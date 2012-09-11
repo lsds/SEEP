@@ -1,0 +1,40 @@
+12/06/2012 Raul
+- Management module. Make explicit the independence of the management module in every worker node. This is associated to NodeManager, or it may be NodeManager itself.
+- Refactor internal routing.
+- bottom-up clean of code, from the internal routing mechanisms, to the external API
+- Define and refine a low level API to describe, configure and connect operators, with state, split keys and other additional information.
+- Integrate zookeeper to maintain synchronization when executing protocols
+- Refine routing information backup to avoid all-to-all communication
+- Attend to old TODOS and inconsistencies when backuping state
+- Pluggable serialization mechanism. In particular, change protocolbuffers by Kryo and make possible to define own mechanism.
+- Integrate Nagios, or Munin or Ganglia, or other monitorization solution within our system to feed the elasticity policy module.
+- Remove upstream backup and twitter storm dependent code...
+- Integrate configuration by means of properties file
+- Refine logging at core
+
+
+11/01/2012 Raul
+*Management module. There should exist a management module. Currently, we have management and system-specific functionality coupled, and in some cases strongly coupled. These should be independent. Doing a management module would comprise:
+	- Instantiation and deployment of operators.
+	- Deployment on Amazon (using the amazon API that is not used now)
+	- Statistics handling
+	- Profiling tools. To make timing measurements... 
+
+*In order to use one or another execution configuration (namely, new model, upstream-backup, etc…) either we duplicate code or we provide a configuration facility or we inject some kind of dependency on runtime depending on this configuration file. Any other option makes the code unmaintenable. This has produced also a lot of errors. In the beginnign it seemed like a good solution, but at the end a lot of code blocks were dependent on the fault-tolerance model, which is something we cannot tolerate anymore.
+
+*It would be a good idea to do some unit tests for some parts of the software, like the key-related code, the dispatch code, the buffer trimming and etc...
+
+*Use java 1.7 could be a good idea.
+
+*Check all the synchronized code and see how to avoid it when possible
+
+*Once the code is refactored (do these things under demand...)
+	- Implement batching
+	- Think about implement ordering
+	- Test the system with local and remote operators mixed...
+	- Add scaling down feature
+	- Improve auto-scale feature
+	- fault-tolerance is controlled, we are not able to discover real failures
+	- we do support one query at a time, for now is enough though.
+	- ACK tiding mechanism to avoid ack storm...
+	- Fixed tuple scheme, timestamp and payload

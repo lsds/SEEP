@@ -1,0 +1,26 @@
+export JAVA_HOME=/usr/lib/jvm/java-6-sun/
+#export EC2_HOME=/homes/rc3011/Desktop/development/java/sEEP/scripts/ec2-api-tools
+export RAIN_HOME=/homes/rc3011/Desktop/development/java/sEEP/scripts/RainToolkit
+export AWS_ACCESS_ID=
+export AWS_SECRET_KEY=
+#cd $RAIN_HOME
+#export EC2_PRIVATE_KEY=~/.ec2/pk-OTHRL42U3J25OO4Y43WZ7NOXEUIO5LVJ.pem
+#export EC2_CERT=~/.ec2/cert-OTHRL42U3J25OO4Y43WZ7NOXEUIO5LVJ.pem
+echo "Creating new machine..."
+#create new machine
+$RAIN_HOME/bin/create-virtual-machine -n instanc -i ami-31814f58 -g seepP -key authEC2 -t SMALL
+#$RAIN_HOME/bin/create-virtual-machine -n instance -i ami-31814f58 -key authEC2 -t SMALL
+echo "Starting new machine..."
+#start that machine
+VM_ADDRESS=`$RAIN_HOME/bin/start-virtual-machine -n instance`
+#deploy needed files in the machine and connect
+echo "New Deployment... "
+echo $VM_ADDRESS
+bash ec2-deploy.sh $VM_ADDRESS
+echo "Executing system process..."
+#execute secondary program
+java -jar proto_ft_seep-20120130.jar Sec new 146.169.5.130 
+echo "system process executed..."
+#return control to java thread
+echo "done"
+exit

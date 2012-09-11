@@ -1,0 +1,15 @@
+#!/bin/sh
+
+#counter is the current virtual terminal ID
+counter=$1
+#last current id, limit for executing command
+lastCurrentId=$2
+#the command to execute in the terminals
+COMMANDS=$3
+while [  "$counter" -ne "$lastCurrentId" ]
+do
+	#to send the command and then press enter
+	tmux send-keys -t EC2:$counter "$COMMANDS" 'Enter'
+	let counter=counter-1
+#	sleep 0.5
+done

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+lastId=$1
+FILE=$2
+
+ID=$[$lastId+1]
+while read line
+do
+	VAR=EC2:$id
+	tmux new-window -t $VAR -n $ID 'bash'
+	ID=$[$ID+1]
+done<$FILE 
+
+echo 'Next ID-> '$ID
+#tmux -2 attach-session -t EC2

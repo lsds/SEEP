@@ -1,0 +1,22 @@
+11/01/2012 Raul
+*Main.java -> When executed as main, "java -jar file.jar Main ft-model" it initialize MonitorManager and ManagerWorker and then prompts the console. There is no deployment nor initialization of any operator at this time. To deploy the Word counter query, there is an option in the console. When executes as secondary "java -jar file.jar Sec ft-model masterIP", the masterIP is the new argument. This is the IP of the master, and it is used by the secondary node to send it bootstrap information (mainly the IP). In this way, it is no longer necessary to indicate IP-s at development phase, so ec2 deployment is realizable.
+
+*seep.proto -> Minor changes in Statistics message to add some more datums
+
+*infrastructure/Infrastructure.java -> there is a new parameter, nodeStack modelled as a Deque<Node> java data structure. This is a stack where nodes registered in the system (those that sent the bootstrap information) are stored. There is also a map that maps ip-socket so that we avoid creating sockets for each known communication. There is a function called alertCPU that is called by MonitorManager to trigger a parallelization. There is a function configureSourceRate in charge of tuning the incoming rate in the source node. (for word counter query). Finally, methods to control time profiling of the software, used to make the measurements.
+
+*infrastructure/ManagerWorker.java -> Previously this was an inner class of infrastructure, now it is an independent class
+
+*infrastructure/Monitor.java -> The monitor in now in charge of sending cpu utilisation but also in charge of sending throughput and rate information that is retrieved from the sink operator.
+
+*infrastructure/MonitorManager.java -> File writing was added to gather the measurements in a proper way to process them later.
+
+*utils/ExecutionConfiguration.java -> monitorInterval variable controls when each operator sends its usage statistics. mainAddr and mainPort represent the endpoint in which the masterNode is listening. sentenceSize is a wordCounter variable that states the number of bits of each sentence. maxRate, eventR, period are variables that control the source rate in the source operator.
+
+*comm/ACKWorker.java -> this is a new class that runs in the same node as the sink. It is in charge of checking if a new tuple came in, and in that case generate an ACK. The reason why this functionality is now decoupled (previously we were calling the ack method within the sink processData method) is that the previous solution was causing a lot of contention. This eliminated a big bottleneck.
+
+*comm/StateBackupWorker.java -> The reason for this new class is the same as previous, although in this case I am not sure if we are avoiding so much contention, and on the contrary we are increasin concurrency, so this is a potential point to refactor.
+
+*comm/Dispatcher.java -> Our God class is still God. 757 lines of deep knowledge here. This does not present major changes, but a lot of tiny ones that were done to avoid bugs, stop the data thread or setting timing properties for the measurements. This class must be splitted in many more. Refactor here is extremely necessary.
+
+*comm/collection/operators -> The operators for the word counter query were also modified because of bugs, profiling purposes, and to decouple some operations sometimes.

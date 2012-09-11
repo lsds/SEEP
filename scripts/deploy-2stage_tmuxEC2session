@@ -1,0 +1,14 @@
+#!/bin/sh
+#Initialize variable
+counter=$1
+FILE=$2
+#read file again ordered, counter is line number
+while read line
+do
+        COMMAND="bash ec2-deploy.sh $line"
+echo $COMMAND
+        tmux send-keys -t EC2:$counter "$COMMAND" 'Enter'
+        let counter=counter+1
+done <$FILE
+
+echo 'Waiting for all machines to connect'

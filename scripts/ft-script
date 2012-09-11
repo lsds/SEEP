@@ -1,0 +1,31 @@
+echo "FaultTolerance client"
+
+#get oldip newip and startDelay from arguments
+#P_TO_KILL=$1
+DELAY=$1
+CONTROL_NODE=$2
+CONTROL_PORT=$3
+OLDIP=$4
+OLDPORT=$5
+NEWIP=$6
+NEWPORT=$7
+IPMASTER=$8
+FTMODEL=$9
+
+#kill node and start it again after delay
+#kill $P_TO_KILL
+kill `ps aux | grep java | head -1 | cut -b 10-14`
+echo "Node killed"
+sleep $DELAY
+echo "Starting node..."
+java -jar dist/proto_ft_seep-20120416.jar Sec $FTMODEL $IPMASTER &
+sleep $DELAY
+
+#Send message to Central Manager
+echo "Sending recovery message..."
+exec 3<>/dev/tcp/$CONTROL_NODE/$CONTROL_PORT
+echo crash $OLDIP $OLDPORT $NEWIP $NEWPORT
+echo -e crash $OLDIP $OLDPORT $NEWIP $NEWPORT >&3
+
+#Print response, just in case
+#cat <&3

@@ -1,0 +1,221 @@
+package seep;
+
+option java_package = "seep.comm.tuples";
+
+message EventBatch{
+	repeated DataTuple event = 1;
+}
+
+message DataTuple {
+	//SYSTEM INFO
+	optional int64 ts = 1;
+	
+	//PAYLOAD, USER-Dependent
+ 	//fields for lrb
+	optional int32 type = 2;
+	optional int32 time = 3;
+	optional int32 vid = 4;
+	optional int32 speed = 5;
+	optional int32 xway = 6;
+	optional int32 lane = 7;
+	optional int32 dir = 8;
+	optional int32 seg = 9;
+	optional int32 pos = 10;
+	optional int32 qid = 11;
+	optional int64 emit = 12;
+	optional int32 toll = 13;
+	optional int32 ba = 14;
+	optional int32 resultTime = 15;
+	
+	//optional int32 sInit = 16;
+	//optional int32 sEnd = 17;
+	//optional int32 dow = 18;
+	//optional int32 tow = 19;
+	//optional int32 day = 20;
+	
+// fields for wc
+	optional int32 int = 21;
+	optional string string = 22;
+}
+
+message ControlTuple {
+  enum Type { ACK = 1; BACKUP_STATE = 2; RECONFIGURE = 3; SCALE_OUT = 4;
+  				RESUME = 5; INIT_STATE =6; STATE_ACK =7; INVALIDATE_STATE=8; BACKUP_RI =9;
+  				INIT_RI = 10;
+  			}
+
+  // Identifies which field is filled in.
+  required Type type = 1;
+
+  // One of the following will be filled in.
+  optional Ack ack = 2;
+  optional BackupState backupState = 3;
+  optional ReconfigureConnection reconfigureConnection = 4;
+  optional ScaleOutInfo scaleOutInfo = 5;
+  optional Resume resume = 6;
+  optional InitState initState = 7;
+  optional StateAck stateAck = 8;
+  optional InvalidateState invalidateState = 9;
+  optional BackupRI backupRI = 10;
+  optional InitRI initRI = 11;
+}
+
+message Ack {
+	required int32 opId = 1;
+	required int64 ts = 2;
+}
+
+message Resume {
+	repeated int32 opId = 1 [packed=true];
+}
+
+message InitState {
+	required int32 opId = 1;
+	required int64 ts = 2;
+	optional AverageState state = 3;
+	optional WordCounterState wcState = 4;
+	optional TollCalculatorState tcState = 5;
+	optional BalanceAccountState baState = 6;
+	optional BalanceAccountCollectorState bacState = 7;
+}
+
+message BackupState {
+// Necessary to add the opID to identify the right buffer in the previous operator
+	required int32 opId = 1;
+	optional int64 ts_s = 2;
+	required int64 ts_e = 3;
+	optional AverageState state = 5;
+	optional WordCounterState wcState = 6;
+	optional TollCalculatorState tcState = 7;
+	optional BalanceAccountState baState = 8;
+	optional BalanceAccountCollectorState bacState = 9;
+}
+
+message InvalidateState{
+	required int32 opId = 1;
+}
+
+message BackupRI {
+	required int32 opId = 1;
+	required string operatorType = 2;
+	repeated int32 index = 3;
+	repeated int32 key = 4;
+}
+
+message InitRI{
+	required int32 opId = 1;
+	repeated int32 index = 2;
+	repeated int32 key = 3;
+}
+
+message AverageState {
+	required int32 state = 1;
+	required int32 counter = 2;
+}
+
+message WordCounterState {
+	message Entry{
+		optional string word = 1;
+//testing
+		optional int32 wordH = 2;
+		required int32 counter = 3;
+	}
+	repeated Entry entry = 1;
+}
+
+message BalanceAccountCollectorState{
+	message DataII {
+		required int32 key = 1;
+		required int32 value = 2;
+	}
+	
+	repeated DataII queryNum = 1;
+	repeated DataII queryBA = 2;
+	required int32 numUpstreams = 3;
+	optional int32 stateId = 4;
+}
+
+message BalanceAccountState{
+	message DataII {
+		required int32 key = 1;
+		required int32 value = 2;
+	}
+	
+	repeated DataII balanceAccount = 1;
+	repeated DataII previousSegment = 2;
+	repeated DataII previousToll = 3;
+	optional int32 lastUpdateOfBA = 4;
+	optional int32 stateId = 5;
+}
+
+message TollCalculatorState {
+	message DataII {
+		required int32 key = 1;
+		required int32 value = 2;
+	}
+	
+	message DataListI {
+		required int32 key = 1;
+		repeated int32 value = 2 [packed=true];
+	}
+	
+	message DataBool {
+		required int32 key = 1;
+		required bool value = 2;
+	}
+	
+	//message DataIV {
+		//message Vehicle {
+			//optional int32 vid = 1;
+		//	optional int32 segment = 2;
+			//optional int32 dir = 3;
+			//optional int32 lane = 4;
+			//optional int32 pos = 5;
+		//}
+		//required int32 key = 1;
+		//repeated Vehicle value = 2;
+	//}
+	repeated DataII speedAvg5Minutes = 1;
+	repeated DataII speedAvg4Minutes = 2;
+	repeated DataII speedAvg3Minutes = 3;
+	repeated DataII speedAvg2Minutes = 4;
+	repeated DataII speedAvg1Minutes = 5;
+	repeated DataII currentVidSpeed_vid_speed = 6;
+	repeated DataII numVidLastMinSeg_seg_numVid = 7;
+	repeated DataListI numVidCurrentMinSeg_seg_listVid = 8;
+	
+	repeated DataBool accidents = 9;
+	repeated DataII consecutiveReports = 10;
+	repeated DataII vid_lastPos = 11;
+	repeated DataListI stoppedCars_pos_vid = 12;
+	required int32 currentMinute = 13;
+	optional int32 stateId = 14;
+}
+
+message ReconfigureConnection {
+	optional int32 opId = 1;
+	required string command = 2;
+	optional string ip = 3;
+	optional int32 node_port = 4;
+	optional int32 inC = 5;
+	optional int32 inD = 6;
+	optional bool operatorNature = 7;
+	optional string operatorType = 8;
+	
+}
+
+message ScaleOutInfo {
+	required int32 oldOpID = 1;
+	required int32 newOpID = 2;
+}
+
+message StateAck {
+	required int32 opId = 1;
+}
+
+message Statistics{
+	required int32 opId = 1;
+	optional double cpuU = 2;
+	optional int32 time = 3;
+	optional double th = 4;
+}

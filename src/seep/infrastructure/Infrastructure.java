@@ -1,0 +1,468 @@
+package seep.infrastructure;
+
+import seep.Main;
+import seep.comm.BasicCommunicationUtils;
+import seep.comm.tuples.Seep;
+import seep.comm.tuples.Seep.ControlTuple;
+import seep.elastic.ElasticInfrastructureUtils;
+import seep.operator.*;
+import seep.operator.OperatorContext.PlacedOperator;
+import seep.utils.*;
+import seep.infrastructure.monitor.*;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Deque;
+import java.util.ArrayDeque;
+import java.util.logging.Logger;
+
+/**
+* Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
+*/
+
+
+public class Infrastructure {
+
+	public static Logger nLogger = Logger.getLogger("seep");
+	
+	int value = Integer.parseInt(Main.valueFor("maxLatencyAllowed"));
+	static final int CONTROL_SOCKET = Integer.parseInt(Main.valueFor("controlSocket"));
+	static final int DATA_SOCKET = Integer.parseInt(Main.valueFor("dataSocket"));
+	
+	static public MasterStatisticsHandler msh = new MasterStatisticsHandler();
+	
+	private int baseId = Integer.parseInt(Main.valueFor("baseId"));
+
+	private Deque<Node> nodeStack = new ArrayDeque<Node>();
+	private int numberRunningMachines = 0;
+
+	private ArrayList<Operator> ops = new ArrayList<Operator>();
+	public Map<Integer,Connectable> elements = new HashMap<Integer, Connectable>();
+	private Operator src;
+	private Operator snk;
+	
+	private BasicCommunicationUtils bcu = new BasicCommunicationUtils();
+
+	private ElasticInfrastructureUtils eiu = new ElasticInfrastructureUtils(this);
+
+	private ManagerWorker manager = null;
+	private MonitorManager monitorManager = null;
+	private int port;
+	
+	public Infrastructure(int listeningPort) {
+		this.port = listeningPort;
+	}
+
+	public MonitorManager getMonitorManager(){
+		return monitorManager;
+	}
+	
+	public ArrayList<Operator> getOps() {
+		return ops;
+	}
+	
+	public Map<Integer, Connectable> getElements() {
+		return elements;
+	}
+	
+	public int getNodePoolSize(){
+		return nodeStack.size();
+	}
+
+	public int getNumberRunningMachines(){
+		return numberRunningMachines;
+	}
+	
+	public BasicCommunicationUtils getBcu() {
+		return bcu;
+	}
+	
+	public ElasticInfrastructureUtils getEiu() {
+		return eiu;
+	}
+	
+	public synchronized int getBaseId() {
+		return baseId;
+	}
+	
+	//This method is still valid to define which is the first operator in the query
+	public void setSource(Operator src) {
+		this.src = src;
+	}
+
+	public void setSink(Operator snk){
+		this.snk = snk;
+	}
+	
+	public void addNode(Node n) {
+		nodeStack.push(n);
+		Infrastructure.nLogger.info("-> Infrastructure. New Node: "+n);
+		Infrastructure.nLogger.info("-> Infrastructure. Num nodes: "+getNodePoolSize());
+	}
+	
+	public void addOperator(Operator o) {
+		ops.add(o);
+		elements.put(o.getOperatorId(), o);
+	}
+	
+	public void placeNew(Operator o, Node n) {
+		int opID = o.getOperatorId();
+		boolean isStatefull = (o instanceof StatefullOperator) ? true : false;
+		OperatorStaticInformation l = new OperatorStaticInformation(n, CONTROL_SOCKET + opID, DATA_SOCKET + opID, isStatefull);
+		o.getOpContext().setOperatorStaticInformation(l);
+		
+		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
+			int downID = downDescr.opID();
+			Connectable downOp = elements.get(downID);
+			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
+		}
+
+		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
+			int upID = upDescr.opID();
+			Connectable upOp = elements.get(upID);
+			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
+		}
+	}
+	
+	public void updateContextLocations(Operator o) {
+		for (Connectable op: elements.values()) {
+			if (op!=o){
+				setDownstreamLocationFromPotentialDownstream(o, op);
+				setUpstreamLocationFromPotentialUpstream(o, op);
+			}
+		}
+	}
+
+	private void setDownstreamLocationFromPotentialDownstream(Connectable target, Connectable downstream) {
+		for (PlacedOperator op: downstream.getOpContext().upstreams) {
+			if (op.opID() == target.getOperatorId()) {
+				target.getOpContext().setDownstreamOperatorStaticInformation(downstream.getOperatorId(), downstream.getOpContext().getOperatorStaticInformation());
+			}
+		}
+	}
+	
+	private void setUpstreamLocationFromPotentialUpstream(Connectable target, Connectable upstream) {
+		for (PlacedOperator op: upstream.getOpContext().downstreams) {
+			if (op.opID() == target.getOperatorId()) {
+				target.getOpContext().setUpstreamOperatorStaticInformation(upstream.getOperatorId(), upstream.getOpContext().getOperatorStaticInformation());
+			}
+		}
+	}
+	
+	/// \todo {Any thread that it is started should be stopped someway}
+	public void startInfrastructure(){
+		Infrastructure.nLogger.info("-> Infrastructure. ManagerWorker running");
+		manager = new ManagerWorker(this, port);
+		Thread centralManagerT = new Thread(manager);
+		centralManagerT.start();
+
+		Infrastructure.nLogger.info("-> Infrastructure. MonitorManager running");
+		monitorManager = new MonitorManager(this);
+		Thread monitorManagerT = new Thread(monitorManager);
+		monitorManagerT.start();
+	}
+
+	public void stopWorkers(){
+		//stop monitor manager.. 
+		monitorManager.stopMManager(true);
+	}
+	
+	public void deploy() throws DeploymentException {
+
+  		//Deploy operators
+		for(Operator op: ops){
+	     	//Establish the connection with the specified address
+			deploy(op);
+		}
+
+		//Configure operators communications
+		for(Operator op : ops){
+			//Establish the connection with the specified address
+			Infrastructure.nLogger.info("-> Infrastructure. Configuring OP-"+op.getOperatorId());
+			init(op);
+		}
+	}
+
+	public void reDeploy(Node n){
+
+		System.out.println("REDEPLOY-operators with ip: "+n.toString());
+
+		//Redeploy operators
+		for(Connectable op: ops){
+			//Loop through the operators, if someone has the same ip, redeploy
+			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
+				Infrastructure.nLogger.info("-> Infrastructure. Redeploy OP-"+op.getOperatorId());
+				bcu.sendObject(n, op);
+			}
+		}
+		for(Connectable op: ops){
+			//Loop through the operators, if someone has the same ip, reconfigure
+			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
+				Infrastructure.nLogger.info("-> Infrastructure. reconfigure OP-"+op.getOperatorId());
+				bcu.sendObject(n, new Integer ((op).getOperatorId()));
+			}
+		}
+	}
+
+	public void deploy(Operator op) {
+		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		Infrastructure.nLogger.info("-> Infrastructure. Deploying OP-"+op.getOperatorId());
+		bcu.sendObject(node, op);
+	}
+
+	public void init(Operator op) {
+		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		bcu.sendObject(node, op.getOperatorId());
+	}
+
+	/// \test {some variables were bad, check if now is working}
+	public void reMap(InetAddress oldIp, InetAddress newIp){
+		OperatorContext opCtx = null;
+		for(Connectable op: ops){
+			opCtx = op.getOpContext();
+			OperatorStaticInformation loc = opCtx.getOperatorStaticInformation();
+			Node node = loc.getMyNode();
+			if(node.getIp().equals(oldIp)){
+				Node newNode = node.setIp(newIp);
+				OperatorStaticInformation newLoc = loc.setNode(newNode);
+				opCtx.setOperatorStaticInformation(newLoc);
+			}
+		}
+	}
+
+/// \todo {What about building google protocol buffers in a more condensed way?}
+	/// \todo{remove boolean paralell recovery}
+/// parallel recovery was added to force the scale out of the failed operator before recovering it. it is necessary to change this and make it properly
+	public void updateU_D(InetAddress oldIp, InetAddress newIp, boolean parallelRecovery){
+		NodeManager.nLogger.warning("-> using sendControlMsg WITHOUT ACK");
+		//Update operator information
+		for(Connectable me : ops){
+			//If there is an operator that was placed in the oldIP...
+			if(me.getOpContext().getOperatorStaticInformation().getMyNode().getIp().equals(oldIp)){
+				//We get its downstreams
+				for(PlacedOperator downD : me.getOpContext().downstreams){
+					//Now we change each downstream info (about me) and update its conn with me
+					for(Connectable downstream: ops){
+						if(downstream.getOperatorId() == downD.opID()){
+							//To change info of this operator, locally first
+							downstream.getOpContext().changeLocation(oldIp, newIp);
+							//...and remotely. It also needs to change its upstream conn
+							Seep.ReconfigureConnection.Builder b = Seep.ReconfigureConnection.newBuilder();
+							b.setOpId(me.getOperatorId());
+							b.setCommand("reconfigure_U");
+							b.setIp(newIp.getHostAddress());
+							Seep.ControlTuple.Builder ctb = Seep.ControlTuple.newBuilder().setType(Seep.ControlTuple.Type.RECONFIGURE).setReconfigureConnection(b.build());
+							Infrastructure.nLogger.info("-> Infrastructure. updating Upstream OP-"+downstream.getOperatorId());
+							//bcu.sendControlMsg(downstream.getOpContext().getOperatorStaticInformation(), ctb.build(), downstream.getOperatorId());
+							bcu.sendControlMsgWithoutACK(downstream.getOpContext().getOperatorStaticInformation(), ctb.build(), downstream.getOperatorId());
+						}
+					}
+				}
+				for(PlacedOperator upU: me.getOpContext().upstreams){
+					for(Connectable upstream: ops){
+						if(upstream.getOperatorId() == upU.opID()){
+							//To change info of this operator, locally and remotely
+							upstream.getOpContext().changeLocation(oldIp, newIp);
+							//It needs to change its upstream conn
+							Seep.ReconfigureConnection.Builder b = null;
+							if(!parallelRecovery){
+								b = Seep.ReconfigureConnection.newBuilder()
+								.setOpId(me.getOperatorId())
+								.setCommand("reconfigure_D")
+								.setIp(newIp.getHostAddress());
+							}
+							else{
+								b = Seep.ReconfigureConnection.newBuilder()
+								.setOpId(me.getOperatorId())
+								.setCommand("just_reconfigure_D")
+								.setIp(newIp.getHostAddress());
+							}
+							Seep.ControlTuple.Builder ctb = Seep.ControlTuple.newBuilder().setType(Seep.ControlTuple.Type.RECONFIGURE).setReconfigureConnection(b.build());
+							Infrastructure.nLogger.info("-> Infrastructure. updating Downstream OP-"+upstream.getOperatorId());
+							//bcu.sendControlMsg(upstream.getOpContext().getOperatorStaticInformation(), ctb.build(), upstream.getOperatorId());
+							bcu.sendControlMsgWithoutACK(upstream.getOpContext().getOperatorStaticInformation(), ctb.build(), upstream.getOperatorId());
+							//It needs to replay buffer
+							String target = "";
+							Seep.ReconfigureConnection.Builder b2 = Seep.ReconfigureConnection.newBuilder();
+							//In the replay msg, opId does not make sense
+							b2.setOpId(0);
+							b2.setCommand("replay");
+							b2.setIp(target);
+							Seep.ControlTuple.Builder ctb2 = Seep.ControlTuple.newBuilder().setType(Seep.ControlTuple.Type.RECONFIGURE).setReconfigureConnection(b2.build());
+							/// \todo {this code block should be independent of the fault tolerance model}
+							if(Main.valueFor("ftmodel").equals("twitterStormModel")){
+								System.out.println("MANAGER: Sending REPLAY command to SOURCE");
+								Infrastructure.nLogger.info("-> Infrastructure. sending REPLAY command to source");
+								//bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), ctb2.build(), src.getOperatorId());
+								bcu.sendControlMsgWithoutACK(src.getOpContext().getOperatorStaticInformation(), ctb2.build(), src.getOperatorId());
+							}
+						}	
+					}
+				}
+			}
+		}
+
+	}	
+
+	public void start() throws ESFTRuntimeException{
+		//Send the message to start the source
+		String msg = "START "+src.getOperatorId();
+		System.out.println("STARTING SOURCE, sending-> "+msg);
+		Infrastructure.nLogger.info("-> Infrastructure. Starting system");
+		bcu.sendObject(src.getOpContext().getOperatorStaticInformation().getMyNode(), msg);
+		//Start clock in sink.
+		bcu.sendObject(snk.getOpContext().getOperatorStaticInformation().getMyNode(), "CLOCK");
+	}
+
+	public synchronized Node getNodeFromPool(){
+		if(nodeStack.size() < Integer.parseInt(Main.valueFor("minimumNodesAvailable"))){
+			//nLogger.info("Instantiating EC2 images");
+			//new Thread(new EC2Worker(this)).start();
+		}
+		numberRunningMachines++;
+		if(nodeStack.isEmpty()){
+			NodeManager.nLogger.warning("-> Node Pool empty, Impossible to scale-out");
+			return null;
+		}
+		return nodeStack.pop();
+	}
+	
+	public synchronized void incrementBaseId(){
+		baseId++;
+	}
+
+	public void deployConnection(String command, Connectable opToContact, Connectable opToAdd, String operatorType) {
+		ControlTuple.Builder tuple = Seep.ControlTuple.newBuilder();
+		tuple.setType(Seep.ControlTuple.Type.RECONFIGURE);
+			
+		Seep.ReconfigureConnection.Builder rec = Seep.ReconfigureConnection.newBuilder();
+		rec.setCommand(command);
+		//Some commands do not require opToAdd
+		if(opToAdd != null){
+			rec.setOpId(opToAdd.getOperatorId());
+			rec.setIp(opToAdd.getOpContext().getOperatorStaticInformation().getMyNode().getIp().getHostAddress());
+			rec.setNodePort(opToAdd.getOpContext().getOperatorStaticInformation().getMyNode().getPort());
+			rec.setInC(opToAdd.getOpContext().getOperatorStaticInformation().getInC());
+			rec.setInD(opToAdd.getOpContext().getOperatorStaticInformation().getInD());
+			rec.setOperatorNature(opToAdd.getOpContext().getOperatorStaticInformation().isStatefull());
+		}
+		rec.setOperatorType(operatorType);
+		rec.build();
+		
+		tuple.setReconfigureConnection(rec);
+		bcu.sendControlMsg(opToContact.getOpContext().getOperatorStaticInformation(), tuple.build(), opToContact.getOperatorId());
+	}
+	
+	public void configureSourceRate(int numberEvents, int time){
+		ControlTuple.Builder tuple = Seep.ControlTuple.newBuilder();
+		tuple.setType(Seep.ControlTuple.Type.RECONFIGURE);
+		//setOpId is carrying in this case the source Rate.
+		tuple.setReconfigureConnection(Seep.ReconfigureConnection.newBuilder().setCommand("configureSourceRate").setOpId(numberEvents).setInC(time).build()).build();
+		/// \todo{avoid this?}
+		Main.eventR = numberEvents;
+		Main.period = time;
+		bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), tuple.build(), src.getOperatorId());
+		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple.build(), snk.getOperatorId());
+	}
+	
+	public int getOpIdFromIp(InetAddress ip){
+		int opId = -1;
+		for(Operator op : ops){
+			if(op.getOpContext().getOperatorStaticInformation().getMyNode().getIp().equals(ip)){
+				opId = op.getOperatorId();
+				return opId;
+			}
+		}
+		return opId;
+	}
+	
+	public int getNumDownstreams(int opId){
+		for(Operator op : ops){
+			if(op.getOperatorId() == opId){
+				return op.getOpContext().downstreams.size();
+			}
+		}
+		return -1;
+	}
+	
+	public int getNumUpstreams(int opId){
+		for(Operator op : ops){
+			if(op.getOperatorId() == opId){
+				return op.getOpContext().upstreams.size();
+			}
+		}
+		return -1;
+	}
+	
+	public void printCurrentInfrastructure(){
+		System.out.println("##########################");
+		System.out.println("INIT: printCurrentInfrastructure");
+		System.out.println("Nodes registered in system:");
+		System.out.println("  ");
+		System.out.println();
+		for(Node n : nodeStack){
+			System.out.println(n);
+		}
+		System.out.println("  ");
+
+		System.out.println("OPERATORS: ");
+		for (Connectable op: ops) {
+			System.out.println(op);
+			System.out.println();
+		}
+		System.out.println("END: printCurrentInfrastructure");
+		System.out.println("##########################");
+	}
+
+	public void saveResults() {
+		ControlTuple.Builder tuple = Seep.ControlTuple.newBuilder();
+		tuple.setType(Seep.ControlTuple.Type.RECONFIGURE);
+		//setOpId is carrying in this case the source Rate.
+		tuple.setReconfigureConnection(Seep.ReconfigureConnection.newBuilder().setCommand("saveResults").build()).build();
+		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple.build(), snk.getOperatorId());
+	}
+	
+	public void switchMechanisms(){
+		ControlTuple.Builder tuple = Seep.ControlTuple.newBuilder();
+		tuple.setType(Seep.ControlTuple.Type.RECONFIGURE);
+		//setOpId is carrying in this case the source Rate.
+		tuple.setReconfigureConnection(Seep.ReconfigureConnection.newBuilder().setCommand("deactivateMechanisms").build()).build();
+		//Send msg to all operators 
+		for(Operator o : ops){
+			bcu.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), tuple.build(), o.getOperatorId());
+		}
+		//Send msg to src and snk
+		bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), tuple.build(), src.getOperatorId());
+		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple.build(), snk.getOperatorId());
+	}
+
+	public String getOpType(int opId) {
+		for(Operator op : ops){
+			if(op.getOperatorId() == opId){
+				return op.getClass().getName(); 
+			}
+		}
+		return null;
+	}
+	
+	public void parallelRecovery(String oldIp_txt) throws UnknownHostException{
+		eiu.executeParallelRecovery(oldIp_txt);
+	}
+
+	public void saveResultsSWC() {
+		ControlTuple.Builder tuple = Seep.ControlTuple.newBuilder();
+		tuple.setType(Seep.ControlTuple.Type.RECONFIGURE);
+		//setOpId is carrying in this case the source Rate.
+		tuple.setReconfigureConnection(Seep.ReconfigureConnection.newBuilder().setCommand("saveResults").build()).build();
+		Operator aux = null;
+		for(Operator op : ops){
+			if(op.getClass().getName().equals("seep.operator.collection.SmartWordCounter")){
+				aux = op;
+			}
+		}
+		bcu.sendControlMsg(aux.getOpContext().getOperatorStaticInformation(), tuple.build(), aux.getOperatorId());
+	}
+}

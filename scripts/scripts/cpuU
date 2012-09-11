@@ -1,0 +1,14 @@
+while [ 1 ]
+do
+	PID=`pidof java`
+	if [ ! -z "$PID" ]
+	then
+		OUT=`top -b -d 1 -n 1 | grep $PID | cut -b 42-46 | head -1`
+		#OUT=`top -b -d 0.1 -n 10 | grep %id | cut -b 35-39 | tail -1`
+
+		echo $OUT
+		echo $OUT > OUT
+	fi
+	sleep 2
+done
+#top -b -d 1 -n 3 | grep java | cut -b 42-46 | head -1

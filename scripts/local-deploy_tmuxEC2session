@@ -1,0 +1,11 @@
+#!/bin/sh
+
+
+counter=$1
+lastCurrentId=$2
+
+while [ "$counter" -ne "$lastCurrentId" ]
+do
+       	bash exec_tmuxEC2session $counter "$lastCurrentId" "./deploy-local"
+	let counter=counter-1
+done

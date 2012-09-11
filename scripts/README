@@ -1,0 +1,18 @@
+- amazonEC2NewMachine.sh
+# This script uses the RainToolkit to make the asyncrhonous API of EC2, syncrhonous, in such a way that it becomes easy to instantiate, and start new machines
+- cpuU
+# this script is in charge of gettin the cpu utilisation of the last java process executed in the system
+- init_tmuxEC2session
+# This script takes as input a file with a number of EC2 instances, create a windows in tmux for each one of them and indicate in the end the next index
+- deploy_tmuxEC2session
+# This script makes use of exec_tmuxEC2session to execute the commands necessary to deploy the system in EC2 easily. As input it receives both the current index and the file with the IP's
+- ec2-deploy.sh
+# This is the script in charge of uploading the scripts and the system an EC2 instance
+- local-deploy_tmuxEC2session
+# This script executes deploy-local in every machine associated to the curernt tmux session
+- deploy-local
+# this script is in charge of preparing each of the EC2 instances to be able to run the system on top
+- exec_tmuxEC2session
+# This script takes as input the current index and a command. It sends the command to all the terminals with a lesser index than the specified one
+- new-instances_tmuxEC2session
+# This script is in charge of creating new windows for the new machines available. these machines are extracted from the file poolNodes and it also gets the current index and returns the one resulting from its own execution
