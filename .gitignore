@@ -3,3 +3,5 @@ build/*
 dist/*
 scripts/RainToolkit
 scripts/RainToolKit_04042011.zip
+.project
+.classpath
