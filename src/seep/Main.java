@@ -37,6 +37,9 @@ import seep.operator.collection.lrbenchmark.Snk;
 import seep.operator.collection.lrbenchmark.TollAssessment;
 import seep.operator.collection.lrbenchmark.TollCalculator;
 import seep.operator.collection.lrbenchmark.TollCollector;
+import seep.operator.collection.testing.Foo;
+import seep.operator.collection.testing.TestSink;
+import seep.operator.collection.testing.TestSource;
 import seep.utils.ExecutionConfiguration;
 
 /**
@@ -719,35 +722,35 @@ public class Main {
 	private void deployTestingTopology(Infrastructure inf) throws DeploymentException {
 		System.out.println("Creating testing topology");
 		//Create operators
-//		TestSource src = new TestSource(-2);
-		DataFeeder src = new DataFeeder(-2);
-//		Foo foo = new Foo(0);
-//		Foo foo2 = new Foo(1);
-		Snk snk = new Snk(-1);
+		TestSource src = new TestSource(-2);
+//		DataFeeder src = new DataFeeder(-2);
+		Foo foo = new Foo(0);
+		Foo foo2 = new Foo(1);
+//		TestSink snk = new Snk(-1);
 //		Foo op1 = new Foo(0);
 //		Foo op2 = new Foo(1);
 //		Foo op3 = new Foo(2);
-//		TestSink snk = new TestSink(-1);
+		TestSink snk = new TestSink(-1);
 		//Add operators
 		inf.setSource(src);
 		inf.addOperator(src);
-//		inf.addOperator(foo);
-//		inf.addOperator(foo2);
+		inf.addOperator(foo);
+		inf.addOperator(foo2);
 //		inf.addOperator(op1);
 //		inf.addOperator(op2);
 //		inf.addOperator(op3);
 		inf.setSink(snk);
 		inf.addOperator(snk);
 		//Connect operators
-		src.connectTo(snk);
-//		src.connectTo(foo);
-//		src.connectTo(foo2);
-//		foo.connectTo(snk);
+//		src.connectTo(snk);
+		src.connectTo(foo);
+		foo.connectTo(foo2);
+		foo2.connectTo(snk);
 //		foo2.connectTo(snk);
 		//Place operators in nodes
 		inf.placeNew(src, inf.getNodeFromPool());
-//		inf.placeNew(foo, inf.getNodeFromPool());
-//		inf.placeNew(foo2, inf.getNodeFromPool());
+		inf.placeNew(foo, inf.getNodeFromPool());
+		inf.placeNew(foo2, inf.getNodeFromPool());
 		inf.placeNew(snk, inf.getNodeFromPool());
 		//deploy
 		inf.deploy();

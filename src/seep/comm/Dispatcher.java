@@ -131,7 +131,6 @@ public class Dispatcher implements Serializable{
 		else if (dispatchPolicy == DispatchPolicy.CONTENT_BASED) {
 			targets = ((ContentBasedFilter)loadBalancer).applyFilter(dt, value);
 			for(Integer target : targets){
-
 				Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
 				sendToDownstream(dt, dest, now, false);
 			}
