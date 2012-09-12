@@ -14,7 +14,7 @@ public class TestSink extends Operator implements StatelessOperator{
 
 	@Override
 	public void processData(Seep.DataTuple dt) {
-//		System.out.println("RCV: "+dt.getInt());
+		System.out.println("RCV: "+dt.getInt());
 		
 	}
 

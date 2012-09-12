@@ -10,7 +10,7 @@ import seep.Main;
 import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
-import seep.comm.InputQueue;
+import seep.comm.InputQueue2;
 import seep.comm.LoadBalancerI;
 import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
@@ -41,6 +41,9 @@ public int ackCounter = 0;
 	private OperatorContext opContext;
 	private OperatorCommonProcessLogic opCommonProcessLogic;
 
+	private InputQueue inputQueue;
+	private DataConsumer dataConsumer;
+	private Thread dConsumerH = null;
 	private Dispatcher dispatcher;
 	
 	private Thread controlH = null;
@@ -54,7 +57,7 @@ public int ackCounter = 0;
 	private LoadBalancerI dispatcherFilter = null;
 	
 	/// \todo {input queue, implement as a singleton}
-	private InputQueue iq = null;
+//	private InputQueue2 iq = null;
 	
 	static ControlTuple genericAck;
 	
@@ -87,8 +90,12 @@ public int ackCounter = 0;
 	}
 	
 	public InputQueue getInputQueue(){
-		return iq;
+		return inputQueue;
 	}
+	
+//	public InputQueue2 getInputQueue2(){
+//		return iq;
+//	}
 	
 	public long getTs_ack() {
 		return ts_ack;
@@ -162,14 +169,21 @@ public int ackCounter = 0;
 		
 		opCommonProcessLogic.setOwner(this);
 		opCommonProcessLogic.setOpContext(opContext);
-		iq = new InputQueue(this);
+//		iq = new InputQueue2(this);
+		inputQueue = new InputQueue();
 		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter);
 		
+		//Control worker
 		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
 		controlH = new Thread(ch);
+		//Data worker
 		idh = new IncomingDataHandler(this, opContext.getOperatorStaticInformation().getInD());
 		iDataH = new Thread(idh);
+		//Consumer worker
+		dataConsumer = new DataConsumer(this, inputQueue);
+		dConsumerH = new Thread(dataConsumer);
 
+		dConsumerH.start();
 		controlH.start();
 		iDataH.start();
 
