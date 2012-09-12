@@ -107,6 +107,7 @@ public class BasicCommunicationUtils {
 		}
 	}
 	
+	//This method gets the local IP and sends a BOOT message to the central node.
 	public void sendBootstrapInformation(int port, InetAddress bindAddr, int ownPort){
 		try{
 			InetAddress ownIp = InetAddress.getLocalHost();

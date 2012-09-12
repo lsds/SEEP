@@ -19,6 +19,8 @@ import seep.comm.tuples.Seep.ControlTuple;
 import seep.comm.tuples.Seep.ControlTuple.Type;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.OperatorInitializationException;
+import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.OperatorStaticInformation;
 import seep.operator.collection.SmartWordCounter;
 import seep.operator.collection.lrbenchmark.Snk;
@@ -156,9 +158,7 @@ public int ackCounter = 0;
 				+ opContext + "]";
 	}
 
-	public boolean initializeOperator(){
-
-		boolean success = false;
+	public void instantiateOperator() throws OperatorInstantiationException{
 		
 		opCommonProcessLogic.setOwner(this);
 		opCommonProcessLogic.setOpContext(opContext);
@@ -178,14 +178,11 @@ public int ackCounter = 0;
 		b.setType(ControlTuple.Type.ACK);
 		genericAck = b.build();
 		
-		success = true;
-		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" initialized");
-		
-		return success;
+		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
 	}
 	
 /// \todo {return a proper boolean after check...}
-	public boolean initializeCommunications(){
+	public void initializeCommunications() throws OperatorInitializationException{
 		dispatcher.setOpContext(opContext);
 		dispatcher.startFilters();
 		opContext.configureCommunication();
@@ -194,7 +191,6 @@ public int ackCounter = 0;
 		opCommonProcessLogic.configureUpstreamIndex();
 		
 		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
-		return true;
 	}
 	
 	//TODO To refine this method...

@@ -145,20 +145,14 @@ public class Main {
 			inf.startInfrastructure();
 
 			boolean alive = true;
-
+			
+			/// \todo{make this robust}
 			while(alive){
 				consoleOutputMessage();
 				try{
 					BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 					String option = br.readLine();
-					int opt = 0;
-					if(!option.equals("y") && !option.equals("n")){
-						opt = Integer.parseInt(option);
-					}
-					else{
-						opt = 100;
-					}
-					System.out.println("next option...");
+					int opt = Integer.parseInt(option);
 					switch(opt){
 						//deploy wordcounter
 						case 1:
@@ -212,7 +206,7 @@ public class Main {
 							System.out.println("save latency SWC-query");
 							saveResultsSWC(inf);
 						default:
-							System.out.println("Wrong option.");
+							System.out.println("Wrong option. Try again...");
 					}
 				}
 				catch(IOException io){
@@ -233,10 +227,7 @@ public class Main {
 	
 	private void saveResultsSWC(Infrastructure inf) {
 		inf.saveResultsSWC();
-		
 	}
-
-
 
 	private void switchMechanisms(Infrastructure inf){
 		inf.switchMechanisms();
@@ -304,104 +295,6 @@ public class Main {
 //		tuple.setDay(Integer.parseInt(fields[14]));
 		return tuple;
 	}
-
-	private void executeSec(int port, InetAddress bindAddr, int ownPort){
-		// NodeManager instantiation
-		NodeManager nm = new NodeManager(port, bindAddr);
-		BasicCommunicationUtils bcu = new BasicCommunicationUtils();
-		ServerSocket serverSocket = null;
-		PrintWriter out = null;
-		ObjectInputStream ois = null;
-		Object o = null;
-		boolean listen = true;
-		boolean initializationSuccess = false;
-
-		bcu.sendBootstrapInformation(port, bindAddr, ownPort);
-
-		try{
-			serverSocket = new ServerSocket(ownPort);
-			System.out.println("SECONDARY: Waiting for incoming requests on port: "+ownPort);
-			Socket clientSocket = null;
-			while(listen){
-				//Accept incoming connections
-				clientSocket = serverSocket.accept();
-				//Establish output stream
-				out = new PrintWriter(clientSocket.getOutputStream(), true);
-				//Establish input stream, which receives serialized objects
-				ois = new ObjectInputStream(clientSocket.getInputStream());
-				//Read the serialized object sent.
-				o = ois.readObject();
-				//Check the class of the object received and initialized accordingly
-				if(o instanceof Operator){
-					initializationSuccess = nm.newOperatorInstantiation(o);
-				}
-				else if(o instanceof Integer){
-					initializationSuccess = nm.newOperatorInitialization(o);
-				}
-				else if(o instanceof String){
-					String tokens[] = ((String)o).split(" ");
-					if(tokens[0].equals("STOP")){
-						System.out.println("Deployment has finished in this node");
-						listen = false;
-						out.println("ack");
-	
-						o = null;
-						ois.close();
-						out.close();
-						clientSocket.close();
-						//since listen=false now, finish the loop
-						continue;
-					}
-					if(tokens[0].equals("START")){
-						/*Integer aux = new Integer(tokens[1]);
-						nm.startOperator(aux);
-						out.println("ack");*/
-						System.out.println("SEC: RECEIVED ORDER TO START this: "+tokens[1]);
-                        //We call the processData method on the source
-                        /// \todo {Is START used? is necessary to answer with ack?}
-                        out.println("ack");
-                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-                        dt.setTs(0);
-                        Integer aux = new Integer(tokens[1]);
-                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt.build());
-					}
-					if(tokens[0].equals("CLOCK")){
-						NodeManager.clock = System.currentTimeMillis();
-						out.println("ack");
-					}
-				}
-				if(!initializationSuccess){
-					//error while initializing
-					System.out.println("error while initializing");
-				}
-
-				//Send message back.
-				out.println("ack");
-	
-				o = null;
-				ois.close();
-				out.close();
-				clientSocket.close();
-			}
-			serverSocket.close();
-		}
-		//For now send nack, probably this is not the best option...
-		catch(IOException io){
-			System.out.println("IOException: "+io.getMessage());
-			io.printStackTrace();
-//			out.println("nack");
-		}
-		catch(ClassNotFoundException cnfe){
-			System.out.println("ClassNotFoundException: "+cnfe.getMessage());
-			cnfe.printStackTrace();
-//			out.println("nack");
-		}
-		catch(IllegalThreadStateException itse){
-			System.out.println("IllegalThreadStateException, no problem, monitor thing");
-			itse.printStackTrace();
-		}
-	}
-	
 	
 	public void consoleOutputMessage(){
 		System.out.println("#############");
@@ -914,5 +807,16 @@ public class Main {
 			return;
 		}
 		eiu.scaleOutOperator(opId, newOpId, newNode);
+	}
+	
+	/**
+	 * SECONDARY NODES EXECUTE THIS METHOD
+	 */
+	
+	private void executeSec(int port, InetAddress bindAddr, int ownPort){
+		// NodeManager instantiation
+		NodeManager nm = new NodeManager(port, bindAddr, ownPort);
+		nm.init();
+		NodeManager.nLogger.info("NodeManager was remotely stopped");
 	}
 }
