@@ -2,7 +2,7 @@ package seep.operator;
 
 import seep.buffer.Buffer;
 import seep.infrastructure.*;
-import seep.utils.CommunicationChannelInformation;
+import seep.utils.CommunicationChannel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +29,11 @@ public class OperatorContext implements Serializable {
 
 	private ArrayList<OperatorStaticInformation> upstream = new ArrayList<OperatorStaticInformation>();
 	private ArrayList<OperatorStaticInformation> downstream = new ArrayList<OperatorStaticInformation>();
+
+	//map in charge of storing the buffers that this operator is using
+	static public Map<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
+	/// \todo{the signature of this attribute must change to the one written below}
+	//private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
 	//These structures are Vector because they are potentially accessed from more than one point at a time
 	/// \todo {refactor this to a synchronized map??}
@@ -42,11 +47,6 @@ public class OperatorContext implements Serializable {
 	public Vector getUpstreamTypeConnection() {
 		return upstreamTypeConnection;
 	}
-
-	//map in charge of storing the buffers that this operator is using
-	static public Map<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
-	/// \todo{the signature of this attribute must change to the one written below}
-	//private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
 	public OperatorContext(ArrayList<Integer> connectionsD, ArrayList<Integer> connectionsU, ArrayList<OperatorStaticInformation> upstream, ArrayList<OperatorStaticInformation> downstream){
 		this.connectionsD = connectionsD;
@@ -67,7 +67,9 @@ public class OperatorContext implements Serializable {
 		connectionsD.add(opID);
 	}
 	
-	public int getDownstreamSize() { return downstream.size(); }
+	public int getDownstreamSize() { 
+		return downstream.size(); 
+	}
 	
 	public void addUpstream(int opID) {
 		connectionsU.add(opID);
@@ -116,14 +118,6 @@ public class OperatorContext implements Serializable {
 		return null;
 	}
 	
-//	public int findDownstreamIndex(int opId){
-//		return findOpIndex(opId, connectionsD);
-//	}
-//	
-//	public int findUpstreamIndex(int opId){
-//		return findOpIndex(opId, connectionsU);
-//	}
-	
 	private int findOpIndex(int opID, ArrayList<Integer> IDList) {
 		for(Integer id : IDList){
 			if(id == opID){
@@ -131,12 +125,6 @@ public class OperatorContext implements Serializable {
 			}
 		}
 		throw new IllegalArgumentException("opID "+ opID + " not found");
-//		for (int i = 0; i < IDList.size(); i++) {
-//			if (IDList.get(i) == opID) {
-//				return i;
-//			}
-//		}
-//		throw new IllegalArgumentException("opID "+ opID + " not found");
 	}
 
 	//TODO place opID in location instead of this?
@@ -187,7 +175,8 @@ public class OperatorContext implements Serializable {
 	public OperatorContext(){
 	}
 	
-	@Override public String toString() {
+	@Override 
+	public String toString() {
 		StringBuffer buf = new StringBuffer("@"+ getOperatorStaticInformation());
 		if (downstream.size()>0) {
 			buf.append(" down: [");
@@ -273,7 +262,7 @@ public class OperatorContext implements Serializable {
 						Socket controlS = new Socket(newIp, down.location().getInC());
 						Buffer buf = downstreamBuffers.get(opId);
 
-						CommunicationChannelInformation cci = new CommunicationChannelInformation(dataS, controlS, buf);
+						CommunicationChannel cci = new CommunicationChannel(dataS, controlS, buf);
 						downstreamTypeConnection.set(down.index(), cci);
 					}
 					catch(IOException io){
@@ -293,7 +282,7 @@ public class OperatorContext implements Serializable {
 				else{
 					try{
 						Socket controlS = new Socket(newIp, up.location().getInC());
-						CommunicationChannelInformation cci = new CommunicationChannelInformation(null, controlS, null);
+						CommunicationChannel cci = new CommunicationChannel(null, controlS, null);
 						upstreamTypeConnection.set(up.index(), cci);
 					}
 					catch(IOException io){
@@ -369,13 +358,13 @@ public class OperatorContext implements Serializable {
 					socketC = new Socket(ip, portC);
 				}
 				Buffer buffer = new Buffer();
-				downstreamTypeConnection.add(new CommunicationChannelInformation(socketD, socketC, buffer));
+				downstreamTypeConnection.add(new CommunicationChannel(socketD, socketC, buffer));
 /// \todo{here a 40000 is used, change this line to make it properly}
 				downstreamBuffers.put((portD-40000), buffer);
 			}
 			else if(type.equals("up")){
 				socketC = new Socket(ip, portC);
-				upstreamTypeConnection.add(new CommunicationChannelInformation(null, socketC, null));
+				upstreamTypeConnection.add(new CommunicationChannel(null, socketC, null));
 			}
 		}
 		catch(IOException io){
@@ -384,12 +373,12 @@ public class OperatorContext implements Serializable {
 		}
 	}
 	
-	public CommunicationChannelInformation getCCIfromOpId(int opId, String type){
+	public CommunicationChannel getCCIfromOpId(int opId, String type){
 		if(type.equals("d")){
 			for(PlacedOperator down: downstreams){
 				if(down.opID() == opId){
-					if( downstreamTypeConnection.elementAt(down.index()) instanceof CommunicationChannelInformation){
-						return (CommunicationChannelInformation)downstreamTypeConnection.elementAt(down.index());
+					if( downstreamTypeConnection.elementAt(down.index()) instanceof CommunicationChannel){
+						return (CommunicationChannel)downstreamTypeConnection.elementAt(down.index());
 					}
 				}
 			}
@@ -397,8 +386,8 @@ public class OperatorContext implements Serializable {
 		else if(type.equals("u")){
 			for(PlacedOperator up: downstreams){
 				if(up.opID() == opId){
-					if(upstreamTypeConnection.elementAt(up.index()) instanceof CommunicationChannelInformation){
-						return (CommunicationChannelInformation)upstreamTypeConnection.elementAt(up.index());
+					if(upstreamTypeConnection.elementAt(up.index()) instanceof CommunicationChannel){
+						return (CommunicationChannel)upstreamTypeConnection.elementAt(up.index());
 					}	
 				}
 			}

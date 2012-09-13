@@ -35,5 +35,4 @@ public class InputQueue {
 		}
 		return null;
 	}
-	
 }

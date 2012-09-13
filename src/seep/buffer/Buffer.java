@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.Main;
 import seep.comm.tuples.Seep;
-import seep.utils.CommunicationChannelInformation;
+import seep.utils.CommunicationChannel;
 import seep.utils.ExecutionConfiguration;
 
 /**
@@ -81,12 +81,12 @@ public class Buffer implements Serializable{
 		}
 	}
 	
-	public void replay(CommunicationChannelInformation oi){
+	public void replay(CommunicationChannel oi){
 long a = System.currentTimeMillis();
 		while(oi.sharedIterator.hasNext()){
 			Seep.EventBatch batch = oi.sharedIterator.next();
 			try{
-				batch.writeDelimitedTo(oi.downstreamSocketD.getOutputStream());
+				batch.writeDelimitedTo(oi.getDownstreamDataSocket().getOutputStream());
 			}
 			catch(IOException io){
 				System.out.println("While replaying: "+io.getMessage());

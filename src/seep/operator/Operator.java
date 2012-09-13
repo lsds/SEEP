@@ -45,6 +45,7 @@ public int ackCounter = 0;
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
 	private Dispatcher dispatcher;
+	private OutputQueue outputQueue;
 	
 	private Thread controlH = null;
 	private ControlHandler ch = null;
@@ -171,7 +172,8 @@ public int ackCounter = 0;
 		opCommonProcessLogic.setOpContext(opContext);
 //		iq = new InputQueue2(this);
 		inputQueue = new InputQueue();
-		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter);
+		outputQueue = new OutputQueue();
+		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter, outputQueue);
 		
 		//Control worker
 		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());

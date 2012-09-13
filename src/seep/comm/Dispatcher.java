@@ -22,6 +22,7 @@ public class Dispatcher implements Serializable{
 	
 	// opContext to have knowledge of downstream and upstream
 	private OperatorContext opContext;
+	private OutputQueue outputQueue;
 	
 	// dispatchPolicy defines how it needs to deliver the information
 	private DispatchPolicy dispatchPolicy = DispatchPolicy.ALL;
@@ -32,17 +33,18 @@ public class Dispatcher implements Serializable{
 	//private int target = 0;
 	private ArrayList<Integer> targets = new ArrayList<Integer>();
 	
-	// replaySemaphore controls whether it is possible to send or not
-	private AtomicInteger replaySemaphore = new AtomicInteger(0);
+//	// replaySemaphore controls whether it is possible to send or not
+//	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	
 	/** btnck detector vars **/
 	int laps = 0;
 	long elapsed = 0;
 	
-	public Dispatcher(OperatorContext opContext, DispatchPolicy dispatchPolicy, LoadBalancerI loadBalancer){
+	public Dispatcher(OperatorContext opContext, DispatchPolicy dispatchPolicy, LoadBalancerI loadBalancer, OutputQueue outputQueue){
 		this.opContext = opContext;
 		this.dispatchPolicy = dispatchPolicy;
 		this.loadBalancer = loadBalancer;
+		this.outputQueue = outputQueue;
 		if(this.dispatchPolicy == DispatchPolicy.CONTENT_BASED){
 			((ContentBasedFilter)loadBalancer).configureLoadBalancers(opContext);
 		}
@@ -81,24 +83,43 @@ public class Dispatcher implements Serializable{
 		loadBalancer = df;
 	}
 
+//	//Start incoming data, one thread has finished replaying
+//	public synchronized void startIncomingData(){
+//		/// \todo {this is a safe check that should not be done because we eventually will be sure that it works well}
+//		if(replaySemaphore.get() == 0){
+//			NodeManager.nLogger.warning("-> Dispatcher. replaySemaphore was 0, stays equals ");
+//			replaySemaphore.set(0);
+//			return;
+//		}
+//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore decrements: "+replaySemaphore.toString());
+//		replaySemaphore.decrementAndGet();
+//		synchronized(this){
+//			this.notify();
+//		}
+//	}
 	//Start incoming data, one thread has finished replaying
 	public synchronized void startIncomingData(){
-		/// \todo {this is a safe check that should not be done because we eventually will be sure that it works well}
-		if(replaySemaphore.get() == 0){
-			NodeManager.nLogger.warning("-> Dispatcher. replaySemaphore was 0, stays equals ");
-			replaySemaphore.set(0);
-			return;
-		}
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore decrements: "+replaySemaphore.toString());
-		replaySemaphore.decrementAndGet();
-		synchronized(this){
-			this.notify();
-		}
+		outputQueue.start();
 	}
 	
+//	public synchronized void stopConnection(int opID) {
+//		//Stop incoming data, a new thread is replaying
+//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
+//		
+//		/**
+//		 * hack done on july the third 2012 to get parallel recovery results.
+//		 *  we make sure that conn is only stop once
+//		 */
+////if (replaySemaphore.get() > 0){
+////	return;
+////}
+//		
+//		replaySemaphore.incrementAndGet();
+//		opContext.getCCIfromOpId(opID, "d").stop.set(true);
+//	}
 	public synchronized void stopConnection(int opID) {
 		//Stop incoming data, a new thread is replaying
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
+//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
 		
 		/**
 		 * hack done on july the third 2012 to get parallel recovery results.
@@ -108,8 +129,9 @@ public class Dispatcher implements Serializable{
 //	return;
 //}
 		
-		replaySemaphore.incrementAndGet();
-		opContext.getCCIfromOpId(opID, "d").stop.set(true);
+//		replaySemaphore.incrementAndGet();
+		outputQueue.stop();
+		opContext.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
 	
 	//dt is the tuple to send, value is a value provided by the user for content-based stuff. now specifies whether this tuples needs to be sent now or can be batched.
@@ -118,139 +140,22 @@ public class Dispatcher implements Serializable{
 		if (dispatchPolicy == DispatchPolicy.ALL){
 			for(int i = 0; i < opContext.getDownstreamTypeConnection().size(); i++){
 				Object dest = opContext.getDownstreamTypeConnection().elementAt(i);
-				sendToDownstream(dt, dest, now, false);
+				outputQueue.sendToDownstream(dt, dest, now, false);
 			}
 		}
 		else if (dispatchPolicy == DispatchPolicy.ANY) {
 			//if downstream is stateless
 			int target = ((StatelessDynamicLoadBalancer)loadBalancer).route();
 			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
-			sendToDownstream(dt, dest, now, false);
+			outputQueue.sendToDownstream(dt, dest, now, false);
 			//what if downstream is statefull
 		}
 		else if (dispatchPolicy == DispatchPolicy.CONTENT_BASED) {
 			targets = ((ContentBasedFilter)loadBalancer).applyFilter(dt, value);
 			for(Integer target : targets){
 				Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
-				sendToDownstream(dt, dest, now, false);
+				outputQueue.sendToDownstream(dt, dest, now, false);
 			}
-		}
-	}
-	
-	private void sendToDownstream(Seep.DataTuple tuple, Object dest, boolean now, boolean beacon) {
-		//*&^*&^*&^*&^*&^
-//		BufferedOutputStream out = null;
-		if(dest instanceof CommunicationChannelInformation){
-			CommunicationChannelInformation channelRecord = (CommunicationChannelInformation) dest;
-/// \fixme {remove all this sync block}
-			synchronized(channelRecord){
-				Socket sock = channelRecord.downstreamSocketD;
-				Buffer buffer = channelRecord.buffer;
-				try{
-					//To send tuple
-					//if(channelRecord.replay.get()){
-					if(channelRecord.replay.compareAndSet(true, false)){
-						channelRecord.buffer.replay(channelRecord);
-						channelRecord.replay.set(false);
-						channelRecord.stop.set(false);
-						sock = channelRecord.downstreamSocketD;
-						//out = new BufferedOutputStream(sock.getOutputStream());
-						//At this point, this operator has finished replaying the tuples
-						NodeManager.setSystemStable();
-					}
-					if(!channelRecord.stop.get()){
-					
-						if(!beacon){
-//							synchronized(channelRecord.batch){
-							channelRecord.batch.addEvent(tuple);
-//						}
-//	System.out.println("tupleSize: "+tuple.getSerializedSize());
-							channelRecord.channelBatchSize--;//limitBatch--;
-						//TODO do i need to update also when I replay? (which mean that last_ts can
-						//also go backward)
-							channelRecord.last_ts = tuple.getTs();
-						}
-					
-					//If it is mandated to send the tuple now (URGENT), then channelBatchSize is put to 0
-						if(now) channelRecord.channelBatchSize = 0;
-						long currentTime = System.currentTimeMillis();
-					
-					/// \todo{Add the following line for include the batch timing mechanism}
-//					if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.tick) > ExecutionConfiguration.maxLatencyAllowed ){
-						if(channelRecord.channelBatchSize == 0){
-							Seep.EventBatch msg = channelRecord.batch.build();
-	
-							channelRecord.tick = currentTime;
-//							long start = System.currentTimeMillis();
-//							System.out.println("*");
-							
-/// \fixme {SYNCRHONIZE OVER THIS SOCKET IS DONE IN MANY PLACES (3), this becomes problematic in event of failure. Necessary to reduce SYNCH}							
-							
-							synchronized(sock){
-//								System.out.println("@");
-								//msg.writeDelimitedTo(sock.getOutputStream());
-								msg.writeDelimitedTo(sock.getOutputStream());
-//								int lessT = msg.getEvent(0).getTime();
-//								int moreT = msg.getEvent(msg.getEventCount()-1).getTime();
-//if((moreT-lessT) > 1){
-//System.out.println("DIF: "+(moreT-lessT));
-//}
-							}
-//							elapsed += System.currentTimeMillis() -start;
-//							laps++;
-//							if(laps == 100){
-//								System.out.println("sendOUT: "+elapsed/100);
-//								laps = 0;
-//								elapsed = 0;
-//							}
-							channelRecord.batch = channelRecord.batch.clear();
-							int limit = Integer.parseInt(Main.valueFor("batchLimit"));
-							channelRecord.channelBatchSize = limit;
-						
-						//buffering batch
-						/// \todo {ft dependant code block}
-							if(!Main.valueFor("ftmodel").equals("twitterStormModel") || (opContext.upstreams.size()) == 0){
-								if(Main.valueFor("eftMechanismEnabled").equals("true")){
-									buffer.save(msg);
-								}
-							}
-						}
-					}
-					else if (!beacon){
-						//Is there any thread replaying?
-						while(replaySemaphore.get() >= 1){
-							//If so, wait.
-							synchronized(this){
-								this.wait();
-							}
-						}
-					}
-				}
-				catch(IOException io){
-					NodeManager.nLogger.severe("-> Dispatcher. While sending: "+io.getMessage());
-					io.printStackTrace();
-//				System.exit(-1);
-				}
-				catch(InterruptedException ie){
-					NodeManager.nLogger.severe("-> Dispatcher. While trying to do wait() "+ie.getMessage());
-					ie.printStackTrace();
-				}
-				catch(Exception gen){
-					System.out.println("###EXCEPTION: "+gen.getMessage());
-					gen.printStackTrace();
-					System.out.println("channelBatchSize == 0???? : "+channelRecord.channelBatchSize);
-					System.out.println("channelRecord BATCH: "+channelRecord.batch.getEventCount());
-					System.out.println("TUPLE: "+tuple);
-					System.out.println("###");
-					System.exit(0);
-				}
-			
-			}//synch
-			
-		}
-		else if(dest instanceof Operator){
-			Operator operatorObj = (Operator) dest;
-			operatorObj.processData(tuple);
 		}
 	}
 	
@@ -258,7 +163,7 @@ public class Dispatcher implements Serializable{
 	public void batchTimeOut(){
 		Seep.DataTuple dt = null;
 		for(Object channelRecord : opContext.getDownstreamTypeConnection()){
-			if(channelRecord instanceof CommunicationChannelInformation){
+			if(channelRecord instanceof CommunicationChannel){
 				//Tick with beacon for every destination, so that this can update their clocks
 //				sendToDownstream(dt, channelRecord, false, true);
 			}
@@ -282,8 +187,8 @@ public class Dispatcher implements Serializable{
 			Operator operatorObj = (Operator) obj;
 			operatorObj.processControlTuple(ct, null);
 		}
-		else if (obj instanceof CommunicationChannelInformation){
-			Socket socket = ((CommunicationChannelInformation) obj).downstreamSocketC;
+		else if (obj instanceof CommunicationChannel){
+			Socket socket = ((CommunicationChannel) obj).downstreamControlSocket;
 			try{
 				Seep.ControlTuple tuple = ct.build();
 				synchronized (socket){
@@ -303,8 +208,8 @@ public class Dispatcher implements Serializable{
 			Operator operatorObj = (Operator) obj;
 			operatorObj.processControlTuple(ct, null);
 		}
-		else if (obj instanceof CommunicationChannelInformation){
-			Socket socket = ((CommunicationChannelInformation) obj).downstreamSocketC;
+		else if (obj instanceof CommunicationChannel){
+			Socket socket = ((CommunicationChannel) obj).downstreamControlSocket;
 			try{
 				Seep.ControlTuple tuple = ct.build();
 				synchronized (socket){
@@ -319,52 +224,119 @@ public class Dispatcher implements Serializable{
 	}
 }
 
-
-/*if(dispatcherFilter == null){
-int target = downStreamAnyIndex++%opContext.getDownstreamTypeConnection().size();
-Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
-sendToDownstream(dt, dest);
-}
-// if there is a dispatcher filter, then split stream according to the window size
-else{
-System.out.println("ANY_window");
-// if window has finished,
-if(filterValue == 0){
-	// update target and reinitialize filterValue
-	target = downStreamAnyIndex++%opContext.getDownstreamTypeConnection().size();
-	filterValue = ((StreamSplitterFilter)dispatcherFilter).getSplitWindow();
-}
-Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
-sendToDownstream(dt, dest);
-filterValue--;
-}*/
-
-
-//private void sendEvent(Seep.DataTuple event, Socket s){
-//batch.addEvent(event);
-//limitBatch--;
-//if(limitBatch == 0){
-//	sendBatch(s);
-//	limitBatch = ExecutionConfiguration.batchLimit;
-//	return;
-//}
+//private void sendToDownstream(Seep.DataTuple tuple, Object dest, boolean now, boolean beacon) {
+////*&^*&^*&^*&^*&^
+////BufferedOutputStream out = null;
+//if(dest instanceof CommunicationChannelInformation){
+//	CommunicationChannelInformation channelRecord = (CommunicationChannelInformation) dest;
+///// \fixme {remove all this sync block}
+//	synchronized(channelRecord){
+//		Socket sock = channelRecord.downstreamSocketD;
+//		Buffer buffer = channelRecord.buffer;
+//		try{
+//			//To send tuple
+//			//if(channelRecord.replay.get()){
+//			if(channelRecord.replay.compareAndSet(true, false)){
+//				channelRecord.buffer.replay(channelRecord);
+//				channelRecord.replay.set(false);
+//				channelRecord.stop.set(false);
+//				sock = channelRecord.downstreamSocketD;
+//				//out = new BufferedOutputStream(sock.getOutputStream());
+//				//At this point, this operator has finished replaying the tuples
+//				NodeManager.setSystemStable();
+//			}
+//			if(!channelRecord.stop.get()){
+//			
+//				if(!beacon){
+////					synchronized(channelRecord.batch){
+//					channelRecord.batch.addEvent(tuple);
+////				}
+////System.out.println("tupleSize: "+tuple.getSerializedSize());
+//					channelRecord.channelBatchSize--;//limitBatch--;
+//				//TODO do i need to update also when I replay? (which mean that last_ts can
+//				//also go backward)
+//					channelRecord.last_ts = tuple.getTs();
+//				}
+//			
+//			//If it is mandated to send the tuple now (URGENT), then channelBatchSize is put to 0
+//				if(now) channelRecord.channelBatchSize = 0;
+//				long currentTime = System.currentTimeMillis();
+//			
+//			/// \todo{Add the following line for include the batch timing mechanism}
+////			if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.tick) > ExecutionConfiguration.maxLatencyAllowed ){
+//				if(channelRecord.channelBatchSize == 0){
+//					Seep.EventBatch msg = channelRecord.batch.build();
 //
+//					channelRecord.tick = currentTime;
+////					long start = System.currentTimeMillis();
+////					System.out.println("*");
+//					
+///// \fixme {SYNCRHONIZE OVER THIS SOCKET IS DONE IN MANY PLACES (3), this becomes problematic in event of failure. Necessary to reduce SYNCH}							
+//					
+//					synchronized(sock){
+////						System.out.println("@");
+//						//msg.writeDelimitedTo(sock.getOutputStream());
+//						msg.writeDelimitedTo(sock.getOutputStream());
+////						int lessT = msg.getEvent(0).getTime();
+////						int moreT = msg.getEvent(msg.getEventCount()-1).getTime();
+////if((moreT-lessT) > 1){
+////System.out.println("DIF: "+(moreT-lessT));
+////}
+//					}
+////					elapsed += System.currentTimeMillis() -start;
+////					laps++;
+////					if(laps == 100){
+////						System.out.println("sendOUT: "+elapsed/100);
+////						laps = 0;
+////						elapsed = 0;
+////					}
+//					channelRecord.batch = channelRecord.batch.clear();
+//					int limit = Integer.parseInt(Main.valueFor("batchLimit"));
+//					channelRecord.channelBatchSize = limit;
+//				
+//				//buffering batch
+//				/// \todo {ft dependant code block}
+//					if(!Main.valueFor("ftmodel").equals("twitterStormModel") || (opContext.upstreams.size()) == 0){
+//						if(Main.valueFor("eftMechanismEnabled").equals("true")){
+//							buffer.save(msg);
+//						}
+//					}
+//				}
+//			}
+//			else if (!beacon){
+//				//Is there any thread replaying?
+//				while(replaySemaphore.get() >= 1){
+//					//If so, wait.
+//					synchronized(this){
+//						this.wait();
+//					}
+//				}
+//			}
+//		}
+//		catch(IOException io){
+//			NodeManager.nLogger.severe("-> Dispatcher. While sending: "+io.getMessage());
+//			io.printStackTrace();
+////		System.exit(-1);
+//		}
+//		catch(InterruptedException ie){
+//			NodeManager.nLogger.severe("-> Dispatcher. While trying to do wait() "+ie.getMessage());
+//			ie.printStackTrace();
+//		}
+//		catch(Exception gen){
+//			System.out.println("###EXCEPTION: "+gen.getMessage());
+//			gen.printStackTrace();
+//			System.out.println("channelBatchSize == 0???? : "+channelRecord.channelBatchSize);
+//			System.out.println("channelRecord BATCH: "+channelRecord.batch.getEventCount());
+//			System.out.println("TUPLE: "+tuple);
+//			System.out.println("###");
+//			System.exit(0);
+//		}
+//	
+//	}//synch
+//	
 //}
-
-//private void batchEvent(Seep.DataTuple event){
-//batch.addEvent(event);
+//else if(dest instanceof Operator){
+//	Operator operatorObj = (Operator) dest;
+//	operatorObj.processData(tuple);
 //}
-
-//private void sendBatch(Socket s){
-//Seep.EventBatch msg = batch.build();
-//synchronized(s){
-//	try {
-//		msg.writeDelimitedTo(s.getOutputStream());
-//	} 
-//	catch (IOException e) {
-//		// TODO Auto-generated catch block
-//		e.printStackTrace();
-//	}
-//}
-//batch = batch.clear();
 //}

@@ -25,12 +25,12 @@ public class StateReplayer implements Runnable {
 
 	private Iterator<Seep.DataTuple> sharedIterator;
 
-	public StateReplayer(CommunicationChannelInformation oi){
+	public StateReplayer(CommunicationChannel oi){
 //		this.socket = oi.downstreamSocketD;
-		this.controlDownstreamSocket = oi.downstreamSocketC;
-		this.buffer = oi.buffer;
-		this.replay = oi.replay;
-		this.stop = oi.stop;
+		this.controlDownstreamSocket = oi.downstreamControlSocket;
+		this.buffer = oi.getBuffer();
+		this.replay = oi.getReplay();
+		this.stop = oi.getStop();
 	}
 
 	public void run(){

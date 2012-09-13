@@ -14,7 +14,7 @@ import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.CommunicationChannelInformation;
+import seep.utils.CommunicationChannel;
 
 @SuppressWarnings("serial")
 public class WordSplitter extends Operator implements StatelessOperator, StateSplitI{

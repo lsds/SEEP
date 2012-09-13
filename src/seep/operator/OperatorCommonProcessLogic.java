@@ -22,7 +22,7 @@ import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.CommunicationChannelInformation;
+import seep.utils.CommunicationChannel;
 import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
@@ -131,9 +131,9 @@ long a = System.currentTimeMillis();
 		//Get operator id
 		int opId = ct.getOpId();
 		//Get buffer for this operator and save the backupState of downstream operator
-		CommunicationChannelInformation downStream = opContext.getCCIfromOpId(opId, "d");
-		if (downStream instanceof CommunicationChannelInformation) {
-			CommunicationChannelInformation connection = (CommunicationChannelInformation) downStream;
+		CommunicationChannel downStream = opContext.getCCIfromOpId(opId, "d");
+		if (downStream instanceof CommunicationChannel) {
+			CommunicationChannel connection = (CommunicationChannel) downStream;
 //System.out.println("comparing "+connection.reconf_ts+" with: "+ct.getTsE());
 			if (connection.reconf_ts <= ct.getTsE()) {
 				//(downstreamBuffers.get(opId)).replaceBackupState(ct);
@@ -150,8 +150,8 @@ long e = System.currentTimeMillis();
 	}
 
 	@Deprecated
-	private void startReplayer( CommunicationChannelInformation oi ) {
-		oi.sharedIterator = oi.buffer.iterator();
+	private void startReplayer( CommunicationChannel oi ) {
+		oi.sharedIterator = oi.getBuffer().iterator();
 		//If new model, then send state and this would trigger the replay buffer
 		if(Main.valueFor("ftmodel").equals("newModel")){
 			StateReplayer replayer = new StateReplayer(oi);
@@ -169,7 +169,7 @@ long e = System.currentTimeMillis();
 		
 	@Deprecated
 	public void startReplayer(int opID) {
-		CommunicationChannelInformation oi = opContext.getCCIfromOpId(opID, "d");
+		CommunicationChannel oi = opContext.getCCIfromOpId(opID, "d");
 		startReplayer(oi);
 	}
 
@@ -320,9 +320,10 @@ long e = System.currentTimeMillis();
 		int newKey = -1;
 				
 		//. stop sending data to op1 remember last data sent
-		CommunicationChannelInformation oldConnection = ((CommunicationChannelInformation)opContext.getDownstreamTypeConnection().get(oldOpIndex));
+		CommunicationChannel oldConnection = ((CommunicationChannel)opContext.getDownstreamTypeConnection().get(oldOpIndex));
 		// necessary to ignore state checkpoints of the old operator before split.
-		oldConnection.reconf_ts = oldConnection.last_ts;
+		long last_ts = oldConnection.getLast_ts();
+		oldConnection.setReconf_ts(last_ts);
 				
 		//Stop connections to perform the update
 		NodeManager.nLogger.info("-> Stopping connections of oldOpId: "+oldOpId+" and newOpId: "+newOpId);
@@ -364,9 +365,9 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 	/// \todo {refactor or make clearer this method}
 	public void replayState(int opId) {
 		//Get channel information
-		CommunicationChannelInformation cci = opContext.getCCIfromOpId(opId, "d");
-		Buffer buffer = cci.buffer;
-		Socket controlDownstreamSocket = cci.downstreamSocketC;
+		CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+		Buffer buffer = cci.getBuffer();
+		Socket controlDownstreamSocket = cci.downstreamControlSocket;
 
 		/// \todo {this block of code should not be ft model dependant}
 		if(!Main.valueFor("ftmodel").equals("twitterStormModel")){
@@ -436,10 +437,10 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 	
 	public void replayTuples(int opId) {
 long a = System.currentTimeMillis();
-		CommunicationChannelInformation cci = opContext.getCCIfromOpId(opId, "d");
-		Iterator<Seep.EventBatch> sharedIterator = cci.buffer.iterator();
-		Socket socket = cci.downstreamSocketD;
-		int bufferSize = cci.buffer.size();
+		CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+		Iterator<Seep.EventBatch> sharedIterator = cci.getBuffer().iterator();
+		Socket socket = cci.getDownstreamDataSocket();
+		int bufferSize = cci.getBuffer().size();
 		int controlThreshold = (int)(bufferSize)/10;
 System.out.println("TO REPLAY: "+bufferSize+ "tuples");
 		int replayed = 0;
@@ -473,8 +474,8 @@ System.out.println("TO REPLAY: "+bufferSize+ "tuples");
 		}
 		//Restablish communication. Set variables and sharedIterator with the current iteration state.
 		NodeManager.nLogger.info("-> Recovering connections");
-		cci.replay.set(true);
-		cci.stop.set(false);
+		cci.getReplay().set(true);
+		cci.getStop().set(false);
 		cci.sharedIterator = sharedIterator;
 		owner.getDispatcher().startIncomingData();
 long b = System.currentTimeMillis() - a;
