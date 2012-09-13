@@ -1,9 +1,9 @@
 package seep.operator.collection.lrbenchmark;
 
 import seep.comm.ContentBasedFilter;
-import seep.comm.StatefulDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
+import seep.comm.ContentBasedFilter.RelationalOperator;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.StatefulDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.TollCalculatorState;
@@ -15,6 +15,7 @@ import seep.operator.StatelessOperator;
 public class Forwarder extends Operator implements StatelessOperator, StateSplitI{
 
 	public Forwarder(int opID) {
+		
 		//Indicate ID
 		super(opID);
 		//Provide subclass to the father
@@ -22,8 +23,8 @@ public class Forwarder extends Operator implements StatelessOperator, StateSplit
 		
 		//Define dispatching filter for different downstreams
 		ContentBasedFilter cbf = new ContentBasedFilter("getType");
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 10);
-		cbf.routeValueToDownstream(RouteOperator.EQ, 2, 20);
+		cbf.routeValueToDownstream(RelationalOperator.EQ, 0, 10);
+		cbf.routeValueToDownstream(RelationalOperator.EQ, 2, 20);
 		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
 	}
 

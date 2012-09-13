@@ -20,7 +20,7 @@ public class ControlHandler implements Runnable{
 	//This variable controls if this Runnable should keep running or not
 	private boolean goOn;
 
-	public Connectable getOwner(){
+	public QuerySpecificationI getOwner(){
 		return owner;
 	}
 	

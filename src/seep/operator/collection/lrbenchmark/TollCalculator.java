@@ -7,7 +7,7 @@ import java.util.List;
 
 import seep.Main;
 import seep.comm.ContentBasedFilter;
-import seep.comm.ContentBasedFilter.RouteOperator;
+import seep.comm.ContentBasedFilter.RelationalOperator;
 import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
@@ -60,10 +60,10 @@ public class TollCalculator extends Operator implements StatefullOperator, State
 		/// \todo Consider moving this piece of code to main (to compose from the interface).
 		ContentBasedFilter cbf = new ContentBasedFilter("getType");
 		// toll notification to both toll collector and toll assesssment
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 31);
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 20);
+		cbf.routeValueToDownstream(RelationalOperator.EQ, 0, 31);
+		cbf.routeValueToDownstream(RelationalOperator.EQ, 0, 20);
 		// accident only to toll collector
-		cbf.routeValueToDownstream(RouteOperator.EQ, 1, 31);
+		cbf.routeValueToDownstream(RelationalOperator.EQ, 1, 31);
 		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
 		
 	}

@@ -108,22 +108,22 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 		
 		private void addPartitioningConnectionCommand(String[] token)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(token[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
 			inf.deployConnection("add_downstream_partition", src, dst, "Null");
 		}
 
 		private void addDownstreamConnectionCommand(String[] token)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(token[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
 			inf.deployConnection("add_downstream", src, dst, "null");
 		}
 
 		private void addUpstreamConnectionCommand(String[] token)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(token[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
 			inf.deployConnection("add_upstream", dst, src, "NuLL");
 		}
 
@@ -140,8 +140,8 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 
 		private void connectCommand(String[] id)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(id[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(id[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(id[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(id[2]));
 			src.connectTo(dst);
 		}
 		

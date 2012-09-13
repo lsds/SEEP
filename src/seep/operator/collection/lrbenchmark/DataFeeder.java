@@ -17,11 +17,11 @@ import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
 import seep.Main;
-import seep.comm.StatefulDynamicLoadBalancer;
 import seep.comm.ContentBasedFilter;
-import seep.comm.StatelessDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
+import seep.comm.ContentBasedFilter.RelationalOperator;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.StatefulDynamicLoadBalancer;
+import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.comm.tuples.lrbenchmark.LRseep.DataTuple;

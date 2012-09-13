@@ -15,7 +15,7 @@ import seep.infrastructure.Infrastructure;
 import seep.infrastructure.MasterStatisticsHandler;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.operator.Connectable;
+import seep.operator.QuerySpecificationI;
 import seep.operator.Operator;
 import seep.operator.OperatorContext.PlacedOperator;
 
@@ -222,8 +222,8 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 
 	public void addDownstreamConnections(Operator newOp){
 		//Search for all upstream ids
-		Connectable opToAdd = newOp;
-		Connectable opToContact = null;
+		QuerySpecificationI opToAdd = newOp;
+		QuerySpecificationI opToContact = null;
 		for(PlacedOperator op : newOp.getOpContext().upstreams){
 			//deploy new connection with all of them?
 			opToContact = inf.getElements().get(op.opID());
@@ -232,8 +232,8 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 	}
 
 	public void addUpstreamConnections(Operator newOp){
-		Connectable opToAdd = newOp;
-		Connectable opToContact = null;
+		QuerySpecificationI opToAdd = newOp;
+		QuerySpecificationI opToContact = null;
 		for(PlacedOperator op : newOp.getOpContext().downstreams){
 			opToContact = inf.getElements().get(op.opID());
 			//the operator that must change, the id of the new replica, the type of operator splitting

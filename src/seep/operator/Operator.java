@@ -10,9 +10,11 @@ import seep.Main;
 import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
-import seep.comm.InputQueue2;
-import seep.comm.LoadBalancerI;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.LoadBalancerI;
+import seep.comm.routing.Router;
+import seep.comm.routing.StatefulRoutingImpl;
+import seep.comm.routing.StatelessRoutingImpl;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.Ack;
 import seep.comm.tuples.Seep.ControlTuple;
@@ -31,7 +33,7 @@ import seep.utils.ExecutionConfiguration;
 */
 
 @SuppressWarnings("serial")
-public abstract class Operator implements Serializable, Connectable {
+public abstract class Operator implements Serializable, QuerySpecificationI {
 
 public int ackCounter = 0;
 	
@@ -40,6 +42,7 @@ public int ackCounter = 0;
 
 	private OperatorContext opContext;
 	private OperatorCommonProcessLogic opCommonProcessLogic;
+	private Router router;
 
 	private InputQueue inputQueue;
 	private DataConsumer dataConsumer;
@@ -130,34 +133,12 @@ public int ackCounter = 0;
 	public void setBackupUpstreamIndex(int backupUpstreamIndex) {
 		this.backupUpstreamIndex = backupUpstreamIndex;
 	}
-
-	/* (non-Javadoc)
-	 * @see seep.operator.Connectable#getOperatorId()
-	 */
-	public int getOperatorId(){
-		return operatorId;
-	}
-
-	/* (non-Javadoc)
-	 * @see seep.operator.Connectable#getOpContext()
-	 */
-	public OperatorContext getOpContext(){
-		return opContext;
-	}
-
-	public void setOpContext(OperatorContext opContext){
-		this.opContext = opContext;
-	}
 	
 	public Operator(int opID){
 		this.operatorId = opID;
 		opContext = new OperatorContext();
 		opCommonProcessLogic = new OperatorCommonProcessLogic();
-	}
-
-	public void connectTo(Connectable down) {
-		opContext.addDownstream(down.getOperatorId());
-		down.getOpContext().addUpstream(getOperatorId());
+		router = new Router();
 	}
 	
 	@Override 
@@ -200,7 +181,8 @@ public int ackCounter = 0;
 /// \todo {return a proper boolean after check...}
 	public void initializeCommunications() throws OperatorInitializationException{
 		dispatcher.setOpContext(opContext);
-		dispatcher.startFilters();
+//		dispatcher.startFilters();
+		router.initializeQueryFunction();
 		opContext.configureCommunication();
 
 		//Choose the upstreamBackupIndex for this operator
@@ -375,7 +357,7 @@ long a = System.currentTimeMillis();
 			processCommand(ct.getReconfigureConnection(), os);
 long b = System.currentTimeMillis() - a;
 System.out.println("*reconfigure: "+b);
-		}	
+		}
 	}
 
 	private void ackControlMessage(OutputStream os){
@@ -622,7 +604,45 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 		ack(currentTsData);
 	}
 	
-	public void printRoutingInfo(){
-		opCommonProcessLogic.printRoutingInfo();
+/** Implementation of QuerySpecificationI **/
+	
+	/* (non-Javadoc)
+	 * @see seep.operator.Connectable#getOperatorId()
+	 */
+	public int getOperatorId(){
+		return operatorId;
+	}
+	
+	/* (non-Javadoc)
+	 * @see seep.operator.Connectable#getOpContext()
+	 */
+	public OperatorContext getOpContext(){
+		return opContext;
+	}
+	
+	public void setOpContext(OperatorContext opContext){
+		this.opContext = opContext;
+	}
+	
+	public void connectTo(QuerySpecificationI down) {
+		opContext.addDownstream(down.getOperatorId());
+		down.getOpContext().addUpstream(getOperatorId());
+	}
+	
+	public void setRoutingQueryFunction(String queryFunction_methodName){
+		router.setQueryFunction(queryFunction_methodName);
+	}
+	
+	public void route(Router.RelationalOperator operand, int value, Operator toConnect){
+		int opId = toConnect.getOperatorId();
+		router.routeValueToDownstream(operand, value, opId);
+	}
+	
+	public void scaleOut(Operator toScaleOut){
+		//TODO implement static scaleOut
+	}
+	
+	public void set(){
+		router.configureRoutingImpl(opContext);
 	}
 }

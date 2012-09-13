@@ -2,6 +2,7 @@ package seep.operator.collection;
 
 import seep.Main;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;

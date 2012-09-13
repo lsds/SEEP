@@ -15,9 +15,9 @@ import seep.buffer.Buffer;
 import seep.buffer.StateReplayer;
 import seep.buffer.TupleReplayer;
 import seep.comm.ContentBasedFilter;
-import seep.comm.StatefulDynamicLoadBalancer;
-import seep.comm.StatelessDynamicLoadBalancer;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.StatefulDynamicLoadBalancer;
+import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.infrastructure.NodeManager;
@@ -523,101 +523,4 @@ System.out.println("backupUpstreamIndex: "+owner.getBackupUpstreamIndex()+ "upIn
 		NodeManager.nLogger.info("-> sending INVALIDATE_STATE to OP "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
 		return ct;
 	}
-	
-	public void printRoutingInfo() {
-//		if(owner.getDispatcher().getDispatcherFilter() instanceof StatelessDynamicLoadBalancer){ 
-//			((StatelessDynamicLoadBalancer)owner.getDispatcher().getDispatcherFilter()).print();
-//		}
-		if ((owner.getDispatcher().getDispatcherFilter() instanceof ContentBasedFilter)){
-			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).print();
-		}
-	}
 }
-
-/*
-//CASE 1, there are more than one type of stateful downstream conn and they can scale out
-if (owner.getDispatcher().getDispatchPolicy().equals(DispatchPolicy.CONTENT_BASED)){
-System.out.println("MORE THAN ONE DOWN TYPE");
-System.out.println("Old Op ID: "+oldOpID+" index: "+oldOpIndex);
-System.out.println("New Op ID: "+newOpID+" index: "+newOpIndex);
-	//We remap the routeInfo map to cope with the new split
-	((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).reconfigureRouteInfo(oldOpIndex, newOpIndex);
-	//We get the downstream that has scaled out and configure the dispatching info for it
-	newKey = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).updateConsistentHashingStructures(oldOpIndex, newOpIndex);
-}
-//CASE 2, There is only one type of stateful downstream conn and it can scale out
-else{
-System.out.println("JUST ONE DOWN TYPE");
-	//There is not a dispatch filter, so access directly to structure
-	newKey = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).getStructure().updateDataStructures(oldOpIndex, newOpIndex);
-}
-return newKey;
-*/
-//}
-
-
-
-///// \todo {consider refactor the two methods inside here...}
-//public void scaleOut(int oldOpID, int newOpID, boolean stateful) {
-//	// !splitState == Downstream operator is stateless
-//	if(!stateful){
-////		configureNewDownstreamStatelessOperatorSplit(oldOpID, newOpID);
-//	}
-//	// splitState == downstream operator is statefull
-//	if(stateful){
-//		int newKey = configureNewDownstreamStatefulOperatorSplit(oldOpId, newOpId);
-//		//I have configured the new split, check if I am also in charge of splitting the state or not
-//		if(opContext.isManagingStateOf(oldOpID)){
-//			NodeManager.nLogger.info("-> Splitting state");
-//			splitState(oldOpID, newOpID, newKey);
-//			owner.setOperatorStatus(Operator.OperatorStatus.WAITING_FOR_STATE_ACK);
-//		}
-//		else{
-//			NodeManager.nLogger.info("-> NOT in charge of split state");
-//		}
-//		//Furthermore, we have to backup the routing state to the downstreams
-////System.out.println("calling to backup ri");
-//		//When downstream is stateful, in this operator it is generated RI, meaning that we have to backup this information
-//		NodeManager.nLogger.info("-> Generating and sending RI backup");
-//		backupRoutingInformation(oldOpID);
-//System.out.println("RI bakcup DONE");
-//	}
-//}
-
-//public synchronized void installRI(Seep.InitRI initRI){
-//NodeManager.nLogger.info("-> Installing RI from OP: "+initRI.getOpId());
-////Get list of indexes
-//List<Integer> indexes = initRI.getIndexList();
-////Build list by transforming indexes into opIds.
-//List<Integer> downstreamOpId = new ArrayList<Integer>();
-//for(Integer index : indexes){
-//	downstreamOpId.add(opContext.getDownOpIdFromIndex(index));
-//}
-//System.out.println("INSTALL RI for LB of: "+downstreamOpId);
-////Search among the indexes that one with a Load balancer assigned
-//System.out.println("##### INDEXES TO INSTALL :"+indexes);
-//for(Integer index : indexes){
-//	int opId = opContext.getDownOpIdFromIndex(index);
-//System.out.println("INSTALL-RI: hasLBForOperator -> "+opId);
-//	//Here, this operator should have a load balancer for one of its downstreams (the main operator)
-//	if(((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).hasLBForOperator(opId)){
-//System.out.println("####### YES");
-//		//Once we are sure that our own operator has a load balancer assigned, we update the routing information of this load balancer with the received info
-//		((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).setIndexesInformation(indexes, initRI.getOpId());
-//		((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).setKeysInformation(initRI.getKeyList(), initRI.getOpId());
-//		
-//		/// \test {this methos may be unnecessary}
-//		//And finally, we assign the load Balancer of opId to the rest of downstreams, (so the replicas of the main operator downstream)
-//		((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).configureLoadBalancer(opId, downstreamOpId);
-//	}
-//	else{
-//System.out.println("####### NO!!!");
-//System.exit(0);
-//	}
-//}
-////System.out.println("## DOUBLE CHECK, PER LB< ITS INDEXES");
-////for(Integer index : indexes){
-////int opId = opContext.getDownOpIdFromIndex(index);
-////System.out.println("##### INDEXES INSTALLED for OP: "+opId+" -> "+((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).getIndexesInformation(opId));
-////}
-//}

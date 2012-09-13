@@ -1,8 +1,9 @@
-package seep.comm;
+package seep.comm.routing;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.zip.CRC32;
+
 
 @SuppressWarnings("serial")
 public class StatefulDynamicLoadBalancer implements Serializable, LoadBalancerI{

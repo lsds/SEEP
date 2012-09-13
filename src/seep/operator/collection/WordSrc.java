@@ -7,8 +7,8 @@ import java.io.IOException;
 
 import seep.Main;
 import seep.comm.ContentBasedFilter;
-import seep.comm.StatelessDynamicLoadBalancer;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.operator.StatelessOperator;
 import seep.utils.ExecutionConfiguration;

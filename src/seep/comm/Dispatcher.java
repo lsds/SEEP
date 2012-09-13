@@ -2,6 +2,8 @@ package seep.comm;
 
 import seep.Main;
 import seep.buffer.Buffer;
+import seep.comm.routing.LoadBalancerI;
+import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.*;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.infrastructure.NodeManager;
@@ -50,13 +52,13 @@ public class Dispatcher implements Serializable{
 		}
 	}
 	
-	/// \todo {consider if this method can be avoided by implementing that line in other place}
-	public void startFilters(){
-		//If it is a contentBasedFilter, initialize the content-based filter and the chained filters if any
-		if (loadBalancer instanceof ContentBasedFilter){
-			((ContentBasedFilter)loadBalancer).initializeFilters();
-		}
-	}
+//	/// \todo {consider if this method can be avoided by implementing that line in other place}
+//	public void startFilters(){
+//		//If it is a contentBasedFilter, initialize the content-based filter and the chained filters if any
+//		if (loadBalancer instanceof ContentBasedFilter){
+//			((ContentBasedFilter)loadBalancer).initializeFilters();
+//		}
+//	}
 	
 	public void setOpContext(OperatorContext opContext) {
 		this.opContext = opContext;

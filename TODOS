@@ -1,3 +1,19 @@
+13/9/2012 Raul
+This todos are ordered by priority level.
+- Refactor internal routing providing clean external interfaces.
+- Serialization mechanism.
+- Low level API to describe/configure/connect operators.
+- Define a basic API to develop operators for SEEP. (extensible is important at this point)
+At this point we have a robust API and robust routing mechanism.
+- Fix distributed protocols and prepare them to SCALE-IN.
+- Fix the following:
+	- Backup state robust
+	- Avoid all-to-all communication
+	- Logging at core
+- Implement Scale-In.
+- Implement an extensible and long-term instrumentation mechanism.
+
+
 12/06/2012 Raul
 - Management module. Make explicit the independence of the management module in every worker node. This is associated to NodeManager, or it may be NodeManager itself.
 - Refactor internal routing.

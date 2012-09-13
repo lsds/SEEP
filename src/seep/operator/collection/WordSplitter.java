@@ -2,10 +2,10 @@ package seep.operator.collection;
 
 import seep.buffer.Buffer;
 import seep.comm.ContentBasedFilter;
-import seep.comm.StatefulDynamicLoadBalancer;
-import seep.comm.StatelessDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
+import seep.comm.ContentBasedFilter.RelationalOperator;
 import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.StatefulDynamicLoadBalancer;
+import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.WordCounterState;
@@ -41,7 +41,7 @@ public class WordSplitter extends Operator implements StatelessOperator, StateSp
 		//Define dispatching filter for different downstreams
 		/** THIS would not need to do this, necessary to refactor the high level API **/
 		ContentBasedFilter cbf = new ContentBasedFilter("getInt");
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 1);
+		cbf.routeValueToDownstream(RelationalOperator.EQ, 0, 1);
 		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
 	}
 
