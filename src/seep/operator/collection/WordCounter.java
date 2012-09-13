@@ -93,7 +93,7 @@ String chosenWord = "Unix";
 
 	@Override
 	public void generateBackupState() {
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			HashMap<String, Integer> countMap = getCountMap();
 			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
 			List<String> words = null;
@@ -117,7 +117,7 @@ String chosenWord = "Unix";
 			bsB.setWcState(wcS.build());
 			backupState(bsB);
 			setCounter(0);
-		}
+		
 	}
 
 	@Override

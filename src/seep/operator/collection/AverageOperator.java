@@ -35,7 +35,7 @@ public class AverageOperator extends Operator implements StatefullOperator{
 //		cumulativeState += value;
 		counter--;
 		if(counter == 50){
-			if(Main.valueFor("ftmodel").equals("newModel")){
+			
 				Seep.AverageState.Builder asB = Seep.AverageState.newBuilder();
 				asB.setState(cumulativeState);
 				asB.setCounter(counter);
@@ -47,7 +47,7 @@ public class AverageOperator extends Operator implements StatefullOperator{
 				/*This method is called each time the developer decides to checkpoint the state. A more powerful API should be offered, for instance able to support timers, and configured initially or whatever... For now, this explicitly does a backup of the state, and in this specific example, the developer chooses to checkpoint each time data is processed in this operator*/
 //System.out.println("AVGOP: Backuping state. cumulState-> "+cumulativeState+" counter-> "+counter);
 				backupState(bsB);
-			}
+			
 		}
 		if(counter == 0){
 //			value = cumulativeState/windowSize;
@@ -76,13 +76,6 @@ System.out.println("AVGOP-> SENDING to SINK");
 		if (is == null) {
 			cumulativeState = 0;
 			counter = windowSize;
-		}
-		if(Main.valueFor("ftmodel").equals("twitterStormModel")){
-			//Extract the specific state to this operator
-			Seep.AverageState as = is.getState();
-			cumulativeState = as.getState();
-			counter = as.getCounter();
-System.out.println("AVGOP: has restored state. cumulState-> "+cumulativeState+" counter-> "+counter);
 		}
 	}
 

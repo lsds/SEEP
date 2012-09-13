@@ -10,11 +10,11 @@ import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.WordCounterState;
 import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.operator.CommunicationChannel;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.CommunicationChannel;
 
 @SuppressWarnings("serial")
 public class WordSplitter extends Operator implements StatelessOperator, StateSplitI{

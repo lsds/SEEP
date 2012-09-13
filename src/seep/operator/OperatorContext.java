@@ -2,7 +2,6 @@ package seep.operator;
 
 import seep.buffer.Buffer;
 import seep.infrastructure.*;
-import seep.utils.CommunicationChannel;
 
 import java.util.ArrayList;
 import java.util.HashMap;

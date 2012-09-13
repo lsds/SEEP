@@ -6,7 +6,7 @@ import java.util.Iterator;
 import seep.comm.Dispatcher;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple;
-import seep.utils.CommunicationChannel;
+import seep.operator.CommunicationChannel;
 
 /**
 * TupleReplayer. This is the runnable object in charge of replaying the buffer of a connection.

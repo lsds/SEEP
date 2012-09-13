@@ -104,18 +104,17 @@ long t_start = 0;
 
 	@Override
 	public void generateBackupState() {
-		if(Main.valueFor("ftmodel").equals("newModel")){
-			Seep.BalanceAccountCollectorState.Builder bacS = Seep.BalanceAccountCollectorState.newBuilder();
-			//query num
-			List<Integer> qid = null;
-			synchronized(queryNum){
-				qid = new ArrayList<Integer>(queryNum.keySet());
-			}
-			Integer qidA[] = qid.toArray(new Integer[0]);
-			List<Integer> num = null;
-			synchronized(queryNum){
-				num = new ArrayList<Integer>(queryNum.values());
-			}
+		Seep.BalanceAccountCollectorState.Builder bacS = Seep.BalanceAccountCollectorState.newBuilder();
+		//query num
+		List<Integer> qid = null;
+		synchronized(queryNum){
+			qid = new ArrayList<Integer>(queryNum.keySet());
+		}
+		Integer qidA[] = qid.toArray(new Integer[0]);
+		List<Integer> num = null;
+		synchronized(queryNum){
+			num = new ArrayList<Integer>(queryNum.values());
+		}
 			Integer numA[] = num.toArray(new Integer[0]);
 			Seep.BalanceAccountCollectorState.DataII.Builder bac = Seep.BalanceAccountCollectorState.DataII.newBuilder();
 			for(int i = 0; i<qidA.length; i++){
@@ -142,7 +141,6 @@ long t_start = 0;
 				bacS.addQueryBA(bac2.build());
 			}
 			numUpstreamNodes = bacS.getNumUpstreams();
-		}
 		
 	}
 

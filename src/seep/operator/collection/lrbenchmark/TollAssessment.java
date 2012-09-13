@@ -130,7 +130,7 @@ private long t_start = 0;
 
 	@Override
 	public synchronized void generateBackupState() {
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			Seep.BalanceAccountState.Builder baS = Seep.BalanceAccountState.newBuilder();
 			//balance account
 			List<Integer> vids = null;
@@ -195,7 +195,7 @@ private long t_start = 0;
 			bsB.setBaState(baS.build());
 			backupState(bsB);
 			setCounter(0);
-		}
+		
 		
 	}
 

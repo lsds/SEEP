@@ -83,40 +83,11 @@ public class Dispatcher implements Serializable{
 		loadBalancer = df;
 	}
 
-//	//Start incoming data, one thread has finished replaying
-//	public synchronized void startIncomingData(){
-//		/// \todo {this is a safe check that should not be done because we eventually will be sure that it works well}
-//		if(replaySemaphore.get() == 0){
-//			NodeManager.nLogger.warning("-> Dispatcher. replaySemaphore was 0, stays equals ");
-//			replaySemaphore.set(0);
-//			return;
-//		}
-//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore decrements: "+replaySemaphore.toString());
-//		replaySemaphore.decrementAndGet();
-//		synchronized(this){
-//			this.notify();
-//		}
-//	}
 	//Start incoming data, one thread has finished replaying
 	public synchronized void startIncomingData(){
 		outputQueue.start();
 	}
-	
-//	public synchronized void stopConnection(int opID) {
-//		//Stop incoming data, a new thread is replaying
-//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
-//		
-//		/**
-//		 * hack done on july the third 2012 to get parallel recovery results.
-//		 *  we make sure that conn is only stop once
-//		 */
-////if (replaySemaphore.get() > 0){
-////	return;
-////}
-//		
-//		replaySemaphore.incrementAndGet();
-//		opContext.getCCIfromOpId(opID, "d").stop.set(true);
-//	}
+
 	public synchronized void stopConnection(int opID) {
 		//Stop incoming data, a new thread is replaying
 //		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
@@ -295,12 +266,9 @@ public class Dispatcher implements Serializable{
 //					channelRecord.channelBatchSize = limit;
 //				
 //				//buffering batch
-//				/// \todo {ft dependant code block}
-//					if(!Main.valueFor("ftmodel").equals("twitterStormModel") || (opContext.upstreams.size()) == 0){
-//						if(Main.valueFor("eftMechanismEnabled").equals("true")){
-//							buffer.save(msg);
-//						}
-//					}
+//				
+//				buffer.save(msg);
+//				
 //				}
 //			}
 //			else if (!beacon){

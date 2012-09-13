@@ -292,13 +292,6 @@ public class Infrastructure {
 							b2.setCommand("replay");
 							b2.setIp(target);
 							Seep.ControlTuple.Builder ctb2 = Seep.ControlTuple.newBuilder().setType(Seep.ControlTuple.Type.RECONFIGURE).setReconfigureConnection(b2.build());
-							/// \todo {this code block should be independent of the fault tolerance model}
-							if(Main.valueFor("ftmodel").equals("twitterStormModel")){
-								System.out.println("MANAGER: Sending REPLAY command to SOURCE");
-								Infrastructure.nLogger.info("-> Infrastructure. sending REPLAY command to source");
-								//bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), ctb2.build(), src.getOperatorId());
-								bcu.sendControlMsgWithoutACK(src.getOpContext().getOperatorStaticInformation(), ctb2.build(), src.getOperatorId());
-							}
 						}	
 					}
 				}

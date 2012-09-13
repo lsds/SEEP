@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.Main;
 import seep.comm.tuples.Seep;
-import seep.utils.CommunicationChannel;
+import seep.operator.CommunicationChannel;
 import seep.utils.ExecutionConfiguration;
 
 /**
@@ -25,20 +25,17 @@ public class Buffer implements Serializable{
 	public Iterator<Seep.EventBatch> iterator() { return buff.iterator(); }
 
 	public Buffer(){
-//\todo This block of code is conditional on ft model. This must be done in a different way.
-		if(Main.valueFor("ftmodel").equals("newModel")){
-			//state cannot be null. before backuping it would be null and this provokes bugs
+		//state cannot be null. before backuping it would be null and this provokes bugs
 //\bug The constructor in Buffer is operator dependant, this must be fixed by means of interfaces that make it independent.
-			Seep.WordCounterState.Builder wcs = Seep.WordCounterState.newBuilder();
-			Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
-			eB.setCounter(0);
-			wcs.addEntry(eB.build());
-			Seep.BackupState.Builder initState = Seep.BackupState.newBuilder();
-			initState.setOpId(0);
-			initState.setTsE(0);
-			initState.setWcState(wcs.build());
-			bs = initState.build();
-		}
+		Seep.WordCounterState.Builder wcs = Seep.WordCounterState.newBuilder();
+		Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
+		eB.setCounter(0);
+		wcs.addEntry(eB.build());
+		Seep.BackupState.Builder initState = Seep.BackupState.newBuilder();
+		initState.setOpId(0);
+		initState.setTsE(0);
+		initState.setWcState(wcs.build());
+		bs = initState.build();
 	}
 	
 	public int size(){

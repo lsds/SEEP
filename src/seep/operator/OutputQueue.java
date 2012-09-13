@@ -9,7 +9,6 @@ import seep.Main;
 import seep.buffer.Buffer;
 import seep.comm.tuples.Seep;
 import seep.infrastructure.NodeManager;
-import seep.utils.CommunicationChannel;
 
 public class OutputQueue {
 

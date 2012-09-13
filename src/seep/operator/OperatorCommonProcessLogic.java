@@ -22,7 +22,6 @@ import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.CommunicationChannel;
 import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
@@ -152,19 +151,11 @@ long e = System.currentTimeMillis();
 	@Deprecated
 	private void startReplayer( CommunicationChannel oi ) {
 		oi.sharedIterator = oi.getBuffer().iterator();
-		//If new model, then send state and this would trigger the replay buffer
-		if(Main.valueFor("ftmodel").equals("newModel")){
-			StateReplayer replayer = new StateReplayer(oi);
-			Thread replayerT = new Thread(replayer);
-			NodeManager.nLogger.info("stateReplayer running");
-			replayerT.start();
-		}
-		//If it is upstream backup, then we should replay buffer directly
-		else {
-			TupleReplayer tReplayer = new TupleReplayer(oi, owner.getDispatcher());
-			NodeManager.nLogger.info("tupleReplayer running");
-			new Thread(tReplayer).start();
-		}
+		//send state and this would trigger the replay buffer
+		StateReplayer replayer = new StateReplayer(oi);
+		Thread replayerT = new Thread(replayer);
+		NodeManager.nLogger.info("stateReplayer running");
+		replayerT.start();
 	}
 		
 	@Deprecated
@@ -181,12 +172,9 @@ long e = System.currentTimeMillis();
 		int counter = 0;
 		long minWithCurrent = current_ts;
 		long minWithoutCurrent = Long.MAX_VALUE;
-		/// \todo {this code block dependant on FT is a source of problems that must be solved}
-		if(!Main.valueFor("ftmodel").equals("twitterStormModel") || opContext.upstreams.size() == 0){
-			Buffer buffer = opContext.getBuffer(opId);
-			if(buffer != null){
-				buffer.trim(current_ts);
-			}
+		Buffer buffer = opContext.getBuffer(opId);
+		if(buffer != null){
+			buffer.trim(current_ts);
 		}
 		//i.e. if the operator is stateless (we should use a tagging interface). Stateless and NOT first operator
 		if ((owner.subclassOperator instanceof StatelessOperator) && !((opContext.upstreams.size()) == 0)) {
@@ -287,14 +275,10 @@ long e = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> NOT in charge of split state");
 		}
 		
-		/**dependent code**/
-		if(!Main.valueFor("ftmodel").equals("newModel")){
-			owner.setOperatorStatus(Operator.OperatorStatus.WAITING_FOR_STATE_ACK);
-			//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
-			NodeManager.nLogger.info("-> Generating and sending RI backup");
-//			backupRoutingInformation(oldOpId);
-		}
-		/****/
+		owner.setOperatorStatus(Operator.OperatorStatus.WAITING_FOR_STATE_ACK);
+		//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
+		NodeManager.nLogger.info("-> Generating and sending RI backup");
+//		backupRoutingInformation(oldOpId);
 		
 		//I always backup the routing info. This leads to replicate messages, but I cant avoid it easily since I can have more than one type of upstream
 		backupRoutingInformation(oldOpId);
@@ -369,69 +353,57 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 		Buffer buffer = cci.getBuffer();
 		Socket controlDownstreamSocket = cci.downstreamControlSocket;
 
-		/// \todo {this block of code should not be ft model dependant}
-		if(!Main.valueFor("ftmodel").equals("twitterStormModel")){
-			//Get a proper init state and just send it
-			Seep.ControlTuple.Builder ctB = Seep.ControlTuple.newBuilder();
+		//Get a proper init state and just send it
+		Seep.ControlTuple.Builder ctB = Seep.ControlTuple.newBuilder();
 
-			Seep.InitState state = null;
-			Seep.BackupState bs = buffer.getBackupState();
-			//if state is null (upstream backup or new model at the start)
-			if (bs != null) {
-				Seep.InitState.Builder isB = Seep.InitState.newBuilder();
-				//Set opID
-				isB.setOpId(owner.getOperatorId());
-				//Ts of init state is the newest ts of the checkpointed state
-				isB.setTs(bs.getTsE());
+		Seep.InitState state = null;
+		Seep.BackupState bs = buffer.getBackupState();
+		//if state is null (upstream backup or new model at the start)
+		if (bs != null) {
+			Seep.InitState.Builder isB = Seep.InitState.newBuilder();
+			//Set opID
+			isB.setOpId(owner.getOperatorId());
+			//Ts of init state is the newest ts of the checkpointed state
+			isB.setTs(bs.getTsE());
 /** THIS WHOLE BLOCK OF CODE IS OPERATOR DEPENDANT. THEREFORE THIS MUST BE FIXED **/
 /// \fix {block dependant of operator, fix this thing.}
-				if(bs.getTcState().getStateId() == 1){
-					//This line is specially important, since each message state has a different name in the proto.file
+			if(bs.getTcState().getStateId() == 1){
+				//This line is specially important, since each message state has a different name in the proto.file
 /// \todo {this operator specific line must be avoided, another function buildInitState must be implemented in the operator, so that here we call that function.}
-					//System.out.println("WORD COUNTER????");
-					//isB.setWcState(bs.getWcState());
-					System.out.println("LRB-TC????");
-					isB.setTcState(bs.getTcState());
-					state = isB.build();
-				}
-				else if (bs.getBaState().getStateId() == 1){
-					System.out.println("LRB-BA????");
-					isB.setBaState(bs.getBaState());
-					state = isB.build();
-				}
-				else if (bs.getWcState() != null){
-					System.out.println("SMART-CNT????");
-					isB.setWcState(bs.getWcState());
-					state = isB.build();
-				}
-				ctB.setInitState(state);
+				//System.out.println("WORD COUNTER????");
+				//isB.setWcState(bs.getWcState());
+				System.out.println("LRB-TC????");
+				isB.setTcState(bs.getTcState());
+				state = isB.build();
 			}
-			else {
-				NodeManager.nLogger.info("-> Replaying EMPTY State");
+			else if (bs.getBaState().getStateId() == 1){
+				System.out.println("LRB-BA????");
+				isB.setBaState(bs.getBaState());
+				state = isB.build();
 			}
-			ctB.setType(Seep.ControlTuple.Type.INIT_STATE);
-			try{
-				NodeManager.nLogger.info("-> INIT_STATE sent to OP: "+opId);
-				//If there is a state, send it ALWAYS
-				if(state != null){
-					synchronized(controlDownstreamSocket){
-						(ctB.build()).writeDelimitedTo(controlDownstreamSocket.getOutputStream());
-					}
-				}
-				//If there is no state, send the empty state just if the ft model is not new model. In new model someone else is sending a state.
-				/// \todo{is this block of code ever used? is correct that state is null?}
-				else{
-					if(!Main.valueFor("ftmodel").equals("newModel")){
-						synchronized(controlDownstreamSocket){
-							(ctB.build()).writeDelimitedTo(controlDownstreamSocket.getOutputStream());
-						}
-					}
+			else if (bs.getWcState() != null){
+				System.out.println("SMART-CNT????");
+				isB.setWcState(bs.getWcState());
+				state = isB.build();
+			}
+			ctB.setInitState(state);
+		}
+		else {
+			NodeManager.nLogger.info("-> Replaying EMPTY State");
+		}
+		ctB.setType(Seep.ControlTuple.Type.INIT_STATE);
+		try{
+			NodeManager.nLogger.info("-> INIT_STATE sent to OP: "+opId);
+			//If there is a state, send it ALWAYS
+			if(state != null){
+				synchronized(controlDownstreamSocket){
+					(ctB.build()).writeDelimitedTo(controlDownstreamSocket.getOutputStream());
 				}
 			}
-			catch(IOException io){
-				System.out.println("REPLAYER: Error while trying to send the INIT_STATE msg: "+io.getMessage());
-				io.printStackTrace();
-			}
+		}
+		catch(IOException io){
+			System.out.println("REPLAYER: Error while trying to send the INIT_STATE msg: "+io.getMessage());
+			io.printStackTrace();
 		}
 	}
 	

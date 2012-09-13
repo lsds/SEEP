@@ -337,41 +337,32 @@ System.out.println("*scaleOut: "+b);
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.RESUME");
 			Seep.Resume resumeM = ct.getResume();
-			///todo {clean up ft dependent code in this block}
-			if(Main.valueFor("ftmodel").equals("newModel")){
-				// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
-				// I may be managing a state but I dont have to replay it if I have not splitted it previously
-				if(operatorStatus.equals(OperatorStatus.WAITING_FOR_STATE_ACK)){
-					/// \todo {why has resumeM a list?? check this}
-					for (int opId: resumeM.getOpIdList()){
-						//Check if I am managing the state of any of the operators to which state must be replayed
+			
+			// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
+			// I may be managing a state but I dont have to replay it if I have not splitted it previously
+			if(operatorStatus.equals(OperatorStatus.WAITING_FOR_STATE_ACK)){
+				/// \todo {why has resumeM a list?? check this}
+				for (int opId: resumeM.getOpIdList()){
+					//Check if I am managing the state of any of the operators to which state must be replayed
+					/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
+					if(opContext.isManagingStateOf(opId)){
 						/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-						if(opContext.isManagingStateOf(opId)){
-							/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-							if(subclassOperator instanceof StateSplitI){
-								//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-								NodeManager.nLogger.info("-> Replaying State");
-								opCommonProcessLogic.replayState(opId);
-							}
-						}
-						else{
-							NodeManager.nLogger.info("-> NOT in charge of managing this state");
+						if(subclassOperator instanceof StateSplitI){
+							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
+							NodeManager.nLogger.info("-> Replaying State");
+							opCommonProcessLogic.replayState(opId);
 						}
 					}
-					//Once I have replayed the required states I put my status to NORMAL
-					this.operatorStatus = OperatorStatus.NORMAL;
+					else{
+						NodeManager.nLogger.info("-> NOT in charge of managing this state");
+					}
 				}
-				else{
-					NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
-				}
+				//Once I have replayed the required states I put my status to NORMAL
+				this.operatorStatus = OperatorStatus.NORMAL;
 			}
-			/**dependent code**/
-			else if(!Main.valueFor("ftmodel").equals("twitterStormModel") || opContext.upstreams.size() == 0){
-				for (int opId: resumeM.getOpIdList()){
-					opCommonProcessLogic.replayTuples(opId);
-				}
+			else{
+				NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
 			}
-			/**dependent code**/	
 long b = System.currentTimeMillis() - a;
 System.out.println("*resume: "+b);
 			//Finally ack the processing of this message
@@ -417,35 +408,27 @@ System.out.println("*reconfigure: "+b);
 			opContext.changeLocation(opId, ip);
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
-			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D")) && !Main.valueFor("ftmodel").equals("twitterStormModel")){
+			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
 				dispatcher.stopConnection(opId);
 			}
 			opContext.updateConnection(opId, ip);
 			if(command.equals("reconfigure_U")){
 				opCommonProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
-			if(command.equals("reconfigure_D") && !Main.valueFor("ftmodel").equals("twitterStormModel")){
+			if(command.equals("reconfigure_D")){
 				/// \todo {change this deprecated. This was the previous way of replaying stuff, now there are no threads}
 				//opCommonProcessLogic.startReplayer(opId);
 				// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
-				/// \todo {this code is ft dependant}
-				/**dependent code**/
-				if(Main.valueFor("ftmodel").equals("newModel")){
-					if(opContext.isManagingStateOf(opId)){
-						if(subclassOperator instanceof StateSplitI){
-							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-							NodeManager.nLogger.info("-> Replaying State");
-							opCommonProcessLogic.replayState(opId);
-						}
-					}
-					else{
-						NodeManager.nLogger.info("-> NOT in charge of managing this state");
+				if(opContext.isManagingStateOf(opId)){
+					if(subclassOperator instanceof StateSplitI){
+						//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
+						NodeManager.nLogger.info("-> Replaying State");
+						opCommonProcessLogic.replayState(opId);
 					}
 				}
-				else if(!Main.valueFor("ftmodel").equals("twitterStormModel") || opContext.upstreams.size() > 0){
-					opCommonProcessLogic.replayTuples(opId);
+				else{
+					NodeManager.nLogger.info("-> NOT in charge of managing this state");
 				}
-				/****/
 			}
 //			operatorStatus = OperatorStatus.NORMAL;
 			//ackControlMessage(os);
@@ -472,24 +455,17 @@ System.out.println("*reconfigure: "+b);
 				//Send to that upstream the routing information I am storing (in case there are ri).
 				opCommonProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 				
-				/**dependent code**/
-				if(Main.valueFor("ftmodel").equals("newModel")){
-					//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
-					opCommonProcessLogic.reconfigureUpstreamBackupIndex();
-				}
-				/****/
+				
+				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
+				opCommonProcessLogic.reconfigureUpstreamBackupIndex();
 			}
 			ackControlMessage(os);
 		}
 		/** SYSTEM READY message **/
 		else if (command.equals("system_ready")){
 			ackControlMessage(os);
-			/**dependent code**/
-			if(Main.valueFor("ftmodel").equals("newModel")){
-				//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
-				opCommonProcessLogic.sendInitialStateBackup();
-			}
-			/****/
+			//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
+			opCommonProcessLogic.sendInitialStateBackup();
 		}
 		/** REPLAY message **/
 		/// \todo {this command is only used for twitter storm model...}

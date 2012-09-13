@@ -69,11 +69,11 @@ public class Main {
 		try {
 			globals.load(new FileInputStream("config.properties"));
 			success = true;
-		} 
+		}
 		catch (FileNotFoundException e1) {
 			System.out.println("Properties file not found "+e1.getMessage());
 			e1.printStackTrace();
-		} 
+		}
 		catch (IOException e1) {
 			System.out.println("While loading properties file "+e1.getMessage());
 			e1.printStackTrace();

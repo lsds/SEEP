@@ -448,7 +448,7 @@ if((e-a) > 5){
 	@Override
 	public synchronized void generateBackupState() {
 long a = System.currentTimeMillis();
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			Seep.TollCalculatorState.Builder tcS = Seep.TollCalculatorState.newBuilder();
 			//avg Speed min 5
 			List<Integer> segment = null;
@@ -757,7 +757,7 @@ long e = System.currentTimeMillis();
 //System.out.println("### Generate BS: "+(e-a));
 //System.out.println("### SIZE SENT, BSB: "+bsB.build().getSerializedSize());
 //System.out.println("### SIZE SENT, TCS: "+tcSbuilt.getSerializedSize());
-		}
+		
 	}
 
 	@Override
