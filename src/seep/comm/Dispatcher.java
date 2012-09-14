@@ -3,6 +3,7 @@ package seep.comm;
 import seep.Main;
 import seep.buffer.Buffer;
 import seep.comm.routing.LoadBalancerI;
+import seep.comm.routing.Router;
 import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.*;
 import seep.comm.tuples.Seep.ControlTuple;
@@ -28,8 +29,13 @@ public class Dispatcher implements Serializable{
 	
 	// dispatchPolicy defines how it needs to deliver the information
 	private DispatchPolicy dispatchPolicy = DispatchPolicy.ALL;
+	
+	/** THIS WILL DISSAPEAR **/
 	// dispatcherFilter defines an optional filter for the dispatchPolicy.
 	private LoadBalancerI loadBalancer = null;
+	
+	//Assigned by Operator
+	private Router router = null;
 
 	//private int filterValue = 0;
 	//private int target = 0;
@@ -63,6 +69,10 @@ public class Dispatcher implements Serializable{
 //			((ContentBasedFilter)loadBalancer).initializeFilters();
 //		}
 //	}
+	
+	public void setRouter(Router router){
+		this.router = router;
+	}
 	
 	public void setOpContext(OperatorContext opContext) {
 		this.opContext = opContext;
@@ -107,30 +117,38 @@ public class Dispatcher implements Serializable{
 		opContext.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
 	
-	//dt is the tuple to send, value is a value provided by the user for content-based stuff. now specifies whether this tuples needs to be sent now or can be batched.
-	//public void sendData(Seep.DataTuple dt, int value, boolean now){
 	public void sendData(Seep.DataTuple dt, int value, boolean now){
-		if (dispatchPolicy == DispatchPolicy.ALL){
-			for(int i = 0; i < opContext.getDownstreamTypeConnection().size(); i++){
-				Object dest = opContext.getDownstreamTypeConnection().elementAt(i);
-				outputQueue.sendToDownstream(dt, dest, now, false);
-			}
-		}
-		else if (dispatchPolicy == DispatchPolicy.ANY) {
-			//if downstream is stateless
-			int target = ((StatelessDynamicLoadBalancer)loadBalancer).route();
+		targets = router.forward(dt, value, now);
+		for(Integer target : targets){
 			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
 			outputQueue.sendToDownstream(dt, dest, now, false);
-			//what if downstream is statefull
-		}
-		else if (dispatchPolicy == DispatchPolicy.CONTENT_BASED) {
-			targets = ((ContentBasedFilter)loadBalancer).applyFilter(dt, value);
-			for(Integer target : targets){
-				Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
-				outputQueue.sendToDownstream(dt, dest, now, false);
-			}
 		}
 	}
+	
+	
+//	//dt is the tuple to send, value is a value provided by the user for content-based stuff. now specifies whether this tuples needs to be sent now or can be batched.
+//	//public void sendData(Seep.DataTuple dt, int value, boolean now){
+//	public void sendData(Seep.DataTuple dt, int value, boolean now){
+//		if (dispatchPolicy == DispatchPolicy.ALL){
+//			for(int i = 0; i < opContext.getDownstreamTypeConnection().size(); i++){
+//				Object dest = opContext.getDownstreamTypeConnection().elementAt(i);
+//				outputQueue.sendToDownstream(dt, dest, now, false);
+//			}
+//		}
+//		else if (dispatchPolicy == DispatchPolicy.ANY) {
+//			//if downstream is stateless
+//			int target = ((StatelessDynamicLoadBalancer)loadBalancer).route();
+//			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
+//			outputQueue.sendToDownstream(dt, dest, now, false);
+//		}
+//		else if (dispatchPolicy == DispatchPolicy.CONTENT_BASED) {
+//			targets = ((ContentBasedFilter)loadBalancer).applyFilter(dt, value);
+//			for(Integer target : targets){
+//				Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
+//				outputQueue.sendToDownstream(dt, dest, now, false);
+//			}
+//		}
+//	}
 	
 	//When batch timeout expires, this method ticks every possible destination to update the clocks
 	public void batchTimeOut(){

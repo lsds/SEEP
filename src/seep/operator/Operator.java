@@ -183,6 +183,8 @@ public int ackCounter = 0;
 		dispatcher.setOpContext(opContext);
 //		dispatcher.startFilters();
 		router.initializeQueryFunction();
+		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
+		dispatcher.setRouter(router);
 		opContext.configureCommunication();
 
 		//Choose the upstreamBackupIndex for this operator

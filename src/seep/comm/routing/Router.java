@@ -1,6 +1,7 @@
 package seep.comm.routing;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,9 +15,9 @@ import seep.operator.OperatorContext.PlacedOperator;
 
 public class Router implements Serializable{
 
-	private static final long serialVersionUID = 1L;
 	private String query = null;
 	private Method queryFunction = null;
+	private boolean requiresQueryData = false;
 	
 	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
@@ -36,11 +37,8 @@ public class Router implements Serializable{
 	
 	public void setQueryFunction(String query){
 		this.query = query;
-	}
-	
-	public ArrayList<Integer> routeLayerOne(){
-		return null;
-		
+		//If a function is defined, the it is necessary to query the data
+		this.requiresQueryData = true;
 	}
 	
 	//if less or greater is than a given value. if equal could be with many values, with range is a special case as well
@@ -60,7 +58,7 @@ public class Router implements Serializable{
 		}
 	}
 	
-	public void _configureRoutingImpl(OperatorContext opContext){
+	public void configureRoutingImpl(OperatorContext opContext){
 		RoutingStrategyI rs = null;
 		int opId = 0;
 		//For every downstream
@@ -77,34 +75,6 @@ public class Router implements Serializable{
 		}
 	}
 	
-	
-	public void configureRoutingImpl(OperatorContext opContext) {
-		//For every type of downstream (statefull or stateless) create an according routingStrategyI.
-		for(Integer contentValue : routeInfo.keySet()){
-			for(Integer opId : routeInfo.get(contentValue)){
-				//If there are no load balancer configured for the OpId, we configure one
-				if(!downstreamRoutingImpl.containsKey(opId)){
-					int index = opContext.findDownstream(opId).index();
-					if(opContext.isDownstreamOperatorStateful(opId)){
-//						StatefulDynamicLoadBalancer lb = new StatefulDynamicLoadBalancer(index);
-						StatefulRoutingImpl rfull = new StatefulRoutingImpl(index);
-System.out.println("CREATING STATEFUL LB : "+opId);
-						downstreamRoutingImpl.put(opId, rfull);
-					}
-					//If the operator is stateless
-					else{
-						//Default size for splitWindow
-						int splitWindow = 1;
-//						StatelessDynamicLoadBalancer lb = new StatelessDynamicLoadBalancer(splitWindow ,index);
-						StatelessRoutingImpl rless = new StatelessRoutingImpl();
-System.out.println("CREATING STATELESS LB : "+opId);
-						downstreamRoutingImpl.put(opId, rless);
-					}
-				}
-			}
-		}
-	}
-	
 	public void initializeQueryFunction(){
 		try {
 			Class<Seep.DataTuple> c = seep.comm.tuples.Seep.DataTuple.class;
@@ -115,5 +85,89 @@ System.out.println("CREATING STATELESS LB : "+opId);
 		}
 	}
 	
+	public ArrayList<Integer> forward(Seep.DataTuple dt, int value, boolean now){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		//LogicalTargets saves the indexes of the downstream logical nodes (those for which a RoutinImpl exists)
+		ArrayList<Integer> logicalTargets = new ArrayList<Integer>();
+		//If it is necessary to query data to guess (logic)downstream
+		if(requiresQueryData){
+			logicalTargets = routeLayerOne(dt, value);
+			targets = routeLayerTwo(logicalTargets, value);
+		}
+		else{
+			//Otherwise, we use the default RoutingImpl
+			//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
+			for(Integer target : downstreamRoutingImpl.keySet()){
+				//This should be called just once...
+				/// \fixme{CHECK THIS}
+				targets = downstreamRoutingImpl.get(target).route(value);
+			}
+		}
+		return targets;
+	}
 	
+	public ArrayList<Integer> routeLayerOne(Seep.DataTuple dt, int value){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+			
+		int contentValue = 0;
+			
+		try {
+			contentValue = (Integer)queryFunction.invoke(dt);
+		}
+		catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return routeInfo.get(contentValue);
+		/** THIS IS PART OF ROUTING LAYER-2 **/
+//		//For every type of downstream that match the filter
+//		for(Integer opId : routeInfo.get(contentValue)){
+//			//We append the downstreams returned
+//			targets = (downstreamRoutingImpl.get(opId).route(targets, value));
+//		}
+//		return targets;
+	}
+	
+	public ArrayList<Integer> routeLayerTwo(ArrayList<Integer> logicalTargets, int value){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		for(Integer ltarget : logicalTargets){
+			targets = downstreamRoutingImpl.get(ltarget).route(targets, value);
+		}
+		return targets;
+	}
+	
+//	public void configureRoutingImpl(OperatorContext opContext) {
+//		//For every type of downstream (statefull or stateless) create an according routingStrategyI.
+//		for(Integer contentValue : routeInfo.keySet()){
+//			for(Integer opId : routeInfo.get(contentValue)){
+//				//If there are no load balancer configured for the OpId, we configure one
+//				if(!downstreamRoutingImpl.containsKey(opId)){
+//					int index = opContext.findDownstream(opId).index();
+//					if(opContext.isDownstreamOperatorStateful(opId)){
+////						StatefulDynamicLoadBalancer lb = new StatefulDynamicLoadBalancer(index);
+//						StatefulRoutingImpl rfull = new StatefulRoutingImpl(index);
+//System.out.println("CREATING STATEFUL LB : "+opId);
+//						downstreamRoutingImpl.put(opId, rfull);
+//					}
+//					//If the operator is stateless
+//					else{
+//						//Default size for splitWindow
+//						int splitWindow = 1;
+////						StatelessDynamicLoadBalancer lb = new StatelessDynamicLoadBalancer(splitWindow ,index);
+//						StatelessRoutingImpl rless = new StatelessRoutingImpl();
+//System.out.println("CREATING STATELESS LB : "+opId);
+//						downstreamRoutingImpl.put(opId, rless);
+//					}
+//				}
+//			}
+//		}
+//	}
 }
