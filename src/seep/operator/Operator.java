@@ -606,16 +606,10 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 	
 /** Implementation of QuerySpecificationI **/
 	
-	/* (non-Javadoc)
-	 * @see seep.operator.Connectable#getOperatorId()
-	 */
 	public int getOperatorId(){
 		return operatorId;
 	}
 	
-	/* (non-Javadoc)
-	 * @see seep.operator.Connectable#getOpContext()
-	 */
 	public OperatorContext getOpContext(){
 		return opContext;
 	}
@@ -627,15 +621,18 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 	public void connectTo(QuerySpecificationI down) {
 		opContext.addDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
+		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
 	}
 	
 	public void setRoutingQueryFunction(String queryFunction_methodName){
 		router.setQueryFunction(queryFunction_methodName);
+		NodeManager.nLogger.info("Configured Routing Query Function: "+queryFunction_methodName+" in Operator: "+this.toString());
 	}
 	
 	public void route(Router.RelationalOperator operand, int value, Operator toConnect){
 		int opId = toConnect.getOperatorId();
 		router.routeValueToDownstream(operand, value, opId);
+		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
 	}
 	
 	public void scaleOut(Operator toScaleOut){
@@ -643,6 +640,7 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 	}
 	
 	public void set(){
+		NodeManager.nLogger.info("Setting Operator: "+this.toString());
 		router.configureRoutingImpl(opContext);
 	}
 }

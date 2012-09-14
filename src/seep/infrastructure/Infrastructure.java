@@ -90,10 +90,12 @@ public class Infrastructure {
 	
 	//This method is still valid to define which is the first operator in the query
 	public void setSource(Operator src) {
+		NodeManager.nLogger.info("Configured SOURCE as Operator: "+src.toString());
 		this.src = src;
 	}
 
 	public void setSink(Operator snk){
+		NodeManager.nLogger.info("Configured SINK as Operator: "+snk.toString());
 		this.snk = snk;
 	}
 	
@@ -106,6 +108,7 @@ public class Infrastructure {
 	public void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);
+		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
 	
 	public void placeNew(Operator o, Node n) {

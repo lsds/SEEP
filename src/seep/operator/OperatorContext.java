@@ -138,19 +138,38 @@ public class OperatorContext implements Serializable {
 			this.locs = locs;
 		}
 		
-		public OperatorStaticInformation location() { return locs.get(index); }
-		public int opID() {  return conns.get(index); }
-		public int index() { return index; }
+		public OperatorStaticInformation location() { 
+			return locs.get(index); 
+		}
+		
+		public boolean isStateful(){
+			return locs.get(index).isStatefull();
+		}
+		
+		public int opID() {  
+			return conns.get(index); 
+		}
+		public int index() { 
+			return index; 
+		}
 	};
 
-	
 	public class DownIter implements Iterable<PlacedOperator>, Serializable {
-		public Iterator<PlacedOperator> iterator() { return new Iter(connectionsD,downstream); }
-		public int size() { return connectionsD.size(); }
+		public Iterator<PlacedOperator> iterator() { 
+			return new Iter(connectionsD,downstream); 
+		}
+		public int size() { 
+			return connectionsD.size(); 
+		}
 	}
+	
 	public class UpIter implements Iterable<PlacedOperator>, Serializable {
-		public Iterator<PlacedOperator> iterator() { return new Iter(connectionsU,upstream); }
-		public int size() { return connectionsU.size(); }
+		public Iterator<PlacedOperator> iterator() { 
+			return new Iter(connectionsU,upstream); 
+		}
+		public int size() { 
+			return connectionsU.size(); 
+		}
 	}
 	
 	public final DownIter downstreams = new DownIter();

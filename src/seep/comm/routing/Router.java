@@ -6,10 +6,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import seep.comm.tuples.Seep;
+import seep.operator.Operator;
 import seep.operator.OperatorContext;
+import seep.operator.StatefullOperator;
+import seep.operator.StatelessOperator;
+import seep.operator.OperatorContext.PlacedOperator;
 
 public class Router implements Serializable{
 
+	private static final long serialVersionUID = 1L;
 	private String query = null;
 	private Method queryFunction = null;
 	
@@ -17,7 +22,7 @@ public class Router implements Serializable{
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
 	//This map stores the load balancer for each type of downstream
-	private HashMap<Integer, RoutingStrategyI> downTypeToLoadBalancer = new HashMap<Integer, RoutingStrategyI>();
+	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -55,18 +60,36 @@ public class Router implements Serializable{
 		}
 	}
 	
+	public void _configureRoutingImpl(OperatorContext opContext){
+		RoutingStrategyI rs = null;
+		int opId = 0;
+		//For every downstream
+		for(PlacedOperator down : opContext.downstreams){
+			opId = down.opID();
+			if(!down.isStateful()){
+				rs = new StatelessRoutingImpl();
+			}
+			else if(down.isStateful()){
+				int index = opContext.findDownstream(opId).index();
+				rs = new StatefulRoutingImpl(index);
+			}
+			downstreamRoutingImpl.put(opId, rs);
+		}
+	}
+	
+	
 	public void configureRoutingImpl(OperatorContext opContext) {
 		//For every type of downstream (statefull or stateless) create an according routingStrategyI.
 		for(Integer contentValue : routeInfo.keySet()){
 			for(Integer opId : routeInfo.get(contentValue)){
 				//If there are no load balancer configured for the OpId, we configure one
-				if(!downTypeToLoadBalancer.containsKey(opId)){
+				if(!downstreamRoutingImpl.containsKey(opId)){
 					int index = opContext.findDownstream(opId).index();
 					if(opContext.isDownstreamOperatorStateful(opId)){
 //						StatefulDynamicLoadBalancer lb = new StatefulDynamicLoadBalancer(index);
 						StatefulRoutingImpl rfull = new StatefulRoutingImpl(index);
 System.out.println("CREATING STATEFUL LB : "+opId);
-						downTypeToLoadBalancer.put(opId, rfull);
+						downstreamRoutingImpl.put(opId, rfull);
 					}
 					//If the operator is stateless
 					else{
@@ -75,7 +98,7 @@ System.out.println("CREATING STATEFUL LB : "+opId);
 //						StatelessDynamicLoadBalancer lb = new StatelessDynamicLoadBalancer(splitWindow ,index);
 						StatelessRoutingImpl rless = new StatelessRoutingImpl();
 System.out.println("CREATING STATELESS LB : "+opId);
-						downTypeToLoadBalancer.put(opId, rless);
+						downstreamRoutingImpl.put(opId, rless);
 					}
 				}
 			}

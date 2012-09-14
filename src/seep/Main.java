@@ -18,6 +18,7 @@ import java.net.UnknownHostException;
 import java.util.Properties;
 
 import seep.comm.BasicCommunicationUtils;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.DeploymentException;
@@ -37,6 +38,7 @@ import seep.operator.collection.lrbenchmark.Snk;
 import seep.operator.collection.lrbenchmark.TollAssessment;
 import seep.operator.collection.lrbenchmark.TollCalculator;
 import seep.operator.collection.lrbenchmark.TollCollector;
+import seep.operator.collection.testing.Bar;
 import seep.operator.collection.testing.Foo;
 import seep.operator.collection.testing.TestSink;
 import seep.operator.collection.testing.TestSource;
@@ -208,6 +210,9 @@ public class Main {
 						case 13:
 							System.out.println("save latency SWC-query");
 							saveResultsSWC(inf);
+						case 14:
+							System.out.println("Testing v0.1");
+							testing01(inf);
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -315,6 +320,40 @@ public class Main {
 		System.out.println("10- EXIT");
 		System.out.println("11- Save results");
 		System.out.println("12- Switch ESFT mechanisms activation");
+	}
+	
+	public void testing01(Infrastructure inf){
+		//Instantiate operators
+		TestSource src = new TestSource(-2);
+		Foo foo = new Foo(0);
+		Foo foo2 = new Foo(1);
+		Bar bar = new Bar(2);
+		TestSink snk = new TestSink(-1);
+		//Configure source and sink
+		inf.setSource(src);
+		inf.setSink(snk);
+		//Add operators to infrastructure
+		inf.addOperator(src);
+		inf.addOperator(foo);
+		inf.addOperator(foo2);
+		inf.addOperator(bar);
+		inf.addOperator(snk);
+		//Connect the operators to form the query
+		src.connectTo(foo);
+		foo.connectTo(foo2);
+		foo.connectTo(bar);
+		foo2.connectTo(snk);
+		bar.connectTo(snk);
+		//Routing information for the operators
+		foo.setRoutingQueryFunction("getType");
+		foo.route(Router.RelationalOperator.EQ, 0, foo2);
+		foo.route(Router.RelationalOperator.EQ, 1, bar);
+		//Set the query
+		src.set();
+		foo.set();
+		foo2.set();
+		bar.set();
+		snk.set();
 	}
 	
 	public void deployWordCounterQueryOption(Infrastructure inf) throws DeploymentException{

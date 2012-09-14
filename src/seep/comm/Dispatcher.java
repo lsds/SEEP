@@ -42,14 +42,18 @@ public class Dispatcher implements Serializable{
 	int laps = 0;
 	long elapsed = 0;
 	
+	public enum DispatchPolicy {
+		ALL, ANY, CONTENT_BASED
+	}
+	
 	public Dispatcher(OperatorContext opContext, DispatchPolicy dispatchPolicy, LoadBalancerI loadBalancer, OutputQueue outputQueue){
 		this.opContext = opContext;
 		this.dispatchPolicy = dispatchPolicy;
 		this.loadBalancer = loadBalancer;
 		this.outputQueue = outputQueue;
-		if(this.dispatchPolicy == DispatchPolicy.CONTENT_BASED){
-			((ContentBasedFilter)loadBalancer).configureLoadBalancers(opContext);
-		}
+//		if(this.dispatchPolicy == DispatchPolicy.CONTENT_BASED){
+//			((ContentBasedFilter)loadBalancer).configureLoadBalancers(opContext);
+//		}
 	}
 	
 //	/// \todo {consider if this method can be avoided by implementing that line in other place}
@@ -62,10 +66,6 @@ public class Dispatcher implements Serializable{
 	
 	public void setOpContext(OperatorContext opContext) {
 		this.opContext = opContext;
-	}
-	
-	public enum DispatchPolicy {
-		ALL, ANY, CONTENT_BASED
 	}
 	
 	public DispatchPolicy getDispatchPolicy() {
