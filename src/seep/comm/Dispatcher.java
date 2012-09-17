@@ -1,18 +1,12 @@
 package seep.comm;
 
-import seep.Main;
-import seep.buffer.Buffer;
-import seep.comm.routing.LoadBalancerI;
 import seep.comm.routing.Router;
-import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.*;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
-import seep.utils.*;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.io.*;
 import java.net.*;
 
@@ -20,19 +14,13 @@ import java.net.*;
 * Dispatcher. This is the class in charge of sending information to other operators
 */
 
-@SuppressWarnings("serial")
 public class Dispatcher implements Serializable{
+	
+	private static final long serialVersionUID = 1L;
 	
 	// opContext to have knowledge of downstream and upstream
 	private OperatorContext opContext;
 	private OutputQueue outputQueue;
-	
-	// dispatchPolicy defines how it needs to deliver the information
-	private DispatchPolicy dispatchPolicy = DispatchPolicy.ALL;
-	
-	/** THIS WILL DISSAPEAR **/
-	// dispatcherFilter defines an optional filter for the dispatchPolicy.
-	private LoadBalancerI loadBalancer = null;
 	
 	//Assigned by Operator
 	private Router router = null;
@@ -41,26 +29,24 @@ public class Dispatcher implements Serializable{
 	//private int target = 0;
 	private ArrayList<Integer> targets = new ArrayList<Integer>();
 	
-//	// replaySemaphore controls whether it is possible to send or not
-//	private AtomicInteger replaySemaphore = new AtomicInteger(0);
-	
 	/** btnck detector vars **/
 	int laps = 0;
 	long elapsed = 0;
 	
-	public enum DispatchPolicy {
-		ALL, ANY, CONTENT_BASED
+	public Dispatcher(OperatorContext opContext, OutputQueue outputQueue){
+		this.opContext = opContext;
+		this.outputQueue = outputQueue;
 	}
 	
-	public Dispatcher(OperatorContext opContext, DispatchPolicy dispatchPolicy, LoadBalancerI loadBalancer, OutputQueue outputQueue){
-		this.opContext = opContext;
-		this.dispatchPolicy = dispatchPolicy;
-		this.loadBalancer = loadBalancer;
-		this.outputQueue = outputQueue;
-//		if(this.dispatchPolicy == DispatchPolicy.CONTENT_BASED){
-//			((ContentBasedFilter)loadBalancer).configureLoadBalancers(opContext);
-//		}
-	}
+//	public Dispatcher(OperatorContext opContext, DispatchPolicy dispatchPolicy, LoadBalancerI loadBalancer, OutputQueue outputQueue){
+//		this.opContext = opContext;
+//		this.dispatchPolicy = dispatchPolicy;
+//		this.loadBalancer = loadBalancer;
+//		this.outputQueue = outputQueue;
+////		if(this.dispatchPolicy == DispatchPolicy.CONTENT_BASED){
+////			((ContentBasedFilter)loadBalancer).configureLoadBalancers(opContext);
+////		}
+//	}
 	
 //	/// \todo {consider if this method can be avoided by implementing that line in other place}
 //	public void startFilters(){
@@ -78,22 +64,22 @@ public class Dispatcher implements Serializable{
 		this.opContext = opContext;
 	}
 	
-	public DispatchPolicy getDispatchPolicy() {
-		return dispatchPolicy;
-	}
-
-	public void setDispatchPolicy(DispatchPolicy t) {
-		dispatchPolicy = t;
-	}
-	
-	public LoadBalancerI getDispatcherFilter() {
-		return loadBalancer;
-	}
-	
-	public void setDispatchPolicy(DispatchPolicy t, LoadBalancerI df){
-		dispatchPolicy = t;
-		loadBalancer = df;
-	}
+//	public DispatchPolicy getDispatchPolicy() {
+//		return dispatchPolicy;
+//	}
+//
+//	public void setDispatchPolicy(DispatchPolicy t) {
+//		dispatchPolicy = t;
+//	}
+//	
+//	public LoadBalancerI getDispatcherFilter() {
+//		return loadBalancer;
+//	}
+//	
+//	public void setDispatchPolicy(DispatchPolicy t, LoadBalancerI df){
+//		dispatchPolicy = t;
+//		loadBalancer = df;
+//	}
 
 	//Start incoming data, one thread has finished replaying
 	public synchronized void startIncomingData(){

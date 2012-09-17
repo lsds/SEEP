@@ -1,6 +1,5 @@
 package seep.operator.collection.testing;
 
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -11,7 +10,7 @@ public class Foo extends Operator implements StatelessOperator{
 	public Foo(int opID) {
 		super(opID);
 		subclassOperator = this;
-		setDispatchPolicy(DispatchPolicy.ALL);
+		
 	}
 
 	@Override

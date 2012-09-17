@@ -3,7 +3,6 @@ package seep.operator.collection.lrbenchmark;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.comm.tuples.Seep.DataTuple.Builder;
@@ -27,7 +26,6 @@ public class AccidentDetector extends Operator implements StatefullOperator{
 	public AccidentDetector(int opID) {
 		super(opID);
 		subclassOperator = this;
-		setDispatchPolicy(DispatchPolicy.ALL);
 	}
 	
 	public void processData(Seep.DataTuple dt){

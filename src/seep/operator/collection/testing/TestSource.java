@@ -1,9 +1,5 @@
 package seep.operator.collection.testing;
 
-import seep.comm.ContentBasedFilter;
-import seep.comm.ContentBasedFilter.RelationalOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
-import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -23,9 +19,6 @@ public class TestSource extends Operator implements StatelessOperator{
 		cbf.routeValueToDownstream(RouteOperator.EQ, 1, 1);
 		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
 		*/
-		
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer(3);
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
 		
 	}
 

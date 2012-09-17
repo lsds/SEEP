@@ -1,8 +1,6 @@
 package seep.operator.collection;
 
 import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
-import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -106,10 +104,6 @@ public class SmartWordCounter extends Operator implements StatefullOperator{
 			}
 			break;
 		}
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer();
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
-		
-		
 	}
 
 	public HashMap<String, Integer> getCountMap(){

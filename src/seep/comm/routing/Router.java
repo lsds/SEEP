@@ -5,16 +5,17 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.zip.CRC32;
 
 import seep.comm.tuples.Seep;
-import seep.operator.Operator;
+import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext;
-import seep.operator.StatefullOperator;
-import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
 public class Router implements Serializable{
 
+	private static CRC32 crc32 = new CRC32();
+	
 	private String query = null;
 	private Method queryFunction = null;
 	private boolean requiresQueryData = false;
@@ -33,6 +34,18 @@ public class Router implements Serializable{
 	
 	public Router(){
 		
+	}
+	
+	//Gather indexes from statefulDynamic Load balancer
+	public ArrayList<Integer> getIndexesInformation(int oldOpId){
+		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
+		return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
+	}
+	
+	//Gather keys from statefulDynamic Load balancer
+	public ArrayList<Integer> getKeysInformation(int oldOpId){
+		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
+		return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
 	}
 	
 	public void setQueryFunction(String query){
@@ -87,11 +100,9 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forward(Seep.DataTuple dt, int value, boolean now){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-		//LogicalTargets saves the indexes of the downstream logical nodes (those for which a RoutinImpl exists)
-		ArrayList<Integer> logicalTargets = new ArrayList<Integer>();
 		//If it is necessary to query data to guess (logic)downstream
 		if(requiresQueryData){
-			logicalTargets = routeLayerOne(dt, value);
+			ArrayList<Integer> logicalTargets = routeLayerOne(dt, value);
 			targets = routeLayerTwo(logicalTargets, value);
 		}
 		else{
@@ -107,10 +118,7 @@ public class Router implements Serializable{
 	}
 	
 	public ArrayList<Integer> routeLayerOne(Seep.DataTuple dt, int value){
-		ArrayList<Integer> targets = new ArrayList<Integer>();
-			
 		int contentValue = 0;
-			
 		try {
 			contentValue = (Integer)queryFunction.invoke(dt);
 		}
@@ -144,6 +152,58 @@ public class Router implements Serializable{
 		return targets;
 	}
 	
+	public int newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+		int key = -1;
+		if(requiresQueryData){
+			return configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		}
+		else{
+			//Otherwise, we use the default RoutingImpl
+			//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
+			for(Integer target : downstreamRoutingImpl.keySet()){
+				//This should be called just once...
+				/// \fixme{CHECK THIS}
+				return downstreamRoutingImpl.get(target).newReplica(oldOpIndex, newOpIndex);
+			}
+		}
+		return key;
+	}
+	
+	/** this can be moved along with downTypeToLoadBalancer */
+	public int configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
+		//We gather the load balancer for the operator splitting (the old one)
+		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
+if(rs == null){
+System.out.println("LB for OP: "+oldOpId+" is null !!!!!!!!!!");
+System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
+}
+		//Then we update this load balancer (the old one) with the new information
+		int key = rs.newReplica(oldOpIndex, newOpIndex);
+		//Now since we have a new replica, we want to assign the same load balancer to this replica so that it has the same route information
+		NodeManager.nLogger.info("-> Registering NEW LB for OP: "+newOpId);
+		downstreamRoutingImpl.put(newOpId, rs);
+		//And finally we return the new key computed
+		return key;
+	}
+
+	private void setNewLoadBalancer(int opId, RoutingStrategyI rs){
+		downstreamRoutingImpl.put(opId, rs);
+	}
+	
+	public void reconfigureRoutingInformation(ArrayList<Integer> downstreamIds, ArrayList<Integer> indexes, ArrayList<Integer> keys) {
+		for(Integer opId : downstreamIds){
+			StatefulRoutingImpl sr = new StatefulRoutingImpl(indexes, keys);
+			setNewLoadBalancer(opId, sr);
+		}
+	}
+	
+	public static int customHash(int value){
+		crc32.update(value);
+		int v = (int)crc32.getValue();
+		crc32.reset();
+		return v;
+	}
+}
 //	public void configureRoutingImpl(OperatorContext opContext) {
 //		//For every type of downstream (statefull or stateless) create an according routingStrategyI.
 //		for(Integer contentValue : routeInfo.keySet()){
@@ -170,4 +230,18 @@ public class Router implements Serializable{
 //			}
 //		}
 //	}
-}
+	
+//	public void newStatelessOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+//	if(requiresQueryData){
+//		configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+//	}
+//	else{
+//		//Otherwise, we use the default RoutingImpl
+//		//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
+//		for(Integer target : downstreamRoutingImpl.keySet()){
+//			//This should be called just once...
+//			/// \fixme{CHECK THIS}
+//			downstreamRoutingImpl.get(target).newReplica(oldOpIndex, newOpIndex);
+//		}
+//	}
+//}

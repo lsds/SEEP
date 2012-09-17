@@ -17,11 +17,6 @@ import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
 import seep.Main;
-import seep.comm.ContentBasedFilter;
-import seep.comm.ContentBasedFilter.RelationalOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
-import seep.comm.routing.StatefulDynamicLoadBalancer;
-import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.comm.tuples.lrbenchmark.LRseep.DataTuple;
@@ -46,8 +41,6 @@ public class DataFeeder extends Operator implements StatelessOperator{
 	public DataFeeder(int opID) {
 		super(opID);
 		subclassOperator = this;
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer();
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
 	}	
 	
 	@Override

@@ -7,22 +7,15 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
-import seep.Main;
 import seep.buffer.Buffer;
 import seep.buffer.StateReplayer;
-import seep.buffer.TupleReplayer;
-import seep.comm.ContentBasedFilter;
-import seep.comm.Dispatcher.DispatchPolicy;
-import seep.comm.routing.StatefulDynamicLoadBalancer;
-import seep.comm.routing.StatelessDynamicLoadBalancer;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class OperatorCommonProcessLogic implements Serializable{
@@ -84,13 +77,21 @@ System.out.println("#################");
 		//Create new LB with the information received
 		ArrayList<Integer> indexes = new ArrayList<Integer>(initRI.getIndexList());
 		ArrayList<Integer> keys = new ArrayList<Integer>(initRI.getKeyList());
-		StatefulDynamicLoadBalancer sdlb = new StatefulDynamicLoadBalancer(indexes, keys);
-		//Assign this load balancer to all the indexes (the actual downstreams) 
+		ArrayList<Integer> downstreamIds = new ArrayList<Integer>();
 		for(Integer index : indexes){
 			int opId = opContext.getDownOpIdFromIndex(index);
-System.out.println("OP: "+opId+" INSTALLING INDEX: "+indexes);
-			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).setNewLoadBalancer(opId, sdlb);
+			downstreamIds.add(opId);
 		}
+		
+		owner.getRouter().reconfigureRoutingInformation(downstreamIds, indexes, keys);
+		
+//		StatefulDynamicLoadBalancer sdlb = new StatefulDynamicLoadBalancer(indexes, keys);
+//		//Assign this load balancer to all the indexes (the actual downstreams)
+//		for(Integer index : indexes){
+//			int opId = opContext.getDownOpIdFromIndex(index);
+//System.out.println("OP: "+opId+" INSTALLING INDEX: "+indexes);
+//			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).setNewLoadBalancer(opId, sdlb);
+//		}
 	}
 	
 	public void sendRoutingInformation(int opId, String operatorType){
@@ -246,7 +247,7 @@ long e = System.currentTimeMillis();
 		//pick the index of the operator to split
 		int oldOpIndex = opContext.findDownstream(oldOpId).index();
 		
-		//if operator is stateful and it can split state
+		//if operator is stateful and (this) can split state
 		if(opContext.isDownstreamOperatorStateful(oldOpId) && owner.subclassOperator instanceof StateSplitI){
 			NodeManager.nLogger.info("-> Scaling out STATEFUL op");
 			scaleOutStatefulOperator(oldOpId, newOpId, oldOpIndex, newOpIndex);
@@ -255,13 +256,14 @@ long e = System.currentTimeMillis();
 		// If operator splitting is stateless...
 		else if (!opContext.isDownstreamOperatorStateful(oldOpId)){
 			NodeManager.nLogger.info("-> Scaling out STATELESS op");
-			configureNewDownstreamStatelessOperatorSplit(oldOpId, newOpId, oldOpIndex, newOpIndex);
+//			configureNewDownstreamStatelessOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+			owner.getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 	}
 	
 	public void scaleOutStatefulOperator(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		//All operators receiving the scale-out message have to change their routing information
-		int newKey = configureNewDownstreamStatefulOperatorSplit(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		int newKey = configureNewDownstreamStatefulOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		//I have configured the new split, check if I am also in charge of splitting the state or not
 		if(opContext.isManagingStateOf(oldOpId)){
 			NodeManager.nLogger.info("-> Splitting state");
@@ -284,44 +286,72 @@ long e = System.currentTimeMillis();
 		backupRoutingInformation(oldOpId);
 	}
 	
-	public void configureNewDownstreamStatelessOperatorSplit(int oldOpID, int newOpId, int oldOpIndex, int newOpIndex){			
-		// If this method is called that means downstream is a stateless operator, so we have to specifically change the ANY policy
-		if (owner.getDispatcher().getDispatchPolicy() == null){
-			// in this case it is needed to change to an ANY policy, by default with windows == 1
-			owner.getDispatcher().setDispatchPolicy(DispatchPolicy.ANY, new StatelessDynamicLoadBalancer());
-		}
-		else if (owner.getDispatcher().getDispatchPolicy() == DispatchPolicy.CONTENT_BASED){
-			//Call newSplit, with oldOpId (to identify group) and newOpINDEX to identify replica
-			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).newSplit(oldOpID, newOpId, oldOpIndex, newOpIndex);
-		}
-		else if (owner.getDispatcher().getDispatchPolicy() == DispatchPolicy.ANY){
-			//Access the loadBalancer, and call newReplica
-			((StatelessDynamicLoadBalancer)owner.getDispatcher().getDispatcherFilter()).newReplica(oldOpIndex, newOpIndex);
-		}
-	}
+//	public void configureNewDownstreamStatelessOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+//		owner.getRouter().newStatelessOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+//	}
+	
+//	public void configureNewDownstreamStatelessOperatorSplit(int oldOpID, int newOpId, int oldOpIndex, int newOpIndex){			
+//		// If this method is called that means downstream is a stateless operator, so we have to specifically change the ANY policy
+//		if (owner.getDispatcher().getDispatchPolicy() == null){
+//			// in this case it is needed to change to an ANY policy, by default with windows == 1
+//			owner.getDispatcher().setDispatchPolicy(DispatchPolicy.ANY, new StatelessDynamicLoadBalancer());
+//		}
+//		else if (owner.getDispatcher().getDispatchPolicy() == DispatchPolicy.CONTENT_BASED){
+//			//Call newSplit, with oldOpId (to identify group) and newOpINDEX to identify replica
+//			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).newSplit(oldOpID, newOpId, oldOpIndex, newOpIndex);
+//		}
+//		else if (owner.getDispatcher().getDispatchPolicy() == DispatchPolicy.ANY){
+//			//Access the loadBalancer, and call newReplica
+//			((StatelessDynamicLoadBalancer)owner.getDispatcher().getDispatcherFilter()).newReplica(oldOpIndex, newOpIndex);
+//		}
+//	}
 			
-	public int configureNewDownstreamStatefulOperatorSplit(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+	
+	public int configureNewDownstreamStatefulOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int newKey = -1;
-				
+		
+		/** BLOCK OF CODE TO REFACTOR **/
 		//. stop sending data to op1 remember last data sent
 		CommunicationChannel oldConnection = ((CommunicationChannel)opContext.getDownstreamTypeConnection().get(oldOpIndex));
 		// necessary to ignore state checkpoints of the old operator before split.
 		long last_ts = oldConnection.getLast_ts();
 		oldConnection.setReconf_ts(last_ts);
+		/** END BLOCK OF CODE **/
 				
 		//Stop connections to perform the update
 		NodeManager.nLogger.info("-> Stopping connections of oldOpId: "+oldOpId+" and newOpId: "+newOpId);
 		owner.getDispatcher().stopConnection(oldOpId);
 		owner.getDispatcher().stopConnection(newOpId);
-				
-		newKey = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).newSplit(oldOpId, newOpId, oldOpIndex, newOpIndex);
+
+		newKey = owner.getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		return newKey;
+		
 	}
+	
+//	public int configureNewDownstreamStatefulOperatorSplit(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+//		int newKey = -1;
+//		
+//		/** BLOCK OF CODE TO REFACTOR **/
+//		//. stop sending data to op1 remember last data sent
+//		CommunicationChannel oldConnection = ((CommunicationChannel)opContext.getDownstreamTypeConnection().get(oldOpIndex));
+//		// necessary to ignore state checkpoints of the old operator before split.
+//		long last_ts = oldConnection.getLast_ts();
+//		oldConnection.setReconf_ts(last_ts);
+//		/** END BLOCK OF CODE **/
+//				
+//		//Stop connections to perform the update
+//		NodeManager.nLogger.info("-> Stopping connections of oldOpId: "+oldOpId+" and newOpId: "+newOpId);
+//		owner.getDispatcher().stopConnection(oldOpId);
+//		owner.getDispatcher().stopConnection(newOpId);
+//				
+//		newKey = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).newSplit(oldOpId, newOpId, oldOpIndex, newOpIndex);
+//		return newKey;
+//	}
 	
 	private void backupRoutingInformation(int oldOpId) {
 		//Get routing information
-		ArrayList<Integer> indexes = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).getIndexesInformation(oldOpId);
-		ArrayList<Integer> keys = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).getKeysInformation(oldOpId);
+		ArrayList<Integer> indexes = owner.getRouter().getIndexesInformation(oldOpId);
+		ArrayList<Integer> keys = owner.getRouter().getKeysInformation(oldOpId);
 System.out.println("BACKUP INDEXES: "+indexes.toString());
 System.out.println("BACKUP KEYS: "+keys.toString());
 		//Create message
@@ -456,7 +486,7 @@ System.out.println("replayTuples: "+b);
 	
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)
 	public void configureUpstreamIndex(){
-		int ownInfo = StatefulDynamicLoadBalancer.customHash(owner.getOperatorId());
+		int ownInfo = Router.customHash(owner.getOperatorId());
 		int upstreamSize = opContext.upstreams.size();
 		//source obviously cant compute this value
 		if(upstreamSize == 0){
@@ -483,7 +513,7 @@ System.out.println("OP: "+owner.getOperatorId()+" INITIAL BACKUP!!!!!!##########
 		NodeManager.nLogger.info("-> Reconfiguring upstream backup index");
 		//First I compute my own info, which is the hash of my id.
 		/** There is a reason to hash the opId. Imagine upSize=2 and opId of downstream 2, 4, 6, 8... So better to mix the space*/
-		int ownInfo = StatefulDynamicLoadBalancer.customHash(owner.getOperatorId());
+		int ownInfo = Router.customHash(owner.getOperatorId());
 		int upstreamSize = opContext.upstreams.size();
 		int upIndex = ownInfo%upstreamSize;
 		//Since ownInfo (hashed) may be negative, this enforces the final value is always positive.

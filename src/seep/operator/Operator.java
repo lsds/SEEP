@@ -10,11 +10,7 @@ import seep.Main;
 import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
-import seep.comm.Dispatcher.DispatchPolicy;
-import seep.comm.routing.LoadBalancerI;
 import seep.comm.routing.Router;
-import seep.comm.routing.StatefulRoutingImpl;
-import seep.comm.routing.StatelessRoutingImpl;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.Ack;
 import seep.comm.tuples.Seep.ControlTuple;
@@ -26,7 +22,6 @@ import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.OperatorStaticInformation;
 import seep.operator.collection.SmartWordCounter;
 import seep.operator.collection.lrbenchmark.Snk;
-import seep.utils.ExecutionConfiguration;
 
 /**
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
@@ -57,11 +52,6 @@ public int ackCounter = 0;
 //	private LocalProfiler lp = new LocalProfiler();
 	
 	public Operator subclassOperator = null;
-	private DispatchPolicy dispatchPolicy = DispatchPolicy.ALL;
-	private LoadBalancerI dispatcherFilter = null;
-	
-	/// \todo {input queue, implement as a singleton}
-//	private InputQueue2 iq = null;
 	
 	static ControlTuple genericAck;
 	
@@ -113,17 +103,21 @@ public int ackCounter = 0;
 		return subclassOperator;
 	}
 	
-	public void setDispatchPolicy(DispatchPolicy dp, LoadBalancerI df) {
-		this.dispatchPolicy = dp;
-		this.dispatcherFilter = df;
-	}
-	
-	public void setDispatchPolicy(DispatchPolicy dp){
-		this.dispatchPolicy = dp;
-	}
+//	public void setDispatchPolicy(DispatchPolicy dp, LoadBalancerI df) {
+//		this.dispatchPolicy = dp;
+//		this.dispatcherFilter = df;
+//	}
+//	
+//	public void setDispatchPolicy(DispatchPolicy dp){
+//		this.dispatchPolicy = dp;
+//	}
 	
 	public Dispatcher getDispatcher(){
 		return dispatcher;
+	}
+	
+	public Router getRouter(){
+		return router;
 	}
 	
 	public int getBackupUpstreamIndex() {
@@ -154,7 +148,8 @@ public int ackCounter = 0;
 //		iq = new InputQueue2(this);
 		inputQueue = new InputQueue();
 		outputQueue = new OutputQueue();
-		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter, outputQueue);
+//		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter, outputQueue);
+		dispatcher = new Dispatcher(opContext, outputQueue);
 		
 		//Control worker
 		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());

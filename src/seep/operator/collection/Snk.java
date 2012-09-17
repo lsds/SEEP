@@ -1,18 +1,10 @@
 package seep.operator.collection;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-
 import seep.Main;
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
 import seep.operator.workers.ACKWorker;
-import seep.comm.*;
 import seep.comm.tuples.*;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class Snk extends Operator implements StatelessOperator{

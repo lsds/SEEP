@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
@@ -39,7 +38,6 @@ public class TollAssessment extends Operator implements StatefullOperator{
 	public TollAssessment(int opID) {
 		super(opID);
 		subclassOperator = this;
-		setDispatchPolicy(DispatchPolicy.ALL);
 	}
 	
 	private void setCounter(int i) {

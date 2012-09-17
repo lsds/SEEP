@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
@@ -30,7 +29,6 @@ public class BACollector extends Operator implements StatefullOperator{
 		super(opID);
 System.out.println("NUM-UPStREAMS: "+numUpstreamNodes);
 		subclassOperator = this;
-		setDispatchPolicy(DispatchPolicy.ALL);
 	}
 
 	public void setCounter(int i){

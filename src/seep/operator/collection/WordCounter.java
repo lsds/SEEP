@@ -1,7 +1,6 @@
 package seep.operator.collection;
 
 import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -40,7 +39,6 @@ String chosenWord = "Unix";
 		subclassOperator = this;
 		//stateBackupWorker = new StateBackupWorker(this);
 		//There is only one so...
-		setDispatchPolicy(DispatchPolicy.ANY);
 	}
 
 	HashMap<String, Integer> countMap = new HashMap<String, Integer>();

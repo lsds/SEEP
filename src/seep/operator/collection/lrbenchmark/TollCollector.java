@@ -1,6 +1,5 @@
 package seep.operator.collection.lrbenchmark;
 
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
@@ -13,7 +12,6 @@ public class TollCollector extends Operator implements StatelessOperator{
 	public TollCollector(int opID) {
 		super(opID);
 		subclassOperator = this;
-		setDispatchPolicy(DispatchPolicy.ALL);
 	}
 	
 	//TESTING

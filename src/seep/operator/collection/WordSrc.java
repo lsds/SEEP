@@ -6,9 +6,6 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import seep.Main;
-import seep.comm.ContentBasedFilter;
-import seep.comm.Dispatcher.DispatchPolicy;
-import seep.comm.routing.StatelessDynamicLoadBalancer;
 import seep.comm.tuples.Seep;
 import seep.operator.StatelessOperator;
 import seep.utils.ExecutionConfiguration;
@@ -27,8 +24,6 @@ public class WordSrc extends Src implements StatelessOperator{
 		super(opID);
 		subclassOperator = this;
 		
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer();
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
 	}
 	
 	@Override 

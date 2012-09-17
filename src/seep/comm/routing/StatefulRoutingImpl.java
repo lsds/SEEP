@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.zip.CRC32;
 
 public class StatefulRoutingImpl implements RoutingStrategyI{
-
-	private static CRC32 crc32 = new CRC32();
 		
 	//These structures store the information for doing consistent hashing
 	//downstreamNodeKeys stores the keys (within the INTEGER space of keys) where each node lies
@@ -79,7 +77,7 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 		
 	/// \todo{OPTIMIZE THIS METHOD}
 	public ArrayList<Integer> route(ArrayList<Integer> targets, int value) {
-		int hash = customHash(value);
+		int hash = Router.customHash(value);
 		//int hash = value;
 		int realIndex = -1;
 		/** for(Integer nodeKey : downstreamNodeKeys){ */
@@ -98,13 +96,6 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 			}
 		}
 		return null;
-	}
-		
-	public static int customHash(int value){
-		crc32.update(value);
-		int v = (int)crc32.getValue();
-		crc32.reset();
-		return v;
 	}
 
 	public ArrayList<Integer> route(int value) {
