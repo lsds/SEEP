@@ -17,9 +17,10 @@ import java.net.Socket;
 * OperatorContext. This object is in charge of model information associated to a given operator, as its connections or its location.
 */
 
-@SuppressWarnings("serial")
 public class OperatorContext implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	private OperatorStaticInformation location;
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	

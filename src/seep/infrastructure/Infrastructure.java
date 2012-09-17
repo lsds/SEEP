@@ -1,23 +1,25 @@
 package seep.infrastructure;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
 import seep.Main;
 import seep.comm.BasicCommunicationUtils;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.elastic.ElasticInfrastructureUtils;
-import seep.operator.*;
+import seep.infrastructure.monitor.MonitorManager;
+import seep.operator.Operator;
+import seep.operator.OperatorContext;
+import seep.operator.QuerySpecificationI;
+import seep.operator.StatefullOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.*;
-import seep.infrastructure.monitor.*;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Deque;
-import java.util.ArrayDeque;
-import java.util.logging.Logger;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.

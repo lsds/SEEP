@@ -9,7 +9,6 @@ import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class BACollector extends Operator implements StatefullOperator{

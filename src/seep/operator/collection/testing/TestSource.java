@@ -33,7 +33,7 @@ public class TestSource extends Operator implements StatelessOperator{
 				value = 1;
 				c = 0;
 			}
-//			data.setInt(value);
+			data.setInt(value);
 			value = 0;
 			c++;
 			sendDown(data.build());

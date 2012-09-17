@@ -1,14 +1,19 @@
 package seep.infrastructure;
 
 
-import seep.Main;
-import seep.operator.*;
-import seep.utils.ExecutionConfiguration;
-
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.*;
-import java.io.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+import seep.Main;
+import seep.operator.Operator;
+import seep.operator.QuerySpecificationI;
 
 /**
 * ManagerWorker. This class implements runnable, it is in charge of listening to events from the running system.

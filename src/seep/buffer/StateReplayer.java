@@ -1,15 +1,11 @@
 package seep.buffer;
 
 
-import seep.Main;
-import seep.comm.tuples.*;
-import seep.operator.CommunicationChannel;
-import seep.utils.*;
+import java.io.IOException;
+import java.net.Socket;
 
-import java.io.*;
-import java.net.*;
-import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean;
+import seep.comm.tuples.Seep;
+import seep.operator.CommunicationChannel;
 
 /**
 * StateReplayer. This runnable object is in charge of replaying the state when necessary.
@@ -21,17 +17,9 @@ public class StateReplayer implements Runnable {
 	private Buffer buffer;
 	private Socket controlDownstreamSocket = null;
 
-	private AtomicBoolean replay;
-	private AtomicBoolean stop;
-
-	private Iterator<Seep.DataTuple> sharedIterator;
-
 	public StateReplayer(CommunicationChannel oi){
-//		this.socket = oi.downstreamSocketD;
 		this.controlDownstreamSocket = oi.downstreamControlSocket;
 		this.buffer = oi.getBuffer();
-		this.replay = oi.getReplay();
-		this.stop = oi.getStop();
 	}
 
 	public void run(){

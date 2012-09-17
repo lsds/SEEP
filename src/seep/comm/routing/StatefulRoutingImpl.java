@@ -1,7 +1,6 @@
 package seep.comm.routing;
 
 import java.util.ArrayList;
-import java.util.zip.CRC32;
 
 public class StatefulRoutingImpl implements RoutingStrategyI{
 		

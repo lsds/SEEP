@@ -5,7 +5,6 @@ import java.util.Iterator;
 
 import seep.comm.Dispatcher;
 import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.DataTuple;
 import seep.operator.CommunicationChannel;
 
 /**

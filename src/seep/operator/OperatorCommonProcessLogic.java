@@ -17,9 +17,10 @@ import seep.comm.tuples.Seep.BackupState;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext.PlacedOperator;
 
-@SuppressWarnings("serial")
 public class OperatorCommonProcessLogic implements Serializable{
 
+	private static final long serialVersionUID = 1L;
+	
 	private Operator owner;
 	private OperatorContext opContext;
 	

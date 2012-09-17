@@ -27,8 +27,10 @@ import seep.operator.collection.lrbenchmark.Snk;
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
 */
 
-@SuppressWarnings("serial")
 public abstract class Operator implements Serializable, QuerySpecificationI {
+
+
+	private static final long serialVersionUID = 1L;
 
 public int ackCounter = 0;
 	
@@ -87,10 +89,6 @@ public int ackCounter = 0;
 		return inputQueue;
 	}
 	
-//	public InputQueue2 getInputQueue2(){
-//		return iq;
-//	}
-	
 	public long getTs_ack() {
 		return ts_ack;
 	}
@@ -102,15 +100,6 @@ public int ackCounter = 0;
 	public Operator getSubclassOperator() {
 		return subclassOperator;
 	}
-	
-//	public void setDispatchPolicy(DispatchPolicy dp, LoadBalancerI df) {
-//		this.dispatchPolicy = dp;
-//		this.dispatcherFilter = df;
-//	}
-//	
-//	public void setDispatchPolicy(DispatchPolicy dp){
-//		this.dispatchPolicy = dp;
-//	}
 	
 	public Dispatcher getDispatcher(){
 		return dispatcher;
@@ -145,11 +134,11 @@ public int ackCounter = 0;
 		
 		opCommonProcessLogic.setOwner(this);
 		opCommonProcessLogic.setOpContext(opContext);
-//		iq = new InputQueue2(this);
 		inputQueue = new InputQueue();
 		outputQueue = new OutputQueue();
-//		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter, outputQueue);
 		dispatcher = new Dispatcher(opContext, outputQueue);
+		//Configure routing to downstream
+		router.configureRoutingImpl(opContext);
 		
 		//Control worker
 		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
@@ -176,7 +165,6 @@ public int ackCounter = 0;
 /// \todo {return a proper boolean after check...}
 	public void initializeCommunications() throws OperatorInitializationException{
 		dispatcher.setOpContext(opContext);
-//		dispatcher.startFilters();
 		router.initializeQueryFunction();
 		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
 		dispatcher.setRouter(router);
@@ -634,10 +622,5 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 	
 	public void scaleOut(Operator toScaleOut){
 		//TODO implement static scaleOut
-	}
-	
-	public void set(){
-		NodeManager.nLogger.info("Setting Operator: "+this.toString());
-		router.configureRoutingImpl(opContext);
 	}
 }

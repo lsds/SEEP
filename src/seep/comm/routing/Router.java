@@ -14,6 +14,8 @@ import seep.operator.OperatorContext.PlacedOperator;
 
 public class Router implements Serializable{
 
+	private static final long serialVersionUID = 1L;
+
 	private static CRC32 crc32 = new CRC32();
 	
 	private String query = null;
@@ -77,11 +79,11 @@ public class Router implements Serializable{
 		//For every downstream
 		for(PlacedOperator down : opContext.downstreams){
 			opId = down.opID();
+			int index = opContext.findDownstream(opId).index();
 			if(!down.isStateful()){
-				rs = new StatelessRoutingImpl();
+				rs = new StatelessRoutingImpl(1, index);
 			}
 			else if(down.isStateful()){
-				int index = opContext.findDownstream(opId).index();
 				rs = new StatefulRoutingImpl(index);
 			}
 			downstreamRoutingImpl.put(opId, rs);
@@ -89,12 +91,15 @@ public class Router implements Serializable{
 	}
 	
 	public void initializeQueryFunction(){
-		try {
-			Class<Seep.DataTuple> c = seep.comm.tuples.Seep.DataTuple.class;
-			queryFunction = c.getMethod(query);
-		}
-		catch (NoSuchMethodException nsme){
-			nsme.printStackTrace();
+		if(query != null){
+			NodeManager.nLogger.info("Initializing method to query stream data...");
+			try {
+				Class<Seep.DataTuple> c = seep.comm.tuples.Seep.DataTuple.class;
+				queryFunction = c.getMethod(query);
+			}
+			catch (NoSuchMethodException nsme){
+				nsme.printStackTrace();
+			}
 		}
 	}
 	
@@ -102,12 +107,16 @@ public class Router implements Serializable{
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		//If it is necessary to query data to guess (logic)downstream
 		if(requiresQueryData){
+			System.out.println("REQUIRES QUERY DATA");
 			ArrayList<Integer> logicalTargets = routeLayerOne(dt, value);
+			System.out.println("LOGICAL TARGETS: "+logicalTargets.size());
 			targets = routeLayerTwo(logicalTargets, value);
 		}
 		else{
+			System.out.println("NO query data");
 			//Otherwise, we use the default RoutingImpl
 			//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
+			System.out.println("DownRoutingImpl size: "+downstreamRoutingImpl.size());
 			for(Integer target : downstreamRoutingImpl.keySet()){
 				//This should be called just once...
 				/// \fixme{CHECK THIS}
@@ -147,6 +156,11 @@ public class Router implements Serializable{
 	public ArrayList<Integer> routeLayerTwo(ArrayList<Integer> logicalTargets, int value){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
+			System.out.println("LOGICAL TARGET: "+ltarget);
+			System.out.println("DownSroutingImpl size: "+downstreamRoutingImpl.size());
+			if(downstreamRoutingImpl.get(ltarget) == null){
+				System.out.println("ROUTING IMPL NULL!!!!");
+			}
 			targets = downstreamRoutingImpl.get(ltarget).route(targets, value);
 		}
 		return targets;

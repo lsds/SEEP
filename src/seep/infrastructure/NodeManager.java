@@ -17,7 +17,6 @@ import seep.comm.BasicCommunicationUtils;
 import seep.comm.tuples.Seep;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
-import seep.utils.ExecutionConfiguration;
 
 /**
  * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the 

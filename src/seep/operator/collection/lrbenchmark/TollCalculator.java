@@ -14,7 +14,6 @@ import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatefullOperator;
 import seep.operator.workers.StateBackupWorker;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class TollCalculator extends Operator implements StatefullOperator, StateSplitI{

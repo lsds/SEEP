@@ -12,11 +12,10 @@ import seep.comm.BasicCommunicationUtils;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.infrastructure.Infrastructure;
-import seep.infrastructure.MasterStatisticsHandler;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.operator.QuerySpecificationI;
 import seep.operator.Operator;
+import seep.operator.QuerySpecificationI;
 import seep.operator.OperatorContext.PlacedOperator;
 
 public class ElasticInfrastructureUtils {

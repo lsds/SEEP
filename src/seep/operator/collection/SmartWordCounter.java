@@ -7,7 +7,6 @@ import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.StateSplitI;
 import seep.operator.workers.StateBackupWorker;
-import seep.utils.ExecutionConfiguration;
 import seep.comm.*;
 
 import java.io.BufferedWriter;

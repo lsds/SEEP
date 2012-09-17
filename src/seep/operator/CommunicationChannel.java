@@ -12,7 +12,6 @@ import seep.comm.tuples.Seep;
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
 */
-/// \todo {This class mixes information that could be separated into a more consistent scheme}
 public class CommunicationChannel{
 
 	private Socket downstreamDataSocket;

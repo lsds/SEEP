@@ -6,17 +6,16 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import seep.Main;
 import seep.comm.tuples.Seep;
 import seep.operator.CommunicationChannel;
-import seep.utils.ExecutionConfiguration;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
 */
 
-@SuppressWarnings("serial")
 public class Buffer implements Serializable{
+
+	private static final long serialVersionUID = 1L;
 
 	private Deque<Seep.EventBatch> buff = new LinkedBlockingDeque<Seep.EventBatch>();
 	

@@ -5,7 +5,6 @@ import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
-import seep.utils.ExecutionConfiguration;
 
 import java.util.HashMap;
 import java.util.List;

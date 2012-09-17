@@ -8,7 +8,6 @@ import java.io.IOException;
 import seep.Main;
 import seep.comm.tuples.Seep;
 import seep.operator.StatelessOperator;
-import seep.utils.ExecutionConfiguration;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 
 @SuppressWarnings("serial")

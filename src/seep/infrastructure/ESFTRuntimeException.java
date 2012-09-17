@@ -8,6 +8,8 @@ package seep.infrastructure;
 
 public class ESFTRuntimeException extends Exception{
 
+	private static final long serialVersionUID = 1L;
+
 	public ESFTRuntimeException(String msg){
 		super(msg);
 	}

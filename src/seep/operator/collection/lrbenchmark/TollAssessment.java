@@ -4,13 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import seep.Main;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.workers.StateBackupWorker;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class TollAssessment extends Operator implements StatefullOperator{

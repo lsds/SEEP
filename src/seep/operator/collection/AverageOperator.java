@@ -4,7 +4,6 @@ import seep.Main;
 import seep.comm.tuples.*;
 import seep.comm.tuples.Seep.Ack;
 import seep.operator.*;
-import seep.utils.ExecutionConfiguration;
 
 public class AverageOperator extends Operator implements StatefullOperator{
 

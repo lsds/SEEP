@@ -16,7 +16,7 @@ public class Foo extends Operator implements StatelessOperator{
 	@Override
 	public void processData(Seep.DataTuple dt) {
 		System.out.println("VALUE: "+dt.getInt());
-		sendDown(dt);
+		sendDown(dt, dt.getInt());
 	}
 
 	@Override

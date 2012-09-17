@@ -22,7 +22,6 @@ import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.comm.tuples.lrbenchmark.LRseep.DataTuple;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class DataFeeder extends Operator implements StatelessOperator{

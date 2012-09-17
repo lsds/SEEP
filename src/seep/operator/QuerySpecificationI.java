@@ -18,6 +18,7 @@ public interface QuerySpecificationI {
 	
 	public void scaleOut(Operator toScaleOut);
 	
-	public void set();
+	///\fixme{this should be done automatically}
+//	public void set();
 
 }

@@ -13,7 +13,8 @@ public class Bar extends Operator implements StatelessOperator{
 
 	@Override
 	public void processData(Seep.DataTuple dt) {
-		// TODO Auto-generated method stub
+		System.out.println("VALUE: "+dt.getInt());
+		sendDown(dt);
 		
 	}
 
