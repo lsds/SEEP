@@ -463,4 +463,13 @@ public class Infrastructure {
 		}
 		bcu.sendControlMsg(aux.getOpContext().getOperatorStaticInformation(), tuple.build(), aux.getOperatorId());
 	}
+
+	public Operator getOperatorById(int opIdToParallelize) {
+		for(Operator op : ops){
+			if(op.getOperatorId() == opIdToParallelize){
+				return op;
+			}
+		}
+		return null;
+	}
 }

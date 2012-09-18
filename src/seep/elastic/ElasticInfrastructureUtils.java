@@ -9,6 +9,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import seep.comm.BasicCommunicationUtils;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.infrastructure.Infrastructure;
@@ -82,6 +83,11 @@ public class ElasticInfrastructureUtils {
 		}
 		//connect new operator to downstreams and upstreams
 		configureOperatorContext(opIdToParallelize, newOp);
+		//Get operator to parallelize
+		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
+		Router copyOfRouter = opToParallelize.getRouter();
+		newOp.setRouter(copyOfRouter);
+		//Get router and assign to new operator
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
 		NodeManager.nLogger.info("Created new Op: "+newOp.toString());

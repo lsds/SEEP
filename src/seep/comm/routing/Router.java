@@ -88,6 +88,7 @@ public class Router implements Serializable{
 			}
 			downstreamRoutingImpl.put(opId, rs);
 		}
+		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
 	}
 	
 	public void initializeQueryFunction(){

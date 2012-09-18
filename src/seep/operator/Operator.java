@@ -109,6 +109,10 @@ public int ackCounter = 0;
 		return router;
 	}
 	
+	public void setRouter(Router router){
+		this.router = router;
+	}
+	
 	public int getBackupUpstreamIndex() {
 		return backupUpstreamIndex;
 	}
