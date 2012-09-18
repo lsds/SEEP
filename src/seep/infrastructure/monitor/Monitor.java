@@ -1,15 +1,16 @@
 package seep.infrastructure.monitor;
 
-import seep.Main;
-import seep.comm.tuples.*;
-import seep.infrastructure.NodeManager;
-import seep.operator.OperatorContext;
-import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.ExecutionConfiguration;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
-import java.net.*;
-import java.io.*;
-import java.util.*;
+import seep.Main;
+import seep.comm.tuples.Seep;
+import seep.infrastructure.NodeManager;
 
 /**
 * Monitor. This class implements runnable and is in charge of retrieving information from the system. There is a monitor in each node that is being used by the system.

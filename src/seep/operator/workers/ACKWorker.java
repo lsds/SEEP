@@ -9,9 +9,11 @@ import java.io.*;
 * ACKWorker. This runnable object is in charge of watching to the last processed tuple and generating an ACK when this has changed.
 */
 
-@SuppressWarnings("serial")
 public class ACKWorker implements Runnable, Serializable{
 
+	
+	private static final long serialVersionUID = 1L;
+	
 	private Snk sink = null;
 	private seep.operator.collection.Snk snk = null;
 	private long memory = 0;

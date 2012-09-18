@@ -1,11 +1,11 @@
 package seep.comm;
 
-import seep.infrastructure.Infrastructure;
-import seep.infrastructure.NodeManager;
-import seep.operator.*;
+import java.io.IOException;
+import java.net.ServerSocket;
 
-import java.io.*;
-import java.net.*;
+import seep.infrastructure.NodeManager;
+import seep.operator.Operator;
+import seep.operator.QuerySpecificationI;
 
 /** 
 * ControlHandler. This class is in charge of managing control connections and attach them to a given thread that is in charge of serving them.
@@ -20,7 +20,7 @@ public class ControlHandler implements Runnable{
 	//This variable controls if this Runnable should keep running or not
 	private boolean goOn;
 
-	public Connectable getOwner(){
+	public QuerySpecificationI getOwner(){
 		return owner;
 	}
 	

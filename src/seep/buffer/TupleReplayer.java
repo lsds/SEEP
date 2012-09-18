@@ -5,8 +5,7 @@ import java.util.Iterator;
 
 import seep.comm.Dispatcher;
 import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.DataTuple;
-import seep.utils.CommunicationChannelInformation;
+import seep.operator.CommunicationChannel;
 
 /**
 * TupleReplayer. This is the runnable object in charge of replaying the buffer of a connection.
@@ -17,14 +16,14 @@ public class TupleReplayer implements Runnable {
 	private Iterator<Seep.EventBatch> sharedIterator;
 	private int controlThreshold;
 	private int bufferSize;
-	private CommunicationChannelInformation connection;
+	private CommunicationChannel connection;
 	private Dispatcher dispatcher;
 	
-	public TupleReplayer(CommunicationChannelInformation oi, Dispatcher dispatcher) {
+	public TupleReplayer(CommunicationChannel oi, Dispatcher dispatcher) {
 		this.connection = oi;
-		oi.sharedIterator = oi.buffer.iterator();
+		oi.sharedIterator = oi.getBuffer().iterator();
 		this.sharedIterator = oi.sharedIterator;
-		bufferSize = oi.buffer.size();
+		bufferSize = oi.getBuffer().size();
 		controlThreshold = (int)(bufferSize)/10;
 		this.dispatcher = dispatcher;
 	}
@@ -37,8 +36,8 @@ public class TupleReplayer implements Runnable {
 			try{
 				Seep.EventBatch dt = sharedIterator.next();
 /// \todo{THIS PIECE OF SYNC WAS REMOVED ON 6-july-2012 to get ft results, test if is still consistent}
-				synchronized(connection.downstreamSocketD){
-					dt.writeDelimitedTo(connection.downstreamSocketD.getOutputStream());
+				synchronized(connection.getDownstreamDataSocket()){
+					dt.writeDelimitedTo(connection.getDownstreamDataSocket().getOutputStream());
 				}
 				replayed++;
 				//Criteria for knowing how to transfer control back to incomingdatahandler
@@ -53,8 +52,8 @@ public class TupleReplayer implements Runnable {
 			}
 		}
 		//Restablish communication
-		connection.replay.set(true);
-		connection.stop.set(false);
+		connection.getReplay().set(true);
+		connection.getStop().set(false);
 		dispatcher.startIncomingData();
 	}
 }

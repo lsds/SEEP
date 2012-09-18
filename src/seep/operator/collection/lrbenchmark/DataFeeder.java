@@ -17,17 +17,11 @@ import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
 import seep.Main;
-import seep.comm.StatefulDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter;
-import seep.comm.StatelessDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.comm.tuples.lrbenchmark.LRseep.DataTuple;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class DataFeeder extends Operator implements StatelessOperator{
@@ -46,8 +40,6 @@ public class DataFeeder extends Operator implements StatelessOperator{
 	public DataFeeder(int opID) {
 		super(opID);
 		subclassOperator = this;
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer();
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
 	}	
 	
 	@Override

@@ -2,7 +2,6 @@ package seep.operator.collection.lrbenchmark;
 
 import java.util.HashMap;
 
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.comm.tuples.Seep.DataTuple.Builder;
@@ -21,7 +20,6 @@ public class Notifier extends Operator implements StatefullOperator{
 		for(int i = -5; i<105; i++){
 			accidents.put(i, false);
 		}
-		setDispatchPolicy(DispatchPolicy.ALL);
 	}
 
 	@Override

@@ -1,14 +1,19 @@
 package seep.infrastructure;
 
 
-import seep.Main;
-import seep.operator.*;
-import seep.utils.ExecutionConfiguration;
-
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.*;
-import java.io.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+import seep.Main;
+import seep.operator.Operator;
+import seep.operator.QuerySpecificationI;
 
 /**
 * ManagerWorker. This class implements runnable, it is in charge of listening to events from the running system.
@@ -108,22 +113,22 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 		
 		private void addPartitioningConnectionCommand(String[] token)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(token[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
 			inf.deployConnection("add_downstream_partition", src, dst, "Null");
 		}
 
 		private void addDownstreamConnectionCommand(String[] token)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(token[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
 			inf.deployConnection("add_downstream", src, dst, "null");
 		}
 
 		private void addUpstreamConnectionCommand(String[] token)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(token[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
 			inf.deployConnection("add_upstream", dst, src, "NuLL");
 		}
 
@@ -140,8 +145,8 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 
 		private void connectCommand(String[] id)
 		throws NumberFormatException {
-			Connectable src = inf.elements.get(Integer.parseInt(id[1]));
-			Connectable dst = inf.elements.get(Integer.parseInt(id[2]));
+			QuerySpecificationI src = inf.elements.get(Integer.parseInt(id[1]));
+			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(id[2]));
 			src.connectTo(dst);
 		}
 		

@@ -9,15 +9,11 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Properties;
 
-import seep.comm.BasicCommunicationUtils;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.DeploymentException;
@@ -25,9 +21,7 @@ import seep.infrastructure.ESFTRuntimeException;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.operator.Operator;
 import seep.operator.collection.SmartWordCounter;
-import seep.operator.collection.WordCounter;
 import seep.operator.collection.WordSplitter;
 import seep.operator.collection.WordSrc;
 import seep.operator.collection.lrbenchmark.BACollector;
@@ -37,10 +31,10 @@ import seep.operator.collection.lrbenchmark.Snk;
 import seep.operator.collection.lrbenchmark.TollAssessment;
 import seep.operator.collection.lrbenchmark.TollCalculator;
 import seep.operator.collection.lrbenchmark.TollCollector;
+import seep.operator.collection.testing.Bar;
 import seep.operator.collection.testing.Foo;
 import seep.operator.collection.testing.TestSink;
 import seep.operator.collection.testing.TestSource;
-import seep.utils.ExecutionConfiguration;
 
 /**
 * Main. The entry point of the whole system. This can be executed as Main (master Node) or as secondary.
@@ -69,11 +63,11 @@ public class Main {
 		try {
 			globals.load(new FileInputStream("config.properties"));
 			success = true;
-		} 
+		}
 		catch (FileNotFoundException e1) {
 			System.out.println("Properties file not found "+e1.getMessage());
 			e1.printStackTrace();
-		} 
+		}
 		catch (IOException e1) {
 			System.out.println("While loading properties file "+e1.getMessage());
 			e1.printStackTrace();
@@ -208,6 +202,11 @@ public class Main {
 						case 13:
 							System.out.println("save latency SWC-query");
 							saveResultsSWC(inf);
+							break;
+						case 14:
+							System.out.println("Testing v0.1");
+							testing01(inf);
+							break;
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -315,6 +314,42 @@ public class Main {
 		System.out.println("10- EXIT");
 		System.out.println("11- Save results");
 		System.out.println("12- Switch ESFT mechanisms activation");
+	}
+	
+	public void testing01(Infrastructure inf) throws DeploymentException{
+		//Instantiate operators
+		TestSource src = new TestSource(-2);
+		Foo foo = new Foo(0);
+		Foo foo2 = new Foo(1);
+		Bar bar = new Bar(2);
+		TestSink snk = new TestSink(-1);
+		//Configure source and sink
+		inf.setSource(src);
+		inf.setSink(snk);
+		//Add operators to infrastructure
+		inf.addOperator(src);
+		inf.addOperator(foo);
+		inf.addOperator(foo2);
+		inf.addOperator(bar);
+		inf.addOperator(snk);
+		//Connect the operators to form the query
+		src.connectTo(foo);
+		foo.connectTo(foo2);
+		foo.connectTo(bar);
+		foo2.connectTo(snk);
+		bar.connectTo(snk);
+		//Routing information for the operators
+		foo.setRoutingQueryFunction("getInt");
+		foo.route(Router.RelationalOperator.EQ, 0, foo2);
+		foo.route(Router.RelationalOperator.EQ, 1, bar);
+		//Set the query
+		inf.placeNew(src, inf.getNodeFromPool());
+		inf.placeNew(foo, inf.getNodeFromPool());
+		inf.placeNew(foo2, inf.getNodeFromPool());
+		inf.placeNew(bar, inf.getNodeFromPool());
+		inf.placeNew(snk, inf.getNodeFromPool());
+		//Deploy
+		inf.deploy();
 	}
 	
 	public void deployWordCounterQueryOption(Infrastructure inf) throws DeploymentException{
@@ -723,30 +758,25 @@ public class Main {
 		System.out.println("Creating testing topology");
 		//Create operators
 		TestSource src = new TestSource(-2);
-//		DataFeeder src = new DataFeeder(-2);
 		Foo foo = new Foo(0);
 		Foo foo2 = new Foo(1);
-//		TestSink snk = new Snk(-1);
-//		Foo op1 = new Foo(0);
-//		Foo op2 = new Foo(1);
-//		Foo op3 = new Foo(2);
 		TestSink snk = new TestSink(-1);
 		//Add operators
 		inf.setSource(src);
 		inf.addOperator(src);
 		inf.addOperator(foo);
 		inf.addOperator(foo2);
-//		inf.addOperator(op1);
-//		inf.addOperator(op2);
-//		inf.addOperator(op3);
 		inf.setSink(snk);
 		inf.addOperator(snk);
 		//Connect operators
-//		src.connectTo(snk);
 		src.connectTo(foo);
 		foo.connectTo(foo2);
 		foo2.connectTo(snk);
-//		foo2.connectTo(snk);
+		//set operators
+//		src.set();
+//		foo.set();
+//		foo2.set();
+//		snk.set();
 		//Place operators in nodes
 		inf.placeNew(src, inf.getNodeFromPool());
 		inf.placeNew(foo, inf.getNodeFromPool());

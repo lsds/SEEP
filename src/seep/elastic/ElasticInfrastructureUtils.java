@@ -9,14 +9,14 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import seep.comm.BasicCommunicationUtils;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.infrastructure.Infrastructure;
-import seep.infrastructure.MasterStatisticsHandler;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.operator.Connectable;
 import seep.operator.Operator;
+import seep.operator.QuerySpecificationI;
 import seep.operator.OperatorContext.PlacedOperator;
 
 public class ElasticInfrastructureUtils {
@@ -83,6 +83,11 @@ public class ElasticInfrastructureUtils {
 		}
 		//connect new operator to downstreams and upstreams
 		configureOperatorContext(opIdToParallelize, newOp);
+		//Get operator to parallelize
+		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
+		Router copyOfRouter = opToParallelize.getRouter();
+		newOp.setRouter(copyOfRouter);
+		//Get router and assign to new operator
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
 		NodeManager.nLogger.info("Created new Op: "+newOp.toString());
@@ -222,8 +227,8 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 
 	public void addDownstreamConnections(Operator newOp){
 		//Search for all upstream ids
-		Connectable opToAdd = newOp;
-		Connectable opToContact = null;
+		QuerySpecificationI opToAdd = newOp;
+		QuerySpecificationI opToContact = null;
 		for(PlacedOperator op : newOp.getOpContext().upstreams){
 			//deploy new connection with all of them?
 			opToContact = inf.getElements().get(op.opID());
@@ -232,8 +237,8 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 	}
 
 	public void addUpstreamConnections(Operator newOp){
-		Connectable opToAdd = newOp;
-		Connectable opToContact = null;
+		QuerySpecificationI opToAdd = newOp;
+		QuerySpecificationI opToContact = null;
 		for(PlacedOperator op : newOp.getOpContext().downstreams){
 			opToContact = inf.getElements().get(op.opID());
 			//the operator that must change, the id of the new replica, the type of operator splitting
@@ -277,6 +282,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			if(opId == op.getOperatorId()){
 				//op.getOpContext().copyContext(newOp);
 				for(PlacedOperator up : op.getOpContext().upstreams){
+					
 					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()));
 				}
 				for(PlacedOperator down : op.getOpContext().downstreams){

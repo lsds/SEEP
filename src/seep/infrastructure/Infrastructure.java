@@ -1,23 +1,25 @@
 package seep.infrastructure;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
 import seep.Main;
 import seep.comm.BasicCommunicationUtils;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.elastic.ElasticInfrastructureUtils;
-import seep.operator.*;
+import seep.infrastructure.monitor.MonitorManager;
+import seep.operator.Operator;
+import seep.operator.OperatorContext;
+import seep.operator.QuerySpecificationI;
+import seep.operator.StatefullOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.*;
-import seep.infrastructure.monitor.*;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Deque;
-import java.util.ArrayDeque;
-import java.util.logging.Logger;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
@@ -40,7 +42,7 @@ public class Infrastructure {
 	private int numberRunningMachines = 0;
 
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
-	public Map<Integer,Connectable> elements = new HashMap<Integer, Connectable>();
+	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	private Operator src;
 	private Operator snk;
 	
@@ -64,7 +66,7 @@ public class Infrastructure {
 		return ops;
 	}
 	
-	public Map<Integer, Connectable> getElements() {
+	public Map<Integer, QuerySpecificationI> getElements() {
 		return elements;
 	}
 	
@@ -90,10 +92,12 @@ public class Infrastructure {
 	
 	//This method is still valid to define which is the first operator in the query
 	public void setSource(Operator src) {
+		NodeManager.nLogger.info("Configured SOURCE as Operator: "+src.toString());
 		this.src = src;
 	}
 
 	public void setSink(Operator snk){
+		NodeManager.nLogger.info("Configured SINK as Operator: "+snk.toString());
 		this.snk = snk;
 	}
 	
@@ -106,6 +110,7 @@ public class Infrastructure {
 	public void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);
+		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
 	
 	public void placeNew(Operator o, Node n) {
@@ -116,19 +121,19 @@ public class Infrastructure {
 		
 		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
 			int downID = downDescr.opID();
-			Connectable downOp = elements.get(downID);
+			QuerySpecificationI downOp = elements.get(downID);
 			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
 		}
 
 		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
 			int upID = upDescr.opID();
-			Connectable upOp = elements.get(upID);
+			QuerySpecificationI upOp = elements.get(upID);
 			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
 		}
 	}
 	
 	public void updateContextLocations(Operator o) {
-		for (Connectable op: elements.values()) {
+		for (QuerySpecificationI op: elements.values()) {
 			if (op!=o){
 				setDownstreamLocationFromPotentialDownstream(o, op);
 				setUpstreamLocationFromPotentialUpstream(o, op);
@@ -136,7 +141,7 @@ public class Infrastructure {
 		}
 	}
 
-	private void setDownstreamLocationFromPotentialDownstream(Connectable target, Connectable downstream) {
+	private void setDownstreamLocationFromPotentialDownstream(QuerySpecificationI target, QuerySpecificationI downstream) {
 		for (PlacedOperator op: downstream.getOpContext().upstreams) {
 			if (op.opID() == target.getOperatorId()) {
 				target.getOpContext().setDownstreamOperatorStaticInformation(downstream.getOperatorId(), downstream.getOpContext().getOperatorStaticInformation());
@@ -144,7 +149,7 @@ public class Infrastructure {
 		}
 	}
 	
-	private void setUpstreamLocationFromPotentialUpstream(Connectable target, Connectable upstream) {
+	private void setUpstreamLocationFromPotentialUpstream(QuerySpecificationI target, QuerySpecificationI upstream) {
 		for (PlacedOperator op: upstream.getOpContext().downstreams) {
 			if (op.opID() == target.getOperatorId()) {
 				target.getOpContext().setUpstreamOperatorStaticInformation(upstream.getOperatorId(), upstream.getOpContext().getOperatorStaticInformation());
@@ -191,14 +196,14 @@ public class Infrastructure {
 		System.out.println("REDEPLOY-operators with ip: "+n.toString());
 
 		//Redeploy operators
-		for(Connectable op: ops){
+		for(QuerySpecificationI op: ops){
 			//Loop through the operators, if someone has the same ip, redeploy
 			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
 				Infrastructure.nLogger.info("-> Infrastructure. Redeploy OP-"+op.getOperatorId());
 				bcu.sendObject(n, op);
 			}
 		}
-		for(Connectable op: ops){
+		for(QuerySpecificationI op: ops){
 			//Loop through the operators, if someone has the same ip, reconfigure
 			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
 				Infrastructure.nLogger.info("-> Infrastructure. reconfigure OP-"+op.getOperatorId());
@@ -221,7 +226,7 @@ public class Infrastructure {
 	/// \test {some variables were bad, check if now is working}
 	public void reMap(InetAddress oldIp, InetAddress newIp){
 		OperatorContext opCtx = null;
-		for(Connectable op: ops){
+		for(QuerySpecificationI op: ops){
 			opCtx = op.getOpContext();
 			OperatorStaticInformation loc = opCtx.getOperatorStaticInformation();
 			Node node = loc.getMyNode();
@@ -239,13 +244,13 @@ public class Infrastructure {
 	public void updateU_D(InetAddress oldIp, InetAddress newIp, boolean parallelRecovery){
 		NodeManager.nLogger.warning("-> using sendControlMsg WITHOUT ACK");
 		//Update operator information
-		for(Connectable me : ops){
+		for(QuerySpecificationI me : ops){
 			//If there is an operator that was placed in the oldIP...
 			if(me.getOpContext().getOperatorStaticInformation().getMyNode().getIp().equals(oldIp)){
 				//We get its downstreams
 				for(PlacedOperator downD : me.getOpContext().downstreams){
 					//Now we change each downstream info (about me) and update its conn with me
-					for(Connectable downstream: ops){
+					for(QuerySpecificationI downstream: ops){
 						if(downstream.getOperatorId() == downD.opID()){
 							//To change info of this operator, locally first
 							downstream.getOpContext().changeLocation(oldIp, newIp);
@@ -262,7 +267,7 @@ public class Infrastructure {
 					}
 				}
 				for(PlacedOperator upU: me.getOpContext().upstreams){
-					for(Connectable upstream: ops){
+					for(QuerySpecificationI upstream: ops){
 						if(upstream.getOperatorId() == upU.opID()){
 							//To change info of this operator, locally and remotely
 							upstream.getOpContext().changeLocation(oldIp, newIp);
@@ -292,13 +297,6 @@ public class Infrastructure {
 							b2.setCommand("replay");
 							b2.setIp(target);
 							Seep.ControlTuple.Builder ctb2 = Seep.ControlTuple.newBuilder().setType(Seep.ControlTuple.Type.RECONFIGURE).setReconfigureConnection(b2.build());
-							/// \todo {this code block should be independent of the fault tolerance model}
-							if(Main.valueFor("ftmodel").equals("twitterStormModel")){
-								System.out.println("MANAGER: Sending REPLAY command to SOURCE");
-								Infrastructure.nLogger.info("-> Infrastructure. sending REPLAY command to source");
-								//bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), ctb2.build(), src.getOperatorId());
-								bcu.sendControlMsgWithoutACK(src.getOpContext().getOperatorStaticInformation(), ctb2.build(), src.getOperatorId());
-							}
 						}	
 					}
 				}
@@ -334,7 +332,7 @@ public class Infrastructure {
 		baseId++;
 	}
 
-	public void deployConnection(String command, Connectable opToContact, Connectable opToAdd, String operatorType) {
+	public void deployConnection(String command, QuerySpecificationI opToContact, QuerySpecificationI opToAdd, String operatorType) {
 		ControlTuple.Builder tuple = Seep.ControlTuple.newBuilder();
 		tuple.setType(Seep.ControlTuple.Type.RECONFIGURE);
 			
@@ -409,7 +407,7 @@ public class Infrastructure {
 		System.out.println("  ");
 
 		System.out.println("OPERATORS: ");
-		for (Connectable op: ops) {
+		for (QuerySpecificationI op: ops) {
 			System.out.println(op);
 			System.out.println();
 		}
@@ -464,5 +462,14 @@ public class Infrastructure {
 			}
 		}
 		bcu.sendControlMsg(aux.getOpContext().getOperatorStaticInformation(), tuple.build(), aux.getOperatorId());
+	}
+
+	public Operator getOperatorById(int opIdToParallelize) {
+		for(Operator op : ops){
+			if(op.getOperatorId() == opIdToParallelize){
+				return op;
+			}
+		}
+		return null;
 	}
 }

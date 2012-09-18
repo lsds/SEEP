@@ -1,12 +1,10 @@
 package seep.operator.collection;
 
 import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
-import seep.utils.ExecutionConfiguration;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +38,6 @@ String chosenWord = "Unix";
 		subclassOperator = this;
 		//stateBackupWorker = new StateBackupWorker(this);
 		//There is only one so...
-		setDispatchPolicy(DispatchPolicy.ANY);
 	}
 
 	HashMap<String, Integer> countMap = new HashMap<String, Integer>();
@@ -93,7 +90,7 @@ String chosenWord = "Unix";
 
 	@Override
 	public void generateBackupState() {
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			HashMap<String, Integer> countMap = getCountMap();
 			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
 			List<String> words = null;
@@ -117,7 +114,7 @@ String chosenWord = "Unix";
 			bsB.setWcState(wcS.build());
 			backupState(bsB);
 			setCounter(0);
-		}
+		
 	}
 
 	@Override

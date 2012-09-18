@@ -5,7 +5,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import seep.Main;
-import seep.utils.ExecutionConfiguration;
 
 /**
  * MasterStatisticsHandler. This class is in the master node and is in charge of retrieving the performance times of the system

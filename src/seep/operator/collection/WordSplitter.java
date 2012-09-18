@@ -1,20 +1,16 @@
 package seep.operator.collection;
 
 import seep.buffer.Buffer;
-import seep.comm.ContentBasedFilter;
-import seep.comm.StatefulDynamicLoadBalancer;
-import seep.comm.StatelessDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.WordCounterState;
 import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.operator.CommunicationChannel;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.utils.CommunicationChannelInformation;
 
 @SuppressWarnings("serial")
 public class WordSplitter extends Operator implements StatelessOperator, StateSplitI{
@@ -40,9 +36,7 @@ public class WordSplitter extends Operator implements StatelessOperator, StateSp
 		
 		//Define dispatching filter for different downstreams
 		/** THIS would not need to do this, necessary to refactor the high level API **/
-		ContentBasedFilter cbf = new ContentBasedFilter("getInt");
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 1);
-		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
+		
 	}
 
 	@Override 
@@ -88,7 +82,7 @@ public class WordSplitter extends Operator implements StatelessOperator, StateSp
 		
 		for(Seep.WordCounterState.Entry e : original.getEntryList()){
 			int aux = e.getWord().hashCode();
-			if(StatefulDynamicLoadBalancer.customHash(aux) < key){
+			if(Router.customHash(aux) < key){
 				oldS.addEntry(e);
 			}
 			else{

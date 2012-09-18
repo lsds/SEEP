@@ -6,12 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import seep.Main;
-import seep.comm.ContentBasedFilter;
-import seep.comm.StatelessDynamicLoadBalancer;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.operator.StatelessOperator;
-import seep.utils.ExecutionConfiguration;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 
 @SuppressWarnings("serial")
@@ -27,8 +23,6 @@ public class WordSrc extends Src implements StatelessOperator{
 		super(opID);
 		subclassOperator = this;
 		
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer();
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
 	}
 	
 	@Override 

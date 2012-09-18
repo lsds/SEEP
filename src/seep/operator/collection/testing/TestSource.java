@@ -1,9 +1,5 @@
 package seep.operator.collection.testing;
 
-import seep.comm.ContentBasedFilter;
-import seep.comm.StatelessDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -24,25 +20,25 @@ public class TestSource extends Operator implements StatelessOperator{
 		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
 		*/
 		
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer(3);
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
-		
 	}
 
 	@Override
 	public void processData(Seep.DataTuple dt) {
 		int value = 0;
 		int c = 0;
+		int fake = 0;
 		while(true){
 			Seep.DataTuple.Builder data = Seep.DataTuple.newBuilder(dt);
 			if(c == 2){
 				value = 1;
 				c = 0;
 			}
-//			data.setInt(value);
+			data.setInt(value);
 			value = 0;
 			c++;
 			sendDown(data.build());
+			fake++;
+			System.out.println("Sent: "+fake);
 			try{
 				Thread.sleep(500);
 			} 

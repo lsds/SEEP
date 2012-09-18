@@ -10,9 +10,7 @@ import seep.Main;
 import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
-import seep.comm.InputQueue;
-import seep.comm.LoadBalancerI;
-import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.Ack;
 import seep.comm.tuples.Seep.ControlTuple;
@@ -24,14 +22,15 @@ import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.OperatorStaticInformation;
 import seep.operator.collection.SmartWordCounter;
 import seep.operator.collection.lrbenchmark.Snk;
-import seep.utils.ExecutionConfiguration;
 
 /**
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
 */
 
-@SuppressWarnings("serial")
-public abstract class Operator implements Serializable, Connectable {
+public abstract class Operator implements Serializable, QuerySpecificationI {
+
+
+	private static final long serialVersionUID = 1L;
 
 public int ackCounter = 0;
 	
@@ -40,8 +39,13 @@ public int ackCounter = 0;
 
 	private OperatorContext opContext;
 	private OperatorCommonProcessLogic opCommonProcessLogic;
+	private Router router;
 
+	private InputQueue inputQueue;
+	private DataConsumer dataConsumer;
+	private Thread dConsumerH = null;
 	private Dispatcher dispatcher;
+	private OutputQueue outputQueue;
 	
 	private Thread controlH = null;
 	private ControlHandler ch = null;
@@ -50,11 +54,6 @@ public int ackCounter = 0;
 //	private LocalProfiler lp = new LocalProfiler();
 	
 	public Operator subclassOperator = null;
-	private DispatchPolicy dispatchPolicy = DispatchPolicy.ALL;
-	private LoadBalancerI dispatcherFilter = null;
-	
-	/// \todo {input queue, implement as a singleton}
-	private InputQueue iq = null;
 	
 	static ControlTuple genericAck;
 	
@@ -87,7 +86,7 @@ public int ackCounter = 0;
 	}
 	
 	public InputQueue getInputQueue(){
-		return iq;
+		return inputQueue;
 	}
 	
 	public long getTs_ack() {
@@ -102,17 +101,16 @@ public int ackCounter = 0;
 		return subclassOperator;
 	}
 	
-	public void setDispatchPolicy(DispatchPolicy dp, LoadBalancerI df) {
-		this.dispatchPolicy = dp;
-		this.dispatcherFilter = df;
-	}
-	
-	public void setDispatchPolicy(DispatchPolicy dp){
-		this.dispatchPolicy = dp;
-	}
-	
 	public Dispatcher getDispatcher(){
 		return dispatcher;
+	}
+	
+	public Router getRouter(){
+		return router;
+	}
+	
+	public void setRouter(Router router){
+		this.router = router;
 	}
 	
 	public int getBackupUpstreamIndex() {
@@ -122,34 +120,12 @@ public int ackCounter = 0;
 	public void setBackupUpstreamIndex(int backupUpstreamIndex) {
 		this.backupUpstreamIndex = backupUpstreamIndex;
 	}
-
-	/* (non-Javadoc)
-	 * @see seep.operator.Connectable#getOperatorId()
-	 */
-	public int getOperatorId(){
-		return operatorId;
-	}
-
-	/* (non-Javadoc)
-	 * @see seep.operator.Connectable#getOpContext()
-	 */
-	public OperatorContext getOpContext(){
-		return opContext;
-	}
-
-	public void setOpContext(OperatorContext opContext){
-		this.opContext = opContext;
-	}
 	
 	public Operator(int opID){
 		this.operatorId = opID;
 		opContext = new OperatorContext();
 		opCommonProcessLogic = new OperatorCommonProcessLogic();
-	}
-
-	public void connectTo(Connectable down) {
-		opContext.addDownstream(down.getOperatorId());
-		down.getOpContext().addUpstream(getOperatorId());
+		router = new Router();
 	}
 	
 	@Override 
@@ -162,14 +138,23 @@ public int ackCounter = 0;
 		
 		opCommonProcessLogic.setOwner(this);
 		opCommonProcessLogic.setOpContext(opContext);
-		iq = new InputQueue(this);
-		dispatcher = new Dispatcher(opContext, dispatchPolicy, dispatcherFilter);
+		inputQueue = new InputQueue();
+		outputQueue = new OutputQueue();
+		dispatcher = new Dispatcher(opContext, outputQueue);
+		//Configure routing to downstream
+		router.configureRoutingImpl(opContext);
 		
+		//Control worker
 		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
 		controlH = new Thread(ch);
+		//Data worker
 		idh = new IncomingDataHandler(this, opContext.getOperatorStaticInformation().getInD());
 		iDataH = new Thread(idh);
+		//Consumer worker
+		dataConsumer = new DataConsumer(this, inputQueue);
+		dConsumerH = new Thread(dataConsumer);
 
+		dConsumerH.start();
 		controlH.start();
 		iDataH.start();
 
@@ -184,7 +169,9 @@ public int ackCounter = 0;
 /// \todo {return a proper boolean after check...}
 	public void initializeCommunications() throws OperatorInitializationException{
 		dispatcher.setOpContext(opContext);
-		dispatcher.startFilters();
+		router.initializeQueryFunction();
+		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
+		dispatcher.setRouter(router);
 		opContext.configureCommunication();
 
 		//Choose the upstreamBackupIndex for this operator
@@ -321,41 +308,32 @@ System.out.println("*scaleOut: "+b);
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.RESUME");
 			Seep.Resume resumeM = ct.getResume();
-			///todo {clean up ft dependent code in this block}
-			if(Main.valueFor("ftmodel").equals("newModel")){
-				// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
-				// I may be managing a state but I dont have to replay it if I have not splitted it previously
-				if(operatorStatus.equals(OperatorStatus.WAITING_FOR_STATE_ACK)){
-					/// \todo {why has resumeM a list?? check this}
-					for (int opId: resumeM.getOpIdList()){
-						//Check if I am managing the state of any of the operators to which state must be replayed
+			
+			// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
+			// I may be managing a state but I dont have to replay it if I have not splitted it previously
+			if(operatorStatus.equals(OperatorStatus.WAITING_FOR_STATE_ACK)){
+				/// \todo {why has resumeM a list?? check this}
+				for (int opId: resumeM.getOpIdList()){
+					//Check if I am managing the state of any of the operators to which state must be replayed
+					/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
+					if(opContext.isManagingStateOf(opId)){
 						/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-						if(opContext.isManagingStateOf(opId)){
-							/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-							if(subclassOperator instanceof StateSplitI){
-								//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-								NodeManager.nLogger.info("-> Replaying State");
-								opCommonProcessLogic.replayState(opId);
-							}
-						}
-						else{
-							NodeManager.nLogger.info("-> NOT in charge of managing this state");
+						if(subclassOperator instanceof StateSplitI){
+							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
+							NodeManager.nLogger.info("-> Replaying State");
+							opCommonProcessLogic.replayState(opId);
 						}
 					}
-					//Once I have replayed the required states I put my status to NORMAL
-					this.operatorStatus = OperatorStatus.NORMAL;
+					else{
+						NodeManager.nLogger.info("-> NOT in charge of managing this state");
+					}
 				}
-				else{
-					NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
-				}
+				//Once I have replayed the required states I put my status to NORMAL
+				this.operatorStatus = OperatorStatus.NORMAL;
 			}
-			/**dependent code**/
-			else if(!Main.valueFor("ftmodel").equals("twitterStormModel") || opContext.upstreams.size() == 0){
-				for (int opId: resumeM.getOpIdList()){
-					opCommonProcessLogic.replayTuples(opId);
-				}
+			else{
+				NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
 			}
-			/**dependent code**/	
 long b = System.currentTimeMillis() - a;
 System.out.println("*resume: "+b);
 			//Finally ack the processing of this message
@@ -368,7 +346,7 @@ long a = System.currentTimeMillis();
 			processCommand(ct.getReconfigureConnection(), os);
 long b = System.currentTimeMillis() - a;
 System.out.println("*reconfigure: "+b);
-		}	
+		}
 	}
 
 	private void ackControlMessage(OutputStream os){
@@ -401,35 +379,27 @@ System.out.println("*reconfigure: "+b);
 			opContext.changeLocation(opId, ip);
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
-			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D")) && !Main.valueFor("ftmodel").equals("twitterStormModel")){
+			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
 				dispatcher.stopConnection(opId);
 			}
 			opContext.updateConnection(opId, ip);
 			if(command.equals("reconfigure_U")){
 				opCommonProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
-			if(command.equals("reconfigure_D") && !Main.valueFor("ftmodel").equals("twitterStormModel")){
+			if(command.equals("reconfigure_D")){
 				/// \todo {change this deprecated. This was the previous way of replaying stuff, now there are no threads}
 				//opCommonProcessLogic.startReplayer(opId);
 				// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
-				/// \todo {this code is ft dependant}
-				/**dependent code**/
-				if(Main.valueFor("ftmodel").equals("newModel")){
-					if(opContext.isManagingStateOf(opId)){
-						if(subclassOperator instanceof StateSplitI){
-							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-							NodeManager.nLogger.info("-> Replaying State");
-							opCommonProcessLogic.replayState(opId);
-						}
-					}
-					else{
-						NodeManager.nLogger.info("-> NOT in charge of managing this state");
+				if(opContext.isManagingStateOf(opId)){
+					if(subclassOperator instanceof StateSplitI){
+						//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
+						NodeManager.nLogger.info("-> Replaying State");
+						opCommonProcessLogic.replayState(opId);
 					}
 				}
-				else if(!Main.valueFor("ftmodel").equals("twitterStormModel") || opContext.upstreams.size() > 0){
-					opCommonProcessLogic.replayTuples(opId);
+				else{
+					NodeManager.nLogger.info("-> NOT in charge of managing this state");
 				}
-				/****/
 			}
 //			operatorStatus = OperatorStatus.NORMAL;
 			//ackControlMessage(os);
@@ -456,24 +426,17 @@ System.out.println("*reconfigure: "+b);
 				//Send to that upstream the routing information I am storing (in case there are ri).
 				opCommonProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 				
-				/**dependent code**/
-				if(Main.valueFor("ftmodel").equals("newModel")){
-					//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
-					opCommonProcessLogic.reconfigureUpstreamBackupIndex();
-				}
-				/****/
+				
+				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
+				opCommonProcessLogic.reconfigureUpstreamBackupIndex();
 			}
 			ackControlMessage(os);
 		}
 		/** SYSTEM READY message **/
 		else if (command.equals("system_ready")){
 			ackControlMessage(os);
-			/**dependent code**/
-			if(Main.valueFor("ftmodel").equals("newModel")){
-				//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
-				opCommonProcessLogic.sendInitialStateBackup();
-			}
-			/****/
+			//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
+			opCommonProcessLogic.sendInitialStateBackup();
 		}
 		/** REPLAY message **/
 		/// \todo {this command is only used for twitter storm model...}
@@ -630,7 +593,38 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 		ack(currentTsData);
 	}
 	
-	public void printRoutingInfo(){
-		opCommonProcessLogic.printRoutingInfo();
+/** Implementation of QuerySpecificationI **/
+	
+	public int getOperatorId(){
+		return operatorId;
+	}
+	
+	public OperatorContext getOpContext(){
+		return opContext;
+	}
+	
+	public void setOpContext(OperatorContext opContext){
+		this.opContext = opContext;
+	}
+	
+	public void connectTo(QuerySpecificationI down) {
+		opContext.addDownstream(down.getOperatorId());
+		down.getOpContext().addUpstream(getOperatorId());
+//		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
+	}
+	
+	public void setRoutingQueryFunction(String queryFunction_methodName){
+		router.setQueryFunction(queryFunction_methodName);
+		NodeManager.nLogger.info("Configured Routing Query Function: "+queryFunction_methodName+" in Operator: "+this.toString());
+	}
+	
+	public void route(Router.RelationalOperator operand, int value, Operator toConnect){
+		int opId = toConnect.getOperatorId();
+		router.routeValueToDownstream(operand, value, opId);
+		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
+	}
+	
+	public void scaleOut(Operator toScaleOut){
+		//TODO implement static scaleOut
 	}
 }

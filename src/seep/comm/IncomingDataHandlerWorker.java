@@ -47,12 +47,17 @@ public class IncomingDataHandlerWorker implements Runnable{
 						owner.setTsData(incomingTs);
 //						if(!owner.getOperatorStatus().equals(Operator.OperatorStatus.INITIALISING_STATE)){
 							//owner.processData(dt);
-							if(owner.isOrderSensitive()){
-								iq.pushEvent(uid, dt);
-							}
-							else{
-								owner.processData(dt);
-							}
+						
+						//Put data in inputQueue
+						iq.push(dt);
+						
+						
+//							if(owner.isOrderSensitive()){
+//								iq.pushEvent(uid, dt);
+//							}
+//							else{
+//								owner.processData(dt);
+//							}
 						}
 //						else{
 //							//Installing state, clean channel from remaining tuples in the batch

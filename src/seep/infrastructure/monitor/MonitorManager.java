@@ -1,13 +1,16 @@
 package seep.infrastructure.monitor;
 
-import seep.Main;
-import seep.utils.*;
-import seep.comm.tuples.*;
-import seep.infrastructure.*;
-import java.io.*;
-import java.net.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+
+import seep.Main;
+import seep.comm.tuples.Seep;
+import seep.infrastructure.Infrastructure;
 
 /**
 * MonitorManager. This class implements Runnable and runs in the master node. It is in charge of retrieving the information sent by the monitors that control the system.

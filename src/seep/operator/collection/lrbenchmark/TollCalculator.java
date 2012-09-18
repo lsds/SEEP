@@ -6,9 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import seep.Main;
-import seep.comm.ContentBasedFilter;
-import seep.comm.ContentBasedFilter.RouteOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.InitState;
@@ -17,7 +14,6 @@ import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatefullOperator;
 import seep.operator.workers.StateBackupWorker;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class TollCalculator extends Operator implements StatefullOperator, StateSplitI{
@@ -58,13 +54,13 @@ public class TollCalculator extends Operator implements StatefullOperator, State
 //			accidents.put(i, false);
 //		}
 		/// \todo Consider moving this piece of code to main (to compose from the interface).
-		ContentBasedFilter cbf = new ContentBasedFilter("getType");
-		// toll notification to both toll collector and toll assesssment
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 31);
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 20);
-		// accident only to toll collector
-		cbf.routeValueToDownstream(RouteOperator.EQ, 1, 31);
-		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
+//		ContentBasedFilter cbf = new ContentBasedFilter("getType");
+//		// toll notification to both toll collector and toll assesssment
+//		cbf.routeValueToDownstream(RelationalOperator.EQ, 0, 31);
+//		cbf.routeValueToDownstream(RelationalOperator.EQ, 0, 20);
+//		// accident only to toll collector
+//		cbf.routeValueToDownstream(RelationalOperator.EQ, 1, 31);
+//		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
 		
 	}
 	
@@ -448,7 +444,7 @@ if((e-a) > 5){
 	@Override
 	public synchronized void generateBackupState() {
 long a = System.currentTimeMillis();
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			Seep.TollCalculatorState.Builder tcS = Seep.TollCalculatorState.newBuilder();
 			//avg Speed min 5
 			List<Integer> segment = null;
@@ -757,7 +753,7 @@ long e = System.currentTimeMillis();
 //System.out.println("### Generate BS: "+(e-a));
 //System.out.println("### SIZE SENT, BSB: "+bsB.build().getSerializedSize());
 //System.out.println("### SIZE SENT, TCS: "+tcSbuilt.getSerializedSize());
-		}
+		
 	}
 
 	@Override

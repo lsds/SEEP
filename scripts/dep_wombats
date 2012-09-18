@@ -1,110 +1,134 @@
 JAR=$1
 echo $JAR
 
-echo "Deploying in wombat15"
+
+#scp $JAR rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+#scp config.properties rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat11.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat11.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat12.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat12.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat13.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat13.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat14.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat14.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat16"
+scp config.properties rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat17"
+scp config.properties rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat18"
+scp config.properties rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat19"
+scp config.properties rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
 
-
-#echo "Deploying in wombat20"
-#scp $JAR rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuU rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuUOld rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/ft-script rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
-
-
-#echo "Deploying in wombat21"
-#scp $JAR rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuU rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuUOld rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/ft-script rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat15"
+#scp $JAR rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat16"
+#scp $JAR rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat17"
+#scp $JAR rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat18"
+#scp $JAR rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat19"
+#scp $JAR rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
 #
-##echo "Deploying in wombat22"
-#scp $JAR rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuU rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuUOld rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/ft-script rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
+#
+##echo "Deploying in wombat20"
+##scp $JAR rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuU rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuUOld rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/ft-script rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+#
+#
+##echo "Deploying in wombat21"
+##scp $JAR rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuU rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuUOld rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/ft-script rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
 ##
-#echo "Deploying in wombat23"
-#scp $JAR rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuU rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuUOld rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/ft-script rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
+###echo "Deploying in wombat22"
+##scp $JAR rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuU rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuUOld rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/ft-script rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
+###
+##echo "Deploying in wombat23"
+##scp $JAR rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuU rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuUOld rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/ft-script rc3011@wombat23.doc.res.ic.ac.uk:/home/rc3011
+##
 #
-
-#echo "Deploying in wombat24"
-#scp $JAR rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuU rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/cpuUOld rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
-#scp scripts/ft-script rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
+##echo "Deploying in wombat24"
+##scp $JAR rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuU rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/cpuUOld rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
+##scp scripts/ft-script rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
+##
 #
-
-echo "Deploying in wombat01"
-scp $JAR rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-echo "Copying source file"
-$scp res/theHackerCrackdown.txt rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-$scp res/datafile20seconds.dat rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat02"
-scp $JAR rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat03"
-scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat04"
-scp $JAR rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat05"
-scp $JAR rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat06"
-scp $JAR rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat07"
-scp $JAR rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat08"
-scp $JAR rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
-echo "Deploying in wombat09"
-scp $JAR rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuU rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/cpuUOld rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
-scp scripts/ft-script rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat01"
+#scp $JAR rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#echo "Copying source file"
+#$scp res/theHackerCrackdown.txt rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#$scp res/datafile20seconds.dat rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat02"
+#scp $JAR rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat03"
+#scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat04"
+#scp $JAR rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat05"
+#scp $JAR rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat06"
+#scp $JAR rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat07"
+#scp $JAR rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat08"
+#scp $JAR rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/ft-script rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
+#echo "Deploying in wombat09"
+#scp $JAR rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuU rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+#scp scripts/cpuUOld rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+######scp scripts/ft-script rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011

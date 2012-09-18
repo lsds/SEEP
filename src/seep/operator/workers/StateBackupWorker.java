@@ -1,19 +1,19 @@
 package seep.operator.workers;
 
-import java.io.*;
+import java.io.Serializable;
 
 import seep.Main;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
-import seep.utils.ExecutionConfiguration;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.
 */
 
-@SuppressWarnings("serial")
 public class StateBackupWorker implements Runnable, Serializable{
 
+	private static final long serialVersionUID = 1L;
+	
 	private StatefullOperator o;
 	/// \todo {get the threshold value in a proper way}
 	private long threshold = 0;

@@ -6,17 +6,16 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import seep.Main;
 import seep.comm.tuples.Seep;
-import seep.utils.CommunicationChannelInformation;
-import seep.utils.ExecutionConfiguration;
+import seep.operator.CommunicationChannel;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
 */
 
-@SuppressWarnings("serial")
 public class Buffer implements Serializable{
+
+	private static final long serialVersionUID = 1L;
 
 	private Deque<Seep.EventBatch> buff = new LinkedBlockingDeque<Seep.EventBatch>();
 	
@@ -25,20 +24,17 @@ public class Buffer implements Serializable{
 	public Iterator<Seep.EventBatch> iterator() { return buff.iterator(); }
 
 	public Buffer(){
-//\todo This block of code is conditional on ft model. This must be done in a different way.
-		if(Main.valueFor("ftmodel").equals("newModel")){
-			//state cannot be null. before backuping it would be null and this provokes bugs
+		//state cannot be null. before backuping it would be null and this provokes bugs
 //\bug The constructor in Buffer is operator dependant, this must be fixed by means of interfaces that make it independent.
-			Seep.WordCounterState.Builder wcs = Seep.WordCounterState.newBuilder();
-			Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
-			eB.setCounter(0);
-			wcs.addEntry(eB.build());
-			Seep.BackupState.Builder initState = Seep.BackupState.newBuilder();
-			initState.setOpId(0);
-			initState.setTsE(0);
-			initState.setWcState(wcs.build());
-			bs = initState.build();
-		}
+		Seep.WordCounterState.Builder wcs = Seep.WordCounterState.newBuilder();
+		Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
+		eB.setCounter(0);
+		wcs.addEntry(eB.build());
+		Seep.BackupState.Builder initState = Seep.BackupState.newBuilder();
+		initState.setOpId(0);
+		initState.setTsE(0);
+		initState.setWcState(wcs.build());
+		bs = initState.build();
 	}
 	
 	public int size(){
@@ -81,12 +77,12 @@ public class Buffer implements Serializable{
 		}
 	}
 	
-	public void replay(CommunicationChannelInformation oi){
+	public void replay(CommunicationChannel oi){
 long a = System.currentTimeMillis();
 		while(oi.sharedIterator.hasNext()){
 			Seep.EventBatch batch = oi.sharedIterator.next();
 			try{
-				batch.writeDelimitedTo(oi.downstreamSocketD.getOutputStream());
+				batch.writeDelimitedTo(oi.getDownstreamDataSocket().getOutputStream());
 			}
 			catch(IOException io){
 				System.out.println("While replaying: "+io.getMessage());

@@ -1,9 +1,6 @@
 package seep.operator.collection.lrbenchmark;
 
-import seep.comm.ContentBasedFilter;
-import seep.comm.StatefulDynamicLoadBalancer;
-import seep.comm.ContentBasedFilter.RouteOperator;
-import seep.comm.Dispatcher.DispatchPolicy;
+import seep.comm.routing.Router;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.TollCalculatorState;
@@ -15,16 +12,14 @@ import seep.operator.StatelessOperator;
 public class Forwarder extends Operator implements StatelessOperator, StateSplitI{
 
 	public Forwarder(int opID) {
+		
 		//Indicate ID
 		super(opID);
 		//Provide subclass to the father
 		subclassOperator = this;
 		
 		//Define dispatching filter for different downstreams
-		ContentBasedFilter cbf = new ContentBasedFilter("getType");
-		cbf.routeValueToDownstream(RouteOperator.EQ, 0, 10);
-		cbf.routeValueToDownstream(RouteOperator.EQ, 2, 20);
-		setDispatchPolicy(DispatchPolicy.CONTENT_BASED, cbf);
+		
 	}
 
 //TESTING
@@ -134,7 +129,7 @@ System.out.println("#######################");
 			TollCalculatorState.Builder newTC = TollCalculatorState.newBuilder();
 			//split SpeedAvg5Minutes
 			for(Seep.TollCalculatorState.DataII data : tcState.getSpeedAvg5MinutesList()){
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addSpeedAvg5Minutes(data);
 				}
 				else{
@@ -143,7 +138,7 @@ System.out.println("#######################");
 			}
 			//split SpeedAvg4Minutes
 			for(Seep.TollCalculatorState.DataII data : tcState.getSpeedAvg4MinutesList()){
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addSpeedAvg4Minutes(data);
 				}
 				else{
@@ -152,7 +147,7 @@ System.out.println("#######################");
 			}
 			//split SpeedAvg3Minutes
 			for(Seep.TollCalculatorState.DataII data : tcState.getSpeedAvg3MinutesList()){
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addSpeedAvg3Minutes(data);
 				}
 				else{
@@ -161,7 +156,7 @@ System.out.println("#######################");
 			}
 			//split SpeedAvg2Minutes
 			for(Seep.TollCalculatorState.DataII data : tcState.getSpeedAvg2MinutesList()){
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addSpeedAvg2Minutes(data);
 				}
 				else{
@@ -170,7 +165,7 @@ System.out.println("#######################");
 			}
 			//split SpeedAvg1Minutes
 			for(Seep.TollCalculatorState.DataII data : tcState.getSpeedAvg1MinutesList()){
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addSpeedAvg1Minutes(data);
 				}
 				else{
@@ -181,7 +176,7 @@ System.out.println("#######################");
 //System.out.println("numVidLastMin_seg_numVid: "+tcState.getNumVidLastMinSegSegNumVidCount());
 			for(Seep.TollCalculatorState.DataII data : tcState.getNumVidLastMinSegSegNumVidList()){
 //System.out.println("NON EMPTY: "+data.getKey());
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 //System.out.println("NON EMPTY: "+data.getKey());
 					oldTC.addNumVidLastMinSegSegNumVid(data);
 				}
@@ -194,7 +189,7 @@ System.out.println("#######################");
 //System.out.println("PAR-> NumVidCurrentMinSegSegListVid: "+tcState.getNumVidCurrentMinSegSegListVidCount());
 			for(Seep.TollCalculatorState.DataListI data : tcState.getNumVidCurrentMinSegSegListVidList()){
 //System.out.println("PAR-> listSize: "+data.getValueCount());
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addNumVidCurrentMinSegSegListVid(data);
 				}
 				else{
@@ -203,7 +198,7 @@ System.out.println("#######################");
 			}
 			//split accidents
 			for(Seep.TollCalculatorState.DataBool data : tcState.getAccidentsList()){
-				if(StatefulDynamicLoadBalancer.customHash(data.getKey()) < key){
+				if(Router.customHash(data.getKey()) < key){
 					oldTC.addAccidents(data);
 				}
 				else{

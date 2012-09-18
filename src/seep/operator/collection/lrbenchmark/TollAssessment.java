@@ -4,14 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.workers.StateBackupWorker;
-import seep.utils.ExecutionConfiguration;
 
 @SuppressWarnings("serial")
 public class TollAssessment extends Operator implements StatefullOperator{
@@ -39,7 +36,6 @@ public class TollAssessment extends Operator implements StatefullOperator{
 	public TollAssessment(int opID) {
 		super(opID);
 		subclassOperator = this;
-		setDispatchPolicy(DispatchPolicy.ALL);
 	}
 	
 	private void setCounter(int i) {
@@ -130,7 +126,7 @@ private long t_start = 0;
 
 	@Override
 	public synchronized void generateBackupState() {
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			Seep.BalanceAccountState.Builder baS = Seep.BalanceAccountState.newBuilder();
 			//balance account
 			List<Integer> vids = null;
@@ -195,7 +191,7 @@ private long t_start = 0;
 			bsB.setBaState(baS.build());
 			backupState(bsB);
 			setCounter(0);
-		}
+		
 		
 	}
 

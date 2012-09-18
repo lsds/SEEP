@@ -1,14 +1,12 @@
 package seep.operator.collection;
 
 import seep.Main;
-import seep.comm.Dispatcher.DispatchPolicy;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.StateSplitI;
 import seep.operator.workers.StateBackupWorker;
-import seep.utils.ExecutionConfiguration;
 import seep.comm.*;
 
 import java.io.BufferedWriter;
@@ -105,10 +103,6 @@ public class SmartWordCounter extends Operator implements StatefullOperator{
 			}
 			break;
 		}
-		StatelessDynamicLoadBalancer ssf = new StatelessDynamicLoadBalancer();
-		setDispatchPolicy(DispatchPolicy.ANY, ssf);
-		
-		
 	}
 
 	public HashMap<String, Integer> getCountMap(){
@@ -203,7 +197,7 @@ System.out.println("###############################");
 
 	@Override
 	public void generateBackupState() {
-		if(Main.valueFor("ftmodel").equals("newModel")){
+		
 			HashMap countMap = getCountMap();
 //long a = System.currentTimeMillis();
 			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
@@ -235,7 +229,7 @@ System.out.println("###############################");
 			/*This method is called each time the developer decides to checkpoint the state. A more powerful API should be offered, for instance able to support timers, and configured initially or whatever... For now, this explicitly does a backup of the state, and in this specific example, the developer chooses to checkpoint each time data is processed in this operator*/
 			backupState(bsB);
 			setCounter(0);
-		}
+		
 		
 	}
 
