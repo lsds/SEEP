@@ -1,8 +1,8 @@
 13/9/2012 Raul
 This todos are ordered by priority level.
-- Refactor internal routing providing clean external interfaces.
+- Refactor internal routing providing clean external interfaces. (X)
 - Serialization mechanism.
-- Low level API to describe/configure/connect operators.
+- Low level API to describe/configure/connect operators. (X)
 - Define a basic API to develop operators for SEEP. (extensible is important at this point)
 At this point we have a robust API and robust routing mechanism.
 - Fix distributed protocols and prepare them to SCALE-IN.

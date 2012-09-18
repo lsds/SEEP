@@ -606,7 +606,7 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 	public void connectTo(QuerySpecificationI down) {
 		opContext.addDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
-		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
+//		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
 	}
 	
 	public void setRoutingQueryFunction(String queryFunction_methodName){

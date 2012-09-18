@@ -7,6 +7,8 @@ import seep.operator.StatelessOperator;
 
 public class Foo extends Operator implements StatelessOperator{
 
+	private int counter = 0;
+	
 	public Foo(int opID) {
 		super(opID);
 		subclassOperator = this;
@@ -15,8 +17,10 @@ public class Foo extends Operator implements StatelessOperator{
 
 	@Override
 	public void processData(Seep.DataTuple dt) {
+		counter++;
 		System.out.println("VALUE: "+dt.getInt());
 		sendDown(dt, dt.getInt());
+		System.out.println("COUNTER: "+counter);
 	}
 
 	@Override

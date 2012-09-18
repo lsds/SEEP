@@ -104,10 +104,10 @@ public class Dispatcher implements Serializable{
 	}
 	
 	public void sendData(Seep.DataTuple dt, int value, boolean now){
-		System.out.println("get targets: ");
+//		System.out.println("get targets: ");
 		targets = router.forward(dt, value, now);
 		for(Integer target : targets){
-			System.out.println("TARGET: "+target.toString());
+//			System.out.println("TARGET: "+target.toString());
 			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
 			outputQueue.sendToDownstream(dt, dest, now, false);
 		}

@@ -107,16 +107,16 @@ public class Router implements Serializable{
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		//If it is necessary to query data to guess (logic)downstream
 		if(requiresQueryData){
-			System.out.println("REQUIRES QUERY DATA");
+//			System.out.println("REQUIRES QUERY DATA");
 			ArrayList<Integer> logicalTargets = routeLayerOne(dt, value);
-			System.out.println("LOGICAL TARGETS: "+logicalTargets.size());
+//			System.out.println("LOGICAL TARGETS: "+logicalTargets.size());
 			targets = routeLayerTwo(logicalTargets, value);
 		}
 		else{
-			System.out.println("NO query data");
+//			System.out.println("NO query data");
 			//Otherwise, we use the default RoutingImpl
 			//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
-			System.out.println("DownRoutingImpl size: "+downstreamRoutingImpl.size());
+//			System.out.println("DownRoutingImpl size: "+downstreamRoutingImpl.size());
 			for(Integer target : downstreamRoutingImpl.keySet()){
 				//This should be called just once...
 				/// \fixme{CHECK THIS}

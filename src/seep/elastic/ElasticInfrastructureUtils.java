@@ -276,6 +276,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			if(opId == op.getOperatorId()){
 				//op.getOpContext().copyContext(newOp);
 				for(PlacedOperator up : op.getOpContext().upstreams){
+					
 					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()));
 				}
 				for(PlacedOperator down : op.getOpContext().downstreams){
