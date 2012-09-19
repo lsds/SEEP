@@ -6,6 +6,8 @@
   <property name="src" location="src"/>
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
+  <property name="lib"	location="lib"/>
+  
 
   <target name="init">
     <!-- Create the time stamp -->
@@ -14,10 +16,16 @@
     <mkdir dir="${build}"/>
   </target>
 
-  <target name="compile" depends="init"
-        description="compile the source " >
+  <target name="compile" depends="init" description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-		<javac debug="on" srcdir="${src}:lib/protobuf-2.4.1/java/src/main/java" destdir="${build}" />
+	<javac debug="on" srcdir="${src}:lib/protobuf-2.4.1/java/src/main/java" destdir="${build}" classpath="classpath">
+		<classpath id="classpath" description="The default classpath.">
+  			<pathelement path="${classpath}"/>
+  			<fileset dir="${lib}">
+    				<include name="kryo-debug-2.20-all.jar"/>
+  			</fileset>
+  		</classpath>
+	</javac>
   </target>
 
   <target name="dist" depends="compile"
