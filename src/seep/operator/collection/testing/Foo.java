@@ -1,5 +1,6 @@
 package seep.operator.collection.testing;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -15,12 +16,12 @@ public class Foo extends Operator implements StatelessOperator{
 		
 	}
 
-	@Override
-	public void processData(Seep.DataTuple dt) {
-		counter++;
-		System.out.println("VALUE: "+dt.getInt());
-		sendDown(dt, dt.getInt());
-		System.out.println("COUNTER: "+counter);
+	
+	public void processData(DataTuple dt) {
+//		counter++;
+//		System.out.println("VALUE: "+dt.getInt());
+//		sendDown(dt, dt.getInt());
+//		System.out.println("COUNTER: "+counter);
 	}
 
 	@Override

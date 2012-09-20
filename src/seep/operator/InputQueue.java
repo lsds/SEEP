@@ -3,17 +3,17 @@ package seep.operator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.DataTuple;
 
 public class InputQueue {
 
-	private BlockingQueue<Seep.DataTuple> inputQueue;
+	private BlockingQueue<DataTuple> inputQueue;
 	
 	public InputQueue(){
-		inputQueue = new LinkedBlockingQueue<Seep.DataTuple>();
+		inputQueue = new LinkedBlockingQueue<DataTuple>();
 	}
 	
-	public void push(Seep.DataTuple data){
+	public void push(DataTuple data){
 		try {
 			inputQueue.put(data);
 //			System.out.println("ID pushed: "+inputQueue.size());
@@ -24,7 +24,7 @@ public class InputQueue {
 		}
 	}
 	
-	public Seep.DataTuple pull(){
+	public DataTuple pull(){
 		try {
 //			System.out.println("ID pop:");
 			return inputQueue.take();

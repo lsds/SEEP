@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import seep.Main;
 import seep.comm.BasicCommunicationUtils;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
@@ -72,10 +73,11 @@ public class NodeManager{
 
 	public void startOperator(Integer opToInitialize) {
 		int opId = opToInitialize.intValue();
-		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
+//		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
+		DataTuple dt = new DataTuple();
 		dt.setTs(0);
 		nLogger.info("-> Starting system");
-		mapOP_ID.get(opId).processData(dt.build());
+		mapOP_ID.get(opId).processData(dt);
 	}
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
@@ -157,10 +159,11 @@ public class NodeManager{
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
-                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
+//                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
+                        DataTuple dt = new DataTuple();
                         dt.setTs(0);
                         Integer aux = new Integer(tokens[1]);
-                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt.build());
+                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);
 					}
 					if(tokens[0].equals("CLOCK")){
 						NodeManager.clock = System.currentTimeMillis();

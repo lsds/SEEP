@@ -1,5 +1,6 @@
 package seep.operator.collection.lrbenchmark;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
@@ -21,29 +22,29 @@ public class TollCollector extends Operator implements StatelessOperator{
 	long tinit = 0;
 	
 	
-	@Override
-	public synchronized void processData(Seep.DataTuple dt) {
-		counter++;
-		if(firstTime){
-			firstTime = false;
-			t_start = System.currentTimeMillis();
-			tinit = System.currentTimeMillis();
-		}
-		
-		sendDown(dt);
-		
-//		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
-//	 	if(t > dt.getTime()+5){
-//			System.out.println("TCol time: emit: "+dt.getTime()+" current: "+t);
+	
+	public synchronized void processData(DataTuple dt) {
+//		counter++;
+//		if(firstTime){
+//			firstTime = false;
+//			t_start = System.currentTimeMillis();
+//			tinit = System.currentTimeMillis();
 //		}
-//		if((System.currentTimeMillis()-t_start) >= 1000){
-//		t_start = System.currentTimeMillis();
-////		System.out.println("FW E/S: "+ackCounter);
-//		System.out.println("TCol E/S: "+counter);
-////		printRoutingInfo();
-////		ackCounter = 0;
-//		counter = 0;
-//		}
+//		
+//		sendDown(dt);
+//		
+////		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
+////	 	if(t > dt.getTime()+5){
+////			System.out.println("TCol time: emit: "+dt.getTime()+" current: "+t);
+////		}
+////		if((System.currentTimeMillis()-t_start) >= 1000){
+////		t_start = System.currentTimeMillis();
+//////		System.out.println("FW E/S: "+ackCounter);
+////		System.out.println("TCol E/S: "+counter);
+//////		printRoutingInfo();
+//////		ackCounter = 0;
+////		counter = 0;
+////		}
 	}
 
 

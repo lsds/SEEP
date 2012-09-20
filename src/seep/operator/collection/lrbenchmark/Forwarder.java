@@ -1,6 +1,7 @@
 package seep.operator.collection.lrbenchmark;
 
 import seep.comm.routing.Router;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.TollCalculatorState;
@@ -29,37 +30,37 @@ public class Forwarder extends Operator implements StatelessOperator, StateSplit
 	long tinit = 0;
 	
 	
-	@Override
-	public void processData(Seep.DataTuple dt) {
+	
+	public void processData(DataTuple dt) {
 //System.out.println("XWAY: "+dt.getXway());
-		counter++;
-		if(firstTime){
-			firstTime = false;
-			t_start = System.currentTimeMillis();
-			tinit = System.currentTimeMillis();
-		}
-		//In this case, splitting is done by segment, so get segment.
-		int value = dt.getSeg();
-		int xway = dt.getXway();
-		int dir = dt.getDir();
-		value = value + (1000*xway);
-		value = (dir == 1) ? (value+1)*-1 : (value)+1;
-		
-		sendDown(dt, value);
-		
-		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
-//	 	if(t > dt.getTime()+5){
-//			System.out.println("FW time: emit: "+dt.getTime()+" current: "+t);
-//		}
-		
-//		if((System.currentTimeMillis()-t_start) >= 1000){
+//		counter++;
+//		if(firstTime){
+//			firstTime = false;
 //			t_start = System.currentTimeMillis();
-////			System.out.println("FW E/S: "+ackCounter);
-//			System.out.println("FW E/S: "+counter);
-////			printRoutingInfo();
-////			ackCounter = 0;
-//			counter = 0;
+//			tinit = System.currentTimeMillis();
 //		}
+//		//In this case, splitting is done by segment, so get segment.
+//		int value = dt.getSeg();
+//		int xway = dt.getXway();
+//		int dir = dt.getDir();
+//		value = value + (1000*xway);
+//		value = (dir == 1) ? (value+1)*-1 : (value)+1;
+//		
+//		sendDown(dt, value);
+//		
+//		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
+////	 	if(t > dt.getTime()+5){
+////			System.out.println("FW time: emit: "+dt.getTime()+" current: "+t);
+////		}
+//		
+////		if((System.currentTimeMillis()-t_start) >= 1000){
+////			t_start = System.currentTimeMillis();
+//////			System.out.println("FW E/S: "+ackCounter);
+////			System.out.println("FW E/S: "+counter);
+//////			printRoutingInfo();
+//////			ackCounter = 0;
+////			counter = 0;
+////		}
 	}
 
 	@Override

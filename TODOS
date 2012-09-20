@@ -12,6 +12,7 @@ At this point we have a robust API and robust routing mechanism.
 	- Logging at core
 - Implement Scale-In.
 - Implement an extensible and long-term instrumentation mechanism.
+- For a developer should be easy to program to a given interface, this needs to be thought and some mechanism proposed.
 
 
 12/06/2012 Raul

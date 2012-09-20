@@ -5,9 +5,7 @@ import com.esotericsoftware.kryo.Kryo;
 
 public class KryoSerializer<T> implements SeePSerializer<T> {
 	
-	public void test(){
-		Kryo k = new Kryo();
-	}
+	public Kryo k = new Kryo();
 	
 	@Override
 	public T deserialize(byte[] data) throws SeePSerializationException {

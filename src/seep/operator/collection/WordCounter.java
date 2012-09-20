@@ -1,6 +1,7 @@
 package seep.operator.collection;
 
 import seep.Main;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -46,34 +47,34 @@ String chosenWord = "Unix";
 		return countMap;
 	}
 	
-	@Override public synchronized void processData(Seep.DataTuple dt) {
-
-		if(first){
-			//new Thread(stateBackupWorker).start();
-			first = false;
-			t_start = System.currentTimeMillis();
-		}
-//		String word = dt.getString();
-//		int count = 0;
-//		if(countMap.get(word) != null){
-//			count = countMap.get(word);
+	public synchronized void processData(DataTuple dt) {
+//
+//		if(first){
+//			//new Thread(stateBackupWorker).start();
+//			first = false;
+//			t_start = System.currentTimeMillis();
 //		}
-//		else{
-//			countMap.put(word, 0);
-//		}
-//		countMap.put(word, ++count);
-//		Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
-//		b.setTs(dt.getTs())
-//			.setString(word)
-//			.setInt(count);
-//		c++;
-//		//System.out.println("WC: word-> "+word+" counter-> "+count);
-//		sendDown(b.build());
-//		//every 1000 tuples backup state.
-//		if(c == 1000){
-//			generateBackupState();
-//		}
-		t_start = System.currentTimeMillis();
+////		String word = dt.getString();
+////		int count = 0;
+////		if(countMap.get(word) != null){
+////			count = countMap.get(word);
+////		}
+////		else{
+////			countMap.put(word, 0);
+////		}
+////		countMap.put(word, ++count);
+////		Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
+////		b.setTs(dt.getTs())
+////			.setString(word)
+////			.setInt(count);
+////		c++;
+////		//System.out.println("WC: word-> "+word+" counter-> "+count);
+////		sendDown(b.build());
+////		//every 1000 tuples backup state.
+////		if(c == 1000){
+////			generateBackupState();
+////		}
+//		t_start = System.currentTimeMillis();
 	}
 
 	public void installState(Seep.InitState is){

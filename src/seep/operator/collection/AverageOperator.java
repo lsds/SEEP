@@ -1,6 +1,7 @@
 package seep.operator.collection;
 
 import seep.Main;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.*;
 import seep.comm.tuples.Seep.Ack;
 import seep.operator.*;
@@ -27,46 +28,46 @@ public class AverageOperator extends Operator implements StatefullOperator{
 		subclassOperator = this;
 	}
 
-	public void processData(Seep.DataTuple dt){
+	public void processData(DataTuple dt){
 //System.out.println("AVGOP: received tuple: "+dt.getInt()+" ts: "+dt.getTs());
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-//		int value = dt.getInt();
-//		cumulativeState += value;
-		counter--;
-		if(counter == 50){
-			
-				Seep.AverageState.Builder asB = Seep.AverageState.newBuilder();
-				asB.setState(cumulativeState);
-				asB.setCounter(counter);
-				Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
-				//Developer needs to save just the state
-				bsB.setState(asB.build());
-//System.out.println("AVGOP: Checkpointing state with cumulativeS: "+cumulativeState+" and counter: "+counter);
-				//backupState(bsB, this);
-				/*This method is called each time the developer decides to checkpoint the state. A more powerful API should be offered, for instance able to support timers, and configured initially or whatever... For now, this explicitly does a backup of the state, and in this specific example, the developer chooses to checkpoint each time data is processed in this operator*/
-//System.out.println("AVGOP: Backuping state. cumulState-> "+cumulativeState+" counter-> "+counter);
-				backupState(bsB);
-			
-		}
-		if(counter == 0){
-//			value = cumulativeState/windowSize;
-			//System.out.println("AVGOP: Sending -> "+value);
-			//System.out.println();
-//			event.setInt(value);
-System.out.println("AVGOP-> SENDING to SINK");
-			sendDown(event.build());
-			counter = windowSize;
-			cumulativeState = 0;
-		}
-
-
-		c++;
-		if(c == n_events){
-			t_end = System.currentTimeMillis();
-			System.out.println("AVG: "+(t_end-t_start)+" ms for "+n_events+" events");
-			t_start = System.currentTimeMillis();
-			c = 0;
-		}
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+////		int value = dt.getInt();
+////		cumulativeState += value;
+//		counter--;
+//		if(counter == 50){
+//			
+//				Seep.AverageState.Builder asB = Seep.AverageState.newBuilder();
+//				asB.setState(cumulativeState);
+//				asB.setCounter(counter);
+//				Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
+//				//Developer needs to save just the state
+//				bsB.setState(asB.build());
+////System.out.println("AVGOP: Checkpointing state with cumulativeS: "+cumulativeState+" and counter: "+counter);
+//				//backupState(bsB, this);
+//				/*This method is called each time the developer decides to checkpoint the state. A more powerful API should be offered, for instance able to support timers, and configured initially or whatever... For now, this explicitly does a backup of the state, and in this specific example, the developer chooses to checkpoint each time data is processed in this operator*/
+////System.out.println("AVGOP: Backuping state. cumulState-> "+cumulativeState+" counter-> "+counter);
+//				backupState(bsB);
+//			
+//		}
+//		if(counter == 0){
+////			value = cumulativeState/windowSize;
+//			//System.out.println("AVGOP: Sending -> "+value);
+//			//System.out.println();
+////			event.setInt(value);
+//System.out.println("AVGOP-> SENDING to SINK");
+//			sendDown(event.build());
+//			counter = windowSize;
+//			cumulativeState = 0;
+//		}
+//
+//
+//		c++;
+//		if(c == n_events){
+//			t_end = System.currentTimeMillis();
+//			System.out.println("AVG: "+(t_end-t_start)+" ms for "+n_events+" events");
+//			t_start = System.currentTimeMillis();
+//			c = 0;
+//		}
 
 	}
 

@@ -2,6 +2,7 @@ package seep.operator.collection;
 
 import seep.buffer.Buffer;
 import seep.comm.routing.Router;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.WordCounterState;
@@ -39,31 +40,31 @@ public class WordSplitter extends Operator implements StatelessOperator, StateSp
 		
 	}
 
-	@Override 
-	public synchronized void processData(Seep.DataTuple dt) {
-		if(first){
-			first = false;
-			t_start = System.currentTimeMillis();
-		}
-		String sentence = dt.getString();
-		String[] tokens = sentence.split(" ");
-		for (String word : tokens) {
-			if(word.equals("") || word.equals(" ") || word.equals("  ") || word.equals("(") || word.equals(")")){
-				continue;
-			}
-			Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
-			b.setTs(dt.getTs())
-			 .setString(word);
-			sendDown(b.build());
-			counter++;
-			//this should be sendDown(tuple, value) to work properly...
-//			System.out.println("word: "+word);
-		}
-		if((System.currentTimeMillis() - t_start) > 1000){
-			System.out.println("# "+counter);
-			counter = 0;
-			t_start = System.currentTimeMillis();
-		}
+	
+	public synchronized void processData(DataTuple dt) {
+//		if(first){
+//			first = false;
+//			t_start = System.currentTimeMillis();
+//		}
+//		String sentence = dt.getString();
+//		String[] tokens = sentence.split(" ");
+//		for (String word : tokens) {
+//			if(word.equals("") || word.equals(" ") || word.equals("  ") || word.equals("(") || word.equals(")")){
+//				continue;
+//			}
+//			Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
+//			b.setTs(dt.getTs())
+//			 .setString(word);
+//			sendDown(b.build());
+//			counter++;
+//			//this should be sendDown(tuple, value) to work properly...
+////			System.out.println("word: "+word);
+//		}
+//		if((System.currentTimeMillis() - t_start) > 1000){
+//			System.out.println("# "+counter);
+//			counter = 0;
+//			t_start = System.currentTimeMillis();
+//		}
 	}
 
 	@Override

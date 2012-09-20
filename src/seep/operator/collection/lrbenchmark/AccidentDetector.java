@@ -3,6 +3,7 @@ package seep.operator.collection.lrbenchmark;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.comm.tuples.Seep.DataTuple.Builder;
@@ -28,17 +29,17 @@ public class AccidentDetector extends Operator implements StatefullOperator{
 		subclassOperator = this;
 	}
 	
-	public void processData(Seep.DataTuple dt){
-		int segment = dt.getSeg();
-		/** AD**/
-		//execute logic for detecting accidents
-		accidentDetector(segment, dt);
-		//if there is an accident in the nearby area
-		if(accidentArea(segment, segment)){
-			//notify the accident with toll=0
-			notifyArea(dt);
-			return;
-		}
+	public void processData(DataTuple dt){
+//		int segment = dt.getSeg();
+//		/** AD**/
+//		//execute logic for detecting accidents
+//		accidentDetector(segment, dt);
+//		//if there is an accident in the nearby area
+//		if(accidentArea(segment, segment)){
+//			//notify the accident with toll=0
+//			notifyArea(dt);
+//			return;
+//		}
 		/** AD**/
 	}
 	

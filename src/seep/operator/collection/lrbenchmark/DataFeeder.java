@@ -17,9 +17,9 @@ import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
 import seep.Main;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
-import seep.comm.tuples.lrbenchmark.LRseep.DataTuple;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
 
@@ -42,92 +42,93 @@ public class DataFeeder extends Operator implements StatelessOperator{
 		subclassOperator = this;
 	}	
 	
-	@Override
-	public void processData(Seep.DataTuple dt){
-		boolean listen = true;
-		long eventTime = 0;
-		long t_start = System.currentTimeMillis();
-		FileInputStream fis = null;
-		try{
-			BufferedInputStream bis = null;
-			
-			if(Main.valueFor("normalLRB").equals("true")){
-				bis = new BufferedInputStream(new FileInputStream(gpbInput), 8000000);
-			}
-			else{
-				bis = new BufferedInputStream(new FileInputStream(gpbInputConstant), 8000000);
-			}
-			
-			int counter = 0;
-			long s = System.currentTimeMillis();
-			
-			Seep.DataTuple event = null;
-			long clock = 0;
-			long systemTs = 0;
-
-			int dist = 0;
-
-			while(listen){
-
-				systemTs = System.currentTimeMillis();
-				clock = systemTs-t_start;
-				if(eventTime*1000 <= clock){
-					event = Seep.DataTuple.parseDelimitedFrom(bis);
-					if(Main.valueFor("normalLRB").equals("true")){
-						//Get timestamps every numberOfXways iterations to have a accurate ts
-						systemTs = System.currentTimeMillis();
-//						int ab = 0;
-						for(int i = 0; i<Main.numberOfXWays; i++){
-//							ab++;
-							//get ts every 100 iterations to reduce overhead
-							Seep.DataTuple.Builder builder = event.toBuilder();
-							builder.setXway(i);
-							builder.setTs(systemTs);
-							event = builder.build();
 	
-							eventTime = event.getTime();
-						
-							sendDown(event);
-							counter++;
-//							if(ab == ExecutionConfiguration.numberOfXWays/2){
-//								systemTs = System.currentTimeMillis();
-//							}
-						}
-					}
-					else{
-						for(int i = 0; i<Main.eventR; i++){
-							Seep.DataTuple.Builder builder = event.toBuilder();
-							builder.setXway(i);
-							builder.setTs(System.currentTimeMillis());
-							event = builder.build();
-	
-							eventTime = event.getTime() - 5000;
-						
-							sendDown(event);
-							counter++;
-						}
-					}
-				}
-				else{
-					Thread.sleep(eventTime*1000 - clock);
-					System.out.println(eventTime+" "+counter);
-					counter = 0;
-				}
-			}
-		}
-		catch(IOException io){
-			io.printStackTrace();
-		}
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+	public void processData(DataTuple dt){
+//		boolean listen = true;
+//		long eventTime = 0;
+//		long t_start = System.currentTimeMillis();
+//		FileInputStream fis = null;
+//		try{
+//			BufferedInputStream bis = null;
+//			
+//			if(Main.valueFor("normalLRB").equals("true")){
+//				bis = new BufferedInputStream(new FileInputStream(gpbInput), 8000000);
+//			}
+//			else{
+//				bis = new BufferedInputStream(new FileInputStream(gpbInputConstant), 8000000);
+//			}
+//			
+//			int counter = 0;
+//			long s = System.currentTimeMillis();
+//			
+//			Seep.DataTuple event = null;
+//			long clock = 0;
+//			long systemTs = 0;
+//
+//			int dist = 0;
+//
+//			while(listen){
+//
+//				systemTs = System.currentTimeMillis();
+//				clock = systemTs-t_start;
+//				if(eventTime*1000 <= clock){
+//					event = Seep.DataTuple.parseDelimitedFrom(bis);
+//					if(Main.valueFor("normalLRB").equals("true")){
+//						//Get timestamps every numberOfXways iterations to have a accurate ts
+//						systemTs = System.currentTimeMillis();
+////						int ab = 0;
+//						for(int i = 0; i<Main.numberOfXWays; i++){
+////							ab++;
+//							//get ts every 100 iterations to reduce overhead
+//							Seep.DataTuple.Builder builder = event.toBuilder();
+//							builder.setXway(i);
+//							builder.setTs(systemTs);
+//							event = builder.build();
+//	
+//							eventTime = event.getTime();
+//						
+//							sendDown(event);
+//							counter++;
+////							if(ab == ExecutionConfiguration.numberOfXWays/2){
+////								systemTs = System.currentTimeMillis();
+////							}
+//						}
+//					}
+//					else{
+//						for(int i = 0; i<Main.eventR; i++){
+//							Seep.DataTuple.Builder builder = event.toBuilder();
+//							builder.setXway(i);
+//							builder.setTs(System.currentTimeMillis());
+//							event = builder.build();
+//	
+//							eventTime = event.getTime() - 5000;
+//						
+//							sendDown(event);
+//							counter++;
+//						}
+//					}
+//				}
+//				else{
+//					Thread.sleep(eventTime*1000 - clock);
+//					System.out.println(eventTime+" "+counter);
+//					counter = 0;
+//				}
+//			}
+//		}
+//		catch(IOException io){
+//			io.printStackTrace();
+//		}
+//		catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 	}
 
-	@Override
+	
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
 }
 	
 //	private Seep.DataTuple.Builder buildDataTuple(String event){

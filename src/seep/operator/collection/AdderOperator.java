@@ -1,9 +1,7 @@
 package seep.operator.collection;
 
+import seep.comm.serialization.DataTuple;
 import seep.operator.*;
-
-import seep.comm.tuples.*;
-import seep.comm.tuples.Seep.DataTuple;
 
 public class AdderOperator extends Operator{ 
 
@@ -22,21 +20,21 @@ public class AdderOperator extends Operator{
 	}
 	
 	//If threads are pushing data here, this processData should be sync
-	public void processData(Seep.DataTuple dt){
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder();
-//		int value = dt.getInt()+addFactor;
-//		event.setInt(value);
-		
-//		System.out.println("ADDER: Sending -> "+value);
-		//System.out.println();
-		sendDown(event.build());
-		counter++;
-		if(counter == n_events){
-			t_end = System.currentTimeMillis();
-			System.out.println("ADD: "+(t_end-t_start)+" ms for "+n_events+" events");
-			t_start = System.currentTimeMillis();
-			counter = 0;
-		}
+	public void processData(DataTuple dt){
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder();
+////		int value = dt.getInt()+addFactor;
+////		event.setInt(value);
+//		
+////		System.out.println("ADDER: Sending -> "+value);
+//		//System.out.println();
+//		sendDown(event.build());
+//		counter++;
+//		if(counter == n_events){
+//			t_end = System.currentTimeMillis();
+//			System.out.println("ADD: "+(t_end-t_start)+" ms for "+n_events+" events");
+//			t_start = System.currentTimeMillis();
+//			counter = 0;
+//		}
 	}
 
 	@Override

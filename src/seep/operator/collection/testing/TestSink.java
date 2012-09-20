@@ -1,5 +1,6 @@
 package seep.operator.collection.testing;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -12,9 +13,9 @@ public class TestSink extends Operator implements StatelessOperator{
 		subclassOperator = this;
 	}
 
-	@Override
-	public void processData(Seep.DataTuple dt) {
-		System.out.println("RCV: "+dt.getInt());
+	
+	public void processData(DataTuple dt) {
+//		System.out.println("RCV: "+dt.getInt());
 		
 	}
 

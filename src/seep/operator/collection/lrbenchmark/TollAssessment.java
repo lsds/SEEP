@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
@@ -44,84 +45,84 @@ public class TollAssessment extends Operator implements StatefullOperator{
 private long t_start = 0;
 	
 	
-	@Override
-	public synchronized void processData(Seep.DataTuple dt) {
-//if(dt.getType() == 2)
-//System.out.println("TA: "+dt.getType());
-		counter++;
-		if(firstTime){
-			firstTime = false;
-			StateBackupWorker stw = new StateBackupWorker(this);
-			tinit = System.currentTimeMillis();
-			t_start = System.currentTimeMillis();
-			new Thread(stw).start();
-		}
-		
-//		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
-//	 	if(t > dt.getTime()+5){
-//			System.out.println("TA time: emit: "+dt.getTime()+" current: "+t);
+	
+	public synchronized void processData(DataTuple dt) {
+////if(dt.getType() == 2)
+////System.out.println("TA: "+dt.getType());
+//		counter++;
+//		if(firstTime){
+//			firstTime = false;
+//			StateBackupWorker stw = new StateBackupWorker(this);
+//			tinit = System.currentTimeMillis();
+//			t_start = System.currentTimeMillis();
+//			new Thread(stw).start();
 //		}
-		
-//		if((System.currentTimeMillis()-t_start) >= 1000){
-//		t_start = System.currentTimeMillis();
-////		System.out.println("FW E/S: "+ackCounter);
-//		System.out.println("FW E/S: "+counter);
-////		printRoutingInfo();
-////		ackCounter = 0;
-//		counter = 0;
+//		
+////		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
+////	 	if(t > dt.getTime()+5){
+////			System.out.println("TA time: emit: "+dt.getTime()+" current: "+t);
+////		}
+//		
+////		if((System.currentTimeMillis()-t_start) >= 1000){
+////		t_start = System.currentTimeMillis();
+//////		System.out.println("FW E/S: "+ackCounter);
+////		System.out.println("FW E/S: "+counter);
+//////		printRoutingInfo();
+//////		ackCounter = 0;
+////		counter = 0;
+////		}
+//		
+//		int vid = dt.getVid();
+//		int xway = 1000000 * dt.getXway();
+//		//east direction positive, west direction negative. all segments are stored in the system with +1 in order to avoid problems with 0
+//		int segment = (dt.getDir() == 1) ? (dt.getSeg()+1)*-1 : (dt.getSeg())+1;
+//		segment = segment + xway;
+//		if(dt.getType() == 0){
+//			//If the vehicle is entering a new segment...
+////System.out.println("currentSeg: "+segment+" prevSeg: "+previousSegment.get(vid));
+//			if(previousSegment.get(vid) != null){
+//				if(segment != previousSegment.get(vid)){
+////System.out.println("new segment");
+//					if(previousToll.get(vid) != null){
+//						int tollPrice = previousToll.get(vid);
+//						int currentBalanceAccount = 0;
+//						if(balanceAccount.get(vid) != null){
+//							currentBalanceAccount = balanceAccount.get(vid);
+//						}
+//						else{
+////System.out.println("toll price registered");
+//							balanceAccount.put(vid, tollPrice);
+//						}
+//						currentBalanceAccount = currentBalanceAccount + tollPrice;
+////System.out.println("current ba: "+currentBalanceAccount);
+//						balanceAccount.put(vid, currentBalanceAccount);
+//						lastUpdateOfBA = (int)(System.currentTimeMillis() - tinit)/1000;
+//					}
+//					else{
+//						previousToll.put(vid, dt.getToll());
+//					}
+//				}
+//			}
+//			else{
+//				previousSegment.put(vid, segment);
+//			}
+//		}		
+//		else if(dt.getType() == 2){
+////System.out.println("VID: "+dt.getVid()+" BA request, notifying...");
+//			Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+//			if(balanceAccount.get(vid) == null){
+//				balanceAccount.put(vid, 0);
+//			}
+//			event.setBa(balanceAccount.get(vid));
+//			event.setResultTime(lastUpdateOfBA);
+////System.out.println("VID: "+dt.getVid()+" BA total: "+dt.getBa());
+//			sendDown(event.build());
 //		}
-		
-		int vid = dt.getVid();
-		int xway = 1000000 * dt.getXway();
-		//east direction positive, west direction negative. all segments are stored in the system with +1 in order to avoid problems with 0
-		int segment = (dt.getDir() == 1) ? (dt.getSeg()+1)*-1 : (dt.getSeg())+1;
-		segment = segment + xway;
-		if(dt.getType() == 0){
-			//If the vehicle is entering a new segment...
-//System.out.println("currentSeg: "+segment+" prevSeg: "+previousSegment.get(vid));
-			if(previousSegment.get(vid) != null){
-				if(segment != previousSegment.get(vid)){
-//System.out.println("new segment");
-					if(previousToll.get(vid) != null){
-						int tollPrice = previousToll.get(vid);
-						int currentBalanceAccount = 0;
-						if(balanceAccount.get(vid) != null){
-							currentBalanceAccount = balanceAccount.get(vid);
-						}
-						else{
-//System.out.println("toll price registered");
-							balanceAccount.put(vid, tollPrice);
-						}
-						currentBalanceAccount = currentBalanceAccount + tollPrice;
-//System.out.println("current ba: "+currentBalanceAccount);
-						balanceAccount.put(vid, currentBalanceAccount);
-						lastUpdateOfBA = (int)(System.currentTimeMillis() - tinit)/1000;
-					}
-					else{
-						previousToll.put(vid, dt.getToll());
-					}
-				}
-			}
-			else{
-				previousSegment.put(vid, segment);
-			}
-		}		
-		else if(dt.getType() == 2){
-//System.out.println("VID: "+dt.getVid()+" BA request, notifying...");
-			Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-			if(balanceAccount.get(vid) == null){
-				balanceAccount.put(vid, 0);
-			}
-			event.setBa(balanceAccount.get(vid));
-			event.setResultTime(lastUpdateOfBA);
-//System.out.println("VID: "+dt.getVid()+" BA total: "+dt.getBa());
-			sendDown(event.build());
-		}
-		
-		//UPDATE previous segment of vehicles
-		previousSegment.put(vid, segment);
-		previousToll.put(vid, dt.getToll());
-		
+//		
+//		//UPDATE previous segment of vehicles
+//		previousSegment.put(vid, segment);
+//		previousToll.put(vid, dt.getToll());
+//		
 	}
 
 	@Override

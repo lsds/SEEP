@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import seep.Main;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
@@ -37,66 +38,66 @@ System.out.println("NUM-UPStREAMS: "+numUpstreamNodes);
 long tinit = 0;
 long t_start = 0;
 	
-	@Override
-	public synchronized void processData(Seep.DataTuple dt) {
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-		//manually update this value (overhead but it is necessary for correctness of this operator) Furthermore, this is not a bottleneck
-		numUpstreamNodes = getOpContext().upstreams.size();
-		counter++;
-		if(firstTime){
-			firstTime = false;
-			tinit = System.currentTimeMillis();
-			t_start = System.currentTimeMillis();
-		}
-		
-//		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
-//	 	if(t > dt.getTime()+5){
-//			System.out.println("BACol time: emit: "+dt.getTime()+" current: "+t);
-//		}
-	 	
-//		if((System.currentTimeMillis()-t_start) >= 1000){
+	
+	public synchronized void processData(DataTuple dt) {
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+//		//manually update this value (overhead but it is necessary for correctness of this operator) Furthermore, this is not a bottleneck
+//		numUpstreamNodes = getOpContext().upstreams.size();
+//		counter++;
+//		if(firstTime){
+//			firstTime = false;
+//			tinit = System.currentTimeMillis();
 //			t_start = System.currentTimeMillis();
-//			System.out.println("FW E/S: "+ackCounter);
-////			System.out.println("FW E/S: "+counter);
-//			ackCounter = 0;
-////			counter = 0;
 //		}
-		
-		int qid = dt.getQid();
-		//initialize structures in case they are not yet.
-		if(queryNum.get(qid) == null){
-			queryNum.put(qid, 0);
-			queryBA.put(qid, dt.getBa());
-		}
-		int numReceived = queryNum.get(qid);
-		numReceived++;
-		//If we have received all responses for the given query
-//System.out.println("numReceived: "+numReceived+" numUpstreams: "+numUpstreamNodes);
-		if(numReceived == numUpstreamNodes){
-			int totalBA = 0;
-			if(queryBA.get(qid) != null){
-				totalBA = queryBA.get(qid) + dt.getBa();
-			}
-			else{
-				totalBA = 0;
-			}
-			queryNum.put(qid, 0);
-			event.setBa(totalBA);
-//System.out.println("forwarding to sink");
-			sendDown(event.build());
-		}
-		else{
-			queryNum.put(qid, numReceived);
-			int cummulated = 0;
-			if(queryBA.get(qid) != null){
-				cummulated = queryBA.get(qid);
-				cummulated = cummulated + dt.getBa();
-			}
-			else{
-				cummulated = 0;
-			}
-			queryBA.put(qid, cummulated);
-		}
+//		
+////		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
+////	 	if(t > dt.getTime()+5){
+////			System.out.println("BACol time: emit: "+dt.getTime()+" current: "+t);
+////		}
+//	 	
+////		if((System.currentTimeMillis()-t_start) >= 1000){
+////			t_start = System.currentTimeMillis();
+////			System.out.println("FW E/S: "+ackCounter);
+//////			System.out.println("FW E/S: "+counter);
+////			ackCounter = 0;
+//////			counter = 0;
+////		}
+//		
+//		int qid = dt.getQid();
+//		//initialize structures in case they are not yet.
+//		if(queryNum.get(qid) == null){
+//			queryNum.put(qid, 0);
+//			queryBA.put(qid, dt.getBa());
+//		}
+//		int numReceived = queryNum.get(qid);
+//		numReceived++;
+//		//If we have received all responses for the given query
+////System.out.println("numReceived: "+numReceived+" numUpstreams: "+numUpstreamNodes);
+//		if(numReceived == numUpstreamNodes){
+//			int totalBA = 0;
+//			if(queryBA.get(qid) != null){
+//				totalBA = queryBA.get(qid) + dt.getBa();
+//			}
+//			else{
+//				totalBA = 0;
+//			}
+//			queryNum.put(qid, 0);
+//			event.setBa(totalBA);
+////System.out.println("forwarding to sink");
+//			sendDown(event.build());
+//		}
+//		else{
+//			queryNum.put(qid, numReceived);
+//			int cummulated = 0;
+//			if(queryBA.get(qid) != null){
+//				cummulated = queryBA.get(qid);
+//				cummulated = cummulated + dt.getBa();
+//			}
+//			else{
+//				cummulated = 0;
+//			}
+//			queryBA.put(qid, cummulated);
+//		}
 	}
 
 	@Override

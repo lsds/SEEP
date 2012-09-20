@@ -1,6 +1,7 @@
 package seep.operator.collection;
 
 import seep.Main;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
@@ -109,69 +110,68 @@ public class SmartWordCounter extends Operator implements StatefullOperator{
 		return countMap;
 	}
 	
-	@Override 
-	public synchronized void processData(Seep.DataTuple dt) {
-//	System.out.println(".");
-		if(first){
-			//new Thread(stateBackupWorker).start();
-			first = false;
-			StateBackupWorker stw = new StateBackupWorker(this);
-			t_start = System.currentTimeMillis();
-			tinit = t_start;
-			new Thread(stw).start();
-			sb = new StringBuilder();
-		}
-		
-		long instantTime = System.currentTimeMillis();
-		//current elapsed time
-		int currentTime = (int)(instantTime - t_start);
-		
-		numTuples++;
-		int t = (int) ((int)(instantTime - tinit)/1000);
-		if(numTuples == 10){
-			//Print time and latency for this tuple
-			String out = (t+" "+(instantTime - dt.getTs())+"\n");
-			sb.append(out);
-//			System.out.println("# "+t+" "+(instantTime - dt.getTs()));
-			numTuples = 0;
-		}
-		
-		String word = dt.getString();
-		int count = 0;
-		if(countMap.containsKey(word)){
-			count = countMap.get(word);
-			countMap.put(word, ++count);
-		}
-		else{
-			countMap.put(word, 1);
-		}
-		//countMap.put(word, ++count);
-		
-//		System.out.println(currentTime+" compare "+period);
-		
-		if(currentTime >= period){
-			if((System.currentTimeMillis()-t_start) >= period){
-//System.out.println("Period.");
-				if(countMap.containsKey(chosenWord)){
-System.out.println("word: "+chosenWord);
-					count = countMap.get(chosenWord);
-					Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
-					b.setTs(dt.getTs())
-						.setString(chosenWord)
-						.setInt(count);
-					c++;
-					sendDown(b.build());
-					System.out.println("Sending counter for: "+chosenWord+ ": "+count);
-//				//every 1000 tuples backup state.
-//				if(c == 1000){
-//					synchronized(this){
-//						generateBackupState();
-//					}
+	public synchronized void processData(DataTuple dt) {
+////	System.out.println(".");
+//		if(first){
+//			//new Thread(stateBackupWorker).start();
+//			first = false;
+//			StateBackupWorker stw = new StateBackupWorker(this);
+//			t_start = System.currentTimeMillis();
+//			tinit = t_start;
+//			new Thread(stw).start();
+//			sb = new StringBuilder();
+//		}
+//		
+//		long instantTime = System.currentTimeMillis();
+//		//current elapsed time
+//		int currentTime = (int)(instantTime - t_start);
+//		
+//		numTuples++;
+//		int t = (int) ((int)(instantTime - tinit)/1000);
+//		if(numTuples == 10){
+//			//Print time and latency for this tuple
+//			String out = (t+" "+(instantTime - dt.getTs())+"\n");
+//			sb.append(out);
+////			System.out.println("# "+t+" "+(instantTime - dt.getTs()));
+//			numTuples = 0;
+//		}
+//		
+//		String word = dt.getString();
+//		int count = 0;
+//		if(countMap.containsKey(word)){
+//			count = countMap.get(word);
+//			countMap.put(word, ++count);
+//		}
+//		else{
+//			countMap.put(word, 1);
+//		}
+//		//countMap.put(word, ++count);
+//		
+////		System.out.println(currentTime+" compare "+period);
+//		
+//		if(currentTime >= period){
+//			if((System.currentTimeMillis()-t_start) >= period){
+////System.out.println("Period.");
+//				if(countMap.containsKey(chosenWord)){
+//System.out.println("word: "+chosenWord);
+//					count = countMap.get(chosenWord);
+//					Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
+//					b.setTs(dt.getTs())
+//						.setString(chosenWord)
+//						.setInt(count);
+//					c++;
+//					sendDown(b.build());
+//					System.out.println("Sending counter for: "+chosenWord+ ": "+count);
+////				//every 1000 tuples backup state.
+////				if(c == 1000){
+////					synchronized(this){
+////						generateBackupState();
+////					}
+////				}
 //				}
-				}
-			}
-			t_start = System.currentTimeMillis();
-		}
+//			}
+//			t_start = System.currentTimeMillis();
+//		}
 	}
 
 	public void installState(Seep.InitState is){

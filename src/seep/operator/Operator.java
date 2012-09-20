@@ -11,6 +11,7 @@ import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
 import seep.comm.routing.Router;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.Ack;
 import seep.comm.tuples.Seep.ControlTuple;
@@ -216,7 +217,7 @@ public int ackCounter = 0;
 	
 	public abstract boolean isOrderSensitive();
 	
-	public abstract void processData(Seep.DataTuple dt);
+	public abstract void processData(DataTuple dt);
 
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(Seep.ControlTuple.Builder ct, OutputStream os) {

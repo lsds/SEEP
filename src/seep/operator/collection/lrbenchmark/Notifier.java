@@ -2,6 +2,7 @@ package seep.operator.collection.lrbenchmark;
 
 import java.util.HashMap;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.InitState;
 import seep.comm.tuples.Seep.DataTuple.Builder;
@@ -22,32 +23,32 @@ public class Notifier extends Operator implements StatefullOperator{
 		}
 	}
 
-	@Override
-	public void processData(Seep.DataTuple dt) {
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-		//toll notification message
-		if(dt.getType() == 0){
-			if(accidents.get(dt.getSeg()) || accidents.get(dt.getSeg()-1) || accidents.get(dt.getSeg()-2) || accidents.get(dt.getSeg()-3)|| accidents.get(dt.getSeg()-4)){
-				// if there is an accident, there is no toll
-				event.setToll(0);
-				//send accident notification
-				event.setType(1);
-System.out.println("Segment: "+dt.getSeg()+" Accident near");
-				sendDown(event.build());
-			}
-			
-			event.setType(0);
-			sendDown(event.build());
-		}
-		//accident notification message
-		else if(dt.getType() == 1){
-			//store accident in memory
-			accidents.put(dt.getSeg(), true);
-		}
-		//accident gone notification message
-		else if(dt.getType() == 5){
-			accidents.put(dt.getSeg(), false);
-		}
+	
+	public void processData(DataTuple dt) {
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+//		//toll notification message
+//		if(dt.getType() == 0){
+//			if(accidents.get(dt.getSeg()) || accidents.get(dt.getSeg()-1) || accidents.get(dt.getSeg()-2) || accidents.get(dt.getSeg()-3)|| accidents.get(dt.getSeg()-4)){
+//				// if there is an accident, there is no toll
+//				event.setToll(0);
+//				//send accident notification
+//				event.setType(1);
+//System.out.println("Segment: "+dt.getSeg()+" Accident near");
+//				sendDown(event.build());
+//			}
+//			
+//			event.setType(0);
+//			sendDown(event.build());
+//		}
+//		//accident notification message
+//		else if(dt.getType() == 1){
+//			//store accident in memory
+//			accidents.put(dt.getSeg(), true);
+//		}
+//		//accident gone notification message
+//		else if(dt.getType() == 5){
+//			accidents.put(dt.getSeg(), false);
+//		}
 	}
 
 	@Override

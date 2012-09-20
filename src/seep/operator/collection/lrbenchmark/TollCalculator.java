@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import seep.Main;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.comm.tuples.Seep.InitState;
@@ -76,180 +77,180 @@ public class TollCalculator extends Operator implements StatefullOperator, State
 long t_start = 0;
 long tinit = 0;
 	
-	@Override
-	public synchronized void processData(Seep.DataTuple dt) {
-		int value2 = dt.getSeg();
-		int xway2 = dt.getXway();
-		int dir2 = dt.getDir();
-		value2 = value2 + (1000*xway2);
-		value2 = (dir2 == 1) ? (value2+1)*-1 : (value2)+1;
-//System.out.println("TC, seg: "+value2);
-//long a = System.currentTimeMillis();
-		if(firstTime){
-			firstTime = false;
-			StateBackupWorker stw = new StateBackupWorker(this);
-			t_start = System.currentTimeMillis();
-			tinit = System.currentTimeMillis();
-			new Thread(stw).start();
-		}
-		counter++;
-		
-//		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
-//	 	if(t > dt.getTime()+5){
-//			System.out.println("TC time: emit: "+dt.getTime()+" current: "+t);
-//		}
-		
-//	 	if((System.currentTimeMillis()-t_start) >= 1000){
+	
+	public synchronized void processData(DataTuple dt) {
+//		int value2 = dt.getSeg();
+//		int xway2 = dt.getXway();
+//		int dir2 = dt.getDir();
+//		value2 = value2 + (1000*xway2);
+//		value2 = (dir2 == 1) ? (value2+1)*-1 : (value2)+1;
+////System.out.println("TC, seg: "+value2);
+////long a = System.currentTimeMillis();
+//		if(firstTime){
+//			firstTime = false;
+//			StateBackupWorker stw = new StateBackupWorker(this);
 //			t_start = System.currentTimeMillis();
-////			System.out.println("FW E/S: "+ackCounter);
-//			System.out.println("TC E/S: "+counter);
-////			printRoutingInfo();
-////			ackCounter = 0;
+//			tinit = System.currentTimeMillis();
+//			new Thread(stw).start();
+//		}
+//		counter++;
+//		
+////		int t = (int) ((int)(System.currentTimeMillis() - tinit)/1000);
+////	 	if(t > dt.getTime()+5){
+////			System.out.println("TC time: emit: "+dt.getTime()+" current: "+t);
+////		}
+//		
+////	 	if((System.currentTimeMillis()-t_start) >= 1000){
+////			t_start = System.currentTimeMillis();
+//////			System.out.println("FW E/S: "+ackCounter);
+////			System.out.println("TC E/S: "+counter);
+//////			printRoutingInfo();
+//////			ackCounter = 0;
+////			counter = 0;
+////		}
+//	 	
+//		/** INITIALIZATION **/
+//		int vehicle = dt.getVid();
+//		long time = dt.getTime();
+//		int speed = dt.getSpeed();
+//		// We reduce the position, segment, dir, xway. Dir is indicated by the sign. xWay by the millionths, segment and position are expressed
+//		// in miles and feet.
+//		int xway = 1000 * dt.getXway();
+//		//east direction positive, west direction negative. all segments are stored in the system with +1 in order to avoid problems with 0
+//		int segment = dt.getSeg() + xway;
+//		segment = (dt.getDir() == 1) ? (segment+1)*-1 : (segment)+1;
+//		/**this is the value that uses the system to parallelize**/
+//		int value = segment;
+//		
+//		int avgSpeed = 0;
+//		int numVehiclesSegment = 0;
+//		int toll = 0;
+//		/** ACCIDENT LOGIC **/
+//		//execute logic for detecting accidents
+//		accidentDetector(segment, dt);
+//		
+//		/** UPDATE DATA STRUCTURES**/
+//		//What minute are we in?
+//		int minute = (int)(time/60) +1;
+//		//new minute, update data structures
+//		if(minute > currentMinute){
+//System.out.println("##MIN CHANGED: last-> "+currentMinute+" current -> "+minute);
+//long ab = System.currentTimeMillis();
+//			currentMinute = minute;
+//			//UPDATE SEGMENT SPEED STATISTICS
+//			speedAvg5Minutes = speedAvg4Minutes;
+//			speedAvg4Minutes = speedAvg3Minutes;
+//			speedAvg3Minutes = speedAvg2Minutes;
+//			speedAvg2Minutes = speedAvg1Minutes;
+//			speedAvg1Minutes = computeAvgSpeed(numVidCurrentMinSeg_seg_listVid, currentVidSpeed_vid_speed);
+//			currentVidSpeed_vid_speed = new HashMap<Integer, Integer>();
+//			//UPDATE SEGMENT NUMVEHICLES STATISTICS
+////			numVidLastMinSeg_seg_numVid = null;
+//			numVidLastMinSeg_seg_numVid = computeNumVehicles(numVidCurrentMinSeg_seg_listVid);
+//			numVidCurrentMinSeg_seg_listVid = new HashMap<Integer, ArrayList<Integer>>();
+//long ba = System.currentTimeMillis();
+//System.out.println("##TIME TO UPDATE: "+(ba-ab));
+//		}
+//	
+//		//UPDATE CURRENT MINUTE STATISTICS
+//		//update num vehicles in current segment in this minute
+//		if (numVidCurrentMinSeg_seg_listVid.get(segment) != null) {
+//			//if the car was not registered yet in this segment we add it
+////System.out.println("VID: "+vehicle+" was not? "+numVehiclesCurrentMinuteSegment.get(segment).indexOf(vehicle));
+//			if(!numVidCurrentMinSeg_seg_listVid.get(segment).contains(vehicle)){
+//				if(numVidCurrentMinSeg_seg_listVid == null){
+//System.out.println("ESTO ES NULL:::: ");
+//
+//				}
+//				if (numVidCurrentMinSeg_seg_listVid.get(segment) == null) {
+//System.out.println("NUMVID.get(segment) NULL NULL seg: "+segment);
+//				}
+//				if(numVidCurrentMinSeg_seg_listVid.get(segment).contains(vehicle)) numVidCurrentMinSeg_seg_listVid.get(segment).add(vehicle);
+////System.out.println("num V in this seg: "+numVehiclesCurrentMinuteSegment.get(segment).size());
+//			}
+//		}
+//		else{
+//			ArrayList<Integer> aux = new ArrayList<Integer>();
+//			aux.add(vehicle);
+//			numVidCurrentMinSeg_seg_listVid.put(segment, aux);
+//		}
+//		//if there is a vehicle that has reported
+//		if (currentVidSpeed_vid_speed.get(vehicle) != null){
+//			//calculate average of vehicle and store it
+//			int vSpeed = (int)((int)(currentVidSpeed_vid_speed.get(vehicle) + speed)) / 2;
+//			currentVidSpeed_vid_speed.put(vehicle, vSpeed);
+//		}
+//		//if the vehicle has not reported yet, store its speed
+//		else{
+//			currentVidSpeed_vid_speed.put(vehicle, speed);
+//		}
+//		/** TOLL CALCULATION LOGIC **/
+//		//IF NOT ACCIDENT AREA
+//		if(!accidentArea(segment)){
+//			//IF NOT EXIT LANE
+//			if(dt.getLane() != 4){
+//				//IF NOT LESS THAN 50 VEHICLES in the previous minute
+//				if(numVidLastMinSeg_seg_numVid.get(segment) != null){
+//					numVehiclesSegment = numVidLastMinSeg_seg_numVid.get(segment);
+////					if (numVehiclesSegment > 40)System.out.println("<-- NUMVEHICLES --> "+numVehiclesSegment);
+//					if(numVehiclesSegment > 50){
+//						avgSpeed = computeSpeedLast5Min(segment);
+//						//IF NOT FASTER THAN 40mph
+//						if(avgSpeed < 40){
+//							toll = (int) (2 * Math.pow((numVehiclesSegment-50), 2));
+////System.out.println("toll "+toll);
+//						}
+//						//IF FASTER THAN 40mph -> toll is 0
+//						else{
+////System.out.println("faster than 40 "+avgSpeed);
+//							toll = 0;
+//						}
+//					}
+//					//IF LESS THAN 50 VEHICLES -> toll is 0
+//					else{
+//						toll = 0;
+////System.out.println("num?vehicles last min: "+numVehiclesSegment);
+//					}
+//				}
+//				else{
+//					//this means that it is the first minute, previously were 0 vehicles, so toll = 0
+//					toll = 0;
+////System.out.println("first minute");
+//				}
+//			}
+//			//IF EXIT LANE -> toll is 0
+//			else{
+//				toll = 0;
+////System.out.println("exit lane: "+dt.getLane());
+//			}
+//		}
+//		//IF ACCIDENT AREA -> toll is 0
+//		else{
+//			notifyAccident(dt);
+////System.out.println("accident area: "+segment);
+//			return;
+//		}
+//		//Once toll has been calculated, emit the output tuple.
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+//		event.setType(0);
+//		event.setSpeed(avgSpeed);
+//		event.setToll(toll);
+//		//finally send toll event notification
+////long aa = System.currentTimeMillis();
+//		sendDown(event.build(), value);
+////long ee = System.currentTimeMillis();
+////if((ee-aa) > 5){
+////	System.out.println("notify: "+(ee-aa));
+////}
+////		
+////long e = System.currentTimeMillis();
+////if((e-a)>50){
+////System.out.println("btnck? "+(e-a));
+////}
+//		if(counter == backupTime ){
+//			//generateBackupState();
 //			counter = 0;
 //		}
-	 	
-		/** INITIALIZATION **/
-		int vehicle = dt.getVid();
-		long time = dt.getTime();
-		int speed = dt.getSpeed();
-		// We reduce the position, segment, dir, xway. Dir is indicated by the sign. xWay by the millionths, segment and position are expressed
-		// in miles and feet.
-		int xway = 1000 * dt.getXway();
-		//east direction positive, west direction negative. all segments are stored in the system with +1 in order to avoid problems with 0
-		int segment = dt.getSeg() + xway;
-		segment = (dt.getDir() == 1) ? (segment+1)*-1 : (segment)+1;
-		/**this is the value that uses the system to parallelize**/
-		int value = segment;
-		
-		int avgSpeed = 0;
-		int numVehiclesSegment = 0;
-		int toll = 0;
-		/** ACCIDENT LOGIC **/
-		//execute logic for detecting accidents
-		accidentDetector(segment, dt);
-		
-		/** UPDATE DATA STRUCTURES**/
-		//What minute are we in?
-		int minute = (int)(time/60) +1;
-		//new minute, update data structures
-		if(minute > currentMinute){
-System.out.println("##MIN CHANGED: last-> "+currentMinute+" current -> "+minute);
-long ab = System.currentTimeMillis();
-			currentMinute = minute;
-			//UPDATE SEGMENT SPEED STATISTICS
-			speedAvg5Minutes = speedAvg4Minutes;
-			speedAvg4Minutes = speedAvg3Minutes;
-			speedAvg3Minutes = speedAvg2Minutes;
-			speedAvg2Minutes = speedAvg1Minutes;
-			speedAvg1Minutes = computeAvgSpeed(numVidCurrentMinSeg_seg_listVid, currentVidSpeed_vid_speed);
-			currentVidSpeed_vid_speed = new HashMap<Integer, Integer>();
-			//UPDATE SEGMENT NUMVEHICLES STATISTICS
-//			numVidLastMinSeg_seg_numVid = null;
-			numVidLastMinSeg_seg_numVid = computeNumVehicles(numVidCurrentMinSeg_seg_listVid);
-			numVidCurrentMinSeg_seg_listVid = new HashMap<Integer, ArrayList<Integer>>();
-long ba = System.currentTimeMillis();
-System.out.println("##TIME TO UPDATE: "+(ba-ab));
-		}
-	
-		//UPDATE CURRENT MINUTE STATISTICS
-		//update num vehicles in current segment in this minute
-		if (numVidCurrentMinSeg_seg_listVid.get(segment) != null) {
-			//if the car was not registered yet in this segment we add it
-//System.out.println("VID: "+vehicle+" was not? "+numVehiclesCurrentMinuteSegment.get(segment).indexOf(vehicle));
-			if(!numVidCurrentMinSeg_seg_listVid.get(segment).contains(vehicle)){
-				if(numVidCurrentMinSeg_seg_listVid == null){
-System.out.println("ESTO ES NULL:::: ");
-
-				}
-				if (numVidCurrentMinSeg_seg_listVid.get(segment) == null) {
-System.out.println("NUMVID.get(segment) NULL NULL seg: "+segment);
-				}
-				if(numVidCurrentMinSeg_seg_listVid.get(segment).contains(vehicle)) numVidCurrentMinSeg_seg_listVid.get(segment).add(vehicle);
-//System.out.println("num V in this seg: "+numVehiclesCurrentMinuteSegment.get(segment).size());
-			}
-		}
-		else{
-			ArrayList<Integer> aux = new ArrayList<Integer>();
-			aux.add(vehicle);
-			numVidCurrentMinSeg_seg_listVid.put(segment, aux);
-		}
-		//if there is a vehicle that has reported
-		if (currentVidSpeed_vid_speed.get(vehicle) != null){
-			//calculate average of vehicle and store it
-			int vSpeed = (int)((int)(currentVidSpeed_vid_speed.get(vehicle) + speed)) / 2;
-			currentVidSpeed_vid_speed.put(vehicle, vSpeed);
-		}
-		//if the vehicle has not reported yet, store its speed
-		else{
-			currentVidSpeed_vid_speed.put(vehicle, speed);
-		}
-		/** TOLL CALCULATION LOGIC **/
-		//IF NOT ACCIDENT AREA
-		if(!accidentArea(segment)){
-			//IF NOT EXIT LANE
-			if(dt.getLane() != 4){
-				//IF NOT LESS THAN 50 VEHICLES in the previous minute
-				if(numVidLastMinSeg_seg_numVid.get(segment) != null){
-					numVehiclesSegment = numVidLastMinSeg_seg_numVid.get(segment);
-//					if (numVehiclesSegment > 40)System.out.println("<-- NUMVEHICLES --> "+numVehiclesSegment);
-					if(numVehiclesSegment > 50){
-						avgSpeed = computeSpeedLast5Min(segment);
-						//IF NOT FASTER THAN 40mph
-						if(avgSpeed < 40){
-							toll = (int) (2 * Math.pow((numVehiclesSegment-50), 2));
-//System.out.println("toll "+toll);
-						}
-						//IF FASTER THAN 40mph -> toll is 0
-						else{
-//System.out.println("faster than 40 "+avgSpeed);
-							toll = 0;
-						}
-					}
-					//IF LESS THAN 50 VEHICLES -> toll is 0
-					else{
-						toll = 0;
-//System.out.println("num?vehicles last min: "+numVehiclesSegment);
-					}
-				}
-				else{
-					//this means that it is the first minute, previously were 0 vehicles, so toll = 0
-					toll = 0;
-//System.out.println("first minute");
-				}
-			}
-			//IF EXIT LANE -> toll is 0
-			else{
-				toll = 0;
-//System.out.println("exit lane: "+dt.getLane());
-			}
-		}
-		//IF ACCIDENT AREA -> toll is 0
-		else{
-			notifyAccident(dt);
-//System.out.println("accident area: "+segment);
-			return;
-		}
-		//Once toll has been calculated, emit the output tuple.
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-		event.setType(0);
-		event.setSpeed(avgSpeed);
-		event.setToll(toll);
-		//finally send toll event notification
-//long aa = System.currentTimeMillis();
-		sendDown(event.build(), value);
-//long ee = System.currentTimeMillis();
-//if((ee-aa) > 5){
-//	System.out.println("notify: "+(ee-aa));
-//}
-//		
-//long e = System.currentTimeMillis();
-//if((e-a)>50){
-//System.out.println("btnck? "+(e-a));
-//}
-		if(counter == backupTime ){
-			//generateBackupState();
-			counter = 0;
-		}
 	}
 
 	private HashMap<Integer, Integer> computeAvgSpeed(HashMap<Integer, ArrayList<Integer>> numVehiclesCurrentMinuteSegment,	HashMap<Integer, Integer> vehicleSpeedMin) {
