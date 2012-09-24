@@ -1,22 +1,34 @@
 package seep.operator;
 
-import java.io.IOException;
-import java.net.Socket;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+
 import seep.Main;
 import seep.buffer.Buffer;
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.BatchDataTuple;
+import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 
 public class OutputQueue {
 
 	// replaySemaphore controls whether it is possible to send or not
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
+	private Kryo k = null;
 	
 	public OutputQueue(){
-		
+		this.k = initializeKryo();
+	}
+	
+	private Kryo initializeKryo(){
+		//optimize here kryo
+		Kryo k = new Kryo();
+		k.register(DataTuple.class);
+		k.register(BatchDataTuple.class);
+		return k;
 	}
 	
 	//Start incoming data, one thread has finished replaying
@@ -48,18 +60,19 @@ public class OutputQueue {
 		replaySemaphore.incrementAndGet();
 	}
 	
-	public void sendToDownstream(Seep.DataTuple tuple, Object dest, boolean now, boolean beacon) {
+	public void sendToDownstream(DataTuple tuple, Object dest, boolean now, boolean beacon) {
 
 		if(dest instanceof CommunicationChannel){
 			CommunicationChannel channelRecord = (CommunicationChannel) dest;
-			Socket sock = channelRecord.getDownstreamDataSocket();
 			Buffer buffer = channelRecord.getBuffer();
 			AtomicBoolean replay = channelRecord.getReplay();
 			AtomicBoolean stop = channelRecord.getStop();
+			//Output for this socket
+			Output output = channelRecord.getOutput();
 			try{
 				//To send tuple
 				if(replay.compareAndSet(true, false)){
-					buffer.replay(channelRecord);
+					replay(channelRecord);
 					replay.set(false);
 					stop.set(false);
 					//At this point, this operator has finished replaying the tuples
@@ -75,10 +88,14 @@ public class OutputQueue {
 					/// \todo{Add the following line for include the batch timing mechanism}
 //					if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.getTick) > ExecutionConfiguration.maxLatencyAllowed ){
 					if(channelRecord.getChannelBatchSize() == 0){
-						Seep.EventBatch msg = channelRecord.buildBatch();
+						BatchDataTuple msg = channelRecord.getBatch();
 	
 						channelRecord.setTick(currentTime);
-						msg.writeDelimitedTo(sock.getOutputStream());
+						
+						k.writeObject(output, msg);
+//						msg.writeDelimitedTo(sock.getOutputStream());
+						
+						
 						channelRecord.cleanBatch();
 						if(Main.valueFor("eftMechanismEnabled").equals("true")){
 							buffer.save(msg);
@@ -95,10 +112,6 @@ public class OutputQueue {
 					}
 				}
 			}
-			catch(IOException io){
-				NodeManager.nLogger.severe("-> Dispatcher. While sending: "+io.getMessage());
-				io.printStackTrace();
-			}
 			catch(InterruptedException ie){
 				NodeManager.nLogger.severe("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 				ie.printStackTrace();
@@ -108,6 +121,40 @@ public class OutputQueue {
 			Operator operatorObj = (Operator) dest;
 			operatorObj.processData(tuple);
 		}
+	}
+	
+	public void replay(CommunicationChannel oi){
+		long a = System.currentTimeMillis();
+				while(oi.getSharedIterator().hasNext()){
+					BatchDataTuple batch = oi.getSharedIterator().next();
+					Output output = oi.getOutput();
+					k.writeObject(output, batch);
+				}
+		long b = System.currentTimeMillis() - a;
+		System.out.println("Dis.replay: "+b);
+	}
+	
+	public void replayTuples(CommunicationChannel cci) {
+				Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
+				Output output = cci.getOutput();
+				int bufferSize = cci.getBuffer().size();
+				int controlThreshold = (int)(bufferSize)/10;
+				int replayed = 0;
+				while(sharedIterator.hasNext()) {
+					BatchDataTuple dt = sharedIterator.next();
+					k.writeObject(output, dt);
+					replayed++;
+					/// \test {test this functionality. is this necessary?}
+					if((bufferSize-replayed) <= (controlThreshold+1)){
+						break;
+					}
+				}
+				//Restablish communication. Set variables and sharedIterator with the current iteration state.
+				NodeManager.nLogger.info("-> Recovering connections");
+				cci.getReplay().set(true);
+				cci.getStop().set(false);
+				cci.setSharedIterator(sharedIterator);
+				start();
 	}
 	
 }

@@ -332,19 +332,19 @@ long tinit = 0;
 		else return false;
 	}
 
-	private void notifyAccident(Seep.DataTuple dt) {
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-		// if there is an accident, there is no toll
-		event.setToll(0);
-		//send accident notification
-		event.setType(1);
-//System.out.println("Segment: "+dt.getSeg()+" Accident near");
-long a = System.currentTimeMillis();
-		sendDown(event.build());
-long e = System.currentTimeMillis();
-if((e-a) > 5){
-	System.out.println("ACC-AREA: "+(e-a));
-}
+	private void notifyAccident(DataTuple dt) {
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+//		// if there is an accident, there is no toll
+//		event.setToll(0);
+//		//send accident notification
+//		event.setType(1);
+////System.out.println("Segment: "+dt.getSeg()+" Accident near");
+//long a = System.currentTimeMillis();
+//		sendDown(event.build());
+//long e = System.currentTimeMillis();
+//if((e-a) > 5){
+//	System.out.println("ACC-AREA: "+(e-a));
+//}
 	}
 
 	private void accidentDetector(int segment, Seep.DataTuple dt) {

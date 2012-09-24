@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.CRC32;
 
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.Seep;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext;
@@ -104,7 +105,7 @@ public class Router implements Serializable{
 		}
 	}
 	
-	public ArrayList<Integer> forward(Seep.DataTuple dt, int value, boolean now){
+	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		//If it is necessary to query data to guess (logic)downstream
 		if(requiresQueryData){
@@ -127,7 +128,7 @@ public class Router implements Serializable{
 		return targets;
 	}
 	
-	public ArrayList<Integer> routeLayerOne(Seep.DataTuple dt, int value){
+	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
 		int contentValue = 0;
 		try {
 			contentValue = (Integer)queryFunction.invoke(dt);

@@ -9,9 +9,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.esotericsoftware.kryo.io.Output;
+
 import seep.buffer.Buffer;
 import seep.buffer.StateReplayer;
 import seep.comm.routing.Router;
+import seep.comm.serialization.BatchDataTuple;
 import seep.comm.tuples.Seep;
 import seep.comm.tuples.Seep.BackupState;
 import seep.infrastructure.NodeManager;
@@ -152,7 +155,7 @@ long e = System.currentTimeMillis();
 
 	@Deprecated
 	private void startReplayer( CommunicationChannel oi ) {
-		oi.sharedIterator = oi.getBuffer().iterator();
+		oi.setSharedIterator(oi.getBuffer().iterator());
 		//send state and this would trigger the replay buffer
 		StateReplayer replayer = new StateReplayer(oi);
 		Thread replayerT = new Thread(replayer);
@@ -382,7 +385,7 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 		//Get channel information
 		CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
 		Buffer buffer = cci.getBuffer();
-		Socket controlDownstreamSocket = cci.downstreamControlSocket;
+		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
 
 		//Get a proper init state and just send it
 		Seep.ControlTuple.Builder ctB = Seep.ControlTuple.newBuilder();
@@ -436,53 +439,6 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 			System.out.println("REPLAYER: Error while trying to send the INIT_STATE msg: "+io.getMessage());
 			io.printStackTrace();
 		}
-	}
-	
-	public void replayTuples(int opId) {
-long a = System.currentTimeMillis();
-		CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
-		Iterator<Seep.EventBatch> sharedIterator = cci.getBuffer().iterator();
-		Socket socket = cci.getDownstreamDataSocket();
-		int bufferSize = cci.getBuffer().size();
-		int controlThreshold = (int)(bufferSize)/10;
-System.out.println("TO REPLAY: "+bufferSize+ "tuples");
-		int replayed = 0;
-		while(sharedIterator.hasNext()) {
-//			System.out.println("I DO HAVE TUPLES");
-			try{
-				Seep.EventBatch dt = sharedIterator.next();
-//				System.out.println("is dt null?");
-//				if(dt == null) System.out.println("yes");
-//				else System.out.println("no");
-				
-				synchronized(socket){
-//					System.out.print("*");
-					OutputStream o = socket.getOutputStream();
-					if(o == null) System.out.println("o is NULL");
-//					System.out.print("1");
-					dt.writeDelimitedTo(o);
-//					System.out.print("/");
-				}
-				replayed++;
-				//Criteria for knowing how to transfer control back to incomingdatahandler
-				/// \test {test this functionality. is this necessary?}
-				if((bufferSize-replayed) <= (controlThreshold+1)){
-					break;
-				}
-			}
-			catch(IOException io){
-				System.out.println("ERROR in replayer when replaying info: "+io.getMessage());
-				io.printStackTrace();
-			}
-		}
-		//Restablish communication. Set variables and sharedIterator with the current iteration state.
-		NodeManager.nLogger.info("-> Recovering connections");
-		cci.getReplay().set(true);
-		cci.getStop().set(false);
-		cci.sharedIterator = sharedIterator;
-		owner.getDispatcher().startIncomingData();
-long b = System.currentTimeMillis() - a;
-System.out.println("replayTuples: "+b);
 	}
 	
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)

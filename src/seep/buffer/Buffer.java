@@ -1,13 +1,12 @@
 package seep.buffer;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import seep.comm.serialization.BatchDataTuple;
 import seep.comm.tuples.Seep;
-import seep.operator.CommunicationChannel;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -17,11 +16,11 @@ public class Buffer implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
-	private Deque<Seep.EventBatch> buff = new LinkedBlockingDeque<Seep.EventBatch>();
+	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
 	
 	private Seep.BackupState bs = null;
 
-	public Iterator<Seep.EventBatch> iterator() { return buff.iterator(); }
+	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
 
 	public Buffer(){
 		//state cannot be null. before backuping it would be null and this provokes bugs
@@ -56,39 +55,24 @@ public class Buffer implements Serializable{
 		this.bs = bs;
 	}
 
-	public void save(Seep.EventBatch batch){
+	public void save(BatchDataTuple batch){
 		buff.add(batch);
 	}
 	
 /// \test trim() should be tested
 	public void trim(long ts){
 //System.out.println("TO TRIM");
-		Iterator<Seep.EventBatch> iter = buff.iterator();
+		Iterator<BatchDataTuple> iter = buff.iterator();
 		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
-			Seep.EventBatch next = iter.next();
+			BatchDataTuple next = iter.next();
 			long timeStamp = 0;
-			numOfTuplesPerBatch = next.getEventCount();
+			numOfTuplesPerBatch = next.getBatchSize();
 			//Accessing last index cause that is the newest tuple in the batch
-			timeStamp = next.getEvent(numOfTuplesPerBatch-1).getTs();
+			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTs();
 //System.out.println("#events: "+numOfTuplesPerBatch+" timeStamp: "+timeStamp+" ts: "+ts);
 			if (timeStamp <= ts) iter.remove();
 			else break;
 		}
-	}
-	
-	public void replay(CommunicationChannel oi){
-long a = System.currentTimeMillis();
-		while(oi.sharedIterator.hasNext()){
-			Seep.EventBatch batch = oi.sharedIterator.next();
-			try{
-				batch.writeDelimitedTo(oi.getDownstreamDataSocket().getOutputStream());
-			}
-			catch(IOException io){
-				System.out.println("While replaying: "+io.getMessage());
-			}
-		}
-long b = System.currentTimeMillis() - a;
-System.out.println("Dis.replay: "+b);
 	}
 }

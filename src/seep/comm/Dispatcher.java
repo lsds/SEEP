@@ -1,6 +1,7 @@
 package seep.comm;
 
 import seep.comm.routing.Router;
+import seep.comm.serialization.DataTuple;
 import seep.comm.tuples.*;
 import seep.comm.tuples.Seep.ControlTuple;
 import seep.infrastructure.NodeManager;
@@ -103,7 +104,7 @@ public class Dispatcher implements Serializable{
 		opContext.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
 	
-	public void sendData(Seep.DataTuple dt, int value, boolean now){
+	public void sendData(DataTuple dt, int value, boolean now){
 //		System.out.println("get targets: ");
 		targets = router.forward(dt, value, now);
 		for(Integer target : targets){
@@ -167,7 +168,7 @@ public class Dispatcher implements Serializable{
 			operatorObj.processControlTuple(ct, null);
 		}
 		else if (obj instanceof CommunicationChannel){
-			Socket socket = ((CommunicationChannel) obj).downstreamControlSocket;
+			Socket socket = ((CommunicationChannel) obj).getDownstreamControlSocket();
 			try{
 				Seep.ControlTuple tuple = ct.build();
 				synchronized (socket){
@@ -188,7 +189,7 @@ public class Dispatcher implements Serializable{
 			operatorObj.processControlTuple(ct, null);
 		}
 		else if (obj instanceof CommunicationChannel){
-			Socket socket = ((CommunicationChannel) obj).downstreamControlSocket;
+			Socket socket = ((CommunicationChannel) obj).getDownstreamControlSocket();
 			try{
 				Seep.ControlTuple tuple = ct.build();
 				synchronized (socket){

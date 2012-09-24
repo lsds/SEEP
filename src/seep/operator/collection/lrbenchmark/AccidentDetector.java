@@ -133,19 +133,19 @@ public class AccidentDetector extends Operator implements StatefullOperator{
 		}
 	}
 	
-	private void notifyArea(Seep.DataTuple dt) {
-		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
-		// if there is an accident, there is no toll
-		event.setToll(0);
-		//send accident notification
-		event.setType(1);
-//System.out.println("Segment: "+dt.getSeg()+" Accident near");
-long a = System.currentTimeMillis();
-		sendDown(event.build());
-long e = System.currentTimeMillis();
-if((e-a) > 5){
-	System.out.println("notify: "+(e-a));
-}
+	private void notifyArea(DataTuple dt) {
+//		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
+//		// if there is an accident, there is no toll
+//		event.setToll(0);
+//		//send accident notification
+//		event.setType(1);
+////System.out.println("Segment: "+dt.getSeg()+" Accident near");
+//long a = System.currentTimeMillis();
+//		sendDown(event.build());
+//long e = System.currentTimeMillis();
+//if((e-a) > 5){
+//	System.out.println("notify: "+(e-a));
+//}
 	}
 	
 	

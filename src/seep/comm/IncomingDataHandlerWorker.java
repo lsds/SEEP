@@ -2,6 +2,7 @@ package seep.comm;
 
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
+import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
 
 import java.io.*;
@@ -31,6 +32,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 		//optimize here kryo
 		Kryo k = new Kryo();
 		k.register(DataTuple.class);
+		k.register(BatchDataTuple.class);
 		return k;
 	}
 	

@@ -189,27 +189,27 @@ public int ackCounter = 0;
 		return true;
 	}
 
-	public void sendDown(Seep.DataTuple dt){
+	public void sendDown(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
 //		lp.start();
 		dispatcher.sendData(dt, Integer.MIN_VALUE, false);
 //		lp.finish();
 	}
 	
-	public void sendDown(Seep.DataTuple dt, int value){
+	public void sendDown(DataTuple dt, int value){
 //		lp.start();
 		dispatcher.sendData(dt, value, false);
 //		lp.finish();
 	}
 	
-	public void sendNow(Seep.DataTuple dt){
+	public void sendNow(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
 //		lp.start();
 		dispatcher.sendData(dt, Integer.MIN_VALUE, true);
 //		lp.finish();
 	}
 	
-	public void sendNow(Seep.DataTuple dt, int value){
+	public void sendNow(DataTuple dt, int value){
 //		lp.start();
 		dispatcher.sendData(dt, value, true);
 //		lp.finish();
@@ -272,7 +272,9 @@ long a = System.currentTimeMillis();
 			int opId = ct.getStateAck().getOpId();
 			NodeManager.nLogger.info("-> Received STATE_ACK from OP: "+opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
-			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
+//			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
+			CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+			outputQueue.replayTuples(cci);
 //			operatorStatus = OperatorStatus.NORMAL;
 long b = System.currentTimeMillis() - a;
 System.out.println("*state_ack: "+b);
@@ -447,7 +449,8 @@ System.out.println("*reconfigure: "+b);
 			dispatcher.stopConnection(opId);
 			/// \todo{avoid this deprecated function}
 			//opCommonProcessLogic.startReplayer(opID);
-			opCommonProcessLogic.replayTuples(opId);
+			CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+			outputQueue.replayTuples(cci);
 		}
 		/** CONFIG SOURCE RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}

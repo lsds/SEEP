@@ -38,6 +38,8 @@
 	<manifest>
 		<attribute name="Main-Class" value="seep/Main" />
 	</manifest>
+	<fileset dir="${build}" includes="**/*.class"/>
+	<zipfileset src="lib/kryo-debug-2.20-all.jar" excludes="META-INF/*"/>
     </jar>
   </target>
 

@@ -18,7 +18,7 @@ public class StateReplayer implements Runnable {
 	private Socket controlDownstreamSocket = null;
 
 	public StateReplayer(CommunicationChannel oi){
-		this.controlDownstreamSocket = oi.downstreamControlSocket;
+		this.controlDownstreamSocket = oi.getDownstreamControlSocket();
 		this.buffer = oi.getBuffer();
 	}
 
