@@ -15,7 +15,6 @@ import java.util.logging.Logger;
 import seep.Main;
 import seep.comm.BasicCommunicationUtils;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
 

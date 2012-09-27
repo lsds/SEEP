@@ -2,6 +2,7 @@ package seep.operator;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.*;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -13,7 +14,6 @@ import seep.buffer.Buffer;
 //import seep.comm.Replayer;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
 
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
@@ -25,7 +25,7 @@ public class CommunicationChannel{
 	private Buffer buffer;
 	
 	private Output output = null;
-	private BufferedOutputStream bos = null;
+	private OutputStream bos = null;
 	
 	//Set atomic variables to their initial value
 	private AtomicBoolean stop = new AtomicBoolean(false);
@@ -48,7 +48,9 @@ public class CommunicationChannel{
 			/// \fixme{this must be fixed, different CONSTRUCTORS, please...}
 			if(downstreamDataSocket != null){
 				//Create buffered output stream
-				bos = new BufferedOutputStream(downstreamSocketD.getOutputStream());
+//				bos = new BufferedOutputStream(downstreamSocketD.getOutputStream());
+				//Create common outputstream and let kryo to manage buffers
+				bos = downstreamSocketD.getOutputStream();
 				//Create the kryo output for this socket
 				output = new Output(bos);
 			}
@@ -72,8 +74,7 @@ public class CommunicationChannel{
 	}
 	
 	public Output getOutput() {
-		// TODO Auto-generated method stub
-		return null;
+		return output;
 	}
 	
 	public void setTick(long tick){

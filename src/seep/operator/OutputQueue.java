@@ -93,10 +93,14 @@ public class OutputQueue {
 						channelRecord.setTick(currentTime);
 						
 						k.writeObject(output, msg);
+						//Flush the buffer to the stream
+//						int size = output.toBytes().length;
+//						System.out.println("SENT: "+size);
+						output.flush();
+//						System.out.println("tx");
 //						msg.writeDelimitedTo(sock.getOutputStream());
-						
-						
 						channelRecord.cleanBatch();
+						
 						if(Main.valueFor("eftMechanismEnabled").equals("true")){
 							buffer.save(msg);
 						}

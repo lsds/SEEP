@@ -6,7 +6,8 @@ import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.comm.serialization.BatchDataTuple;
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.StateI;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -18,40 +19,37 @@ public class Buffer implements Serializable{
 
 	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
 	
-	private Seep.BackupState bs = null;
+	private BackupState bs = null;
 
 	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
 
 	public Buffer(){
 		//state cannot be null. before backuping it would be null and this provokes bugs
 //\bug The constructor in Buffer is operator dependant, this must be fixed by means of interfaces that make it independent.
-		Seep.WordCounterState.Builder wcs = Seep.WordCounterState.newBuilder();
-		Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
-		eB.setCounter(0);
-		wcs.addEntry(eB.build());
-		Seep.BackupState.Builder initState = Seep.BackupState.newBuilder();
+		BackupState initState = new BackupState();
 		initState.setOpId(0);
-		initState.setTsE(0);
-		initState.setWcState(wcs.build());
-		bs = initState.build();
+		initState.setTs_e(0);
+		StateI state = null;
+		initState.setState(state);
+		bs = initState;
 	}
 	
 	public int size(){
 		return buff.size();
 	}
 
-	public Seep.BackupState getBackupState(){
+	public BackupState getBackupState(){
 		return bs;
 	}
 
-	public void saveStateAndTrim(Seep.BackupState bs){
+	public void saveStateAndTrim(BackupState bs){
 		//Save state
 		this.bs = bs;
 		//Trim buffer, eliminating those tuples that are represented by this state
-		trim(bs.getTsE());
+		trim(bs.getTs_e());
 	}
 	
-	public void replaceBackupState(Seep.BackupState bs) {
+	public void replaceBackupState(BackupState bs) {
 		this.bs = bs;
 	}
 

@@ -11,11 +11,12 @@ import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
 import seep.comm.routing.Router;
+import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.Ack;
-import seep.comm.tuples.Seep.ControlTuple;
-import seep.comm.tuples.Seep.ControlTuple.Type;
+import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import seep.comm.serialization.controlhelpers.Resume;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorInitializationException;
@@ -76,6 +77,11 @@ public int ackCounter = 0;
 	//This enum is for aiding in the implementation of the protocols
 	public enum OperatorStatus {
 		NORMAL, WAITING_FOR_STATE_ACK, INITIALISING_STATE//, REPLAYING_BUFFER//, RECONFIGURING_COMM
+	}
+	
+	public enum ControlTupleType{
+		ACK, BACKUP_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
+		BACKUP_RI, INIT_RI
 	}
 	
 	public synchronized void setTsData(long ts_data){
@@ -160,9 +166,9 @@ public int ackCounter = 0;
 		iDataH.start();
 
 		//initialize the genericAck message to answer some specific messages.
-		ControlTuple.Builder b = ControlTuple.newBuilder();
-		b.setType(ControlTuple.Type.ACK);
-		genericAck = b.build();
+		ControlTuple b = new ControlTuple();
+		b.setType(ControlTupleType.ACK);
+		genericAck = b;
 		
 		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
 	}
@@ -189,6 +195,10 @@ public int ackCounter = 0;
 		return true;
 	}
 
+//	public <T extends DataTuple> void sendDown(T dt){
+//		dispatcher.sendData(dt, Integer.MIN_VALUE, false);
+//	}
+	
 	public void sendDown(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
 //		lp.start();
@@ -218,11 +228,12 @@ public int ackCounter = 0;
 	public abstract boolean isOrderSensitive();
 	
 	public abstract void processData(DataTuple dt);
-
+	
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
-	public void processControlTuple(Seep.ControlTuple.Builder ct, OutputStream os) {
+	public void processControlTuple(ControlTuple ct, OutputStream os) {
 		/** ACK message **/
-		if(ct.getType() == Seep.ControlTuple.Type.ACK) {
+		ControlTupleType ctt = ct.getType();
+		if(ctt.equals(ControlTupleType.ACK)) {
 //long a = System.currentTimeMillis();
 			if(ct.getAck().getTs() >= ts_ack){
 				ackCounter++;
@@ -232,7 +243,7 @@ public int ackCounter = 0;
 //System.out.println("*processAck: "+b);
 		}
 		/** INVALIDATE_STATE message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.INVALIDATE_STATE) {
+		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.INVALIDATE_STATE from OP: "+ct.getInvalidateState().getOpId());
 			opContext.invalidateState(ct.getInvalidateState().getOpId());
@@ -240,7 +251,7 @@ long b = System.currentTimeMillis() - a;
 System.out.println("*invalidate_state: "+b);
 		}
 		/** INIT_MESSAGE message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.INIT_STATE){
+		else if(ctt.equals(ControlTupleType.INIT_STATE)){
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitState().getOpId());
 			processInitState(ct.getInitState());
@@ -248,13 +259,13 @@ long b = System.currentTimeMillis() - a;
 System.out.println("*init_message: "+b);
 		}
 		/** BACKUP_STATE message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.BACKUP_STATE){
+		else if(ctt.equals(ControlTupleType.BACKUP_STATE)){
 			//If communications are not being reconfigured
 //			if(!operatorStatus.equals(OperatorStatus.RECONFIGURING_COMM)){
 //			if(!operatorStatus.equals(OperatorStatus.REPLAYING_BUFFER)){
 long a = System.currentTimeMillis();
 			//Register this state as being managed by this operator
-				Seep.BackupState backupState = ct.getBackupState();
+				BackupState backupState = ct.getBackupState();
 				NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv BACKUP_STATE from OP: "+backupState.getOpId());
 				opContext.registerManagedState(backupState.getOpId());
 				opCommonProcessLogic.processBackupState(backupState);
@@ -267,7 +278,7 @@ System.out.println("*backup_state: "+b);
 //			}
 		}
 		/** STATE_ACK message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.STATE_ACK){
+		else if(ctt.equals(ControlTupleType.STATE_ACK)){
 long a = System.currentTimeMillis();
 			int opId = ct.getStateAck().getOpId();
 			NodeManager.nLogger.info("-> Received STATE_ACK from OP: "+opId);
@@ -280,7 +291,7 @@ long b = System.currentTimeMillis() - a;
 System.out.println("*state_ack: "+b);
 		}
 		/** BACKUP_RI message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.BACKUP_RI){
+		else if(ctt.equals(ControlTupleType.BACKUP_RI)){
 long a = System.currentTimeMillis();
 
 			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.BACKUP_RI");
@@ -289,7 +300,7 @@ long b = System.currentTimeMillis() - a;
 System.out.println("*backup_ri: "+b);
 		}
 		/** INIT_RI message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.INIT_RI){
+		else if(ctt.equals(ControlTupleType.INIT_RI)){
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getOpId());
 			opCommonProcessLogic.installRI(ct.getInitRI());
@@ -297,26 +308,26 @@ long b = System.currentTimeMillis() - a;
 System.out.println("*backup_ri: "+b);
 		}
 		/** SCALE_OUT message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.SCALE_OUT) {
+		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
 			//Ack the message, we do not need to wait until the end
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.SCALE_OUT");
 			opCommonProcessLogic.scaleOut(ct.getScaleOutInfo());
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 long b = System.currentTimeMillis() - a;
 System.out.println("*scaleOut: "+b);
 		}
 		/** RESUME message **/
-		else if (ct.getType() == Seep.ControlTuple.Type.RESUME) {
+		else if (ctt.equals(ControlTupleType.RESUME)) {
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.RESUME");
-			Seep.Resume resumeM = ct.getResume();
+			Resume resumeM = ct.getResume();
 			
 			// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
 			// I may be managing a state but I dont have to replay it if I have not splitted it previously
 			if(operatorStatus.equals(OperatorStatus.WAITING_FOR_STATE_ACK)){
 				/// \todo {why has resumeM a list?? check this}
-				for (int opId: resumeM.getOpIdList()){
+				for (int opId: resumeM.getOpId()){
 					//Check if I am managing the state of any of the operators to which state must be replayed
 					/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
 					if(opContext.isManagingStateOf(opId)){
@@ -340,30 +351,20 @@ long a = System.currentTimeMillis();
 long b = System.currentTimeMillis() - a;
 System.out.println("*resume: "+b);
 			//Finally ack the processing of this message
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 		}
 		
 		/** RECONFIGURE message **/
-		else if(ct.getType() == Seep.ControlTuple.Type.RECONFIGURE){
+		else if(ctt.equals(ControlTupleType.RECONFIGURE)){
 long a = System.currentTimeMillis();
 			processCommand(ct.getReconfigureConnection(), os);
 long b = System.currentTimeMillis() - a;
 System.out.println("*reconfigure: "+b);
 		}
 	}
-
-	private void ackControlMessage(OutputStream os){
-		try{
-			genericAck.writeDelimitedTo(os);
-		} 
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 	
 	/// \todo {stopping and starting the conn should be done from updateConnection in some way to hide the complexity this introduces here}
-	public void processCommand(Seep.ReconfigureConnection rc, OutputStream os){
+	public void processCommand(ReconfigureConnection rc, OutputStream os){
 		String command = rc.getCommand();
 		NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv "+command+" command ");
 		InetAddress ip = null;
@@ -410,7 +411,7 @@ System.out.println("*reconfigure: "+b);
 		/** ADD DOWN or ADD UP message **/
 		else if(command.equals("add_downstream") || command.equals("add_upstream")){
 //			operatorStatus = OperatorStatus.RECONFIGURING_COMM;
-			OperatorStaticInformation loc = new OperatorStaticInformation(new Node(ip, rc.getNodePort()), rc.getInC(), rc.getInD(), rc.getOperatorNature());
+			OperatorStaticInformation loc = new OperatorStaticInformation(new Node(ip, rc.getNode_port()), rc.getInC(), rc.getInD(), rc.getOperatorNature());
 			if(command.equals("add_downstream")){
 				opContext.addDownstream(opId);
 				opContext.setDownstreamOperatorStaticInformation(opId, loc);
@@ -433,11 +434,11 @@ System.out.println("*reconfigure: "+b);
 				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
 				opCommonProcessLogic.reconfigureUpstreamBackupIndex();
 			}
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 		}
 		/** SYSTEM READY message **/
 		else if (command.equals("system_ready")){
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 			//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
 			opCommonProcessLogic.sendInitialStateBackup();
 		}
@@ -455,7 +456,7 @@ System.out.println("*reconfigure: "+b);
 		/** CONFIG SOURCE RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("configureSourceRate")){
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 			int numberEvents = rc.getOpId();
 			int time = rc.getInC();
 			if(numberEvents == 0 && time == 0){
@@ -470,7 +471,7 @@ System.out.println("*reconfigure: "+b);
 		/** SAVE RESULTS RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("saveResults")){
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 			try{
 			((Snk)this.subclassOperator).save();
 			}catch(Exception e){
@@ -480,7 +481,7 @@ System.out.println("*reconfigure: "+b);
 		/** DEACTIVATE elft mechanism message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("deactivateMechanisms")){
-			ackControlMessage(os);
+			dispatcher.ackControlMessage(genericAck, os);
 			if(Main.eftMechanismEnabled){
 				NodeManager.nLogger.info("--> Desactivated ESFT mechanisms.");
 				Main.eftMechanismEnabled = false;
@@ -498,29 +499,22 @@ System.out.println("*reconfigure: "+b);
 	}
 	
 	public void ack(long ts) {
-//long a = System.currentTimeMillis();
-		ControlTuple.Builder ack = ControlTuple.newBuilder()
-			.setType(Type.ACK)
-			.setAck(Ack.newBuilder()
-					.setOpId(operatorId)
-					.setTs(ts));
+		ControlTuple ack = new ControlTuple(ControlTupleType.ACK, operatorId, ts);
 		dispatcher.sendAllUpstreams(ack);
-//long b = System.currentTimeMillis() - a;
-//System.out.println("Op.ACK: "+b);
 	}
 
 	private void manageBackupUpstreamIndex(int opId){
 		//Firstly, I configure my upstreamBackupIndex, which is the index of the operatorId coming in this message (the one in charge of managing it)
 		int newIndex = opContext.findUpstream(opId).index();
 		if(backupUpstreamIndex != -1 && newIndex != backupUpstreamIndex){
-			ControlTuple.Builder ct = opCommonProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
+			ControlTuple ct = opCommonProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
 			dispatcher.sendUpstream(ct, backupUpstreamIndex);
 		}
 		//Set the new backup upstream index, this has been sent by the manager.
 		this.setBackupUpstreamIndex(newIndex);
 	}
 	
-	public void processInitState(Seep.InitState ct){
+	public void processInitState(InitState ct){
 long a = System.currentTimeMillis();
 		//Reconfigure backup stream index
 		manageBackupUpstreamIndex(ct.getOpId());
@@ -545,9 +539,7 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 		
 		//Send a msg to ask for the rest of information. (tuple replaying)
 		NodeManager.nLogger.info("-> Sending STATE_ACK");
-		Seep.ControlTuple.Builder rb = Seep.ControlTuple.newBuilder();
-		rb.setType(Seep.ControlTuple.Type.STATE_ACK);
-		rb.setStateAck(Seep.StateAck.newBuilder().setOpId(operatorId).build());
+		ControlTuple rb = new ControlTuple().makeStateAck(operatorId);
 		dispatcher.sendAllUpstreams(rb);
 long b = System.currentTimeMillis() - a;
 System.out.println("OP.processInitState: "+b);
@@ -579,17 +571,15 @@ System.out.println("OP.processInitState: "+b);
 	 * 
 	 * NEW -> Now all the previous computation is done when there is an upstream added, to set the system to a coherent state as soon as possible
 	 */
-	public void backupState(Seep.BackupState.Builder bs){
+	public void backupState(BackupState bs){
 		//TODO Fill ts_e and ts_s of backupstate. FIXME now it is badly assigned
 		long currentTsData = ts_data;
 		
 		bs.setOpId(operatorId);
-		bs.setTsE(currentTsData);
-		bs.setTsS(0);
+		bs.setTs_e(currentTsData);
+		bs.setTs_s(0);
 		//Build the ControlTuple msg
-		Seep.ControlTuple.Builder ctB = Seep.ControlTuple.newBuilder();
-		ctB.setType(Seep.ControlTuple.Type.BACKUP_STATE);
-		ctB.setBackupState(bs.build());
+		ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 		//Finally send the backup state
 System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
 		dispatcher.sendUpstream(ctB, backupUpstreamIndex);

@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import seep.Main;
-import seep.comm.tuples.Seep;
 import seep.infrastructure.NodeManager;
 
 /**

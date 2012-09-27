@@ -1,21 +1,35 @@
 package seep.operator;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import seep.comm.serialization.DataTuple;
 
 public class InputQueue {
 
 	private BlockingQueue<DataTuple> inputQueue;
+	private int size;
+	
+	public synchronized void addSize(){
+		size++;
+	}
+	
+	public synchronized void restSize(){
+		size--;
+	}
 	
 	public InputQueue(){
-		inputQueue = new LinkedBlockingQueue<DataTuple>();
+		inputQueue = new ArrayBlockingQueue<DataTuple>(100000);
+	}
+	
+	public int getSize(){
+		return size;
 	}
 	
 	public void push(DataTuple data){
 		try {
 			inputQueue.put(data);
+			addSize();
 //			System.out.println("ID pushed: "+inputQueue.size());
 		} 
 		catch (InterruptedException e) {
@@ -27,6 +41,7 @@ public class InputQueue {
 	public DataTuple pull(){
 		try {
 //			System.out.println("ID pop:");
+			restSize();
 			return inputQueue.take();
 		} 
 		catch (InterruptedException e) {

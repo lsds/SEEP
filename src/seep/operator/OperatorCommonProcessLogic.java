@@ -15,8 +15,12 @@ import seep.buffer.Buffer;
 import seep.buffer.StateReplayer;
 import seep.comm.routing.Router;
 import seep.comm.serialization.BatchDataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.BackupState;
+import seep.comm.serialization.ControlTuple;
+import seep.comm.serialization.controlhelpers.Ack;
+import seep.comm.serialization.controlhelpers.BackupRI;
+import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.InitRI;
+import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext.PlacedOperator;
 
@@ -39,10 +43,10 @@ public class OperatorCommonProcessLogic implements Serializable{
 	
 	//routing information, operatorCLASS - backupRI
 //	private Seep.BackupRI backupRI = null;
-	private HashMap<String, Seep.BackupRI> backupRoutingInformation = new HashMap<String, Seep.BackupRI>();
+	private HashMap<String, BackupRI> backupRoutingInformation = new HashMap<String, BackupRI>();
 	
 	/// \todo{check if i can avoid operations in the data structure when receiving same msg again and again}
-	public void storeBackupRI(Seep.BackupRI backupRI){
+	public void storeBackupRI(BackupRI backupRI){
 		//Get operator Class
 		String operatorType = backupRI.getOperatorType();
 		
@@ -76,11 +80,11 @@ System.out.println("#################");
 	 * Consequently, I have to locate the load balancers that this operator has right now and change the routing information.
 	 * Then, create the new required ones with the new information**/
 	
-	public synchronized void installRI(Seep.InitRI initRI){
+	public synchronized void installRI(InitRI initRI){
 		NodeManager.nLogger.info("-> Installing RI from OP: "+initRI.getOpId());
 		//Create new LB with the information received
-		ArrayList<Integer> indexes = new ArrayList<Integer>(initRI.getIndexList());
-		ArrayList<Integer> keys = new ArrayList<Integer>(initRI.getKeyList());
+		ArrayList<Integer> indexes = new ArrayList<Integer>(initRI.getIndex());
+		ArrayList<Integer> keys = new ArrayList<Integer>(initRI.getKey());
 		ArrayList<Integer> downstreamIds = new ArrayList<Integer>();
 		for(Integer index : indexes){
 			int opId = opContext.getDownOpIdFromIndex(index);
@@ -115,11 +119,11 @@ System.out.println("#################");
 		NodeManager.nLogger.info("-> Sending backupRI to upstream");
 System.out.println("KEY: "+operatorType);
 		//Otherwise I pick the backupRI msg from the data structure where i am storing these ones
-		Seep.BackupRI backupRI = backupRoutingInformation.get(operatorType);
+		BackupRI backupRI = backupRoutingInformation.get(operatorType);
 		//Form the message
 		Seep.InitRI.Builder initRI = Seep.InitRI.newBuilder();
-		initRI.addAllIndex(backupRI.getIndexList());
-		initRI.addAllKey(backupRI.getKeyList());
+		initRI.addAllIndex(backupRI.getIndex());
+		initRI.addAllKey(backupRI.getKey());
 		initRI.setOpId(owner.getOperatorId());
 		Seep.ControlTuple.Builder ct = Seep.ControlTuple.newBuilder();
 		ct.setType(Seep.ControlTuple.Type.INIT_RI);
@@ -130,7 +134,7 @@ System.out.println("KEY: "+operatorType);
 	
 	/*Checkpoint the state that it has received in the corresponding buffer (The buffer of the connection from which it received the state)*/
 	/// \todo{there is a double check (unnecesary) of the nature of downStream variable}
-	public synchronized void processBackupState(Seep.BackupState ct){
+	public synchronized void processBackupState(BackupState ct){
 long a = System.currentTimeMillis();
 		//Get operator id
 		int opId = ct.getOpId();
@@ -139,7 +143,7 @@ long a = System.currentTimeMillis();
 		if (downStream instanceof CommunicationChannel) {
 			CommunicationChannel connection = (CommunicationChannel) downStream;
 //System.out.println("comparing "+connection.reconf_ts+" with: "+ct.getTsE());
-			if (connection.reconf_ts <= ct.getTsE()) {
+			if (connection.reconf_ts <= ct.getTs_e()) {
 				//(downstreamBuffers.get(opId)).replaceBackupState(ct);
 //				System.out.println("replacing backupState");
 				opContext.getBuffer(opId).replaceBackupState(ct);
@@ -171,7 +175,7 @@ long e = System.currentTimeMillis();
 
 	//Send ACK tuples to the upstream nodes and update TS_ACK
 	/// \todo{now this method is syncrhonized, with ACK Tile mechanism we can avoid most of the method, but it is not finished yet}
-	public synchronized void processAck(Seep.Ack ct){
+	public synchronized void processAck(Ack ct){
 		int opId = ct.getOpId();
 		long current_ts = ct.getTs();
 		int counter = 0;
@@ -227,8 +231,8 @@ long e = System.currentTimeMillis();
 		
 		BackupState.Builder splitted[] = operatorToSplit.parallelizeState(oldState, key);
 
-		splitted[0].setTsE(oldState.getTsE());
-		splitted[1].setTsE(oldState.getTsE());
+		splitted[0].setTsE(oldState.getTs_e());
+		splitted[1].setTsE(oldState.getTs_e());
 		splitted[0].setOpId(oldOpId);
 		splitted[1].setOpId(newOpId);
 		NodeManager.nLogger.severe("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
@@ -240,9 +244,9 @@ long e = System.currentTimeMillis();
 		opContext.registerManagedState(newOpId);
 	}
 	
-	public synchronized void scaleOut(Seep.ScaleOutInfo scaleOutInfo){
-		int oldOpId = scaleOutInfo.getOldOpID();
-		int newOpId = scaleOutInfo.getNewOpID();
+	public synchronized void scaleOut(ScaleOutInfo scaleOutInfo){
+		int oldOpId = scaleOutInfo.getOldOpId();
+		int newOpId = scaleOutInfo.getNewOpId();
 		int newOpIndex = -1;
 		for(PlacedOperator op: opContext.downstreams) {
 			if (op.opID() == newOpId)
@@ -485,7 +489,7 @@ System.out.println("backupUpstreamIndex: "+owner.getBackupUpstreamIndex()+ "upIn
 		if(upIndex != backupUpstreamIndex){
 			NodeManager.nLogger.info("-> Upstream backup has changed...");
 			//Invalidate old Upstream state
-			Seep.ControlTuple.Builder ct = buildInvalidateMsg(backupUpstreamIndex);
+			ControlTuple ct = buildInvalidateMsg(backupUpstreamIndex);
 			owner.getDispatcher().sendUpstream(ct, backupUpstreamIndex);
 		
 			//Update my information
@@ -500,12 +504,8 @@ System.out.println("backupUpstreamIndex: "+owner.getBackupUpstreamIndex()+ "upIn
 		//Else, all remains the same
 	}
 	
-	public Seep.ControlTuple.Builder buildInvalidateMsg(int backupUpstreamIndex) {
-		Seep.ControlTuple.Builder ct = Seep.ControlTuple.newBuilder();
-		ct.setType(Seep.ControlTuple.Type.INVALIDATE_STATE);
-		Seep.InvalidateState.Builder is = Seep.InvalidateState.newBuilder();
-		is.setOpId(owner.getOperatorId());
-		ct.setInvalidateState(is.build());
+	public ControlTuple buildInvalidateMsg(int backupUpstreamIndex) {
+		ControlTuple ct = new ControlTuple(Operator.ControlTupleType.INVALIDATE_STATE, owner.getOperatorId());
 		//Send invalidation message to old upstream
 		NodeManager.nLogger.info("-> sending INVALIDATE_STATE to OP "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
 		return ct;

@@ -4,7 +4,9 @@ package seep.buffer;
 import java.io.IOException;
 import java.net.Socket;
 
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.ControlTuple;
+import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.CommunicationChannel;
 
 /**
@@ -24,39 +26,39 @@ public class StateReplayer implements Runnable {
 
 	public void run(){
 		//Get a proper init state and just send it
-		Seep.ControlTuple.Builder ctB = Seep.ControlTuple.newBuilder();
+		ControlTuple ctB = new ControlTuple();
 
-		Seep.InitState state = null;
-		Seep.BackupState bs = buffer.getBackupState();
+		InitState state = null;
+		BackupState bs = buffer.getBackupState();
 		//if state is null (upstream backup or new model at the start)
 		if (bs != null) {
-			Seep.InitState.Builder isB = Seep.InitState.newBuilder();
+			InitState isB = new InitState();
 			//Ts of init state is the newest ts of the checkpointed state
-			isB.setTs(bs.getTsE());
+			isB.setTs(bs.getTs_e());
 			//This line is specially important, since each message state has a different name in the proto.file
 /// \todo {this operator specific line must be avoided}
 			//System.out.println("WORD COUNTER????");
 			//isB.setWcState(bs.getWcState());
 			System.out.println("LRB????");
-			isB.setTcState(bs.getTcState());
-			state = isB.build();
-			ctB.setInitState(state);
+			isB.setState(bs.getState());
+			state = isB;
+//			ctB.setBackupState(state);
 		}
 		else {
 			System.out.println("Replayer: sending empty state");
 		}
-		ctB.setType(Seep.ControlTuple.Type.INIT_STATE);
-		try{
-			System.out.println("STATEREPLAYER: State sent to OP: "+(controlDownstreamSocket.toString()));
-			//If there is a state, send it ALWAYS
-			if(state != null){
-				synchronized(controlDownstreamSocket){
-					(ctB.build()).writeDelimitedTo(controlDownstreamSocket.getOutputStream());
-				}
-			}
-		}
-		catch(IOException io){
-			System.out.println("REPLAYER: Error while trying to send the InitState msg: "+io.getMessage());
-		}
+//		ctB.setType(Operator.ControlTupleType.INIT_STATE);
+//		try{
+//			System.out.println("STATEREPLAYER: State sent to OP: "+(controlDownstreamSocket.toString()));
+//			//If there is a state, send it ALWAYS
+//			if(state != null){
+//				synchronized(controlDownstreamSocket){
+////					(ctB.build()).writeDelimitedTo(controlDownstreamSocket.getOutputStream());
+//				}
+//			}
+//		}
+//		catch(IOException io){
+//			System.out.println("REPLAYER: Error while trying to send the InitState msg: "+io.getMessage());
+//		}
 	}
 }

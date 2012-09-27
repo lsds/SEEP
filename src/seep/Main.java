@@ -14,7 +14,6 @@ import java.net.UnknownHostException;
 import java.util.Properties;
 
 import seep.comm.routing.Router;
-import seep.comm.tuples.Seep;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.DeploymentException;
 import seep.infrastructure.ESFTRuntimeException;
@@ -184,7 +183,7 @@ public class Main {
 							deployLinearRoadBenchmark2(inf);
 							break;
 						case 9:
-							parseTextFileToBinaryFile();
+//							parseTextFileToBinaryFile();
 							System.out.println("FINISHED");
 							break;
 						case 10:
@@ -239,64 +238,64 @@ public class Main {
 		inf.saveResults();
 	}
 
-	private void parseTextFileToBinaryFile() {
-		String event = null;
-		try{
-			File inputFile = null;
-			File outputFile = null;
-			if(Main.valueFor("normalLRB").equals("True")){
-				outputFile = new File(Main.valueFor("pathToOutputFile"));
-				inputFile = new File(Main.valueFor("pathToInputFile"));
-			}
-			else{
-				outputFile = new File(Main.valueFor("pathToOutputFileConstant"));
-				inputFile = new File(Main.valueFor("pathToInputFileConstant"));
-			}
-			//FileOutputStream out = new FileOutputStream(outputFile);
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outputFile));
-			//GZIPOutputStream gZipOut = new GZIPOutputStream(out);
-			BufferedReader br = new BufferedReader(new FileReader(inputFile));
-			event = null;
-			while((event = br.readLine()) != null){
-				//System.out.println("E_READ: "+event.length()*2);
-				Seep.DataTuple.Builder tuple = buildDataTuple(event);
-				if(tuple != null){
-					Seep.DataTuple d = tuple.build();
-					//System.out.println("E_SIZE: "+d.getSerializedSize());
-					d.writeDelimitedTo(out);
-				}
-			}
-		}
-		catch(IOException io){
-			System.out.println("THIS BROKE "+event);
-			io.printStackTrace();
-			
-		}
-	}
+//	private void parseTextFileToBinaryFile() {
+//		String event = null;
+//		try{
+//			File inputFile = null;
+//			File outputFile = null;
+//			if(Main.valueFor("normalLRB").equals("True")){
+//				outputFile = new File(Main.valueFor("pathToOutputFile"));
+//				inputFile = new File(Main.valueFor("pathToInputFile"));
+//			}
+//			else{
+//				outputFile = new File(Main.valueFor("pathToOutputFileConstant"));
+//				inputFile = new File(Main.valueFor("pathToInputFileConstant"));
+//			}
+//			//FileOutputStream out = new FileOutputStream(outputFile);
+//			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outputFile));
+//			//GZIPOutputStream gZipOut = new GZIPOutputStream(out);
+//			BufferedReader br = new BufferedReader(new FileReader(inputFile));
+//			event = null;
+//			while((event = br.readLine()) != null){
+//				//System.out.println("E_READ: "+event.length()*2);
+//				Seep.DataTuple.Builder tuple = buildDataTuple(event);
+//				if(tuple != null){
+//					Seep.DataTuple d = tuple.build();
+//					//System.out.println("E_SIZE: "+d.getSerializedSize());
+//					d.writeDelimitedTo(out);
+//				}
+//			}
+//		}
+//		catch(IOException io){
+//			System.out.println("THIS BROKE "+event);
+//			io.printStackTrace();
+//			
+//		}
+//	}
 	
-	private Seep.DataTuple.Builder buildDataTuple(String event){
-//		System.out.println(event);
-		Seep.DataTuple.Builder tuple = Seep.DataTuple.newBuilder();
-		String fields[] = event.split(",");
-		tuple.setTs(Integer.parseInt(fields[1]));
-		tuple.setType(Integer.parseInt(fields[0]));
-		if(tuple.getType() == 3 || tuple.getType() == 4) return null;
-		tuple.setTime(Integer.parseInt(fields[1]));
-		tuple.setVid(Integer.parseInt(fields[2]));
-		tuple.setSpeed(Integer.parseInt(fields[3]));
-		tuple.setXway(Integer.parseInt(fields[4]));
-		tuple.setLane(Integer.parseInt(fields[5]));
-		tuple.setDir(Integer.parseInt(fields[6]));
-		tuple.setSeg(Integer.parseInt(fields[7]));
-		tuple.setPos(Integer.parseInt(fields[8]));
-		tuple.setQid(Integer.parseInt(fields[9]));
-//		tuple.setSInit(Integer.parseInt(fields[10]));
-//		tuple.setSEnd(Integer.parseInt(fields[11]));
-//		tuple.setDow(Integer.parseInt(fields[12]));
-//		tuple.setTow(Integer.parseInt(fields[13]));
-//		tuple.setDay(Integer.parseInt(fields[14]));
-		return tuple;
-	}
+//	private Seep.DataTuple.Builder buildDataTuple(String event){
+////		System.out.println(event);
+//		Seep.DataTuple.Builder tuple = Seep.DataTuple.newBuilder();
+//		String fields[] = event.split(",");
+//		tuple.setTs(Integer.parseInt(fields[1]));
+//		tuple.setType(Integer.parseInt(fields[0]));
+//		if(tuple.getType() == 3 || tuple.getType() == 4) return null;
+//		tuple.setTime(Integer.parseInt(fields[1]));
+//		tuple.setVid(Integer.parseInt(fields[2]));
+//		tuple.setSpeed(Integer.parseInt(fields[3]));
+//		tuple.setXway(Integer.parseInt(fields[4]));
+//		tuple.setLane(Integer.parseInt(fields[5]));
+//		tuple.setDir(Integer.parseInt(fields[6]));
+//		tuple.setSeg(Integer.parseInt(fields[7]));
+//		tuple.setPos(Integer.parseInt(fields[8]));
+//		tuple.setQid(Integer.parseInt(fields[9]));
+////		tuple.setSInit(Integer.parseInt(fields[10]));
+////		tuple.setSEnd(Integer.parseInt(fields[11]));
+////		tuple.setDow(Integer.parseInt(fields[12]));
+////		tuple.setTow(Integer.parseInt(fields[13]));
+////		tuple.setDay(Integer.parseInt(fields[14]));
+//		return tuple;
+//	}
 	
 	public void consoleOutputMessage(){
 		System.out.println("#############");
@@ -314,6 +313,41 @@ public class Main {
 		System.out.println("10- EXIT");
 		System.out.println("11- Save results");
 		System.out.println("12- Switch ESFT mechanisms activation");
+	}
+	
+	public void _testing01(Infrastructure inf) throws DeploymentException{
+		//Instantiate operators
+		TestSource src = new TestSource(-2);
+		Foo foo = new Foo(0);
+		Bar bar = new Bar(2);
+		TestSink snk = new TestSink(-1);
+		//Configure source and sink
+		inf.setSource(src);
+		inf.setSink(snk);
+		//Add operators to infrastructure
+		inf.addOperator(src);
+		inf.addOperator(foo);
+		inf.addOperator(bar);
+		inf.addOperator(snk);
+		//Connect the operators to form the query
+		src.connectTo(foo);
+		foo.connectTo(bar);
+		bar.connectTo(snk);
+		
+//		src.connectTo(snk);
+		
+		//Routing information for the operators
+//		foo.setRoutingQueryFunction("getId");
+//		foo.route(Router.RelationalOperator.EQ, 0, foo2);
+//		foo.route(Router.RelationalOperator.EQ, 1, bar);
+		//Set the query
+		inf.placeNew(src, inf.getNodeFromPool());
+		inf.placeNew(foo, inf.getNodeFromPool());
+//		inf.placeNew(foo2, inf.getNodeFromPool());
+		inf.placeNew(bar, inf.getNodeFromPool());
+		inf.placeNew(snk, inf.getNodeFromPool());
+		//Deploy
+		inf.deploy();
 	}
 	
 	public void testing01(Infrastructure inf) throws DeploymentException{
@@ -339,7 +373,7 @@ public class Main {
 		foo2.connectTo(snk);
 		bar.connectTo(snk);
 		//Routing information for the operators
-		foo.setRoutingQueryFunction("getInt");
+		foo.setRoutingQueryFunction("getId");
 		foo.route(Router.RelationalOperator.EQ, 0, foo2);
 		foo.route(Router.RelationalOperator.EQ, 1, bar);
 		//Set the query

@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import seep.Main;
-import seep.comm.tuples.Seep;
 import seep.infrastructure.Infrastructure;
 
 /**

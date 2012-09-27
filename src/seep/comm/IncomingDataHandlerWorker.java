@@ -7,6 +7,7 @@ import seep.comm.serialization.DataTuple;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -42,16 +43,22 @@ public void run() {
 			InputQueue iq = owner.getInputQueue();
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
-			BufferedInputStream bis = new BufferedInputStream(is);
-			Input i = new Input(bis);
-			DataTuple datatuple = null;
+			Input i = new Input(is);
+			BatchDataTuple batchDataTuple = null;
 
 			while(goOn){
-				datatuple = k.readObject(i, DataTuple.class);
-				long incomingTs = datatuple.getTs();
-				owner.setTsData(incomingTs);
-				//Put data in inputQueue
-				iq.push(datatuple);
+//				System.out.println("Ready to read: ");
+				batchDataTuple = k.readObject(i, BatchDataTuple.class);
+//				int size = i.total();
+//				i.rewind();
+//				System.out.println("rx: "+size);
+				ArrayList<DataTuple> batch = batchDataTuple.getTuples();
+				for(DataTuple datatuple : batch){
+					long incomingTs = datatuple.getTs();
+					owner.setTsData(incomingTs);
+					//Put data in inputQueue
+					iq.push(datatuple);
+				}
 			}
 			System.out.println("ALERT !!!!!!");
 			upstreamSocket.close();

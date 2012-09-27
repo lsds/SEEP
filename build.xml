@@ -18,7 +18,7 @@
 
   <target name="compile" depends="init" description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-	<javac debug="on" srcdir="${src}:lib/protobuf-2.4.1/java/src/main/java" destdir="${build}" classpath="classpath">
+	<javac debug="on" srcdir="${src}" destdir="${build}" classpath="classpath">
 		<classpath id="classpath" description="The default classpath.">
   			<pathelement path="${classpath}"/>
   			<fileset dir="${lib}">

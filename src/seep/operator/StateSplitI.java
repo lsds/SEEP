@@ -1,9 +1,10 @@
 package seep.operator;
 
-import seep.comm.tuples.Seep.BackupState;
+import seep.comm.serialization.controlhelpers.BackupState;
+
 
 public interface StateSplitI {
 	
-	public BackupState.Builder[] parallelizeState(BackupState toSplit, int key);
+	public BackupState[] parallelizeState(BackupState toSplit, int key);
 	
 }

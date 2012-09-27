@@ -10,8 +10,7 @@ import java.util.ArrayList;
 
 import seep.comm.BasicCommunicationUtils;
 import seep.comm.routing.Router;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.ControlTuple;
+import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
@@ -125,13 +124,10 @@ public class ElasticInfrastructureUtils {
 		for (Operator o: ops) {
 			if (o.getOperatorId() == failedNode) {
 				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
-				bcu.sendControlMsg(minUpstream.location(), ControlTuple.newBuilder()
-						.setType(ControlTuple.Type.RESUME)
-						.setResume(Seep.Resume.newBuilder()
-								.setOpId(0, failedNode)
-								.build())
-								.build()
-				, minUpstream.opID());
+				ArrayList<Integer> opIds = new ArrayList<Integer>();
+				opIds.add(failedNode);
+				ControlTuple ct = new ControlTuple().makeResume(opIds);
+				bcu.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
 			}
 		}
 	}
@@ -141,14 +137,13 @@ public class ElasticInfrastructureUtils {
 		for (Operator o: ops) {
 			if (o.getOperatorId() == opIdToParallelize) {
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
-					Seep.ControlTuple.Builder ct = Seep.ControlTuple.newBuilder();
-					ct.setType(ControlTuple.Type.RESUME);
-					Seep.Resume.Builder si = Seep.Resume.newBuilder();
-					si.addOpId(opIdToParallelize);
-					si.addOpId(newOpId);
-					ct.setResume(si.build());
 					
-					bcu.sendControlMsg(upstream.location(), ct.build(), upstream.opID());
+					ArrayList<Integer> opIds = new ArrayList<Integer>();
+					opIds.add(opIdToParallelize);
+					opIds.add(newOpId);
+					ControlTuple ct = new ControlTuple().makeResume(opIds);
+					
+					bcu.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}
 			}
 		}
@@ -160,33 +155,27 @@ public class ElasticInfrastructureUtils {
 		for (Operator o: ops) {
 			if (o.getOperatorId() == opIdToParallelize) {
 				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
-				Seep.ControlTuple.Builder ct = Seep.ControlTuple.newBuilder();
-				ct.setType(ControlTuple.Type.RESUME);
-				Seep.Resume.Builder si = Seep.Resume.newBuilder();
-				//si.setOpId(1, opIdToParallelize);
-				si.addOpId(opIdToParallelize);
-				//si.setOpId(2, newOpId);
-				si.addOpId(newOpId);
-				ct.setResume(si.build());
-				bcu.sendControlMsg(minUpstream.location(), ct.build(), minUpstream.opID());
+				
+				ArrayList<Integer> opIds = new ArrayList<Integer>();
+				opIds.add(opIdToParallelize);
+				opIds.add(newOpId);
+				ControlTuple ct = new ControlTuple().makeResume(opIds);
+				
+				bcu.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
 			}
 		}
 	}
 
-	private void sendScaleOutMessageToUpstreams(int opIdToParallelize, int newOpID) {
+	private void sendScaleOutMessageToUpstreams(int opIdToParallelize, int newOpId) {
 		ArrayList<Operator> ops = inf.getOps();
 		for (Operator o: ops) {
 			if (o.getOperatorId() == opIdToParallelize) {
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
 					NodeManager.nLogger.info("-> scale_out to: "+upstream.opID());
-					Seep.ControlTuple.Builder ct = Seep.ControlTuple.newBuilder();
-					ct.setType(ControlTuple.Type.SCALE_OUT);
-					Seep.ScaleOutInfo.Builder scaleOutInfo = Seep.ScaleOutInfo.newBuilder();
-					scaleOutInfo.setOldOpID(opIdToParallelize);
-					scaleOutInfo.setNewOpID(newOpID);
-					ct.setScaleOutInfo(scaleOutInfo.build());
 					
-					bcu.sendControlMsg(upstream.location(), ct.build(), upstream.opID());
+					ControlTuple ct = new ControlTuple().makeScaleOut(opIdToParallelize, newOpId);
+					
+					bcu.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}
 			}
 		}
