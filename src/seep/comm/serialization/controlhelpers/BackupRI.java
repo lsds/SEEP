@@ -9,6 +9,17 @@ public class BackupRI {
 	private ArrayList<Integer> index;
 	private ArrayList<Integer> key;
 	
+	public BackupRI(){
+		
+	}
+	
+	public BackupRI(int opId, ArrayList<Integer> index, ArrayList<Integer> key, String operatorType){
+		this.opId = opId;
+		this.index = index;
+		this.key = key;
+		this.operatorType = operatorType;
+	}
+	
 	public int getOpId() {
 		return opId;
 	}

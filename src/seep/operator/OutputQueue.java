@@ -94,11 +94,8 @@ public class OutputQueue {
 						
 						k.writeObject(output, msg);
 						//Flush the buffer to the stream
-//						int size = output.toBytes().length;
-//						System.out.println("SENT: "+size);
 						output.flush();
-//						System.out.println("tx");
-//						msg.writeDelimitedTo(sock.getOutputStream());
+
 						channelRecord.cleanBatch();
 						
 						if(Main.valueFor("eftMechanismEnabled").equals("true")){
@@ -133,6 +130,7 @@ public class OutputQueue {
 					BatchDataTuple batch = oi.getSharedIterator().next();
 					Output output = oi.getOutput();
 					k.writeObject(output, batch);
+					output.flush();
 				}
 		long b = System.currentTimeMillis() - a;
 		System.out.println("Dis.replay: "+b);
@@ -147,6 +145,7 @@ public class OutputQueue {
 				while(sharedIterator.hasNext()) {
 					BatchDataTuple dt = sharedIterator.next();
 					k.writeObject(output, dt);
+					output.flush();
 					replayed++;
 					/// \test {test this functionality. is this necessary?}
 					if((bufferSize-replayed) <= (controlThreshold+1)){

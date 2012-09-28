@@ -6,6 +6,16 @@ public class InitState {
 	private long ts;
 	private StateI state;
 	
+	public InitState(){
+		
+	}
+	
+	public InitState(int opId, long ts, StateI state){
+		this.opId = opId;
+		this.ts = ts;
+		this.state = state;
+	}
+	
 	public int getOpId() {
 		return opId;
 	}

@@ -50,6 +50,7 @@ public class ControlHandlerWorker implements Runnable{
 			while(goOn){
 //				tuple = Seep.ControlTuple.parseDelimitedFrom(is);
 				tuple = k.readObject(i, ControlTuple.class);
+				System.out.println("RECEIVED");
 /// \todo {what is the underlying problem that makes tuple potentially be null?}
 				if(tuple != null){
 					owner.processControlTuple(tuple, os);

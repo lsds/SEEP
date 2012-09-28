@@ -85,18 +85,18 @@ public class BasicCommunicationUtils {
 	public void sendControlMsg(OperatorStaticInformation loc, ControlTuple ct, int socketId){
 		Socket connection = uniqueSocket.get(socketId);
 		try{
-			Output output = new Output(connection.getOutputStream());
-			Input input = new Input(connection.getInputStream());
-			
 			if(connection == null){
 				connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
 				Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
 				uniqueSocket.put(socketId, connection);
 			}
-			
+			Output output = new Output(connection.getOutputStream());
+			Input input = new Input(connection.getInputStream());
 //			ct.writeDelimitedTo(connection.getOutputStream());
-			
+			System.out.println("sendTo: "+connection.toString());
 			k.writeObject(output, ct);
+			/**Critical line in KRYO**/
+			output.flush();
 			//wait for application level ack
 //			Seep.ControlTuple ack = Seep.ControlTuple.parseDelimitedFrom(connection.getInputStream());
 			ControlTuple ack = k.readObject(input, ControlTuple.class);
@@ -121,6 +121,7 @@ public class BasicCommunicationUtils {
 			}
 
 			k.writeObject(output, ct);
+			output.flush();
 		}
 		catch(IOException io){
 			Infrastructure.nLogger.severe("-> Infrastructure. While sending Msg "+io.getMessage());

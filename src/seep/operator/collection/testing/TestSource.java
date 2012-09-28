@@ -23,7 +23,7 @@ public class TestSource extends Operator implements StatelessOperator{
 				value = 1;
 				c = 0;
 			}
-//			data.setId(value);
+			data.setId(value);
 			value = 0;
 			c++;
 			sendDown(data);

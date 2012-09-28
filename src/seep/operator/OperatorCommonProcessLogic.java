@@ -1,20 +1,15 @@
 package seep.operator;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-
-import com.esotericsoftware.kryo.io.Output;
 
 import seep.buffer.Buffer;
 import seep.buffer.StateReplayer;
 import seep.comm.routing.Router;
-import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupRI;
@@ -92,14 +87,6 @@ System.out.println("#################");
 		}
 		
 		owner.getRouter().reconfigureRoutingInformation(downstreamIds, indexes, keys);
-		
-//		StatefulDynamicLoadBalancer sdlb = new StatefulDynamicLoadBalancer(indexes, keys);
-//		//Assign this load balancer to all the indexes (the actual downstreams)
-//		for(Integer index : indexes){
-//			int opId = opContext.getDownOpIdFromIndex(index);
-//System.out.println("OP: "+opId+" INSTALLING INDEX: "+indexes);
-//			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).setNewLoadBalancer(opId, sdlb);
-//		}
 	}
 	
 	public void sendRoutingInformation(int opId, String operatorType){
@@ -121,13 +108,7 @@ System.out.println("KEY: "+operatorType);
 		//Otherwise I pick the backupRI msg from the data structure where i am storing these ones
 		BackupRI backupRI = backupRoutingInformation.get(operatorType);
 		//Form the message
-		Seep.InitRI.Builder initRI = Seep.InitRI.newBuilder();
-		initRI.addAllIndex(backupRI.getIndex());
-		initRI.addAllKey(backupRI.getKey());
-		initRI.setOpId(owner.getOperatorId());
-		Seep.ControlTuple.Builder ct = Seep.ControlTuple.newBuilder();
-		ct.setType(Seep.ControlTuple.Type.INIT_RI);
-		ct.setInitRI(initRI);
+		ControlTuple ct = new ControlTuple().makeInitRI(owner.getOperatorId(), backupRI.getIndex(), backupRI.getKey());
 		//Send the message
 		owner.getDispatcher().sendUpstream(ct, upstreamIndex);
 	}
@@ -229,15 +210,15 @@ long e = System.currentTimeMillis();
 			NodeManager.nLogger.severe("NOT MANAGING STATE?????   ");
 		}
 		
-		BackupState.Builder splitted[] = operatorToSplit.parallelizeState(oldState, key);
+		BackupState splitted[] = operatorToSplit.parallelizeState(oldState, key);
 
-		splitted[0].setTsE(oldState.getTs_e());
-		splitted[1].setTsE(oldState.getTs_e());
+		splitted[0].setTs_e(oldState.getTs_e());
+		splitted[1].setTs_e(oldState.getTs_e());
 		splitted[0].setOpId(oldOpId);
 		splitted[1].setOpId(newOpId);
 		NodeManager.nLogger.severe("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
-		opContext.getBuffer(oldOpId).replaceBackupState(splitted[0].build());
-		opContext.getBuffer(newOpId).replaceBackupState(splitted[1].build());
+		opContext.getBuffer(oldOpId).replaceBackupState(splitted[0]);
+		opContext.getBuffer(newOpId).replaceBackupState(splitted[1]);
 		//Indicate that we are now managing both these states
 		NodeManager.nLogger.severe("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
 		opContext.registerManagedState(oldOpId);
@@ -294,27 +275,6 @@ long e = System.currentTimeMillis();
 		backupRoutingInformation(oldOpId);
 	}
 	
-//	public void configureNewDownstreamStatelessOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
-//		owner.getRouter().newStatelessOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
-//	}
-	
-//	public void configureNewDownstreamStatelessOperatorSplit(int oldOpID, int newOpId, int oldOpIndex, int newOpIndex){			
-//		// If this method is called that means downstream is a stateless operator, so we have to specifically change the ANY policy
-//		if (owner.getDispatcher().getDispatchPolicy() == null){
-//			// in this case it is needed to change to an ANY policy, by default with windows == 1
-//			owner.getDispatcher().setDispatchPolicy(DispatchPolicy.ANY, new StatelessDynamicLoadBalancer());
-//		}
-//		else if (owner.getDispatcher().getDispatchPolicy() == DispatchPolicy.CONTENT_BASED){
-//			//Call newSplit, with oldOpId (to identify group) and newOpINDEX to identify replica
-//			((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).newSplit(oldOpID, newOpId, oldOpIndex, newOpIndex);
-//		}
-//		else if (owner.getDispatcher().getDispatchPolicy() == DispatchPolicy.ANY){
-//			//Access the loadBalancer, and call newReplica
-//			((StatelessDynamicLoadBalancer)owner.getDispatcher().getDispatcherFilter()).newReplica(oldOpIndex, newOpIndex);
-//		}
-//	}
-			
-	
 	public int configureNewDownstreamStatefulOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int newKey = -1;
 		
@@ -336,47 +296,15 @@ long e = System.currentTimeMillis();
 		
 	}
 	
-//	public int configureNewDownstreamStatefulOperatorSplit(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
-//		int newKey = -1;
-//		
-//		/** BLOCK OF CODE TO REFACTOR **/
-//		//. stop sending data to op1 remember last data sent
-//		CommunicationChannel oldConnection = ((CommunicationChannel)opContext.getDownstreamTypeConnection().get(oldOpIndex));
-//		// necessary to ignore state checkpoints of the old operator before split.
-//		long last_ts = oldConnection.getLast_ts();
-//		oldConnection.setReconf_ts(last_ts);
-//		/** END BLOCK OF CODE **/
-//				
-//		//Stop connections to perform the update
-//		NodeManager.nLogger.info("-> Stopping connections of oldOpId: "+oldOpId+" and newOpId: "+newOpId);
-//		owner.getDispatcher().stopConnection(oldOpId);
-//		owner.getDispatcher().stopConnection(newOpId);
-//				
-//		newKey = ((ContentBasedFilter)owner.getDispatcher().getDispatcherFilter()).newSplit(oldOpId, newOpId, oldOpIndex, newOpIndex);
-//		return newKey;
-//	}
-	
 	private void backupRoutingInformation(int oldOpId) {
 		//Get routing information
 		ArrayList<Integer> indexes = owner.getRouter().getIndexesInformation(oldOpId);
 		ArrayList<Integer> keys = owner.getRouter().getKeysInformation(oldOpId);
 System.out.println("BACKUP INDEXES: "+indexes.toString());
 System.out.println("BACKUP KEYS: "+keys.toString());
-		//Create message
-		Seep.BackupRI.Builder backupRI = Seep.BackupRI.newBuilder();
-		for(Integer index : indexes){
-			backupRI.addIndex(index);
-		}
-		for(Integer key : keys){
-			backupRI.addKey(key);
-		}
-		//Set the id of this operator, and the type as well
-		backupRI.setOpId(owner.getOperatorId());
-		backupRI.setOperatorType(owner.getClass().getName());
 
-		Seep.ControlTuple.Builder msg = Seep.ControlTuple.newBuilder();
-		msg.setType(Seep.ControlTuple.Type.BACKUP_RI);
-		msg.setBackupRI(backupRI);
+		//Create message
+		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getOperatorId(), indexes, keys, owner.getClass().getName());
 		//Send message to downstreams (for now, all downstreams) 
 		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
 		for(Integer index : indexes){
@@ -384,7 +312,6 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 		}
 	}
 	
-	/// \todo {refactor or make clearer this method}
 	public void replayState(int opId) {
 		//Get channel information
 		CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
@@ -392,56 +319,15 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
 
 		//Get a proper init state and just send it
-		Seep.ControlTuple.Builder ctB = Seep.ControlTuple.newBuilder();
-
-		Seep.InitState state = null;
-		Seep.BackupState bs = buffer.getBackupState();
-		//if state is null (upstream backup or new model at the start)
-		if (bs != null) {
-			Seep.InitState.Builder isB = Seep.InitState.newBuilder();
-			//Set opID
-			isB.setOpId(owner.getOperatorId());
-			//Ts of init state is the newest ts of the checkpointed state
-			isB.setTs(bs.getTsE());
-/** THIS WHOLE BLOCK OF CODE IS OPERATOR DEPENDANT. THEREFORE THIS MUST BE FIXED **/
-/// \fix {block dependant of operator, fix this thing.}
-			if(bs.getTcState().getStateId() == 1){
-				//This line is specially important, since each message state has a different name in the proto.file
-/// \todo {this operator specific line must be avoided, another function buildInitState must be implemented in the operator, so that here we call that function.}
-				//System.out.println("WORD COUNTER????");
-				//isB.setWcState(bs.getWcState());
-				System.out.println("LRB-TC????");
-				isB.setTcState(bs.getTcState());
-				state = isB.build();
-			}
-			else if (bs.getBaState().getStateId() == 1){
-				System.out.println("LRB-BA????");
-				isB.setBaState(bs.getBaState());
-				state = isB.build();
-			}
-			else if (bs.getWcState() != null){
-				System.out.println("SMART-CNT????");
-				isB.setWcState(bs.getWcState());
-				state = isB.build();
-			}
-			ctB.setInitState(state);
-		}
-		else {
-			NodeManager.nLogger.info("-> Replaying EMPTY State");
-		}
-		ctB.setType(Seep.ControlTuple.Type.INIT_STATE);
-		try{
-			NodeManager.nLogger.info("-> INIT_STATE sent to OP: "+opId);
-			//If there is a state, send it ALWAYS
-			if(state != null){
-				synchronized(controlDownstreamSocket){
-					(ctB.build()).writeDelimitedTo(controlDownstreamSocket.getOutputStream());
-				}
-			}
-		}
-		catch(IOException io){
-			System.out.println("REPLAYER: Error while trying to send the INIT_STATE msg: "+io.getMessage());
-			io.printStackTrace();
+		BackupState bs = buffer.getBackupState();
+		ControlTuple ct = new ControlTuple().makeInitState(owner.getOperatorId(), bs.getTs_e(), bs.getState());
+		
+		try {
+			owner.getDispatcher().initStateMessage(ct, controlDownstreamSocket.getOutputStream());
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	

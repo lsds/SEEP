@@ -8,7 +8,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.esotericsoftware.kryo.Kryo;
+
 import seep.Main;
+import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.NodeManager;
 
 /**
@@ -21,11 +24,9 @@ public class Monitor implements Runnable{
 	private InetAddress addrMon = null;
 	private int portMon = Integer.parseInt(Main.valueFor("monitorManagerPort"));
 	private OutputStream out = null;
-//	private InputStreamReader isr = null;
-//	private BufferedReader br = null;
-//	private String fileWithCpuU = ExecutionConfiguration.fileWithCpuU;
 	private RandomAccessFile sourceFile;
 	private int opId = -1;
+	private Kryo k = null;
 
 	private double throughput;
 	private int second;
@@ -33,38 +34,49 @@ public class Monitor implements Runnable{
 	public void info(double throughput, int second){
 		this.throughput = throughput;
 		this.second = second;
+		this.k = initializeKryo();
+	}
+	
+	private Kryo initializeKryo(){
+		k = new Kryo();
+		k.register(MetricsTuple.class);
+		return k;
 	}
 
 	private void sendTh() throws IOException{
-		//Send th every second
-		Seep.Statistics.Builder stat = Seep.Statistics.newBuilder();
-		stat.setOpId(opId);
-		//static variables at nodeMonitor
-		stat.setTime(second);
-		stat.setTh(throughput);
-		stat.setCpuU(-1);
-		try{
-			(stat.build()).writeDelimitedTo(out);
-		}
-		catch(IOException io){
-			System.out.println("MONITOR: While sending time,th: "+io.getMessage());
-			io.printStackTrace();
-		}
+		
+//		//Send th every second
+//		Seep.Statistics.Builder stat = Seep.Statistics.newBuilder();
+//		stat.setOpId(opId);
+//		//static variables at nodeMonitor
+//		stat.setTime(second);
+//		stat.setTh(throughput);
+//		stat.setCpuU(-1);
+//		try{
+//			(stat.build()).writeDelimitedTo(out);
+//		}
+//		catch(IOException io){
+//			System.out.println("MONITOR: While sending time,th: "+io.getMessage());
+//			io.printStackTrace();
+//		}
 	}
 
-/// \todo {this uses a seep.proto message that could be put in another place}
-//	private void sendStatistics() throws IOException{
-//		String command = "scripts/cpuUOld";
-//		Process c = null;
+	private void sendMonitorInfo() throws IOException{
 //		//Gather required metrics
-//		c = (Runtime.getRuntime().exec(command));
-//		isr = new InputStreamReader(c.getInputStream());
-////		Sleep
-//		br = new BufferedReader(isr);
-//		String line = br.readLine();
+////		String line = br.readLine();
+////System.out.println("READED: "+line);
+////		if(line == null || line.equals("")) return;
+////		double cpuU = Double.parseDouble(line);
+////System.out.println("TO READ");
+//		sourceFile = new RandomAccessFile(Main.valueFor("fileWithCpuU"), "r");
+//		String line = sourceFile.readLine();
+//		if(line.equals("")) return;
 //		double cpuU = Double.parseDouble(line);
-//		System.out.println("####");
-//		System.out.println("OP: "+opId+" CPU_U: "+cpuU);
+////System.out.println("READED: "+cpuU);
+//		if(cpuU == 0) return;
+//		sourceFile.close();
+////		System.out.println("####");
+////		System.out.println("OP: "+opId+" CPU_U: "+cpuU);
 //		//Send metrics
 //		Seep.Statistics.Builder stat = Seep.Statistics.newBuilder();
 //		List<Integer> ops = new ArrayList<Integer>(NodeManager.mapOP_ID.keySet());
@@ -73,46 +85,13 @@ public class Monitor implements Runnable{
 //		stat.setOpId(opId);
 //		stat.setCpuU(cpuU);
 //		(stat.build()).writeDelimitedTo(out);
-//		for(PlacedOperator op : ((NodeManager.mapOP_ID.get(opIds[0]))).getOpContext().downstreams){
-//			int opId = op.opID();
-//			if ((OperatorContext.downstreamBuffers.get(opId)) != null) 
-//				System.out.println("OP:"+opId+" BUF: "+(OperatorContext.downstreamBuffers.get(opId)).size());
-//		}
-//		//Sleep
-//		c.destroy();
-//	}
-
-	private void sendMonitorInfo() throws IOException{
-		//Gather required metrics
-//		String line = br.readLine();
-//System.out.println("READED: "+line);
-//		if(line == null || line.equals("")) return;
-//		double cpuU = Double.parseDouble(line);
-//System.out.println("TO READ");
-		sourceFile = new RandomAccessFile(Main.valueFor("fileWithCpuU"), "r");
-		String line = sourceFile.readLine();
-		if(line.equals("")) return;
-		double cpuU = Double.parseDouble(line);
-//System.out.println("READED: "+cpuU);
-		if(cpuU == 0) return;
-		sourceFile.close();
-//		System.out.println("####");
-//		System.out.println("OP: "+opId+" CPU_U: "+cpuU);
-		//Send metrics
-		Seep.Statistics.Builder stat = Seep.Statistics.newBuilder();
-		List<Integer> ops = new ArrayList<Integer>(NodeManager.mapOP_ID.keySet());
-		Integer opIds[] = ops.toArray(new Integer[0]);
-		opId = opIds[0];
-		stat.setOpId(opId);
-		stat.setCpuU(cpuU);
-		(stat.build()).writeDelimitedTo(out);
-//		if(!NodeManager.monitorOfSink){
-//			for(PlacedOperator op : ((NodeManager.mapOP_ID.get(opIds[0]))).getOpContext().downstreams){
-//				int opId = op.opID();
-//				if ((OperatorContext.downstreamBuffers.get(opId)) != null) 
-//					System.out.println("OP:"+opId+" BUF: "+(OperatorContext.downstreamBuffers.get(opId)).size());
-//			}
-//		}
+////		if(!NodeManager.monitorOfSink){
+////			for(PlacedOperator op : ((NodeManager.mapOP_ID.get(opIds[0]))).getOpContext().downstreams){
+////				int opId = op.opID();
+////				if ((OperatorContext.downstreamBuffers.get(opId)) != null) 
+////					System.out.println("OP:"+opId+" BUF: "+(OperatorContext.downstreamBuffers.get(opId)).size());
+////			}
+////		}
 	}
 
 

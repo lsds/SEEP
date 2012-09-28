@@ -1,7 +1,6 @@
 package seep.operator.collection;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.*;
 import seep.operator.*;
 
 public class HelloWorldCL extends Operator{

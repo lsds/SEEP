@@ -219,6 +219,7 @@ public class Infrastructure {
 
 	public void init(Operator op) {
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		Infrastructure.nLogger.info("-> Infrastructure. Initializing OP-"+op.getOperatorId());
 		bcu.sendObject(node, op.getOperatorId());
 	}
 

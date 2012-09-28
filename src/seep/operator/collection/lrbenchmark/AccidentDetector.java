@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.InitState;
-import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.collection.lrbenchmark.beans.VehiclePosition;
@@ -52,86 +50,86 @@ public class AccidentDetector extends Operator implements StatefullOperator{
 		else return false;
 	}
 	
-	private void accidentDetector(int segment, Seep.DataTuple dt) {
-		//var to work with
-		int vehicle = dt.getVid();
-		int position = dt.getPos();
-		VehiclePosition currentPosition = new VehiclePosition(vehicle, segment, dt.getDir(), dt.getLane(), dt.getPos());
-		//get this vehicle previous position report
-		VehiclePosition prevPosition = lastVSegment.get(vehicle);
-		if(prevPosition != null){
-			//If the car has been previously identified as stopped...
-			if(stoppedCars.get(position) != null && stoppedCars.get(position).indexOf(vehicle) != -1){
-				//if it is in the same position return
-				if(prevPosition.pos == currentPosition.pos){
-					//System.out.println("Vehicle "+vehicle+" was previously stopped, ignore pos report");
-					return;
-				}
-				//otherwise reinitialize the structures...
-				else {
-					System.out.println("Vehicle "+vehicle+" ACCIDENT CLEAR");
-					//it is no longer in an accident
-					ArrayList<Integer> cars = stoppedCars.get(position);
-					//remove from stopped cars
-					cars.remove(vehicle);
-					stoppedCars.put(position, cars);
-					accidents.put(dt.getSeg(), false);
-					return;
-				}
-			}
-			// if the previous position is the same as current one
-			if(prevPosition.pos == currentPosition.pos){
-				//System.out.println("Vehicle: "+vehicle+" reported same consecutive position");
-				// check how many times has reported the same position and increment the counter
-				if(consecutiveReports.get(vehicle) != null){
-					int aux = consecutiveReports.get(vehicle);
-					aux++;
-					// if it has reported 4 times, means it is stopped
-					if(aux == 4){
-						//System.out.println("Vehicle: "+vehicle+" 4 consect same position reports");
-						// check if there is another car stopped in the same position
-						if(stoppedCars.get(position) != null){
-							if (stoppedCars.get(position).size() > 0){
-					
-								System.out.println("Vehicle: "+vehicle+" ACCIDENT");
-								stoppedCars.get(position).add(vehicle);
-								accidents.put(dt.getSeg(), true);
-							}
-							else{
-								//System.out.println("Vehicle: "+vehicle+" is stopped at pos: "+position);
-								ArrayList<Integer> cars = stoppedCars.get(position);
-								cars.add(vehicle);
-								stoppedCars.put(position, cars);
-							}
-						}
-						else{
-							//System.out.println("Vehicle: "+vehicle+" is stopped at pos: "+position);
-							ArrayList<Integer> cars = new ArrayList<Integer>();
-							cars.add(vehicle);
-							stoppedCars.put(position, cars);
-						}
-					}
-					// if not, indicate the number of consecutive position reports
-					else{
-						consecutiveReports.put(vehicle, aux);
-					}
-				}
-				else{
-					//notify of this report
-					consecutiveReports.put(vehicle, 1);
-				}
-			}
-			else{
-				// if not, then update vehicle position
-				lastVSegment.put(vehicle, currentPosition);
-				//reset the consecutive reports
-				consecutiveReports.put(vehicle, 0);
-			}
-		}
-		else{
-			lastVSegment.put(vehicle, currentPosition);
-		}
-	}
+//	private void accidentDetector(int segment, Seep.DataTuple dt) {
+//		//var to work with
+//		int vehicle = dt.getVid();
+//		int position = dt.getPos();
+//		VehiclePosition currentPosition = new VehiclePosition(vehicle, segment, dt.getDir(), dt.getLane(), dt.getPos());
+//		//get this vehicle previous position report
+//		VehiclePosition prevPosition = lastVSegment.get(vehicle);
+//		if(prevPosition != null){
+//			//If the car has been previously identified as stopped...
+//			if(stoppedCars.get(position) != null && stoppedCars.get(position).indexOf(vehicle) != -1){
+//				//if it is in the same position return
+//				if(prevPosition.pos == currentPosition.pos){
+//					//System.out.println("Vehicle "+vehicle+" was previously stopped, ignore pos report");
+//					return;
+//				}
+//				//otherwise reinitialize the structures...
+//				else {
+//					System.out.println("Vehicle "+vehicle+" ACCIDENT CLEAR");
+//					//it is no longer in an accident
+//					ArrayList<Integer> cars = stoppedCars.get(position);
+//					//remove from stopped cars
+//					cars.remove(vehicle);
+//					stoppedCars.put(position, cars);
+//					accidents.put(dt.getSeg(), false);
+//					return;
+//				}
+//			}
+//			// if the previous position is the same as current one
+//			if(prevPosition.pos == currentPosition.pos){
+//				//System.out.println("Vehicle: "+vehicle+" reported same consecutive position");
+//				// check how many times has reported the same position and increment the counter
+//				if(consecutiveReports.get(vehicle) != null){
+//					int aux = consecutiveReports.get(vehicle);
+//					aux++;
+//					// if it has reported 4 times, means it is stopped
+//					if(aux == 4){
+//						//System.out.println("Vehicle: "+vehicle+" 4 consect same position reports");
+//						// check if there is another car stopped in the same position
+//						if(stoppedCars.get(position) != null){
+//							if (stoppedCars.get(position).size() > 0){
+//					
+//								System.out.println("Vehicle: "+vehicle+" ACCIDENT");
+//								stoppedCars.get(position).add(vehicle);
+//								accidents.put(dt.getSeg(), true);
+//							}
+//							else{
+//								//System.out.println("Vehicle: "+vehicle+" is stopped at pos: "+position);
+//								ArrayList<Integer> cars = stoppedCars.get(position);
+//								cars.add(vehicle);
+//								stoppedCars.put(position, cars);
+//							}
+//						}
+//						else{
+//							//System.out.println("Vehicle: "+vehicle+" is stopped at pos: "+position);
+//							ArrayList<Integer> cars = new ArrayList<Integer>();
+//							cars.add(vehicle);
+//							stoppedCars.put(position, cars);
+//						}
+//					}
+//					// if not, indicate the number of consecutive position reports
+//					else{
+//						consecutiveReports.put(vehicle, aux);
+//					}
+//				}
+//				else{
+//					//notify of this report
+//					consecutiveReports.put(vehicle, 1);
+//				}
+//			}
+//			else{
+//				// if not, then update vehicle position
+//				lastVSegment.put(vehicle, currentPosition);
+//				//reset the consecutive reports
+//				consecutiveReports.put(vehicle, 0);
+//			}
+//		}
+//		else{
+//			lastVSegment.put(vehicle, currentPosition);
+//		}
+//	}
 	
 	private void notifyArea(DataTuple dt) {
 //		Seep.DataTuple.Builder event = Seep.DataTuple.newBuilder(dt);
@@ -161,11 +159,11 @@ public class AccidentDetector extends Operator implements StatefullOperator{
 		return 0;
 	}
 
-	@Override
-	public void installState(InitState is) {
-		// TODO Auto-generated method stub
-		
-	}
+//	@Override
+//	public void installState(InitState is) {
+//		// TODO Auto-generated method stub
+//		
+//	}
 
 	@Override
 	public long getBackupTime() {
@@ -177,6 +175,12 @@ public class AccidentDetector extends Operator implements StatefullOperator{
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 	

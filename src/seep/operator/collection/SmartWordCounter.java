@@ -2,8 +2,7 @@ package seep.operator.collection;
 
 import seep.Main;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.StateSplitI;
@@ -174,64 +173,64 @@ public class SmartWordCounter extends Operator implements StatefullOperator{
 //		}
 	}
 
-	public void installState(Seep.InitState is){
-System.out.println("INSTALLING STATE: ###############################");
-		countMap = new HashMap<String, Integer>();
-		counter = 0;
-
-		//Extract the specific state to this operator
-		Seep.WordCounterState wcS = is.getWcState();
-		Seep.WordCounterState.Entry e = null;
-System.out.println("Number of entries of this state: "+wcS.getEntryCount());
-		List<Seep.WordCounterState.Entry> entries = wcS.getEntryList();
-		for(Seep.WordCounterState.Entry entry : entries){
-			countMap.put(entry.getWord(), entry.getCounter());
-		}
-//		for(int i = 0; i<wcS.getEntryCount(); i++){
-//			e = wcS.getEntry(i);
-//			countMap.put(e.getWord(), e.getCounter());
+//	public void installState(Seep.InitState is){
+//System.out.println("INSTALLING STATE: ###############################");
+//		countMap = new HashMap<String, Integer>();
+//		counter = 0;
+//
+//		//Extract the specific state to this operator
+//		Seep.WordCounterState wcS = is.getWcState();
+//		Seep.WordCounterState.Entry e = null;
+//System.out.println("Number of entries of this state: "+wcS.getEntryCount());
+//		List<Seep.WordCounterState.Entry> entries = wcS.getEntryList();
+//		for(Seep.WordCounterState.Entry entry : entries){
+//			countMap.put(entry.getWord(), entry.getCounter());
 //		}
-System.out.println("Op: "+getOperatorId()+" has restored state");
-System.out.println("###############################");
-	}
+////		for(int i = 0; i<wcS.getEntryCount(); i++){
+////			e = wcS.getEntry(i);
+////			countMap.put(e.getWord(), e.getCounter());
+////		}
+//System.out.println("Op: "+getOperatorId()+" has restored state");
+//System.out.println("###############################");
+//	}
 
-	@Override
-	public void generateBackupState() {
-		
-			HashMap countMap = getCountMap();
-//long a = System.currentTimeMillis();
-			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
-			List<String> words = null;
-			synchronized(countMap){
-				words = new ArrayList<String>(countMap.keySet());
-			}
-			//List<Integer> words = new ArrayList<Integer>(countMap.keySet());
-			String wordsA[] = words.toArray(new String [0]);
-//System.out.println("OP: "+getOperatorId()+" my state has "+wordsA.length+" entries");
-			//Integer wordsA[] = words.toArray(new Integer [0]);
-			List<Integer> counters = null;
-			synchronized(countMap){
-				counters = new ArrayList<Integer>(countMap.values());
-			}
-			Integer countersA[] = counters.toArray(new Integer[0]);
-			Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
-			for(int i = 0; i<wordsA.length; i++){
-				eB.setWord(wordsA[i]);
-				//eB.setWordH(wordsA[i]);
-				eB.setCounter(countersA[i]);
-				wcS.addEntry(eB.build());
-			}
-			Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
-			//Developer needs to save just the state
-			bsB.setWcState(wcS.build());
-			//System.out.println("WORDCOUNTER: Checkpointing state");
-			//backupState(bsB, this);
-			/*This method is called each time the developer decides to checkpoint the state. A more powerful API should be offered, for instance able to support timers, and configured initially or whatever... For now, this explicitly does a backup of the state, and in this specific example, the developer chooses to checkpoint each time data is processed in this operator*/
-			backupState(bsB);
-			setCounter(0);
-		
-		
-	}
+//	@Override
+//	public void generateBackupState() {
+//		
+//			HashMap countMap = getCountMap();
+////long a = System.currentTimeMillis();
+//			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
+//			List<String> words = null;
+//			synchronized(countMap){
+//				words = new ArrayList<String>(countMap.keySet());
+//			}
+//			//List<Integer> words = new ArrayList<Integer>(countMap.keySet());
+//			String wordsA[] = words.toArray(new String [0]);
+////System.out.println("OP: "+getOperatorId()+" my state has "+wordsA.length+" entries");
+//			//Integer wordsA[] = words.toArray(new Integer [0]);
+//			List<Integer> counters = null;
+//			synchronized(countMap){
+//				counters = new ArrayList<Integer>(countMap.values());
+//			}
+//			Integer countersA[] = counters.toArray(new Integer[0]);
+//			Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
+//			for(int i = 0; i<wordsA.length; i++){
+//				eB.setWord(wordsA[i]);
+//				//eB.setWordH(wordsA[i]);
+//				eB.setCounter(countersA[i]);
+//				wcS.addEntry(eB.build());
+//			}
+//			Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
+//			//Developer needs to save just the state
+//			bsB.setWcState(wcS.build());
+//			//System.out.println("WORDCOUNTER: Checkpointing state");
+//			//backupState(bsB, this);
+//			/*This method is called each time the developer decides to checkpoint the state. A more powerful API should be offered, for instance able to support timers, and configured initially or whatever... For now, this explicitly does a backup of the state, and in this specific example, the developer chooses to checkpoint each time data is processed in this operator*/
+//			backupState(bsB);
+//			setCounter(0);
+//		
+//		
+//	}
 
 	@Override
 	public long getBackupTime() {
@@ -242,5 +241,17 @@ System.out.println("###############################");
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void generateBackupState() {
+		// TODO Auto-generated method stub
+		
 	}
 }

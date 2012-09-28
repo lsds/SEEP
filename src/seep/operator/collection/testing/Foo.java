@@ -1,8 +1,6 @@
 package seep.operator.collection.testing;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
 

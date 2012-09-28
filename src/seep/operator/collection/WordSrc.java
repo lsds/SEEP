@@ -7,9 +7,7 @@ import java.io.IOException;
 
 import seep.Main;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
 import seep.operator.StatelessOperator;
-import seep.comm.tuples.Seep.DataTuple.Builder;
 
 @SuppressWarnings("serial")
 public class WordSrc extends Src implements StatelessOperator{

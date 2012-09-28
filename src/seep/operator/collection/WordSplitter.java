@@ -3,10 +3,7 @@ package seep.operator.collection;
 import seep.buffer.Buffer;
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.BackupState;
-import seep.comm.tuples.Seep.WordCounterState;
-import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.comm.serialization.controlhelpers.BackupState;
 import seep.operator.CommunicationChannel;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
@@ -67,42 +64,49 @@ public class WordSplitter extends Operator implements StatelessOperator, StateSp
 //		}
 	}
 
-	@Override
-	public seep.comm.tuples.Seep.BackupState.Builder[] parallelizeState(BackupState toSplit, int key) {
-		System.out.println("#######################");
-		System.out.println("PARALLEL KEY: "+key);
-		System.out.println("#######################");
-		BackupState.Builder splitted[] = new BackupState.Builder[2];
-		
-		Seep.WordCounterState original = toSplit.getWcState();
-		
-		Seep.BackupState.Builder oldBS = Seep.BackupState.newBuilder();
-		Seep.WordCounterState.Builder oldS = Seep.WordCounterState.newBuilder();
-		Seep.BackupState.Builder newBS = Seep.BackupState.newBuilder();
-		Seep.WordCounterState.Builder newS = Seep.WordCounterState.newBuilder();
-		
-		for(Seep.WordCounterState.Entry e : original.getEntryList()){
-			int aux = e.getWord().hashCode();
-			if(Router.customHash(aux) < key){
-				oldS.addEntry(e);
-			}
-			else{
-				newS.addEntry(e);
-			}
-		}
-		
-		oldBS.setWcState(oldS);
-		newBS.setWcState(newS);
-		
-		splitted[0] = oldBS;
-		splitted[1] = newBS;
-		
-		return splitted;
-	}
+//	@Override
+//	public seep.comm.tuples.Seep.BackupState.Builder[] parallelizeState(BackupState toSplit, int key) {
+//		System.out.println("#######################");
+//		System.out.println("PARALLEL KEY: "+key);
+//		System.out.println("#######################");
+//		BackupState.Builder splitted[] = new BackupState.Builder[2];
+//		
+//		Seep.WordCounterState original = toSplit.getWcState();
+//		
+//		Seep.BackupState.Builder oldBS = Seep.BackupState.newBuilder();
+//		Seep.WordCounterState.Builder oldS = Seep.WordCounterState.newBuilder();
+//		Seep.BackupState.Builder newBS = Seep.BackupState.newBuilder();
+//		Seep.WordCounterState.Builder newS = Seep.WordCounterState.newBuilder();
+//		
+//		for(Seep.WordCounterState.Entry e : original.getEntryList()){
+//			int aux = e.getWord().hashCode();
+//			if(Router.customHash(aux) < key){
+//				oldS.addEntry(e);
+//			}
+//			else{
+//				newS.addEntry(e);
+//			}
+//		}
+//		
+//		oldBS.setWcState(oldS);
+//		newBS.setWcState(newS);
+//		
+//		splitted[0] = oldBS;
+//		splitted[1] = newBS;
+//		
+//		return splitted;
+//	}
 
 	@Override
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+
+	@Override
+	public BackupState[] parallelizeState(BackupState toSplit, int key) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

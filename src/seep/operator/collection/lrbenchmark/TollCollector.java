@@ -1,8 +1,6 @@
 package seep.operator.collection.lrbenchmark;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.StatelessOperator;

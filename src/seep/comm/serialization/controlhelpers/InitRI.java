@@ -8,6 +8,16 @@ public class InitRI {
 	private ArrayList<Integer> index;
 	private ArrayList<Integer> key;
 	
+	public InitRI(){
+		
+	}
+	
+	public InitRI(int opId, ArrayList<Integer> index, ArrayList<Integer> key){
+		this.opId = opId;
+		this.index = index;
+		this.key = key;
+	}
+	
 	public int getOpId() {
 		return opId;
 	}

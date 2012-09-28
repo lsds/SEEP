@@ -124,6 +124,7 @@ public class Dispatcher implements Serializable{
 				synchronized (socket){
 //					tuple.writeDelimitedTo(socket.getOutputStream());
 					k.writeObject(output, ct);
+					output.flush();
 				}
 			}
 			catch(IOException io){
@@ -147,6 +148,7 @@ public class Dispatcher implements Serializable{
 				synchronized (socket){
 //					tuple.writeDelimitedTo(socket.getOutputStream());
 					k.writeObject(output, ct);
+					output.flush();
 				}
 			}
 			catch(IOException io){
@@ -159,5 +161,12 @@ public class Dispatcher implements Serializable{
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
 		Output output = new Output(os);
 		k.writeObject(output, genericAck);
+		output.flush();
+	}
+	
+	public void initStateMessage(ControlTuple initStateMsg, OutputStream os){
+		Output output = new Output(os);
+		k.writeObject(output, initStateMsg);
+		output.flush();
 	}
 }

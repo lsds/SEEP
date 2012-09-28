@@ -3,7 +3,6 @@ package seep.operator.collection;
 import seep.operator.*;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.*;
 
 public class Src extends Operator{
 

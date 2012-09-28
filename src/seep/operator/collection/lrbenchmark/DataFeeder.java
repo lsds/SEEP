@@ -18,8 +18,6 @@ import java.util.zip.GZIPInputStream;
 
 import seep.Main;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.DataTuple.Builder;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
 
@@ -29,7 +27,7 @@ public class DataFeeder extends Operator implements StatelessOperator{
 	private File inputFile = new File(Main.valueFor("pathToInputFile"));
 	private String[] buffer = new String[100000];
 	
-	private Seep.DataTuple[] bufferEvents = null;
+	private DataTuple[] bufferEvents = null;
 	
 	
 	//OPTION 4

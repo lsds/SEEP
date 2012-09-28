@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
 import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;

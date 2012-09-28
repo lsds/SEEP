@@ -3,9 +3,8 @@ package seep.operator.collection.lrbenchmark;
 import java.util.HashMap;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.InitState;
-import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.comm.serialization.controlhelpers.InitState;
+
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 
@@ -62,12 +61,12 @@ public class Notifier extends Operator implements StatefullOperator{
 		// TODO Auto-generated method stub
 		return 0;
 	}
-
-	@Override
-	public void installState(InitState is) {
-		// TODO Auto-generated method stub
-		
-	}
+//
+//	@Override
+//	public void installState(InitState is) {
+//		// TODO Auto-generated method stub
+//		
+//	}
 
 	@Override
 	public long getBackupTime() {
@@ -80,5 +79,19 @@ public class Notifier extends Operator implements StatefullOperator{
 		// TODO Auto-generated method stub
 		return false;
 	}
+
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+//	@Override
+//	public void installState(InitState is) {
+//		// TODO Auto-generated method stub
+//		
+//	}
 
 }

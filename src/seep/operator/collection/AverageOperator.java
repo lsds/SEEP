@@ -1,9 +1,7 @@
 package seep.operator.collection;
 
-import seep.Main;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.*;
-import seep.comm.tuples.Seep.Ack;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.*;
 
 public class AverageOperator extends Operator implements StatefullOperator{
@@ -71,14 +69,6 @@ public class AverageOperator extends Operator implements StatefullOperator{
 
 	}
 
-	//FIXME this method should no longer be sync
-	public synchronized void installState(Seep.InitState is){
-		if (is == null) {
-			cumulativeState = 0;
-			counter = windowSize;
-		}
-	}
-
 	@Override
 	public void generateBackupState() {
 		// TODO Auto-generated method stub
@@ -101,5 +91,11 @@ public class AverageOperator extends Operator implements StatefullOperator{
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
 	}
 }

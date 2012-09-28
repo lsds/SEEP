@@ -1,7 +1,6 @@
 package seep.operator.collection.testing;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
 
@@ -25,7 +24,6 @@ public class Bar extends Operator implements StatelessOperator{
 //		System.out.println("VALUE: "+dt.getId());
 		sendDown(dt);
 //		System.out.println("COUNTER: "+counter);
-		counter++;
 //		System.out.println("VALUE: "+dt.getId());
 //		sendDown(dt, dt.getId());
 //		System.out.println("COUNTER: "+counter);

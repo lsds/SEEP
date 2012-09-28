@@ -6,8 +6,7 @@ import java.util.List;
 
 import seep.Main;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.InitState;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 
@@ -100,72 +99,72 @@ long t_start = 0;
 //		}
 	}
 
-	@Override
-	public void generateBackupState() {
-		Seep.BalanceAccountCollectorState.Builder bacS = Seep.BalanceAccountCollectorState.newBuilder();
-		//query num
-		List<Integer> qid = null;
-		synchronized(queryNum){
-			qid = new ArrayList<Integer>(queryNum.keySet());
-		}
-		Integer qidA[] = qid.toArray(new Integer[0]);
-		List<Integer> num = null;
-		synchronized(queryNum){
-			num = new ArrayList<Integer>(queryNum.values());
-		}
-			Integer numA[] = num.toArray(new Integer[0]);
-			Seep.BalanceAccountCollectorState.DataII.Builder bac = Seep.BalanceAccountCollectorState.DataII.newBuilder();
-			for(int i = 0; i<qidA.length; i++){
-				bac.setKey(qidA[i]);
-				bac.setValue(numA[i]);
-				bacS.addQueryNum(bac.build());
-			}
-			
-			//query num
-			qid = null;
-			synchronized(queryBA){
-				qid = new ArrayList<Integer>(queryBA.keySet());
-			}
-			qidA = qid.toArray(new Integer[0]);
-			num = null;
-			synchronized(queryBA){
-				num = new ArrayList<Integer>(queryBA.values());
-			}
-			numA = num.toArray(new Integer[0]);
-			Seep.BalanceAccountCollectorState.DataII.Builder bac2 = Seep.BalanceAccountCollectorState.DataII.newBuilder();
-			for(int i = 0; i<qidA.length; i++){
-				bac2.setKey(qidA[i]);
-				bac2.setValue(numA[i]);
-				bacS.addQueryBA(bac2.build());
-			}
-			numUpstreamNodes = bacS.getNumUpstreams();
-		
-	}
+//	@Override
+//	public void generateBackupState() {
+//		Seep.BalanceAccountCollectorState.Builder bacS = Seep.BalanceAccountCollectorState.newBuilder();
+//		//query num
+//		List<Integer> qid = null;
+//		synchronized(queryNum){
+//			qid = new ArrayList<Integer>(queryNum.keySet());
+//		}
+//		Integer qidA[] = qid.toArray(new Integer[0]);
+//		List<Integer> num = null;
+//		synchronized(queryNum){
+//			num = new ArrayList<Integer>(queryNum.values());
+//		}
+//			Integer numA[] = num.toArray(new Integer[0]);
+//			Seep.BalanceAccountCollectorState.DataII.Builder bac = Seep.BalanceAccountCollectorState.DataII.newBuilder();
+//			for(int i = 0; i<qidA.length; i++){
+//				bac.setKey(qidA[i]);
+//				bac.setValue(numA[i]);
+//				bacS.addQueryNum(bac.build());
+//			}
+//			
+//			//query num
+//			qid = null;
+//			synchronized(queryBA){
+//				qid = new ArrayList<Integer>(queryBA.keySet());
+//			}
+//			qidA = qid.toArray(new Integer[0]);
+//			num = null;
+//			synchronized(queryBA){
+//				num = new ArrayList<Integer>(queryBA.values());
+//			}
+//			numA = num.toArray(new Integer[0]);
+//			Seep.BalanceAccountCollectorState.DataII.Builder bac2 = Seep.BalanceAccountCollectorState.DataII.newBuilder();
+//			for(int i = 0; i<qidA.length; i++){
+//				bac2.setKey(qidA[i]);
+//				bac2.setValue(numA[i]);
+//				bacS.addQueryBA(bac2.build());
+//			}
+//			numUpstreamNodes = bacS.getNumUpstreams();
+//		
+//	}
 
 	@Override
 	public int getCounter() {
 		return counter;
 	}
 
-	@Override
-	public void installState(InitState is) {
-		queryNum = new HashMap<Integer, Integer>();
-		Seep.BalanceAccountCollectorState tcS = is.getBacState();
-		Seep.BalanceAccountCollectorState.DataII bcAccount = null;
-		for(int i = 0; i < tcS.getQueryNumCount(); i++){
-			bcAccount = tcS.getQueryNum(i);
-			queryNum.put(bcAccount.getKey(), bcAccount.getValue());
-		}
-		
-		queryBA = new HashMap<Integer, Integer>();
-		Seep.BalanceAccountCollectorState.DataII bcAccount1 = null;
-		for(int i = 0; i < tcS.getQueryBACount(); i++){
-			bcAccount1 = tcS.getQueryBA(i);
-			queryBA.put(bcAccount1.getKey(), bcAccount1.getValue());
-		}
-		
-		System.out.println("OP"+getOperatorId()+" -> has restored state");
-	}
+//	@Override
+//	public void installState(InitState is) {
+//		queryNum = new HashMap<Integer, Integer>();
+//		Seep.BalanceAccountCollectorState tcS = is.getBacState();
+//		Seep.BalanceAccountCollectorState.DataII bcAccount = null;
+//		for(int i = 0; i < tcS.getQueryNumCount(); i++){
+//			bcAccount = tcS.getQueryNum(i);
+//			queryNum.put(bcAccount.getKey(), bcAccount.getValue());
+//		}
+//		
+//		queryBA = new HashMap<Integer, Integer>();
+//		Seep.BalanceAccountCollectorState.DataII bcAccount1 = null;
+//		for(int i = 0; i < tcS.getQueryBACount(); i++){
+//			bcAccount1 = tcS.getQueryBA(i);
+//			queryBA.put(bcAccount1.getKey(), bcAccount1.getValue());
+//		}
+//		
+//		System.out.println("OP"+getOperatorId()+" -> has restored state");
+//	}
 
 	@Override
 	public long getBackupTime() {
@@ -177,5 +176,17 @@ long t_start = 0;
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void generateBackupState() {
+		// TODO Auto-generated method stub
+		
 	}
 }

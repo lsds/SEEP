@@ -5,7 +5,6 @@ import seep.infrastructure.NodeManager;
 import seep.operator.*;
 import seep.operator.workers.ACKWorker;
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.*;
 
 @SuppressWarnings("serial")
 public class Snk extends Operator implements StatelessOperator{

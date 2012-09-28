@@ -12,6 +12,7 @@ import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.Operator;
 
 public class ControlTuple {
@@ -154,6 +155,24 @@ public class ControlTuple {
 	public ControlTuple makeReconfigureSingleCommand(String command){
 		this.type = Operator.ControlTupleType.RECONFIGURE;
 		this.reconfigureConnection = new ReconfigureConnection(command);
+		return this;
+	}
+	
+	public ControlTuple makeInitRI(int opId, ArrayList<Integer> indexes, ArrayList<Integer> keys){
+		this.type = Operator.ControlTupleType.INIT_RI;
+		this.initRI = new InitRI(opId, indexes, keys);
+		return this;
+	}
+	
+	public ControlTuple makeBackupRI(int opId, ArrayList<Integer> indexes, ArrayList<Integer> keys, String operatorType){
+		this.type = Operator.ControlTupleType.BACKUP_RI;
+		this.backupRI = new BackupRI(opId, indexes, keys, operatorType);
+		return this;
+	}
+	
+	public ControlTuple makeInitState(int opId, long ts, StateI state){
+		this.type = Operator.ControlTupleType.INIT_STATE;
+		this.initState = new InitState(opId, ts, state);
 		return this;
 	}
 }

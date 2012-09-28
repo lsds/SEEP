@@ -5,8 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.InitState;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 import seep.operator.workers.StateBackupWorker;
@@ -125,119 +124,131 @@ private long t_start = 0;
 //		
 	}
 
-	@Override
-	public synchronized void generateBackupState() {
-		
-			Seep.BalanceAccountState.Builder baS = Seep.BalanceAccountState.newBuilder();
-			//balance account
-			List<Integer> vids = null;
-			synchronized(balanceAccount){
-				vids = new ArrayList<Integer>(balanceAccount.keySet());
-			}
-			Integer vidsA[] = vids.toArray(new Integer[0]);
-			List<Integer> sum = null;
-			synchronized(balanceAccount){
-				sum = new ArrayList<Integer>(balanceAccount.values());
-			}
-			Integer sumA[] = sum.toArray(new Integer[0]);
-			Seep.BalanceAccountState.DataII.Builder ba = Seep.BalanceAccountState.DataII.newBuilder();
-			for(int i = 0; i<vidsA.length; i++){
-				ba.setKey(vidsA[i]);
-				ba.setValue(sumA[i]);
-				baS.addBalanceAccount(ba.build());
-			}
-			
-			//previous segment
-			vids = null;
-			synchronized(previousSegment){
-				vids = new ArrayList<Integer>(previousSegment.keySet());
-			}
-			vidsA = vids.toArray(new Integer[0]);
-			sum = null;
-			synchronized(previousSegment){
-				sum = new ArrayList<Integer>(previousSegment.values());
-			}
-			sumA = sum.toArray(new Integer[0]);
-			Seep.BalanceAccountState.DataII.Builder ps = Seep.BalanceAccountState.DataII.newBuilder();
-			for(int i = 0; i<vidsA.length; i++){
-				ps.setKey(vidsA[i]);
-				ps.setValue(sumA[i]);
-				baS.addPreviousSegment(ps.build());
-			}
-			
-			//previous toll
-			vids = null;
-			synchronized(previousToll){
-				vids = new ArrayList<Integer>(previousToll.keySet());
-			}
-			vidsA = vids.toArray(new Integer[0]);
-			sum = null;
-			synchronized(previousToll){
-				sum = new ArrayList<Integer>(previousToll.values());
-			}
-			sumA = sum.toArray(new Integer[0]);
-			Seep.BalanceAccountState.DataII.Builder pt = Seep.BalanceAccountState.DataII.newBuilder();
-			for(int i = 0; i<vidsA.length; i++){
-				pt.setKey(vidsA[i]);
-				pt.setValue(sumA[i]);
-				baS.addPreviousToll(pt.build());
-			}
-			
-			baS.setLastUpdateOfBA(lastUpdateOfBA);
-			//To indicate that this is a toll assessment state
-			baS.setStateId(1);
-
-			Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
-			//Developer needs to save just the state
-			bsB.setBaState(baS.build());
-			backupState(bsB);
-			setCounter(0);
-		
-		
-	}
+//	@Override
+//	public synchronized void generateBackupState() {
+//		
+//			Seep.BalanceAccountState.Builder baS = Seep.BalanceAccountState.newBuilder();
+//			//balance account
+//			List<Integer> vids = null;
+//			synchronized(balanceAccount){
+//				vids = new ArrayList<Integer>(balanceAccount.keySet());
+//			}
+//			Integer vidsA[] = vids.toArray(new Integer[0]);
+//			List<Integer> sum = null;
+//			synchronized(balanceAccount){
+//				sum = new ArrayList<Integer>(balanceAccount.values());
+//			}
+//			Integer sumA[] = sum.toArray(new Integer[0]);
+//			Seep.BalanceAccountState.DataII.Builder ba = Seep.BalanceAccountState.DataII.newBuilder();
+//			for(int i = 0; i<vidsA.length; i++){
+//				ba.setKey(vidsA[i]);
+//				ba.setValue(sumA[i]);
+//				baS.addBalanceAccount(ba.build());
+//			}
+//			
+//			//previous segment
+//			vids = null;
+//			synchronized(previousSegment){
+//				vids = new ArrayList<Integer>(previousSegment.keySet());
+//			}
+//			vidsA = vids.toArray(new Integer[0]);
+//			sum = null;
+//			synchronized(previousSegment){
+//				sum = new ArrayList<Integer>(previousSegment.values());
+//			}
+//			sumA = sum.toArray(new Integer[0]);
+//			Seep.BalanceAccountState.DataII.Builder ps = Seep.BalanceAccountState.DataII.newBuilder();
+//			for(int i = 0; i<vidsA.length; i++){
+//				ps.setKey(vidsA[i]);
+//				ps.setValue(sumA[i]);
+//				baS.addPreviousSegment(ps.build());
+//			}
+//			
+//			//previous toll
+//			vids = null;
+//			synchronized(previousToll){
+//				vids = new ArrayList<Integer>(previousToll.keySet());
+//			}
+//			vidsA = vids.toArray(new Integer[0]);
+//			sum = null;
+//			synchronized(previousToll){
+//				sum = new ArrayList<Integer>(previousToll.values());
+//			}
+//			sumA = sum.toArray(new Integer[0]);
+//			Seep.BalanceAccountState.DataII.Builder pt = Seep.BalanceAccountState.DataII.newBuilder();
+//			for(int i = 0; i<vidsA.length; i++){
+//				pt.setKey(vidsA[i]);
+//				pt.setValue(sumA[i]);
+//				baS.addPreviousToll(pt.build());
+//			}
+//			
+//			baS.setLastUpdateOfBA(lastUpdateOfBA);
+//			//To indicate that this is a toll assessment state
+//			baS.setStateId(1);
+//
+//			Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
+//			//Developer needs to save just the state
+//			bsB.setBaState(baS.build());
+//			backupState(bsB);
+//			setCounter(0);
+//		
+//		
+//	}
 
 	@Override
 	public int getCounter() {
 		return counter;
 	}
 
-	@Override
-	public void installState(InitState is) {
-		
-		balanceAccount.clear();
-		previousSegment.clear();
-		previousToll.clear();
-		
-		balanceAccount = new HashMap<Integer, Integer>();
-		Seep.BalanceAccountState baS = is.getBaState();
-		Seep.BalanceAccountState.DataII bAccount = null;
-		for(int i = 0; i < baS.getBalanceAccountCount(); i++){
-			bAccount = baS.getBalanceAccount(i);
-			balanceAccount.put(bAccount.getKey(), bAccount.getValue());
-		}
-		
-		previousSegment = new HashMap<Integer, Integer>();
-		Seep.BalanceAccountState.DataII pSegment = null;
-		for(int i = 0; i < baS.getPreviousSegmentCount(); i++){
-			pSegment = baS.getPreviousSegment(i);
-			previousSegment.put(pSegment.getKey(), pSegment.getValue());
-		}
-		
-		previousToll = new HashMap<Integer, Integer>();
-		Seep.BalanceAccountState.DataII pToll = null;
-		for(int i = 0; i < baS.getPreviousTollCount(); i++){
-			pToll = baS.getPreviousToll(i);
-			previousToll.put(pToll.getKey(), pToll.getValue());
-		}
-		
-		lastUpdateOfBA = baS.getLastUpdateOfBA();
-		
-		System.out.println("OP"+getOperatorId()+" -> has restored state");
-	}
+//	@Override
+//	public void installState(InitState is) {
+//		
+//		balanceAccount.clear();
+//		previousSegment.clear();
+//		previousToll.clear();
+//		
+//		balanceAccount = new HashMap<Integer, Integer>();
+//		Seep.BalanceAccountState baS = is.getBaState();
+//		Seep.BalanceAccountState.DataII bAccount = null;
+//		for(int i = 0; i < baS.getBalanceAccountCount(); i++){
+//			bAccount = baS.getBalanceAccount(i);
+//			balanceAccount.put(bAccount.getKey(), bAccount.getValue());
+//		}
+//		
+//		previousSegment = new HashMap<Integer, Integer>();
+//		Seep.BalanceAccountState.DataII pSegment = null;
+//		for(int i = 0; i < baS.getPreviousSegmentCount(); i++){
+//			pSegment = baS.getPreviousSegment(i);
+//			previousSegment.put(pSegment.getKey(), pSegment.getValue());
+//		}
+//		
+//		previousToll = new HashMap<Integer, Integer>();
+//		Seep.BalanceAccountState.DataII pToll = null;
+//		for(int i = 0; i < baS.getPreviousTollCount(); i++){
+//			pToll = baS.getPreviousToll(i);
+//			previousToll.put(pToll.getKey(), pToll.getValue());
+//		}
+//		
+//		lastUpdateOfBA = baS.getLastUpdateOfBA();
+//		
+//		System.out.println("OP"+getOperatorId()+" -> has restored state");
+//	}
 
 	@Override
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void generateBackupState() {
+		// TODO Auto-generated method stub
+		
 	}
 }

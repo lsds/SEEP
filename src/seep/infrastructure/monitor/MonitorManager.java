@@ -8,7 +8,11 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+
 import seep.Main;
+import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.Infrastructure;
 
 /**
@@ -194,22 +198,34 @@ public class MonitorManager implements Runnable{
 		private Socket conn = null;
 		private InputStream is = null;
 		private BufferedWriter bw = null;
+		private Input input = null;
+		private Kryo k = null;
 
 		public MonitorManagerWorker(Socket conn){
 			this.conn = conn;
+			this.k = initializeKryo();
+		}
+		
+		private Kryo initializeKryo(){
+			k = new Kryo();
+			k.register(MetricsTuple.class);
+			return k;
 		}
 		
 		public void run(){
 			try{
 				is = conn.getInputStream();
+				input = new Input(is);
 				//bw = new OutputStreamWriter(new FileOutputStream("m.csv"));
 				
 				while(listen){
-					Seep.Statistics stat = Seep.Statistics.parseDelimitedFrom(is);
-					if(stat != null){
-						statisticsHandler(stat.getOpId(), stat.getCpuU(), stat.getTime(), stat.getTh(), bw);
-//						Infrastructure.msh.statisticsHandler(stat.getOpId(), stat.getCpuU(), stat.getTime(), stat.getTh(), bw);
-					}
+//					Seep.Statistics stat = Seep.Statistics.parseDelimitedFrom(is);
+					MetricsTuple m = k.readObject(input, MetricsTuple.class);
+					/** HANDLE THE METRICS below **/
+//					if(stat != null){
+//						statisticsHandler(stat.getOpId(), stat.getCpuU(), stat.getTime(), stat.getTh(), bw);
+////						Infrastructure.msh.statisticsHandler(stat.getOpId(), stat.getCpuU(), stat.getTime(), stat.getTh(), bw);
+//					}
 				}
 				is.close();
 				conn.close();
