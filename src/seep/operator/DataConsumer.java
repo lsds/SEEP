@@ -1,6 +1,6 @@
 package seep.operator;
 
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.DataTuple;
 
 public class DataConsumer implements Runnable {
 
@@ -21,7 +21,7 @@ public class DataConsumer implements Runnable {
 	public void run() {
 		while(doWork){
 //			System.out.println("CONSUMER->going to pull data");
-			Seep.DataTuple data = inputQueue.pull();
+			DataTuple data = inputQueue.pull();
 //			System.out.println("CONSUMER->Data pulled");
 			owner.processData(data);
 		}

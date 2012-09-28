@@ -4,7 +4,7 @@ import seep.Main;
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
 import seep.operator.workers.ACKWorker;
-import seep.comm.tuples.*;
+import seep.comm.serialization.DataTuple;
 
 @SuppressWarnings("serial")
 public class Snk extends Operator implements StatelessOperator{
@@ -31,31 +31,31 @@ public class Snk extends Operator implements StatelessOperator{
 	int second = 0;
 
 
-	public void processData(Seep.DataTuple dt){
-		System.out.println("SINK: Data received, WORD-> "+dt.getString()+" COUNT->"+dt.getInt());
-		tACK = dt.getTs();
-
-		if(first){
-			//Start the ACK worker
-			new Thread(ackWorker).start();
-			NodeManager.monitorOfSink = true;
-			first = false;
-			//Profiling variables
-			t_start = System.currentTimeMillis();
-			period = 1000;
-		}
-		counter++;
-		if((System.currentTimeMillis()-t_start) >= period){
-			//number of bits processed over a second is the Throughput, kbps
-			//double bps = (double)((counter/12)*ExecutionConfiguration.sentenceSize);
-			int bps = (counter/12) * Integer.parseInt(Main.valueFor("sentenceSize"));
-			int th = (bps)/1000;
-			System.out.println("E/S: "+counter+ "Th: "+th);
-			//NodeManager.nodeMonitor.info(th, second);
-			second++;
-			t_start = System.currentTimeMillis();
-			counter = 0;
-		}
+	public void processData(DataTuple dt){
+//		System.out.println("SINK: Data received, WORD-> "+dt.getString()+" COUNT->"+dt.getInt());
+//		tACK = dt.getTs();
+//
+//		if(first){
+//			//Start the ACK worker
+//			new Thread(ackWorker).start();
+//			NodeManager.monitorOfSink = true;
+//			first = false;
+//			//Profiling variables
+//			t_start = System.currentTimeMillis();
+//			period = 1000;
+//		}
+//		counter++;
+//		if((System.currentTimeMillis()-t_start) >= period){
+//			//number of bits processed over a second is the Throughput, kbps
+//			//double bps = (double)((counter/12)*ExecutionConfiguration.sentenceSize);
+//			int bps = (counter/12) * Integer.parseInt(Main.valueFor("sentenceSize"));
+//			int th = (bps)/1000;
+//			System.out.println("E/S: "+counter+ "Th: "+th);
+//			//NodeManager.nodeMonitor.info(th, second);
+//			second++;
+//			t_start = System.currentTimeMillis();
+//			counter = 0;
+//		}
 	}
 
 	@Override

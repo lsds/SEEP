@@ -1,17 +1,20 @@
 13/9/2012 Raul
 This todos are ordered by priority level.
 - Refactor internal routing providing clean external interfaces. (X)
-- Serialization mechanism.
+- Serialization mechanism. (X)
 - Low level API to describe/configure/connect operators. (X)
 - Define a basic API to develop operators for SEEP. (extensible is important at this point)
+	- Inherit from tuples to build own tuples
+	- Building blocks to implement different functionality
+	- Define a library/iface to code against.
+- Implement an extensible and long-term instrumentation mechanism.
 At this point we have a robust API and robust routing mechanism.
 - Fix distributed protocols and prepare them to SCALE-IN.
 - Fix the following:
 	- Backup state robust
-	- Avoid all-to-all communication
+	- Avoid all-to-all communication in RI backup
 	- Logging at core
 - Implement Scale-In.
-- Implement an extensible and long-term instrumentation mechanism.
 
 
 12/06/2012 Raul

@@ -10,7 +10,11 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import seep.comm.tuples.Seep;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+
+import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorStaticInformation;
@@ -23,6 +27,17 @@ import seep.infrastructure.Node;
 public class BasicCommunicationUtils {
 	
 	private Map<Integer, Socket> uniqueSocket = new HashMap<Integer, Socket>();
+	private Kryo k;
+	
+	public BasicCommunicationUtils(){
+		this.k = initializeKryo();
+	}
+	
+	private Kryo initializeKryo(){
+		k = new Kryo();
+		k.register(ControlTuple.class);
+		return k;
+	}
 	
 	public boolean sendObject(Node n, Object o){
 		//Get destiny address, port is preconfigured to 3500 for deployer tasks
@@ -67,7 +82,7 @@ public class BasicCommunicationUtils {
 		return success;
 	}
 
-	public void sendControlMsg(OperatorStaticInformation loc, Seep.ControlTuple ct, int socketId){
+	public void sendControlMsg(OperatorStaticInformation loc, ControlTuple ct, int socketId){
 		Socket connection = uniqueSocket.get(socketId);
 		try{
 			if(connection == null){
@@ -75,10 +90,16 @@ public class BasicCommunicationUtils {
 				Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
 				uniqueSocket.put(socketId, connection);
 			}
-			
-			ct.writeDelimitedTo(connection.getOutputStream());
+			Output output = new Output(connection.getOutputStream());
+			Input input = new Input(connection.getInputStream());
+//			ct.writeDelimitedTo(connection.getOutputStream());
+			System.out.println("sendTo: "+connection.toString());
+			k.writeObject(output, ct);
+			/**Critical line in KRYO**/
+			output.flush();
 			//wait for application level ack
-			Seep.ControlTuple ack = Seep.ControlTuple.parseDelimitedFrom(connection.getInputStream());
+//			Seep.ControlTuple ack = Seep.ControlTuple.parseDelimitedFrom(connection.getInputStream());
+			ControlTuple ack = k.readObject(input, ControlTuple.class);
 			//waiting for ack
 			NodeManager.nLogger.info("-> controlMsg ACK");
 		}
@@ -89,16 +110,18 @@ public class BasicCommunicationUtils {
 		}
 	}
 	
-	public void sendControlMsgWithoutACK(OperatorStaticInformation loc, Seep.ControlTuple ct, int socketId){
+	public void sendControlMsgWithoutACK(OperatorStaticInformation loc, ControlTuple ct, int socketId){
 		Socket connection = uniqueSocket.get(socketId);
 		try{
+			Output output = new Output(connection.getOutputStream());
 			if(connection == null){
 				connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
 				Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
 				uniqueSocket.put(socketId, connection);
 			}
-			
-			ct.writeDelimitedTo(connection.getOutputStream());
+
+			k.writeObject(output, ct);
+			output.flush();
 		}
 		catch(IOException io){
 			Infrastructure.nLogger.severe("-> Infrastructure. While sending Msg "+io.getMessage());

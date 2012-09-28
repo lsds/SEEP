@@ -2,7 +2,7 @@ package seep.operator.collection;
 
 import seep.operator.*;
 
-import seep.comm.tuples.*;
+import seep.comm.serialization.DataTuple;
 
 public class ForwarderOperator extends Operator{ 
 
@@ -11,8 +11,8 @@ public class ForwarderOperator extends Operator{
 	}
 	
 	//If threads are pushing data here, this processData should be sync
-	public void processData(Seep.DataTuple dt){
-		this.sendDown(dt);
+	public void processData(DataTuple dt){
+//		this.sendDown(dt);
 	}
 
 	@Override

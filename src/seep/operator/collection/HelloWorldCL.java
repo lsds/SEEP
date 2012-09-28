@@ -1,6 +1,6 @@
 package seep.operator.collection;
 
-import seep.comm.tuples.*;
+import seep.comm.serialization.DataTuple;
 import seep.operator.*;
 
 public class HelloWorldCL extends Operator{
@@ -12,7 +12,7 @@ public class HelloWorldCL extends Operator{
 		this.att = att;
 	}
 
-	public void processData(Seep.DataTuple dt){
+	public void processData(DataTuple dt){
 		System.out.println("HelloWorld Object loaded "+att);
 	}
 

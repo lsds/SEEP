@@ -1,8 +1,8 @@
 package seep.operator.collection;
 
 import seep.Main;
-import seep.comm.tuples.Seep;
-import seep.comm.tuples.Seep.DataTuple.Builder;
+import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
 import seep.operator.StatefullOperator;
 
@@ -46,76 +46,76 @@ String chosenWord = "Unix";
 		return countMap;
 	}
 	
-	@Override public synchronized void processData(Seep.DataTuple dt) {
-
-		if(first){
-			//new Thread(stateBackupWorker).start();
-			first = false;
-			t_start = System.currentTimeMillis();
-		}
-//		String word = dt.getString();
-//		int count = 0;
-//		if(countMap.get(word) != null){
-//			count = countMap.get(word);
+	public synchronized void processData(DataTuple dt) {
+//
+//		if(first){
+//			//new Thread(stateBackupWorker).start();
+//			first = false;
+//			t_start = System.currentTimeMillis();
 //		}
-//		else{
-//			countMap.put(word, 0);
-//		}
-//		countMap.put(word, ++count);
-//		Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
-//		b.setTs(dt.getTs())
-//			.setString(word)
-//			.setInt(count);
-//		c++;
-//		//System.out.println("WC: word-> "+word+" counter-> "+count);
-//		sendDown(b.build());
-//		//every 1000 tuples backup state.
-//		if(c == 1000){
-//			generateBackupState();
-//		}
-		t_start = System.currentTimeMillis();
+////		String word = dt.getString();
+////		int count = 0;
+////		if(countMap.get(word) != null){
+////			count = countMap.get(word);
+////		}
+////		else{
+////			countMap.put(word, 0);
+////		}
+////		countMap.put(word, ++count);
+////		Seep.DataTuple.Builder b = Seep.DataTuple.newBuilder();
+////		b.setTs(dt.getTs())
+////			.setString(word)
+////			.setInt(count);
+////		c++;
+////		//System.out.println("WC: word-> "+word+" counter-> "+count);
+////		sendDown(b.build());
+////		//every 1000 tuples backup state.
+////		if(c == 1000){
+////			generateBackupState();
+////		}
+//		t_start = System.currentTimeMillis();
 	}
 
-	public void installState(Seep.InitState is){
-		countMap = new HashMap<String, Integer>();
-		counter = 0;
-		Seep.WordCounterState wcS = is.getWcState();
-		Seep.WordCounterState.Entry e = null;
-		for(int i = 0; i<wcS.getEntryCount(); i++){
-			e = wcS.getEntry(i);
-			countMap.put(e.getWord(), e.getCounter());
-		}
-		System.out.println("OP"+getOperatorId()+" -> has restored state");
-	}
+//	public void installState(Seep.InitState is){
+//		countMap = new HashMap<String, Integer>();
+//		counter = 0;
+//		Seep.WordCounterState wcS = is.getWcState();
+//		Seep.WordCounterState.Entry e = null;
+//		for(int i = 0; i<wcS.getEntryCount(); i++){
+//			e = wcS.getEntry(i);
+//			countMap.put(e.getWord(), e.getCounter());
+//		}
+//		System.out.println("OP"+getOperatorId()+" -> has restored state");
+//	}
 
-	@Override
-	public void generateBackupState() {
-		
-			HashMap<String, Integer> countMap = getCountMap();
-			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
-			List<String> words = null;
-			synchronized(countMap){
-				words = new ArrayList<String>(countMap.keySet());
-			}
-			String wordsA[] = words.toArray(new String [0]);
-			List<Integer> counters = null;
-			synchronized(countMap){
-				counters = new ArrayList<Integer>(countMap.values());
-			}
-			Integer countersA[] = counters.toArray(new Integer[0]);
-			Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
-			for(int i = 0; i<wordsA.length; i++){
-				eB.setWord(wordsA[i]);
-				eB.setCounter(countersA[i]);
-				wcS.addEntry(eB.build());
-			}
-			Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
-			//Developer needs to save just the state
-			bsB.setWcState(wcS.build());
-			backupState(bsB);
-			setCounter(0);
-		
-	}
+//	@Override
+//	public void generateBackupState() {
+//		
+//			HashMap<String, Integer> countMap = getCountMap();
+//			Seep.WordCounterState.Builder wcS = Seep.WordCounterState.newBuilder();
+//			List<String> words = null;
+//			synchronized(countMap){
+//				words = new ArrayList<String>(countMap.keySet());
+//			}
+//			String wordsA[] = words.toArray(new String [0]);
+//			List<Integer> counters = null;
+//			synchronized(countMap){
+//				counters = new ArrayList<Integer>(countMap.values());
+//			}
+//			Integer countersA[] = counters.toArray(new Integer[0]);
+//			Seep.WordCounterState.Entry.Builder eB = Seep.WordCounterState.Entry.newBuilder();
+//			for(int i = 0; i<wordsA.length; i++){
+//				eB.setWord(wordsA[i]);
+//				eB.setCounter(countersA[i]);
+//				wcS.addEntry(eB.build());
+//			}
+//			Seep.BackupState.Builder bsB = Seep.BackupState.newBuilder();
+//			//Developer needs to save just the state
+//			bsB.setWcState(wcS.build());
+//			backupState(bsB);
+//			setCounter(0);
+//		
+//	}
 
 	@Override
 	public long getBackupTime() {
@@ -127,5 +127,17 @@ String chosenWord = "Unix";
 	public boolean isOrderSensitive() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public void installState(InitState is) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void generateBackupState() {
+		// TODO Auto-generated method stub
+		
 	}
 }

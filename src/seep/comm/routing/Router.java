@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.CRC32;
 
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext;
 import seep.operator.OperatorContext.PlacedOperator;
@@ -91,11 +91,12 @@ public class Router implements Serializable{
 		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
 	}
 	
+	/// \fixme{how to make this generic so that it always knows which class to query?}
 	public void initializeQueryFunction(){
 		if(query != null){
 			NodeManager.nLogger.info("Initializing method to query stream data...");
 			try {
-				Class<Seep.DataTuple> c = seep.comm.tuples.Seep.DataTuple.class;
+				Class<DataTuple> c = DataTuple.class;
 				queryFunction = c.getMethod(query);
 			}
 			catch (NoSuchMethodException nsme){
@@ -104,7 +105,7 @@ public class Router implements Serializable{
 		}
 	}
 	
-	public ArrayList<Integer> forward(Seep.DataTuple dt, int value, boolean now){
+	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		//If it is necessary to query data to guess (logic)downstream
 		if(requiresQueryData){
@@ -127,7 +128,7 @@ public class Router implements Serializable{
 		return targets;
 	}
 	
-	public ArrayList<Integer> routeLayerOne(Seep.DataTuple dt, int value){
+	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
 		int contentValue = 0;
 		try {
 			contentValue = (Integer)queryFunction.invoke(dt);
@@ -157,8 +158,8 @@ public class Router implements Serializable{
 	public ArrayList<Integer> routeLayerTwo(ArrayList<Integer> logicalTargets, int value){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
-			System.out.println("LOGICAL TARGET: "+ltarget);
-			System.out.println("DownSroutingImpl size: "+downstreamRoutingImpl.size());
+//			System.out.println("LOGICAL TARGET: "+ltarget);
+//			System.out.println("DownSroutingImpl size: "+downstreamRoutingImpl.size());
 			if(downstreamRoutingImpl.get(ltarget) == null){
 				System.out.println("ROUTING IMPL NULL!!!!");
 			}
@@ -219,44 +220,3 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 		return v;
 	}
 }
-//	public void configureRoutingImpl(OperatorContext opContext) {
-//		//For every type of downstream (statefull or stateless) create an according routingStrategyI.
-//		for(Integer contentValue : routeInfo.keySet()){
-//			for(Integer opId : routeInfo.get(contentValue)){
-//				//If there are no load balancer configured for the OpId, we configure one
-//				if(!downstreamRoutingImpl.containsKey(opId)){
-//					int index = opContext.findDownstream(opId).index();
-//					if(opContext.isDownstreamOperatorStateful(opId)){
-////						StatefulDynamicLoadBalancer lb = new StatefulDynamicLoadBalancer(index);
-//						StatefulRoutingImpl rfull = new StatefulRoutingImpl(index);
-//System.out.println("CREATING STATEFUL LB : "+opId);
-//						downstreamRoutingImpl.put(opId, rfull);
-//					}
-//					//If the operator is stateless
-//					else{
-//						//Default size for splitWindow
-//						int splitWindow = 1;
-////						StatelessDynamicLoadBalancer lb = new StatelessDynamicLoadBalancer(splitWindow ,index);
-//						StatelessRoutingImpl rless = new StatelessRoutingImpl();
-//System.out.println("CREATING STATELESS LB : "+opId);
-//						downstreamRoutingImpl.put(opId, rless);
-//					}
-//				}
-//			}
-//		}
-//	}
-	
-//	public void newStatelessOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
-//	if(requiresQueryData){
-//		configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
-//	}
-//	else{
-//		//Otherwise, we use the default RoutingImpl
-//		//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
-//		for(Integer target : downstreamRoutingImpl.keySet()){
-//			//This should be called just once...
-//			/// \fixme{CHECK THIS}
-//			downstreamRoutingImpl.get(target).newReplica(oldOpIndex, newOpIndex);
-//		}
-//	}
-//}

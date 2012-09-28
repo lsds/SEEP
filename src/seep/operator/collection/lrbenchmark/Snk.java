@@ -6,7 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import seep.comm.tuples.Seep;
+import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
@@ -64,76 +64,76 @@ public class Snk extends Operator implements StatelessOperator{
 		System.out.println("SAVED!!!!!");
 	}
 
-	@Override
-	public synchronized void processData(Seep.DataTuple dt) {
-		//instrumentation variables
-		counter++;
-		bytes += dt.getSerializedSize();
-		
-		//current timestamp
-		long instantTime = System.currentTimeMillis();
-		//current elapsed time
-		int currentTime = (int)(instantTime - t_start);
-		//current elapsed time in seconds
-		int t = (int) ((int)(instantTime - tinit)/1000);
-		
-		//sampling tuple latency
-		if(dt.getType() == 0){
-			numTuples++;
-			if(numTuples == 100){
-				//Print time and latency for this tuple
-				String out = (t+" "+(instantTime - dt.getTs())+"\n");
-				sb.append(out);
-//				System.out.println("# "+t+" "+(instantTime - dt.getTs()));
-				numTuples = 0;
-			}
-			//acumLatency += (instantTime-dt.getTs());
-		}
-		else{
-			//eventDiscarted++;
-		}
-		
-		if(firstTime){
-			firstTime = false;
-//			tinit = dt.getTime();
-			// one second margin for warm-up of the system
-			NodeManager.monitorOfSink = true;
-			tinit = instantTime;
-			t_start = instantTime;
-			new Thread(ackWorker).start();
-			
-			//builder
-			sb = new StringBuilder();
-		}
-		tACK = dt.getTs();
-		
-		
-	 	if(t > dt.getTime()+5 && dt.getType() != 2 ){
-			//System.out.println("TS violated -> emit: "+dt.getTime()+" current: "+t);
-	 		mem = dt.getTime() - t;
-			flag = true;
-		}
-
-		if(currentTime >= 1000){
-			t_start = instantTime;
-			int kbps = (bytes*8)/1000;
-			//TIME - E/S - kbps - ilatency - avgLatency during last second
-			//System.out.println(t+" "+counter+" "+kbps+" "+(instantTime-dt.getTs())+" "+(acumLatency/(counter-eventDiscarted)));
-			System.out.println(t+" "+counter+" "+kbps);
-			if(flag){
-//				System.out.println("TS violated -> emit: "+dt.getTime()+" current: "+t);
-				System.out.println("TS violated -> "+ mem);
-				flag = false;
-			}
-//			System.out.println("T: "+t+" E/S: "+counter+" kbps: "+kbps+" iL: "+(instantTime-dt.getTs())+" avgL: "+(acumLatency/(counter-eventDiscarted)));
-//			System.out.println("E/S: "+counter);
-			//System.out.println("AvgLatency: "+(acumLatency/(counter-eventDiscarted)));
-			bytes = 0;
-			counter = 0;
-			acumLatency = 0;
-			eventDiscarted = 0;
-			ackCounter = 0;
-		}
+	
+	public synchronized void processData(DataTuple dt) {
+//		//instrumentation variables
+//		counter++;
+//		bytes += dt.getSerializedSize();
+//		
+//		//current timestamp
+//		long instantTime = System.currentTimeMillis();
+//		//current elapsed time
+//		int currentTime = (int)(instantTime - t_start);
+//		//current elapsed time in seconds
+//		int t = (int) ((int)(instantTime - tinit)/1000);
+//		
+//		//sampling tuple latency
+//		if(dt.getType() == 0){
+//			numTuples++;
+//			if(numTuples == 100){
+//				//Print time and latency for this tuple
+//				String out = (t+" "+(instantTime - dt.getTs())+"\n");
+//				sb.append(out);
+////				System.out.println("# "+t+" "+(instantTime - dt.getTs()));
+//				numTuples = 0;
+//			}
+//			//acumLatency += (instantTime-dt.getTs());
+//		}
+//		else{
+//			//eventDiscarted++;
+//		}
+//		
+//		if(firstTime){
+//			firstTime = false;
+////			tinit = dt.getTime();
+//			// one second margin for warm-up of the system
+//			NodeManager.monitorOfSink = true;
+//			tinit = instantTime;
+//			t_start = instantTime;
+//			new Thread(ackWorker).start();
+//			
+//			//builder
+//			sb = new StringBuilder();
+//		}
+//		tACK = dt.getTs();
+//		
+//		
+//	 	if(t > dt.getTime()+5 && dt.getType() != 2 ){
+//			//System.out.println("TS violated -> emit: "+dt.getTime()+" current: "+t);
+//	 		mem = dt.getTime() - t;
+//			flag = true;
+//		}
+//
+//		if(currentTime >= 1000){
+//			t_start = instantTime;
+//			int kbps = (bytes*8)/1000;
+//			//TIME - E/S - kbps - ilatency - avgLatency during last second
+//			//System.out.println(t+" "+counter+" "+kbps+" "+(instantTime-dt.getTs())+" "+(acumLatency/(counter-eventDiscarted)));
+//			System.out.println(t+" "+counter+" "+kbps);
+//			if(flag){
+////				System.out.println("TS violated -> emit: "+dt.getTime()+" current: "+t);
+//				System.out.println("TS violated -> "+ mem);
+//				flag = false;
+//			}
+////			System.out.println("T: "+t+" E/S: "+counter+" kbps: "+kbps+" iL: "+(instantTime-dt.getTs())+" avgL: "+(acumLatency/(counter-eventDiscarted)));
+////			System.out.println("E/S: "+counter);
+//			//System.out.println("AvgLatency: "+(acumLatency/(counter-eventDiscarted)));
+//			bytes = 0;
+//			counter = 0;
+//			acumLatency = 0;
+//			eventDiscarted = 0;
+//			ackCounter = 0;
+//		}
 	}
 
 	@Override

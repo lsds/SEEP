@@ -2,7 +2,7 @@ package seep.operator.collection;
 
 import seep.operator.*;
 
-import seep.comm.tuples.*;
+import seep.comm.serialization.DataTuple;
 
 public class Src extends Operator{
 
@@ -18,34 +18,34 @@ public class Src extends Operator{
 		super(opID);
 	}
 	
-	public void processData(Seep.DataTuple dt){
-		//This while is here to simulate a real source.
-		boolean listen = true;
-		int value = 0;
-		while(listen){
-			Seep.DataTuple.Builder tuple = Seep.DataTuple.newBuilder();
-			tuple.setTs(System.currentTimeMillis());
-			//Data generated is an incrementing value...
-//			tuple.setInt(value++);
-			sendDown(tuple.build());
-//			System.out.println("TESTSOURCE: sending: ts->"+tuple.getTs()+" value->"+tuple.getInt());
-			//System.out.println();
-
-			counter++;
-			if(counter == n_events){
-				t_end = System.currentTimeMillis();
-				System.out.println("SRC: "+(t_end-t_start)+" ms for "+n_events+" events");
-				t_start = System.currentTimeMillis();
-				counter = 0;
-			}
-
-			try{
-				Thread.sleep(1000);
-			}
-			catch(InterruptedException ie){
-				System.out.println("SOURCE EXCEPTION: "+ie.getMessage());
-			}	
-		}
+	public void processData(DataTuple dt){
+//		//This while is here to simulate a real source.
+//		boolean listen = true;
+//		int value = 0;
+//		while(listen){
+//			Seep.DataTuple.Builder tuple = Seep.DataTuple.newBuilder();
+//			tuple.setTs(System.currentTimeMillis());
+//			//Data generated is an incrementing value...
+////			tuple.setInt(value++);
+//			sendDown(tuple.build());
+////			System.out.println("TESTSOURCE: sending: ts->"+tuple.getTs()+" value->"+tuple.getInt());
+//			//System.out.println();
+//
+//			counter++;
+//			if(counter == n_events){
+//				t_end = System.currentTimeMillis();
+//				System.out.println("SRC: "+(t_end-t_start)+" ms for "+n_events+" events");
+//				t_start = System.currentTimeMillis();
+//				counter = 0;
+//			}
+//
+//			try{
+//				Thread.sleep(1000);
+//			}
+//			catch(InterruptedException ie){
+//				System.out.println("SOURCE EXCEPTION: "+ie.getMessage());
+//			}	
+//		}
 	}
 
 	@Override
