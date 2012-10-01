@@ -7,6 +7,7 @@
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
   <property name="lib"	location="lib"/>
+  <property name="lib-metrics" location="lib/codahale-metrics"/>
   
 
   <target name="init">
@@ -18,7 +19,7 @@
 
   <target name="compile" depends="init" description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-	<javac debug="on" srcdir="${src}" destdir="${build}" classpath="classpath">
+	<javac debug="on" srcdir="${src}:${lib-metrics}" destdir="${build}" classpath="classpath">
 		<classpath id="classpath" description="The default classpath.">
   			<pathelement path="${classpath}"/>
   			<fileset dir="${lib}">

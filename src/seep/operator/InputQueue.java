@@ -3,23 +3,17 @@ package seep.operator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
+import seep.Main;
 import seep.comm.serialization.DataTuple;
+import seep.infrastructure.monitor.MetricsReader;
 
 public class InputQueue {
 
 	private BlockingQueue<DataTuple> inputQueue;
 	private int size;
 	
-	public synchronized void addSize(){
-		size++;
-	}
-	
-	public synchronized void restSize(){
-		size--;
-	}
-	
 	public InputQueue(){
-		inputQueue = new ArrayBlockingQueue<DataTuple>(100000);
+		inputQueue = new ArrayBlockingQueue<DataTuple>(new Integer(Main.valueFor("inputQueueLength")));
 	}
 	
 	public int getSize(){
@@ -29,8 +23,7 @@ public class InputQueue {
 	public void push(DataTuple data){
 		try {
 			inputQueue.put(data);
-			addSize();
-//			System.out.println("ID pushed: "+inputQueue.size());
+			MetricsReader.eventsInputQueue.inc();
 		} 
 		catch (InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -40,8 +33,7 @@ public class InputQueue {
 	
 	public DataTuple pull(){
 		try {
-//			System.out.println("ID pop:");
-			restSize();
+			MetricsReader.eventsInputQueue.dec();
 			return inputQueue.take();
 		} 
 		catch (InterruptedException e) {

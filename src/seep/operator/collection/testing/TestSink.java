@@ -1,6 +1,7 @@
 package seep.operator.collection.testing;
 
 import seep.comm.serialization.DataTuple;
+import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
 import seep.operator.workers.ACKWorker;
@@ -42,6 +43,7 @@ public class TestSink extends Operator implements StatelessOperator{
 		
 		if(currentTime >= 1000){
 			System.out.println("E/S: "+counter);
+			System.out.println("INPUTQ-counter: "+MetricsReader.eventsInputQueue.getCount());
 			t_start = System.currentTimeMillis();
 			counter = 0;
 		}
