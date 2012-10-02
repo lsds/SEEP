@@ -1,6 +1,7 @@
 package seep.operator.collection.testing;
 
 import seep.comm.serialization.DataTuple;
+import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
 
@@ -35,7 +36,8 @@ public class Bar extends Operator implements StatelessOperator{
 		long currentTime = i_time - t_start;
 		
 		if(currentTime >= 1000){
-			System.out.println("InputQueue Size: "+getInputQueue().getSize());
+			System.out.println("E/S: "+counter);
+			System.out.println("InputQueue Size: "+MetricsReader.eventsInputQueue.getCount());
 			t_start = System.currentTimeMillis();
 			counter = 0;
 		}

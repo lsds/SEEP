@@ -10,14 +10,9 @@ import seep.infrastructure.monitor.MetricsReader;
 public class InputQueue {
 
 	private BlockingQueue<DataTuple> inputQueue;
-	private int size;
 	
 	public InputQueue(){
-		inputQueue = new ArrayBlockingQueue<DataTuple>(new Integer(Main.valueFor("inputQueueLength")));
-	}
-	
-	public int getSize(){
-		return size;
+		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(Main.valueFor("inputQueueLength")));
 	}
 	
 	public void push(DataTuple data){

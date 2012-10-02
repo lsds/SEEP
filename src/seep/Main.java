@@ -311,7 +311,7 @@ public class Main {
 		System.out.println("12- Switch ESFT mechanisms activation");
 	}
 	
-	public void _testing01(Infrastructure inf) throws DeploymentException{
+	public void testing01(Infrastructure inf) throws DeploymentException{
 		//Instantiate operators
 		TestSource src = new TestSource(-2);
 		Foo foo = new Foo(0);
@@ -346,7 +346,7 @@ public class Main {
 		inf.deploy();
 	}
 	
-	public void testing01(Infrastructure inf) throws DeploymentException{
+	public void _testing01(Infrastructure inf) throws DeploymentException{
 		//Instantiate operators
 		TestSource src = new TestSource(-2);
 		Foo foo = new Foo(0);

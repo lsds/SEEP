@@ -81,7 +81,8 @@ public class Router implements Serializable{
 			opId = down.opID();
 			int index = opContext.findDownstream(opId).index();
 			if(!down.isStateful()){
-				rs = new StatelessRoutingImpl(1, index);
+				int numDownstreams = opContext.getDownstreamSize();
+				rs = new StatelessRoutingImpl(1, index, numDownstreams);
 			}
 			else if(down.isStateful()){
 				rs = new StatefulRoutingImpl(index);

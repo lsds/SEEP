@@ -305,7 +305,7 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 
 		//Create message
 		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getOperatorId(), indexes, keys, owner.getClass().getName());
-		//Send message to downstreams (for now, all downstreams) 
+		//Send message to downstreams (for now, all downstreams)
 		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
 		for(Integer index : indexes){
 			owner.getDispatcher().sendDownstream(msg, index);
