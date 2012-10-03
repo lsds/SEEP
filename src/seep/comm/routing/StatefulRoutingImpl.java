@@ -98,11 +98,8 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 	}
 
 	public ArrayList<Integer> route(int value) {
-		return null;
-//		/** LAYER ONE OF ROUTING.. done in both implementations */
-//		ArrayList<Integer> logicTargets = routeLayerOne();
-		
-//		ArrayList<Integer> targets = route(logicTargets, value);
-//		return targets;
+		System.out.println("WARNING...route(int value) in StatefulRoutingImpl");
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		return route(targets, value);
 	}
 }

@@ -147,7 +147,7 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 		throws NumberFormatException {
 			QuerySpecificationI src = inf.elements.get(Integer.parseInt(id[1]));
 			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(id[2]));
-			src.connectTo(dst);
+			src.connectTo(dst, false);
 		}
 		
 		/// \todo {java 7 supports switch(string)}

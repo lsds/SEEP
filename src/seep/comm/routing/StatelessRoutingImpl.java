@@ -5,7 +5,6 @@ import java.util.HashMap;
 
 public class StatelessRoutingImpl implements RoutingStrategyI{
 
-		//By default, the splitWindow is a round robin, (splitWindow = 0)
 		private int splitWindow = 0;
 		private int target = 0;
 		private int downstreamIndex = 0;
@@ -18,32 +17,16 @@ public class StatelessRoutingImpl implements RoutingStrategyI{
 		/// \todo{consider change this structure to arraylist}
 		private HashMap<Integer, Integer> virtualIndexToRealIndex = new HashMap<Integer, Integer>();
 		private int virtualIndex = 0;
-
-//		public StatelessRoutingImpl(int splitWindow){
-//			//value minus one to take into consideration value = 0
-//			this.splitWindow = splitWindow-1;
-//			//Initialize the windows size to the configured window
-//			this.remainingWindow = this.splitWindow;
-//			//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
-//			this.numberOfDownstreams = 1;
-//		}
 		
-//		public StatelessRoutingImpl(){
-//			//value minus one to take into consideration value = 0
-//			this.splitWindow = 0;
-//			//Initialize the windows size to the configured window
-//			this.remainingWindow = this.splitWindow;
-//			//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
-//			this.numberOfDownstreams = 1;
-//		}
+		public void setNumberOfDownstreams(int numberOfDownstreams){
+			this.numberOfDownstreams = numberOfDownstreams;
+		}
 		
-		// This constructor is only called when there is a CONTENT-BASED dispatch policy
 		public StatelessRoutingImpl(int splitWindow, int index, int numOfDownstreams){
 			this.splitWindow = splitWindow-1;
 			//Map the virtual index with the real index
 			virtualIndexToRealIndex.put(virtualIndex, index);
 			virtualIndex++;
-			//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
 			this.numberOfDownstreams = numOfDownstreams;
 		}
 		
@@ -88,7 +71,7 @@ public class StatelessRoutingImpl implements RoutingStrategyI{
 				//Reinitialize the window size
 				remainingWindow = splitWindow;
 				// update target and reinitialize filterValue
-System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
+//System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
 				target = downstreamIndex++%numberOfDownstreams;
 				// get the real index from the virtual one.
 				//target = virtualIndexToRealIndex.get(target);
@@ -116,5 +99,21 @@ System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
 			return -1;
 		}
 	
+//		public StatelessRoutingImpl(int splitWindow){
+//		//value minus one to take into consideration value = 0
+//		this.splitWindow = splitWindow-1;
+//		//Initialize the windows size to the configured window
+//		this.remainingWindow = this.splitWindow;
+//		//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
+//		this.numberOfDownstreams = 1;
+//	}
 	
+//	public StatelessRoutingImpl(){
+//		//value minus one to take into consideration value = 0
+//		this.splitWindow = 0;
+//		//Initialize the windows size to the configured window
+//		this.remainingWindow = this.splitWindow;
+//		//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
+//		this.numberOfDownstreams = 1;
+//	}
 }

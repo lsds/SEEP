@@ -21,12 +21,17 @@ public class Router implements Serializable{
 	private String query = null;
 	private Method queryFunction = null;
 	private boolean requiresQueryData = false;
-	
+		
 	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
-	//This map stores the load balancer for each type of downstream
+	//This map stores the load balancer for each type of downstream. This map is related to routeInfo
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
+	
+	//This structure rests here in case there is just one type of downstream, in case routeInfo is empty
+	// change this for a final int position in downstreamRoutingImpl ??
+	private final int INDEX_FOR_ROUTING_IMPL = 0; 
+//	private RoutingStrategyI routingImpl = null;
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -73,7 +78,13 @@ public class Router implements Serializable{
 		}
 	}
 	
-	public void configureRoutingImpl(OperatorContext opContext){
+	/**
+	 * this function must be executed when the operator is not initialized yet. at this point all it has is the main topology of the query
+	 * and so it needs just to put a routingImpl per oprator. Now, the problem is that when this is being called because of a scale out/scale in
+	 * the downstream is not the original one. NEED to differentiate between main/execution graph. Or, make explicit whith type is and call as it is required
+	 * CHANGE-> actually the DIFFERENTIATION IS required
+	**/
+	public void _configureRoutingImpl(OperatorContext opContext){
 		RoutingStrategyI rs = null;
 		int opId = 0;
 		//For every downstream
@@ -87,7 +98,38 @@ public class Router implements Serializable{
 			else if(down.isStateful()){
 				rs = new StatefulRoutingImpl(index);
 			}
+			System.out.println("ADDED");
 			downstreamRoutingImpl.put(opId, rs);
+		}
+		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
+	}
+	
+	public void configureRoutingImpl(OperatorContext opContext){
+		RoutingStrategyI rs = null;
+		int opId = 0;
+		//For every downstream in the original query graph
+		System.out.println("ORIGINAL DOWN SIZE: "+opContext.getOriginalDownstream().size());
+		for(Integer id : opContext.getOriginalDownstream()){
+//		for(PlacedOperator down : opContext.downstreams){
+			PlacedOperator down = opContext.findDownstream(id);
+			int index = down.index();
+			if(!down.isStateful()){
+				int numDownstreams = opContext.getDownstreamSize();
+				rs = new StatelessRoutingImpl(1, index, numDownstreams);
+			}
+			else if(down.isStateful()){
+				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
+				rs = new StatefulRoutingImpl(index);
+			}
+			System.out.println("ADDED");
+			//If more than one downstream type, then put the new rs with the opId
+			if(opContext.downstreams.size() > 1){
+				downstreamRoutingImpl.put(opId, rs);
+			}
+			//Otherwise, store the rs in the reserved place of downstreamRoutingImpl
+			else if (opContext.downstreams.size() == 1){
+				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
+			}
 		}
 		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
 	}
@@ -118,13 +160,8 @@ public class Router implements Serializable{
 		else{
 //			System.out.println("NO query data");
 			//Otherwise, we use the default RoutingImpl
-			//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
-//			System.out.println("DownRoutingImpl size: "+downstreamRoutingImpl.size());
-			for(Integer target : downstreamRoutingImpl.keySet()){
-				//This should be called just once...
-				/// \fixme{CHECK THIS}
-				targets = downstreamRoutingImpl.get(target).route(value);
-			}
+			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+//			targets = routingImpl.route(value);
 		}
 		return targets;
 	}
@@ -147,23 +184,11 @@ public class Router implements Serializable{
 			e.printStackTrace();
 		}
 		return routeInfo.get(contentValue);
-		/** THIS IS PART OF ROUTING LAYER-2 **/
-//		//For every type of downstream that match the filter
-//		for(Integer opId : routeInfo.get(contentValue)){
-//			//We append the downstreams returned
-//			targets = (downstreamRoutingImpl.get(opId).route(targets, value));
-//		}
-//		return targets;
 	}
 	
 	public ArrayList<Integer> routeLayerTwo(ArrayList<Integer> logicalTargets, int value){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
-//			System.out.println("LOGICAL TARGET: "+ltarget);
-//			System.out.println("DownSroutingImpl size: "+downstreamRoutingImpl.size());
-			if(downstreamRoutingImpl.get(ltarget) == null){
-				System.out.println("ROUTING IMPL NULL!!!!");
-			}
 			targets = downstreamRoutingImpl.get(ltarget).route(targets, value);
 		}
 		return targets;
@@ -176,12 +201,8 @@ public class Router implements Serializable{
 		}
 		else{
 			//Otherwise, we use the default RoutingImpl
-			//There will only be ONE entry in the map, this is an ugly "hack" to take advantage of the same data structure
-			for(Integer target : downstreamRoutingImpl.keySet()){
-				//This should be called just once...
-				/// \fixme{CHECK THIS}
-				return downstreamRoutingImpl.get(target).newReplica(oldOpIndex, newOpIndex);
-			}
+//			key = routingImpl.newReplica(oldOpIndex, newOpIndex);
+			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newReplica(oldOpIndex, newOpIndex);
 		}
 		return key;
 	}

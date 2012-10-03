@@ -272,11 +272,13 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 				//op.getOpContext().copyContext(newOp);
 				for(PlacedOperator up : op.getOpContext().upstreams){
 					
-					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()));
+					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()), false);
 				}
 				for(PlacedOperator down : op.getOpContext().downstreams){
-					inf.getElements().get(newOp.getOperatorId()).connectTo(inf.getElements().get(down.opID()));
+					inf.getElements().get(newOp.getOperatorId()).connectTo(inf.getElements().get(down.opID()), false);
 				}
+				//Copy the original operators to the new operatorContext
+				newOp.setOriginalDownstream(op.getOpContext().getOriginalDownstream());
 			}
 		}
 	}

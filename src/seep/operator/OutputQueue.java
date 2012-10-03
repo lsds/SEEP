@@ -94,7 +94,7 @@ public class OutputQueue {
 						
 						k.writeObject(output, msg);
 						//Flush the buffer to the stream
-						output.flush();
+//						output.flush();
 
 						channelRecord.cleanBatch();
 						

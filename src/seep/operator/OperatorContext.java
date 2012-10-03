@@ -40,6 +40,24 @@ public class OperatorContext implements Serializable {
 	private Vector downstreamTypeConnection = null;
 	private Vector upstreamTypeConnection = null;
 	
+	public final DownIter downstreams = new DownIter();
+	
+	public final UpIter upstreams = new UpIter();
+	
+	private ArrayList<Integer> originalDownstream = new ArrayList<Integer>();
+	
+	public void addOriginalDownstream(Integer opId){
+		originalDownstream.add(opId);
+	}
+	
+	public ArrayList<Integer> getOriginalDownstream(){
+		return originalDownstream;
+	}
+	
+	public void setOriginalDownstream(ArrayList<Integer> originalDownstream){
+		this.originalDownstream = originalDownstream;
+	}
+	
 	public Vector getDownstreamTypeConnection() {
 		return downstreamTypeConnection;
 	}
@@ -156,6 +174,7 @@ public class OperatorContext implements Serializable {
 	};
 
 	public class DownIter implements Iterable<PlacedOperator>, Serializable {
+		private static final long serialVersionUID = 1L;
 		public Iterator<PlacedOperator> iterator() { 
 			return new Iter(connectionsD,downstream); 
 		}
@@ -165,6 +184,7 @@ public class OperatorContext implements Serializable {
 	}
 	
 	public class UpIter implements Iterable<PlacedOperator>, Serializable {
+		private static final long serialVersionUID = 1L;
 		public Iterator<PlacedOperator> iterator() { 
 			return new Iter(connectionsU,upstream); 
 		}
@@ -172,10 +192,6 @@ public class OperatorContext implements Serializable {
 			return connectionsU.size(); 
 		}
 	}
-	
-	public final DownIter downstreams = new DownIter();
-	
-	public final UpIter upstreams = new UpIter();
 	
 	static class Iter implements Iterator<PlacedOperator> {
 

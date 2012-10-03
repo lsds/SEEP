@@ -10,7 +10,7 @@ public interface QuerySpecificationI {
 	
 	public void setOpContext(OperatorContext opContext);
 
-	public void connectTo(QuerySpecificationI down);
+	public void connectTo(QuerySpecificationI down, boolean originalQuery);
 	
 	public void setRoutingQueryFunction(String queryFunction_methodName);
 	

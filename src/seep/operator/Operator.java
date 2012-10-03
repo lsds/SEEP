@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import seep.Main;
 import seep.comm.ControlHandler;
@@ -112,6 +113,7 @@ public int ackCounter = 0;
 	}
 	
 	public Router getRouter(){
+		//If router is to be retrieved, it has previously been initialized
 		return router;
 	}
 	
@@ -600,8 +602,13 @@ System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContex
 		this.opContext = opContext;
 	}
 	
-	public void connectTo(QuerySpecificationI down) {
+	public void setOriginalDownstream(ArrayList<Integer> originalDownstream){
+		this.opContext.setOriginalDownstream(originalDownstream);
+	}
+	
+	public void connectTo(QuerySpecificationI down, boolean originalQuery) {
 		opContext.addDownstream(down.getOperatorId());
+		if(originalQuery)opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
 //		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
 	}
