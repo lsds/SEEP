@@ -7,11 +7,11 @@ import java.util.List;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 import seep.operator.workers.StateBackupWorker;
 
 @SuppressWarnings("serial")
-public class TollAssessment extends Operator implements StatefullOperator{
+public class TollAssessment extends Operator implements StatefulOperator{
 
 	//Store for every vehicle the last toll notification, that will be the toll assessed in the future
 	private HashMap<Integer, Integer> previousToll = new HashMap<Integer, Integer>(1000);

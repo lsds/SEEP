@@ -17,7 +17,7 @@ import seep.infrastructure.monitor.MonitorManager;
 import seep.operator.Operator;
 import seep.operator.OperatorContext;
 import seep.operator.QuerySpecificationI;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
 /**
@@ -42,7 +42,8 @@ public class Infrastructure {
 
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
-	private Operator src;
+	//More than one source is supported
+	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
 	
 	private BasicCommunicationUtils bcu = new BasicCommunicationUtils();
@@ -90,9 +91,10 @@ public class Infrastructure {
 	}
 	
 	//This method is still valid to define which is the first operator in the query
-	public void setSource(Operator src) {
-		NodeManager.nLogger.info("Configured SOURCE as Operator: "+src.toString());
-		this.src = src;
+	public void setSource(Operator source) {
+		NodeManager.nLogger.info("Configured NEW SOURCE, Operator: "+src.toString());
+		src.add(source);
+		
 	}
 
 	public void setSink(Operator snk){
@@ -114,7 +116,7 @@ public class Infrastructure {
 	
 	public void placeNew(Operator o, Node n) {
 		int opID = o.getOperatorId();
-		boolean isStatefull = (o instanceof StatefullOperator) ? true : false;
+		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
 		OperatorStaticInformation l = new OperatorStaticInformation(n, CONTROL_SOCKET + opID, DATA_SOCKET + opID, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
@@ -290,13 +292,16 @@ public class Infrastructure {
 	}	
 
 	public void start() throws ESFTRuntimeException{
-		//Send the message to start the source
-		String msg = "START "+src.getOperatorId();
-		System.out.println("STARTING SOURCE, sending-> "+msg);
-		Infrastructure.nLogger.info("-> Infrastructure. Starting system");
-		bcu.sendObject(src.getOpContext().getOperatorStaticInformation().getMyNode(), msg);
+		//Send the messages to start the sources
+		for(Operator source : src){
+			String msg = "START "+source.getOperatorId();
+			System.out.println("STARTING SOURCE, sending-> "+msg);
+			Infrastructure.nLogger.info("-> Infrastructure. Starting source");
+			bcu.sendObject(source.getOpContext().getOperatorStaticInformation().getMyNode(), msg);
+		}
 		//Start clock in sink.
 		bcu.sendObject(snk.getOpContext().getOperatorStaticInformation().getMyNode(), "CLOCK");
+		Infrastructure.nLogger.info("All SOURCES have been notified. Starting system...");
 	}
 
 	public synchronized Node getNodeFromPool(){
@@ -342,7 +347,9 @@ public class Infrastructure {
 		
 		Main.eventR = numberEvents;
 		Main.period = time;
-		bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), tuple, src.getOperatorId());
+		for(Operator source : src){
+			bcu.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
+		}
 		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
 	}
 	
@@ -406,7 +413,9 @@ public class Infrastructure {
 			bcu.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), tuple, o.getOperatorId());
 		}
 		//Send msg to src and snk
-		bcu.sendControlMsg(src.getOpContext().getOperatorStaticInformation(), tuple, src.getOperatorId());
+		for(Operator source : src){
+			bcu.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
+		}
 		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
 	}
 

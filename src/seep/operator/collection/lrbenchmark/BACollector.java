@@ -8,10 +8,10 @@ import seep.Main;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 
 @SuppressWarnings("serial")
-public class BACollector extends Operator implements StatefullOperator{
+public class BACollector extends Operator implements StatefulOperator{
 
 	private int numUpstreamNodes = 0;
 	

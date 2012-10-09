@@ -525,9 +525,9 @@ System.out.println("CONTROL THREAD: changing operator status to initialising");
 //		stopDataProcessingChannel();
 		//Manage ts...
 		//Pass the state to the user
-		if (subclassOperator instanceof StatefullOperator){
+		if (subclassOperator instanceof StatefulOperator){
 			NodeManager.nLogger.info("-> Installing INIT state");
-			((StatefullOperator)subclassOperator).installState(ct);
+			((StatefulOperator)subclassOperator).installState(ct);
 			NodeManager.nLogger.info("-> State has been installed");
 		}
 		else{

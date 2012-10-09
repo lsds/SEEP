@@ -11,11 +11,11 @@ import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 import seep.operator.workers.StateBackupWorker;
 
 @SuppressWarnings("serial")
-public class TollCalculator extends Operator implements StatefullOperator, StateSplitI{
+public class TollCalculator extends Operator implements StatefulOperator, StateSplitI{
 
 	//Store the stopped cars in every position. position-car
 	private HashMap<Integer, ArrayList<Integer>> stoppedCars_pos_vid = new HashMap<Integer, ArrayList<Integer>>(1000);

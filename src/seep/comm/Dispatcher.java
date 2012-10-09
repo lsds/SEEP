@@ -82,9 +82,15 @@ public class Dispatcher implements Serializable{
 //		System.out.println("get targets: ");
 		targets = router.forward(dt, value, now);
 		for(Integer target : targets){
+			try{
 //			System.out.println("TARGET: "+target.toString());
-			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
-			outputQueue.sendToDownstream(dt, dest, now, false);
+				Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
+				outputQueue.sendToDownstream(dt, dest, now, false);
+			}
+			catch(ArrayIndexOutOfBoundsException aioobe){
+				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+opContext.getDownstreamTypeConnection().size());
+				aioobe.printStackTrace();
+			}
 		}
 	}
 	

@@ -6,10 +6,10 @@ import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 
 @SuppressWarnings("serial")
-public class Notifier extends Operator implements StatefullOperator{
+public class Notifier extends Operator implements StatefulOperator{
 
 	//stores per segment if there is an accident (true) or not
 	private HashMap<Integer, Boolean> accidents = new HashMap<Integer, Boolean>();

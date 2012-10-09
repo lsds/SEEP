@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import seep.Main;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.
@@ -14,12 +14,12 @@ public class StateBackupWorker implements Runnable, Serializable{
 
 	private static final long serialVersionUID = 1L;
 	
-	private StatefullOperator o;
+	private StatefulOperator o;
 	/// \todo {get the threshold value in a proper way}
 	private long threshold = 0;
 	private long initTime = 0;
 
-	public StateBackupWorker(StatefullOperator o){
+	public StateBackupWorker(StatefulOperator o){
 		this.o = o;
 		this.threshold = o.getBackupTime();
 	}

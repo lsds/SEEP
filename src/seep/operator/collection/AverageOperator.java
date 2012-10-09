@@ -4,7 +4,7 @@ import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.*;
 
-public class AverageOperator extends Operator implements StatefullOperator{
+public class AverageOperator extends Operator implements StatefulOperator{
 
 	private int windowSize;
 

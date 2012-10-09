@@ -2,7 +2,7 @@ package seep.operator.collection.lrbenchmark;
 
 import seep.comm.serialization.DataTuple;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 import seep.operator.StatelessOperator;
 
 @SuppressWarnings("serial")

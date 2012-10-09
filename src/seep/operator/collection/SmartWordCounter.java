@@ -4,7 +4,7 @@ import seep.Main;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 import seep.operator.StateSplitI;
 import seep.operator.workers.StateBackupWorker;
 import seep.comm.*;
@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 
-public class SmartWordCounter extends Operator implements StatefullOperator{
+public class SmartWordCounter extends Operator implements StatefulOperator{
 	
 	//test purposes
 	int counter = 0;

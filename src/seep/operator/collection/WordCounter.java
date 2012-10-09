@@ -4,14 +4,14 @@ import seep.Main;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
 @SuppressWarnings("serial")
-public class WordCounter extends Operator implements StatefullOperator{
+public class WordCounter extends Operator implements StatefulOperator{
 
 //test purposes
 int counter = 0;

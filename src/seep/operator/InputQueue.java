@@ -15,7 +15,11 @@ public class InputQueue {
 		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(Main.valueFor("inputQueueLength")));
 	}
 	
-	public void push(DataTuple data){
+	public InputQueue(int size){
+		inputQueue = new ArrayBlockingQueue<DataTuple>(size);
+	}
+	
+	public synchronized void push(DataTuple data){
 		try {
 			inputQueue.put(data);
 			MetricsReader.eventsInputQueue.inc();

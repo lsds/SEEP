@@ -349,9 +349,9 @@ System.out.println("BACKUP KEYS: "+keys.toString());
 	//This method simply backups its state. It is useful for making the upstream know that is in charge of managing this state.
 	public void sendInitialStateBackup(){
 		//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
-		if(owner.subclassOperator instanceof StatefullOperator){
+		if(owner.subclassOperator instanceof StatefulOperator){
 System.out.println("OP: "+owner.getOperatorId()+" INITIAL BACKUP!!!!!!#############");
-			((StatefullOperator)owner.subclassOperator).generateBackupState();
+			((StatefulOperator)owner.subclassOperator).generateBackupState();
 		}
 	}
 	
@@ -382,9 +382,9 @@ System.out.println("backupUpstreamIndex: "+owner.getBackupUpstreamIndex()+ "upIn
 			owner.setBackupUpstreamIndex(upIndex);
 			
 			//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
-			if(owner.subclassOperator instanceof StatefullOperator){
+			if(owner.subclassOperator instanceof StatefulOperator){
 				NodeManager.nLogger.info("-> sending BACKUP_STATE to the new manager of my state");
-				((StatefullOperator)owner.subclassOperator).generateBackupState();
+				((StatefulOperator)owner.subclassOperator).generateBackupState();
 			}
 		}
 		//Else, all remains the same

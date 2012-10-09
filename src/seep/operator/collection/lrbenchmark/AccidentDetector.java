@@ -6,11 +6,11 @@ import java.util.HashMap;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.operator.Operator;
-import seep.operator.StatefullOperator;
+import seep.operator.StatefulOperator;
 import seep.operator.collection.lrbenchmark.beans.VehiclePosition;
 
 @SuppressWarnings("serial")
-public class AccidentDetector extends Operator implements StatefullOperator{
+public class AccidentDetector extends Operator implements StatefulOperator{
 
 	//Store the stopped cars in every position. position-car
 	private HashMap<Integer, ArrayList<Integer>> stoppedCars = new HashMap<Integer, ArrayList<Integer>>(60000);

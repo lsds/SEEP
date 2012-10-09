@@ -202,6 +202,10 @@ public class Main {
 							System.out.println("Testing v0.1");
 							testing01(inf);
 							break;
+						case 15:
+							System.out.println("Testing v0.2");
+							testing02(inf);
+							break;
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -309,7 +313,44 @@ public class Main {
 		System.out.println("10- EXIT");
 		System.out.println("11- Save results");
 		System.out.println("12- Switch ESFT mechanisms activation");
+		System.out.println("13");
+		System.out.println("14- tsetint v0.1 pipeline");
+		System.out.println("15- tsetint v0.1 NOT pipeline");
+		System.out.println("16- wikipedia data to binary data");
 	}
+	
+	public void testing02(Infrastructure inf) throws DeploymentException{
+		//Instantiate operators
+		TestSource src = new TestSource(-2);
+		TestSource src2 = new TestSource(-3);
+		Foo foo = new Foo(0);
+		Bar bar = new Bar(2);
+		TestSink snk = new TestSink(-1);
+		//Configure sources and sink
+		inf.setSource(src);
+		inf.setSource(src2);
+		inf.setSink(snk);
+		//Add operators to infrastructure
+		inf.addOperator(src);
+		inf.addOperator(src2);
+		inf.addOperator(foo);
+		inf.addOperator(bar);
+		inf.addOperator(snk);
+		//Connect operators
+		src.connectTo(foo, true);
+		src2.connectTo(foo, true);
+		foo.connectTo(bar, true);
+		bar.connectTo(snk, true);
+		//Set the query
+		inf.placeNew(src, inf.getNodeFromPool());
+		inf.placeNew(src2, inf.getNodeFromPool());
+		inf.placeNew(foo, inf.getNodeFromPool());
+		inf.placeNew(bar, inf.getNodeFromPool());
+		inf.placeNew(snk, inf.getNodeFromPool());
+		//Deploy
+		inf.deploy();
+	}
+	
 	
 	public void testing01(Infrastructure inf) throws DeploymentException{
 		//Instantiate operators
