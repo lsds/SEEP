@@ -99,7 +99,7 @@ public class OutputQueue {
 						channelRecord.cleanBatch();
 						
 						if(Main.valueFor("eftMechanismEnabled").equals("true")){
-							buffer.save(msg);
+//							buffer.save(msg);
 						}
 					}
 				}

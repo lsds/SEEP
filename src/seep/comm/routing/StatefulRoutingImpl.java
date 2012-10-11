@@ -98,7 +98,7 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 	}
 
 	public ArrayList<Integer> route(int value) {
-		System.out.println("WARNING...route(int value) in StatefulRoutingImpl");
+//		System.out.println("WARNING...route(int value) in StatefulRoutingImpl");
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		return route(targets, value);
 	}

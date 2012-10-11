@@ -37,6 +37,7 @@ public class TestSink extends Operator implements StatelessOperator{
 			first = false;
 			new Thread(ackWorker).start();
 		}
+		
 		i_time = System.currentTimeMillis();
 		long currentTime = i_time - t_start;
 		counter++;

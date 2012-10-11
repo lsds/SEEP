@@ -3,13 +3,19 @@ package seep;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Properties;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+
 import seep.comm.routing.Router;
+import seep.comm.serialization.DataTuple;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.DeploymentException;
 import seep.infrastructure.ESFTRuntimeException;
@@ -26,6 +32,10 @@ import seep.operator.collection.lrbenchmark.Snk;
 import seep.operator.collection.lrbenchmark.TollAssessment;
 import seep.operator.collection.lrbenchmark.TollCalculator;
 import seep.operator.collection.lrbenchmark.TollCollector;
+import seep.operator.collection.mapreduceexample.Map;
+import seep.operator.collection.mapreduceexample.Reduce;
+import seep.operator.collection.mapreduceexample.Sink;
+import seep.operator.collection.mapreduceexample.Source;
 import seep.operator.collection.testing.Bar;
 import seep.operator.collection.testing.Foo;
 import seep.operator.collection.testing.TestSink;
@@ -206,6 +216,14 @@ public class Main {
 							System.out.println("Testing v0.2");
 							testing02(inf);
 							break;
+						case 16:
+							System.out.println("Parse wikipedia data file");
+							parseWikipediaFile(inf);
+							break;
+						case 17:
+							System.out.println("Run map-reduce query on wikipedia data");
+							runMR(inf);
+							break;
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -224,6 +242,81 @@ public class Main {
 		catch(ESFTRuntimeException ere){
 			System.out.println(ere.getMessage());
 		}
+	}
+	
+	private void runMR(Infrastructure inf){
+		//Instantiate operators
+		Source src = new Source(-2);
+		Source src2 = new Source(-3);
+		Source src3 = new Source(-4);
+		Map map = new Map(0);
+		Reduce reduce = new Reduce(1);
+		Sink snk = new Sink(-1);
+		//Configure sources and sink
+		inf.setSource(src);
+		inf.setSource(src2);
+		inf.setSource(src3);
+		inf.setSink(snk);
+		//Add operators to infrastructure
+		inf.addOperator(src);
+		inf.addOperator(src2);
+		inf.addOperator(src3);
+		inf.addOperator(map);
+		inf.addOperator(reduce);
+		inf.addOperator(snk);
+		//Connect operators
+		src.connectTo(map, true);
+		src2.connectTo(map, true);
+		src3.connectTo(map, true);
+		map.connectTo(reduce, true);
+		reduce.connectTo(snk, true);
+		//Set the query
+		inf.placeNew(src, inf.getNodeFromPool());
+		inf.placeNew(src2, inf.getNodeFromPool());
+		inf.placeNew(src3, inf.getNodeFromPool());
+		inf.placeNew(map, inf.getNodeFromPool());
+		inf.placeNew(reduce, inf.getNodeFromPool());
+		inf.placeNew(snk, inf.getNodeFromPool());
+		//Deploy
+		try {
+			inf.deploy();
+		} 
+		catch (DeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void parseWikipediaFile(Infrastructure inf){
+		Kryo k = new Kryo();
+		k.register(DataTuple.class);
+		FileOutputStream os;
+		try {
+			os = new FileOutputStream("workload");
+		
+			Output o = new Output(os);
+			BufferedReader br = new BufferedReader(new FileReader("raw_expanded_mixed"));
+			String line = null;
+			while((line = br.readLine()) != null){
+				String [] tokens = line.split(" ");
+				DataTuple dt = new DataTuple();
+				dt.setCountryCode(tokens[0]);
+				dt.setArticle(tokens[1]);
+//				System.out.println("SAVING: "+tokens[0]+" "+tokens[1]);
+				k.writeObject(o, dt);
+			}
+			os.close();
+			br.close();
+		}
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	private void saveResultsSWC(Infrastructure inf) {
