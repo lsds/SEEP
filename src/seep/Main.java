@@ -249,6 +249,7 @@ public class Main {
 		Source src = new Source(-2);
 		Source src2 = new Source(-3);
 		Source src3 = new Source(-4);
+//		Source src4 = new Source(-5);
 		Map map = new Map(0);
 		Reduce reduce = new Reduce(1);
 		Sink snk = new Sink(-1);
@@ -256,11 +257,13 @@ public class Main {
 		inf.setSource(src);
 		inf.setSource(src2);
 		inf.setSource(src3);
+//		inf.setSource(src4);
 		inf.setSink(snk);
 		//Add operators to infrastructure
 		inf.addOperator(src);
 		inf.addOperator(src2);
 		inf.addOperator(src3);
+//		inf.addOperator(src4);
 		inf.addOperator(map);
 		inf.addOperator(reduce);
 		inf.addOperator(snk);
@@ -268,12 +271,14 @@ public class Main {
 		src.connectTo(map, true);
 		src2.connectTo(map, true);
 		src3.connectTo(map, true);
+//		src4.connectTo(map, true);
 		map.connectTo(reduce, true);
 		reduce.connectTo(snk, true);
 		//Set the query
 		inf.placeNew(src, inf.getNodeFromPool());
 		inf.placeNew(src2, inf.getNodeFromPool());
 		inf.placeNew(src3, inf.getNodeFromPool());
+//		inf.placeNew(src4, inf.getNodeFromPool());
 		inf.placeNew(map, inf.getNodeFromPool());
 		inf.placeNew(reduce, inf.getNodeFromPool());
 		inf.placeNew(snk, inf.getNodeFromPool());
