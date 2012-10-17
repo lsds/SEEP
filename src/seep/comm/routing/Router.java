@@ -45,13 +45,23 @@ public class Router implements Serializable{
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
-		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
+		RoutingStrategyI rs = null;
+		if(!requiresQueryData){
+			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
+			return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
+		}
+		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
 	}
 	
 	//Gather keys from statefulDynamic Load balancer
 	public ArrayList<Integer> getKeysInformation(int oldOpId){
-		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
+		RoutingStrategyI rs = null;
+		if(!requiresQueryData){
+			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
+			return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
+		}
+		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
 	}
 	
@@ -160,6 +170,33 @@ public class Router implements Serializable{
 		else{
 //			System.out.println("NO query data");
 			//Otherwise, we use the default RoutingImpl
+//			/**TSTING **/
+//			
+//			RoutingStrategyI rsi = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
+//			if(rsi instanceof StatelessRoutingImpl){
+//				System.out.println("STATELESS DOWNSTREAM");
+//			}
+//			else if (rsi instanceof StatefulRoutingImpl){
+//				System.out.println("STATEFUL DOWNSTREAM");
+//				ArrayList<Integer> keys = ((StatefulRoutingImpl)rsi).getDownstreamNodeKeys();
+//				if(!keys.isEmpty()){
+//					System.out.println("KEYS: "+keys.toString());
+//				}
+//				else{
+//					System.out.println("KEYS is empty");
+//				}
+//				
+//				ArrayList<Integer> indexes = ((StatefulRoutingImpl)rsi).getKeyToDownstreamRealIndex();
+//				if(!indexes.isEmpty()){
+//					System.out.println("INDEXES: "+indexes.toString());
+//				}
+//				else{
+//					System.out.println("INDEXES is empty");
+//				}
+//			}
+
+//			/**TSTING **/
+			
 			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
 //			targets = routingImpl.route(value);
 		}
@@ -202,6 +239,7 @@ public class Router implements Serializable{
 		else{
 			//Otherwise, we use the default RoutingImpl
 //			key = routingImpl.newReplica(oldOpIndex, newOpIndex);
+			
 			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newReplica(oldOpIndex, newOpIndex);
 		}
 		return key;
@@ -225,7 +263,12 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 	}
 
 	private void setNewLoadBalancer(int opId, RoutingStrategyI rs){
-		downstreamRoutingImpl.put(opId, rs);
+		if(requiresQueryData){
+			downstreamRoutingImpl.put(opId, rs);
+		}
+		else{
+			downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
+		}
 	}
 	
 	public void reconfigureRoutingInformation(ArrayList<Integer> downstreamIds, ArrayList<Integer> indexes, ArrayList<Integer> keys) {
@@ -240,5 +283,12 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 		int v = (int)crc32.getValue();
 		crc32.reset();
 		return v;
+	}
+	
+	public static int customHash(String value){
+		/// \todo{Search for a more efficient way of hashing a java string}
+		int v = 0; 
+		v = value.hashCode();
+		return customHash(v);
 	}
 }

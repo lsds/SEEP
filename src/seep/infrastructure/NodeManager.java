@@ -81,33 +81,33 @@ public class NodeManager{
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
-		String command = "systemStable \n";
-		try{
-			//if(connMaster == null){
-			Socket connMaster = new Socket(InetAddress.getByName(Main.valueFor("mainAddr")), Integer.parseInt(Main.valueFor("mainFor")));
-			//connMaster.setSoLinger(true, 0);
-			OutputStream os = connMaster.getOutputStream();
-				//connMaster.setReuseAddress(true);
-				//Server is expecting new conn with accept
-				
-			//}
-			//(connMaster.getOutputStream()).write(command.getBytes());
-			os.write(command.getBytes());
-			System.out.println("finished method!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-			Thread.sleep(100);
-			os.close();
-		}
-		catch(UnknownHostException uhe){
-			System.out.println("NodeManager.setSystemStable: "+uhe.getMessage());
-			uhe.printStackTrace();
-		}
-		catch(IOException io){
-			System.out.println("NodeManager.setSystemStable: "+io.getMessage());
-			io.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		String command = "systemStable \n";
+//		try{
+//			//if(connMaster == null){
+//			Socket connMaster = new Socket(InetAddress.getByName(Main.valueFor("mainAddr")), Integer.parseInt(Main.valueFor("mainPort")));
+//			//connMaster.setSoLinger(true, 0);
+//			OutputStream os = connMaster.getOutputStream();
+//				//connMaster.setReuseAddress(true);
+//				//Server is expecting new conn with accept
+//				
+//			//}
+//			//(connMaster.getOutputStream()).write(command.getBytes());
+//			os.write(command.getBytes());
+//			System.out.println("finished method!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+//			Thread.sleep(100);
+//			os.close();
+//		}
+//		catch(UnknownHostException uhe){
+//			System.out.println("NodeManager.setSystemStable: "+uhe.getMessage());
+//			uhe.printStackTrace();
+//		}
+//		catch(IOException io){
+//			System.out.println("NodeManager.setSystemStable: "+io.getMessage());
+//			io.printStackTrace();
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 	
 	public void init(){

@@ -1,10 +1,10 @@
 package seep.operator;
 
-import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.StateI;
 
 
 public interface StateSplitI {
 	
-	public BackupState[] parallelizeState(BackupState toSplit, int key);
+	public StateI[] parallelizeState(StateI toSplit, int key, String stateClass);
 	
 }

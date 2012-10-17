@@ -52,7 +52,7 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 	/**		virtualIndexToRealIndex.put(virtualIndex, newOpIndex); */
 	//System.out.println("OLD_VIRTUAL_INDEX: "+oldVirtualIndex);
 		//. decide where to split key space
-		int key = downstreamNodeKeys.get(oldVirtualIndex);
+		int key = downstreamNodeKeys.get(oldVirtualIndex); 
 		//previous key is the min value if there was just one operator or the key of the previous operator to oldOpIndex
 		int previousKey = oldVirtualIndex == 0 ? Integer.MIN_VALUE : downstreamNodeKeys.get(oldVirtualIndex-1);
 		//the new key is the medium point between key and previous key

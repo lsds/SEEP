@@ -3,6 +3,7 @@ package seep.operator.collection;
 import seep.Main;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.Operator;
 import seep.operator.StatefulOperator;
 
@@ -130,7 +131,7 @@ String chosenWord = "Unix";
 	}
 
 	@Override
-	public void installState(InitState is) {
+	public void installState(StateI is) {
 		// TODO Auto-generated method stub
 		
 	}

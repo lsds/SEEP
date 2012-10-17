@@ -1,6 +1,5 @@
 package seep.operator.collection.mapreduceexample;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
@@ -8,7 +7,6 @@ import java.util.LinkedList;
 import seep.comm.serialization.DataTuple;
 import seep.operator.Operator;
 import seep.operator.StatelessOperator;
-import seep.operator.collection.mapreduceexample.Reduce.TopPosition;
 
 
 public class Sink extends Operator implements StatelessOperator{
@@ -31,19 +29,19 @@ public class Sink extends Operator implements StatelessOperator{
 		}
 	}
 
-	class TopPosition implements Serializable{
-		
-		private static final long serialVersionUID = 1L;
-		public String countryCode = null;
-		public int visits = 0;
-		
-		public TopPosition(String countryCode, int visits){
-			this.countryCode = countryCode;
-			this.visits = visits;
-		}
-	}
+//	class TopPosition implements Serializable{
+//		
+//		private static final long serialVersionUID = 1L;
+//		public String countryCode = null;
+//		public int visits = 0;
+//		
+//		public TopPosition(String countryCode, int visits){
+//			this.countryCode = countryCode;
+//			this.visits = visits;
+//		}
+//	}
 	
-	private void reviewTop5(String key, int totalVisits){
+	private void _reviewTop5(String key, int totalVisits){
 		for(int i = 0; i<top.size(); i++){
 			if(totalVisits > top.get(i).visits){
 				TopPosition tp = new TopPosition(key, totalVisits);
@@ -61,6 +59,51 @@ public class Sink extends Operator implements StatelessOperator{
 		}
 	}
 	
+	private boolean updateCode(String key, int totalVisits){
+		boolean alreadyExisted = false;
+		for (int i = 0; i<top.size(); i++){
+			TopPosition current = top.get(i);
+			if(current.countryCode.equals(key)){
+				int prevVisits = current.visits;
+				TopPosition updated = new TopPosition(key, prevVisits+totalVisits);
+				top.add(i, updated);
+				top.remove(i+1);
+				alreadyExisted = true;
+			}
+		}
+		return alreadyExisted;
+	}
+	
+	private void reviewTop5(String key, int totalVisits){
+		boolean alreadyExisted = updateCode(key, totalVisits);
+		if(!alreadyExisted){
+//			for (int j = 0; j<top.size(); j++){
+//				TopPosition current = top.get(j);
+//				if(totalVisits > current.visits){
+//					TopPosition tp = new TopPosition(key, totalVisits);
+//					top.add(j, tp);
+//					top.remove(5);
+//				}
+//			}
+			for(int i = 0; i<top.size(); i++){
+				if(totalVisits > top.get(i).visits){
+					TopPosition tp = new TopPosition(key, totalVisits);
+					if(top.get(i).countryCode.equals(key)){
+						top.remove(i);
+						top.add(i, tp);
+					}
+					else{
+						top.add(i, tp);
+						top.remove(5);
+					}
+//					top5Visits = top.get(4).visits;
+					break;
+				}
+			}
+		}
+		top5Visits = top.get(4).visits;
+	}
+	
 	@Override
 	public void processData(DataTuple dt) {
 		rx++;
@@ -68,11 +111,11 @@ public class Sink extends Operator implements StatelessOperator{
 		ArrayList<String> codes = dt.getTopCCode();
 		for(int i = 0; i< codes.size(); i++){
 			int totalVisits = visits.get(i);
-			System.out.println("new: "+totalVisits+" old: "+top5Visits);
-			if(totalVisits > top5Visits){
+//			System.out.println("new: "+totalVisits+" old: "+top5Visits);
+//			if(totalVisits > top5Visits){
 				String key = codes.get(i);
 				reviewTop5(key, totalVisits);
-			}
+//			}
 		}
 		System.out.println("rx something");
 		if(rx == this.getOpContext().upstreams.size()){

@@ -17,6 +17,7 @@ import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorInitializationException;
@@ -34,7 +35,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI {
 
 	private static final long serialVersionUID = 1L;
 
-public int ackCounter = 0;
+	public int ackCounter = 0;
 	
 	private int operatorId;
 	private int backupUpstreamIndex = -1;
@@ -527,7 +528,7 @@ System.out.println("CONTROL THREAD: changing operator status to initialising");
 		//Pass the state to the user
 		if (subclassOperator instanceof StatefulOperator){
 			NodeManager.nLogger.info("-> Installing INIT state");
-			((StatefulOperator)subclassOperator).installState(ct);
+			((StatefulOperator)subclassOperator).installState(ct.getState());
 			NodeManager.nLogger.info("-> State has been installed");
 		}
 		else{
@@ -572,13 +573,16 @@ System.out.println("OP.processInitState: "+b);
 	 * 
 	 * NEW -> Now all the previous computation is done when there is an upstream added, to set the system to a coherent state as soon as possible
 	 */
-	public void backupState(BackupState bs){
+	public void backupState(StateI state, String stateClass){
+		BackupState bs = new BackupState();
 		//TODO Fill ts_e and ts_s of backupstate. FIXME now it is badly assigned
 		long currentTsData = ts_data;
 		
 		bs.setOpId(operatorId);
 		bs.setTs_e(currentTsData);
 		bs.setTs_s(0);
+		bs.setState(state);
+		bs.setStateClass(stateClass);
 		//Build the ControlTuple msg
 		ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 		//Finally send the backup state

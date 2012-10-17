@@ -322,7 +322,7 @@ public class Infrastructure {
 	}
 
 	public void deployConnection(String command, QuerySpecificationI opToContact, QuerySpecificationI opToAdd, String operatorType) {
-		
+		System.out.println("OPERATOR TYPE: "+operatorType);
 		ControlTuple ct = null;
 		String ip = null;
 		//Some commands do not require opToAdd
@@ -333,7 +333,7 @@ public class Infrastructure {
 			int in_c = opToAdd.getOpContext().getOperatorStaticInformation().getInC();
 			int in_d = opToAdd.getOpContext().getOperatorStaticInformation().getInD();
 			boolean operatorNature = opToAdd.getOpContext().getOperatorStaticInformation().isStatefull();
-			ct = new ControlTuple().makeReconfigure(opId, command, ip, node_port, in_c, in_d, operatorNature);
+			ct = new ControlTuple().makeReconfigure(opId, command, ip, node_port, in_c, in_d, operatorNature, operatorType);
 		}
 		else{
 			ct = new ControlTuple().makeReconfigure(0, command, ip);

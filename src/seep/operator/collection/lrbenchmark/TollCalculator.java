@@ -9,6 +9,7 @@ import seep.Main;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatefulOperator;
@@ -967,13 +968,13 @@ long tinit = 0;
 	}
 
 	@Override
-	public void installState(InitState is) {
+	public void installState(StateI is) {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public BackupState[] parallelizeState(BackupState toSplit, int key) {
+	public StateI[] parallelizeState(StateI toSplit, int key, String stateClass) {
 		// TODO Auto-generated method stub
 		return null;
 	}

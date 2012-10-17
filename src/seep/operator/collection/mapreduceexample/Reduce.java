@@ -1,14 +1,16 @@
 package seep.operator.collection.mapreduceexample;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedList;
 
 import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.Operator;
 import seep.operator.StatefulOperator;
+import seep.operator.workers.StateBackupWorker;
+//import seep.operator.collection.mapreduceexample.TopKReduceState.TopPosition;
+
 
 public class Reduce extends Operator implements StatefulOperator{
 
@@ -21,7 +23,7 @@ public class Reduce extends Operator implements StatefulOperator{
 	private int top5Visits = 0;
 	//map storing the number of visits per country code
 	private HashMap<String, Integer> countryCode = new HashMap<String, Integer>();
-	int batchSize = 0;
+//	int batchSize = 0;
 	
 	/** VAR TIME CONTROL BUSINESS LOGIC **/
 	boolean first = true;
@@ -39,18 +41,6 @@ public class Reduce extends Operator implements StatefulOperator{
 		
 		for(int i = 0; i<5; i++){
 			top.add(i, new TopPosition("trash", 0));
-		}
-	}
-	
-	class TopPosition implements Serializable{
-		
-		private static final long serialVersionUID = 1L;
-		public String countryCode = null;
-		public int visits = 0;
-		
-		public TopPosition(String countryCode, int visits){
-			this.countryCode = countryCode;
-			this.visits = visits;
 		}
 	}
 	
@@ -75,6 +65,8 @@ public class Reduce extends Operator implements StatefulOperator{
 	@Override
 	public void processData(DataTuple dt) {
 		if(first){
+			StateBackupWorker stw = new StateBackupWorker(this);
+			new Thread(stw).start();
 			t_start = System.currentTimeMillis();
 			t_start2 = t_start;
 			first = false;
@@ -91,6 +83,9 @@ public class Reduce extends Operator implements StatefulOperator{
 		else{
 			countryCode.put(key, 1);
 		}
+		
+//		System.out.println("CODES SIZE: "+countryCode.size());
+		
 		if(totalVisits > top5Visits){
 			reviewTop5(key, totalVisits);
 		}
@@ -120,15 +115,24 @@ public class Reduce extends Operator implements StatefulOperator{
 	}
 
 	@Override
-	public void generateBackupState() {
-		// TODO Auto-generated method stub
-		
+	public synchronized void generateBackupState() {
+		System.out.println("###################");
+		System.out.println("###################");
+		TopKReduceState backupState = new TopKReduceState();
+		backupState.countryCode = this.countryCode;
+		System.out.println("SIZE OF countries map: "+countryCode.size());
+		System.out.println("###################");
+		System.out.println("###################");
+		backupState.top = this.top;
+		backupState.top5Visits = this.top5Visits;
+		backupState(backupState, backupState.getClass().toString());
 	}
 
+	private int backupTime = 5000;
+	
 	@Override
 	public long getBackupTime() {
-		// TODO Auto-generated method stub
-		return 0;
+		return backupTime;
 	}
 
 	@Override
@@ -138,9 +142,25 @@ public class Reduce extends Operator implements StatefulOperator{
 	}
 
 	@Override
-	public void installState(InitState is) {
-		// TODO Auto-generated method stub
-		
+	public void installState(StateI is) {
+		System.out.println("Installing State");
+		synchronized(this.top){
+			if(((TopKReduceState)is).top.isEmpty()){
+				for(int i = 0; i<5; i++){
+					top.add(i, new TopPosition("trash", 0));
+				}
+			}
+			else{
+				this.top = ((TopKReduceState)is).top;
+			}
+		}
+		synchronized(this.countryCode){
+			this.countryCode = ((TopKReduceState)is).countryCode;
+		}
+		synchronized(this){
+			this.top5Visits = ((TopKReduceState)is).top5Visits;
+		}
+		System.out.println("OP"+getOperatorId()+" -> has restored state");
 	}
 	
 	@Override

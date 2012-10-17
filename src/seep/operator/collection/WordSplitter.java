@@ -4,6 +4,7 @@ import seep.buffer.Buffer;
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.CommunicationChannel;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
@@ -105,7 +106,7 @@ public class WordSplitter extends Operator implements StatelessOperator, StateSp
 
 
 	@Override
-	public BackupState[] parallelizeState(BackupState toSplit, int key) {
+	public StateI[] parallelizeState(StateI toSplit, int key, String stateClass) {
 		// TODO Auto-generated method stub
 		return null;
 	}

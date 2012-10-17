@@ -9,7 +9,7 @@ FILE=$3
 
 while [ "$counter" -ne "$lastCurrentId" ]
 do
-	bash exec_tmuxEC2session $counter $lastCurrentId "cd /homes/rc3011/Desktop/development/java/seep-system/scripts"
+	bash command-tmux $counter $lastCurrentId "cd /homes/rc3011/Desktop/development/java/seep-system/scripts/deployment"
 	let counter=counter-1
 done
 echo 'Executed change directory to working directory'

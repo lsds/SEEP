@@ -3,6 +3,8 @@ package seep.operator.collection;
 import seep.Main;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.StateI;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.Operator;
 import seep.operator.StatefulOperator;
 import seep.operator.StateSplitI;
@@ -244,7 +246,7 @@ public class SmartWordCounter extends Operator implements StatefulOperator{
 	}
 
 	@Override
-	public void installState(InitState is) {
+	public void installState(StateI is) {
 		// TODO Auto-generated method stub
 		
 	}

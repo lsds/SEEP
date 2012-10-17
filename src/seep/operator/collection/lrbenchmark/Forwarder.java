@@ -3,6 +3,7 @@ package seep.operator.collection.lrbenchmark;
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.Operator;
 import seep.operator.StateSplitI;
 import seep.operator.StatelessOperator;
@@ -263,7 +264,7 @@ public class Forwarder extends Operator implements StatelessOperator, StateSplit
 	}
 
 	@Override
-	public BackupState[] parallelizeState(BackupState toSplit, int key) {
+	public StateI[] parallelizeState(StateI toSplit, int key, String stateClass) {
 		// TODO Auto-generated method stub
 		return null;
 	}

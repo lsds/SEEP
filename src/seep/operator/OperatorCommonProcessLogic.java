@@ -16,6 +16,7 @@ import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.infrastructure.NodeManager;
 import seep.operator.OperatorContext.PlacedOperator;
 
@@ -99,6 +100,8 @@ System.out.println("#################");
 		}
 		System.out.println("## NEW UPSTREAM, op: "+opId+" type: "+operatorType);
 		//If i dont have backup for that upstream, I am not in charge...
+		System.out.println("BACKUPROUTINGINFO: "+backupRoutingInformation.toString());
+		System.out.println("OP TYPE: "+operatorType);
 		if(!backupRoutingInformation.containsKey(operatorType)){
 			NodeManager.nLogger.info("-> NO routing info to send");
 			return;
@@ -210,15 +213,26 @@ long e = System.currentTimeMillis();
 			NodeManager.nLogger.severe("NOT MANAGING STATE?????   ");
 		}
 		
-		BackupState splitted[] = operatorToSplit.parallelizeState(oldState, key);
+		//BackupState splitted[] = operatorToSplit.parallelizeState(oldState, key);
+		StateI splitted[] = operatorToSplit.parallelizeState(oldState.getState(), key, oldState.getStateClass());
+		BackupState newPartition = new BackupState();
+		BackupState oldPartition = new BackupState();
+		oldPartition.setTs_e(oldState.getTs_e());
+		oldPartition.setOpId(oldOpId);
+		oldPartition.setState(splitted[0]);
+		newPartition.setTs_e(oldState.getTs_e());
+		newPartition.setOpId(newOpId);
+		newPartition.setState(splitted[1]);
 
-		splitted[0].setTs_e(oldState.getTs_e());
-		splitted[1].setTs_e(oldState.getTs_e());
-		splitted[0].setOpId(oldOpId);
-		splitted[1].setOpId(newOpId);
+//		splitted[0].setTs_e(oldState.getTs_e());
+//		splitted[1].setTs_e(oldState.getTs_e());
+//		splitted[0].setOpId(oldOpId);
+//		splitted[1].setOpId(newOpId);
 		NodeManager.nLogger.severe("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
-		opContext.getBuffer(oldOpId).replaceBackupState(splitted[0]);
-		opContext.getBuffer(newOpId).replaceBackupState(splitted[1]);
+//		opContext.getBuffer(oldOpId).replaceBackupState(splitted[0]);
+//		opContext.getBuffer(newOpId).replaceBackupState(splitted[1]);
+		opContext.getBuffer(oldOpId).replaceBackupState(oldPartition);
+		opContext.getBuffer(newOpId).replaceBackupState(newPartition);
 		//Indicate that we are now managing both these states
 		NodeManager.nLogger.severe("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
 		opContext.registerManagedState(oldOpId);
@@ -304,6 +318,7 @@ System.out.println("BACKUP INDEXES: "+indexes.toString());
 System.out.println("BACKUP KEYS: "+keys.toString());
 
 		//Create message
+System.out.println("REGISTERED CLASS: "+owner.getClass().getName());
 		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getOperatorId(), indexes, keys, owner.getClass().getName());
 		//Send message to downstreams (for now, all downstreams)
 		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}

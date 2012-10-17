@@ -2,6 +2,7 @@ package seep.operator.collection;
 
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.StateI;
 import seep.operator.*;
 
 public class AverageOperator extends Operator implements StatefulOperator{
@@ -94,7 +95,7 @@ public class AverageOperator extends Operator implements StatefulOperator{
 	}
 
 	@Override
-	public void installState(InitState is) {
+	public void installState(StateI is) {
 		// TODO Auto-generated method stub
 		
 	}

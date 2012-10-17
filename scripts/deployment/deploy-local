@@ -1,6 +1,6 @@
 
 mkdir scripts
-cp cpuU scripts
-cp cpuUOld scripts
+#cp cpuU scripts
+#cp cpuUOld scripts
 mkdir res
 mkdir tests

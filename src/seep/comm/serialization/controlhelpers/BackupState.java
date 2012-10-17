@@ -6,7 +6,14 @@ public class BackupState {
 	private long ts_s;
 	private long ts_e;
 	private StateI state;
+	private String stateClass;
 	
+	public void setStateClass(String stateClass){
+		this.stateClass = stateClass;
+	}
+	public String getStateClass(){
+		return stateClass;
+	}
 	public int getOpId() {
 		return opId;
 	}

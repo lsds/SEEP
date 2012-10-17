@@ -27,6 +27,9 @@ public class Source extends Operator implements StatelessOperator{
 	long t_start = 0;
 	long i_time = 0;
 	boolean first = true;
+	int avgCounter = 0;
+	double avg = 0;
+	int sec = 0;
 	
 	public Source(int opId){
 		super(opId);
@@ -72,10 +75,19 @@ public class Source extends Operator implements StatelessOperator{
 			long currentTime = i_time - t_start;
 			counter += alpha;
 			if(currentTime >= 1000){
-				System.out.println("E/S: "+counter);
+				sec++;
+//				System.out.println("E/S: "+counter);
 //				System.out.println("INPUTQ-counter: "+MetricsReader.eventsInputQueue.getCount());
 				t_start = System.currentTimeMillis();
+				avg += counter;
 				counter = 0;
+				avgCounter++;
+				if(avgCounter == 10){
+					avg = avg/10;
+					System.out.println("# AVG INPUT RATE(10s): "+avg+" SEC: "+sec);
+					avgCounter =0;
+					avg = 0;
+				}
 			}
 		}
 		

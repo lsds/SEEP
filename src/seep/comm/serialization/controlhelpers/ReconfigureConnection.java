@@ -25,7 +25,7 @@ public class ReconfigureConnection {
 		this.ip = ip;
 	}
 	
-	public ReconfigureConnection(int opId, String command, String ip,int nodePort, int inC, int inD, boolean operatorNature) {
+	public ReconfigureConnection(int opId, String command, String ip,int nodePort, int inC, int inD, boolean operatorNature, String operatorType) {
 		this.opId = opId;
 		this.command = command;
 		this.ip = ip;
@@ -33,6 +33,7 @@ public class ReconfigureConnection {
 		this.inC = inC;
 		this.inD = inD;
 		this.operatorNature = operatorNature;
+		this.operatorType = operatorType;
 	}
 	
 	public ReconfigureConnection(int opId, String command, int inC){
