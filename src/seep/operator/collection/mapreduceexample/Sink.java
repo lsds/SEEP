@@ -19,6 +19,13 @@ public class Sink extends Operator implements StatelessOperator{
 	// integer storing the number of visits of the fifth member in top map
 	private int top5Visits = 0;
 	
+	//Control variables
+	boolean first = true;
+	long t_init = 0;
+	long t_start = 0;
+	long i_time = 0;
+	int sec = 0;
+	
 	int rx = 0;
 	
 	public Sink(int opId){
@@ -45,7 +52,7 @@ public class Sink extends Operator implements StatelessOperator{
 		for(int i = 0; i<top.size(); i++){
 			if(totalVisits > top.get(i).visits){
 				TopPosition tp = new TopPosition(key, totalVisits);
-				if(top.get(i).countryCode.equals(key)){
+				if(top.get(i).countryCodeString.equals(key)){
 					top.remove(i);
 					top.add(i, tp);
 				}
@@ -63,7 +70,7 @@ public class Sink extends Operator implements StatelessOperator{
 		boolean alreadyExisted = false;
 		for (int i = 0; i<top.size(); i++){
 			TopPosition current = top.get(i);
-			if(current.countryCode.equals(key)){
+			if(current.countryCodeString.equals(key)){
 				int prevVisits = current.visits;
 				TopPosition updated = new TopPosition(key, prevVisits+totalVisits);
 				top.add(i, updated);
@@ -88,7 +95,7 @@ public class Sink extends Operator implements StatelessOperator{
 			for(int i = 0; i<top.size(); i++){
 				if(totalVisits > top.get(i).visits){
 					TopPosition tp = new TopPosition(key, totalVisits);
-					if(top.get(i).countryCode.equals(key)){
+					if(top.get(i).countryCodeString.equals(key)){
 						top.remove(i);
 						top.add(i, tp);
 					}
@@ -106,6 +113,28 @@ public class Sink extends Operator implements StatelessOperator{
 	
 	@Override
 	public void processData(DataTuple dt) {
+		if(first){
+			first = false;
+			t_init = System.currentTimeMillis();
+			t_start = System.currentTimeMillis();
+		}
+		
+		i_time = System.currentTimeMillis();
+		long currentTime = i_time - t_start;
+		
+		if(currentTime >= 1000){
+			if(dt.getTs() == 666){
+				sec++;
+				t_start = System.currentTimeMillis();
+				//events per second
+				int es = dt.getId();
+				int upstreamSize = this.getOpContext().upstreams.size();
+				int totalConsumptionRate = upstreamSize*es;
+				int time = (int)(System.currentTimeMillis()-t_init)/1000;
+				System.out.println("# T: "+time+" TH: "+totalConsumptionRate);
+				return;
+			}
+		}
 		rx++;
 		ArrayList<Integer> visits = dt.getTopVisits();
 		ArrayList<String> codes = dt.getTopCCode();
@@ -117,9 +146,9 @@ public class Sink extends Operator implements StatelessOperator{
 				reviewTop5(key, totalVisits);
 //			}
 		}
-		System.out.println("rx something");
+//		System.out.println("rx something");
 		if(rx == this.getOpContext().upstreams.size()){
-			printTop5();
+//			printTop5();
 			rx = 0;
 		}
 	}
@@ -129,7 +158,7 @@ public class Sink extends Operator implements StatelessOperator{
 		System.out.println("TIME: "+(now.toString()));
 		
 		for(int i = 0; i<top.size(); i++){
-			System.out.println(i+":"+top.get(i).countryCode+" total: "+top.get(i).visits);
+			System.out.println(i+":"+top.get(i).countryCodeString+" total: "+top.get(i).visits);
 		}
 		System.out.println("      ");
 		System.out.println("      ");

@@ -11,6 +11,8 @@ import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
 import seep.comm.routing.Router;
+import seep.comm.routing.StatefulRoutingImpl;
+import seep.comm.routing.StatelessRoutingImpl;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupState;
@@ -23,6 +25,7 @@ import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorInitializationException;
 import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.OperatorStaticInformation;
+import seep.operator.OperatorContext.PlacedOperator;
 import seep.operator.collection.SmartWordCounter;
 import seep.operator.collection.lrbenchmark.Snk;
 
@@ -225,6 +228,20 @@ public abstract class Operator implements Serializable, QuerySpecificationI {
 //		lp.start();
 		dispatcher.sendData(dt, value, true);
 //		lp.finish();
+	}
+	
+	/** this hacked sent was added on 17 october 2012 to avoid refactoring the inner system to allow a operator configured with a stateful down to send
+	 * as a stateless **/
+	public void hackRouter(){
+		for(Integer id : opContext.getOriginalDownstream()){
+			PlacedOperator down = opContext.findDownstream(id);
+			int index = down.index();
+			int numDownstreams = opContext.getDownstreamSize();
+			StatelessRoutingImpl rs = new StatelessRoutingImpl(1, index, numDownstreams);
+			System.out.println("ROUTER HACKED");
+			//If more than one downstream type, then put the new rs with the opId
+			router.setNewLoadBalancer(id, rs);
+		}
 	}
 	
 	public abstract boolean isOrderSensitive();

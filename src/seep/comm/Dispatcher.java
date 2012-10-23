@@ -78,6 +78,35 @@ public class Dispatcher implements Serializable{
 		opContext.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
 	
+	int remainingWindow = 0;
+	int splitWindow = 0;
+	int target = 0;
+	int downstreamIndex = 0;
+	int numberOfDownstreams = 0;
+	
+	public void h_sendData(DataTuple dt){
+		if(remainingWindow == 0){
+			//Reinitialize the window size
+			remainingWindow = splitWindow;
+			// update target and reinitialize filterValue
+			target = downstreamIndex++%numberOfDownstreams;
+			// get the real index from the virtual one.
+			//target = virtualIndexToRealIndex.get(target);
+		}
+		remainingWindow--;
+		/// \todo Return the real Index, got from the virtual one. Optimize this
+		//target = virtualIndexToRealIndex.get(target);
+		try{
+//		System.out.println("TARGET: "+target.toString());
+			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
+			outputQueue.sendToDownstream(dt, dest, false, false);
+		}
+		catch(ArrayIndexOutOfBoundsException aioobe){
+			System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+opContext.getDownstreamTypeConnection().size());
+			aioobe.printStackTrace();
+		}
+	}
+	
 	public void sendData(DataTuple dt, int value, boolean now){
 //		System.out.println("get targets: ");
 		targets = router.forward(dt, value, now);
@@ -127,7 +156,7 @@ public class Dispatcher implements Serializable{
 			Output output = null;
 			try{
 				output = new Output(socket.getOutputStream());
-				synchronized (socket){
+				synchronized (output){
 //					tuple.writeDelimitedTo(socket.getOutputStream());
 					k.writeObject(output, ct);
 					output.flush();

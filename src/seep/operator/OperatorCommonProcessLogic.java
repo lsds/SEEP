@@ -311,20 +311,21 @@ long e = System.currentTimeMillis();
 	}
 	
 	private void backupRoutingInformation(int oldOpId) {
-		//Get routing information
-		ArrayList<Integer> indexes = owner.getRouter().getIndexesInformation(oldOpId);
-		ArrayList<Integer> keys = owner.getRouter().getKeysInformation(oldOpId);
-System.out.println("BACKUP INDEXES: "+indexes.toString());
-System.out.println("BACKUP KEYS: "+keys.toString());
-
-		//Create message
-System.out.println("REGISTERED CLASS: "+owner.getClass().getName());
-		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getOperatorId(), indexes, keys, owner.getClass().getName());
-		//Send message to downstreams (for now, all downstreams)
-		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
-		for(Integer index : indexes){
-			owner.getDispatcher().sendDownstream(msg, index);
-		}
+		System.out.println("SOMETHING IS WRONG HERE!!!!!!!!! HACKED, FIX THIS FIX THIS!!!1");
+//		//Get routing information
+//		ArrayList<Integer> indexes = owner.getRouter().getIndexesInformation(oldOpId);
+//		ArrayList<Integer> keys = owner.getRouter().getKeysInformation(oldOpId);
+//System.out.println("BACKUP INDEXES: "+indexes.toString());
+//System.out.println("BACKUP KEYS: "+keys.toString());
+//
+//		//Create message
+//System.out.println("REGISTERED CLASS: "+owner.getClass().getName());
+//		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getOperatorId(), indexes, keys, owner.getClass().getName());
+//		//Send message to downstreams (for now, all downstreams)
+//		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
+//		for(Integer index : indexes){
+//			owner.getDispatcher().sendDownstream(msg, index);
+//		}
 	}
 	
 	public void replayState(int opId) {

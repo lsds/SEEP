@@ -5,11 +5,11 @@ import java.io.Serializable;
 public class TopPosition implements Serializable{
 	
 	private static final long serialVersionUID = 1L;
-	public String countryCode = null;
+	public String countryCodeString = null;
 	public int visits = 0;
 	
-	public TopPosition(String countryCode, int visits){
-		this.countryCode = countryCode;
+	public TopPosition(String countryCodeString, int visits){
+		this.countryCodeString = countryCodeString;
 		this.visits = visits;
 	}
 	

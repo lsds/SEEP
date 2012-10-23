@@ -2,17 +2,14 @@ package seep.infrastructure;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import seep.Main;
 import seep.comm.BasicCommunicationUtils;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.monitor.Monitor;
@@ -58,6 +55,8 @@ public class NodeManager{
 	public void newOperatorInstantiation(Object o) throws OperatorInstantiationException {
 //System.out.println("MONITOR THREAD STATE: "+monitorT);
 		if(monitorT == null){
+			int opId = ((Operator)o).getOperatorId();
+			nodeMonitor.setOpId(opId);
 			monitorT = new Thread(nodeMonitor);
 			monitorT.start();
 			nLogger.info("-> Node Monitor running");

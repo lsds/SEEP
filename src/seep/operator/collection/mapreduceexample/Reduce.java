@@ -48,19 +48,28 @@ public class Reduce extends Operator implements StatefulOperator{
 		for(int i = 0; i<top.size(); i++){
 			if(totalVisits > top.get(i).visits){
 				TopPosition tp = new TopPosition(key, totalVisits);
-				if(top.get(i).countryCode.equals(key)){
-					top.remove(i);
-					top.add(i, tp);
+				if(top.get(i) != null ) if(top.get(i).countryCodeString != null){
+					if(top.get(i).countryCodeString.equals(key)){
+						top.remove(i);
+						top.add(i, tp);
+					}
+					else{
+						top.add(i, tp);
+						top.remove(5);
+					}
+					if(top.size() == 5){
+						top5Visits = top.get(4).visits;
+					}
+					else{
+						top5Visits = 0;
+					}
+					break;
 				}
-				else{
-					top.add(i, tp);
-					top.remove(5);
-				}
-				top5Visits = top.get(4).visits;
-				break;
 			}
 		}
 	}
+	
+	int sec = 0;
 	
 	@Override
 	public void processData(DataTuple dt) {
@@ -94,8 +103,8 @@ public class Reduce extends Operator implements StatefulOperator{
 		i_time = System.currentTimeMillis();
 		long currentTime = i_time - t_start;
 		if(currentTime >= 30000){
-			dt.setTop5(top.get(0).countryCode, top.get(0).visits, top.get(1).countryCode, top.get(1).visits, top.get(2).countryCode, 
-					top.get(2).visits, top.get(3).countryCode, top.get(3).visits, top.get(4).countryCode, top.get(4).visits);
+			dt.setTop5(top.get(0).countryCodeString, top.get(0).visits, top.get(1).countryCodeString, top.get(1).visits, top.get(2).countryCodeString, 
+					top.get(2).visits, top.get(3).countryCodeString, top.get(3).visits, top.get(4).countryCodeString, top.get(4).visits);
 			System.out.println("Sent top5");
 			System.out.println("size of codes: "+dt.getTopCCode().size());
 			System.out.println("size of visits: "+dt.getTopVisits().size());
@@ -107,8 +116,13 @@ public class Reduce extends Operator implements StatefulOperator{
 		i_time2 = System.currentTimeMillis();
 		long currentTime2 = i_time2 - t_start2;
 		if(currentTime2 >= 1000){
-			System.out.println("E/S: "+counter);
+			sec++;
+			//System.out.println("# E/S: "+counter+ "t: "+sec);
 			System.out.println("INPUTQ-counter: "+MetricsReader.eventsInputQueue.getCount());
+			DataTuple dt2 = new DataTuple();
+			dt2.setId(counter);
+			dt2.setTs(666);
+			sendDown(dt2);
 			t_start2 = System.currentTimeMillis();
 			counter = 0;
 		}

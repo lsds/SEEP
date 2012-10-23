@@ -242,6 +242,9 @@ public class Main {
 		catch(ESFTRuntimeException ere){
 			System.out.println(ere.getMessage());
 		}
+		catch(Exception g){
+			System.out.println(g.getMessage());
+		}
 	}
 	
 	private void runMR(Infrastructure inf){
@@ -249,6 +252,21 @@ public class Main {
 		Source src = new Source(-2);
 		Source src2 = new Source(-3);
 		Source src3 = new Source(-4);
+		Source src4 = new Source(-5);
+		Source src5 = new Source(-6);
+		Source src6 = new Source(-7);
+		Source src7 = new Source(-8);
+		Source src8 = new Source(-9);
+		Source src9 = new Source(-10);
+		Source src10 = new Source(-11);
+		Source src11 = new Source(-12);
+		Source src12 = new Source(-13);
+		Source src13 = new Source(-14);
+		Source src14 = new Source(-15);
+		Source src15 = new Source(-16);
+		Source src16 = new Source(-17);
+//		Source src17 = new Source(-18);
+//		Source src18 = new Source(-19);
 //		Source src4 = new Source(-5);
 		Map map = new Map(0);
 		Reduce reduce = new Reduce(1);
@@ -257,12 +275,42 @@ public class Main {
 		inf.setSource(src);
 		inf.setSource(src2);
 		inf.setSource(src3);
+		inf.setSource(src4);
+		inf.setSource(src5);
+		inf.setSource(src6);
+		inf.setSource(src7);
+		inf.setSource(src8);
+		inf.setSource(src9);
+		inf.setSource(src10);
+		inf.setSource(src11);
+		inf.setSource(src12);
+		inf.setSource(src13);
+		inf.setSource(src14);
+		inf.setSource(src15);
+		inf.setSource(src16);
+//		inf.setSource(src17);
+//		inf.setSource(src18);
 //		inf.setSource(src4);
 		inf.setSink(snk);
 		//Add operators to infrastructure
 		inf.addOperator(src);
 		inf.addOperator(src2);
 		inf.addOperator(src3);
+		inf.addOperator(src4);
+		inf.addOperator(src5);
+		inf.addOperator(src6);
+		inf.addOperator(src7);
+		inf.addOperator(src8);
+		inf.addOperator(src9);
+		inf.addOperator(src10);
+		inf.addOperator(src11);
+		inf.addOperator(src12);
+		inf.addOperator(src13);
+		inf.addOperator(src14);
+		inf.addOperator(src15);
+		inf.addOperator(src16);
+//		inf.addOperator(src17);
+//		inf.addOperator(src18);
 //		inf.addOperator(src4);
 		inf.addOperator(map);
 		inf.addOperator(reduce);
@@ -271,6 +319,21 @@ public class Main {
 		src.connectTo(map, true);
 		src2.connectTo(map, true);
 		src3.connectTo(map, true);
+		src4.connectTo(map, true);
+		src5.connectTo(map, true);
+		src6.connectTo(map, true);
+		src7.connectTo(map, true);
+		src8.connectTo(map, true);
+		src9.connectTo(map, true);
+		src10.connectTo(map, true);
+		src11.connectTo(map, true);
+		src12.connectTo(map, true);
+		src13.connectTo(map, true);
+		src14.connectTo(map, true);
+		src15.connectTo(map, true);
+		src16.connectTo(map, true);
+//		src17.connectTo(map, true);
+//		src18.connectTo(map, true);
 //		src4.connectTo(map, true);
 		map.connectTo(reduce, true);
 		reduce.connectTo(snk, true);
@@ -278,6 +341,21 @@ public class Main {
 		inf.placeNew(src, inf.getNodeFromPool());
 		inf.placeNew(src2, inf.getNodeFromPool());
 		inf.placeNew(src3, inf.getNodeFromPool());
+		inf.placeNew(src4, inf.getNodeFromPool());
+		inf.placeNew(src5, inf.getNodeFromPool());
+		inf.placeNew(src6, inf.getNodeFromPool());
+		inf.placeNew(src7, inf.getNodeFromPool());
+		inf.placeNew(src8, inf.getNodeFromPool());
+		inf.placeNew(src9, inf.getNodeFromPool());
+		inf.placeNew(src10, inf.getNodeFromPool());
+		inf.placeNew(src11, inf.getNodeFromPool());
+		inf.placeNew(src12, inf.getNodeFromPool());
+		inf.placeNew(src13, inf.getNodeFromPool());
+		inf.placeNew(src14, inf.getNodeFromPool());
+		inf.placeNew(src15, inf.getNodeFromPool());
+		inf.placeNew(src16, inf.getNodeFromPool());
+//		inf.placeNew(src17, inf.getNodeFromPool());
+//		inf.placeNew(src18, inf.getNodeFromPool());
 //		inf.placeNew(src4, inf.getNodeFromPool());
 		inf.placeNew(map, inf.getNodeFromPool());
 		inf.placeNew(reduce, inf.getNodeFromPool());

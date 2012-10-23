@@ -9,7 +9,7 @@ echo "copy deploy-local"
 scp -i ../authEC2.pem deploy-local ec2-user@$INSTANCE:/home/ec2-user
 #scp -i authEC2.pem authEC2.pem ec2-user@$INSTANCE:/home/ec2-user
 echo "copy jar"
-scp -i ../authEC2.pem ../../dist/SEEPv0.1-20121016.jar ec2-user@$INSTANCE:/home/ec2-user
+scp -i ../authEC2.pem ../../dist/SEEPv0.1-20121023.jar ec2-user@$INSTANCE:/home/ec2-user
 echo "copy config-file"
 scp -i ../authEC2.pem ../../config.properties ec2-user@$INSTANCE:/home/ec2-user
 #echo "copy theHackerCrackdown"

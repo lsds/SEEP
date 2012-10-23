@@ -45,6 +45,7 @@ public class Router implements Serializable{
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
+try{
 		RoutingStrategyI rs = null;
 		if(!requiresQueryData){
 			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
@@ -52,10 +53,17 @@ public class Router implements Serializable{
 		}
 		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
+}
+catch(ClassCastException cce){
+	System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
+}
+//remove with the try-catch
+return null;
 	}
 	
 	//Gather keys from statefulDynamic Load balancer
 	public ArrayList<Integer> getKeysInformation(int oldOpId){
+try{
 		RoutingStrategyI rs = null;
 		if(!requiresQueryData){
 			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
@@ -63,7 +71,13 @@ public class Router implements Serializable{
 		}
 		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
-	}
+}
+catch(ClassCastException cce){
+System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
+}
+//remove with the try-catch
+return null;
+}
 	
 	public void setQueryFunction(String query){
 		this.query = query;
@@ -262,7 +276,9 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 		return key;
 	}
 
-	private void setNewLoadBalancer(int opId, RoutingStrategyI rs){
+	/**this function was made public on 17 oct 2012 to enable a higher level hack**/
+	
+	public void setNewLoadBalancer(int opId, RoutingStrategyI rs){
 		if(requiresQueryData){
 			downstreamRoutingImpl.put(opId, rs);
 		}

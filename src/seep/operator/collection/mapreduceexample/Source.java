@@ -20,7 +20,7 @@ public class Source extends Operator implements StatelessOperator{
 	private int records = 0;
 	
 	/** INPUT RATE xVAR **/
-	private int alpha = 10;
+	private int alpha = 50;
 	
 	/** TIME CONTROL**/
 	int counter = 0;
@@ -65,12 +65,12 @@ public class Source extends Operator implements StatelessOperator{
 			for(int j = 0; j<alpha; j++){
 				sendDown(tuple);
 			}
-//			try{
-//				Thread.sleep(1000);
-//			}
-//			catch(Exception e){
-//				e.printStackTrace();
-//			}
+			try{
+				Thread.sleep(1);
+			}
+			catch(Exception e){
+				e.printStackTrace();
+			}
 			i_time = System.currentTimeMillis();
 			long currentTime = i_time - t_start;
 			counter += alpha;

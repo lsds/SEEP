@@ -30,6 +30,12 @@ public class InputQueue {
 		}
 	}
 	
+	public synchronized boolean pushOrShed(DataTuple data){
+		boolean inserted = inputQueue.offer(data);
+		if (inserted) MetricsReader.eventsInputQueue.inc();
+		return inserted;
+	}
+	
 	public DataTuple pull(){
 		try {
 			MetricsReader.eventsInputQueue.dec();

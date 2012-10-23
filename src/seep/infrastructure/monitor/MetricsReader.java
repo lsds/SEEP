@@ -1,5 +1,6 @@
 package seep.infrastructure.monitor;
 
+import seep.comm.IncomingDataHandler;
 import seep.operator.InputQueue;
 
 import com.yammer.metrics.Metrics;
@@ -10,6 +11,7 @@ import com.yammer.metrics.core.Counter;
 public class MetricsReader {
 
 	final public static Counter eventsInputQueue = Metrics.newCounter(InputQueue.class, "events-iq");
+	final public static Counter numberIncomingDataHandlerWorkers = Metrics.newCounter(IncomingDataHandler.class, "dataThreads-idh");
 	
 	public MetricsReader(){
 		

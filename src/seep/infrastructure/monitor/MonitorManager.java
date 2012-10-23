@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -14,6 +15,7 @@ import com.esotericsoftware.kryo.io.Input;
 import seep.Main;
 import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.Infrastructure;
+import seep.operator.Operator;
 
 /**
 * MonitorManager. This class implements Runnable and runs in the master node. It is in charge of retrieving the information sent by the monitors that control the system.
@@ -31,6 +33,8 @@ public class MonitorManager implements Runnable{
 	private long t_lastSplit = 0;
 	private Map<Integer, Integer> alertsMemory = new HashMap<Integer, Integer>();
 	private boolean suspended = false;
+	
+	private ArrayBlockingQueue<MetricsTuple> mem = new ArrayBlockingQueue<MetricsTuple>(1);
 
 	public void initSp(){
 		System.out.println("Initializing SP: ");
@@ -56,11 +60,12 @@ public class MonitorManager implements Runnable{
 		ServerSocket ss = null;
 		Socket currentConn = null;
 		try{
-			
 			ss = new ServerSocket(Integer.parseInt(Main.valueFor("monitorManagerPort")));
+			Thread consumer = new Thread(new Consumer(mem));
+			consumer.start();
 			while(listen){
 				currentConn = ss.accept();
-				Thread client = new Thread(new MonitorManagerWorker(currentConn));
+				Thread client = new Thread(new MonitorManagerWorker(currentConn, mem));
 				client.start();
 			}
 			ss.close();
@@ -193,6 +198,82 @@ public class MonitorManager implements Runnable{
 		}
 	}
 	
+	
+	class Consumer implements Runnable{
+
+		boolean scalingOut = false;
+		private boolean listen = true;
+		private ArrayBlockingQueue<MetricsTuple> mem = null;
+		
+		public Consumer(ArrayBlockingQueue<MetricsTuple> mem){
+			this.mem = mem;
+		}
+		
+		private synchronized void decider(int opId, long queueSize){
+		
+			
+//			try {
+//				Thread.sleep(2000);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+			Operator toScale = inf.getOperatorById(opId);
+			if(toScale instanceof seep.operator.collection.mapreduceexample.Reduce){
+				if(!scalingOut){
+					synchronized(inf){
+						scalingOut = true;
+						inf.getEiu().alert(opId);
+						scalingOut = false;
+					}
+				}
+			}
+			if(queueSize > 90000){
+				if(Main.valueFor("enableAutomaticScaleOut").equals("true")){
+					if(!scalingOut){
+						synchronized(inf){
+							scalingOut = true;
+							inf.getEiu().alert(opId);
+							scalingOut = false;
+						}
+					}
+				}
+			}
+		}
+		
+		
+		@Override
+		public void run() {
+			while(listen){
+				/**TEMPORAL HACK heuristic policy **/
+//				System.out.println("get something");
+//				triggers++;
+				MetricsTuple m = null;
+				try {
+					m = mem.take();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				long n = m.getInputQueueEvents();
+				if(n > 30000){
+//					System.out.println("bigger than 30K, and triggers is: "+triggers);
+//					if(triggers > 5){
+						System.out.println("To Decisor");
+						decider(m.getOpId(), n);
+//						triggers = 0;
+					}
+					System.out.println("OP: "+m.getOpId()+" IQL: "+n);
+				}
+				
+				/**END TEMPORAL HACK**/
+			}
+			
+		}
+		
+		
+	}
+	
 	class MonitorManagerWorker implements Runnable{
 
 		private Socket conn = null;
@@ -200,10 +281,13 @@ public class MonitorManager implements Runnable{
 		private BufferedWriter bw = null;
 		private Input input = null;
 		private Kryo k = null;
+		private boolean listen = true;
+		private ArrayBlockingQueue<MetricsTuple> mem = null;
 
-		public MonitorManagerWorker(Socket conn){
+		public MonitorManagerWorker(Socket conn, ArrayBlockingQueue<MetricsTuple> mem){
 			this.conn = conn;
 			this.k = initializeKryo();
+			this.mem = mem;
 		}
 		
 		private Kryo initializeKryo(){
@@ -213,6 +297,7 @@ public class MonitorManager implements Runnable{
 		}
 		
 		public void run(){
+			int triggers = 0;
 			try{
 				is = conn.getInputStream();
 				input = new Input(is);
@@ -221,12 +306,10 @@ public class MonitorManager implements Runnable{
 				while(listen){
 //					Seep.Statistics stat = Seep.Statistics.parseDelimitedFrom(is);
 					MetricsTuple m = k.readObject(input, MetricsTuple.class);
-					/** HANDLE THE METRICS below **/
-//					if(stat != null){
-//						statisticsHandler(stat.getOpId(), stat.getCpuU(), stat.getTime(), stat.getTh(), bw);
-////						Infrastructure.msh.statisticsHandler(stat.getOpId(), stat.getCpuU(), stat.getTime(), stat.getTh(), bw);
-//					}
+					//Put in a one-size queue
+					mem.offer(m);
 				}
+				input.close();
 				is.close();
 				conn.close();
 				bw.flush();
@@ -237,33 +320,33 @@ public class MonitorManager implements Runnable{
 			}
 		}
 
-		public synchronized void statisticsHandler(int opId, double cpuU, int time, double th, BufferedWriter bw){
-			Infrastructure.msh.th = th;
-			Infrastructure.msh.numberRunningMachines = inf.getNumberRunningMachines();
-			/// \fix{hack, invert cpu, cause we are sending idle cpu time}
-//			int value = (int) (100 - cpuU);
-			double value = cpuU;
-			//Sanity check in case the information is corrupted (reported case where cpu was 882% in a slow wombat)
-			if(cpuU > 0 && cpuU < 150){
-//				int elapsedTime = (int)(System.currentTimeMillis() - t_lastSplit)/1000;
-//				System.out.println("elapsedTime: "+elapsedTime);
-//				if(!suspended && elapsedTime > 3){
-				if(!suspended){
-					alertHandler(opId, value);
-				}
-			}
-			else{
-				//double rate = ((double)(ExecutionConfiguration.eventR*ExecutionConfiguration.sentenceSize)/1000);
-				if(time != 0){
-					//System.out.println("Time: "+time+" rate: "+rate+" th: "+throughput+" numberOfMachines: "+inf.getNumberRunningMachines());
-//					System.out.println("Time: "+time+" th: "+th+" numberOfMachines: "+inf.getNumberRunningMachines());
-				}
-				//String info = time+", "+rate+", "+throughput+", "+(inf.getNumberRunningMachines());
-				String info = time+", "+th+", "+(inf.getNumberRunningMachines());
-				
-				log(bw, info);
-			}
-		}
+//		public synchronized void statisticsHandler(int opId, double cpuU, int time, double th, BufferedWriter bw){
+//			Infrastructure.msh.th = th;
+//			Infrastructure.msh.numberRunningMachines = inf.getNumberRunningMachines();
+//			/// \fix{hack, invert cpu, cause we are sending idle cpu time}
+////			int value = (int) (100 - cpuU);
+//			double value = cpuU;
+//			//Sanity check in case the information is corrupted (reported case where cpu was 882% in a slow wombat)
+//			if(cpuU > 0 && cpuU < 150){
+////				int elapsedTime = (int)(System.currentTimeMillis() - t_lastSplit)/1000;
+////				System.out.println("elapsedTime: "+elapsedTime);
+////				if(!suspended && elapsedTime > 3){
+//				if(!suspended){
+//					alertHandler(opId, value);
+//				}
+//			}
+//			else{
+//				//double rate = ((double)(ExecutionConfiguration.eventR*ExecutionConfiguration.sentenceSize)/1000);
+//				if(time != 0){
+//					//System.out.println("Time: "+time+" rate: "+rate+" th: "+throughput+" numberOfMachines: "+inf.getNumberRunningMachines());
+////					System.out.println("Time: "+time+" th: "+th+" numberOfMachines: "+inf.getNumberRunningMachines());
+//				}
+//				//String info = time+", "+rate+", "+throughput+", "+(inf.getNumberRunningMachines());
+//				String info = time+", "+th+", "+(inf.getNumberRunningMachines());
+//				
+//				log(bw, info);
+//			}
+//		}
 
 		private void log(BufferedWriter bw, String info) {
 			/**
@@ -288,4 +371,3 @@ public class MonitorManager implements Runnable{
 //			}
 		}
 	}
-}

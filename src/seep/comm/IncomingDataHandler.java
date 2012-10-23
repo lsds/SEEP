@@ -2,6 +2,7 @@ package seep.comm;
 
 import seep.comm.serialization.KryoSerializer;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.*;
 
 import java.io.*;
@@ -46,6 +47,7 @@ public class IncomingDataHandler implements Runnable{
 			while(goOn){
 				Thread newConn = new Thread(new IncomingDataHandlerWorker(uid, incDataServerSocket.accept(), owner));
 				newConn.start();
+				MetricsReader.numberIncomingDataHandlerWorkers.inc();
 				uid++;
 			}
 			incDataServerSocket.close();
