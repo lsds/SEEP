@@ -136,16 +136,16 @@ public class Sink extends Operator implements StatelessOperator{
 			}
 		}
 		rx++;
-		ArrayList<Integer> visits = dt.getTopVisits();
-		ArrayList<String> codes = dt.getTopCCode();
-		for(int i = 0; i< codes.size(); i++){
-			int totalVisits = visits.get(i);
-//			System.out.println("new: "+totalVisits+" old: "+top5Visits);
-//			if(totalVisits > top5Visits){
-				String key = codes.get(i);
-				reviewTop5(key, totalVisits);
-//			}
-		}
+//		ArrayList<Integer> visits = dt.getTopVisits();
+//		ArrayList<String> codes = dt.getTopCCode();
+//		for(int i = 0; i< codes.size(); i++){
+//			int totalVisits = visits.get(i);
+////			System.out.println("new: "+totalVisits+" old: "+top5Visits);
+////			if(totalVisits > top5Visits){
+//				String key = codes.get(i);
+//				reviewTop5(key, totalVisits);
+////			}
+//		}
 //		System.out.println("rx something");
 		if(rx == this.getOpContext().upstreams.size()){
 //			printTop5();

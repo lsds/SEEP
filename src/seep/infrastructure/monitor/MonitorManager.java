@@ -268,10 +268,7 @@ public class MonitorManager implements Runnable{
 				
 				/**END TEMPORAL HACK**/
 			}
-			
 		}
-		
-		
 	}
 	
 	class MonitorManagerWorker implements Runnable{

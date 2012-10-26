@@ -83,34 +83,34 @@ public class Reduce extends Operator implements StatefulOperator{
 //		System.out.println("RX-> K: "+dt.getCountryCode()+" V: "+dt.getMRValue());
 		counter++;
 		/** OPERATOR BUSINESS LOGIC **/
-		String key = dt.getCountryCode();
+//		String key = dt.getCountryCode();
 		int totalVisits = 0;
-		if(countryCode.containsKey(key)){
-			totalVisits = countryCode.get(key) + 1;
-			countryCode.put(key, totalVisits);
-		}
-		else{
-			countryCode.put(key, 1);
-		}
+//		if(countryCode.containsKey(key)){
+//			totalVisits = countryCode.get(key) + 1;
+//			countryCode.put(key, totalVisits);
+//		}
+//		else{
+//			countryCode.put(key, 1);
+//		}
 		
 //		System.out.println("CODES SIZE: "+countryCode.size());
 		
-		if(totalVisits > top5Visits){
-			reviewTop5(key, totalVisits);
-		}
+//		if(totalVisits > top5Visits){
+//			reviewTop5(key, totalVisits);
+//		}
 		
 		/** TIME WINDOW CONTROL**/
 		i_time = System.currentTimeMillis();
 		long currentTime = i_time - t_start;
-		if(currentTime >= 30000){
-			dt.setTop5(top.get(0).countryCodeString, top.get(0).visits, top.get(1).countryCodeString, top.get(1).visits, top.get(2).countryCodeString, 
-					top.get(2).visits, top.get(3).countryCodeString, top.get(3).visits, top.get(4).countryCodeString, top.get(4).visits);
-			System.out.println("Sent top5");
-			System.out.println("size of codes: "+dt.getTopCCode().size());
-			System.out.println("size of visits: "+dt.getTopVisits().size());
-			sendDown(dt);
-			t_start = System.currentTimeMillis();
-		}
+//		if(currentTime >= 30000){
+//			dt.setTop5(top.get(0).countryCodeString, top.get(0).visits, top.get(1).countryCodeString, top.get(1).visits, top.get(2).countryCodeString, 
+//					top.get(2).visits, top.get(3).countryCodeString, top.get(3).visits, top.get(4).countryCodeString, top.get(4).visits);
+//			System.out.println("Sent top5");
+//			System.out.println("size of codes: "+dt.getTopCCode().size());
+//			System.out.println("size of visits: "+dt.getTopVisits().size());
+//			sendDown(dt);
+//			t_start = System.currentTimeMillis();
+//		}
 		
 		/**TIME CONTROL**/
 		i_time2 = System.currentTimeMillis();

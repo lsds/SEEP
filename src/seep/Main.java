@@ -224,6 +224,14 @@ public class Main {
 							System.out.println("Run map-reduce query on wikipedia data");
 							runMR(inf);
 							break;
+						case 18:
+							System.out.println("Parse financial data file");
+							parseFinancialFile(inf);
+							break;
+						case 19:
+							System.out.println("Run put/call parity query");
+							runPutCallParity(inf);
+							break;
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -247,6 +255,51 @@ public class Main {
 		}
 	}
 	
+	private void runPutCallParity(Infrastructure inf) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void parseFinancialFile(Infrastructure inf) {
+		//str(second),exchange,monthcode,expday,expyear,strikeprice, '\n')
+	/**TO USE THIS, CHANGE DATATUPLE**/
+		
+		Kryo k = new Kryo();
+		k.register(DataTuple.class);
+		FileOutputStream os;
+		try {
+			os = new FileOutputStream("workload-fin");
+		
+			Output o = new Output(os);
+			BufferedReader br = new BufferedReader(new FileReader("financialdata_adapted"));
+			String line = null;
+			while((line = br.readLine()) != null){
+				String [] tokens = line.split(" ");
+				DataTuple dt = new DataTuple();
+				dt.setSecond(Integer.parseInt(tokens[0]));
+				dt.setExchangeId(tokens[1]);
+				dt.setMonth(tokens[2]);
+				dt.setExpiryDay(Integer.parseInt(tokens[3]));
+				dt.setExpiryYear(Integer.parseInt(tokens[4]));
+				dt.setStrikePrice(Integer.parseInt(tokens[5]));
+				
+//				System.out.println("SAVING: "+tokens[0]+" "+tokens[1]);
+				k.writeObject(o, dt);
+			}
+			os.close();
+			br.close();
+		}
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
 	private void runMR(Infrastructure inf){
 		//Instantiate operators
 		Source src = new Source(-2);
@@ -371,34 +424,36 @@ public class Main {
 	}
 	
 	private void parseWikipediaFile(Infrastructure inf){
-		Kryo k = new Kryo();
-		k.register(DataTuple.class);
-		FileOutputStream os;
-		try {
-			os = new FileOutputStream("workload");
+		/**TO USE THIS, CHANGE DATATUPLE**/
 		
-			Output o = new Output(os);
-			BufferedReader br = new BufferedReader(new FileReader("raw_expanded_mixed"));
-			String line = null;
-			while((line = br.readLine()) != null){
-				String [] tokens = line.split(" ");
-				DataTuple dt = new DataTuple();
-				dt.setCountryCode(tokens[0]);
-				dt.setArticle(tokens[1]);
-//				System.out.println("SAVING: "+tokens[0]+" "+tokens[1]);
-				k.writeObject(o, dt);
-			}
-			os.close();
-			br.close();
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		Kryo k = new Kryo();
+//		k.register(DataTuple.class);
+//		FileOutputStream os;
+//		try {
+//			os = new FileOutputStream("workload");
+//		
+//			Output o = new Output(os);
+//			BufferedReader br = new BufferedReader(new FileReader("raw_expanded_mixed"));
+//			String line = null;
+//			while((line = br.readLine()) != null){
+//				String [] tokens = line.split(" ");
+//				DataTuple dt = new DataTuple();
+//				dt.setCountryCode(tokens[0]);
+//				dt.setArticle(tokens[1]);
+////				System.out.println("SAVING: "+tokens[0]+" "+tokens[1]);
+//				k.writeObject(o, dt);
+//			}
+//			os.close();
+//			br.close();
+//		}
+//		catch (FileNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} 
+//		catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 	}
 	

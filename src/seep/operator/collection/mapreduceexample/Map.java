@@ -38,9 +38,8 @@ public class Map extends Operator implements StatelessOperator, StateSplitI{
 		}
 //		System.out.println("RX: "+dt.getCountryCode()+" Visit article: "+dt.getArticle());
 		//Emit <K,V> being <countryCode, 1>
-		dt.setMRValue(1);
-		sendDown(dt, dt.getCountryCode().hashCode());
-//		hacked_send(dt);
+//		dt.setMRValue(1);
+//		sendDown(dt, dt.getCountryCode().hashCode());
 		
 		/**TIME CONTROL**/
 		i_time = System.currentTimeMillis();
