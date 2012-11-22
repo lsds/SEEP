@@ -40,11 +40,11 @@ public class ParityChecker extends Operator implements StatefulOperator{
 		for(int i = 0; i<b.size(); i++){
 			Value v = b.get(i);
 			//parity
-			if(a.exId != v.exId && Math.abs(a.monthCode - v.monthCode) == 12){
+			if(a.exId.equals(v.exId) && Math.abs(a.monthCode - v.monthCode) == 12){
 				return v;
 			}
 			//tuple overlap
-			else if (a.exId == v.exId && Math.abs(a.monthCode - v.monthCode) < 12){
+			else if (a.exId.equals(v.exId) && Math.abs(a.monthCode - v.monthCode) < 12){
 				//get rid of old tuple
 				b.remove(i);
 				//update the map

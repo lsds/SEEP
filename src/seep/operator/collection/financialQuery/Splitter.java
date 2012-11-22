@@ -25,10 +25,8 @@ public class Splitter extends Operator implements StatelessOperator{
 	int sec = 0;
 	
 	public Splitter(int opID) {
-		
 		super(opID);
 		subclassOperator = this;
-		
 		mapping.put("A", 1);
 		mapping.put("B", 2);
 		mapping.put("C", 3);
@@ -53,7 +51,6 @@ public class Splitter extends Operator implements StatelessOperator{
 		mapping.put("V", 22);
 		mapping.put("W", 23);
 		mapping.put("X", 24);
-		
 	}
 
 	@Override
@@ -70,7 +67,7 @@ public class Splitter extends Operator implements StatelessOperator{
 		}
 		
 		String keyString = null;
-		String strike = Integer.toString(dt.getStrikePrice());
+		String strike = Double.toString(dt.getStrikePrice());
 		String eDay = Integer.toString(dt.getExpiryDay());
 		String eYear = Integer.toString(dt.getExpiryYear());
 		keyString = strike+eDay+eYear;

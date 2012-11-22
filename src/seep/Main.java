@@ -25,6 +25,10 @@ import seep.infrastructure.NodeManager;
 import seep.operator.collection.SmartWordCounter;
 import seep.operator.collection.WordSplitter;
 import seep.operator.collection.WordSrc;
+import seep.operator.collection.financialQuery.ParityChecker;
+import seep.operator.collection.financialQuery.Splitter;
+import seep.operator.collection.financialQuery.Source;
+import seep.operator.collection.financialQuery.Sink;
 import seep.operator.collection.lrbenchmark.BACollector;
 import seep.operator.collection.lrbenchmark.DataFeeder;
 import seep.operator.collection.lrbenchmark.Forwarder;
@@ -34,8 +38,6 @@ import seep.operator.collection.lrbenchmark.TollCalculator;
 import seep.operator.collection.lrbenchmark.TollCollector;
 import seep.operator.collection.mapreduceexample.Map;
 import seep.operator.collection.mapreduceexample.Reduce;
-import seep.operator.collection.mapreduceexample.Sink;
-import seep.operator.collection.mapreduceexample.Source;
 import seep.operator.collection.testing.Bar;
 import seep.operator.collection.testing.Foo;
 import seep.operator.collection.testing.TestSink;
@@ -256,8 +258,36 @@ public class Main {
 	}
 	
 	private void runPutCallParity(Infrastructure inf) {
-		// TODO Auto-generated method stub
-		
+		//Instantiate operators
+		Source src = new Source(-2);
+		Splitter sp = new Splitter(0);
+		ParityChecker pc = new ParityChecker(1);
+		Sink snk = new Sink(-1);
+		//Configure sources and sink
+		inf.setSource(src);
+		inf.setSink(snk);
+		//Add operators to infrastructure
+		inf.addOperator(src);
+		inf.addOperator(sp);
+		inf.addOperator(pc);
+		inf.addOperator(snk);
+		//Connect operators
+		src.connectTo(sp, true);
+		sp.connectTo(pc, true);
+		pc.connectTo(snk, true);
+		//Set the query
+		inf.placeNew(src, inf.getNodeFromPool());
+		inf.placeNew(sp, inf.getNodeFromPool());
+		inf.placeNew(pc, inf.getNodeFromPool());
+		inf.placeNew(snk, inf.getNodeFromPool());
+		//Deploy
+		try {
+			inf.deploy();
+		}
+		catch (DeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private void parseFinancialFile(Infrastructure inf) {
@@ -281,7 +311,7 @@ public class Main {
 				dt.setMonth(tokens[2]);
 				dt.setExpiryDay(Integer.parseInt(tokens[3]));
 				dt.setExpiryYear(Integer.parseInt(tokens[4]));
-				dt.setStrikePrice(Integer.parseInt(tokens[5]));
+				dt.setStrikePrice(Double.parseDouble(tokens[5]));
 				
 //				System.out.println("SAVING: "+tokens[0]+" "+tokens[1]);
 				k.writeObject(o, dt);

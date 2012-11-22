@@ -33,7 +33,7 @@ public class DataTuple {
 	}
 	
 	private int second;
-	private int strikePrice;
+	private double strikePrice;
 	private String exchangeId;
 	private int expiryDay;
 	private int expiryYear;
@@ -76,12 +76,12 @@ public class DataTuple {
 		this.second = second;
 	}
 
-	public int getStrikePrice() {
+	public double getStrikePrice() {
 		return strikePrice;
 	}
 
-	public void setStrikePrice(int strikePrice) {
-		this.strikePrice = strikePrice;
+	public void setStrikePrice(double d) {
+		this.strikePrice = d;
 	}
 
 	public String getExchangeId() {

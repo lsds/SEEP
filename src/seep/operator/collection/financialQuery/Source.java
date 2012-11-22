@@ -15,7 +15,7 @@ public class Source extends Operator implements StatelessOperator{
 	
 	private static final long serialVersionUID = 1L;
 
-	private String financialData = "financialdata_adapted";
+	private String financialData = "workload-fin";
 	
 	private int records = 0;
 	
@@ -49,7 +49,7 @@ public class Source extends Operator implements StatelessOperator{
 		InputStream is = null;
 		try {
 			is = new FileInputStream(financialData);
-		} 
+		}
 		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -57,24 +57,25 @@ public class Source extends Operator implements StatelessOperator{
 		Input i = new Input(is);
 		while(true){
 			records++;
-			DataTuple tuple = kryo.readObjectOrNull(i, DataTuple.class);
+			DataTuple tuple = kryo.readObject(i, DataTuple.class);
 			if(tuple == null){
-				System.out.println("Replayed: "+records+". FINISHED");
-				System.exit(0);
+				System.out.println("NULL read");
+//				System.exit(0);
 			}
-//			for(int j = 0; j<alpha; j++){
-//				sendDown(tuple);
-//			}
+			for(int j = 0; j<alpha; j++){
+				sendDown(tuple);
+			}
 			sendDown(tuple);
-			try{
-				Thread.sleep(1);
-			}
-			catch(Exception e){
-				e.printStackTrace();
-			}
+//			try{
+//				Thread.sleep(1);
+//			}
+//			catch(Exception e){
+//				e.printStackTrace();
+//			}
 			i_time = System.currentTimeMillis();
 			long currentTime = i_time - t_start;
 			counter += alpha;
+//			counter++;
 			if(currentTime >= 1000){
 				sec++;
 				System.out.println("E/S: "+counter);

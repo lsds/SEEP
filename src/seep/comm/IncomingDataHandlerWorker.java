@@ -58,12 +58,12 @@ public void run() {
 					owner.setTsData(incomingTs);
 					//Put data in inputQueue
 					//HACK FOR EXPERIMENT
-					if(owner.getClass().toString().equals("class seep.operator.collection.mapreduceexample.Map")){
-						iq.pushOrShed(datatuple);
-					}
-					else{
+//					if(owner.getClass().toString().equals("class seep.operator.collection.mapreduceexample.Map")){
+//						iq.pushOrShed(datatuple);
+//					}
+//					else{
 						iq.push(datatuple);
-					}
+//					}
 				}
 			}
 			System.out.println("ALERT !!!!!!");
