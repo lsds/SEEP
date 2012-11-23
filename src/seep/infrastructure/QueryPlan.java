@@ -6,9 +6,7 @@ import java.util.Map;
 
 import seep.P;
 import seep.operator.Operator;
-import seep.operator.OperatorContext;
 import seep.operator.QuerySpecificationI;
-import seep.operator.StatefulOperator;
 
 public class QueryPlan {
 	
@@ -20,6 +18,8 @@ public class QueryPlan {
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
+	//Mapping of operators to node
+	private Map<Integer, ArrayList<Operator>> mapOperatorToNode = new HashMap<Integer, ArrayList<Operator>>();
 	
 	public ArrayList<Operator> getOps() {
 		return ops;
@@ -35,6 +35,10 @@ public class QueryPlan {
 
 	public Operator getSnk() {
 		return snk;
+	}
+	
+	public Map<Integer, ArrayList<Operator>> getMapOperatorToNode(){
+		return mapOperatorToNode;
 	}
 	
 	//This method is still valid to define which is the first operator in the query
@@ -54,23 +58,15 @@ public class QueryPlan {
 		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
 	
-	public void placeNew(Operator o, Node n) {
-		int opID = o.getOperatorId();
-		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
-		OperatorStaticInformation l = new OperatorStaticInformation(n, CONTROL_SOCKET + opID, DATA_SOCKET + opID, isStatefull);
-		o.getOpContext().setOperatorStaticInformation(l);
-		
-		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
-			int downID = downDescr.opID();
-			QuerySpecificationI downOp = elements.get(downID);
-			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
+	public void place(Operator o, Node n){
+		int nodeId = n.getNodeId();
+		if(mapOperatorToNode.containsKey(nodeId)){
+			mapOperatorToNode.get(nodeId).add(o);
 		}
-
-		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
-			int upID = upDescr.opID();
-			QuerySpecificationI upOp = elements.get(upID);
-			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
+		else{
+			ArrayList<Operator> opsOfNode = new ArrayList<Operator>();
+			opsOfNode.add(o);
+			mapOperatorToNode.put(nodeId, opsOfNode);
 		}
 	}
-	
 }

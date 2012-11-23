@@ -11,8 +11,14 @@ public class Node implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 	
+	private int nodeId = 0;
+	
 	private InetAddress ip;
 	private int port;
+	
+	public int getNodeId(){
+		return nodeId;
+	}
 	
 	public InetAddress getIp(){
 		return ip;
@@ -26,13 +32,18 @@ public class Node implements Serializable{
 		return new Node(newIp, port);
 	}
 
+	public Node(int nodeId){
+		this.nodeId = nodeId;
+	}
+	
 	public Node(InetAddress ip, int port) {
 		super();
 		this.ip = ip;
 		this.port = port;
 	}
 	
-	@Override public int hashCode() {
+	@Override 
+	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((ip == null) ? 0 : ip.hashCode());
@@ -40,7 +51,8 @@ public class Node implements Serializable{
 		return result;
 	}
 
-	@Override public boolean equals(Object obj) {
+	@Override 
+	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
 		if (obj == null)
@@ -58,7 +70,8 @@ public class Node implements Serializable{
 		return true;
 	}
 
-	@Override public String toString() {
+	@Override 
+	public String toString() {
 		return "Node [ip=" + ip + ", port=" + port + "]";
 	}
 

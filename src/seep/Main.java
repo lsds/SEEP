@@ -1,11 +1,7 @@
 package seep;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Properties;
 
 import seep.infrastructure.NodeManager;
 

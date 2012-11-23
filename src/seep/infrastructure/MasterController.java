@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import seep.P;
 import seep.elastic.ElasticInfrastructureUtils;
 
+
 public class MasterController {
 
 	//MasterController must be a singleton 
@@ -24,17 +25,22 @@ public class MasterController {
     P prop = new P();
 	
 	public void init(){
+		NodeManager.nLogger.info("-> Initializing Master Controller...");
 		prop.loadProperties();
-		inf = new Infrastructure(Integer.parseInt(P.valueFor("masterPort")));
+		inf = new Infrastructure(Integer.parseInt(P.valueFor("mainPort")));
 		eiu = new ElasticInfrastructureUtils(inf);
 		inf.startInfrastructure();
+		NodeManager.nLogger.info("-> DONE");
 	}
 	
 	public void submitQuery(QueryPlan qp){
+		NodeManager.nLogger.info("-> Submitting query to the system...");
 		inf.loadQuery(qp);
+		NodeManager.nLogger.info("-> DONE");
 	}
 	
 	public void start() throws DeploymentException{
+		NodeManager.nLogger.info("-> Starting Interactive Console: ");
 		try {
 			boolean alive = true;
 			
@@ -46,6 +52,10 @@ public class MasterController {
 					String option = br.readLine();
 					int opt = Integer.parseInt(option);
 					switch(opt){
+						//Map operators to nodes
+						case 1:
+							deployQueryToNodes();
+							break;
 						//start system
 						case 2:
 							startSystemOption(inf);
@@ -64,22 +74,25 @@ public class MasterController {
 							inf.stopWorkers();
 							System.out.println("ENDING console...");
 							break;
-						case 10:
+						//Exit the system
+						case 6:
 							System.out.println("BYE");
 							System.exit(0);
 							break;
-						case 11:
+						/*
+						case 7:
 							System.out.println("SAVE RESULTS");
 							saveResults(inf);
 							break;
-						case 12:
+						case 8:
 							System.out.println("SWITCH ESFT MECHANISMS");
 							switchMechanisms(inf);
 							break;
-						case 13:
+						case 9:
 							System.out.println("save latency SWC-query");
 							saveResultsSWC(inf);
 							break;
+						*/
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -98,6 +111,21 @@ public class MasterController {
 		catch(Exception g){
 			System.out.println(g.getMessage());
 		}
+	}
+	
+	private void deployQueryToNodes(){
+		NodeManager.nLogger.info("-> Deploying operators to Nodes");
+		//First deploy query to nodes
+		inf.deployQueryToNodes();
+		//Finally deploy the new submitted query (instantiation, etc)
+		try {
+			inf.deploy();
+		} 
+		catch (DeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		NodeManager.nLogger.info("-> DONE");
 	}
 	
 	private String getUserInput(String msg) throws IOException{
@@ -156,37 +184,27 @@ public class MasterController {
 		eiu.scaleOutOperator(opId, newOpId, newNode);
 	}
 	
-	private void saveResultsSWC(Infrastructure inf) {
-		inf.saveResultsSWC();
-	}
-
-	private void switchMechanisms(Infrastructure inf){
-		inf.switchMechanisms();
-	}
-	
-	private void saveResults(Infrastructure inf){
-		inf.saveResults();
-	}
+//	private void saveResultsSWC(Infrastructure inf) {
+//		inf.saveResultsSWC();
+//	}
+//
+//	private void switchMechanisms(Infrastructure inf){
+//		inf.switchMechanisms();
+//	}
+//	
+//	private void saveResults(Infrastructure inf){
+//		inf.saveResults();
+//	}
 	
 	public void consoleOutputMessage(){
 		System.out.println("#############");
 		System.out.println("USER Console, choose an option");
 		System.out.println();
-		System.out.println("1- Deploy WordCounter example");
+		System.out.println("1- Deploy query to Nodes");
 		System.out.println("2- Start system");
 		System.out.println("3- Configure source rate");
 		System.out.println("4- Parallelize Operator Manually");
 		System.out.println("5- Stop system console (EXP)");
-		System.out.println("6- Deploy Linear Road Benchmark");
-		System.out.println("7- Deploy testing topology");
-		System.out.println("8- Deploy LRB testing topology");
-		System.out.println("9- Parse text file to binary file");
-		System.out.println("10- EXIT");
-		System.out.println("11- Save results");
-		System.out.println("12- Switch ESFT mechanisms activation");
-		System.out.println("13");
-		System.out.println("14- tsetint v0.1 pipeline");
-		System.out.println("15- tsetint v0.1 NOT pipeline");
-		System.out.println("16- wikipedia data to binary data");
+		System.out.println("6- Exit");
 	}
 }

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import seep.Main;
@@ -39,11 +40,16 @@ public class Infrastructure {
 	private Deque<Node> nodeStack = new ArrayDeque<Node>();
 	private int numberRunningMachines = 0;
 
+	///\todo{Put this in a map{query->structure} and refer back to it properly}
+	/** The following wrapped attributes are specific to a query **/
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
+	//Mapping of operators to node
+	private Map<Integer, ArrayList<Operator>> queryToNodesMapping = new HashMap<Integer, ArrayList<Operator>>();
+	/** Until here **/
 	
 	private BasicCommunicationUtils bcu = new BasicCommunicationUtils();
 
@@ -66,6 +72,8 @@ public class Infrastructure {
 		elements = qp.getElements();
 		src = qp.getSrc();
 		snk = qp.getSnk();
+		
+		queryToNodesMapping = qp.getMapOperatorToNode();
 	}
 
 	public MonitorManager getMonitorManager(){
@@ -147,6 +155,16 @@ public class Infrastructure {
 	public void stopWorkers(){
 		//stop monitor manager.. 
 		monitorManager.stopMManager(true);
+	}
+	
+	public void deployQueryToNodes(){
+		//	Finally get the mapping for this query and assing real nodes
+		for(Entry<Integer, ArrayList<Operator>> e : queryToNodesMapping.entrySet()){
+			Node a = getNodeFromPool();
+			for(Operator o : e.getValue()){
+				placeNew(o, a);
+			}
+		}
 	}
 	
 	public void deploy() throws DeploymentException {
@@ -293,6 +311,25 @@ public class Infrastructure {
 	public synchronized void incrementBaseId(){
 		baseId++;
 	}
+	
+	public void placeNew(Operator o, Node n) {
+		int opID = o.getOperatorId();
+		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
+		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opID, QueryPlan.DATA_SOCKET + opID, isStatefull);
+		o.getOpContext().setOperatorStaticInformation(l);
+		
+		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
+			int downID = downDescr.opID();
+			QuerySpecificationI downOp = elements.get(downID);
+			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
+		}
+
+		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
+			int upID = upDescr.opID();
+			QuerySpecificationI upOp = elements.get(upID);
+			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
+		}
+	}
 
 	public void deployConnection(String command, QuerySpecificationI opToContact, QuerySpecificationI opToAdd, String operatorType) {
 		System.out.println("OPERATOR TYPE: "+operatorType);
@@ -433,22 +470,5 @@ public class Infrastructure {
 		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
 	
-	public void placeNew(Operator o, Node n) {
-		int opID = o.getOperatorId();
-		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
-		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opID, QueryPlan.DATA_SOCKET + opID, isStatefull);
-		o.getOpContext().setOperatorStaticInformation(l);
-		
-		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
-			int downID = downDescr.opID();
-			QuerySpecificationI downOp = elements.get(downID);
-			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
-		}
-
-		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
-			int upID = upDescr.opID();
-			QuerySpecificationI upOp = elements.get(upID);
-			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
-		}
-	}
+	
 }
