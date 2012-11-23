@@ -8,7 +8,7 @@ import java.net.Socket;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 
-import seep.Main;
+import seep.P;
 import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.NodeManager;
 
@@ -56,14 +56,14 @@ public class Monitor implements Runnable{
 		initializeKryo();
 		try{
 			//Establish connection with the monitor manager.
-			InetAddress addrMon = InetAddress.getByName(Main.valueFor("mainAddr"));
-			int portMon = Integer.parseInt(Main.valueFor("monitorManagerPort"));
+			InetAddress addrMon = InetAddress.getByName(P.valueFor("mainAddr"));
+			int portMon = Integer.parseInt(P.valueFor("monitorManagerPort"));
 			NodeManager.nLogger.info("MONITOR-> conn ip: "+addrMon.toString()+" port: "+portMon);
 			Socket conn = new Socket(addrMon, portMon);
 			OutputStream out = conn.getOutputStream();
 			output = new Output(out);
 			//Monitoring interval
-			int sleepInterval = 1000*(Integer.parseInt(Main.valueFor("monitorInterval"))-1);
+			int sleepInterval = 1000*(Integer.parseInt(P.valueFor("monitorInterval"))-1);
 			//Runtime monitor loop
 			while(listen){
 				Thread.sleep(sleepInterval);

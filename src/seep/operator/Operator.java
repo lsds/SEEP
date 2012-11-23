@@ -26,8 +26,6 @@ import seep.infrastructure.OperatorInitializationException;
 import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.OperatorStaticInformation;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.operator.collection.SmartWordCounter;
-import seep.operator.collection.lrbenchmark.Snk;
 
 /**
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
@@ -490,12 +488,12 @@ System.out.println("*reconfigure: "+b);
 		/** SAVE RESULTS RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("saveResults")){
-			dispatcher.ackControlMessage(genericAck, os);
-			try{
-			((Snk)this.subclassOperator).save();
-			}catch(Exception e){
-				((SmartWordCounter)this.subclassOperator).save();
-			}
+//			dispatcher.ackControlMessage(genericAck, os);
+//			try{
+//			((Snk)this.subclassOperator).save();
+//			}catch(Exception e){
+//				((SmartWordCounter)this.subclassOperator).save();
+//			}
 		}
 		/** DEACTIVATE elft mechanism message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}

@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 import seep.Main;
+import seep.P;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 
@@ -174,7 +175,7 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 						System.out.println("Manager: Command received -> "+com);
 						
 						if(token[0].equals("crash")){
-							if(Main.valueFor("parallelRecovery").equals("true")){
+							if(P.valueFor("parallelRecovery").equals("true")){
 								//params oldIp
 								inf.parallelRecovery(token[1]);
 							}

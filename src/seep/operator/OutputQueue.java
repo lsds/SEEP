@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 
 import seep.Main;
+import seep.P;
 import seep.buffer.Buffer;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
@@ -98,7 +99,7 @@ public class OutputQueue {
 
 						channelRecord.cleanBatch();
 						
-						if(Main.valueFor("eftMechanismEnabled").equals("true")){
+						if(P.valueFor("eftMechanismEnabled").equals("true")){
 //							buffer.save(msg);
 						}
 					}

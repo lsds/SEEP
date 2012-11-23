@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import seep.Main;
+import seep.P;
 import seep.comm.BasicCommunicationUtils;
 import seep.comm.serialization.ControlTuple;
 import seep.elastic.ElasticInfrastructureUtils;
@@ -29,13 +30,11 @@ public class Infrastructure {
 
 	public static Logger nLogger = Logger.getLogger("seep");
 	
-	int value = Integer.parseInt(Main.valueFor("maxLatencyAllowed"));
-	static final int CONTROL_SOCKET = Integer.parseInt(Main.valueFor("controlSocket"));
-	static final int DATA_SOCKET = Integer.parseInt(Main.valueFor("dataSocket"));
+	int value = Integer.parseInt(P.valueFor("maxLatencyAllowed"));
 	
 	static public MasterStatisticsHandler msh = new MasterStatisticsHandler();
 	
-	private int baseId = Integer.parseInt(Main.valueFor("baseId"));
+	private int baseId = Integer.parseInt(P.valueFor("baseId"));
 
 	private Deque<Node> nodeStack = new ArrayDeque<Node>();
 	private int numberRunningMachines = 0;
@@ -56,6 +55,17 @@ public class Infrastructure {
 	
 	public Infrastructure(int listeningPort) {
 		this.port = listeningPort;
+	}
+	
+	/** 
+	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
+	 * and then, for the below methods, indicate the query id that needs to be accessed.
+	**/
+	public void loadQuery(QueryPlan qp){
+		ops = qp.getOps();
+		elements = qp.getElements();
+		src = qp.getSrc();
+		snk = qp.getSnk();
 	}
 
 	public MonitorManager getMonitorManager(){
@@ -90,47 +100,10 @@ public class Infrastructure {
 		return baseId;
 	}
 	
-	//This method is still valid to define which is the first operator in the query
-	public void setSource(Operator source) {
-		NodeManager.nLogger.info("Configured NEW SOURCE, Operator: "+src.toString());
-		src.add(source);
-		
-	}
-
-	public void setSink(Operator snk){
-		NodeManager.nLogger.info("Configured SINK as Operator: "+snk.toString());
-		this.snk = snk;
-	}
-	
 	public void addNode(Node n) {
 		nodeStack.push(n);
 		Infrastructure.nLogger.info("-> Infrastructure. New Node: "+n);
 		Infrastructure.nLogger.info("-> Infrastructure. Num nodes: "+getNodePoolSize());
-	}
-	
-	public void addOperator(Operator o) {
-		ops.add(o);
-		elements.put(o.getOperatorId(), o);
-		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
-	}
-	
-	public void placeNew(Operator o, Node n) {
-		int opID = o.getOperatorId();
-		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
-		OperatorStaticInformation l = new OperatorStaticInformation(n, CONTROL_SOCKET + opID, DATA_SOCKET + opID, isStatefull);
-		o.getOpContext().setOperatorStaticInformation(l);
-		
-		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
-			int downID = downDescr.opID();
-			QuerySpecificationI downOp = elements.get(downID);
-			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
-		}
-
-		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
-			int upID = upDescr.opID();
-			QuerySpecificationI upOp = elements.get(upID);
-			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
-		}
 	}
 	
 	public void updateContextLocations(Operator o) {
@@ -305,7 +278,7 @@ public class Infrastructure {
 	}
 
 	public synchronized Node getNodeFromPool(){
-		if(nodeStack.size() < Integer.parseInt(Main.valueFor("minimumNodesAvailable"))){
+		if(nodeStack.size() < Integer.parseInt(P.valueFor("minimumNodesAvailable"))){
 			//nLogger.info("Instantiating EC2 images");
 			//new Thread(new EC2Worker(this)).start();
 		}
@@ -450,5 +423,32 @@ public class Infrastructure {
 			}
 		}
 		return null;
+	}
+	
+	/** THIS FUNCTIONS WILL BE REPLACED WITH THE ACTUAL IDENTIFIER OF THE QUERY THE OP IS PART OF  **/
+	
+	public void addOperator(Operator o) {
+		ops.add(o);
+		elements.put(o.getOperatorId(), o);
+		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
+	}
+	
+	public void placeNew(Operator o, Node n) {
+		int opID = o.getOperatorId();
+		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
+		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opID, QueryPlan.DATA_SOCKET + opID, isStatefull);
+		o.getOpContext().setOperatorStaticInformation(l);
+		
+		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
+			int downID = downDescr.opID();
+			QuerySpecificationI downOp = elements.get(downID);
+			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
+		}
+
+		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
+			int upID = upDescr.opID();
+			QuerySpecificationI upOp = elements.get(upID);
+			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
+		}
 	}
 }
