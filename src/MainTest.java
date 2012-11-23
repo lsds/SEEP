@@ -10,7 +10,7 @@ import seep.operator.InputQueue;
 public class MainTest {
 
 	InputQueue inputQueue = new InputQueue(100000);
-	InputQueue2 inputQueue2 = null;
+	InputQueue2  inputQueue2 = null;
 	
 	private BlockingQueue<DataTuple> iq = new ArrayBlockingQueue<DataTuple>(100000);
 	
