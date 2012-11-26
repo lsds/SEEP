@@ -1,5 +1,9 @@
 package seep.infrastructure;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.PrintWriter;
@@ -142,6 +146,36 @@ public class NodeManager{
 				}
 				else if(o instanceof String){
 					String tokens[] = ((String)o).split(" ");
+					System.out.println("Tokens received: "+tokens[0]);
+					if(tokens[0].equals("CODE")){
+						//Send ACK back
+						out.println("ack");
+						// Establish subconnection to receive the code
+						System.out.println("Waiting for receiving the file");
+						Socket subConnection = serverSocket.accept();
+						DataInputStream dis = new DataInputStream(subConnection.getInputStream());
+//						int fileSize = dis.readInt();
+						byte[] serializedFile = new byte[0];
+						int bytesRead = dis.read(serializedFile);
+//						if(bytesRead != fileSize){
+//							NodeManager.nLogger.warning("Mismatch between read bytes and expected bytes when receiving code");
+//							///\fixme{RAISE EXCEPTION HERE}
+//							
+//						}
+//						System.out.println("READ: "+fileSize+" bytes from the network");
+						//Here I have the serialized bytes of the file, we materialize the real file
+						//For now the name of the file is always query.jar
+						FileOutputStream fos = new FileOutputStream(new File("query.jar"));
+						fos.write(serializedFile);
+						fos.close();
+						dis.close();
+						subConnection.close();
+						out.println("ack");
+						//At this point we should have the file on disk
+						File aux = new File("query.jar");
+						System.out.println("PATH TO NEW CODE: "+aux.getAbsolutePath());
+						
+					}
 					if(tokens[0].equals("STOP")){
 						listen = false;
 						out.println("ack");

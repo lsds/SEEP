@@ -1,5 +1,8 @@
 package seep.infrastructure;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
@@ -167,7 +170,23 @@ public class Infrastructure {
 		}
 	}
 	
-	public void deploy() throws DeploymentException {
+	public void setUp(String path) throws CodeDeploymentException{
+		FileInputStream fis = null;
+		try {
+			NodeManager.nLogger.info("Opening stream to file: "+path);
+			fis = new FileInputStream(new File(path));
+		}
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		for(Operator op: ops){
+			sendCode(op, fis);
+		}
+	
+	}
+	
+	public void deploy() throws OperatorDeploymentException {
 
   		//Deploy operators
 		for(Operator op: ops){
@@ -202,6 +221,13 @@ public class Infrastructure {
 				bcu.sendObject(n, new Integer ((op).getOperatorId()));
 			}
 		}
+	}
+	
+	public void sendCode(Operator op, FileInputStream fis){
+		///\fixme{once there are more than one op per node this code will need to be fixed}
+		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		Infrastructure.nLogger.info("-> Infrastructure. Sending CODE to node: "+node.toString());
+		bcu.sendFile(node, fis);
 	}
 
 	public void deploy(Operator op) {

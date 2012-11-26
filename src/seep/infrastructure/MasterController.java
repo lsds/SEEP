@@ -3,7 +3,12 @@ package seep.infrastructure;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 import seep.P;
 import seep.elastic.ElasticInfrastructureUtils;
@@ -11,9 +16,13 @@ import seep.elastic.ElasticInfrastructureUtils;
 
 public class MasterController {
 
-	//MasterController must be a singleton 
+	//MasterController must be a singleton
 	private static final MasterController instance = new MasterController();
-	 
+	
+	//The current path to the query being submitted. If another query is submitted this is overwritten
+	///\todo{Check if this is an issue or not}
+	private String pathToQueryDefinition = null;
+	
     private MasterController() {}
  
     public static MasterController getInstance() {
@@ -39,7 +48,7 @@ public class MasterController {
 		NodeManager.nLogger.info("-> DONE");
 	}
 	
-	public void start() throws DeploymentException{
+	public void start() throws OperatorDeploymentException{
 		NodeManager.nLogger.info("-> Starting Interactive Console: ");
 		try {
 			boolean alive = true;
@@ -53,6 +62,10 @@ public class MasterController {
 					int opt = Integer.parseInt(option);
 					switch(opt){
 						//Map operators to nodes
+						case 0:
+							System.out.println("Not implemented yet");
+							//Submit Query to the system
+							break;
 						case 1:
 							deployQueryToNodes();
 							break;
@@ -79,20 +92,6 @@ public class MasterController {
 							System.out.println("BYE");
 							System.exit(0);
 							break;
-						/*
-						case 7:
-							System.out.println("SAVE RESULTS");
-							saveResults(inf);
-							break;
-						case 8:
-							System.out.println("SWITCH ESFT MECHANISMS");
-							switchMechanisms(inf);
-							break;
-						case 9:
-							System.out.println("save latency SWC-query");
-							saveResultsSWC(inf);
-							break;
-						*/
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -113,15 +112,80 @@ public class MasterController {
 		}
 	}
 	
+	public QueryPlan executeComposeFromQuery(String pathToJar, String definitionClass){
+		URLClassLoader ucl = null;
+		Class baseI = null;
+		Object baseInstance = null;
+		Method compose = null;
+		QueryPlan qp = null;
+		pathToQueryDefinition = pathToJar;
+		String urlPathToQueryDefinition = "file://" + pathToJar;
+		URL[] urls = new URL[1];
+		try {
+			urls[0] = new URL(urlPathToQueryDefinition);
+		}
+		catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ucl = new URLClassLoader(urls);
+		//Check what the classLoader is loading
+		URL []a = ucl.getURLs();
+		for(int i = 0; i < a.length; i++){
+			System.out.println("Loading URL: "+a[i]);
+		}
+		
+		try {
+			baseI = ucl.loadClass(definitionClass);
+			baseInstance = baseI.newInstance();
+			compose = baseI.getDeclaredMethod("compose", null);
+			qp = (QueryPlan) compose.invoke(baseInstance, null);
+		} 
+		catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		//Finally we return the queryPlan
+		return qp;
+	}
+	
 	private void deployQueryToNodes(){
 		NodeManager.nLogger.info("-> Deploying operators to Nodes");
 		//First deploy query to nodes
 		inf.deployQueryToNodes();
 		//Finally deploy the new submitted query (instantiation, etc)
 		try {
+			inf.setUp(pathToQueryDefinition);
 			inf.deploy();
-		} 
-		catch (DeploymentException e) {
+		}
+		catch (OperatorDeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (CodeDeploymentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -184,22 +248,11 @@ public class MasterController {
 		eiu.scaleOutOperator(opId, newOpId, newNode);
 	}
 	
-//	private void saveResultsSWC(Infrastructure inf) {
-//		inf.saveResultsSWC();
-//	}
-//
-//	private void switchMechanisms(Infrastructure inf){
-//		inf.switchMechanisms();
-//	}
-//	
-//	private void saveResults(Infrastructure inf){
-//		inf.saveResults();
-//	}
-	
 	public void consoleOutputMessage(){
 		System.out.println("#############");
 		System.out.println("USER Console, choose an option");
 		System.out.println();
+		System.out.println("0- Submit query to the System");
 		System.out.println("1- Deploy query to Nodes");
 		System.out.println("2- Start system");
 		System.out.println("3- Configure source rate");

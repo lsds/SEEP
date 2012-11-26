@@ -1,6 +1,8 @@
 package seep.comm;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
@@ -44,7 +46,6 @@ public class BasicCommunicationUtils {
 		InetAddress ip = n.getIp();
 		int port = n.getPort();
 /// \bug {creating socket again and again.}
-		//Socket connection = uniqueSocket.get(port);
 		Socket connection = null;
 		ObjectOutputStream oos = null;
 		BufferedReader in = null;
@@ -54,11 +55,10 @@ public class BasicCommunicationUtils {
 				System.out.println("Creating socket to: "+ip.toString()+" port: "+port);
 				connection = new Socket(ip, port);
 				Infrastructure.nLogger.info("-> BCU. New socket created, IP: "+ip.toString()+" Port: "+port);
-				//uniqueSocket.put(port, connection);
 			}
-//System.out.println("SENDOBJECT: to IP: "+ip.toString()+" Port: "+port);
 			oos = new ObjectOutputStream(connection.getOutputStream());
 			in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			System.out.println("Class about to send: "+o.getClass());
 			oos.writeObject(o);
 			String reply = null;
 			reply = in.readLine();
@@ -80,6 +80,34 @@ public class BasicCommunicationUtils {
 			e.printStackTrace();
 		}
 		return success;
+	}
+	
+	public void sendFile(Node n, FileInputStream fis){
+		sendObject(n, "CODE");
+		System.out.println("Getting ready to send FILE");
+		InetAddress ip = n.getIp();
+		int port = n.getPort();
+		Socket connection = null;
+		byte[] data = new byte[0];
+System.out.println("A");
+		try{
+System.out.println("B");
+			int fileSize = fis.read(data);
+System.out.println("C");
+			connection = new Socket(ip, port);
+			DataOutputStream dos = new DataOutputStream(connection.getOutputStream());
+System.out.println("D");
+//			dos.writeInt(fileSize);
+			System.out.println("FILE WRITTEN HERE");
+			dos.write(data);
+System.out.println("E");
+		}
+		catch(IOException io){
+			NodeManager.nLogger.severe("IOEX when trying to send file over the network");
+			io.printStackTrace();
+		}
+		
+		
 	}
 
 	public void sendControlMsg(OperatorStaticInformation loc, ControlTuple ct, int socketId){
