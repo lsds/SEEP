@@ -1,23 +1,29 @@
 package seep.infrastructure;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import seep.comm.BasicCommunicationUtils;
+import seep.comm.NodeManagerCommunication;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
+import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
+import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
 /**
  * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the 
@@ -25,6 +31,8 @@ import seep.operator.Operator;
  */
 
 public class NodeManager{
+	
+	private RuntimeClassLoader rcl = null;
 	
 	//Endpoint of the central node
 	private int bindPort;
@@ -34,7 +42,7 @@ public class NodeManager{
 	
 	public static Logger nLogger = Logger.getLogger("seep");
 	
-	private BasicCommunicationUtils bcu = new BasicCommunicationUtils();
+	private NodeManagerCommunication bcu = new NodeManagerCommunication();
 	
 	static public boolean monitorOfSink = false;
 	
@@ -54,6 +62,8 @@ public class NodeManager{
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
 		this.ownPort = ownPort;
+		
+		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
 
 	public void newOperatorInstantiation(Object o) throws OperatorInstantiationException {
@@ -113,13 +123,16 @@ public class NodeManager{
 //		}
 	}
 	
+	
 	public void init(){
 		//Send bootstrap information
 		bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
 		//Local variables
 		ServerSocket serverSocket = null;
 		PrintWriter out = null;
-		ObjectInputStream ois = null;
+		ExtendedObjectInputStream ois = null;
+		ExtendedObjectInputStream hack = null;
+		
 		Object o = null;
 		boolean listen = true;
 		boolean initializationSuccess = false;
@@ -134,9 +147,28 @@ public class NodeManager{
 				//Establish output stream
 				out = new PrintWriter(clientSocket.getOutputStream(), true);
 				//Establish input stream, which receives serialized objects
-				ois = new ObjectInputStream(clientSocket.getInputStream());
+				ois = new ExtendedObjectInputStream(clientSocket.getInputStream(), rcl);
+//				hack = rcl.getEOIS(clientSocket.getInputStream());
 				//Read the serialized object sent.
-				o = ois.readObject();
+				ObjectStreamClass osc = ois.readClassDescriptor();
+				System.out.println("Reading class descriptor: "+osc.toString());
+				//Lazy load of the required class in case is an operator
+				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
+					System.out.println("Loading class with CUSTOM CLASSLOADER: "+osc.getName());
+					Class<?> baseI = rcl.loadClass(osc.getName());
+					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
+					Object[] initargs = new Object[1];
+					initargs[0] = -666;
+					Object base = constructor.newInstance(initargs);
+					System.out.println("Mock object id: "+((Operator)base).getOperatorId());
+					o = ois.readObject();
+					System.out.println("REAL object id: "+((Operator)o).getOperatorId());
+				}
+				else{
+					o = ois.readObject();
+				}
+				// Can I read the object with the class supposedly loaded in the environment?
+//				o = ois.readObject();
 				//Check the class of the object received and initialized accordingly
 				if(o instanceof Operator){
 					this.newOperatorInstantiation(o);
@@ -154,27 +186,30 @@ public class NodeManager{
 						System.out.println("Waiting for receiving the file");
 						Socket subConnection = serverSocket.accept();
 						DataInputStream dis = new DataInputStream(subConnection.getInputStream());
-//						int fileSize = dis.readInt();
-						byte[] serializedFile = new byte[0];
-						int bytesRead = dis.read(serializedFile);
-//						if(bytesRead != fileSize){
-//							NodeManager.nLogger.warning("Mismatch between read bytes and expected bytes when receiving code");
-//							///\fixme{RAISE EXCEPTION HERE}
-//							
-//						}
-//						System.out.println("READ: "+fileSize+" bytes from the network");
+						int codeSize = dis.readInt();
+						byte[] serializedFile = new byte[codeSize];
+						dis.readFully(serializedFile);
+						int bytesRead = serializedFile.length;
+						System.out.println("Code is "+codeSize+ ": Read bytes is: "+bytesRead);
+						if(bytesRead != codeSize){
+							NodeManager.nLogger.warning("Mismatch between read and file size");
+						}
 						//Here I have the serialized bytes of the file, we materialize the real file
 						//For now the name of the file is always query.jar
 						FileOutputStream fos = new FileOutputStream(new File("query.jar"));
+						System.out.println("READ "+serializedFile.length+" bytes");
 						fos.write(serializedFile);
 						fos.close();
 						dis.close();
 						subConnection.close();
 						out.println("ack");
 						//At this point we should have the file on disk
-						File aux = new File("query.jar");
-						System.out.println("PATH TO NEW CODE: "+aux.getAbsolutePath());
-						
+						File pathToCode = new File("query.jar");
+						System.out.println("PATH TO NEW CODE: "+pathToCode.getAbsolutePath());
+						System.out.println("Exists??? "+pathToCode.exists());
+						if(pathToCode.exists()){
+							loadCodeToRuntime(pathToCode);
+						}
 					}
 					if(tokens[0].equals("STOP")){
 						listen = false;
@@ -217,11 +252,6 @@ public class NodeManager{
 			io.printStackTrace();
 //			out.println("nack");
 		}
-		catch(ClassNotFoundException cnfe){
-			System.out.println("ClassNotFoundException: "+cnfe.getMessage());
-			cnfe.printStackTrace();
-//			out.println("nack");
-		}
 		catch(IllegalThreadStateException itse){
 			System.out.println("IllegalThreadStateException, no problem, monitor thing");
 			itse.printStackTrace();
@@ -232,6 +262,51 @@ public class NodeManager{
 		}
 		catch (OperatorInitializationException e) {
 			NodeManager.nLogger.warning("Error while initializing operator");
+			e.printStackTrace();
+		}
+		catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
+	private void loadCodeToRuntime(File pathToCode){
+		URL urlToCode = null;
+		try {
+			urlToCode = new URL("file://"+pathToCode.getAbsolutePath());
+			System.out.println("Loading into class loader: "+urlToCode.toString());
+			URL[] urls = new URL[1];
+			urls[0] = urlToCode;
+			//rcl = new RuntimeClassLoader(urls, this.getClass().getClassLoader());
+			rcl.addURL(urlToCode);
+		}
+		catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

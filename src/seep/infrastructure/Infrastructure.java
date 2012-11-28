@@ -3,6 +3,7 @@ package seep.infrastructure;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
@@ -15,7 +16,8 @@ import java.util.logging.Logger;
 
 import seep.Main;
 import seep.P;
-import seep.comm.BasicCommunicationUtils;
+import seep.comm.NodeManagerCommunication;
+import seep.comm.RuntimeCommunicationTools;
 import seep.comm.serialization.ControlTuple;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.monitor.MonitorManager;
@@ -54,8 +56,8 @@ public class Infrastructure {
 	private Map<Integer, ArrayList<Operator>> queryToNodesMapping = new HashMap<Integer, ArrayList<Operator>>();
 	/** Until here **/
 	
-	private BasicCommunicationUtils bcu = new BasicCommunicationUtils();
-
+	private RuntimeCommunicationTools rct = new RuntimeCommunicationTools();
+	private NodeManagerCommunication bcu = new NodeManagerCommunication();
 	private ElasticInfrastructureUtils eiu = new ElasticInfrastructureUtils(this);
 
 	private ManagerWorker manager = null;
@@ -99,7 +101,11 @@ public class Infrastructure {
 		return numberRunningMachines;
 	}
 	
-	public BasicCommunicationUtils getBcu() {
+	public RuntimeCommunicationTools getRCT() {
+		return rct;
+	}
+	
+	public NodeManagerCommunication getBCU(){
 		return bcu;
 	}
 	
@@ -172,18 +178,24 @@ public class Infrastructure {
 	
 	public void setUp(String path) throws CodeDeploymentException{
 		FileInputStream fis = null;
+		long fileSize = 0;
 		try {
 			NodeManager.nLogger.info("Opening stream to file: "+path);
-			fis = new FileInputStream(new File(path));
+			File f = new File(path);
+			fis = new FileInputStream(f);
+			fileSize = f.length();
+			for(Operator op: ops){
+				sendCode(op, fis, fileSize);
+			}
+			fis.close();
 		}
 		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		for(Operator op: ops){
-			sendCode(op, fis);
-		}
-	
 	}
 	
 	public void deploy() throws OperatorDeploymentException {
@@ -223,11 +235,11 @@ public class Infrastructure {
 		}
 	}
 	
-	public void sendCode(Operator op, FileInputStream fis){
+	public void sendCode(Operator op, FileInputStream fis, long fileSize){
 		///\fixme{once there are more than one op per node this code will need to be fixed}
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
 		Infrastructure.nLogger.info("-> Infrastructure. Sending CODE to node: "+node.toString());
-		bcu.sendFile(node, fis);
+		bcu.sendFile(node, fis, fileSize);
 	}
 
 	public void deploy(Operator op) {
@@ -277,7 +289,7 @@ public class Infrastructure {
 							
 							Infrastructure.nLogger.info("-> Infrastructure. updating Upstream OP-"+downstream.getOperatorId());
 							//bcu.sendControlMsg(downstream.getOpContext().getOperatorStaticInformation(), ctb.build(), downstream.getOperatorId());
-							bcu.sendControlMsgWithoutACK(downstream.getOpContext().getOperatorStaticInformation(), ctb, downstream.getOperatorId());
+							rct.sendControlMsgWithoutACK(downstream.getOpContext().getOperatorStaticInformation(), ctb, downstream.getOperatorId());
 						}
 					}
 				}
@@ -296,7 +308,7 @@ public class Infrastructure {
 							}
 							Infrastructure.nLogger.info("-> Infrastructure. updating Downstream OP-"+upstream.getOperatorId());
 							//bcu.sendControlMsg(upstream.getOpContext().getOperatorStaticInformation(), ctb.build(), upstream.getOperatorId());
-							bcu.sendControlMsgWithoutACK(upstream.getOpContext().getOperatorStaticInformation(), ctb, upstream.getOperatorId());
+							rct.sendControlMsgWithoutACK(upstream.getOpContext().getOperatorStaticInformation(), ctb, upstream.getOperatorId());
 							//It needs to replay buffer
 							String target = "";
 							ControlTuple ctb2 = new ControlTuple().makeReconfigure(0, "replay", target);
@@ -374,7 +386,7 @@ public class Infrastructure {
 		else{
 			ct = new ControlTuple().makeReconfigure(0, command, ip);
 		}
-		bcu.sendControlMsg(opToContact.getOpContext().getOperatorStaticInformation(), ct, opToContact.getOperatorId());
+		rct.sendControlMsg(opToContact.getOpContext().getOperatorStaticInformation(), ct, opToContact.getOperatorId());
 	}
 	
 	public void configureSourceRate(int numberEvents, int time){
@@ -384,9 +396,9 @@ public class Infrastructure {
 		Main.eventR = numberEvents;
 		Main.period = time;
 		for(Operator source : src){
-			bcu.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
+			rct.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
 		}
-		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
+		rct.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
 	}
 	
 	public int getOpIdFromIp(InetAddress ip){
@@ -440,19 +452,19 @@ public class Infrastructure {
 
 	public void saveResults() {
 		ControlTuple tuple = new ControlTuple().makeReconfigureSingleCommand("saveResults");
-		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
+		rct.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
 	}
 	
 	public void switchMechanisms(){
 		ControlTuple tuple = new ControlTuple().makeReconfigureSingleCommand("deactivateMechanisms");
 		for(Operator o : ops){
-			bcu.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), tuple, o.getOperatorId());
+			rct.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), tuple, o.getOperatorId());
 		}
 		//Send msg to src and snk
 		for(Operator source : src){
-			bcu.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
+			rct.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
 		}
-		bcu.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
+		rct.sendControlMsg(snk.getOpContext().getOperatorStaticInformation(), tuple, snk.getOperatorId());
 	}
 
 	public String getOpType(int opId) {
@@ -476,7 +488,7 @@ public class Infrastructure {
 				aux = op;
 			}
 		}
-		bcu.sendControlMsg(aux.getOpContext().getOperatorStaticInformation(), tuple, aux.getOperatorId());
+		rct.sendControlMsg(aux.getOpContext().getOperatorStaticInformation(), tuple, aux.getOperatorId());
 	}
 
 	public Operator getOperatorById(int opIdToParallelize) {
@@ -495,6 +507,5 @@ public class Infrastructure {
 		elements.put(o.getOperatorId(), o);
 		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
-	
 	
 }
