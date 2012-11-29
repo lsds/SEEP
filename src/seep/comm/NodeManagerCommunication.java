@@ -64,21 +64,15 @@ public class NodeManagerCommunication {
 		return success;
 	}
 	
-	public void sendFile(Node n, FileInputStream fis, long fileSize){
+	public void sendFile(Node n, byte[] data){
 		sendObject(n, "CODE");
 		InetAddress ip = n.getIp();
 		int port = n.getPort();
 		Socket connection = null;
-		byte[] data = new byte[(int) fileSize];
 		try{
-			int readBytesFromFile = fis.read(data);
-			if(readBytesFromFile != fileSize){
-				NodeManager.nLogger.warning("Mismatch between read bytes and file size");
-			}
-			System.out.println("File size is: "+fileSize+". Going to send "+readBytesFromFile+" bytes through the network");
 			connection = new Socket(ip, port);
 			DataOutputStream dos = new DataOutputStream(connection.getOutputStream());
-			dos.writeInt(readBytesFromFile);
+			dos.writeInt(data.length);
 			dos.write(data);
 //			fis.close();
 			dos.close();

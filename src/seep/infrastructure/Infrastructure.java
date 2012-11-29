@@ -179,22 +179,43 @@ public class Infrastructure {
 	public void setUp(String path) throws CodeDeploymentException{
 		FileInputStream fis = null;
 		long fileSize = 0;
+		byte[] data = null;
 		try {
+			//Open stream to file
 			NodeManager.nLogger.info("Opening stream to file: "+path);
 			File f = new File(path);
 			fis = new FileInputStream(f);
 			fileSize = f.length();
-			for(Operator op: ops){
-				sendCode(op, fis, fileSize);
+			//Read file data
+			data = new byte[(int)fileSize];
+			int readBytesFromFile = fis.read(data);
+			//Check if we have read correctly
+			if(readBytesFromFile != fileSize){
+				NodeManager.nLogger.warning("Mismatch between read bytes and file size");
 			}
+			//Send data to operators
+			for(Operator op: ops){
+				sendCode(op, data);
+			}
+			//Close the stream
 			fis.close();
 		}
 		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (IOException e) {
+		} 
+		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+		finally{
+			try {
+				fis.close();
+			} 
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -235,11 +256,11 @@ public class Infrastructure {
 		}
 	}
 	
-	public void sendCode(Operator op, FileInputStream fis, long fileSize){
+	public void sendCode(Operator op, byte[] data){
 		///\fixme{once there are more than one op per node this code will need to be fixed}
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
 		Infrastructure.nLogger.info("-> Infrastructure. Sending CODE to node: "+node.toString());
-		bcu.sendFile(node, fis, fileSize);
+		bcu.sendFile(node, data);
 	}
 
 	public void deploy(Operator op) {

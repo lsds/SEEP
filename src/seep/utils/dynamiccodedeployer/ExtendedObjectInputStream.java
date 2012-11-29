@@ -30,6 +30,7 @@ public class ExtendedObjectInputStream extends ObjectInputStream {
 	}
 	
 	public Class<?> resolveClass(ObjectStreamClass osc){
+		///\fixme{Check if the class is already loaded in the system before loading it}
 		Class hack = null;
 		System.out.println("Trying to cast something with class: "+osc.getName());
 		hack = rcl.loadClass(osc.getName());
