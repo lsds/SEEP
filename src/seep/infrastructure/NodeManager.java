@@ -86,7 +86,7 @@ public class NodeManager{
 	public void startOperator(Integer opToInitialize) {
 		int opId = opToInitialize.intValue();
 //		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-		DataTuple dt = new DataTuple();
+		DataTuple dt = new DataTuple(-5);
 		dt.setTs(0);
 		nLogger.info("-> Starting system");
 		mapOP_ID.get(opId).processData(dt);
@@ -227,7 +227,7 @@ public class NodeManager{
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
 //                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-                        DataTuple dt = new DataTuple();
+                        DataTuple dt = new DataTuple(-5);
                         dt.setTs(0);
                         Integer aux = new Integer(tokens[1]);
                         (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);

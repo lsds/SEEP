@@ -11,7 +11,6 @@ import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
 import seep.comm.routing.Router;
-import seep.comm.routing.StatefulRoutingImpl;
 import seep.comm.routing.StatelessRoutingImpl;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
@@ -245,7 +244,8 @@ public abstract class Operator implements Serializable, QuerySpecificationI {
 	public abstract boolean isOrderSensitive();
 	
 	public abstract void processData(DataTuple dt);
-	
+//	public abstract void processData(Object dt);
+		
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
 		/** ACK message **/
