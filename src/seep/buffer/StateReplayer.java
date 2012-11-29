@@ -7,7 +7,7 @@ import java.net.Socket;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitState;
-import seep.operator.CommunicationChannel;
+import seep.runtimeengine.CommunicationChannel;
 
 /**
 * StateReplayer. This runnable object is in charge of replaying the state when necessary.

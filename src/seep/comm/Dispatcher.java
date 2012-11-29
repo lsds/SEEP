@@ -5,6 +5,10 @@ import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
+import seep.runtimeengine.CommunicationChannel;
+import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.OutputQueue;
+import seep.runtimeengine.RuntimeContext;
 
 import java.util.*;
 import java.io.*;
@@ -24,7 +28,7 @@ public class Dispatcher implements Serializable{
 	private Kryo k;
 	
 	// opContext to have knowledge of downstream and upstream
-	private OperatorContext opContext;
+	private RuntimeContext opContext;
 	private OutputQueue outputQueue;
 	
 	//Assigned by Operator
@@ -36,7 +40,7 @@ public class Dispatcher implements Serializable{
 	int laps = 0;
 	long elapsed = 0;
 	
-	public Dispatcher(OperatorContext opContext, OutputQueue outputQueue){
+	public Dispatcher(RuntimeContext opContext, OutputQueue outputQueue){
 		this.opContext = opContext;
 		this.outputQueue = outputQueue;
 		this.k = initializeKryo();
@@ -52,7 +56,7 @@ public class Dispatcher implements Serializable{
 		this.router = router;
 	}
 	
-	public void setOpContext(OperatorContext opContext) {
+	public void setOpContext(RuntimeContext opContext) {
 		this.opContext = opContext;
 	}
 	
@@ -147,8 +151,8 @@ public class Dispatcher implements Serializable{
 
 	public void sendUpstream(ControlTuple ct, int index){
 		Object obj = (Object)opContext.getUpstreamTypeConnection().elementAt(index);
-		if(obj instanceof Operator){
-			Operator operatorObj = (Operator) obj;
+		if(obj instanceof CoreRE){
+			CoreRE operatorObj = (CoreRE) obj;
 			operatorObj.processControlTuple(ct, null);
 		}
 		else if (obj instanceof CommunicationChannel){
@@ -171,8 +175,8 @@ public class Dispatcher implements Serializable{
 	
 	public void sendDownstream(ControlTuple ct, int index){
 		Object obj = (Object)opContext.getDownstreamTypeConnection().elementAt(index);
-		if(obj instanceof Operator){
-			Operator operatorObj = (Operator) obj;
+		if(obj instanceof CoreRE){
+			CoreRE operatorObj = (CoreRE) obj;
 			operatorObj.processControlTuple(ct, null);
 		}
 		else if (obj instanceof CommunicationChannel){

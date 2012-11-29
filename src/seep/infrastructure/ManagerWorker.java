@@ -15,6 +15,7 @@ import seep.Main;
 import seep.P;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
+import seep.runtimeengine.CoreRE;
 
 /**
 * ManagerWorker. This class implements runnable, it is in charge of listening to events from the running system.
@@ -99,12 +100,10 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 			int opID = Integer.parseInt(opID_txt);
 			if (className.equals("seep.operator.collection.AverageOperator") || className.equals("seep.operator.collection.AdderOperator")) {
 				Constructor constr = Class.forName(className).getConstructor(int.class,int.class);
-				op = (Operator) 
-				constr.newInstance(opID,Integer.parseInt(opArg));
+				op = (Operator)	constr.newInstance(opID,Integer.parseInt(opArg));
 			}
 			else if (className.equals("seep.operator.collection.WordCounter") || className.equals("seep.operator.collection.WordSplitter")) {
-				op = (Operator) Class.forName(className).getConstructor(int.class)
-				.newInstance(opID);
+				op = (Operator)Class.forName(className).getConstructor(int.class).newInstance(opID);
 			}
 			else {
 				System.err.println("Class not known");

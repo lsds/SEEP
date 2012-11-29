@@ -175,10 +175,11 @@ public class MasterController {
 	
 	private void deployQueryToNodes(){
 		NodeManager.nLogger.info("-> Deploying operators to Nodes");
-		//First deploy query to nodes
+		//First configure statically (local) the connections between operators
 		inf.deployQueryToNodes();
 		//Finally deploy the new submitted query (instantiation, etc)
 		try {
+			//Send code to nodes (query code)
 			inf.setUp(pathToQueryDefinition);
 			inf.deploy();
 		}

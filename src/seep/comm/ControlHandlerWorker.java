@@ -3,6 +3,8 @@ package seep.comm;
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
+import seep.runtimeengine.CoreRE;
+
 import java.io.*;
 import java.net.*;
 
@@ -16,12 +18,12 @@ import com.esotericsoftware.kryo.io.Input;
 public class ControlHandlerWorker implements Runnable{
 
 	private Socket incomingSocket = null;
-	private Operator owner = null;
+	private CoreRE owner = null;
 	//In charge of control thread execution
 	private boolean goOn;
 	private Kryo k = null;
 
-	public ControlHandlerWorker(Socket incomingSocket, Operator owner){
+	public ControlHandlerWorker(Socket incomingSocket, CoreRE owner){
 		this.incomingSocket = incomingSocket;
 		this.owner = owner;
 		this.goOn = true;

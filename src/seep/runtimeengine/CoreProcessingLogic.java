@@ -1,4 +1,4 @@
-package seep.operator;
+package seep.runtimeengine;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -18,19 +18,22 @@ import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateI;
 import seep.infrastructure.NodeManager;
-import seep.operator.OperatorContext.PlacedOperator;
+import seep.operator.StateSplitI;
+import seep.operator.StatefulOperator;
+import seep.operator.StatelessOperator;
+import seep.runtimeengine.RuntimeContext.PlacedOperator;
 
-public class OperatorCommonProcessLogic implements Serializable{
+public class CoreProcessingLogic implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 	
-	private Operator owner;
-	private OperatorContext opContext;
+	private CoreRE owner;
+	private RuntimeContext opContext;
 	
-	public void setOwner(Operator owner) {
+	public void setOwner(CoreRE owner) {
 		this.owner = owner;
 	}
-	public void setOpContext(OperatorContext opContext) {
+	public void setOpContext(RuntimeContext opContext) {
 		this.opContext = opContext;
 	}
 	
@@ -271,7 +274,7 @@ long e = System.currentTimeMillis();
 		if(opContext.isManagingStateOf(oldOpId)){
 			NodeManager.nLogger.info("-> Splitting state");
 			splitState(oldOpId, newOpId, newKey);
-			owner.setOperatorStatus(Operator.OperatorStatus.WAITING_FOR_STATE_ACK);
+			owner.setOperatorStatus(CoreRE.OperatorStatus.WAITING_FOR_STATE_ACK);
 			//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 			NodeManager.nLogger.info("-> Generating and sending RI backup");
 //			backupRoutingInformation(oldOpId);
@@ -280,7 +283,7 @@ long e = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> NOT in charge of split state");
 		}
 		
-		owner.setOperatorStatus(Operator.OperatorStatus.WAITING_FOR_STATE_ACK);
+		owner.setOperatorStatus(CoreRE.OperatorStatus.WAITING_FOR_STATE_ACK);
 		//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 		NodeManager.nLogger.info("-> Generating and sending RI backup");
 //		backupRoutingInformation(oldOpId);
@@ -407,7 +410,7 @@ System.out.println("backupUpstreamIndex: "+owner.getBackupUpstreamIndex()+ "upIn
 	}
 	
 	public ControlTuple buildInvalidateMsg(int backupUpstreamIndex) {
-		ControlTuple ct = new ControlTuple(Operator.ControlTupleType.INVALIDATE_STATE, owner.getOperatorId());
+		ControlTuple ct = new ControlTuple(CoreRE.ControlTupleType.INVALIDATE_STATE, owner.getOperatorId());
 		//Send invalidation message to old upstream
 		NodeManager.nLogger.info("-> sending INVALIDATE_STATE to OP "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
 		return ct;

@@ -2,6 +2,8 @@ package seep.comm;
 
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
+import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.InputQueue;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
 
@@ -16,11 +18,11 @@ public class IncomingDataHandlerWorker implements Runnable{
 
 	private int uid = 0;
 	private Socket upstreamSocket = null;
-	private Operator owner = null;
+	private CoreRE owner = null;
 	private boolean goOn;
 	private Kryo k = null;
 	
-	public IncomingDataHandlerWorker(int uid, Socket upstreamSocket, Operator owner){
+	public IncomingDataHandlerWorker(int uid, Socket upstreamSocket, CoreRE owner){
 		//upstream id
 		this.uid = uid;
 		this.upstreamSocket = upstreamSocket;

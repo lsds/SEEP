@@ -22,10 +22,11 @@ import seep.comm.serialization.ControlTuple;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.monitor.MonitorManager;
 import seep.operator.Operator;
-import seep.operator.OperatorContext;
 import seep.operator.QuerySpecificationI;
 import seep.operator.StatefulOperator;
-import seep.operator.OperatorContext.PlacedOperator;
+import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.RuntimeContext;
+import seep.runtimeengine.RuntimeContext.PlacedOperator;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
@@ -221,17 +222,28 @@ public class Infrastructure {
 	
 	public void deploy() throws OperatorDeploymentException {
 
-  		//Deploy operators
+  		//Deploy operators (push operators to nodes)
 		for(Operator op: ops){
 	     	//Establish the connection with the specified address
 			deploy(op);
 		}
 
-		//Configure operators communications
+		//Once all operators have been pushed to the nodes, we say that those are ready to run
 		for(Operator op : ops){
 			//Establish the connection with the specified address
 			Infrastructure.nLogger.info("-> Infrastructure. Configuring OP-"+op.getOperatorId());
 			init(op);
+		}
+		
+		//Finally, we tell the nodes to initialize all communications, all is ready to run
+		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
+		for(Operator op : ops){
+			Infrastructure.nLogger.info("Sending initialization message to Node");
+			// If we havent communicated to this node yet, we do
+			if (!nodesVisited.containsKey(op.getOperatorId())){
+				initRuntime(op);
+				nodesVisited.put(op.getOperatorId(), true);
+			}
 		}
 	}
 
@@ -274,10 +286,16 @@ public class Infrastructure {
 		Infrastructure.nLogger.info("-> Infrastructure. Initializing OP-"+op.getOperatorId());
 		bcu.sendObject(node, op.getOperatorId());
 	}
+	
+	public void initRuntime(Operator op){
+		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		Infrastructure.nLogger.info("-> Infrastructure. Starting RUNTIME-"+op.getOperatorId());
+		bcu.sendObject(node, "SET-RUNTIME");
+	}
 
 	/// \test {some variables were bad, check if now is working}
 	public void reMap(InetAddress oldIp, InetAddress newIp){
-		OperatorContext opCtx = null;
+		RuntimeContext opCtx = null;
 		for(QuerySpecificationI op: ops){
 			opCtx = op.getOpContext();
 			OperatorStaticInformation loc = opCtx.getOperatorStaticInformation();
@@ -377,13 +395,13 @@ public class Infrastructure {
 		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opID, QueryPlan.DATA_SOCKET + opID, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
-		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
+		for (RuntimeContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
 			int downID = downDescr.opID();
 			QuerySpecificationI downOp = elements.get(downID);
 			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
 		}
 
-		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
+		for (RuntimeContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
 			int upID = upDescr.opID();
 			QuerySpecificationI upOp = elements.get(upID);
 			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);

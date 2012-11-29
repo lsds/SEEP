@@ -16,7 +16,7 @@ import seep.Main;
 import seep.P;
 import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.Infrastructure;
-import seep.operator.Operator;
+import seep.runtimeengine.CoreRE;
 
 /**
 * MonitorManager. This class implements Runnable and runs in the master node. It is in charge of retrieving the information sent by the monitors that control the system.
@@ -219,7 +219,7 @@ public class MonitorManager implements Runnable{
 //				// TODO Auto-generated catch block
 //				e.printStackTrace();
 //			}
-			Operator toScale = inf.getOperatorById(opId);
+			CoreRE toScale = inf.getOperatorById(opId);
 			
 			if(!scalingOut){
 				synchronized(inf){

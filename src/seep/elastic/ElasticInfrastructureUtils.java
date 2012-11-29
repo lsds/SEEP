@@ -17,7 +17,8 @@ import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
-import seep.operator.OperatorContext.PlacedOperator;
+import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.RuntimeContext.PlacedOperator;
 
 public class ElasticInfrastructureUtils {
 
@@ -117,14 +118,14 @@ public class ElasticInfrastructureUtils {
 		//sendSendInitToMinUpstream(opIdToParallelize,newOpId);
 	}
 	
-	private void sendSystemConfiguredToReplica(Operator replica){
+	private void sendSystemConfiguredToReplica(CoreRE replica){
 		inf.deployConnection("system_ready", replica, null, "");
 	}
 	
 /// \test{when is this method used?}
 	private void sendSendInitToMinFailedNodeUpstream(int failedNode) {
-		ArrayList<Operator> ops = inf.getOps();
-		for (Operator o: ops) {
+		ArrayList<CoreRE> ops = inf.getOps();
+		for (CoreRE o: ops) {
 			if (o.getOperatorId() == failedNode) {
 				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
 				ArrayList<Integer> opIds = new ArrayList<Integer>();
@@ -136,8 +137,8 @@ public class ElasticInfrastructureUtils {
 	}
 	
 	private void sendResumeMessageToUpstreams(int opIdToParallelize, int newOpId) {
-		ArrayList<Operator> ops = inf.getOps();
-		for (Operator o: ops) {
+		ArrayList<CoreRE> ops = inf.getOps();
+		for (CoreRE o: ops) {
 			if (o.getOperatorId() == opIdToParallelize) {
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
 					

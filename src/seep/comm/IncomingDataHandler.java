@@ -4,6 +4,7 @@ import seep.comm.serialization.KryoSerializer;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.*;
+import seep.runtimeengine.CoreRE;
 
 import java.io.*;
 import java.net.*;
@@ -17,7 +18,7 @@ import com.esotericsoftware.kryo.Kryo;
 public class IncomingDataHandler implements Runnable{
 
 	//private Operator owner;
-	private Operator owner;
+	private CoreRE owner;
 	private int connPort;
 	private boolean goOn;
 
@@ -29,7 +30,7 @@ public class IncomingDataHandler implements Runnable{
 		this.connPort = connPort;
 	}
 
-	public IncomingDataHandler(Operator owner, int connPort){
+	public IncomingDataHandler(CoreRE owner, int connPort){
 		this.owner = owner;
 		this.connPort = connPort;
 		//this.selector = initSelector();

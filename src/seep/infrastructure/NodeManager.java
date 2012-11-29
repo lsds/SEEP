@@ -8,20 +8,17 @@ import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
-import seep.comm.serialization.DataTuple;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
+import seep.runtimeengine.CoreRE;
 import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
 import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
@@ -31,6 +28,8 @@ import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
  */
 
 public class NodeManager{
+	
+	private CoreRE core = null;
 	
 	private RuntimeClassLoader rcl = null;
 	
@@ -48,7 +47,6 @@ public class NodeManager{
 	
 	static public long clock = 0;
 	
-	static public Map<Integer, Operator> mapOP_ID = new HashMap<Integer, Operator>();
 	
 	static public Monitor nodeMonitor = new Monitor();
 	static public int second;
@@ -66,31 +64,19 @@ public class NodeManager{
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
 
-	public void newOperatorInstantiation(Object o) throws OperatorInstantiationException {
-//System.out.println("MONITOR THREAD STATE: "+monitorT);
-		if(monitorT == null){
-			int opId = ((Operator)o).getOperatorId();
-			nodeMonitor.setOpId(opId);
-			monitorT = new Thread(nodeMonitor);
-			monitorT.start();
-			nLogger.info("-> Node Monitor running");
-		}
-		mapOP_ID.put(((Operator)o).getOperatorId(), (Operator)o);
-		((Operator)o).instantiateOperator();
-	}
+//	public void newOperatorInitialization(Object o) throws OperatorInitializationException {
+////		mapOP_ID.get(((Integer)o).intValue()).initializeCommunications();
+//		core.setOpReady((Integer)o);
+//	}
 
-	public void newOperatorInitialization(Object o) throws OperatorInitializationException {
-		mapOP_ID.get(((Integer)o).intValue()).initializeCommunications();
-	}
-
-	public void startOperator(Integer opToInitialize) {
-		int opId = opToInitialize.intValue();
-//		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-		DataTuple dt = new DataTuple(-5);
-		dt.setTs(0);
-		nLogger.info("-> Starting system");
-		mapOP_ID.get(opId).processData(dt);
-	}
+//	public void startOperator(Integer opToInitialize) {
+//		int opId = opToInitialize.intValue();
+////		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
+//		DataTuple dt = new DataTuple(-5);
+//		dt.setTs(0);
+//		nLogger.info("-> Starting system");
+//		mapOP_ID.get(opId).processData(dt);
+//	}
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
@@ -123,8 +109,20 @@ public class NodeManager{
 //		}
 	}
 	
+	private int getUniqueIdentifier(){
+		return 0;
+	}
 	
 	public void init(){
+		//Get unique identifier for this node
+		int nodeId = getUniqueIdentifier();
+		//Initialize node engine ( CoreRE + ProcessingUnit )
+		CoreRE core = new CoreRE();
+		//Initialize monitor
+		nodeMonitor.setNodeId(nodeId);
+		monitorT = new Thread(nodeMonitor);
+		monitorT.start();
+		nLogger.info("-> Node Monitor running");
 		//Send bootstrap information
 		bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
 		//Local variables
@@ -171,10 +169,12 @@ public class NodeManager{
 //				o = ois.readObject();
 				//Check the class of the object received and initialized accordingly
 				if(o instanceof Operator){
-					this.newOperatorInstantiation(o);
+					core.pushOperator((Operator)o);
+					//this.newOperatorInstantiation(o);
 				}
 				else if(o instanceof Integer){
-					this.newOperatorInitialization(o);
+//					this.newOperatorInitialization(o);
+					core.setOpReady((Integer)o);
 				}
 				else if(o instanceof String){
 					String tokens[] = ((String)o).split(" ");
@@ -212,6 +212,7 @@ public class NodeManager{
 						}
 					}
 					if(tokens[0].equals("STOP")){
+						core.stopDataProcessing();
 						listen = false;
 						out.println("ack");
 						o = null;
@@ -221,16 +222,22 @@ public class NodeManager{
 						//since listen=false now, finish the loop
 						continue;
 					}
+					if(tokens[0].equals("SET-RUNTIME")){
+						System.out.println("Set runtime");
+						core.setRuntime();
+						out.println("ack");
+					}
 					if(tokens[0].equals("START")){
 						System.out.println("SEC: RECEIVED ORDER TO START this: "+tokens[1]);
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
 //                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-                        DataTuple dt = new DataTuple(-5);
-                        dt.setTs(0);
-                        Integer aux = new Integer(tokens[1]);
-                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);
+//                        DataTuple dt = new DataTuple(-5);
+//                        dt.setTs(0);
+//                        Integer aux = new Integer(tokens[1]);
+//                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);
+                        core.startDataProcessing();
 					}
 					if(tokens[0].equals("CLOCK")){
 						NodeManager.clock = System.currentTimeMillis();
@@ -256,14 +263,6 @@ public class NodeManager{
 			System.out.println("IllegalThreadStateException, no problem, monitor thing");
 			itse.printStackTrace();
 		} 
-		catch (OperatorInstantiationException e) {
-			NodeManager.nLogger.warning("Error while instantiating operator");
-			e.printStackTrace();
-		}
-		catch (OperatorInitializationException e) {
-			NodeManager.nLogger.warning("Error while initializing operator");
-			e.printStackTrace();
-		}
 		catch (InstantiationException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

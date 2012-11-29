@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 import seep.infrastructure.NodeManager;
-import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
+import seep.runtimeengine.CoreRE;
 
 /** 
 * ControlHandler. This class is in charge of managing control connections and attach them to a given thread that is in charge of serving them.
@@ -14,7 +14,7 @@ import seep.operator.QuerySpecificationI;
 public class ControlHandler implements Runnable{
 
 	//The operator that owns this control handler
-	private Operator owner;
+	private CoreRE owner;
 	//The connection port that this controlhandler must use
 	private int connPort;
 	//This variable controls if this Runnable should keep running or not
@@ -24,7 +24,7 @@ public class ControlHandler implements Runnable{
 		return owner;
 	}
 	
-	public void setOwner(Operator owner){
+	public void setOwner(CoreRE owner){
 		this.owner = owner;
 	}
 
@@ -44,7 +44,7 @@ public class ControlHandler implements Runnable{
 		this.goOn = goOn;
 	}
 
-	public ControlHandler(Operator owner, int connPort){
+	public ControlHandler(CoreRE owner, int connPort){
 		this.owner = owner;
 		this.connPort = connPort;
 		this.goOn = true;

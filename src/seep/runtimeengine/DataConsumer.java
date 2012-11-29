@@ -1,10 +1,10 @@
-package seep.operator;
+package seep.runtimeengine;
 
 import seep.comm.serialization.DataTuple;
 
 public class DataConsumer implements Runnable {
 
-	private Operator owner;
+	private CoreRE owner;
 	private InputQueue inputQueue;
 	private boolean doWork = true;
 	
@@ -12,7 +12,7 @@ public class DataConsumer implements Runnable {
 		this.doWork = doWork;
 	}
 	
-	public DataConsumer(Operator owner, InputQueue inputQueue){
+	public DataConsumer(CoreRE owner, InputQueue inputQueue){
 		this.owner = owner;
 		this.inputQueue = inputQueue;
 	}

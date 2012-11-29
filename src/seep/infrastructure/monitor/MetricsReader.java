@@ -1,7 +1,7 @@
 package seep.infrastructure.monitor;
 
 import seep.comm.IncomingDataHandler;
-import seep.operator.InputQueue;
+import seep.runtimeengine.InputQueue;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;

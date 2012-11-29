@@ -1,4 +1,4 @@
-package seep.operator;
+package seep.runtimeengine;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -119,8 +119,8 @@ public class OutputQueue {
 				ie.printStackTrace();
 			}
 		}
-		else if(dest instanceof Operator){
-			Operator operatorObj = (Operator) dest;
+		else if(dest instanceof CoreRE){
+			CoreRE operatorObj = (CoreRE) dest;
 			operatorObj.processData(tuple);
 		}
 	}

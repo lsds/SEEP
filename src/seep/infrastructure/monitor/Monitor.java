@@ -18,7 +18,7 @@ import seep.infrastructure.NodeManager;
 
 public class Monitor implements Runnable{
 
-	private int opId = -1000;
+	private int nodeId = -1000;
 	private Kryo k = null;
 	private Output output = null;
 	
@@ -30,8 +30,8 @@ public class Monitor implements Runnable{
 		return k;
 	}
 	
-	public void setOpId(int opId) {
-		this.opId = opId;
+	public void setNodeId(int opId) {
+		this.nodeId = opId;
 	}
 	
 	public void stopMonitor(){
@@ -43,7 +43,7 @@ public class Monitor implements Runnable{
 		long inputQueueEvents = MetricsReader.eventsInputQueue.getCount();
 		long numberIncomingdataHandlerWorkers = MetricsReader.numberIncomingDataHandlerWorkers.getCount();
 		MetricsTuple mt = new MetricsTuple();
-		mt.setOpId(opId);
+		mt.setOpId(nodeId);
 		mt.setInputQueueEvents(inputQueueEvents);
 		mt.setNumberIncomingDataHandlerWorkers(numberIncomingdataHandlerWorkers);
 		k.writeObject(output, mt);

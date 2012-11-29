@@ -1,7 +1,8 @@
-package seep.operator;
+package seep.runtimeengine;
 
 import seep.buffer.Buffer;
 import seep.infrastructure.*;
+import seep.processingunit.ProcessingUnit;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +18,7 @@ import java.net.Socket;
 * OperatorContext. This object is in charge of model information associated to a given operator, as its connections or its location.
 */
 
-public class OperatorContext implements Serializable {
+public class RuntimeContext implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -66,7 +67,7 @@ public class OperatorContext implements Serializable {
 		return upstreamTypeConnection;
 	}
 	
-	public OperatorContext(ArrayList<Integer> connectionsD, ArrayList<Integer> connectionsU, ArrayList<OperatorStaticInformation> upstream, ArrayList<OperatorStaticInformation> downstream){
+	public RuntimeContext(ArrayList<Integer> connectionsD, ArrayList<Integer> connectionsU, ArrayList<OperatorStaticInformation> upstream, ArrayList<OperatorStaticInformation> downstream){
 		this.connectionsD = connectionsD;
 		this.connectionsU = connectionsU;
 		this.upstream = upstream;
@@ -207,7 +208,7 @@ public class OperatorContext implements Serializable {
 		public void remove() { throw new UnsupportedOperationException(); }
 	}
 
-	public OperatorContext(){
+	public RuntimeContext(){
 	}
 	
 	@Override 
@@ -352,9 +353,9 @@ public class OperatorContext implements Serializable {
 	public void configureNewUpstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = location.getMyNode().getIp();
 		if(loc.getMyNode().getIp().equals(localIp)){
-			if(NodeManager.mapOP_ID.containsKey(opID)){
+			if(ProcessingUnit.mapOP_ID.containsKey(opID)){
 				//Store reference in upstreamTypeConnection, store operator(local) or socket(remote)
-				upstreamTypeConnection.add(NodeManager.mapOP_ID.get(opID));
+				upstreamTypeConnection.add(ProcessingUnit.mapOP_ID.get(opID));
 				NodeManager.nLogger.info("-> OperatorContext. New local upstream conn to OP-"+opID);
 			}
 		}
@@ -370,9 +371,9 @@ public class OperatorContext implements Serializable {
 		//Check if downstream node is remote or local, and check that it is not a Sink
 		if(loc.getMyNode().getIp().equals(localIp)){
 			//Access downstream reference in map with op_id
-			if (NodeManager.mapOP_ID.containsKey(opID)) {
+			if (ProcessingUnit.mapOP_ID.containsKey(opID)) {
 				//Store reference in downstreamTypeConnection, store operator(local) or socket(remote)
-				downstreamTypeConnection.add(NodeManager.mapOP_ID.get(opID));
+				downstreamTypeConnection.add(ProcessingUnit.mapOP_ID.get(opID));
 				NodeManager.nLogger.info("-> OperatorContext. New local downstream conn to OP-"+opID);
 			}
 		}

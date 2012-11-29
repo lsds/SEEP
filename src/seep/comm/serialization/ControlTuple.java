@@ -13,11 +13,11 @@ import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
 import seep.comm.serialization.controlhelpers.StateI;
-import seep.operator.Operator;
+import seep.runtimeengine.CoreRE;
 
 public class ControlTuple {
 
-	private Operator.ControlTupleType type;
+	private CoreRE.ControlTupleType type;
 	
 	private Ack ack;
 	private BackupState backupState;
@@ -32,20 +32,20 @@ public class ControlTuple {
 	
 	public ControlTuple(){}
 	
-	public ControlTuple(Operator.ControlTupleType type, int opId, long ts){
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, long ts){
 		this.type = type;
 		this.ack = new Ack(opId, ts);
 	}
 	
-	public ControlTuple(Operator.ControlTupleType type, int opId){
+	public ControlTuple(CoreRE.ControlTupleType type, int opId){
 		this.type = type;
 		this.invalidateState = new InvalidateState(opId);
 	}
 	
-	public Operator.ControlTupleType getType() {
+	public CoreRE.ControlTupleType getType() {
 		return type;
 	}
-	public void setType(Operator.ControlTupleType type) {
+	public void setType(CoreRE.ControlTupleType type) {
 		this.type = type;
 	}
 	public Ack getAck() {
@@ -110,68 +110,68 @@ public class ControlTuple {
 	}
 	
 	public ControlTuple makeStateAck(int opId){
-		this.type = Operator.ControlTupleType.STATE_ACK;
+		this.type = CoreRE.ControlTupleType.STATE_ACK;
 		this.stateAck = new StateAck(opId);
 		return this;
 	}
 	
 	public ControlTuple makeBackupState(BackupState bs){
-		this.type = Operator.ControlTupleType.BACKUP_STATE;
+		this.type = CoreRE.ControlTupleType.BACKUP_STATE;
 		this.backupState = bs;
 		return this;
 	}
 	
 	public ControlTuple makeResume(ArrayList<Integer> opIds){
-		this.type = Operator.ControlTupleType.RESUME;
+		this.type = CoreRE.ControlTupleType.RESUME;
 		this.resume = new Resume(opIds);
 		return this;
 	}
 	
 	public ControlTuple makeScaleOut(int opIdToParallelize, int newOpId){
-		this.type = Operator.ControlTupleType.SCALE_OUT;
+		this.type = CoreRE.ControlTupleType.SCALE_OUT;
 		this.scaleOutInfo = new ScaleOutInfo(opIdToParallelize, newOpId);
 		return this;
 	}
 	
 	public ControlTuple makeReconfigure(int opId, String command, String ip){
-		this.type = Operator.ControlTupleType.RECONFIGURE;
+		this.type = CoreRE.ControlTupleType.RECONFIGURE;
 		this.reconfigureConnection = new ReconfigureConnection(opId, command, ip);
 		return this;
 	}
 
 	public ControlTuple makeReconfigure(int opId, String command, String ip, int nodePort, int inC, int inD, boolean operatorNature, String operatorType) {
-		this.type = Operator.ControlTupleType.RECONFIGURE;
+		this.type = CoreRE.ControlTupleType.RECONFIGURE;
 		this.reconfigureConnection = new ReconfigureConnection(opId, command, ip, nodePort, inC, inD, operatorNature, operatorType);
 		return this;
 	}
 	
 	public ControlTuple makeReconfigureSourceRate(int opId, String command, int inC){
-		this.type = Operator.ControlTupleType.RECONFIGURE;
+		this.type = CoreRE.ControlTupleType.RECONFIGURE;
 		this.reconfigureConnection = new ReconfigureConnection(opId, command, inC);
 		return this;
 		
 	}
 	
 	public ControlTuple makeReconfigureSingleCommand(String command){
-		this.type = Operator.ControlTupleType.RECONFIGURE;
+		this.type = CoreRE.ControlTupleType.RECONFIGURE;
 		this.reconfigureConnection = new ReconfigureConnection(command);
 		return this;
 	}
 	
 	public ControlTuple makeInitRI(int opId, ArrayList<Integer> indexes, ArrayList<Integer> keys){
-		this.type = Operator.ControlTupleType.INIT_RI;
+		this.type = CoreRE.ControlTupleType.INIT_RI;
 		this.initRI = new InitRI(opId, indexes, keys);
 		return this;
 	}
 	
 	public ControlTuple makeBackupRI(int opId, ArrayList<Integer> indexes, ArrayList<Integer> keys, String operatorType){
-		this.type = Operator.ControlTupleType.BACKUP_RI;
+		this.type = CoreRE.ControlTupleType.BACKUP_RI;
 		this.backupRI = new BackupRI(opId, indexes, keys, operatorType);
 		return this;
 	}
 	
 	public ControlTuple makeInitState(int opId, long ts, StateI state){
-		this.type = Operator.ControlTupleType.INIT_STATE;
+		this.type = CoreRE.ControlTupleType.INIT_STATE;
 		this.initState = new InitState(opId, ts, state);
 		return this;
 	}

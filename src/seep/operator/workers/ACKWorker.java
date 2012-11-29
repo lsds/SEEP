@@ -1,6 +1,6 @@
 package seep.operator.workers;
 
-import seep.operator.Operator;
+import seep.runtimeengine.CoreRE;
 
 import java.io.*;
 

@@ -4,8 +4,8 @@ import java.io.Serializable;
 
 import seep.Main;
 import seep.P;
-import seep.operator.Operator;
 import seep.operator.StatefulOperator;
+import seep.runtimeengine.CoreRE;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.
@@ -39,7 +39,7 @@ long a = System.currentTimeMillis();
 //				if(Main.eftMechanismEnabled){
 				if(P.valueFor("eftMechanismEnabled").equals("true")){
 					//if not initialisin state...
-					if(!((Operator)o).getOperatorStatus().equals(Operator.OperatorStatus.INITIALISING_STATE)){
+					if(!((CoreRE)o).getOperatorStatus().equals(CoreRE.OperatorStatus.INITIALISING_STATE)){
 						synchronized(o){
 							o.generateBackupState();
 						}
