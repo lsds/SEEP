@@ -8,7 +8,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-import seep.comm.BasicCommunicationUtils;
+import seep.comm.NodeManagerCommunication;
+import seep.comm.RuntimeCommunicationTools;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
@@ -21,11 +22,13 @@ import seep.operator.OperatorContext.PlacedOperator;
 public class ElasticInfrastructureUtils {
 
 	private Infrastructure inf = null;
-	private BasicCommunicationUtils bcu = null;
+	private RuntimeCommunicationTools rct = null;
+	private NodeManagerCommunication bcu = null;
 	
 	public ElasticInfrastructureUtils(Infrastructure inf){
 		this.inf = inf;
-		this.bcu = inf.getBcu();
+		this.rct = inf.getRCT();
+		this.bcu = inf.getBCU();
 	}
 	
 	public boolean promptForUserValidation(int opIdToParallelize){
@@ -84,9 +87,9 @@ public class ElasticInfrastructureUtils {
 		configureOperatorContext(opIdToParallelize, newOp);
 		//Get operator to parallelize
 		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
+		//Get router and assign to new operator
 		Router copyOfRouter = opToParallelize.getRouter();
 		newOp.setRouter(copyOfRouter);
-		//Get router and assign to new operator
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
 		NodeManager.nLogger.info("Created new Op: "+newOp.toString());
@@ -127,7 +130,7 @@ public class ElasticInfrastructureUtils {
 				ArrayList<Integer> opIds = new ArrayList<Integer>();
 				opIds.add(failedNode);
 				ControlTuple ct = new ControlTuple().makeResume(opIds);
-				bcu.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
+				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
 			}
 		}
 	}
@@ -143,7 +146,7 @@ public class ElasticInfrastructureUtils {
 					opIds.add(newOpId);
 					ControlTuple ct = new ControlTuple().makeResume(opIds);
 					
-					bcu.sendControlMsg(upstream.location(), ct, upstream.opID());
+					rct.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}
 			}
 		}
@@ -161,7 +164,7 @@ public class ElasticInfrastructureUtils {
 				opIds.add(newOpId);
 				ControlTuple ct = new ControlTuple().makeResume(opIds);
 				
-				bcu.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
+				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
 			}
 		}
 	}
@@ -175,7 +178,7 @@ public class ElasticInfrastructureUtils {
 					
 					ControlTuple ct = new ControlTuple().makeScaleOut(opIdToParallelize, newOpId);
 					
-					bcu.sendControlMsg(upstream.location(), ct, upstream.opID());
+					rct.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}
 			}
 		}

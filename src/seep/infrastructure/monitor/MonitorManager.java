@@ -13,6 +13,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 
 import seep.Main;
+import seep.P;
 import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.Infrastructure;
 import seep.operator.Operator;
@@ -60,7 +61,7 @@ public class MonitorManager implements Runnable{
 		ServerSocket ss = null;
 		Socket currentConn = null;
 		try{
-			ss = new ServerSocket(Integer.parseInt(Main.valueFor("monitorManagerPort")));
+			ss = new ServerSocket(Integer.parseInt(P.valueFor("monitorManagerPort")));
 			Thread consumer = new Thread(new Consumer(mem));
 			consumer.start();
 			while(listen){
@@ -96,11 +97,11 @@ public class MonitorManager implements Runnable{
 //			if((opId != lastOpTrigger) || (opId == lastOpTrigger && cpuU > (lastCpuUTrigger))){
 //				lastCpuUTrigger = cpuU+5;
 //				lastOpTrigger = opId;
-				if(Main.valueFor("enableAutomaticScaleOut").equals("true")){
+				if(P.valueFor("enableAutomaticScaleOut").equals("true")){
 					if(alertsMemory.containsKey(opId)){ 
 						int numAlerts = alertsMemory.get(opId);
 						//...provided that the operator has reported X consecutive times higher CPU utilisation
-						if(numAlerts == Integer.parseInt(Main.valueFor("numMaxAlerts"))){
+						if(numAlerts == Integer.parseInt(P.valueFor("numMaxAlerts"))){
 //							int elapsedTime = (int)((int)(System.currentTimeMillis() - t_lastSplit))/1000;
 //							if(elapsedTime > ExecutionConfiguration.minimumTimeBetweenSplit){
 								//...ALERT cpu overloaded...
@@ -219,17 +220,16 @@ public class MonitorManager implements Runnable{
 //				e.printStackTrace();
 //			}
 			Operator toScale = inf.getOperatorById(opId);
-			if(toScale instanceof seep.operator.collection.mapreduceexample.Reduce){
-				if(!scalingOut){
-					synchronized(inf){
-						scalingOut = true;
-						inf.getEiu().alert(opId);
-						scalingOut = false;
-					}
+			
+			if(!scalingOut){
+				synchronized(inf){
+					scalingOut = true;
+					inf.getEiu().alert(opId);
+					scalingOut = false;
 				}
 			}
 			if(queueSize > 90000){
-				if(Main.valueFor("enableAutomaticScaleOut").equals("true")){
+				if(P.valueFor("enableAutomaticScaleOut").equals("true")){
 					if(!scalingOut){
 						synchronized(inf){
 							scalingOut = true;

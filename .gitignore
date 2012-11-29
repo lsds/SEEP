@@ -1,6 +1,7 @@
 lib/*
 build/*
 dist/*
+old/*
 scripts/RainToolkit
 scripts/RainToolKit_04042011.zip
 .project

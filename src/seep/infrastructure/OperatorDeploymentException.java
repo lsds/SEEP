@@ -5,11 +5,11 @@ package seep.infrastructure;
 */
 
 /// \todo {this one is never used}
-public class DeploymentException extends Exception{
+public class OperatorDeploymentException extends Exception{
 	
 	private static final long serialVersionUID = 1L;
 
-	public DeploymentException(String msg){
+	public OperatorDeploymentException(String msg){
 		super(msg);
 	}
 }

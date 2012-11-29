@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.esotericsoftware.kryo.io.Output;
 
 import seep.Main;
+import seep.P;
 import seep.buffer.Buffer;
 //import seep.comm.Replayer;
 import seep.comm.serialization.BatchDataTuple;
@@ -37,7 +38,7 @@ public class CommunicationChannel{
 	
 	//Batch information for this channel
 	private BatchDataTuple batch = new BatchDataTuple();
-	private int channelBatchSize = Integer.parseInt(Main.valueFor("batchLimit"));
+	private int channelBatchSize = Integer.parseInt(P.valueFor("batchLimit"));
 	private long tick = 0;
 
 	public CommunicationChannel(Socket downstreamSocketD, Socket downstreamSocketC, Buffer buffer){
@@ -123,7 +124,7 @@ public class CommunicationChannel{
 	
 	public void cleanBatch(){
 		batch.clear();
-		int limit = Integer.parseInt(Main.valueFor("batchLimit"));
+		int limit = Integer.parseInt(P.valueFor("batchLimit"));
 		channelBatchSize = limit;
 	}
 	

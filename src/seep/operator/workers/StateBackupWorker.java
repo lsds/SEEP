@@ -3,6 +3,7 @@ package seep.operator.workers;
 import java.io.Serializable;
 
 import seep.Main;
+import seep.P;
 import seep.operator.Operator;
 import seep.operator.StatefulOperator;
 
@@ -36,7 +37,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 //	System.out.println("##### BACKUP");
 long a = System.currentTimeMillis();
 //				if(Main.eftMechanismEnabled){
-				if(Main.valueFor("eftMechanismEnabled").equals("true")){
+				if(P.valueFor("eftMechanismEnabled").equals("true")){
 					//if not initialisin state...
 					if(!((Operator)o).getOperatorStatus().equals(Operator.OperatorStatus.INITIALISING_STATE)){
 						synchronized(o){

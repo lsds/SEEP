@@ -11,7 +11,6 @@ import seep.comm.ControlHandler;
 import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
 import seep.comm.routing.Router;
-import seep.comm.routing.StatefulRoutingImpl;
 import seep.comm.routing.StatelessRoutingImpl;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
@@ -26,8 +25,6 @@ import seep.infrastructure.OperatorInitializationException;
 import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.OperatorStaticInformation;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.operator.collection.SmartWordCounter;
-import seep.operator.collection.lrbenchmark.Snk;
 
 /**
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
@@ -247,7 +244,8 @@ public abstract class Operator implements Serializable, QuerySpecificationI {
 	public abstract boolean isOrderSensitive();
 	
 	public abstract void processData(DataTuple dt);
-	
+//	public abstract void processData(Object dt);
+		
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
 		/** ACK message **/
@@ -490,12 +488,12 @@ System.out.println("*reconfigure: "+b);
 		/** SAVE RESULTS RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("saveResults")){
-			dispatcher.ackControlMessage(genericAck, os);
-			try{
-			((Snk)this.subclassOperator).save();
-			}catch(Exception e){
-				((SmartWordCounter)this.subclassOperator).save();
-			}
+//			dispatcher.ackControlMessage(genericAck, os);
+//			try{
+//			((Snk)this.subclassOperator).save();
+//			}catch(Exception e){
+//				((SmartWordCounter)this.subclassOperator).save();
+//			}
 		}
 		/** DEACTIVATE elft mechanism message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}

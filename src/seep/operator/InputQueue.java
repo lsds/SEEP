@@ -4,6 +4,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import seep.Main;
+import seep.P;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.monitor.MetricsReader;
 
@@ -12,7 +13,7 @@ public class InputQueue {
 	private BlockingQueue<DataTuple> inputQueue;
 	
 	public InputQueue(){
-		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(Main.valueFor("inputQueueLength")));
+		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(P.valueFor("inputQueueLength")));
 	}
 	
 	public InputQueue(int size){

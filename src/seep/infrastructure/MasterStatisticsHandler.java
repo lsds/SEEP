@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import seep.Main;
+import seep.P;
 
 /**
  * MasterStatisticsHandler. This class is in the master node and is in charge of retrieving the performance times of the system
@@ -42,7 +43,7 @@ public class MasterStatisticsHandler {
 	public synchronized void setSystemStableTime(long systemStable){
 		//new message received
 		msgReceived++;
-		double rate = ((double)(Main.eventR*Integer.parseInt(Main.valueFor("sentenceSize"))/1000));
+		double rate = ((double)(Main.eventR*Integer.parseInt(P.valueFor("sentenceSize"))/1000));
 		//compute time
 		//Once I have received all the required messages (from all the upstreams)
 System.out.println("RECV: "+msgReceived+" UPSize: "+numOfUpstreams);

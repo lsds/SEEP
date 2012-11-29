@@ -1,47 +1,12 @@
 package seep;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Properties;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
-
-import seep.comm.routing.Router;
-import seep.comm.serialization.DataTuple;
-import seep.elastic.ElasticInfrastructureUtils;
-import seep.infrastructure.DeploymentException;
-import seep.infrastructure.ESFTRuntimeException;
-import seep.infrastructure.Infrastructure;
-import seep.infrastructure.Node;
+import seep.infrastructure.OperatorDeploymentException;
+import seep.infrastructure.MasterController;
 import seep.infrastructure.NodeManager;
-import seep.operator.collection.SmartWordCounter;
-import seep.operator.collection.WordSplitter;
-import seep.operator.collection.WordSrc;
-import seep.operator.collection.financialQuery.ParityChecker;
-import seep.operator.collection.financialQuery.Splitter;
-import seep.operator.collection.financialQuery.Source;
-import seep.operator.collection.financialQuery.Sink;
-import seep.operator.collection.lrbenchmark.BACollector;
-import seep.operator.collection.lrbenchmark.DataFeeder;
-import seep.operator.collection.lrbenchmark.Forwarder;
-import seep.operator.collection.lrbenchmark.Snk;
-import seep.operator.collection.lrbenchmark.TollAssessment;
-import seep.operator.collection.lrbenchmark.TollCalculator;
-import seep.operator.collection.lrbenchmark.TollCollector;
-import seep.operator.collection.mapreduceexample.Map;
-import seep.operator.collection.mapreduceexample.Reduce;
-import seep.operator.collection.testing.Bar;
-import seep.operator.collection.testing.Foo;
-import seep.operator.collection.testing.TestSink;
-import seep.operator.collection.testing.TestSource;
+import seep.infrastructure.QueryPlan;
 
 /**
 * Main. The entry point of the whole system. This can be executed as Main (master Node) or as secondary.
@@ -50,89 +15,36 @@ import seep.operator.collection.testing.TestSource;
 public class Main {
 	
 	//Runtime variable globals
+	///\fixme{remove this shit}
 	public static int eventR;
 	public static int period;
 	public static boolean maxRate;
 	public static boolean eftMechanismEnabled;
 	public static int numberOfXWays;
 	
-	//Properties object
-	private static Properties globals = new Properties();
-	
-	//Method to get value doing: Main.valueFor(key) instead of Main.globals.getProperty(key)
-	public static String valueFor(String key){
-		return globals.getProperty(key);
-	}
-	
-	//Load properties from file
-	public boolean loadProperties(){
-		boolean success = false;
-		try {
-			globals.load(new FileInputStream("config.properties"));
-			success = true;
-		}
-		catch (FileNotFoundException e1) {
-			System.out.println("Properties file not found "+e1.getMessage());
-			e1.printStackTrace();
-		}
-		catch (IOException e1) {
-			System.out.println("While loading properties file "+e1.getMessage());
-			e1.printStackTrace();
-		}
-		//LOAD RUNTIME VAR GLOBALS FROM FILE HERE
-		//#######################################
-		return success;
-	}
+	//Properties variable
+	static P p = new P();
 	
 	public static void main(String args[]){
 		
 		Main instance = new Main();
 		//Load configuration properties from the config file
-		instance.loadProperties();
+		
+		p.loadProperties();
 		
 		if(args.length == 0){
 			System.out.println("ARGS:");
-			System.out.println("{Main/Sec} {masterIp} {masterPort/3500} {ownPort/3500}");
+			System.out.println("Master <querySourceFile.jar> <MainClass>");
+			System.out.println("Worker");
 			System.exit(-1);
 		}
 
-		//master ip		
-		InetAddress bindAddr = null;
-		if (args.length >= 2){
-			try {
-				bindAddr = InetAddress.getByName(args[1]);
-			}
-			catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
+		if(args[0].equals("Master")){
+			instance.executeMaster(args);
 		}
-
-		//master node, 3500 by default
-		int port;
-		if (args.length >= 3){
-			port = Integer.parseInt(args[2]);
-		}
-		else {
-			port = 3500;
-		}
-		
-		//own port, where I am listening
-		int ownPort;
-		if (args.length >= 4){
-			ownPort = Integer.parseInt(args[3]);
-		}
-		else{
-			ownPort = 3500;
-		}
-
-		//execution mode, main or secondary
-		if(args[0].equals("Main")){
-			//main receives the port where it will listen
-			instance.executeMain(port);
-		}
-		else if(args[0].equals("Sec")){
+		else if(args[0].equals("Worker")){
 			//secondary receives port and ip of master node
-			instance.executeSec(port, bindAddr, ownPort);
+			instance.executeSec();
 		}
 		else{
 			System.out.println("Error. See Usage");
@@ -140,123 +52,53 @@ public class Main {
 		}
 	}
 	
-	void executeMain(int port){
+	private void executeMaster(String[] args){
+		//Get instance of MasterController and initialize it
+		MasterController mc = MasterController.getInstance();
+		mc.init();
 		
-		try {
-			
-			Infrastructure inf = new Infrastructure(port);
-			ElasticInfrastructureUtils eiu = new ElasticInfrastructureUtils(inf);
-			inf.startInfrastructure();
-
-			boolean alive = true;
-			
-			/// \todo{make this robust}
-			while(alive){
-				consoleOutputMessage();
-				try{
-					BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-					String option = br.readLine();
-					int opt = Integer.parseInt(option);
-					switch(opt){
-						//deploy wordcounter
-						case 1:
-							deployWordCounterQueryOption(inf);
-							break;
-						//start system
-						case 2:
-							startSystemOption(inf);
-							break;
-						//configure source rate
-						case 3:
-							configureSourceRateOption(inf);
-							break;
-						//parallelize operator manually
-						case 4:
-							parallelizeOpManualOption(inf, eiu);
-							break;
-						//silent the console
-						case 5:
-							alive = false;
-							inf.stopWorkers();
-							System.out.println("ENDING console...");
-							break;
-						// linear road benchmark example
-						case 6:
-							deployLinearRoadBenchmark(inf);
-							break;
-						case 7:
-							deployTestingTopology(inf);
-							break;
-						case 8:
-							deployLinearRoadBenchmark2(inf);
-							break;
-						case 9:
-//							parseTextFileToBinaryFile();
-							System.out.println("FINISHED");
-							break;
-						case 10:
-							System.out.println("BYE");
-							System.exit(0);
-							break;
-						case 11:
-							System.out.println("SAVE RESULTS");
-							saveResults(inf);
-							break;
-						case 12:
-							System.out.println("SWITCH ESFT MECHANISMS");
-							switchMechanisms(inf);
-							break;
-						case 13:
-							System.out.println("save latency SWC-query");
-							saveResultsSWC(inf);
-							break;
-						case 14:
-							System.out.println("Testing v0.1");
-							testing01(inf);
-							break;
-						case 15:
-							System.out.println("Testing v0.2");
-							testing02(inf);
-							break;
-						case 16:
-							System.out.println("Parse wikipedia data file");
-							parseWikipediaFile(inf);
-							break;
-						case 17:
-							System.out.println("Run map-reduce query on wikipedia data");
-							runMR(inf);
-							break;
-						case 18:
-							System.out.println("Parse financial data file");
-							parseFinancialFile(inf);
-							break;
-						case 19:
-							System.out.println("Run put/call parity query");
-							runPutCallParity(inf);
-							break;
-						default:
-							System.out.println("Wrong option. Try again...");
-					}
-				}
-				catch(IOException io){
-					System.out.println("While reading from terminal: "+io.getMessage());
-					io.printStackTrace();
-				}			
+		QueryPlan qp = null;
+		//If the user provided a query when launching the master node...
+		if(args[1] != null){
+			if(!(args.length > 2)){
+				System.out.println("Error. See Usage");
+				System.exit(-1);
 			}
-			System.out.println("BYE");
-
+			//Then we execute the compose method and get the QueryPlan back
+			qp = mc.executeComposeFromQuery(args[1], args[2]);
+			//Once we have the QueryPlan from the user submitted query, we submit the query plan to the MasterController
+			mc.submitQuery(qp);
 		}
-		catch(DeploymentException de){
-			System.out.println(de.getMessage());
-		}
-		catch(ESFTRuntimeException ere){
-			System.out.println(ere.getMessage());
-		}
-		catch(Exception g){
-			System.out.println(g.getMessage());
+		//In any case we start the MasterController to get access to the interface
+		try {
+			mc.start();
+		} 
+		catch (OperatorDeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	
+	private void executeSec(){
+		//Read parameters from properties
+		int port = Integer.parseInt(P.valueFor("mainPort"));
+		InetAddress bindAddr = null;
+		try {
+			bindAddr = InetAddress.getByName(P.valueFor("mainAddr"));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		int ownPort = Integer.parseInt(P.valueFor("ownPort"));
+		
+		
+		// NodeManager instantiation
+		NodeManager nm = new NodeManager(port, bindAddr, ownPort);
+		nm.init();
+		NodeManager.nLogger.info("NodeManager was remotely stopped");
+	}
+	
+/*
 	private void runPutCallParity(Infrastructure inf) {
 		//Instantiate operators
 		Source src = new Source(-2);
@@ -290,9 +132,10 @@ public class Main {
 		}
 	}
 
+	
 	private void parseFinancialFile(Infrastructure inf) {
 		//str(second),exchange,monthcode,expday,expyear,strikeprice, '\n')
-	/**TO USE THIS, CHANGE DATATUPLE**/
+	//TO USE THIS, CHANGE DATATUPLE
 		
 		Kryo k = new Kryo();
 		k.register(DataTuple.class);
@@ -446,7 +289,7 @@ public class Main {
 		//Deploy
 		try {
 			inf.deploy();
-		} 
+		}  
 		catch (DeploymentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -454,7 +297,7 @@ public class Main {
 	}
 	
 	private void parseWikipediaFile(Infrastructure inf){
-		/**TO USE THIS, CHANGE DATATUPLE**/
+		//TO USE THIS, CHANGE DATATUPLE
 		
 //		Kryo k = new Kryo();
 //		k.register(DataTuple.class);
@@ -1068,12 +911,12 @@ public class Main {
 		tCollector0.connectTo(c, true);
 		baCollector.connectTo(c, true);
 		//Place operators in nodes
-		/*
-		Node n1 = inf.getNodeFromPool();
-		Node n2 = inf.getNodeFromPool();
-		Node n3 = inf.getNodeFromPool();
-		Node n4 = inf.getNodeFromPool();
-		*/
+		//
+		//Node n1 = inf.getNodeFromPool();
+//		Node n2 = inf.getNodeFromPool();
+//		Node n3 = inf.getNodeFromPool();
+//		Node n4 = inf.getNodeFromPool();
+		
 //		Node n = inf.getNodeFromPool();
 		inf.placeNew(src, inf.getNodeFromPool());
 		inf.placeNew(fw0, inf.getNodeFromPool());
@@ -1174,14 +1017,8 @@ public class Main {
 		eiu.scaleOutOperator(opId, newOpId, newNode);
 	}
 	
-	/**
-	 * SECONDARY NODES EXECUTE THIS METHOD
-	 */
 	
-	private void executeSec(int port, InetAddress bindAddr, int ownPort){
-		// NodeManager instantiation
-		NodeManager nm = new NodeManager(port, bindAddr, ownPort);
-		nm.init();
-		NodeManager.nLogger.info("NodeManager was remotely stopped");
-	}
+	//SECONDARY NODES EXECUTE THIS METHOD
+	
+*/
 }
