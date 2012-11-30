@@ -311,33 +311,24 @@ public class CoreRE {
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
-long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from OP: "+ct.getInvalidateState().getOpId());
 			processingUnit.invalidateState(ct.getInvalidateState().getOpId());
-long b = System.currentTimeMillis() - a;
-System.out.println("*invalidate_state: "+b);
 		}
 		/** INIT_MESSAGE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
-long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitState().getOpId());
 			processInitState(ct.getInitState());
-long b = System.currentTimeMillis() - a;
-System.out.println("*init_message: "+b);
 		}
 		/** BACKUP_STATE message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_STATE)){
 			//If communications are not being reconfigured
 //			if(!operatorStatus.equals(OperatorStatus.RECONFIGURING_COMM)){
 //			if(!operatorStatus.equals(OperatorStatus.REPLAYING_BUFFER)){
-long a = System.currentTimeMillis();
 			//Register this state as being managed by this operator
 				BackupState backupState = ct.getBackupState();
 				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_STATE from OP: "+backupState.getOpId());
 				processingUnit.registerManagedState(backupState.getOpId());
 				coreProcessLogic.processBackupState(backupState);
-long b = System.currentTimeMillis() - a;
-System.out.println("*backup_state: "+b);
 //System.out.println("#####::: "+ct.getBackupState().getOpId()+" ::: STATE SIZE: "+ct.build().getSerializedSize());
 //			}
 //			else{
@@ -346,7 +337,6 @@ System.out.println("*backup_state: "+b);
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
-long a = System.currentTimeMillis();
 			int opId = ct.getStateAck().getOpId();
 			NodeManager.nLogger.info("-> Received STATE_ACK from OP: "+opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
@@ -354,39 +344,27 @@ long a = System.currentTimeMillis();
 			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
 //			operatorStatus = OperatorStatus.NORMAL;
-long b = System.currentTimeMillis() - a;
-System.out.println("*state_ack: "+b);
 		}
 		/** BACKUP_RI message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_RI)){
-long a = System.currentTimeMillis();
 
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.BACKUP_RI");
 			coreProcessLogic.storeBackupRI(ct.getBackupRI());
-long b = System.currentTimeMillis() - a;
-System.out.println("*backup_ri: "+b);
 		}
 		/** INIT_RI message **/
 		else if(ctt.equals(ControlTupleType.INIT_RI)){
-long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getOpId());
 			coreProcessLogic.installRI(ct.getInitRI());
-long b = System.currentTimeMillis() - a;
-System.out.println("*backup_ri: "+b);
 		}
 		/** SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
 			//Ack the message, we do not need to wait until the end
-long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo());
 			dispatcher.ackControlMessage(genericAck, os);
-long b = System.currentTimeMillis() - a;
-System.out.println("*scaleOut: "+b);
 		}
 		/** RESUME message **/
 		else if (ctt.equals(ControlTupleType.RESUME)) {
-long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.RESUME");
 			Resume resumeM = ct.getResume();
 			
@@ -415,18 +393,13 @@ long a = System.currentTimeMillis();
 			else{
 				NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
 			}
-long b = System.currentTimeMillis() - a;
-System.out.println("*resume: "+b);
 			//Finally ack the processing of this message
 			dispatcher.ackControlMessage(genericAck, os);
 		}
 		
 		/** RECONFIGURE message **/
 		else if(ctt.equals(ControlTupleType.RECONFIGURE)){
-long a = System.currentTimeMillis();
 			processCommand(ct.getReconfigureConnection(), os);
-long b = System.currentTimeMillis() - a;
-System.out.println("*reconfigure: "+b);
 		}
 	}
 	
@@ -584,7 +557,6 @@ System.out.println("*reconfigure: "+b);
 	}
 	
 	public void processInitState(InitState ct){
-long a = System.currentTimeMillis();
 		//Reconfigure backup stream index
 		manageBackupUpstreamIndex(ct.getOpId());
 System.out.println("CONTROL THREAD: changing operator status to initialising");
@@ -610,8 +582,6 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 		NodeManager.nLogger.info("-> Sending STATE_ACK");
 		ControlTuple rb = new ControlTuple().makeStateAck(operatorId);
 		dispatcher.sendAllUpstreams(rb);
-long b = System.currentTimeMillis() - a;
-System.out.println("OP.processInitState: "+b);
 	}
 
 	//Recover the state to Normal, so the receiver thread can go on with its work

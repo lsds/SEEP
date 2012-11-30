@@ -9,7 +9,8 @@ import java.util.zip.CRC32;
 
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
-import seep.runtimeengine.RuntimeContext;
+import seep.operator.OperatorContext;
+import seep.operator.OperatorContext.PlacedOperator;
 
 
 public class Router implements Serializable{
@@ -108,7 +109,7 @@ return null;
 	 * the downstream is not the original one. NEED to differentiate between main/execution graph. Or, make explicit whith type is and call as it is required
 	 * CHANGE-> actually the DIFFERENTIATION IS required
 	**/
-	public void _configureRoutingImpl(RuntimeContext opContext){
+	public void _configureRoutingImpl(OperatorContext opContext){
 		RoutingStrategyI rs = null;
 		int opId = 0;
 		//For every downstream
@@ -128,7 +129,7 @@ return null;
 		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
 	}
 	
-	public void configureRoutingImpl(RuntimeContext opContext){
+	public void configureRoutingImpl(OperatorContext opContext){
 		RoutingStrategyI rs = null;
 		int opId = 0;
 		//For every downstream in the original query graph
