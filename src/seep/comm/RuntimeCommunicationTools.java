@@ -8,7 +8,7 @@ import java.util.Map;
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.NodeManager;
-import seep.infrastructure.OperatorStaticInformation;
+import seep.operator.OperatorStaticInformation;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;

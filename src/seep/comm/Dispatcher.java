@@ -5,6 +5,7 @@ import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.*;
+import seep.processingunit.PUContext;
 import seep.runtimeengine.CommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
@@ -28,7 +29,7 @@ public class Dispatcher implements Serializable{
 	private Kryo k;
 	
 	// opContext to have knowledge of downstream and upstream
-	private RuntimeContext opContext;
+	private PUContext puCtx;
 	private OutputQueue outputQueue;
 	
 	//Assigned by Operator
@@ -40,8 +41,8 @@ public class Dispatcher implements Serializable{
 	int laps = 0;
 	long elapsed = 0;
 	
-	public Dispatcher(RuntimeContext opContext, OutputQueue outputQueue){
-		this.opContext = opContext;
+	public Dispatcher(PUContext puCtx, OutputQueue outputQueue){
+		this.puCtx = puCtx;
 		this.outputQueue = outputQueue;
 		this.k = initializeKryo();
 	}
@@ -56,8 +57,8 @@ public class Dispatcher implements Serializable{
 		this.router = router;
 	}
 	
-	public void setOpContext(RuntimeContext opContext) {
-		this.opContext = opContext;
+	public void setPUCtx(PUContext puCtx) {
+		this.puCtx = puCtx;
 	}
 	
 	//Start incoming data, one thread has finished replaying
@@ -79,7 +80,7 @@ public class Dispatcher implements Serializable{
 		
 //		replaySemaphore.incrementAndGet();
 		outputQueue.stop();
-		opContext.getCCIfromOpId(opID, "d").getStop().set(true);
+		puCtx.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
 	
 	int remainingWindow = 0;
@@ -102,11 +103,11 @@ public class Dispatcher implements Serializable{
 		//target = virtualIndexToRealIndex.get(target);
 		try{
 //		System.out.println("TARGET: "+target.toString());
-			Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
+			EndPoint dest = puCtx.getDownstreamTypeConnection().elementAt(target);
 			outputQueue.sendToDownstream(dt, dest, false, false);
 		}
 		catch(ArrayIndexOutOfBoundsException aioobe){
-			System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+opContext.getDownstreamTypeConnection().size());
+			System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+puCtx.getDownstreamTypeConnection().size());
 			aioobe.printStackTrace();
 		}
 	}
@@ -117,11 +118,11 @@ public class Dispatcher implements Serializable{
 		for(Integer target : targets){
 			try{
 //			System.out.println("TARGET: "+target.toString());
-				Object dest = opContext.getDownstreamTypeConnection().elementAt(target);
+				EndPoint dest = puCtx.getDownstreamTypeConnection().elementAt(target);
 				outputQueue.sendToDownstream(dt, dest, now, false);
 			}
 			catch(ArrayIndexOutOfBoundsException aioobe){
-				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+opContext.getDownstreamTypeConnection().size());
+				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+puCtx.getDownstreamTypeConnection().size());
 				aioobe.printStackTrace();
 			}
 		}
@@ -130,7 +131,7 @@ public class Dispatcher implements Serializable{
 	//When batch timeout expires, this method ticks every possible destination to update the clocks
 	public void batchTimeOut(){
 		DataTuple dt = null;
-		for(Object channelRecord : opContext.getDownstreamTypeConnection()){
+		for(EndPoint channelRecord : puCtx.getDownstreamTypeConnection()){
 			if(channelRecord instanceof CommunicationChannel){
 				//Tick with beacon for every destination, so that this can update their clocks
 //				sendToDownstream(dt, channelRecord, false, true);
@@ -139,18 +140,19 @@ public class Dispatcher implements Serializable{
 	}
 
 	public void sendAllUpstreams(ControlTuple ct){
-		for(int i = 0; i < opContext.getUpstreamTypeConnection().size(); i++) {
+		for(int i = 0; i < puCtx.getUpstreamTypeConnection().size(); i++) {
 			sendUpstream(ct, i);
 		}		
 	}
 	
-	public void sendMinUpstream(ControlTuple ct) {
-		int index = opContext.minimumUpstream().index();
-		sendUpstream(ct, index);
-	}
+//	@Deprecated
+//	public void sendMinUpstream(ControlTuple ct) {
+//		int index = opContext.minimumUpstream().index();
+//		sendUpstream(ct, index);
+//	}
 
 	public void sendUpstream(ControlTuple ct, int index){
-		Object obj = (Object)opContext.getUpstreamTypeConnection().elementAt(index);
+		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		if(obj instanceof CoreRE){
 			CoreRE operatorObj = (CoreRE) obj;
 			operatorObj.processControlTuple(ct, null);
@@ -174,7 +176,7 @@ public class Dispatcher implements Serializable{
 	}
 	
 	public void sendDownstream(ControlTuple ct, int index){
-		Object obj = (Object)opContext.getDownstreamTypeConnection().elementAt(index);
+		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
 		if(obj instanceof CoreRE){
 			CoreRE operatorObj = (CoreRE) obj;
 			operatorObj.processControlTuple(ct, null);

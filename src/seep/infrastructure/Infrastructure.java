@@ -22,11 +22,13 @@ import seep.comm.serialization.ControlTuple;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.monitor.MonitorManager;
 import seep.operator.Operator;
+import seep.operator.OperatorContext;
+import seep.operator.OperatorStaticInformation;
 import seep.operator.QuerySpecificationI;
 import seep.operator.StatefulOperator;
+import seep.operator.OperatorContext.PlacedOperator;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.RuntimeContext;
-import seep.runtimeengine.RuntimeContext.PlacedOperator;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
@@ -295,7 +297,7 @@ public class Infrastructure {
 
 	/// \test {some variables were bad, check if now is working}
 	public void reMap(InetAddress oldIp, InetAddress newIp){
-		RuntimeContext opCtx = null;
+		OperatorContext opCtx = null;
 		for(QuerySpecificationI op: ops){
 			opCtx = op.getOpContext();
 			OperatorStaticInformation loc = opCtx.getOperatorStaticInformation();
@@ -390,21 +392,21 @@ public class Infrastructure {
 	}
 	
 	public void placeNew(Operator o, Node n) {
-		int opID = o.getOperatorId();
+		int opId = o.getOperatorId();
 		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
-		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opID, QueryPlan.DATA_SOCKET + opID, isStatefull);
+		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
-		for (RuntimeContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
+		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
 			int downID = downDescr.opID();
 			QuerySpecificationI downOp = elements.get(downID);
-			downOp.getOpContext().setUpstreamOperatorStaticInformation(opID, l);
+			downOp.getOpContext().setUpstreamOperatorStaticInformation(opId, l);
 		}
 
-		for (RuntimeContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
+		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
 			int upID = upDescr.opID();
 			QuerySpecificationI upOp = elements.get(upID);
-			upOp.getOpContext().setDownstreamOperatorStaticInformation(opID, l);
+			upOp.getOpContext().setDownstreamOperatorStaticInformation(opId, l);
 		}
 	}
 

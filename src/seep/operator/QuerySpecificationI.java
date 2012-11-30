@@ -8,17 +8,17 @@ public interface QuerySpecificationI {
 
 	int getOperatorId();
 
-	RuntimeContext getOpContext();
+	OperatorContext getOpContext();
 	
-	public void setOpContext(RuntimeContext opContext);
+	public void setOpContext(OperatorContext opContext);
 
 	public void connectTo(QuerySpecificationI down, boolean originalQuery);
 	
 	public void setRoutingQueryFunction(String queryFunction_methodName);
 	
-	public void route(Router.RelationalOperator operand, int value, CoreRE toConnect);
+	public void route(Router.RelationalOperator operand, int value, Operator toConnect);
 	
-	public void scaleOut(CoreRE toScaleOut);
+	public void scaleOut(Operator toScaleOut);
 	
 	///\fixme{this should be done automatically}
 //	public void set();

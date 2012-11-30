@@ -13,6 +13,7 @@ import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
@@ -28,6 +29,8 @@ import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
  */
 
 public class NodeManager{
+	
+	private WorkerNodeDescription nodeDescr;
 	
 	private CoreRE core = null;
 	
@@ -60,6 +63,14 @@ public class NodeManager{
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
 		this.ownPort = ownPort;
+		
+		try {
+			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
+		} 
+		catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
@@ -109,15 +120,11 @@ public class NodeManager{
 //		}
 	}
 	
-	private int getUniqueIdentifier(){
-		return 0;
-	}
-	
 	public void init(){
 		//Get unique identifier for this node
-		int nodeId = getUniqueIdentifier();
+		int nodeId = nodeDescr.getNodeId();
 		//Initialize node engine ( CoreRE + ProcessingUnit )
-		CoreRE core = new CoreRE();
+		CoreRE core = new CoreRE(nodeDescr);
 		//Initialize monitor
 		nodeMonitor.setNodeId(nodeId);
 		monitorT = new Thread(nodeMonitor);

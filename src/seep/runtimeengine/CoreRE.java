@@ -23,13 +23,14 @@ import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorInitializationException;
 import seep.infrastructure.OperatorInstantiationException;
-import seep.infrastructure.OperatorStaticInformation;
+import seep.infrastructure.WorkerNodeDescription;
 import seep.operator.Operator;
+import seep.operator.OperatorStaticInformation;
 import seep.operator.QuerySpecificationI;
 import seep.operator.StateSplitI;
 import seep.operator.StatefulOperator;
+import seep.processingunit.PUContext;
 import seep.processingunit.ProcessingUnit;
-import seep.runtimeengine.RuntimeContext.PlacedOperator;
 
 /**
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
@@ -37,7 +38,9 @@ import seep.runtimeengine.RuntimeContext.PlacedOperator;
 
 public class CoreRE {
 
+	private WorkerNodeDescription nodeDescr = null;
 	private ProcessingUnit processingUnit = null;
+	private PUContext puCtx = null;
 	private boolean coreReady = false;
 	
 	public int ackCounter = 0;
@@ -46,7 +49,7 @@ public class CoreRE {
 	private int backupUpstreamIndex = -1;
 
 //	private RuntimeContext opContext;
-	private CoreProcessingLogic opCommonProcessLogic;
+	private CoreProcessingLogic coreProcessLogic;
 	private Router router;
 
 	private InputQueue inputQueue;
@@ -71,9 +74,14 @@ public class CoreRE {
 	
 	private OperatorStatus operatorStatus = OperatorStatus.NORMAL;
 	
-	public CoreRE(){
-		processingUnit = new ProcessingUnit();
-		opCommonProcessLogic = new CoreProcessingLogic();
+	public CoreRE(WorkerNodeDescription nodeDescr){
+		this.nodeDescr = nodeDescr;
+		processingUnit = new ProcessingUnit(this);
+		coreProcessLogic = new CoreProcessingLogic();
+	}
+	
+	public WorkerNodeDescription getNodeDescr(){
+		return nodeDescr;
 	}
 	
 	public void pushOperator(Operator o){
@@ -86,17 +94,18 @@ public class CoreRE {
 	
 	public void setRuntime(){
 		/// At this point I need information about what connections I need to establish
-		/// So communicate with the processing unit, that knows our operators and their requirements
+		PUContext puCtx = processingUnit.setUpProcessingUnit();
 		
 		/// INSTANTIATION
-		opCommonProcessLogic.setOwner(this);
+		/** MORE REFACTORING HERE **/
+		coreProcessLogic.setOwner(this);
 		
-		opCommonProcessLogic.setOpContext(opContext);
+		coreProcessLogic.setOpContext(puCtx);
 		
 		inputQueue = new InputQueue();
 		outputQueue = new OutputQueue();
 		
-		dispatcher = new Dispatcher(opContext, outputQueue);
+		dispatcher = new Dispatcher(puCtx, outputQueue);
 		//Configure routing to downstream
 		router.configureRoutingImpl(opContext);
 		
@@ -122,15 +131,12 @@ public class CoreRE {
 		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
 		
 		/// INITIALIZATION
-		
-		dispatcher.setOpContext(opContext);
 		router.initializeQueryFunction();
 		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
 		dispatcher.setRouter(router);
-		opContext.configureCommunication();
 
 		//Choose the upstreamBackupIndex for this operator
-		opCommonProcessLogic.configureUpstreamIndex();
+		coreProcessLogic.configureUpstreamIndex();
 		
 		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
 	}
@@ -274,32 +280,6 @@ public class CoreRE {
 //		dispatcher.sendData(dt, Integer.MIN_VALUE, false);
 //	}
 	
-	public void sendDown(DataTuple dt){
-		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
-//		lp.start();
-		dispatcher.sendData(dt, Integer.MIN_VALUE, false);
-//		lp.finish();
-	}
-	
-	public void sendDown(DataTuple dt, int value){
-//		lp.start();
-		dispatcher.sendData(dt, value, false);
-//		lp.finish();
-	}
-	
-	public void sendNow(DataTuple dt){
-		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
-//		lp.start();
-		dispatcher.sendData(dt, Integer.MIN_VALUE, true);
-//		lp.finish();
-	}
-	
-	public void sendNow(DataTuple dt, int value){
-//		lp.start();
-		dispatcher.sendData(dt, value, true);
-//		lp.finish();
-	}
-	
 	/** this hacked sent was added on 17 october 2012 to avoid refactoring the inner system to allow a operator configured with a stateful down to send
 	 * as a stateless **/
 	public void hackRouter(){
@@ -327,7 +307,7 @@ public class CoreRE {
 //long a = System.currentTimeMillis();
 			if(ct.getAck().getTs() >= ts_ack){
 				ackCounter++;
-				opCommonProcessLogic.processAck(ct.getAck());
+				coreProcessLogic.processAck(ct.getAck());
 			}
 //long b = System.currentTimeMillis() - a;
 //System.out.println("*processAck: "+b);
@@ -358,7 +338,7 @@ long a = System.currentTimeMillis();
 				BackupState backupState = ct.getBackupState();
 				NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv BACKUP_STATE from OP: "+backupState.getOpId());
 				opContext.registerManagedState(backupState.getOpId());
-				opCommonProcessLogic.processBackupState(backupState);
+				coreProcessLogic.processBackupState(backupState);
 long b = System.currentTimeMillis() - a;
 System.out.println("*backup_state: "+b);
 //System.out.println("#####::: "+ct.getBackupState().getOpId()+" ::: STATE SIZE: "+ct.build().getSerializedSize());
@@ -385,7 +365,7 @@ System.out.println("*state_ack: "+b);
 long a = System.currentTimeMillis();
 
 			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.BACKUP_RI");
-			opCommonProcessLogic.storeBackupRI(ct.getBackupRI());
+			coreProcessLogic.storeBackupRI(ct.getBackupRI());
 long b = System.currentTimeMillis() - a;
 System.out.println("*backup_ri: "+b);
 		}
@@ -393,7 +373,7 @@ System.out.println("*backup_ri: "+b);
 		else if(ctt.equals(ControlTupleType.INIT_RI)){
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getOpId());
-			opCommonProcessLogic.installRI(ct.getInitRI());
+			coreProcessLogic.installRI(ct.getInitRI());
 long b = System.currentTimeMillis() - a;
 System.out.println("*backup_ri: "+b);
 		}
@@ -402,7 +382,7 @@ System.out.println("*backup_ri: "+b);
 			//Ack the message, we do not need to wait until the end
 long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.SCALE_OUT");
-			opCommonProcessLogic.scaleOut(ct.getScaleOutInfo());
+			coreProcessLogic.scaleOut(ct.getScaleOutInfo());
 			dispatcher.ackControlMessage(genericAck, os);
 long b = System.currentTimeMillis() - a;
 System.out.println("*scaleOut: "+b);
@@ -425,7 +405,7 @@ long a = System.currentTimeMillis();
 						if(subclassOperator instanceof StateSplitI){
 							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
 							NodeManager.nLogger.info("-> Replaying State");
-							opCommonProcessLogic.replayState(opId);
+							coreProcessLogic.replayState(opId);
 						}
 					}
 					else{
@@ -478,7 +458,7 @@ System.out.println("*reconfigure: "+b);
 			}
 			opContext.updateConnection(opId, ip);
 			if(command.equals("reconfigure_U")){
-				opCommonProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
+				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
 			if(command.equals("reconfigure_D")){
 				/// \todo {change this deprecated. This was the previous way of replaying stuff, now there are no threads}
@@ -488,7 +468,7 @@ System.out.println("*reconfigure: "+b);
 					if(subclassOperator instanceof StateSplitI){
 						//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
 						NodeManager.nLogger.info("-> Replaying State");
-						opCommonProcessLogic.replayState(opId);
+						coreProcessLogic.replayState(opId);
 					}
 				}
 				else{
@@ -518,11 +498,11 @@ System.out.println("*reconfigure: "+b);
 				//to avoid problems with the following messages ??
 //				operatorStatus = OperatorStatus.NORMAL;
 				//Send to that upstream the routing information I am storing (in case there are ri).
-				opCommonProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
+				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 				
 				
 				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
-				opCommonProcessLogic.reconfigureUpstreamBackupIndex();
+				coreProcessLogic.reconfigureUpstreamBackupIndex();
 			}
 			dispatcher.ackControlMessage(genericAck, os);
 		}
@@ -530,7 +510,7 @@ System.out.println("*reconfigure: "+b);
 		else if (command.equals("system_ready")){
 			dispatcher.ackControlMessage(genericAck, os);
 			//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
-			opCommonProcessLogic.sendInitialStateBackup();
+			coreProcessLogic.sendInitialStateBackup();
 		}
 		/** REPLAY message **/
 		/// \todo {this command is only used for twitter storm model...}
@@ -597,7 +577,7 @@ System.out.println("*reconfigure: "+b);
 		//Firstly, I configure my upstreamBackupIndex, which is the index of the operatorId coming in this message (the one in charge of managing it)
 		int newIndex = opContext.findUpstream(opId).index();
 		if(backupUpstreamIndex != -1 && newIndex != backupUpstreamIndex){
-			ControlTuple ct = opCommonProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
+			ControlTuple ct = coreProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
 			dispatcher.sendUpstream(ct, backupUpstreamIndex);
 		}
 		//Set the new backup upstream index, this has been sent by the manager.

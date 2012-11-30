@@ -21,20 +21,21 @@ import seep.infrastructure.NodeManager;
 import seep.operator.StateSplitI;
 import seep.operator.StatefulOperator;
 import seep.operator.StatelessOperator;
-import seep.runtimeengine.RuntimeContext.PlacedOperator;
+import seep.processingunit.PUContext;
+
 
 public class CoreProcessingLogic implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 	
 	private CoreRE owner;
-	private RuntimeContext opContext;
+	private PUContext puCtx;
 	
 	public void setOwner(CoreRE owner) {
 		this.owner = owner;
 	}
-	public void setOpContext(RuntimeContext opContext) {
-		this.opContext = opContext;
+	public void setOpContext(PUContext puCtx) {
+		this.puCtx = puCtx;
 	}
 	
 	//map where it is saved the ack received by each downstream
@@ -126,14 +127,14 @@ long a = System.currentTimeMillis();
 		//Get operator id
 		int opId = ct.getOpId();
 		//Get buffer for this operator and save the backupState of downstream operator
-		CommunicationChannel downStream = opContext.getCCIfromOpId(opId, "d");
+		CommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
 		if (downStream instanceof CommunicationChannel) {
 			CommunicationChannel connection = (CommunicationChannel) downStream;
 //System.out.println("comparing "+connection.reconf_ts+" with: "+ct.getTsE());
 			if (connection.reconf_ts <= ct.getTs_e()) {
 				//(downstreamBuffers.get(opId)).replaceBackupState(ct);
 //				System.out.println("replacing backupState");
-				opContext.getBuffer(opId).replaceBackupState(ct);
+				puCtx.getBuffer(opId).replaceBackupState(ct);
 			}
 		}
 		else{
@@ -156,7 +157,7 @@ long e = System.currentTimeMillis();
 		
 	@Deprecated
 	public void startReplayer(int opID) {
-		CommunicationChannel oi = opContext.getCCIfromOpId(opID, "d");
+		CommunicationChannel oi = puCtx.getCCIfromOpId(opID, "d");
 		startReplayer(oi);
 	}
 
@@ -168,7 +169,7 @@ long e = System.currentTimeMillis();
 		int counter = 0;
 		long minWithCurrent = current_ts;
 		long minWithoutCurrent = Long.MAX_VALUE;
-		Buffer buffer = opContext.getBuffer(opId);
+		Buffer buffer = puCtx.getBuffer(opId);
 		if(buffer != null){
 			buffer.trim(current_ts);
 		}
@@ -210,7 +211,7 @@ long e = System.currentTimeMillis();
 	
 	public void splitState(int oldOpId, int newOpId, int key) {
 		StateSplitI operatorToSplit = (StateSplitI)owner.getSubclassOperator();
-		BackupState oldState = opContext.getBuffer(oldOpId).getBackupState();
+		BackupState oldState = puCtx.getBuffer(oldOpId).getBackupState();
 
 		if(!opContext.isManagingStateOf(oldOpId)){
 			NodeManager.nLogger.severe("NOT MANAGING STATE?????   ");
@@ -234,8 +235,8 @@ long e = System.currentTimeMillis();
 		NodeManager.nLogger.severe("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
 //		opContext.getBuffer(oldOpId).replaceBackupState(splitted[0]);
 //		opContext.getBuffer(newOpId).replaceBackupState(splitted[1]);
-		opContext.getBuffer(oldOpId).replaceBackupState(oldPartition);
-		opContext.getBuffer(newOpId).replaceBackupState(newPartition);
+		puCtx.getBuffer(oldOpId).replaceBackupState(oldPartition);
+		puCtx.getBuffer(newOpId).replaceBackupState(newPartition);
 		//Indicate that we are now managing both these states
 		NodeManager.nLogger.severe("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
 		opContext.registerManagedState(oldOpId);
@@ -333,7 +334,7 @@ long e = System.currentTimeMillis();
 	
 	public void replayState(int opId) {
 		//Get channel information
-		CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+		CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 		Buffer buffer = cci.getBuffer();
 		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
 

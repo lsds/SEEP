@@ -10,7 +10,7 @@ import java.util.zip.CRC32;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.RuntimeContext;
-import seep.runtimeengine.RuntimeContext.PlacedOperator;
+
 
 public class Router implements Serializable{
 

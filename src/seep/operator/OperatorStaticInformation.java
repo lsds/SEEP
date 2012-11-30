@@ -1,6 +1,8 @@
-package seep.infrastructure;
+package seep.operator;
 
 import java.io.Serializable;
+
+import seep.infrastructure.Node;
 
 /**
 * Location. Location class models the endpoints of a given operator, providing node and port information.

@@ -13,6 +13,8 @@ import seep.buffer.Buffer;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
+import seep.operator.EndPoint;
+import seep.operator.Operator;
 
 public class OutputQueue {
 
@@ -61,7 +63,7 @@ public class OutputQueue {
 		replaySemaphore.incrementAndGet();
 	}
 	
-	public void sendToDownstream(DataTuple tuple, Object dest, boolean now, boolean beacon) {
+	public void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
 
 		if(dest instanceof CommunicationChannel){
 			CommunicationChannel channelRecord = (CommunicationChannel) dest;
@@ -119,8 +121,8 @@ public class OutputQueue {
 				ie.printStackTrace();
 			}
 		}
-		else if(dest instanceof CoreRE){
-			CoreRE operatorObj = (CoreRE) dest;
+		else if(dest instanceof Operator){
+			Operator operatorObj = (Operator) dest;
 			operatorObj.processData(tuple);
 		}
 	}

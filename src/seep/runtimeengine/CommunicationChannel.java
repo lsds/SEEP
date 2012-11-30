@@ -1,6 +1,5 @@
 package seep.runtimeengine;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.*;
@@ -9,18 +8,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.esotericsoftware.kryo.io.Output;
 
-import seep.Main;
 import seep.P;
 import seep.buffer.Buffer;
-//import seep.comm.Replayer;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
+import seep.operator.EndPoint;
 
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
 */
-public class CommunicationChannel{
+public class CommunicationChannel implements EndPoint{
 
+	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
 	private Buffer buffer;
@@ -41,7 +40,8 @@ public class CommunicationChannel{
 	private int channelBatchSize = Integer.parseInt(P.valueFor("batchLimit"));
 	private long tick = 0;
 
-	public CommunicationChannel(Socket downstreamSocketD, Socket downstreamSocketC, Buffer buffer){
+	public CommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Buffer buffer){
+		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
 		this.downstreamControlSocket = downstreamSocketC;
 		this.buffer = buffer;
@@ -60,6 +60,10 @@ public class CommunicationChannel{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public int getOperatorId(){
+		return targetOperatorId;
 	}
 	
 	public Socket getDownstreamControlSocket(){
