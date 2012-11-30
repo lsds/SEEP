@@ -130,27 +130,6 @@ public class PUContext {
 		}
 	}
 	
-//	public CommunicationChannel getCCIfromOpId(int opId, String type){
-//		if(type.equals("d")){
-//			for(PlacedOperator down: downstreams){
-//				if(down.opID() == opId){
-//					if(downstreamTypeConnection.elementAt(down.index()) instanceof CommunicationChannel){
-//						return (CommunicationChannel)downstreamTypeConnection.elementAt(down.index());
-//					}
-//				}
-//			}
-//		}
-//		else if(type.equals("u")){
-//			for(PlacedOperator up: downstreams){
-//				if(up.opID() == opId){
-//					if(upstreamTypeConnection.elementAt(up.index()) instanceof CommunicationChannel){
-//						return (CommunicationChannel)upstreamTypeConnection.elementAt(up.index());
-//					}	
-//				}
-//			}
-//		}
-//		return null;
-//	}
 	
 	public CommunicationChannel getCCIfromOpId(int opId, String type){
 		if(type.equals('d')){
@@ -173,4 +152,126 @@ public class PUContext {
 	public Buffer getBuffer(int opId) {
 		return downstreamBuffers.get(opId);
 	}
+	
+	/** Dynamic Reconfiguration **/
+	
+	public void updateConnection(int opId, InetAddress newIp){
+	InetAddress localIp = nodeDescr.getIp();
+	Operator opToReconfigure = ProcessingUnit.mapOP_ID.get(opId);
+	int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
+	int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();
+	
+	for(EndPoint ep : downstreamTypeConnection){
+		if(ep.getOperatorId() == opId){
+			try{
+				Socket dataS = new Socket(newIp, dataPort);
+				Socket controlS = new Socket(newIp, controlPort);
+				Buffer buf = downstreamBuffers.get(opId);
+				int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
+				CommunicationChannel cci = new CommunicationChannel(opId, dataS, controlS, buf);
+				downstreamTypeConnection.set(index, cci);
+			}
+			catch(IOException io){
+				System.out.println("While re-creating socket: "+io.getMessage());
+			}
+		}
+	}
+	for(EndPoint ep : upstreamTypeConnection){
+		if(ep.getOperatorId() == opId){
+			try{
+				Socket controlS = new Socket(newIp, controlPort);
+				int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
+				CommunicationChannel cci = new CommunicationChannel(opId, null, controlS, null);
+				upstreamTypeConnection.set(index, cci);
+			}
+			catch(IOException io){
+				System.out.println("While re-creating socket: "+io.getMessage());
+			}
+		}
+	}
+	NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
 }
+
+
+//public CommunicationChannel getCCIfromOpId(int opId, String type){
+//if(type.equals("d")){
+//	for(PlacedOperator down: downstreams){
+//		if(down.opID() == opId){
+//			if(downstreamTypeConnection.elementAt(down.index()) instanceof CommunicationChannel){
+//				return (CommunicationChannel)downstreamTypeConnection.elementAt(down.index());
+//			}
+//		}
+//	}
+//}
+//else if(type.equals("u")){
+//	for(PlacedOperator up: downstreams){
+//		if(up.opID() == opId){
+//			if(upstreamTypeConnection.elementAt(up.index()) instanceof CommunicationChannel){
+//				return (CommunicationChannel)upstreamTypeConnection.elementAt(up.index());
+//			}	
+//		}
+//	}
+//}
+//return null;
+//}
+	
+//	public void updateConnection(int opId, InetAddress newIp){
+//		InetAddress localIp = nodeDescr.getIp();
+//	
+//		
+//		for(PlacedOperator down: downstreams){
+//			if(down.opID() == opId){
+//				if(down.location().getMyNode().getIp().equals(localIp)){
+//					System.out.println("PROBLEM HERE!!!!!!");
+///// \todo {when introducing local operators there is a whole new bunch of possibilities to handle}
+//					//This means that a previous remote operator is now local, so, previous operator buffers should be replayed
+//					//destroyed, and this new operator should create the new buffer for their downstream connection.
+//				}
+//				else{
+//					try{
+//						Socket dataS = new Socket(newIp, down.location().getInD());
+//						Socket controlS = new Socket(newIp, down.location().getInC());
+//						Buffer buf = downstreamBuffers.get(opId);
+//
+//						CommunicationChannel cci = new CommunicationChannel(dataS, controlS, buf);
+//						downstreamTypeConnection.set(down.index(), cci);
+//					}
+//					catch(IOException io){
+//						System.out.println("While re-creating socket: "+io.getMessage());
+//					}
+//				}
+//			}
+//		}
+//		for(PlacedOperator up: upstreams){
+//			if(up.opID() == opId){
+//				if(up.location().getMyNode().getIp().equals(localIp)){
+//					System.out.println("PROBLEM HERE!!!!!!");
+//					//This means that a previous remote operator is now local, so, previous operator buffers should be replayed
+//					//destroyed, and this new operator should create the new buffer for their downstream connection. 
+///// \todo {when introducing local operators there is a whole new bunch of possibilities to handle}
+//				}
+//				else{
+//					try{
+//						Socket controlS = new Socket(newIp, up.location().getInC());
+//						CommunicationChannel cci = new CommunicationChannel(null, controlS, null);
+//						upstreamTypeConnection.set(up.index(), cci);
+//					}
+//					catch(IOException io){
+//						System.out.println("While re-creating socket: "+io.getMessage());
+//					}
+//				}
+//				
+//			}
+//			//FIXME this should dissapear...
+///// \test {Work without this -2}
+////			else if (up.opID() == -2){
+////				//Sources are always remote
+////				createRemoteCommunication(up.location().getMyNode().getIp(), 0, up.location().getInC(), "up");
+////			}
+//		}
+//		NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
+//	}
+}
+
+
+	

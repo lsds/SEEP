@@ -27,8 +27,6 @@ import seep.operator.OperatorStaticInformation;
 import seep.operator.QuerySpecificationI;
 import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.runtimeengine.CoreRE;
-import seep.runtimeengine.RuntimeContext;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.

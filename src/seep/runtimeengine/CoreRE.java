@@ -99,7 +99,7 @@ public class CoreRE {
 		/// INSTANTIATION
 		/** MORE REFACTORING HERE **/
 		coreProcessLogic.setOwner(this);
-		
+		coreProcessLogic.setProcessingUnit(processingUnit);
 		coreProcessLogic.setOpContext(puCtx);
 		
 		inputQueue = new InputQueue();
@@ -108,6 +108,7 @@ public class CoreRE {
 		dispatcher = new Dispatcher(puCtx, outputQueue);
 		//Configure routing to downstream
 		router.configureRoutingImpl(opContext);
+		router.initializeQueryFunction();
 		
 		//Control worker
 		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
@@ -128,17 +129,17 @@ public class CoreRE {
 		b.setType(ControlTupleType.ACK);
 		genericAck = b;
 		
-		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
+		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" instantiated");
 		
 		/// INITIALIZATION
-		router.initializeQueryFunction();
+		
 		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
 		dispatcher.setRouter(router);
 
 		//Choose the upstreamBackupIndex for this operator
 		coreProcessLogic.configureUpstreamIndex();
 		
-		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
+		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 	}
 	
 	public void startDataProcessing(){
@@ -186,6 +187,10 @@ public class CoreRE {
 
 	public void setTs_ack(long tsAck) {
 		ts_ack = tsAck;
+	}
+	
+	public void forwardData(DataTuple data){
+		processingUnit.processData(data);
 	}
 	
 //	public CoreRE getSubclassOperator() {
@@ -276,12 +281,8 @@ public class CoreRE {
 		return true;
 	}
 
-//	public <T extends DataTuple> void sendDown(T dt){
-//		dispatcher.sendData(dt, Integer.MIN_VALUE, false);
-//	}
-	
 	/** this hacked sent was added on 17 october 2012 to avoid refactoring the inner system to allow a operator configured with a stateful down to send
-	 * as a stateless **/
+	 * 
 	public void hackRouter(){
 		for(Integer id : opContext.getOriginalDownstream()){
 			PlacedOperator down = opContext.findDownstream(id);
@@ -293,11 +294,7 @@ public class CoreRE {
 			router.setNewLoadBalancer(id, rs);
 		}
 	}
-	
-//	public abstract boolean isOrderSensitive();
-	
-//	public abstract void processData(DataTuple dt);
-//	public abstract void processData(Object dt);
+	as a stateless **/
 		
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
@@ -315,15 +312,15 @@ public class CoreRE {
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
 long a = System.currentTimeMillis();
-			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.INVALIDATE_STATE from OP: "+ct.getInvalidateState().getOpId());
-			opContext.invalidateState(ct.getInvalidateState().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from OP: "+ct.getInvalidateState().getOpId());
+			processingUnit.invalidateState(ct.getInvalidateState().getOpId());
 long b = System.currentTimeMillis() - a;
 System.out.println("*invalidate_state: "+b);
 		}
 		/** INIT_MESSAGE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
 long a = System.currentTimeMillis();
-			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitState().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitState().getOpId());
 			processInitState(ct.getInitState());
 long b = System.currentTimeMillis() - a;
 System.out.println("*init_message: "+b);
@@ -336,8 +333,8 @@ System.out.println("*init_message: "+b);
 long a = System.currentTimeMillis();
 			//Register this state as being managed by this operator
 				BackupState backupState = ct.getBackupState();
-				NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv BACKUP_STATE from OP: "+backupState.getOpId());
-				opContext.registerManagedState(backupState.getOpId());
+				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_STATE from OP: "+backupState.getOpId());
+				processingUnit.registerManagedState(backupState.getOpId());
 				coreProcessLogic.processBackupState(backupState);
 long b = System.currentTimeMillis() - a;
 System.out.println("*backup_state: "+b);
@@ -354,7 +351,7 @@ long a = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> Received STATE_ACK from OP: "+opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 //			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
-			CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
 //			operatorStatus = OperatorStatus.NORMAL;
 long b = System.currentTimeMillis() - a;
@@ -364,7 +361,7 @@ System.out.println("*state_ack: "+b);
 		else if(ctt.equals(ControlTupleType.BACKUP_RI)){
 long a = System.currentTimeMillis();
 
-			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.BACKUP_RI");
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.BACKUP_RI");
 			coreProcessLogic.storeBackupRI(ct.getBackupRI());
 long b = System.currentTimeMillis() - a;
 System.out.println("*backup_ri: "+b);
@@ -372,7 +369,7 @@ System.out.println("*backup_ri: "+b);
 		/** INIT_RI message **/
 		else if(ctt.equals(ControlTupleType.INIT_RI)){
 long a = System.currentTimeMillis();
-			NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getOpId());
 			coreProcessLogic.installRI(ct.getInitRI());
 long b = System.currentTimeMillis() - a;
 System.out.println("*backup_ri: "+b);
@@ -381,7 +378,7 @@ System.out.println("*backup_ri: "+b);
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
 			//Ack the message, we do not need to wait until the end
 long a = System.currentTimeMillis();
-			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.SCALE_OUT");
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo());
 			dispatcher.ackControlMessage(genericAck, os);
 long b = System.currentTimeMillis() - a;
@@ -390,7 +387,7 @@ System.out.println("*scaleOut: "+b);
 		/** RESUME message **/
 		else if (ctt.equals(ControlTupleType.RESUME)) {
 long a = System.currentTimeMillis();
-			NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv ControlTuple.RESUME");
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.RESUME");
 			Resume resumeM = ct.getResume();
 			
 			// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
@@ -400,7 +397,7 @@ long a = System.currentTimeMillis();
 				for (int opId: resumeM.getOpId()){
 					//Check if I am managing the state of any of the operators to which state must be replayed
 					/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-					if(opContext.isManagingStateOf(opId)){
+					if(processingUnit.isManagingStateOf(opId)){
 						/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
 						if(subclassOperator instanceof StateSplitI){
 							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
@@ -436,7 +433,7 @@ System.out.println("*reconfigure: "+b);
 	/// \todo {stopping and starting the conn should be done from updateConnection in some way to hide the complexity this introduces here}
 	public void processCommand(ReconfigureConnection rc, OutputStream os){
 		String command = rc.getCommand();
-		NodeManager.nLogger.info("-> OP "+this.getOperatorId()+" recv "+command+" command ");
+		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv "+command+" command ");
 		InetAddress ip = null;
 		int opId = rc.getOpId();
 		
@@ -444,19 +441,21 @@ System.out.println("*reconfigure: "+b);
 			ip = InetAddress.getByName(rc.getIp());
 		} 
 		catch (UnknownHostException uhe) {
-			NodeManager.nLogger.severe("-> OP"+this.getOperatorId()+" EXCEPTION while getting IP from msg "+uhe.getMessage());
+			NodeManager.nLogger.severe("-> Node "+nodeDescr.getNodeId()+" EXCEPTION while getting IP from msg "+uhe.getMessage());
 			uhe.printStackTrace();
 		}
 		/** RECONFIGURE DOWN or RECONFIGURE UP message **/
 		if(command.equals("reconfigure_D") || command.equals("reconfigure_U") || command.equals("just_reconfigure_D")){
 //			operatorStatus = OperatorStatus.RECONFIGURING_COMM;
-			opContext.changeLocation(opId, ip);
+			processingUnit.reconfigureOperatorLocation(opId, ip);
+			
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
 			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
 				dispatcher.stopConnection(opId);
 			}
-			opContext.updateConnection(opId, ip);
+			processingUnit.reconfigureOperatorConnection(opId, ip);
+			
 			if(command.equals("reconfigure_U")){
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
@@ -464,7 +463,7 @@ System.out.println("*reconfigure: "+b);
 				/// \todo {change this deprecated. This was the previous way of replaying stuff, now there are no threads}
 				//opCommonProcessLogic.startReplayer(opId);
 				// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
-				if(opContext.isManagingStateOf(opId)){
+				if(processingUnit.isManagingStateOf(opId)){
 					if(subclassOperator instanceof StateSplitI){
 						//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
 						NodeManager.nLogger.info("-> Replaying State");
@@ -520,7 +519,7 @@ System.out.println("*reconfigure: "+b);
 			dispatcher.stopConnection(opId);
 			/// \todo{avoid this deprecated function}
 			//opCommonProcessLogic.startReplayer(opID);
-			CommunicationChannel cci = opContext.getCCIfromOpId(opId, "d");
+			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
 		}
 		/** CONFIG SOURCE RATE message **/

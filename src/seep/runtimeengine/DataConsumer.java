@@ -23,7 +23,8 @@ public class DataConsumer implements Runnable {
 //			System.out.println("CONSUMER->going to pull data");
 			DataTuple data = inputQueue.pull();
 //			System.out.println("CONSUMER->Data pulled");
-			owner.processData(data);
+			//owner.processData(data);
+			owner.forwardData(data);
 		}
 	}
 }

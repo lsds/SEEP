@@ -1,13 +1,18 @@
 package seep.operator;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import seep.buffer.Buffer;
 import seep.comm.routing.Router.RelationalOperator;
 import seep.infrastructure.Node;
+import seep.infrastructure.NodeManager;
+import seep.runtimeengine.CommunicationChannel;
 
 public class OperatorContext {
 
@@ -29,6 +34,108 @@ public class OperatorContext {
 	
 	public OperatorContext(){
 		
+	}
+	
+	public int getDownOpIdFromIndex(int index){
+		int opId = 0;
+		for(PlacedOperator down : downstreams){
+			if(down.index() == index){
+				return down.opID();
+			}
+		}
+		return opId;
+	}
+	
+	public int getUpOpIdFromIndex(int index){
+		int opId = 0;
+		for(PlacedOperator up : upstreams){
+			if(up.index() == index){
+				return up.opID();
+			}
+		}
+		return opId;
+	}
+	
+	public ArrayList<Integer> getListOfDownstreamIndexes() {
+		ArrayList<Integer> indexes = new ArrayList<Integer>();
+		for(PlacedOperator down : downstreams){
+			indexes.add(down.index());
+		}
+		return indexes;
+	}
+
+	//Check if the given opId is statefull
+	public boolean isDownstreamOperatorStateful(int opId) {
+		for(PlacedOperator op : downstreams){
+			if(op.opID() == opId){
+				if(op.location().isStatefull()){
+					return true;
+				}
+				else{
+					return false;
+				}
+			}
+		}
+		return false;
+	}
+	
+	//Check if all downstreamms are stateful
+	public boolean isDownstreamStateful() {
+		for(PlacedOperator op : downstreams){
+			if(!(op.location().isStatefull())){
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public PlacedOperator minimumUpstream() {
+		PlacedOperator min = null;
+		for (PlacedOperator op : upstreams) {
+			if (min==null) { min = op; }
+			else if (min.opID() > op.opID()) { min = op; }
+		}
+		return min;
+	}
+	
+	public int getDownstreamSize() { 
+		return downstream.size(); 
+	}
+	
+	public OperatorStaticInformation getDownstreamLocation(int opID) {
+		return downstream.get(findOpIndex(opID, connectionsD));
+	}
+	
+	public OperatorStaticInformation getUpstreamLocation(int opID) {
+		return upstream.get(findOpIndex(opID, connectionsU));
+	}
+	
+	public PlacedOperator findUpstream(int opId){
+		for (PlacedOperator op : upstreams) {
+			if (op.opID() == opId) return op;
+		}
+		return null;
+	}
+	
+	public PlacedOperator findDownstream(int opID) {
+		for (PlacedOperator op : downstreams) {
+			if (op.opID() == opID) return op;
+		}
+		return null;
+	}
+	
+	public int getDownOpIndexFromOpId(int opId){
+		for(PlacedOperator po : downstreams){
+			if(po.opID() == opId) return po.index;
+		}
+		return -1;
+	}
+	
+	public int getUpOpIndexFromOpId(int opId){
+		for(PlacedOperator po : upstreams){
+			if(po.opID() == opId) return po.index;
+		}
+		return -1;
 	}
 	
 	/** Methods called by QuerySpecificationI **/
@@ -148,6 +255,7 @@ public class OperatorContext {
 			}
 		}
 	}
+	
 	
 	public ArrayList<Integer> getOriginalDownstream(){
 		return originalDownstream;

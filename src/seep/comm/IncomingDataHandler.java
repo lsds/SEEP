@@ -1,15 +1,11 @@
 package seep.comm;
 
-import seep.comm.serialization.KryoSerializer;
+import java.io.IOException;
+import java.net.ServerSocket;
+
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.monitor.MetricsReader;
-import seep.operator.*;
 import seep.runtimeengine.CoreRE;
-
-import java.io.*;
-import java.net.*;
-
-import com.esotericsoftware.kryo.Kryo;
 
 /**
 * IncomingDataHandler. This is in charge of managing incoming data connections and associate a thread to them

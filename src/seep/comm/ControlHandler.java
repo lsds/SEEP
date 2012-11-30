@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 import seep.infrastructure.NodeManager;
-import seep.operator.QuerySpecificationI;
 import seep.runtimeengine.CoreRE;
 
 /** 
@@ -13,14 +12,14 @@ import seep.runtimeengine.CoreRE;
 
 public class ControlHandler implements Runnable{
 
-	//The operator that owns this control handler
+	//The core that owns this control handler
 	private CoreRE owner;
 	//The connection port that this controlhandler must use
 	private int connPort;
 	//This variable controls if this Runnable should keep running or not
 	private boolean goOn;
 
-	public QuerySpecificationI getOwner(){
+	public CoreRE getOwner(){
 		return owner;
 	}
 	

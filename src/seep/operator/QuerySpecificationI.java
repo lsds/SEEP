@@ -1,8 +1,6 @@
 package seep.operator;
 
 import seep.comm.routing.Router;
-import seep.runtimeengine.CoreRE;
-import seep.runtimeengine.RuntimeContext;
 
 public interface QuerySpecificationI {
 

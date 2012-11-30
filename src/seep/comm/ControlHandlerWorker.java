@@ -1,12 +1,13 @@
 package seep.comm;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.NodeManager;
-import seep.operator.*;
 import seep.runtimeengine.CoreRE;
-
-import java.io.*;
-import java.net.*;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -40,7 +41,6 @@ public class ControlHandlerWorker implements Runnable{
 	public void run(){
 		InputStream is = null;
 		OutputStream os = null;
-		String infoS = incomingSocket.getRemoteSocketAddress().toString();
 		ControlTuple tuple = null;
 //		Seep.ControlTuple.Builder ct = null;
 		try{
@@ -57,9 +57,13 @@ public class ControlHandlerWorker implements Runnable{
 				if(tuple != null){
 					owner.processControlTuple(tuple, os);
 				}
-				else break;
+				else{
+					NodeManager.nLogger.severe("-> ControlHandlerWorker. TUPLE IS NULL !");
+					break;
+				}
 			}
 			//Close streams and socket
+			NodeManager.nLogger.severe("-> Closing connection");
 			is.close();
 			incomingSocket.close();
 		}

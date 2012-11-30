@@ -22,6 +22,7 @@ import seep.operator.StateSplitI;
 import seep.operator.StatefulOperator;
 import seep.operator.StatelessOperator;
 import seep.processingunit.PUContext;
+import seep.processingunit.ProcessingUnit;
 
 
 public class CoreProcessingLogic implements Serializable{
@@ -29,13 +30,18 @@ public class CoreProcessingLogic implements Serializable{
 	private static final long serialVersionUID = 1L;
 	
 	private CoreRE owner;
+	private ProcessingUnit pu;
 	private PUContext puCtx;
+	
 	
 	public void setOwner(CoreRE owner) {
 		this.owner = owner;
 	}
 	public void setOpContext(PUContext puCtx) {
 		this.puCtx = puCtx;
+	}
+	public void setProcessingUnit(ProcessingUnit processingUnit){
+		this.pu = processingUnit;
 	}
 	
 	//map where it is saved the ack received by each downstream
@@ -87,7 +93,7 @@ System.out.println("#################");
 		ArrayList<Integer> keys = new ArrayList<Integer>(initRI.getKey());
 		ArrayList<Integer> downstreamIds = new ArrayList<Integer>();
 		for(Integer index : indexes){
-			int opId = opContext.getDownOpIdFromIndex(index);
+			int opId = puCtx.getDownOpIdFromIndex(index);
 			downstreamIds.add(opId);
 		}
 		

@@ -1,19 +1,20 @@
 package seep.comm;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.net.Socket;
+import java.util.ArrayList;
+
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
-import seep.operator.*;
+import seep.operator.EndPoint;
 import seep.processingunit.PUContext;
 import seep.runtimeengine.CommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
-import seep.runtimeengine.RuntimeContext;
-
-import java.util.*;
-import java.io.*;
-import java.net.*;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
