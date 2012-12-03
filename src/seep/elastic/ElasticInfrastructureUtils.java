@@ -89,7 +89,7 @@ public class ElasticInfrastructureUtils {
 		configureOperatorContext(opIdToParallelize, newOp);
 		//Get operator to parallelize
 		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
-		//Get router and assign to new operator
+		//Get pre-configured router and assign to new operator
 		Router copyOfRouter = opToParallelize.getRouter();
 		newOp.setRouter(copyOfRouter);
 		inf.placeNew(newOp, newNode);

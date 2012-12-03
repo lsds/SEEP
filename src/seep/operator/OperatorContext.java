@@ -1,18 +1,13 @@
 package seep.operator;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import seep.buffer.Buffer;
 import seep.comm.routing.Router.RelationalOperator;
 import seep.infrastructure.Node;
-import seep.infrastructure.NodeManager;
-import seep.runtimeengine.CommunicationChannel;
 
 public class OperatorContext {
 
@@ -34,6 +29,14 @@ public class OperatorContext {
 	
 	public OperatorContext(){
 		
+	}
+	
+	public String getQueryFunction(){
+		return queryFunction;
+	}
+	
+	public HashMap<Integer, ArrayList<Integer>> getRouteInfo(){
+		return routeInfo;
 	}
 	
 	public int getDownOpIdFromIndex(int index){

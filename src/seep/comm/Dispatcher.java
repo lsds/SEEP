@@ -1,23 +1,14 @@
 package seep.comm;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Serializable;
-import java.net.Socket;
 import java.util.ArrayList;
 
 import seep.comm.routing.Router;
-import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
-import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 import seep.processingunit.PUContext;
 import seep.runtimeengine.CommunicationChannel;
-import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
 
 /**
 * Dispatcher. This is the class in charge of sending information to other operators
@@ -26,8 +17,6 @@ import com.esotericsoftware.kryo.io.Output;
 public class Dispatcher implements Serializable{
 	
 	private static final long serialVersionUID = 1L;
-	
-	private Kryo k;
 	
 	// opContext to have knowledge of downstream and upstream
 	private PUContext puCtx;
@@ -38,20 +27,9 @@ public class Dispatcher implements Serializable{
 
 	private ArrayList<Integer> targets = new ArrayList<Integer>();
 	
-	/** btnck detector vars **/
-	int laps = 0;
-	long elapsed = 0;
-	
 	public Dispatcher(PUContext puCtx, OutputQueue outputQueue){
 		this.puCtx = puCtx;
 		this.outputQueue = outputQueue;
-		this.k = initializeKryo();
-	}
-	
-	private Kryo initializeKryo(){
-		k = new Kryo();
-		k.register(ControlTuple.class);
-		return k;
 	}
 	
 	public void setRouter(Router router){
@@ -129,7 +107,7 @@ public class Dispatcher implements Serializable{
 		}
 	}
 	
-	//When batch timeout expires, this method ticks every possible destination to update the clocks
+////	//When batch timeout expires, this method ticks every possible destination to update the clocks
 	public void batchTimeOut(){
 		DataTuple dt = null;
 		for(EndPoint channelRecord : puCtx.getDownstreamTypeConnection()){
@@ -139,76 +117,11 @@ public class Dispatcher implements Serializable{
 			}
 		}
 	}
+//
+////	@Deprecated
+////	public void sendMinUpstream(ControlTuple ct) {
+////		int index = opContext.minimumUpstream().index();
+////		sendUpstream(ct, index);
+////	}
 
-	public void sendAllUpstreams(ControlTuple ct){
-		for(int i = 0; i < puCtx.getUpstreamTypeConnection().size(); i++) {
-			sendUpstream(ct, i);
-		}		
-	}
-	
-//	@Deprecated
-//	public void sendMinUpstream(ControlTuple ct) {
-//		int index = opContext.minimumUpstream().index();
-//		sendUpstream(ct, index);
-//	}
-
-	public void sendUpstream(ControlTuple ct, int index){
-		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		if(obj instanceof CoreRE){
-			CoreRE operatorObj = (CoreRE) obj;
-			operatorObj.processControlTuple(ct, null);
-		}
-		else if (obj instanceof CommunicationChannel){
-			Socket socket = ((CommunicationChannel) obj).getDownstreamControlSocket();
-			Output output = null;
-			try{
-				output = new Output(socket.getOutputStream());
-				synchronized (output){
-//					tuple.writeDelimitedTo(socket.getOutputStream());
-					k.writeObject(output, ct);
-					output.flush();
-				}
-			}
-			catch(IOException io){
-				NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
-				io.printStackTrace();
-			}
-		}
-	}
-	
-	public void sendDownstream(ControlTuple ct, int index){
-		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
-		if(obj instanceof CoreRE){
-			CoreRE operatorObj = (CoreRE) obj;
-			operatorObj.processControlTuple(ct, null);
-		}
-		else if (obj instanceof CommunicationChannel){
-			Socket socket = ((CommunicationChannel) obj).getDownstreamControlSocket();
-			Output output = null;
-			try{
-				output = new Output(socket.getOutputStream());
-				synchronized (socket){
-//					tuple.writeDelimitedTo(socket.getOutputStream());
-					k.writeObject(output, ct);
-					output.flush();
-				}
-			}
-			catch(IOException io){
-				NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
-				io.printStackTrace();
-			}
-		}
-	}
-	
-	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
-		Output output = new Output(os);
-		k.writeObject(output, genericAck);
-		output.flush();
-	}
-	
-	public void initStateMessage(ControlTuple initStateMsg, OutputStream os){
-		Output output = new Output(os);
-		k.writeObject(output, initStateMsg);
-		output.flush();
-	}
 }

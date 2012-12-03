@@ -16,6 +16,7 @@ import seep.Main;
 import seep.P;
 import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.Infrastructure;
+import seep.operator.Operator;
 import seep.runtimeengine.CoreRE;
 
 /**
@@ -219,7 +220,7 @@ public class MonitorManager implements Runnable{
 //				// TODO Auto-generated catch block
 //				e.printStackTrace();
 //			}
-			CoreRE toScale = inf.getOperatorById(opId);
+			Operator toScale = inf.getOperatorById(opId);
 			
 			if(!scalingOut){
 				synchronized(inf){

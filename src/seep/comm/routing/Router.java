@@ -19,7 +19,6 @@ public class Router implements Serializable{
 
 	private static CRC32 crc32 = new CRC32();
 	
-	private String query = null;
 	private Method queryFunction = null;
 	private boolean requiresQueryData = false;
 		
@@ -40,8 +39,28 @@ public class Router implements Serializable{
 		EQ
 	}
 	
-	public Router(){
-		
+	public Router(String query, HashMap<Integer, ArrayList<Integer>> routeInfo){
+		if(query != null){
+			this.requiresQueryData = true;
+		}
+		this.queryFunction = this.initializeQueryFunction(query);
+		this.routeInfo = routeInfo;
+	}
+	
+	/// \fixme{how to make this generic so that it always knows which class to query?}
+	public Method initializeQueryFunction(String query){
+		if(query != null){
+			NodeManager.nLogger.info("Initializing method to query stream data...");
+			try {
+				Class<DataTuple> c = DataTuple.class;
+				queryFunction = c.getMethod(query);
+				return queryFunction;
+			}
+			catch (NoSuchMethodException nsme){
+				nsme.printStackTrace();
+			}
+		}
+		return null;
 	}
 	
 	//Gather indexes from statefulDynamic Load balancer
@@ -80,11 +99,11 @@ System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
 return null;
 }
 	
-	public void setQueryFunction(String query){
-		this.query = query;
-		//If a function is defined, the it is necessary to query the data
-		this.requiresQueryData = true;
-	}
+//	public void setQueryFunction(String query){
+//		this.query = query;
+//		//If a function is defined, the it is necessary to query the data
+//		this.requiresQueryData = true;
+//	}
 	
 	//if less or greater is than a given value. if equal could be with many values, with range is a special case as well
 	public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
@@ -157,20 +176,6 @@ return null;
 			}
 		}
 		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
-	}
-	
-	/// \fixme{how to make this generic so that it always knows which class to query?}
-	public void initializeQueryFunction(){
-		if(query != null){
-			NodeManager.nLogger.info("Initializing method to query stream data...");
-			try {
-				Class<DataTuple> c = DataTuple.class;
-				queryFunction = c.getMethod(query);
-			}
-			catch (NoSuchMethodException nsme){
-				nsme.printStackTrace();
-			}
-		}
 	}
 	
 	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){

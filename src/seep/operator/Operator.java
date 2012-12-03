@@ -18,9 +18,18 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	private boolean ready = false;
 	public Operator subclassOperator = null;
 	public ProcessingUnit processingUnit = null;
+	private Router router = null;
 	
 	public void setReady(boolean ready){
 		this.ready = ready;
+	}
+	
+	public Router getRouter(){
+		return router;
+	}
+	
+	public void setRouter(Router router){
+		this.router = router;
 	}
 	
 	public Operator getSubclassOperator() {
@@ -37,21 +46,25 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	public void sendDown(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
-		processingUnit.sendData(dt, Integer.MIN_VALUE, false);
+		// We check the targets with our routers
+		ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
+		processingUnit.sendData(dt, targets);
 	}
 	
 	public void sendDown(DataTuple dt, int value){
-		processingUnit.sendData(dt, value, false);
+		// We check the targets with our routers
+		ArrayList<Integer> targets = router.forward(dt, value, false);
+		processingUnit.sendData(dt, targets);
 	}
 	
-	public void sendNow(DataTuple dt){
-		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
-		processingUnit.sendData(dt, Integer.MIN_VALUE, true);
-	}
-	
-	public void sendNow(DataTuple dt, int value){
-		processingUnit.sendData(dt, value, true);
-	}
+//	public void sendNow(DataTuple dt){
+//		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
+//		processingUnit.sendData(dt, Integer.MIN_VALUE, true);
+//	}
+//	
+//	public void sendNow(DataTuple dt, int value){
+//		processingUnit.sendData(dt, value, true);
+//	}
 	
 /** Implementation of QuerySpecificationI **/
 	

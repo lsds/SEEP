@@ -56,6 +56,7 @@ public class CoreRE {
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
 	private Dispatcher dispatcher;
+	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
 	
 	private Thread controlH = null;
@@ -93,8 +94,10 @@ public class CoreRE {
 	}
 	
 	public void setRuntime(){
+		outputQueue = new OutputQueue();
 		/// At this point I need information about what connections I need to establish
 		PUContext puCtx = processingUnit.setUpProcessingUnit();
+		processingUnit.setOutputQueue(outputQueue);
 		
 		/// INSTANTIATION
 		/** MORE REFACTORING HERE **/
@@ -102,19 +105,22 @@ public class CoreRE {
 		coreProcessLogic.setProcessingUnit(processingUnit);
 		coreProcessLogic.setOpContext(puCtx);
 		
-		inputQueue = new InputQueue();
-		outputQueue = new OutputQueue();
+		controlDispatcher = new ControlDispatcher(puCtx);
 		
-		dispatcher = new Dispatcher(puCtx, outputQueue);
-		//Configure routing to downstream
-		router.configureRoutingImpl(opContext);
-		router.initializeQueryFunction();
+		
+		//dispatcher = new Dispatcher(puCtx, outputQueue);
+		
+		// At this moment we are only creating one input stream for the most upstream operator we manage, we need 
+		// a data structure and proper access to support more than one, but its not difficult to do so
+		inputQueue = new InputQueue();
+		int inC = processingUnit.getMostUpstream().getOpContext().getOperatorStaticInformation().getInC();
+		int inD = processingUnit.getMostUpstream().getOpContext().getOperatorStaticInformation().getInD();
 		
 		//Control worker
-		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
+		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch);
 		//Data worker
-		idh = new IncomingDataHandler(this, opContext.getOperatorStaticInformation().getInD());
+		idh = new IncomingDataHandler(this, inD);
 		iDataH = new Thread(idh);
 		//Consumer worker
 		dataConsumer = new DataConsumer(this, inputQueue);
@@ -134,7 +140,7 @@ public class CoreRE {
 		/// INITIALIZATION
 		
 		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
-		dispatcher.setRouter(router);
+		//dispatcher.setRouter(router);
 
 		//Choose the upstreamBackupIndex for this operator
 		coreProcessLogic.configureUpstreamIndex();
@@ -222,7 +228,6 @@ public class CoreRE {
 //		this.operatorId = opID;
 //		opContext = new RuntimeContext();
 //		opCommonProcessLogic = new CoreProcessingLogic();
-		router = new Router();
 	}
 	
 	
@@ -361,7 +366,7 @@ public class CoreRE {
 			//Ack the message, we do not need to wait until the end
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo());
-			dispatcher.ackControlMessage(genericAck, os);
+			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** RESUME message **/
 		else if (ctt.equals(ControlTupleType.RESUME)) {
@@ -394,7 +399,7 @@ public class CoreRE {
 				NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
 			}
 			//Finally ack the processing of this message
-			dispatcher.ackControlMessage(genericAck, os);
+			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		
 		/** RECONFIGURE message **/
@@ -455,18 +460,20 @@ public class CoreRE {
 //			operatorStatus = OperatorStatus.RECONFIGURING_COMM;
 			OperatorStaticInformation loc = new OperatorStaticInformation(new Node(ip, rc.getNode_port()), rc.getInC(), rc.getInD(), rc.getOperatorNature());
 			if(command.equals("add_downstream")){
-				opContext.addDownstream(opId);
-				opContext.setDownstreamOperatorStaticInformation(opId, loc);
-				opContext.configureNewDownstreamCommunication(opId, loc);
+				processingUnit.addDownstream(opId, loc);
+//				opContext.addDownstream(opId);
+//				opContext.setDownstreamOperatorStaticInformation(opId, loc);
+//				opContext.configureNewDownstreamCommunication(opId, loc);
 					//if we are in a partition policy the above the above line actually do
 					//not activate the key yet, so it works, while in the reconfigure we had
 					//to stop
 			}
 			else if (command.equals("add_upstream")) {
 				//Configure new upstream
-				opContext.addUpstream(opId);
-				opContext.setUpstreamOperatorStaticInformation(opId, loc);
-				opContext.configureNewUpstreamCommunication(opId,loc);
+				processingUnit.addUpstream(opId, loc);
+//				opContext.addUpstream(opId);
+//				opContext.setUpstreamOperatorStaticInformation(opId, loc);
+//				opContext.configureNewUpstreamCommunication(opId,loc);
 				//to avoid problems with the following messages ??
 //				operatorStatus = OperatorStatus.NORMAL;
 				//Send to that upstream the routing information I am storing (in case there are ri).
@@ -476,11 +483,11 @@ public class CoreRE {
 				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
 				coreProcessLogic.reconfigureUpstreamBackupIndex();
 			}
-			dispatcher.ackControlMessage(genericAck, os);
+			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** SYSTEM READY message **/
 		else if (command.equals("system_ready")){
-			dispatcher.ackControlMessage(genericAck, os);
+			controlDispatcher.ackControlMessage(genericAck, os);
 			//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
 			coreProcessLogic.sendInitialStateBackup();
 		}
@@ -498,7 +505,7 @@ public class CoreRE {
 		/** CONFIG SOURCE RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("configureSourceRate")){
-			dispatcher.ackControlMessage(genericAck, os);
+			controlDispatcher.ackControlMessage(genericAck, os);
 			int numberEvents = rc.getOpId();
 			int time = rc.getInC();
 			if(numberEvents == 0 && time == 0){
@@ -523,7 +530,7 @@ public class CoreRE {
 		/** DEACTIVATE elft mechanism message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("deactivateMechanisms")){
-			dispatcher.ackControlMessage(genericAck, os);
+			controlDispatcher.ackControlMessage(genericAck, os);
 			if(Main.eftMechanismEnabled){
 				NodeManager.nLogger.info("--> Desactivated ESFT mechanisms.");
 				Main.eftMechanismEnabled = false;
@@ -542,7 +549,7 @@ public class CoreRE {
 	
 	public void ack(long ts) {
 		ControlTuple ack = new ControlTuple(ControlTupleType.ACK, operatorId, ts);
-		dispatcher.sendAllUpstreams(ack);
+		controlDispatcher.sendAllUpstreams(ack);
 	}
 
 	private void manageBackupUpstreamIndex(int opId){
@@ -550,7 +557,7 @@ public class CoreRE {
 		int newIndex = opContext.findUpstream(opId).index();
 		if(backupUpstreamIndex != -1 && newIndex != backupUpstreamIndex){
 			ControlTuple ct = coreProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
-			dispatcher.sendUpstream(ct, backupUpstreamIndex);
+			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
 		}
 		//Set the new backup upstream index, this has been sent by the manager.
 		this.setBackupUpstreamIndex(newIndex);
@@ -581,7 +588,7 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 		//Send a msg to ask for the rest of information. (tuple replaying)
 		NodeManager.nLogger.info("-> Sending STATE_ACK");
 		ControlTuple rb = new ControlTuple().makeStateAck(operatorId);
-		dispatcher.sendAllUpstreams(rb);
+		controlDispatcher.sendAllUpstreams(rb);
 	}
 
 	//Recover the state to Normal, so the receiver thread can go on with its work
@@ -624,7 +631,7 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 		ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 		//Finally send the backup state
 System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
-		dispatcher.sendUpstream(ctB, backupUpstreamIndex);
+		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	
 		ack(currentTsData);
 	}
