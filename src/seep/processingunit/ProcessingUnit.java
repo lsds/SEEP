@@ -10,8 +10,10 @@ import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
+import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
+import seep.operator.State;
 import seep.runtimeengine.CommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
@@ -23,7 +25,8 @@ public class ProcessingUnit {
 	private PUContext ctx = null;
 	//Operators managed by this processing unit [ opId<Integer> - op<Operator> ]
 	static public Map<Integer, Operator> mapOP_ID = new HashMap<Integer, Operator>();
-	//Map between operator id and dispatcher [opId<Integer> - Dispatcher]
+	//Map between operator id and state [opId<Integer> - State]
+	private Map<Integer, State> mapOP_S = new HashMap<Integer, State>();
 	private Operator mostUpstream = null;
 	
 	private OutputQueue outputQueue = null;
@@ -52,6 +55,10 @@ public class ProcessingUnit {
 		}
 		o.setProcessingUnit(this);
 		mapOP_ID.put(o.getOperatorId(), o);
+		//If the operator is stateful, we extract its state and store it in the provisioned map
+		if(o instanceof StatefulOperator){
+			mapOP_S.put(o.getOperatorId(), o.getState());
+		}
 	}
 
 	public void setOpReady(int opId) {

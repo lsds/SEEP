@@ -15,10 +15,15 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	private int operatorId;
 	private OperatorContext opContext = null;
+	private State state = null;
 	private boolean ready = false;
 	public Operator subclassOperator = null;
 	public ProcessingUnit processingUnit = null;
 	private Router router = null;
+	
+	public State getState(){
+		return state;
+	}
 	
 	public void setReady(boolean ready){
 		this.ready = ready;
