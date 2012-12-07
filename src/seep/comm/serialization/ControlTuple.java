@@ -12,7 +12,7 @@ import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
-import seep.comm.serialization.controlhelpers.StateI;
+import seep.operator.State;
 import seep.runtimeengine.CoreRE;
 
 public class ControlTuple {
@@ -170,7 +170,7 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInitState(int opId, long ts, StateI state){
+	public ControlTuple makeInitState(int opId, long ts, State state){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
 		this.initState = new InitState(opId, ts, state);
 		return this;

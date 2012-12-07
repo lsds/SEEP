@@ -281,7 +281,7 @@ long e = System.currentTimeMillis();
 		if(opContext.isManagingStateOf(oldOpId)){
 			NodeManager.nLogger.info("-> Splitting state");
 			splitState(oldOpId, newOpId, newKey);
-			owner.setOperatorStatus(CoreRE.OperatorStatus.WAITING_FOR_STATE_ACK);
+			owner.setOperatorStatus(CoreRE.SystemStatus.WAITING_FOR_STATE_ACK);
 			//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 			NodeManager.nLogger.info("-> Generating and sending RI backup");
 //			backupRoutingInformation(oldOpId);
@@ -290,7 +290,7 @@ long e = System.currentTimeMillis();
 			NodeManager.nLogger.info("-> NOT in charge of split state");
 		}
 		
-		owner.setOperatorStatus(CoreRE.OperatorStatus.WAITING_FOR_STATE_ACK);
+		owner.setOperatorStatus(CoreRE.SystemStatus.WAITING_FOR_STATE_ACK);
 		//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 		NodeManager.nLogger.info("-> Generating and sending RI backup");
 //		backupRoutingInformation(oldOpId);

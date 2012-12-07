@@ -1,3 +1,50 @@
+/** SYNC STATE **/
+
+public class MainTest{
+
+	public static void main(String args[]){
+		C c = new C();
+		Th th = new Th(c);
+		Thread t = new Thread(th);
+		System.out.println("Start Thread");
+		t.start();
+		int cn = 0;
+		while(true){
+			try {
+				//synchronized(c){
+				//Check if its free, and if it is free, indicate 1 (this thread edits)
+				c.ai.compareAndSet(0, 1);
+				// If it was set, proceed
+				if(c.ai.get() == 1){
+					String message = c.getHello();
+					System.out.println(message + " c: "+cn);
+					cn++;
+					//After proceeding, just reset the value again to free
+					c.ai.set(0);
+//					synchronized(c){
+//						c.notify();
+//					}
+				}
+//				else{
+//					synchronized(c){
+//						c.wait();
+//					}
+//				}
+				//}
+				Thread.sleep(200);
+				
+			} 
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+}
+
+
+/** INPUT QUEUE SYNC STUFF**/
+
 //import java.util.ArrayList;
 //import java.util.concurrent.ArrayBlockingQueue;
 //import java.util.concurrent.BlockingQueue;

@@ -7,7 +7,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.controlhelpers.BackupState;
-import seep.comm.serialization.controlhelpers.StateI;
+import seep.operator.State;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -29,7 +29,7 @@ public class Buffer implements Serializable{
 		BackupState initState = new BackupState();
 		initState.setOpId(0);
 		initState.setTs_e(0);
-		StateI state = null;
+		State state = null;
 		initState.setState(state);
 		bs = initState;
 	}

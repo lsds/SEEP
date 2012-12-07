@@ -1,11 +1,12 @@
 package seep.comm.serialization.controlhelpers;
 
+import seep.operator.State;
+
 public class BackupState {
 
 	private int opId;
-	private long ts_s;
-	private long ts_e;
-	private StateI state;
+	
+	private State state;
 	private String stateClass;
 	
 	public void setStateClass(String stateClass){
@@ -20,22 +21,10 @@ public class BackupState {
 	public void setOpId(int opId) {
 		this.opId = opId;
 	}
-	public long getTs_s() {
-		return ts_s;
-	}
-	public void setTs_s(long tsS) {
-		ts_s = tsS;
-	}
-	public long getTs_e() {
-		return ts_e;
-	}
-	public void setTs_e(long tsE) {
-		ts_e = tsE;
-	}
-	public StateI getState() {
+	public State getState() {
 		return state;
 	}
-	public void setState(StateI state) {
+	public void setState(State state) {
 		this.state = state;
 	}
 }

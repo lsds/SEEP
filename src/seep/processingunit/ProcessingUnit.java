@@ -4,9 +4,12 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import seep.comm.routing.Router;
+import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.controlhelpers.BackupState;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
@@ -18,19 +21,24 @@ import seep.runtimeengine.CommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
 
-
 public class ProcessingUnit {
 
 	private CoreRE owner = null;
 	private PUContext ctx = null;
+	private SystemStatus systemStatus = SystemStatus.NORMAL;
+
 	//Operators managed by this processing unit [ opId<Integer> - op<Operator> ]
 	static public Map<Integer, Operator> mapOP_ID = new HashMap<Integer, Operator>();
 	//Map between operator id and state [opId<Integer> - State]
 	private Map<Integer, State> mapOP_S = new HashMap<Integer, State>();
+	// lockState arbiters the access to the state between operators and processingUnit. 0-> free, 1->operator, 2->pu
+	private AtomicInteger lockState = new AtomicInteger(0);
 	private Operator mostUpstream = null;
 	
 	private OutputQueue outputQueue = null;
 	
+	private StateBackupWorker sbw;
+	private Thread stateWorker;
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	
 	public ProcessingUnit(CoreRE owner){
@@ -40,6 +48,19 @@ public class ProcessingUnit {
 	
 	public Operator getMostUpstream(){
 		return mostUpstream;
+	}
+	
+	public SystemStatus getSystemStatus(){
+		return systemStatus;
+	}
+	
+	public void setSystemStatus(SystemStatus systemStatus){
+		this.systemStatus = systemStatus;
+	}
+	
+	//This enum is for aiding in the implementation of the protocols
+	public enum SystemStatus {
+		NORMAL, WAITING_FOR_STATE_ACK, INITIALISING_STATE//, REPLAYING_BUFFER//, RECONFIGURING_COMM
 	}
 	
 	/** SETUP methods **/
@@ -79,13 +100,36 @@ public class ProcessingUnit {
 			r.configureRoutingImpl(op.getOpContext());
 			op.setRouter(r);
 		}
+		//Create and run state backup worker in case this is a stateful machine
+		// FIXME pick the checkpoint interval properly
+		int checkpointInterval = 0;
+		sbw = new StateBackupWorker(this, mapOP_S, checkpointInterval);
+		stateWorker = new Thread(sbw);
+		stateWorker.start();
 		return ctx;
-	}
+	} 
 	
 	/** Runtime methods **/
 	
 	public void processData(DataTuple data){
+		// Try to acquire the lock for processing data
+		while(!lockState.compareAndSet(0,1)){
+			// If not successfull wait till is available
+			synchronized(lockState){
+				try{
+					lockState.wait();
+				}
+				catch(InterruptedException ie){
+					ie.printStackTrace();
+				}
+			}
+		}
+		// If successful process the data
+		// TODO: Adjust timestamp of state
 		mostUpstream.processData(data);
+		//Set the lock free again
+		lockState.set(0);
+		lockState.notify();
 	}
 
 	public void sendData(DataTuple dt, ArrayList<Integer> targets){
@@ -140,6 +184,27 @@ public class ProcessingUnit {
 	}
 	
 	/** State Management Stuff **/
+	
+		/** State operations **/
+	public void checkpointAndBackupState(){
+		// LOCK MANAGEMENT TO ENSURE NO CONCURRENT ACCESS WITH OPERATOR CODE
+	}
+	
+	public void backupState(State state){
+		BackupState bs = new BackupState();
+		bs.setOpId(state.getOwnerId());
+		bs.setState(state);
+		bs.setStateClass(state.getStateTag());
+		//Build the ControlTuple msg
+		ControlTuple ctB = new ControlTuple().makeBackupState(bs);
+		//Finally send the backup state
+//System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
+		owner.sendBackupState(ctB);
+//		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
+//		ack(currentTsData);
+	}
+	
+	
 		/** Who manages which state? **/
 	
 	public synchronized void invalidateState(int opId) {

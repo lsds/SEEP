@@ -18,7 +18,6 @@ import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
-import seep.comm.serialization.controlhelpers.StateI;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorInitializationException;
@@ -72,9 +71,7 @@ public class CoreRE {
 	private long ts_data = 0;
 	// Timestamp of the last ack processed by this operator
 	private long ts_ack;
-	
-	private OperatorStatus operatorStatus = OperatorStatus.NORMAL;
-	
+		
 	public CoreRE(WorkerNodeDescription nodeDescr){
 		this.nodeDescr = nodeDescr;
 		processingUnit = new ProcessingUnit(this);
@@ -154,20 +151,6 @@ public class CoreRE {
 	
 	public void stopDataProcessing(){
 		//TODO stop and release resources
-	}
-	
-	
-	public OperatorStatus getOperatorStatus(){
-		return operatorStatus;
-	}
-	
-	public void setOperatorStatus(OperatorStatus operatorStatus){
-		this.operatorStatus = operatorStatus;
-	}
-	
-	//This enum is for aiding in the implementation of the protocols
-	public enum OperatorStatus {
-		NORMAL, WAITING_FOR_STATE_ACK, INITIALISING_STATE//, REPLAYING_BUFFER//, RECONFIGURING_COMM
 	}
 	
 	public enum ControlTupleType{
@@ -375,7 +358,7 @@ public class CoreRE {
 			
 			// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
 			// I may be managing a state but I dont have to replay it if I have not splitted it previously
-			if(operatorStatus.equals(OperatorStatus.WAITING_FOR_STATE_ACK)){
+			if(operatorStatus.equals(SystemStatus.WAITING_FOR_STATE_ACK)){
 				/// \todo {why has resumeM a list?? check this}
 				for (int opId: resumeM.getOpId()){
 					//Check if I am managing the state of any of the operators to which state must be replayed
@@ -393,7 +376,7 @@ public class CoreRE {
 					}
 				}
 				//Once I have replayed the required states I put my status to NORMAL
-				this.operatorStatus = OperatorStatus.NORMAL;
+				this.operatorStatus = SystemStatus.NORMAL;
 			}
 			else{
 				NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
@@ -568,7 +551,7 @@ public class CoreRE {
 		manageBackupUpstreamIndex(ct.getOpId());
 System.out.println("CONTROL THREAD: changing operator status to initialising");
 		//Clean the data processing channel from remaining tuples in old batch
-		operatorStatus = OperatorStatus.INITIALISING_STATE;
+		operatorStatus = SystemStatus.INITIALISING_STATE;
 //		stopDataProcessingChannel();
 		//Manage ts...
 		//Pass the state to the user
@@ -580,7 +563,7 @@ System.out.println("CONTROL THREAD: changing operator status to initialising");
 		else{
 			NodeManager.nLogger.info("-> Stateless operator, not installing state");
 		}
-		operatorStatus = OperatorStatus.NORMAL;
+		operatorStatus = SystemStatus.NORMAL;
 System.out.println("CONTROL THREAD: restarting data processing...");
 		//Once the state has been installed, recover dataProcessingChannel
 //		restartDataProcessingChannel();
@@ -593,49 +576,16 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 
 	//Recover the state to Normal, so the receiver thread can go on with its work
 	private void restartDataProcessingChannel() {
-		operatorStatus = OperatorStatus.NORMAL;
+		operatorStatus = SystemStatus.NORMAL;
 		
 	}
 
 	//Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
 	private void stopDataProcessingChannel() {
-		operatorStatus = OperatorStatus.INITIALISING_STATE;
+		operatorStatus = SystemStatus.INITIALISING_STATE;
 	}
-
-	/**
-	 *  DEPPRECATED-> This method is in charge of receiving the backupState msg, put it into a
-	 * ControlTuple tuple and send it upstream. It sends always to the upstream with minimum opID,
-	 * to make it easier for parallelization: the manager can explicitly tell that guy that
-	 * is the one responsible to send INIT message (even if it does not have state, e.g. before any
-	 * backup takes place)
-	 * 
-	 * NEW -> This method previously was sending the state to the same upstream. This strategy becomes a bottleneck when the state is big
-	 * or when multiple instances are sending their state to the same upstream. A way of distributing the state is just sending to index%upstreamSize
-	 * Of course, in this way, as the upstream grows, the target upstream is going to change, but this does not affect this operator. (however, the old state
-	 * must be invalidated).
-	 * 
-	 * 
-	 * NEW -> Now all the previous computation is done when there is an upstream added, to set the system to a coherent state as soon as possible
-	 */
-	public void backupState(StateI state, String stateClass){
-		BackupState bs = new BackupState();
-		//TODO Fill ts_e and ts_s of backupstate. FIXME now it is badly assigned
-		long currentTsData = ts_data;
-		
-		bs.setOpId(operatorId);
-		bs.setTs_e(currentTsData);
-		bs.setTs_s(0);
-		bs.setState(state);
-		bs.setStateClass(stateClass);
-		//Build the ControlTuple msg
-		ControlTuple ctB = new ControlTuple().makeBackupState(bs);
-		//Finally send the backup state
-System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
+	
+	public void sendBackupState(ControlTuple ctB){
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
-	
-		ack(currentTsData);
 	}
-	
-
-
 }

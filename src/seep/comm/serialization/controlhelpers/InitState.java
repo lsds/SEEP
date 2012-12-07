@@ -1,16 +1,18 @@
 package seep.comm.serialization.controlhelpers;
 
+import seep.operator.State;
+
 public class InitState {
 
 	private int opId;
 	private long ts;
-	private StateI state;
+	private State state;
 	
 	public InitState(){
 		
 	}
 	
-	public InitState(int opId, long ts, StateI state){
+	public InitState(int opId, long ts, State state){
 		this.opId = opId;
 		this.ts = ts;
 		this.state = state;
@@ -28,10 +30,10 @@ public class InitState {
 	public void setTs(long ts) {
 		this.ts = ts;
 	}
-	public StateI getState() {
+	public State getState() {
 		return state;
 	}
-	public void setState(StateI state) {
+	public void setState(State state) {
 		this.state = state;
 	}
 }
