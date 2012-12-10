@@ -14,6 +14,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
@@ -136,7 +137,6 @@ public class NodeManager{
 		ServerSocket serverSocket = null;
 		PrintWriter out = null;
 		ExtendedObjectInputStream ois = null;
-		ExtendedObjectInputStream hack = null;
 		
 		Object o = null;
 		boolean listen = true;

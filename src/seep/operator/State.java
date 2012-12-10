@@ -2,11 +2,11 @@ package seep.operator;
 
 public abstract class State {
 
-	private final int ownerId;
+	private int ownerId;
 	private String stateTag;
 	private State stateImpl;
 	private long data_ts;
-	private final int checkpointInterval;
+	private int checkpointInterval;
 		
 	public void setStateTag(String stateTag){
 		this.stateTag = stateTag;
@@ -14,6 +14,10 @@ public abstract class State {
 	
 	public int getCheckpointInterval(){
 		return checkpointInterval;
+	}
+	
+	public void setCheckpointInterval(int checkpointInterval){
+		this.checkpointInterval = checkpointInterval;
 	}
 	
 	public String getStateTag(){
@@ -24,12 +28,20 @@ public abstract class State {
 		return ownerId;
 	}
 	
+	public void setOwnerId(int ownerId){
+		this.ownerId = ownerId;
+	}
+	
 	public long getData_ts(){
 		return data_ts;
 	}
 	
 	public void setData_ts(long data_ts){
 		this.data_ts = data_ts;
+	}
+	
+	public State getStateImpl(){
+		return stateImpl;
 	}
 	
 	public State(State toCopy){
@@ -46,6 +58,12 @@ public abstract class State {
 		// Mandatory variables to initialize a state
 		this.ownerId = ownerId;
 		this.checkpointInterval = checkpointInterval;
+	}
+	
+	public State(int ownerId, int checkpointInterval, State stateImpl){
+		this.ownerId = ownerId;
+		this.checkpointInterval = checkpointInterval;
+		this.stateImpl = stateImpl;
 	}
 	
 	public abstract State[] splitState(State toSplit, int key);

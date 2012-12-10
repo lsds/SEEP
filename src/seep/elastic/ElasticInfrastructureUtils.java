@@ -17,6 +17,7 @@ import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
+import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.runtimeengine.CoreRE;
 
@@ -173,12 +174,16 @@ public class ElasticInfrastructureUtils {
 
 	private void sendScaleOutMessageToUpstreams(int opIdToParallelize, int newOpId) {
 		ArrayList<Operator> ops = inf.getOps();
+		boolean isStateful = false;
 		for (Operator o: ops) {
 			if (o.getOperatorId() == opIdToParallelize) {
+				if(o instanceof StatefulOperator){
+					isStateful = true;
+				}
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
 					NodeManager.nLogger.info("-> scale_out to: "+upstream.opID());
 					
-					ControlTuple ct = new ControlTuple().makeScaleOut(opIdToParallelize, newOpId);
+					ControlTuple ct = new ControlTuple().makeScaleOut(opIdToParallelize, newOpId, isStateful);
 					
 					rct.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}

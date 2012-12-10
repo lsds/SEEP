@@ -9,7 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.controlhelpers.BackupState;
+import seep.comm.serialization.controlhelpers.BackupNodeState;
+import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
@@ -34,6 +35,7 @@ public class ProcessingUnit {
 	// lockState arbiters the access to the state between operators and processingUnit. 0-> free, 1->operator, 2->pu
 	private AtomicInteger lockState = new AtomicInteger(0);
 	private Operator mostUpstream = null;
+	private Operator mostDownstream = null;
 	
 	private OutputQueue outputQueue = null;
 	
@@ -48,6 +50,15 @@ public class ProcessingUnit {
 	
 	public Operator getMostUpstream(){
 		return mostUpstream;
+	}
+	
+	public Operator getMostDownstream(){
+		return mostDownstream;
+	}
+	
+	public boolean isNodeStateful(){
+		// If its not empty is because a previous operator let there its state
+		return mapOP_S.isEmpty();
 	}
 	
 	public SystemStatus getSystemStatus(){
@@ -80,6 +91,8 @@ public class ProcessingUnit {
 		if(o instanceof StatefulOperator){
 			mapOP_S.put(o.getOperatorId(), o.getState());
 		}
+		// Overwritten till last instantiation. If there are movements within the same node, then this wont be valid
+		mostDownstream = o;
 	}
 
 	public void setOpReady(int opId) {
@@ -156,6 +169,23 @@ public class ProcessingUnit {
 		}
 	}
 	
+	public synchronized void stopConnection(int opID) {
+		//Stop incoming data, a new thread is replaying
+//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
+		
+		/**
+		 * hack done on july the third 2012 to get parallel recovery results.
+		 *  we make sure that conn is only stop once
+		 */
+//if (replaySemaphore.get() > 0){
+//	return;
+//}
+		
+//		replaySemaphore.incrementAndGet();
+		outputQueue.stop();
+		ctx.getCCIfromOpId(opID, "d").getStop().set(true);
+	}
+	
 //	public void sendData(DataTuple dt, int value, boolean now) {
 //		ArrayList<Integer> targets = router.forward(dt, value, now);
 //		for(Integer target : targets){
@@ -187,16 +217,42 @@ public class ProcessingUnit {
 	
 		/** State operations **/
 	public void checkpointAndBackupState(){
-		// LOCK MANAGEMENT TO ENSURE NO CONCURRENT ACCESS WITH OPERATOR CODE
+		// Try to set lockState to 2 for backuping state
+		while(!lockState.compareAndSet(0,2)){
+			synchronized(lockState){
+				try{
+					lockState.wait();
+				}
+				catch(InterruptedException ie){
+					ie.printStackTrace();
+				}
+			}
+		}
+		// Backup state
+		backupState();
+		//Set the lock free again
+		lockState.set(0);
+		lockState.notify();
 	}
 	
-	public void backupState(State state){
-		BackupState bs = new BackupState();
-		bs.setOpId(state.getOwnerId());
-		bs.setState(state);
-		bs.setStateClass(state.getStateTag());
+	private void backupState(){
+		int numberOfStates = mapOP_S.values().size();
+		//Create the array of backup states
+		BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
+		BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
+		// We fill the array with the states
+		ArrayList<State> statesToBackup = (ArrayList<State>) mapOP_S.values();
+		for(int i = 0; i < numberOfStates ; i++){
+			State current = statesToBackup.get(i);
+			BackupOperatorState bs = new BackupOperatorState();
+			bs.setOpId(current.getOwnerId());
+			bs.setState(current);
+			bs.setStateClass(current.getStateTag());
+			backupState[i] = bs;
+		}
 		//Build the ControlTuple msg
-		ControlTuple ctB = new ControlTuple().makeBackupState(bs);
+		backupNodeState.setBackupOperatorState(backupState);
+		ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);
 		//Finally send the backup state
 //System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
 		owner.sendBackupState(ctB);
@@ -207,29 +263,27 @@ public class ProcessingUnit {
 	
 		/** Who manages which state? **/
 	
-	public synchronized void invalidateState(int opId) {
+	public synchronized void invalidateState(int nodeId) {
 		//If the states figures as being managed we removed it
 		int index = 0;
-		if((index = listOfManagedStates.indexOf(opId)) != -1) listOfManagedStates.remove(index);
+		if((index = listOfManagedStates.indexOf(nodeId)) != -1) listOfManagedStates.remove(index);
 		// and then we clean both the buffer and the mapping in downstreamBuffers.
-		if(PUContext.downstreamBuffers.get(opId) != null){
+		if(PUContext.downstreamBuffers.get(nodeId) != null){
 			//First of all, we empty the buffer
-			PUContext.downstreamBuffers.get(opId).replaceBackupState(null);
+			PUContext.downstreamBuffers.get(nodeId).replaceBackupNodeState(null);
 		}
 	}
 	
-	public synchronized void registerManagedState(int opId) {
+	public synchronized void registerManagedState(int nodeId) {
 		//If the state does not figure as being managed, we include it
-		if(!listOfManagedStates.contains(opId)){
-			NodeManager.nLogger.info("-> New STATE registered for OP: "+opId);
-			listOfManagedStates.add(opId);
+		if(!listOfManagedStates.contains(nodeId)){
+			NodeManager.nLogger.info("-> New STATE registered for NODE: "+nodeId);
+			listOfManagedStates.add(nodeId);
 		}
 	}
 	
 	public boolean isManagingStateOf(int opId) {
-//		if(downstreamBuffers.get(opId) != null) return true;
-		if(listOfManagedStates.contains(opId)) return true;
-		return false;
+		return listOfManagedStates.contains(opId) ? true : false;
 	}
 	
 		/** Dynamic change of operator information **/

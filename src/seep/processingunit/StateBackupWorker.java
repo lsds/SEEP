@@ -1,15 +1,10 @@
 package seep.processingunit;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import seep.Main;
 import seep.P;
 import seep.operator.State;
-import seep.operator.StatefulOperator;
-import seep.runtimeengine.CoreRE;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.

@@ -1,6 +1,7 @@
 package seep.infrastructure;
 
 import java.net.InetAddress;
+import java.util.UUID;
 
 public class WorkerNodeDescription {
 	
@@ -10,10 +11,6 @@ public class WorkerNodeDescription {
 	
 	public int getNodeId() {
 		return nodeId;
-	}
-
-	public void setNodeId(int nodeId) {
-		this.nodeId = nodeId;
 	}
 
 	public InetAddress getIp() {
@@ -33,8 +30,12 @@ public class WorkerNodeDescription {
 	}
 	
 	public WorkerNodeDescription(InetAddress ip, int ownPort){
-		///\todo{generate a unique id for the node}
+		this.nodeId = generateNodeIdFromIp(ip);
 		this.ip = ip;
 		this.ownPort = ownPort;
+	}
+	
+	private int generateNodeIdFromIp(InetAddress ip){
+		return UUID.randomUUID().hashCode();
 	}
 }

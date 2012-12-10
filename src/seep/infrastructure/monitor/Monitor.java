@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.UUID;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -18,7 +19,7 @@ import seep.infrastructure.NodeManager;
 
 public class Monitor implements Runnable{
 
-	private int nodeId = -1000;
+	private int nodeId;
 	private Kryo k = null;
 	private Output output = null;
 	

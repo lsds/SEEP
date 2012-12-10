@@ -2,21 +2,21 @@ package seep.comm.serialization.controlhelpers;
 
 public class InvalidateState {
 
-	private int opId;
+	private int nodeId;
 
 	public InvalidateState(){
 	}
 	
-	public InvalidateState(int opId){
-		this.opId = opId;
+	public InvalidateState(int nodeId){
+		this.nodeId = nodeId;
 	}
 	
-	public int getOpId() {
-		return opId;
+	public int getNodeId() {
+		return nodeId;
 	}
 
-	public void setOpId(int opId) {
-		this.opId = opId;
+	public void setNodeId(int nodeId) {
+		this.nodeId = nodeId;
 	}
 	
 }

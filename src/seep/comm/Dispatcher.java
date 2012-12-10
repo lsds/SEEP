@@ -45,22 +45,7 @@ public class Dispatcher implements Serializable{
 		outputQueue.start();
 	}
 
-	public synchronized void stopConnection(int opID) {
-		//Stop incoming data, a new thread is replaying
-//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
-		
-		/**
-		 * hack done on july the third 2012 to get parallel recovery results.
-		 *  we make sure that conn is only stop once
-		 */
-//if (replaySemaphore.get() > 0){
-//	return;
-//}
-		
-//		replaySemaphore.incrementAndGet();
-		outputQueue.stop();
-		puCtx.getCCIfromOpId(opID, "d").getStop().set(true);
-	}
+	
 	
 	int remainingWindow = 0;
 	int splitWindow = 0;

@@ -3,8 +3,8 @@ package seep.comm.serialization;
 import java.util.ArrayList;
 
 import seep.comm.serialization.controlhelpers.Ack;
+import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupRI;
-import seep.comm.serialization.controlhelpers.BackupState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InitState;
 import seep.comm.serialization.controlhelpers.InvalidateState;
@@ -20,7 +20,7 @@ public class ControlTuple {
 	private CoreRE.ControlTupleType type;
 	
 	private Ack ack;
-	private BackupState backupState;
+	private BackupNodeState backupState;
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
 	private Resume resume;
@@ -54,10 +54,10 @@ public class ControlTuple {
 	public void setAck(Ack ack) {
 		this.ack = ack;
 	}
-	public BackupState getBackupState() {
+	public BackupNodeState getBackupState() {
 		return backupState;
 	}
-	public void setBackupState(BackupState backupState) {
+	public void setBackupState(BackupNodeState backupState) {
 		this.backupState = backupState;
 	}
 	public ReconfigureConnection getReconfigureConnection() {
@@ -115,8 +115,8 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeBackupState(BackupState bs){
-		this.type = CoreRE.ControlTupleType.BACKUP_STATE;
+	public ControlTuple makeBackupState(BackupNodeState bs){
+		this.type = CoreRE.ControlTupleType.BACKUP_NODE_STATE;
 		this.backupState = bs;
 		return this;
 	}
@@ -127,9 +127,9 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeScaleOut(int opIdToParallelize, int newOpId){
+	public ControlTuple makeScaleOut(int opIdToParallelize, int newOpId, boolean isStateful){
 		this.type = CoreRE.ControlTupleType.SCALE_OUT;
-		this.scaleOutInfo = new ScaleOutInfo(opIdToParallelize, newOpId);
+		this.scaleOutInfo = new ScaleOutInfo(opIdToParallelize, newOpId, isStateful);
 		return this;
 	}
 	
@@ -173,6 +173,12 @@ public class ControlTuple {
 	public ControlTuple makeInitState(int opId, long ts, State state){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
 		this.initState = new InitState(opId, ts, state);
+		return this;
+	}
+	
+	public ControlTuple makeInvalidateMessage(int backupUpstreamIndex){
+		this.type = CoreRE.ControlTupleType.INVALIDATE_STATE;
+		this.invalidateState = new InvalidateState(backupUpstreamIndex);
 		return this;
 	}
 }
