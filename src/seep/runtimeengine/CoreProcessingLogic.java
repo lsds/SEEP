@@ -388,7 +388,6 @@ System.out.println("KEY: "+operatorType);
 	}
 	
 	
-	
 	//This method simply backups its state. It is useful for making the upstream know that is in charge of managing this state.
 	public void sendInitialStateBackup(){
 		//Without waiting for the counter, we backup the state right now, (in case operator is stateful)

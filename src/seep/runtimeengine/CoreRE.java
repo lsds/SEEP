@@ -425,7 +425,7 @@ public class CoreRE {
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
 			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
-				dispatcher.stopConnection(opId);
+				processingUnit.stopConnection(opId);
 			}
 			processingUnit.reconfigureOperatorConnection(opId, ip);
 			
@@ -479,7 +479,7 @@ public class CoreRE {
 		else if (command.equals("replay")){
 			//ackControlMessage(os);
 			//FIXME there is only one, this must be done for each conn
-			dispatcher.stopConnection(opId);
+			processingUnit.stopConnection(opId);
 			/// \todo{avoid this deprecated function}
 			//opCommonProcessLogic.startReplayer(opID);
 			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
@@ -537,9 +537,11 @@ public class CoreRE {
 
 	private void manageBackupUpstreamIndex(int opId){
 		//Firstly, I configure my upstreamBackupIndex, which is the index of the operatorId coming in this message (the one in charge of managing it)
-		int newIndex = opContext.findUpstream(opId).index();
+//		int newIndex = opContext.findUpstream(opId).index();
+		int newIndex = processingUnit.getMostUpstream().getOpContext().findUpstream(opId).index();
 		if(backupUpstreamIndex != -1 && newIndex != backupUpstreamIndex){
-			ControlTuple ct = coreProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
+//			ControlTuple ct = coreProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
+			ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
 			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
 		}
 		//Set the new backup upstream index, this has been sent by the manager.
@@ -551,7 +553,7 @@ public class CoreRE {
 		manageBackupUpstreamIndex(ct.getOpId());
 System.out.println("CONTROL THREAD: changing operator status to initialising");
 		//Clean the data processing channel from remaining tuples in old batch
-		operatorStatus = SystemStatus.INITIALISING_STATE;
+		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
 //		stopDataProcessingChannel();
 		//Manage ts...
 		//Pass the state to the user
@@ -563,7 +565,7 @@ System.out.println("CONTROL THREAD: changing operator status to initialising");
 		else{
 			NodeManager.nLogger.info("-> Stateless operator, not installing state");
 		}
-		operatorStatus = SystemStatus.NORMAL;
+		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
 System.out.println("CONTROL THREAD: restarting data processing...");
 		//Once the state has been installed, recover dataProcessingChannel
 //		restartDataProcessingChannel();
@@ -576,13 +578,13 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 
 	//Recover the state to Normal, so the receiver thread can go on with its work
 	private void restartDataProcessingChannel() {
-		operatorStatus = SystemStatus.NORMAL;
+		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
 		
 	}
 
 	//Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
 	private void stopDataProcessingChannel() {
-		operatorStatus = SystemStatus.INITIALISING_STATE;
+		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
 	}
 	
 	public void sendBackupState(ControlTuple ctB){
@@ -591,7 +593,7 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 	
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)
 	public void configureUpstreamIndex(int upstreamSize){
-		int ownInfo = Router.customHash(owner.getNodeDescr().getNodeId());
+		int ownInfo = Router.customHash(getNodeDescr().getNodeId());
 //		int upstreamSize = opContext.upstreams.size();
 		
 		//source obviously cant compute this value
@@ -602,7 +604,7 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 		upIndex = (upIndex < 0) ? upIndex*-1 : upIndex;
 		
 		//Update my information
-		owner.setBackupUpstreamIndex(upIndex);
+		backupUpstreamIndex = upIndex;
 	}
 	
 	public void reconfigureUpstreamBackupIndex(int upstreamSize){
