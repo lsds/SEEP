@@ -7,16 +7,16 @@ public class Ack {
 	
 	public Ack(){}
 	
-	public Ack(int opId, long ts){
-		this.opId = opId;
+	public Ack(int nodeId, long ts){
+		this.opId = nodeId;
 		this.ts = ts;
 	}
 	
 	public int getOpId() {
 		return opId;
 	}
-	public void setOpId(int opId) {
-		this.opId = opId;
+	public void setOpId(int nodeId) {
+		this.opId = nodeId;
 	}
 	public long getTs() {
 		return ts;

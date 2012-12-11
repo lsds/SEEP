@@ -13,7 +13,6 @@ import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
-import seep.operator.State;
 import seep.runtimeengine.CoreRE;
 
 public class ControlTuple {
@@ -25,7 +24,6 @@ public class ControlTuple {
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
 	private Resume resume;
-//	private InitOperatorState initState;
 	private InitNodeState initNodeState;
 	private StateAck stateAck;
 	private InvalidateState invalidateState;
@@ -191,12 +189,6 @@ public class ControlTuple {
 		this.backupRI = new BackupRI(opId, indexes, keys, operatorType);
 		return this;
 	}
-	
-//	public ControlTuple makeInitState(int opId,  State state){
-//		this.type = CoreRE.ControlTupleType.INIT_STATE;
-//		this.initState = new InitOperatorState(opId, state);
-//		return this;
-//	}
 	
 	public ControlTuple makeInitNodeState(int nodeId, InitOperatorState[] initOperatorState){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;

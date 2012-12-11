@@ -198,37 +198,37 @@ System.out.println("KEY: "+operatorType);
 			buffer.trim(current_ts);
 		}
 		//i.e. if the operator is stateless (we should use a tagging interface). Stateless and NOT first operator
-		if ((owner.subclassOperator instanceof StatelessOperator) && !((opContext.upstreams.size()) == 0)) {
-			for( Map.Entry<Integer, Long> entry: downstreamLastAck.entrySet()) {
-				long ts = entry.getValue();
-				if (entry.getKey() != opId) {
-					if(ts < minWithCurrent){ 
-						minWithCurrent = ts; 
-					}
+//		if ((owner.subclassOperator instanceof StatelessOperator) && !((opContext.upstreams.size()) == 0)) {
+		for( Map.Entry<Integer, Long> entry: downstreamLastAck.entrySet()) {
+			long ts = entry.getValue();
+			if (entry.getKey() != opId) {
+				if(ts < minWithCurrent){ 
+					minWithCurrent = ts;
 				}
-				if(ts < minWithoutCurrent){ 
-					minWithoutCurrent = ts; 
-				}				
-				counter++;
 			}
-			downstreamLastAck.put(opId, current_ts);
-				//FIXME if I remove a downstream (scale down) I should remove from map/clear the map
-	/// \todo {scaling down operators introduce a new bunch of possibilities}
-			if(downstreamLastAck.size() != opContext.downstreams.size()) {
-		//			System.out.println("missing some acks suppressing ACK");
+			if(ts < minWithoutCurrent){
+				minWithoutCurrent = ts;
 			}
-			else if (minWithCurrent==minWithoutCurrent) {
-		//			System.out.println("min did not changed, suppress ACK");
-			}
-			else{
-				owner.ack(minWithCurrent);
-			}
+			counter++;
 		}
+		downstreamLastAck.put(opId, current_ts);
+			//FIXME if I remove a downstream (scale down) I should remove from map/clear the map
+	/// \todo {scaling down operators introduce a new bunch of possibilities}
+		if(downstreamLastAck.size() != pu.getMostDownstream().getOpContext().downstreams.size()) {
+		//			System.out.println("missing some acks suppressing ACK");
+		}
+		else if (minWithCurrent==minWithoutCurrent) {
+		//			System.out.println("min did not changed, suppress ACK");
+		}
+		else{
+			owner.ack(minWithCurrent);
+		}
+//		}
 		//if the operator is stateful, we backpropagate the ACK directly. with batching, we will always propagate unique ACK's
 		//else if (owner.subclassOperator instanceof StatefullOperator){
-		else{
-			owner.ack(current_ts);
-		}
+//		else{
+//			owner.ack(current_ts);
+//		}
 		// To indicate that this is the last ack processed by this operator
 		owner.setTs_ack(current_ts);
 	}
@@ -431,9 +431,11 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 	//This method simply backups its state. It is useful for making the upstream know that is in charge of managing this state.
 	public void sendInitialStateBackup(){
 		//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
-		if(owner.subclassOperator instanceof StatefulOperator){
-System.out.println("OP: "+owner.getOperatorId()+" INITIAL BACKUP!!!!!!#############");
-			((StatefulOperator)owner.subclassOperator).generateBackupState();
+		if(pu.isNodeStateful()){
+		//if(owner.subclassOperator instanceof StatefulOperator){
+System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!!!!#############");
+//			((StatefulOperator)owner.subclassOperator).generateBackupState();
+			pu.checkpointAndBackupState();
 		}
 	}
 }

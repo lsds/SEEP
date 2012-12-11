@@ -435,15 +435,14 @@ public class CoreRE {
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
 			if(command.equals("reconfigure_D")){
-				/// \todo {change this deprecated. This was the previous way of replaying stuff, now there are no threads}
-				//opCommonProcessLogic.startReplayer(opId);
 				// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
 				if(processingUnit.isManagingStateOf(opId)){
-					if(subclassOperator instanceof StateSplitI){
+					/** WHILE REFACTORING THE FOLLOWING IF WAS REMOVED, this was here for a reason **/
+//					if(subclassOperator instanceof StateSplitI){
 						//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-						NodeManager.nLogger.info("-> Replaying State");
-						coreProcessLogic.replayState(opId);
-					}
+					NodeManager.nLogger.info("-> Replaying State");
+					coreProcessLogic.replayState(opId);
+//					}
 				}
 				else{
 					NodeManager.nLogger.info("-> NOT in charge of managing this state");
@@ -533,7 +532,7 @@ public class CoreRE {
 	}
 	
 	public void ack(long ts) {
-		ControlTuple ack = new ControlTuple(ControlTupleType.ACK, operatorId, ts);
+		ControlTuple ack = new ControlTuple(ControlTupleType.ACK, processingUnit.getMostUpstream().getOperatorId(), ts);
 		controlDispatcher.sendAllUpstreams(ack);
 	}
 
