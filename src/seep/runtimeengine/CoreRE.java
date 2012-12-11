@@ -51,12 +51,12 @@ public class CoreRE {
 
 //	private RuntimeContext opContext;
 	private CoreProcessingLogic coreProcessLogic;
-	private Router router;
+//	private Router router;
 
 	private InputQueue inputQueue;
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
-	private Dispatcher dispatcher;
+//	private Dispatcher dispatcher;
 	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
 	
@@ -196,19 +196,19 @@ public class CoreRE {
 //	public CoreRE getSubclassOperator() {
 //		return subclassOperator;
 //	}
+//	
+//	public Dispatcher getDispatcher(){
+//		return dispatcher;
+//	}
 	
-	public Dispatcher getDispatcher(){
-		return dispatcher;
-	}
-	
-	public Router getRouter(){
-		//If router is to be retrieved, it has previously been initialized
-		return router;
-	}
-	
-	public void setRouter(Router router){
-		this.router = router;
-	}
+//	public Router getRouter(){
+//		//If router is to be retrieved, it has previously been initialized
+//		return router;
+//	}
+//	
+//	public void setRouter(Router router){
+//		this.router = router;
+//	}
 	
 	public int getBackupUpstreamIndex() {
 		return backupUpstreamIndex;
@@ -345,7 +345,7 @@ public class CoreRE {
 		}
 		/** INIT_RI message **/
 		else if(ctt.equals(ControlTupleType.INIT_RI)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getNodeId());
 			coreProcessLogic.installRI(ct.getInitRI());
 		}
 		/** SCALE_OUT message **/
@@ -576,16 +576,16 @@ System.out.println("CONTROL THREAD: restarting data processing...");
 		controlDispatcher.sendAllUpstreams(rb);
 	}
 
-	//Recover the state to Normal, so the receiver thread can go on with its work
-	private void restartDataProcessingChannel() {
-		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
-		
-	}
-
-	//Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
-	private void stopDataProcessingChannel() {
-		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
-	}
+//	//Recover the state to Normal, so the receiver thread can go on with its work
+//	private void restartDataProcessingChannel() {
+//		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
+//		
+//	}
+//
+//	//Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
+//	private void stopDataProcessingChannel() {
+//		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
+//	}
 	
 	public void sendBackupState(ControlTuple ctB){
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);

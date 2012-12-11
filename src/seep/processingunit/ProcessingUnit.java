@@ -213,6 +213,14 @@ public class ProcessingUnit {
 		ctx.updateConnection(opId, ip);
 	}
 	
+	public ArrayList<Integer> getRouterIndexesInformation(int opId){
+		return mostDownstream.getRouter().getIndexesInformation(opId);
+	}
+	
+	public ArrayList<Integer> getRouterKeysInformation(int opId){
+		return mostDownstream.getRouter().getKeysInformation(opId);
+	}
+	
 	/** State Management Stuff **/
 	
 		/** State operations **/
@@ -263,22 +271,22 @@ public class ProcessingUnit {
 	
 		/** Who manages which state? **/
 	
-	public synchronized void invalidateState(int nodeId) {
+	public synchronized void invalidateState(int opId) {
 		//If the states figures as being managed we removed it
 		int index = 0;
-		if((index = listOfManagedStates.indexOf(nodeId)) != -1) listOfManagedStates.remove(index);
+		if((index = listOfManagedStates.indexOf(opId)) != -1) listOfManagedStates.remove(index);
 		// and then we clean both the buffer and the mapping in downstreamBuffers.
-		if(PUContext.downstreamBuffers.get(nodeId) != null){
+		if(PUContext.downstreamBuffers.get(opId) != null){
 			//First of all, we empty the buffer
-			PUContext.downstreamBuffers.get(nodeId).replaceBackupNodeState(null);
+			PUContext.downstreamBuffers.get(opId).replaceBackupNodeState(null);
 		}
 	}
 	
-	public synchronized void registerManagedState(int nodeId) {
+	public synchronized void registerManagedState(int opId) {
 		//If the state does not figure as being managed, we include it
-		if(!listOfManagedStates.contains(nodeId)){
-			NodeManager.nLogger.info("-> New STATE registered for NODE: "+nodeId);
-			listOfManagedStates.add(nodeId);
+		if(!listOfManagedStates.contains(opId)){
+			NodeManager.nLogger.info("-> New STATE registered for NODE: "+opId);
+			listOfManagedStates.add(opId);
 		}
 	}
 	

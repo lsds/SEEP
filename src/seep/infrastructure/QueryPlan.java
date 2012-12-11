@@ -14,7 +14,7 @@ public class QueryPlan {
 	static final int DATA_SOCKET = Integer.parseInt(P.valueFor("dataSocket"));
 	
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
-	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
+	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;

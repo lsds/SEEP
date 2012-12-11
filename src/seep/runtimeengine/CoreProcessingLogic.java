@@ -22,6 +22,7 @@ import seep.operator.State;
 import seep.operator.StateSplitI;
 import seep.operator.StatefulOperator;
 import seep.operator.StatelessOperator;
+import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.PUContext;
 import seep.processingunit.ProcessingUnit;
 
@@ -88,23 +89,24 @@ System.out.println("#################");
 	 * Then, create the new required ones with the new information**/
 	
 	public synchronized void installRI(InitRI initRI){
-		NodeManager.nLogger.info("-> Installing RI from OP: "+initRI.getOpId());
+		NodeManager.nLogger.info("-> Installing RI from Node: "+initRI.getNodeId());
 		//Create new LB with the information received
 		ArrayList<Integer> indexes = new ArrayList<Integer>(initRI.getIndex());
 		ArrayList<Integer> keys = new ArrayList<Integer>(initRI.getKey());
 		ArrayList<Integer> downstreamIds = new ArrayList<Integer>();
 		for(Integer index : indexes){
-			int opId = puCtx.getDownOpIdFromIndex(index);
+			// opId from the most downstream operator
+			int opId = pu.getMostDownstream().getOpContext().getDownOpIdFromIndex(index);
 			downstreamIds.add(opId);
 		}
-		
-		owner.getRouter().reconfigureRoutingInformation(downstreamIds, indexes, keys);
+		// Reconfigure routing info of the most downstream operator
+		pu.getMostDownstream().getRouter().reconfigureRoutingInformation(downstreamIds, indexes, keys);
 	}
 	
 	public void sendRoutingInformation(int opId, String operatorType){
 		//Get index from opId
 		int upstreamIndex = 0;
-		for(PlacedOperator op : opContext.upstreams){
+		for(PlacedOperator op : pu.getMostUpstream().getOpContext().upstreams){
 			if(op.opID() == opId){
 				 upstreamIndex = op.index();
 			}
@@ -122,9 +124,9 @@ System.out.println("KEY: "+operatorType);
 		//Otherwise I pick the backupRI msg from the data structure where i am storing these ones
 		BackupRI backupRI = backupRoutingInformation.get(operatorType);
 		//Form the message
-		ControlTuple ct = new ControlTuple().makeInitRI(owner.getOperatorId(), backupRI.getIndex(), backupRI.getKey());
+		ControlTuple ct = new ControlTuple().makeInitRI(owner.getNodeDescr().getNodeId(), backupRI.getIndex(), backupRI.getKey());
 		//Send the message
-		owner.getDispatcher().sendUpstream(ct, upstreamIndex);
+		owner.getControlDispatcher().sendUpstream(ct, upstreamIndex);
 	}
 	
 	/*Checkpoint the state that it has received in the corresponding buffer (The buffer of the connection from which it received the state)*/
@@ -273,11 +275,7 @@ System.out.println("KEY: "+operatorType);
 		puCtx.getBuffer(newOpId).replaceBackupNodeState(newBackupNodeState);
 		//Indicate that we are now managing both these states
 		NodeManager.nLogger.severe("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
-		/** 
-		 * 
-		 * WRONG, register managed state requires the node id, not the op id...
-		 * 
-		 * **/
+		// We state we manage the state of the old and new ops replicas
 		pu.registerManagedState(oldOpId);
 		pu.registerManagedState(newOpId);
 	}
@@ -300,7 +298,7 @@ System.out.println("KEY: "+operatorType);
 		else{
 			NodeManager.nLogger.info("-> Scaling out STATELESS op");
 //			configureNewDownstreamStatelessOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
-			owner.getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+			pu.getMostDownstream().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 	}
 	
@@ -326,6 +324,7 @@ System.out.println("KEY: "+operatorType);
 //		backupRoutingInformation(oldOpId);
 		
 		//I always backup the routing info. This leads to replicate messages, but I cant avoid it easily since I can have more than one type of upstream
+		///\fixme{FIX THIS INEFFICIENCY}
 		backupRoutingInformation(oldOpId);
 	}
 	
@@ -345,27 +344,26 @@ System.out.println("KEY: "+operatorType);
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
 
-		newKey = owner.getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		newKey = pu.getMostDownstream().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		return newKey;
 		
 	}
 	
 	private void backupRoutingInformation(int oldOpId) {
-		System.out.println("SOMETHING IS WRONG HERE!!!!!!!!! HACKED, FIX THIS FIX THIS!!!1");
-//		//Get routing information
-//		ArrayList<Integer> indexes = owner.getRouter().getIndexesInformation(oldOpId);
-//		ArrayList<Integer> keys = owner.getRouter().getKeysInformation(oldOpId);
-//System.out.println("BACKUP INDEXES: "+indexes.toString());
-//System.out.println("BACKUP KEYS: "+keys.toString());
-//
-//		//Create message
-//System.out.println("REGISTERED CLASS: "+owner.getClass().getName());
-//		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getOperatorId(), indexes, keys, owner.getClass().getName());
-//		//Send message to downstreams (for now, all downstreams)
-//		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
-//		for(Integer index : indexes){
-//			owner.getDispatcher().sendDownstream(msg, index);
-//		}
+		//Get routing information of the operator that has scaled out
+		ArrayList<Integer> indexes = pu.getRouterIndexesInformation(oldOpId);
+		ArrayList<Integer> keys = pu.getRouterKeysInformation(oldOpId);
+System.out.println("BACKUP INDEXES: "+indexes.toString());
+System.out.println("BACKUP KEYS: "+keys.toString());
+
+		//Create message
+System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getName());
+		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getNodeDescr().getNodeId(), indexes, keys, pu.getMostDownstream().getClass().getName());
+		//Send message to downstreams (for now, all downstreams)
+		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
+		for(Integer index : indexes){
+			owner.getControlDispatcher().sendDownstream(msg, index);
+		}
 	}
 	
 	public void replayState(int opId) {

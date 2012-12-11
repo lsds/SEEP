@@ -158,9 +158,9 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInitRI(int opId, ArrayList<Integer> indexes, ArrayList<Integer> keys){
+	public ControlTuple makeInitRI(int nodeId, ArrayList<Integer> indexes, ArrayList<Integer> keys){
 		this.type = CoreRE.ControlTupleType.INIT_RI;
-		this.initRI = new InitRI(opId, indexes, keys);
+		this.initRI = new InitRI(nodeId, indexes, keys);
 		return this;
 	}
 	
@@ -176,9 +176,9 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInvalidateMessage(int backupUpstreamIndex){
+	public ControlTuple makeInvalidateMessage(int opIdToInvalidate){
 		this.type = CoreRE.ControlTupleType.INVALIDATE_STATE;
-		this.invalidateState = new InvalidateState(backupUpstreamIndex);
+		this.invalidateState = new InvalidateState(opIdToInvalidate);
 		return this;
 	}
 }

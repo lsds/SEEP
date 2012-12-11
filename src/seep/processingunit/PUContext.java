@@ -156,42 +156,42 @@ public class PUContext {
 	/** Dynamic Reconfiguration **/
 	
 	public void updateConnection(int opId, InetAddress newIp){
-	InetAddress localIp = nodeDescr.getIp();
-	Operator opToReconfigure = ProcessingUnit.mapOP_ID.get(opId);
-	int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
-	int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();
+		InetAddress localIp = nodeDescr.getIp();
+		Operator opToReconfigure = ProcessingUnit.mapOP_ID.get(opId);
+		int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
+		int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();
 	
-	for(EndPoint ep : downstreamTypeConnection){
-		if(ep.getOperatorId() == opId){
-			try{
-				Socket dataS = new Socket(newIp, dataPort);
-				Socket controlS = new Socket(newIp, controlPort);
-				Buffer buf = downstreamBuffers.get(opId);
-				int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
-				CommunicationChannel cci = new CommunicationChannel(opId, dataS, controlS, buf);
-				downstreamTypeConnection.set(index, cci);
-			}
-			catch(IOException io){
-				System.out.println("While re-creating socket: "+io.getMessage());
-			}
-		}
-	}
-	for(EndPoint ep : upstreamTypeConnection){
-		if(ep.getOperatorId() == opId){
-			try{
-				Socket controlS = new Socket(newIp, controlPort);
-				int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
-				CommunicationChannel cci = new CommunicationChannel(opId, null, controlS, null);
-				upstreamTypeConnection.set(index, cci);
-			}
-			catch(IOException io){
-				System.out.println("While re-creating socket: "+io.getMessage());
+		for(EndPoint ep : downstreamTypeConnection){
+			if(ep.getOperatorId() == opId){
+				try{
+					Socket dataS = new Socket(newIp, dataPort);
+					Socket controlS = new Socket(newIp, controlPort);
+					Buffer buf = downstreamBuffers.get(opId);
+					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
+					CommunicationChannel cci = new CommunicationChannel(opId, dataS, controlS, buf);
+					downstreamTypeConnection.set(index, cci);
+				}
+				catch(IOException io){
+					System.out.println("While re-creating socket: "+io.getMessage());
+				}
 			}
 		}
+		for(EndPoint ep : upstreamTypeConnection){
+			if(ep.getOperatorId() == opId){
+				try{
+					Socket controlS = new Socket(newIp, controlPort);
+					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
+					CommunicationChannel cci = new CommunicationChannel(opId, null, controlS, null);
+					upstreamTypeConnection.set(index, cci);
+				}
+				catch(IOException io){
+					System.out.println("While re-creating socket: "+io.getMessage());
+				}
+			}
+		}
+		NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
 	}
-	NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
 }
-
 
 //public CommunicationChannel getCCIfromOpId(int opId, String type){
 //if(type.equals("d")){
@@ -271,7 +271,3 @@ public class PUContext {
 //		}
 //		NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
 //	}
-}
-
-
-	

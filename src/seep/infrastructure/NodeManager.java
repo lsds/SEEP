@@ -14,7 +14,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
