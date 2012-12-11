@@ -5,8 +5,9 @@ import java.util.ArrayList;
 import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupRI;
+import seep.comm.serialization.controlhelpers.InitNodeState;
 import seep.comm.serialization.controlhelpers.InitRI;
-import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InvalidateState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
@@ -24,11 +25,13 @@ public class ControlTuple {
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
 	private Resume resume;
-	private InitState initState;
+//	private InitOperatorState initState;
+	private InitNodeState initNodeState;
 	private StateAck stateAck;
 	private InvalidateState invalidateState;
 	private BackupRI backupRI;
 	private InitRI initRI;
+	
 	
 	public ControlTuple(){}
 	
@@ -45,73 +48,92 @@ public class ControlTuple {
 	public CoreRE.ControlTupleType getType() {
 		return type;
 	}
+	
 	public void setType(CoreRE.ControlTupleType type) {
 		this.type = type;
 	}
+	
 	public Ack getAck() {
 		return ack;
 	}
+	
 	public void setAck(Ack ack) {
 		this.ack = ack;
 	}
 	public BackupNodeState getBackupState() {
 		return backupState;
 	}
+	
 	public void setBackupState(BackupNodeState backupState) {
 		this.backupState = backupState;
 	}
+	
 	public ReconfigureConnection getReconfigureConnection() {
 		return reconfigureConnection;
 	}
 	public void setReconfigureConnection(ReconfigureConnection reconfigureConnection) {
 		this.reconfigureConnection = reconfigureConnection;
 	}
+	
 	public ScaleOutInfo getScaleOutInfo() {
 		return scaleOutInfo;
 	}
+	
 	public void setScaleOutInfo(ScaleOutInfo scaleOutInfo) {
 		this.scaleOutInfo = scaleOutInfo;
 	}
+	
 	public Resume getResume() {
 		return resume;
 	}
+	
 	public void setResume(Resume resume) {
 		this.resume = resume;
 	}
-	public InitState getInitState() {
-		return initState;
+	
+	public InitNodeState getInitNodeState() {
+		return initNodeState;
 	}
-	public void setInitState(InitState initState) {
-		this.initState = initState;
+	
+	public void setInitNodeState(InitNodeState initNodeState) {
+		this.initNodeState = initNodeState;
 	}
+	
 	public StateAck getStateAck() {
 		return stateAck;
 	}
+	
 	public void setStateAck(StateAck stateAck) {
 		this.stateAck = stateAck;
 	}
+	
 	public InvalidateState getInvalidateState() {
 		return invalidateState;
 	}
+	
 	public void setInvalidateState(InvalidateState invalidateState) {
 		this.invalidateState = invalidateState;
 	}
+	
 	public BackupRI getBackupRI() {
 		return backupRI;
 	}
+	
 	public void setBackupRI(BackupRI backupRI) {
 		this.backupRI = backupRI;
 	}
+	
 	public InitRI getInitRI() {
 		return initRI;
 	}
+	
 	public void setInitRI(InitRI initRI) {
 		this.initRI = initRI;
 	}
 	
-	public ControlTuple makeStateAck(int opId){
+	public ControlTuple makeStateAck(int nodeId, int mostUpstreamOpId){
 		this.type = CoreRE.ControlTupleType.STATE_ACK;
-		this.stateAck = new StateAck(opId);
+		this.stateAck = new StateAck(nodeId, mostUpstreamOpId);
 		return this;
 	}
 	
@@ -170,9 +192,15 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInitState(int opId, long ts, State state){
+//	public ControlTuple makeInitState(int opId,  State state){
+//		this.type = CoreRE.ControlTupleType.INIT_STATE;
+//		this.initState = new InitOperatorState(opId, state);
+//		return this;
+//	}
+	
+	public ControlTuple makeInitNodeState(int nodeId, InitOperatorState[] initOperatorState){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
-		this.initState = new InitState(opId, ts, state);
+		this.initNodeState = new InitNodeState(nodeId, initOperatorState);
 		return this;
 	}
 	

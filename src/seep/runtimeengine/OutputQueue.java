@@ -131,27 +131,27 @@ public class OutputQueue {
 	}
 	
 	public void replayTuples(CommunicationChannel cci) {
-				Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
-				Output output = cci.getOutput();
-				int bufferSize = cci.getBuffer().size();
-				int controlThreshold = (int)(bufferSize)/10;
-				int replayed = 0;
-				while(sharedIterator.hasNext()) {
-					BatchDataTuple dt = sharedIterator.next();
-					k.writeObject(output, dt);
-					output.flush();
-					replayed++;
-					/// \test {test this functionality. is this necessary?}
-					if((bufferSize-replayed) <= (controlThreshold+1)){
-						break;
-					}
-				}
-				//Restablish communication. Set variables and sharedIterator with the current iteration state.
-				NodeManager.nLogger.info("-> Recovering connections");
-				cci.getReplay().set(true);
-				cci.getStop().set(false);
-				cci.setSharedIterator(sharedIterator);
-				start();
+		Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
+		Output output = cci.getOutput();
+		int bufferSize = cci.getBuffer().size();
+		int controlThreshold = (int)(bufferSize)/10;
+		int replayed = 0;
+		while(sharedIterator.hasNext()) {
+			BatchDataTuple dt = sharedIterator.next();
+			k.writeObject(output, dt);
+			output.flush();
+			replayed++;
+			/// \test {test this functionality. is this necessary?}
+			if((bufferSize-replayed) <= (controlThreshold+1)){
+				break;
+			}
+		}
+		//Restablish communication. Set variables and sharedIterator with the current iteration state.
+		NodeManager.nLogger.info("-> Recovering connections");
+		cci.getReplay().set(true);
+		cci.getStop().set(false);
+		cci.setSharedIterator(sharedIterator);
+		start();
 	}
 	
 }

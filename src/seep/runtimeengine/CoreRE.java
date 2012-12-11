@@ -16,7 +16,8 @@ import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
-import seep.comm.serialization.controlhelpers.InitState;
+import seep.comm.serialization.controlhelpers.InitNodeState;
+import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.infrastructure.Node;
@@ -315,8 +316,8 @@ public class CoreRE {
 		}
 		/** INIT_MESSAGE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitState().getOpId());
-			processInitState(ct.getInitState());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitNodeState().getNodeId());
+			coreProcessLogic.processInitState(ct.getInitNodeState());
 		}
 		/** BACKUP_STATE message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_NODE_STATE)){
@@ -329,8 +330,9 @@ public class CoreRE {
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
-			int opId = ct.getStateAck().getOpId();
-			NodeManager.nLogger.info("-> Received STATE_ACK from OP: "+opId);
+			int nodeId = ct.getStateAck().getNodeId();
+			int opId = ct.getStateAck().getMostUpstreamOpId();
+			NodeManager.nLogger.info("-> Received STATE_ACK from Node: "+nodeId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 //			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
 			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
@@ -376,12 +378,12 @@ public class CoreRE {
 					//Check if I am managing the state of any of the operators to which state must be replayed
 					/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
 					if(processingUnit.isManagingStateOf(opId)){
-						/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-						if(subclassOperator instanceof StateSplitI){
-							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-							NodeManager.nLogger.info("-> Replaying State");
-							coreProcessLogic.replayState(opId);
-						}
+						/** CHANGED ON 11/12/2012 on the road to version 0.2 **/
+//						/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
+//						if(subclassOperator instanceof StateSplitI){
+						NodeManager.nLogger.info("-> Replaying State");
+						coreProcessLogic.replayState(opId);
+//						}
 					}
 					else{
 						NodeManager.nLogger.info("-> NOT in charge of managing this state");
@@ -535,7 +537,7 @@ public class CoreRE {
 		controlDispatcher.sendAllUpstreams(ack);
 	}
 
-	private void manageBackupUpstreamIndex(int opId){
+	public void manageBackupUpstreamIndex(int opId){
 		//Firstly, I configure my upstreamBackupIndex, which is the index of the operatorId coming in this message (the one in charge of managing it)
 //		int newIndex = opContext.findUpstream(opId).index();
 		int newIndex = processingUnit.getMostUpstream().getOpContext().findUpstream(opId).index();
@@ -546,34 +548,6 @@ public class CoreRE {
 		}
 		//Set the new backup upstream index, this has been sent by the manager.
 		this.setBackupUpstreamIndex(newIndex);
-	}
-	
-	public void processInitState(InitState ct){
-		//Reconfigure backup stream index
-		manageBackupUpstreamIndex(ct.getOpId());
-System.out.println("CONTROL THREAD: changing operator status to initialising");
-		//Clean the data processing channel from remaining tuples in old batch
-		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
-//		stopDataProcessingChannel();
-		//Manage ts...
-		//Pass the state to the user
-		if (subclassOperator instanceof StatefulOperator){
-			NodeManager.nLogger.info("-> Installing INIT state");
-			((StatefulOperator)subclassOperator).installState(ct.getState());
-			NodeManager.nLogger.info("-> State has been installed");
-		}
-		else{
-			NodeManager.nLogger.info("-> Stateless operator, not installing state");
-		}
-		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
-System.out.println("CONTROL THREAD: restarting data processing...");
-		//Once the state has been installed, recover dataProcessingChannel
-//		restartDataProcessingChannel();
-		
-		//Send a msg to ask for the rest of information. (tuple replaying)
-		NodeManager.nLogger.info("-> Sending STATE_ACK");
-		ControlTuple rb = new ControlTuple().makeStateAck(operatorId);
-		controlDispatcher.sendAllUpstreams(rb);
 	}
 
 //	//Recover the state to Normal, so the receiver thread can go on with its work

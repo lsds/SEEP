@@ -14,6 +14,8 @@ import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.controlhelpers.InitNodeState;
+import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.infrastructure.NodeManager;
@@ -373,16 +375,56 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
 
 		//Get a proper init state and just send it
-		BackupOperatorState bs = buffer.getBackupState();
-		ControlTuple ct = new ControlTuple().makeInitState(owner.getOperatorId(), bs.getTs_e(), bs.getState());
+		BackupNodeState bs = buffer.getBackupState();
+		BackupOperatorState[] backupOperatorState = bs.getBackupOperatorState();
+//		ControlTuple ct = new ControlTuple().makeInitState(owner.getNodeDescr().getNodeId(), bs.getTs_e(), bs.getState());
+		InitOperatorState[] initOperatorState = new InitOperatorState[backupOperatorState.length];
+		for(int i = 0; i< initOperatorState.length; i++){
+			BackupOperatorState current = backupOperatorState[i];
+			initOperatorState[i] = new InitOperatorState(current.getOpId(), current.getState());
+		}
+		ControlTuple ct = new ControlTuple().makeInitNodeState(owner.getNodeDescr().getNodeId(), initOperatorState);
 		
 		try {
-			owner.getDispatcher().initStateMessage(ct, controlDownstreamSocket.getOutputStream());
+			owner.getControlDispatcher().initStateMessage(ct, controlDownstreamSocket.getOutputStream());
 		} 
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public void processInitState(InitNodeState ct){
+		//Reconfigure backup stream index
+		//Pick one of the opIds of the message
+		int opId = ct.getInitOperatorState()[0].getOpId();
+		owner.manageBackupUpstreamIndex(opId);
+System.out.println("CONTROL THREAD: changing operator status to initialising");
+		//Clean the data processing channel from remaining tuples in old batch
+		pu.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
+//		stopDataProcessingChannel();
+		//Manage ts...
+		//Give state to processing unit for it to manage it
+		pu.installState(ct.getInitOperatorState());
+		
+//		if (subclassOperator instanceof StatefulOperator){
+//			NodeManager.nLogger.info("-> Installing INIT state");
+//			((StatefulOperator)subclassOperator).installState(ct.getState());
+//			NodeManager.nLogger.info("-> State has been installed");
+//		}
+//		else{
+//			NodeManager.nLogger.info("-> Stateless operator, not installing state");
+//		}
+		
+		pu.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
+System.out.println("CONTROL THREAD: restarting data processing...");
+		//Once the state has been installed, recover dataProcessingChannel
+//		restartDataProcessingChannel();
+		
+		//Send a msg to ask for the rest of information. (tuple replaying)
+		NodeManager.nLogger.info("-> Sending STATE_ACK");
+		ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getMostUpstream().getOperatorId());
+		owner.getControlDispatcher().sendAllUpstreams(rb);
 	}
 	
 	

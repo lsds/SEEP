@@ -11,6 +11,7 @@ import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
@@ -266,6 +267,19 @@ public class ProcessingUnit {
 		owner.sendBackupState(ctB);
 //		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 //		ack(currentTsData);
+	}
+	
+	public void installState(InitOperatorState[] initOperatorState){
+		// Simply replace the state and update operator references
+		for(int i = 0; i < initOperatorState.length; i++){
+			InitOperatorState current = initOperatorState[i];
+			int stateOwnerId = current.getOpId();
+			State state = current.getState();
+			// Replace state
+			mapOP_S.put(stateOwnerId, state);
+			// And reference in operator
+			((StatefulOperator)mapOP_ID.get(stateOwnerId)).replaceState(state);
+		}
 	}
 	
 	
