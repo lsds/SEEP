@@ -20,14 +20,18 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public ProcessingUnit processingUnit = null;
 	private Router router = null;
 	
-	public Operator(int operatorId){
+	public Operator(int operatorId, State state){
 		this.operatorId = operatorId;
+		this.state = state;
 		subclassOperator = this;
-		System.out.println("WHO AM I?? : "+subclassOperator.getClass().getName());
 	}
 	
 	public State getState(){
 		return state;
+	}
+	
+	public void setState(State state){
+		this.state = state;
 	}
 	
 	public void setReady(boolean ready){
@@ -128,4 +132,11 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 //
 //public void sendNow(DataTuple dt, int value){
 //	processingUnit.sendData(dt, value, true);
+//}
+
+
+//public Operator(int operatorId){
+//	this.operatorId = operatorId;
+//	subclassOperator = this;
+//	System.out.println("WHO AM I?? : "+subclassOperator.getClass().getName());
 //}

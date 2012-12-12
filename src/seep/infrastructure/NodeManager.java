@@ -160,10 +160,10 @@ public class NodeManager{
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
 					NodeManager.nLogger.info("-> Received Unknown Operator. Using custom class loader to resolve it");
 					Class<?> baseI = rcl.loadClass(osc.getName());
-					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
-					Object[] initargs = new Object[1];
-					initargs[0] = -666;
-					Object base = constructor.newInstance(initargs);
+//					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
+//					Object[] initargs = new Object[1];
+//					initargs[0] = -666;
+//					Object base = constructor.newInstance(initargs);
 					o = ois.readObject();
 					NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
 				}
@@ -234,12 +234,6 @@ public class NodeManager{
 					}
 					if(tokens[0].equals("SET-RUNTIME")){
 						NodeManager.nLogger.info("-> SET-RUNTIME Command");
-						try {
-							Thread.sleep(2000);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
 						core.setRuntime();
 						out.println("ack");
 					}
@@ -280,14 +274,6 @@ public class NodeManager{
 			System.out.println("IllegalThreadStateException, no problem, monitor thing");
 			itse.printStackTrace();
 		} 
-		catch (InstantiationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
 		catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -296,18 +282,10 @@ public class NodeManager{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
 		catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 	
 	

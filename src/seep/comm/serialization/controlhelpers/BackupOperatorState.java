@@ -27,4 +27,5 @@ public class BackupOperatorState {
 	public void setState(State state) {
 		this.state = state;
 	}
+	
 }

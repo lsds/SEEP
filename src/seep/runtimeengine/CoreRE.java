@@ -1,35 +1,23 @@
 package seep.runtimeengine;
 
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 
 import seep.Main;
 import seep.comm.ControlHandler;
-import seep.comm.Dispatcher;
 import seep.comm.IncomingDataHandler;
 import seep.comm.routing.Router;
-import seep.comm.routing.StatelessRoutingImpl;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
-import seep.comm.serialization.controlhelpers.BackupOperatorState;
-import seep.comm.serialization.controlhelpers.InitNodeState;
-import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.infrastructure.OperatorInitializationException;
-import seep.infrastructure.OperatorInstantiationException;
 import seep.infrastructure.WorkerNodeDescription;
 import seep.operator.Operator;
 import seep.operator.OperatorStaticInformation;
-import seep.operator.QuerySpecificationI;
-import seep.operator.StateSplitI;
-import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.PUContext;
 import seep.processingunit.ProcessingUnit;
@@ -43,21 +31,16 @@ public class CoreRE {
 	private WorkerNodeDescription nodeDescr = null;
 	private ProcessingUnit processingUnit = null;
 	private PUContext puCtx = null;
-	private boolean coreReady = false;
 	
 	public int ackCounter = 0;
 	
-//	private int operatorId;
 	private int backupUpstreamIndex = -1;
 
-//	private RuntimeContext opContext;
 	private CoreProcessingLogic coreProcessLogic;
-//	private Router router;
 
 	private InputQueue inputQueue;
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
-//	private Dispatcher dispatcher;
 	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
 	
@@ -65,8 +48,6 @@ public class CoreRE {
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
-	
-//	public CoreRE subclassOperator = null;
 	
 	static ControlTuple genericAck;
 	
@@ -153,16 +134,19 @@ public class CoreRE {
 		//Choose the upstreamBackupIndex for this operator
 		int upstreamSize = processingUnit.getMostUpstream().getOpContext().upstreams.size();
 		configureUpstreamIndex(upstreamSize);
-		
+		// After configuring the upstream backup index, we start the stateBackupWorker thread if the node is stateful
+		if(processingUnit.isNodeStateful()){
+			processingUnit.createAndRunStateBackupWorker();
+		}
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 	}
 	
 	public void startDataProcessing(){
-		
+		NodeManager.nLogger.info("-> Starting to process data...");
 	}
 	
 	public void stopDataProcessing(){
-		//TODO stop and release resources
+		NodeManager.nLogger.info("-> The system has been remotely stopped. No processing data");
 	}
 	
 	public enum ControlTupleType{
@@ -194,23 +178,6 @@ public class CoreRE {
 		processingUnit.processData(data);
 	}
 	
-//	public CoreRE getSubclassOperator() {
-//		return subclassOperator;
-//	}
-//	
-//	public Dispatcher getDispatcher(){
-//		return dispatcher;
-//	}
-	
-//	public Router getRouter(){
-//		//If router is to be retrieved, it has previously been initialized
-//		return router;
-//	}
-//	
-//	public void setRouter(Router router){
-//		this.router = router;
-//	}
-	
 	public int getBackupUpstreamIndex() {
 		return backupUpstreamIndex;
 	}
@@ -225,54 +192,6 @@ public class CoreRE {
 //		opCommonProcessLogic = new CoreProcessingLogic();
 	}
 	
-	
-
-//	public void instantiateOperator() throws OperatorInstantiationException{
-//		
-//		opCommonProcessLogic.setOwner(this);
-//		opCommonProcessLogic.setOpContext(opContext);
-//		inputQueue = new InputQueue();
-//		outputQueue = new OutputQueue();
-//		dispatcher = new Dispatcher(opContext, outputQueue);
-//		//Configure routing to downstream
-//		router.configureRoutingImpl(opContext);
-//		
-//		//Control worker
-//		ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
-//		controlH = new Thread(ch);
-//		//Data worker
-//		idh = new IncomingDataHandler(this, opContext.getOperatorStaticInformation().getInD());
-//		iDataH = new Thread(idh);
-//		//Consumer worker
-//		dataConsumer = new DataConsumer(this, inputQueue);
-//		dConsumerH = new Thread(dataConsumer);
-//
-//		dConsumerH.start();
-//		controlH.start();
-//		iDataH.start();
-//
-//		//initialize the genericAck message to answer some specific messages.
-//		ControlTuple b = new ControlTuple();
-//		b.setType(ControlTupleType.ACK);
-//		genericAck = b;
-//		
-//		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
-//	}
-	
-/// \todo {return a proper boolean after check...}
-//	public void initializeCommunications() throws OperatorInitializationException{
-//		dispatcher.setOpContext(opContext);
-//		router.initializeQueryFunction();
-//		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
-//		dispatcher.setRouter(router);
-//		opContext.configureCommunication();
-//
-//		//Choose the upstreamBackupIndex for this operator
-//		opCommonProcessLogic.configureUpstreamIndex();
-//		
-//		NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
-//	}
-	
 	//TODO To refine this method...
 	/// \todo {this method should work when an operator must be killed in a proper way}
 	public boolean killHandlers(){
@@ -280,21 +199,6 @@ public class CoreRE {
 		//iDataH.destroy();
 		return true;
 	}
-
-	/** this hacked sent was added on 17 october 2012 to avoid refactoring the inner system to allow a operator configured with a stateful down to send
-	 * 
-	public void hackRouter(){
-		for(Integer id : opContext.getOriginalDownstream()){
-			PlacedOperator down = opContext.findDownstream(id);
-			int index = down.index();
-			int numDownstreams = opContext.getDownstreamSize();
-			StatelessRoutingImpl rs = new StatelessRoutingImpl(1, index, numDownstreams);
-			System.out.println("ROUTER HACKED");
-			//If more than one downstream type, then put the new rs with the opId
-			router.setNewLoadBalancer(id, rs);
-		}
-	}
-	as a stateless **/
 		
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
@@ -548,19 +452,9 @@ public class CoreRE {
 		//Set the new backup upstream index, this has been sent by the manager.
 		this.setBackupUpstreamIndex(newIndex);
 	}
-
-//	//Recover the state to Normal, so the receiver thread can go on with its work
-//	private void restartDataProcessingChannel() {
-//		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
-//		
-//	}
-//
-//	//Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
-//	private void stopDataProcessingChannel() {
-//		processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
-//	}
 	
 	public void sendBackupState(ControlTuple ctB){
+		NodeManager.nLogger.info("-> Backuping to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
 	
@@ -571,6 +465,7 @@ public class CoreRE {
 		
 		//source obviously cant compute this value
 		if(upstreamSize == 0){
+			NodeManager.nLogger.warning("-> If this node is not the most upstream, there is a problem");
 			return;
 		}
 		int upIndex = ownInfo%upstreamSize;
@@ -578,6 +473,7 @@ public class CoreRE {
 		
 		//Update my information
 		backupUpstreamIndex = upIndex;
+		NodeManager.nLogger.info("-> The new Upstream backup INDEX is: "+backupUpstreamIndex);
 	}
 	
 	public void reconfigureUpstreamBackupIndex(int upstreamSize){
@@ -612,11 +508,102 @@ System.out.println("backupUpstreamIndex: "+backupUpstreamIndex+ "upIndex: "+upIn
 			}
 		}
 	}
-	
-//	public ControlTuple buildInvalidateMsg(int backupUpstreamIndex) {
-//		ControlTuple ct = new ControlTuple(CoreRE.ControlTupleType.INVALIDATE_STATE, owner.getOperatorId());
-//		//Send invalidation message to old upstream
-//		NodeManager.nLogger.info("-> sending INVALIDATE_STATE to OP "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
-//		return ct;
-//	}
 }
+
+
+//public CoreRE getSubclassOperator() {
+//return subclassOperator;
+//}
+//
+//public Dispatcher getDispatcher(){
+//return dispatcher;
+//}
+
+//public Router getRouter(){
+////If router is to be retrieved, it has previously been initialized
+//return router;
+//}
+//
+//public void setRouter(Router router){
+//this.router = router;
+//}
+
+//public ControlTuple buildInvalidateMsg(int backupUpstreamIndex) {
+//ControlTuple ct = new ControlTuple(CoreRE.ControlTupleType.INVALIDATE_STATE, owner.getOperatorId());
+////Send invalidation message to old upstream
+//NodeManager.nLogger.info("-> sending INVALIDATE_STATE to OP "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
+//return ct;
+//}
+
+////Recover the state to Normal, so the receiver thread can go on with its work
+//private void restartDataProcessingChannel() {
+//	processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
+//	
+//}
+//
+////Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
+//private void stopDataProcessingChannel() {
+//	processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
+//}
+
+
+/** this hacked sent was added on 17 october 2012 to avoid refactoring the inner system to allow a operator configured with a stateful down to send
+ * 
+public void hackRouter(){
+	for(Integer id : opContext.getOriginalDownstream()){
+		PlacedOperator down = opContext.findDownstream(id);
+		int index = down.index();
+		int numDownstreams = opContext.getDownstreamSize();
+		StatelessRoutingImpl rs = new StatelessRoutingImpl(1, index, numDownstreams);
+		System.out.println("ROUTER HACKED");
+		//If more than one downstream type, then put the new rs with the opId
+		router.setNewLoadBalancer(id, rs);
+	}
+}
+as a stateless **/
+
+//public void instantiateOperator() throws OperatorInstantiationException{
+//
+//opCommonProcessLogic.setOwner(this);
+//opCommonProcessLogic.setOpContext(opContext);
+//inputQueue = new InputQueue();
+//outputQueue = new OutputQueue();
+//dispatcher = new Dispatcher(opContext, outputQueue);
+////Configure routing to downstream
+//router.configureRoutingImpl(opContext);
+//
+////Control worker
+//ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
+//controlH = new Thread(ch);
+////Data worker
+//idh = new IncomingDataHandler(this, opContext.getOperatorStaticInformation().getInD());
+//iDataH = new Thread(idh);
+////Consumer worker
+//dataConsumer = new DataConsumer(this, inputQueue);
+//dConsumerH = new Thread(dataConsumer);
+//
+//dConsumerH.start();
+//controlH.start();
+//iDataH.start();
+//
+////initialize the genericAck message to answer some specific messages.
+//ControlTuple b = new ControlTuple();
+//b.setType(ControlTupleType.ACK);
+//genericAck = b;
+//
+//NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
+//}
+
+/// \todo {return a proper boolean after check...}
+//public void initializeCommunications() throws OperatorInitializationException{
+//dispatcher.setOpContext(opContext);
+//router.initializeQueryFunction();
+////Once Router is configured, we assign it to dispatcher that will make use of it on runtime
+//dispatcher.setRouter(router);
+//opContext.configureCommunication();
+//
+////Choose the upstreamBackupIndex for this operator
+//opCommonProcessLogic.configureUpstreamIndex();
+//
+//NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
+//}

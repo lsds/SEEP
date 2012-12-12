@@ -235,6 +235,13 @@ public class Infrastructure {
 			init(op);
 		}
 		
+		/**
+		 * 
+		 * Send the states registered in the system so that every worker is aware of it, state is something dynamic and all workers
+		 * should be able to resolve it
+		 * 
+		 * **/
+		
 		//Finally, we tell the nodes to initialize all communications, all is ready to run
 		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
 		for(Operator op : ops){

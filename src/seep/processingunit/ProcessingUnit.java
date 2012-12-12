@@ -60,7 +60,7 @@ public class ProcessingUnit {
 	
 	public boolean isNodeStateful(){
 		// If its not empty is because a previous operator let there its state
-		return mapOP_S.isEmpty();
+		return !mapOP_S.isEmpty();
 	}
 	
 	public SystemStatus getSystemStatus(){
@@ -127,14 +127,15 @@ public class ProcessingUnit {
 			r.configureRoutingImpl(op.getOpContext());
 			op.setRouter(r);
 		}
-		// Create and run state backup worker in case this is a stateful machine
-		if(this.isNodeStateful()){
-			NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
-			sbw = new StateBackupWorker(this, mapOP_S);
-			stateWorker = new Thread(sbw);
-			stateWorker.start();
-		}
 		return ctx;
+	}
+	
+	public void createAndRunStateBackupWorker(){
+		// Create and run state backup worker
+		NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
+		sbw = new StateBackupWorker(this, mapOP_S);
+		stateWorker = new Thread(sbw);
+		stateWorker.start();
 	}
 	
 	public int getStateCheckpointInterval(){
@@ -266,7 +267,9 @@ public class ProcessingUnit {
 		backupState();
 		//Set the lock free again
 		lockState.set(0);
-		lockState.notify();
+		synchronized(lockState){
+			lockState.notify();
+		}
 	}
 	
 	private void backupState(){
@@ -286,6 +289,7 @@ public class ProcessingUnit {
 			bs.setStateClass(current.getStateTag());
 			backupState[i] = bs;
 		}
+		NodeManager.nLogger.info("-> Backuping the "+backupState.length+" states in this node");
 		//Build the ControlTuple msg
 		backupNodeState.setBackupOperatorState(backupState);
 		ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);

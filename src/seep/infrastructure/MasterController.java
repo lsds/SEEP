@@ -114,7 +114,7 @@ public class MasterController {
 	
 	public QueryPlan executeComposeFromQuery(String pathToJar, String definitionClass){
 		URLClassLoader ucl = null;
-		Class baseI = null;
+		Class<?> baseI = null;
 		Object baseInstance = null;
 		Method compose = null;
 		QueryPlan qp = null;
@@ -138,9 +138,9 @@ public class MasterController {
 		try {
 			baseI = ucl.loadClass(definitionClass);
 			baseInstance = baseI.newInstance();
-			compose = baseI.getDeclaredMethod("compose", null);
-			qp = (QueryPlan) compose.invoke(baseInstance, null);
-		} 
+			compose = baseI.getDeclaredMethod("compose", (Class<?>[])null);
+			qp = (QueryPlan) compose.invoke(baseInstance, (Object[])null);
+		}
 		catch (SecurityException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
