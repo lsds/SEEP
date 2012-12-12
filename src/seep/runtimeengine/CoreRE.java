@@ -99,31 +99,19 @@ public class CoreRE {
 	
 	public void setOpReady(int opId) {
 		processingUnit.setOpReady(opId);
+		if(processingUnit.allOperatorsReady()){
+			NodeManager.nLogger.info("-> All operators in this unit are ready. Initializing communications...");
+			initializeCommunications();
+		}
 	}
 	
-	public void setRuntime(){
+	public void initializeCommunications(){
 		outputQueue = new OutputQueue();
-		/// At this point I need information about what connections I need to establish
-		PUContext puCtx = processingUnit.setUpProcessingUnit();
-		processingUnit.setOutputQueue(outputQueue);
-		
-		/// INSTANTIATION
-		/** MORE REFACTORING HERE **/
-		coreProcessLogic.setOwner(this);
-		coreProcessLogic.setProcessingUnit(processingUnit);
-		coreProcessLogic.setOpContext(puCtx);
-		
-		controlDispatcher = new ControlDispatcher(puCtx);
-		
-		
-		//dispatcher = new Dispatcher(puCtx, outputQueue);
-		
 		// At this moment we are only creating one input stream for the most upstream operator we manage, we need 
 		// a data structure and proper access to support more than one, but its not difficult to do so
 		inputQueue = new InputQueue();
 		int inC = processingUnit.getMostUpstream().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getMostUpstream().getOpContext().getOperatorStaticInformation().getInD();
-		
 		//Control worker
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch);
@@ -137,6 +125,21 @@ public class CoreRE {
 		dConsumerH.start();
 		controlH.start();
 		iDataH.start();
+	}
+	
+	public void setRuntime(){
+		
+		/// At this point I need information about what connections I need to establish
+		PUContext puCtx = processingUnit.setUpProcessingUnit();
+		processingUnit.setOutputQueue(outputQueue);
+		
+		/// INSTANTIATION
+		/** MORE REFACTORING HERE **/
+		coreProcessLogic.setOwner(this);
+		coreProcessLogic.setProcessingUnit(processingUnit);
+		coreProcessLogic.setOpContext(puCtx);
+		
+		controlDispatcher = new ControlDispatcher(puCtx);
 
 		//initialize the genericAck message to answer some specific messages.
 		ControlTuple b = new ControlTuple();
@@ -146,9 +149,6 @@ public class CoreRE {
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" instantiated");
 		
 		/// INITIALIZATION
-		
-		//Once Router is configured, we assign it to dispatcher that will make use of it on runtime
-		//dispatcher.setRouter(router);
 
 		//Choose the upstreamBackupIndex for this operator
 		int upstreamSize = processingUnit.getMostUpstream().getOpContext().upstreams.size();

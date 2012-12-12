@@ -39,6 +39,7 @@ public class IncomingDataHandler implements Runnable{
 			//Establish listening port
 			incDataServerSocket = new ServerSocket(connPort);
 			incDataServerSocket.setReuseAddress(true);
+			NodeManager.nLogger.info("-> IncomingDataHandler listening in port: "+connPort);
 			//Upstream id
 			int uid = 0;
 			while(goOn){

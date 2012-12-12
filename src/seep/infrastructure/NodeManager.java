@@ -155,18 +155,17 @@ public class NodeManager{
 //				hack = rcl.getEOIS(clientSocket.getInputStream());
 				//Read the serialized object sent.
 				ObjectStreamClass osc = ois.readClassDescriptor();
-				System.out.println("Reading class descriptor: "+osc.toString());
+//				System.out.println("Reading class descriptor: "+osc.toString());
 				//Lazy load of the required class in case is an operator
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
-					System.out.println("Loading class with CUSTOM CLASSLOADER: "+osc.getName());
+					NodeManager.nLogger.info("-> Received Unknown Operator. Using custom class loader to resolve it");
 					Class<?> baseI = rcl.loadClass(osc.getName());
 					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
 					Object[] initargs = new Object[1];
 					initargs[0] = -666;
 					Object base = constructor.newInstance(initargs);
-					System.out.println("Mock object id: "+((Operator)base).getOperatorId());
 					o = ois.readObject();
-					System.out.println("REAL object id: "+((Operator)o).getOperatorId());
+					NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
 				}
 				else{
 					o = ois.readObject();
@@ -186,24 +185,26 @@ public class NodeManager{
 					String tokens[] = ((String)o).split(" ");
 					System.out.println("Tokens received: "+tokens[0]);
 					if(tokens[0].equals("CODE")){
+						NodeManager.nLogger.info("-> CODE Command");
 						//Send ACK back
 						out.println("ack");
 						// Establish subconnection to receive the code
-						System.out.println("Waiting for receiving the file");
+						NodeManager.nLogger.info("-> Waiting for receiving the file");
 						Socket subConnection = serverSocket.accept();
 						DataInputStream dis = new DataInputStream(subConnection.getInputStream());
 						int codeSize = dis.readInt();
 						byte[] serializedFile = new byte[codeSize];
 						dis.readFully(serializedFile);
 						int bytesRead = serializedFile.length;
-						System.out.println("Code is "+codeSize+ ": Read bytes is: "+bytesRead);
 						if(bytesRead != codeSize){
 							NodeManager.nLogger.warning("Mismatch between read and file size");
+						}
+						else{
+							NodeManager.nLogger.info("-> CODE received completely");
 						}
 						//Here I have the serialized bytes of the file, we materialize the real file
 						//For now the name of the file is always query.jar
 						FileOutputStream fos = new FileOutputStream(new File("query.jar"));
-						System.out.println("READ "+serializedFile.length+" bytes");
 						fos.write(serializedFile);
 						fos.close();
 						dis.close();
@@ -211,13 +212,16 @@ public class NodeManager{
 						out.println("ack");
 						//At this point we should have the file on disk
 						File pathToCode = new File("query.jar");
-						System.out.println("PATH TO NEW CODE: "+pathToCode.getAbsolutePath());
-						System.out.println("Exists??? "+pathToCode.exists());
 						if(pathToCode.exists()){
+							NodeManager.nLogger.info("-> Loading CODE from: "+pathToCode.getAbsolutePath());
 							loadCodeToRuntime(pathToCode);
+						}
+						else{
+							NodeManager.nLogger.severe("-> No access to the CODE");
 						}
 					}
 					if(tokens[0].equals("STOP")){
+						NodeManager.nLogger.info("-> STOP Command");
 						core.stopDataProcessing();
 						listen = false;
 						out.println("ack");
@@ -229,12 +233,18 @@ public class NodeManager{
 						continue;
 					}
 					if(tokens[0].equals("SET-RUNTIME")){
-						System.out.println("Set runtime");
+						NodeManager.nLogger.info("-> SET-RUNTIME Command");
+						try {
+							Thread.sleep(2000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 						core.setRuntime();
 						out.println("ack");
 					}
 					if(tokens[0].equals("START")){
-						System.out.println("SEC: RECEIVED ORDER TO START this: "+tokens[1]);
+						NodeManager.nLogger.info("-> START Command");
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
@@ -246,6 +256,7 @@ public class NodeManager{
                         core.startDataProcessing();
 					}
 					if(tokens[0].equals("CLOCK")){
+						NodeManager.nLogger.info("-> CLOCK Command");
 						NodeManager.clock = System.currentTimeMillis();
 						out.println("ack");
 					}

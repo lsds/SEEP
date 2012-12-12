@@ -9,8 +9,9 @@ import java.util.Iterator;
 import seep.comm.routing.Router.RelationalOperator;
 import seep.infrastructure.Node;
 
-public class OperatorContext {
+public class OperatorContext implements Serializable{
 
+	private static final long serialVersionUID = 1L;
 	/** VAR -> Location information of this operator and of their upstream and downstream **/
 	private OperatorStaticInformation location;
 	public final DownIter downstreams = new DownIter();

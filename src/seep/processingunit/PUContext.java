@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -57,7 +58,7 @@ public class PUContext {
 		}
 	}
 	
-	public void configureOperatorConnections(ArrayList<Operator> operatorSet) {
+	public void configureOperatorConnections(Collection<Operator> operatorSet) {
 		
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
@@ -73,13 +74,13 @@ public class PUContext {
 			if(ProcessingUnit.mapOP_ID.containsKey(opID)){
 				//Store reference in upstreamTypeConnection, store operator(local) or socket(remote)
 				upstreamTypeConnection.add(ProcessingUnit.mapOP_ID.get(opID));
-				NodeManager.nLogger.info("-> OperatorContext. New local upstream conn to OP-"+opID);
+				NodeManager.nLogger.info("-> PUContext. New local upstream conn to OP-"+opID);
 			}
 		}
 		//remote
 		else if (!(loc.getMyNode().getIp().equals(localIp))){
 			createRemoteCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
-			NodeManager.nLogger.info("-> OperatorContext. New remote upstream conn to OP-"+opID);
+			NodeManager.nLogger.info("-> PUContext. New remote upstream conn to OP-"+opID);
 		}
 	}
 
@@ -91,13 +92,13 @@ public class PUContext {
 			if (ProcessingUnit.mapOP_ID.containsKey(opID)) {
 				//Store reference in downstreamTypeConnection, store operator(local) or socket(remote)
 				downstreamTypeConnection.add(ProcessingUnit.mapOP_ID.get(opID));
-				NodeManager.nLogger.info("-> OperatorContext. New local downstream conn to OP-"+opID);
+				NodeManager.nLogger.info("-> PUContext. New local downstream conn to OP-"+opID);
 			}
 		}
 		else if(!(loc.getMyNode().getIp().equals(localIp))){
 			//If remote, create communication with other point
 			createRemoteCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
-			NodeManager.nLogger.info("-> OperatorContext. New remote downstream conn to OP-"+opID);
+			NodeManager.nLogger.info("-> PUContext. New remote downstream conn to OP-"+opID);
 		}
 	}
 	
@@ -106,6 +107,7 @@ public class PUContext {
 		Socket socketC = null;
 		try{
 			if(type.equals("down")){
+				NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+portD);
 				socketD = new Socket(ip, portD);
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
@@ -118,6 +120,7 @@ public class PUContext {
 				downstreamBuffers.put((portD-40000), buffer);
 			}
 			else if(type.equals("up")){
+				NodeManager.nLogger.info("-> Trying remote upstream conn to: "+ip.toString()+"/"+portC);
 				socketC = new Socket(ip, portC);
 				CommunicationChannel con = new CommunicationChannel(opID, null, socketC, null);
 				upstreamTypeConnection.add(con);
@@ -125,7 +128,17 @@ public class PUContext {
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> OperatorContext. While establishing remote connection "+io.getMessage());
+			NodeManager.nLogger.severe("-> PUContext. While establishing remote connection "+io.getMessage());
+			if(socketD != null){
+				NodeManager.nLogger.severe("-> Data Conn to: "+socketD.toString());
+			}
+			else if(socketC != null){
+				NodeManager.nLogger.severe("-> Control Conn to: "+socketC.toString());
+			}
+			else{
+				NodeManager.nLogger.severe("-> Socket objects are BOTH NULL");
+
+			}
 			io.printStackTrace();
 		}
 	}
@@ -189,7 +202,7 @@ public class PUContext {
 				}
 			}
 		}
-		NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
+		NodeManager.nLogger.info("-> PUContext. Conns of OP-"+opId+" updated");
 	}
 }
 

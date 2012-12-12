@@ -55,6 +55,7 @@ public class ControlHandler implements Runnable{
 			//Establish listening port
     		controlServerSocket = new ServerSocket(connPort);
 			controlServerSocket.setReuseAddress(true);
+			NodeManager.nLogger.info("-> ControlHandler listening in port: "+connPort);
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection

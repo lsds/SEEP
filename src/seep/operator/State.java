@@ -1,7 +1,11 @@
 package seep.operator;
 
-public abstract class State {
+import java.io.Serializable;
 
+public abstract class State implements Serializable{
+
+	private static final long serialVersionUID = 1L;
+	
 	private int ownerId;
 	private String stateTag;
 	private State stateImpl;
@@ -67,9 +71,9 @@ public abstract class State {
 	}
 	
 	public abstract State[] splitState(State toSplit, int key);
-	public abstract int getCounter();
-	public abstract void generateBackupState();
-	public abstract void installState(State is);
-	public abstract long getBackupTime();
+//	public abstract int getCounter();
+//	public abstract void generateBackupState();
+//	public abstract void installState(State is);
+//	public abstract long getBackupTime();
 	
 }

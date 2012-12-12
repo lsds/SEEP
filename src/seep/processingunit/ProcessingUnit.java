@@ -2,6 +2,7 @@ package seep.processingunit;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,6 +83,7 @@ public class ProcessingUnit {
 	}
 	
 	public void newOperatorInstantiation(Operator o) {
+		NodeManager.nLogger.info("-> Instantiating Operator");
 		//Detect the first submitted operator
 		if(mapOP_ID.isEmpty()){
 			mostUpstream = o;
@@ -96,13 +98,24 @@ public class ProcessingUnit {
 		mostDownstream = o;
 	}
 
+	public boolean allOperatorsReady(){
+		for(Operator o : mapOP_ID.values()){
+			if(!o.getReady()){
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	public void setOpReady(int opId) {
+		NodeManager.nLogger.info("-> Setting operator ready");
 		mapOP_ID.get(opId).setReady(true);
 	}
 	
 	public PUContext setUpProcessingUnit(){
 		//Create connections between operators
-		ArrayList<Operator> operatorSet = (ArrayList<Operator>) mapOP_ID.values();
+//		ArrayList<Operator> operatorSet = (ArrayList<Operator>) mapOP_ID.values();
+		Collection<Operator> operatorSet = mapOP_ID.values();
 		ctx.configureOperatorConnections(operatorSet);
 		//Create and configure routers
 		for(Operator op : operatorSet){
@@ -114,14 +127,26 @@ public class ProcessingUnit {
 			r.configureRoutingImpl(op.getOpContext());
 			op.setRouter(r);
 		}
-		//Create and run state backup worker in case this is a stateful machine
-		// FIXME pick the checkpoint interval properly
-		int checkpointInterval = 0;
-		sbw = new StateBackupWorker(this, mapOP_S, checkpointInterval);
-		stateWorker = new Thread(sbw);
-		stateWorker.start();
+		// Create and run state backup worker in case this is a stateful machine
+		if(this.isNodeStateful()){
+			NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
+			sbw = new StateBackupWorker(this, mapOP_S);
+			stateWorker = new Thread(sbw);
+			stateWorker.start();
+		}
 		return ctx;
-	} 
+	}
+	
+	public int getStateCheckpointInterval(){
+		int checkpointInterval = Integer.MAX_VALUE;
+		for(State s : mapOP_S.values()){
+			int currentCheckpointInterval = s.getCheckpointInterval();
+			if(currentCheckpointInterval < checkpointInterval){
+				checkpointInterval = currentCheckpointInterval;
+			}
+		}
+		return checkpointInterval;
+	}
 	
 	/** Runtime methods **/
 	
@@ -250,7 +275,9 @@ public class ProcessingUnit {
 		BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
 		BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
 		// We fill the array with the states
-		ArrayList<State> statesToBackup = (ArrayList<State>) mapOP_S.values();
+		/// \fixme{UGLY STUFF}
+		Collection<State> aux = mapOP_S.values();
+		ArrayList<State> statesToBackup = new ArrayList<State>(aux);
 		for(int i = 0; i < numberOfStates ; i++){
 			State current = statesToBackup.get(i);
 			BackupOperatorState bs = new BackupOperatorState();

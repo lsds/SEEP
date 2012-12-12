@@ -25,15 +25,15 @@ public class StateBackupWorker implements Runnable, Serializable{
 		this.goOn = false;
 	}
 
-	public StateBackupWorker(ProcessingUnit processingUnit, Map<Integer, State> mapOPS, int checkpointInterval){
+	public StateBackupWorker(ProcessingUnit processingUnit, Map<Integer, State> mapOPS){
 		this.processingUnit = processingUnit;
 		this.mapOP_S = mapOPS;
-		this.checkpointInterval = checkpointInterval;
 	}
 	
 	public void run(){
 		initTime = System.currentTimeMillis();
 		processingUnit.checkpointAndBackupState();
+		checkpointInterval = processingUnit.getStateCheckpointInterval();
 //		o.generateBackupState();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;

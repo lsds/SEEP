@@ -175,7 +175,7 @@ return null;
 				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
 			}
 		}
-		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
+		NodeManager.nLogger.info("Routing Engine Configured");
 	}
 	
 	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){

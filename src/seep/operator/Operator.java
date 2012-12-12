@@ -7,19 +7,24 @@ import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.processingunit.ProcessingUnit;
-import seep.runtimeengine.CoreRE;
 
 public abstract class Operator implements Serializable, QuerySpecificationI, EndPoint{
 	
 	private static final long serialVersionUID = 1L;
 	
 	private int operatorId;
-	private OperatorContext opContext = null;
+	private OperatorContext opContext = new OperatorContext();
 	private State state = null;
 	private boolean ready = false;
 	public Operator subclassOperator = null;
 	public ProcessingUnit processingUnit = null;
 	private Router router = null;
+	
+	public Operator(int operatorId){
+		this.operatorId = operatorId;
+		subclassOperator = this;
+		System.out.println("WHO AM I?? : "+subclassOperator.getClass().getName());
+	}
 	
 	public State getState(){
 		return state;
@@ -27,6 +32,10 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	public void setReady(boolean ready){
 		this.ready = ready;
+	}
+	
+	public boolean getReady(){
+		return ready;
 	}
 	
 	public Router getRouter(){
@@ -61,15 +70,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		ArrayList<Integer> targets = router.forward(dt, value, false);
 		processingUnit.sendData(dt, targets);
 	}
-	
-//	public void sendNow(DataTuple dt){
-//		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
-//		processingUnit.sendData(dt, Integer.MIN_VALUE, true);
-//	}
-//	
-//	public void sendNow(DataTuple dt, int value){
-//		processingUnit.sendData(dt, value, true);
-//	}
 	
 /** Implementation of QuerySpecificationI **/
 	
@@ -109,7 +109,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
 	}
 	
-	public void scaleOut(CoreRE toScaleOut){
+	public void scaleOut(Operator toScaleOut){
 		//TODO implement static scaleOut
 	}
 	
@@ -118,5 +118,14 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		return "Operator [operatorId=" + operatorId + ", opContext="
 				+ opContext + "]";
 	}
-
 }
+
+
+//public void sendNow(DataTuple dt){
+//	/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
+//	processingUnit.sendData(dt, Integer.MIN_VALUE, true);
+//}
+//
+//public void sendNow(DataTuple dt, int value){
+//	processingUnit.sendData(dt, value, true);
+//}
