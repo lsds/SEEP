@@ -48,6 +48,10 @@ public abstract class State implements Serializable{
 		return stateImpl;
 	}
 	
+	public State(){
+		// Empty constructor for serialization purposes
+	}
+	
 	public State(State toCopy){
 		//This copy-constructor wont be used for anything more than copying
 		this.checkpointInterval = 0;

@@ -6,8 +6,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
@@ -19,6 +17,7 @@ import java.util.logging.Logger;
 import seep.comm.NodeManagerCommunication;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
+import seep.operator.State;
 import seep.runtimeengine.CoreRE;
 import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
 import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
@@ -34,6 +33,7 @@ public class NodeManager{
 	
 	private CoreRE core = null;
 	
+	//private RuntimeClassLoader rcl = null;
 	private RuntimeClassLoader rcl = null;
 	
 	//Endpoint of the central node
@@ -124,7 +124,7 @@ public class NodeManager{
 		//Get unique identifier for this node
 		int nodeId = nodeDescr.getNodeId();
 		//Initialize node engine ( CoreRE + ProcessingUnit )
-		CoreRE core = new CoreRE(nodeDescr);
+		CoreRE core = new CoreRE(nodeDescr, rcl);
 		//Initialize monitor
 		nodeMonitor.setNodeId(nodeId);
 		monitorT = new Thread(nodeMonitor);
@@ -158,14 +158,20 @@ public class NodeManager{
 //				System.out.println("Reading class descriptor: "+osc.toString());
 				//Lazy load of the required class in case is an operator
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
-					NodeManager.nLogger.info("-> Received Unknown Operator. Using custom class loader to resolve it");
+					NodeManager.nLogger.info("-> Received Unknown Class. Using custom class loader to resolve it");
 					Class<?> baseI = rcl.loadClass(osc.getName());
+					
 //					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
 //					Object[] initargs = new Object[1];
 //					initargs[0] = -666;
 //					Object base = constructor.newInstance(initargs);
 					o = ois.readObject();
-					NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
+					if(o instanceof Operator){
+						NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
+					}
+					else if (o instanceof State){
+						NodeManager.nLogger.info("-> STATE resolved, Class: "+o.getClass().getName());
+					}
 				}
 				else{
 					o = ois.readObject();

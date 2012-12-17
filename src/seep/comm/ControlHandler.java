@@ -2,6 +2,7 @@ package seep.comm;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.ArrayList;
 
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;
@@ -48,7 +49,7 @@ public class ControlHandler implements Runnable{
 		this.connPort = connPort;
 		this.goOn = true;
 	}
-
+	
 	public void run(){
 		ServerSocket controlServerSocket = null;
 		try{
@@ -69,5 +70,4 @@ public class ControlHandler implements Runnable{
 			io.printStackTrace();
 		}
 	}
-	
 }	

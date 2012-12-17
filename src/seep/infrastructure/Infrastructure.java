@@ -25,6 +25,7 @@ import seep.operator.Operator;
 import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.QuerySpecificationI;
+import seep.operator.State;
 import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
@@ -49,6 +50,8 @@ public class Infrastructure {
 	///\todo{Put this in a map{query->structure} and refer back to it properly}
 	/** The following wrapped attributes are specific to a query **/
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
+	// States of the query
+	private ArrayList<State> states = new ArrayList<State>();
 	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
@@ -75,6 +78,7 @@ public class Infrastructure {
 	**/
 	public void loadQuery(QueryPlan qp){
 		ops = qp.getOps();
+		states = qp.getStates();
 		elements = qp.getElements();
 		src = qp.getSrc();
 		snk = qp.getSnk();
@@ -220,6 +224,13 @@ public class Infrastructure {
 		}
 	}
 	
+	public void broadcastState(State s){
+		for(Operator op: ops){
+			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+			bcu.sendObject(node, s);
+		}
+	}
+	
 	public void deploy() throws OperatorDeploymentException {
 
   		//Deploy operators (push operators to nodes)
@@ -235,12 +246,11 @@ public class Infrastructure {
 			init(op);
 		}
 		
-		/**
-		 * 
-		 * Send the states registered in the system so that every worker is aware of it, state is something dynamic and all workers
-		 * should be able to resolve it
-		 * 
-		 * **/
+		//Broadcast the registered states to all the worker nodes, so that these can register the classes in the custom class loader
+		for(State s : states){
+			//Send every state to all the worker nodes
+			broadcastState(s);
+		}
 		
 		//Finally, we tell the nodes to initialize all communications, all is ready to run
 		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();

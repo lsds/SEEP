@@ -149,6 +149,12 @@ public class ProcessingUnit {
 		return checkpointInterval;
 	}
 	
+	public void startDataProcessing(){
+		/// \todo{Find a better way to start the operator...}
+		DataTuple fake = new DataTuple();
+		this.mostUpstream.processData(fake);
+	}
+	
 	/** Runtime methods **/
 	
 	public void processData(DataTuple data){
@@ -169,7 +175,9 @@ public class ProcessingUnit {
 		mostUpstream.processData(data);
 		//Set the lock free again
 		lockState.set(0);
-		lockState.notify();
+		synchronized(lockState){
+			lockState.notify();
+		}
 	}
 
 	public void sendData(DataTuple dt, ArrayList<Integer> targets){

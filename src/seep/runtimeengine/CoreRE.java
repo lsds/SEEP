@@ -21,6 +21,7 @@ import seep.operator.OperatorStaticInformation;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.PUContext;
 import seep.processingunit.ProcessingUnit;
+import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
 /**
 * Operator. This is the class that must inherit any subclass (the developer must inherit this class). It is the basis for building an operator
@@ -31,6 +32,7 @@ public class CoreRE {
 	private WorkerNodeDescription nodeDescr = null;
 	private ProcessingUnit processingUnit = null;
 	private PUContext puCtx = null;
+	private RuntimeClassLoader rcl = null;
 	
 	public int ackCounter = 0;
 	
@@ -56,10 +58,15 @@ public class CoreRE {
 	// Timestamp of the last ack processed by this operator
 	private long ts_ack;
 		
-	public CoreRE(WorkerNodeDescription nodeDescr){
+	public CoreRE(WorkerNodeDescription nodeDescr, RuntimeClassLoader rcl){
 		this.nodeDescr = nodeDescr;
+		this.rcl = rcl;
 		processingUnit = new ProcessingUnit(this);
 		coreProcessLogic = new CoreProcessingLogic();
+	}
+	
+	public RuntimeClassLoader getRuntimeClassLoader(){
+		return rcl;
 	}
 	
 	public WorkerNodeDescription getNodeDescr(){
@@ -143,6 +150,7 @@ public class CoreRE {
 	
 	public void startDataProcessing(){
 		NodeManager.nLogger.info("-> Starting to process data...");
+		processingUnit.startDataProcessing();
 	}
 	
 	public void stopDataProcessing(){
@@ -184,12 +192,6 @@ public class CoreRE {
 
 	public void setBackupUpstreamIndex(int backupUpstreamIndex) {
 		this.backupUpstreamIndex = backupUpstreamIndex;
-	}
-	
-	public CoreRE(int opID){
-//		this.operatorId = opID;
-//		opContext = new RuntimeContext();
-//		opCommonProcessLogic = new CoreProcessingLogic();
 	}
 	
 	//TODO To refine this method...
@@ -606,4 +608,10 @@ as a stateless **/
 //opCommonProcessLogic.configureUpstreamIndex();
 //
 //NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
+//}
+
+//public CoreRE(int opID){
+////	this.operatorId = opID;
+////	opContext = new RuntimeContext();
+////	opCommonProcessLogic = new CoreProcessingLogic();
 //}

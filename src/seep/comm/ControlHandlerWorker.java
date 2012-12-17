@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.NodeManager;
@@ -34,6 +35,7 @@ public class ControlHandlerWorker implements Runnable{
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
+		k.setClassLoader(owner.getRuntimeClassLoader());
 		k.register(ControlTuple.class);
 		return k;
 	}

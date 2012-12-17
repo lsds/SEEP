@@ -7,6 +7,7 @@ import java.util.Map;
 import seep.P;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
+import seep.operator.State;
 
 public class QueryPlan {
 	
@@ -14,6 +15,7 @@ public class QueryPlan {
 	static final int DATA_SOCKET = Integer.parseInt(P.valueFor("dataSocket"));
 	
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
+	private ArrayList<State> states = new ArrayList<State>();
 	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
@@ -23,6 +25,10 @@ public class QueryPlan {
 	
 	public ArrayList<Operator> getOps() {
 		return ops;
+	}
+	
+	public ArrayList<State> getStates(){
+		return states;
 	}
 
 	public Map<Integer, QuerySpecificationI> getElements() {
@@ -50,6 +56,11 @@ public class QueryPlan {
 	public void setSink(Operator snk){
 		NodeManager.nLogger.info("Configured SINK as Operator: "+snk.toString());
 		this.snk = snk;
+	}
+	
+	public void registerState(State s){
+		states.add(s);
+		NodeManager.nLogger.info("Added new State to Query");
 	}
 	
 	public void addOperator(Operator o) {

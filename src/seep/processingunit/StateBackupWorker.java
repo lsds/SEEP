@@ -32,6 +32,12 @@ public class StateBackupWorker implements Runnable, Serializable{
 	
 	public void run(){
 		initTime = System.currentTimeMillis();
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		processingUnit.checkpointAndBackupState();
 		checkpointInterval = processingUnit.getStateCheckpointInterval();
 //		o.generateBackupState();

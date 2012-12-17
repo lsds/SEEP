@@ -145,14 +145,14 @@ public class PUContext {
 	
 	
 	public CommunicationChannel getCCIfromOpId(int opId, String type){
-		if(type.equals('d')){
+		if(type.equals("d")){
 			for(EndPoint ep : downstreamTypeConnection){
 				if(ep.getOperatorId() == opId){
 					return (CommunicationChannel)ep;
 				}
 			}
 		}
-		else if(type.equals('u')){
+		else if(type.equals("u")){
 			for(EndPoint ep : upstreamTypeConnection){
 				if(ep.getOperatorId() == opId){
 					return (CommunicationChannel)ep;
