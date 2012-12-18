@@ -47,6 +47,9 @@ public class Infrastructure {
 	private Deque<Node> nodeStack = new ArrayDeque<Node>();
 	private int numberRunningMachines = 0;
 
+	private boolean systemIsRunning = false;
+	private String pathToQueryDefinition = null;
+	
 	///\todo{Put this in a map{query->structure} and refer back to it properly}
 	/** The following wrapped attributes are specific to a query **/
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
@@ -72,6 +75,10 @@ public class Infrastructure {
 		this.port = listeningPort;
 	}
 	
+	public boolean isSystemRunning(){
+		return systemIsRunning;
+	}
+	
 	/** 
 	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
 	 * and then, for the below methods, indicate the query id that needs to be accessed.
@@ -84,6 +91,14 @@ public class Infrastructure {
 		snk = qp.getSnk();
 		
 		queryToNodesMapping = qp.getMapOperatorToNode();
+	}
+	
+	public void setPathToQueryDefinition(String pathToQueryDefinition){
+		this.pathToQueryDefinition = pathToQueryDefinition;
+	}
+	
+	public String getPathToQueryDefinition(){
+		return pathToQueryDefinition;
 	}
 
 	public MonitorManager getMonitorManager(){
@@ -181,14 +196,64 @@ public class Infrastructure {
 		}
 	}
 	
-	public void setUp(String path) throws CodeDeploymentException{
+	public byte[] getDataFromFile(String pathToQueryDefinition){
 		FileInputStream fis = null;
 		long fileSize = 0;
 		byte[] data = null;
 		try {
 			//Open stream to file
-			NodeManager.nLogger.info("Opening stream to file: "+path);
-			File f = new File(path);
+			NodeManager.nLogger.info("Opening stream to file: "+pathToQueryDefinition);
+			File f = new File(pathToQueryDefinition);
+			fis = new FileInputStream(f);
+			fileSize = f.length();
+			//Read file data
+			data = new byte[(int)fileSize];
+			int readBytesFromFile = fis.read(data);
+			//Check if we have read correctly
+			if(readBytesFromFile != fileSize){
+				NodeManager.nLogger.warning("Mismatch between read bytes and file size");
+			}
+			//Close the stream
+			fis.close();
+		}
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		finally{
+			try {
+				fis.close();
+			} 
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return data;
+	}
+	
+	public void setUp() throws CodeDeploymentException{
+		byte data[] = getDataFromFile(pathToQueryDefinition);
+		//Send data to operators
+		for(Operator op: ops){
+			sendCode(op, data);
+		}
+	}
+	
+	//public void setUp(String path) throws CodeDeploymentException{
+	public void _setUp() throws CodeDeploymentException{
+		NodeManager.nLogger.info("-> Deploying CODE to attached node");
+		FileInputStream fis = null;
+		long fileSize = 0;
+		byte[] data = null;
+		try {
+			//Open stream to file
+			NodeManager.nLogger.info("Opening stream to file: "+pathToQueryDefinition);
+			File f = new File(pathToQueryDefinition);
 			fis = new FileInputStream(f);
 			fileSize = f.length();
 			//Read file data
@@ -283,6 +348,10 @@ public class Infrastructure {
 				bcu.sendObject(n, new Integer ((op).getOperatorId()));
 			}
 		}
+	}
+	
+	public void sendCode(Node n, byte[] data){
+		bcu.sendFile(n, data);
 	}
 	
 	public void sendCode(Operator op, byte[] data){
@@ -387,6 +456,7 @@ public class Infrastructure {
 		//Start clock in sink.
 		bcu.sendObject(snk.getOpContext().getOperatorStaticInformation().getMyNode(), "CLOCK");
 		Infrastructure.nLogger.info("All SOURCES have been notified. Starting system...");
+		systemIsRunning = true;
 	}
 
 	public synchronized Node getNodeFromPool(){

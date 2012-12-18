@@ -22,6 +22,7 @@ public class MasterController {
 	//The current path to the query being submitted. If another query is submitted this is overwritten
 	///\todo{Check if this is an issue or not}
 	private String pathToQueryDefinition = null;
+	private URLClassLoader ucl = null;
 	
     private MasterController() {}
  
@@ -113,12 +114,13 @@ public class MasterController {
 	}
 	
 	public QueryPlan executeComposeFromQuery(String pathToJar, String definitionClass){
-		URLClassLoader ucl = null;
+//		URLClassLoader ucl = null;
 		Class<?> baseI = null;
 		Object baseInstance = null;
 		Method compose = null;
 		QueryPlan qp = null;
 		pathToQueryDefinition = pathToJar;
+		inf.setPathToQueryDefinition(pathToJar);
 		String urlPathToQueryDefinition = "file://" + pathToJar;
 		URL[] urls = new URL[1];
 		try {
@@ -128,13 +130,9 @@ public class MasterController {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		// First time it is created we pass the urls
 		ucl = new URLClassLoader(urls);
-		//Check what the classLoader is loading
-		URL []a = ucl.getURLs();
-		for(int i = 0; i < a.length; i++){
-			System.out.println("Loading URL: "+a[i]);
-		}
-		
+		eiu.setClassLoader(ucl);
 		try {
 			baseI = ucl.loadClass(definitionClass);
 			baseInstance = baseI.newInstance();
@@ -179,17 +177,25 @@ public class MasterController {
 		inf.deployQueryToNodes();
 		//Finally deploy the new submitted query (instantiation, etc)
 		try {
+			// The code is previously sent to the nodes (when these attached to the master)
 			//Send code to nodes (query code)
-			inf.setUp(pathToQueryDefinition);
+			try {
+				inf.setUp();
+			} 
+			catch (CodeDeploymentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			inf.deploy();
 		}
 		catch (OperatorDeploymentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (CodeDeploymentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
+//		catch (CodeDeploymentException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		NodeManager.nLogger.info("-> DONE");
 	}
 	

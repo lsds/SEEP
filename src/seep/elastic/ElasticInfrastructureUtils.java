@@ -3,8 +3,11 @@ package seep.elastic;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
@@ -15,11 +18,13 @@ import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.QueryPlan;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
+import seep.operator.State;
 import seep.operator.StatefulOperator;
+import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.runtimeengine.CoreRE;
 
 
 public class ElasticInfrastructureUtils {
@@ -28,10 +33,16 @@ public class ElasticInfrastructureUtils {
 	private RuntimeCommunicationTools rct = null;
 	private NodeManagerCommunication bcu = null;
 	
+	private URLClassLoader ucl = null;
+	
 	public ElasticInfrastructureUtils(Infrastructure inf){
 		this.inf = inf;
 		this.rct = inf.getRCT();
 		this.bcu = inf.getBCU();
+	}
+	
+	public void setClassLoader(URLClassLoader ucl){
+		this.ucl = ucl;
 	}
 	
 	public boolean promptForUserValidation(int opIdToParallelize){
@@ -254,22 +265,47 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		}
 		try{
 			NodeManager.nLogger.info("-> Registering new OP: "+newOpId+" as OPType: "+className);
-			op = (Operator) Class.forName(className).getConstructor(int.class).newInstance(newOpId);
+			// I use the custom class loader to load the operator, since its code coming from the user side
+			Object instance = null;
+			Constructor<?> constructor = null;
+			// We load the class
+			Class<?> operatorClass = ucl.loadClass(className);
+			// By reflection we extract the constructor for this class
+			Class<?> parameterTypes[] = {int.class, seep.operator.State.class};
+			constructor = operatorClass.getConstructor(parameterTypes);
+			Object[] args = new Object[2];
+			// new replica op id
+			args[0] = newOpId;
+			// null state since it will be inserted on runtime by the system
+			args[1] = null;
+			instance = constructor.newInstance(args);
+			// Cast instance to operator
+			op = (Operator)instance;
+			//op = (Operator) Class.forName(className).getConstructor(int.class).newInstance(newOpId);
 		}
 		catch(ClassNotFoundException cnfe){
 			System.out.println("While looking for className: "+cnfe.getMessage());
-		}
-		catch(NoSuchMethodException nsme){
-			System.out.println("While invoking constructor: "+nsme.getMessage());
+			cnfe.printStackTrace();
 		}
 		catch(InstantiationException ie){
 			System.out.println("While instantiating operator: "+ie.getMessage());
+			ie.printStackTrace();
 		}
 		catch(IllegalAccessException iae){
 			System.out.println("While instantiating...: "+iae.getMessage());
-		}
-		catch(InvocationTargetException ite){
-			System.out.println("While instantiating....: "+ite.getMessage());
+			iae.printStackTrace();
+		} catch (SecurityException se) {
+			System.out.println("While instantiating...: "+se.getMessage());
+			se.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			System.out.println("While instantiating...: "+e.getMessage());
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			System.out.println("While instantiating...: "+e.getMessage());
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			System.out.println("While instantiating...: "+e.getMessage());
+			e.printStackTrace();
 		}
 		inf.addOperator(op);
 		return op;
@@ -298,7 +334,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		String className = null;
 		for(Operator op : ops){
 			if(op.getOperatorId() == opId){
-				className = op.getClass().getName();
+				className = op.getClass().getCanonicalName();
 			}
 		}
 		return className;

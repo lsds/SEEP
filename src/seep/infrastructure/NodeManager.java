@@ -130,8 +130,6 @@ public class NodeManager{
 		monitorT = new Thread(nodeMonitor);
 		monitorT.start();
 		nLogger.info("-> Node Monitor running");
-		//Send bootstrap information
-		bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
 		//Local variables
 		ServerSocket serverSocket = null;
 		PrintWriter out = null;
@@ -145,6 +143,8 @@ public class NodeManager{
 			serverSocket = new ServerSocket(ownPort);
 			NodeManager.nLogger.info("NODEMANAGER: Waiting for incoming requests on port: "+ownPort);
 			Socket clientSocket = null;
+			//Send bootstrap information
+			bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
 			while(listen){
 				//Accept incoming connections
 				clientSocket = serverSocket.accept();

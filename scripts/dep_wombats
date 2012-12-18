@@ -7,9 +7,9 @@ scp config.properties rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
 scp config.properties rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
 
-#scp config.properties rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011

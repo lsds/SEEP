@@ -90,9 +90,14 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 			Node n = new Node(bootIp, port);
 			//add node to the stack
 			inf.addNode(n);
+			if(inf.isSystemRunning()){
+				byte[] data = inf.getDataFromFile(inf.getPathToQueryDefinition());
+				NodeManager.nLogger.info("-> Sending code to recently added worker");
+				inf.sendCode(n, data);
+			}
 		}
 		
-		private void addOperatorCommand(String className, String opID_txt, String opArg) 
+		private void addOperatorCommand(String className, String opID_txt, String opArg)
 		throws SecurityException, NoSuchMethodException, ClassNotFoundException, IllegalArgumentException,
 		InstantiationException, IllegalAccessException, InvocationTargetException{
 			
