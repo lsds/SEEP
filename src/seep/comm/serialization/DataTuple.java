@@ -1,5 +1,7 @@
 package seep.comm.serialization;
 
+import java.util.ArrayList;
+
 public class DataTuple {
 
 	private int tupleSchemaId;
@@ -41,6 +43,73 @@ public class DataTuple {
 		this.tupleSchemaId = tupleSchemaId;
 		this.timestamp = timestamp;
 		this.id = id;
+	}
+	
+	/*Ad-hoc for experimentation*/
+	
+	
+	private int userId;
+	private int itemId;
+	private int rating;
+	private ArrayList userVector;
+	private ArrayList<Integer> partialRecommendationVector;
+	private ArrayList noRec;
+	private int recommendation;
+	
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public int getItemId() {
+		return itemId;
+	}
+
+	public void setItemId(int itemId) {
+		this.itemId = itemId;
+	}
+
+	public int getRating() {
+		return rating;
+	}
+
+	public void setRating(int rating) {
+		this.rating = rating;
+	}
+	
+	public ArrayList getUserVector(){
+		return userVector;
+	}
+	
+	public void setUserVector(ArrayList userVector){
+		this.userVector = userVector;
+	}
+	
+	public ArrayList<Integer> getPartialRecommendationVector(){
+		return partialRecommendationVector;
+	}
+	
+	public void setPartialRecommendationVector(ArrayList<Integer> partialRecommendationVector){
+		this.partialRecommendationVector = partialRecommendationVector;
+	}
+	
+	public ArrayList getNoRec(){
+		return noRec;
+	}
+	
+	public void setNoRec(ArrayList noRec){
+		this.noRec = noRec;
+	}
+	
+	public int getRecommendation(){
+		return recommendation;
+	}
+	
+	public void setRecommendation(int recommendation){
+		this.recommendation = recommendation;
 	}
 	
 //	private int second;

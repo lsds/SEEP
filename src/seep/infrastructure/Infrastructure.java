@@ -442,7 +442,6 @@ public class Infrastructure {
 				}
 			}
 		}
-
 	}	
 
 	public void start() throws ESFTRuntimeException{

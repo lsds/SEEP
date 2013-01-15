@@ -11,11 +11,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import seep.Main;
 import seep.P;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
-import seep.runtimeengine.CoreRE;
 
 /**
 * ManagerWorker. This class implements runnable, it is in charge of listening to events from the running system.

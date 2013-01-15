@@ -75,7 +75,15 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		processingUnit.sendData(dt, targets);
 	}
 	
-/** Implementation of QuerySpecificationI **/
+	/** Experimental methods **/
+	
+	public boolean upstreamJoinOnBarrier(){
+		// TODO
+		return false;
+	}
+	
+	
+	/** Implementation of QuerySpecificationI **/
 	
 	public int getOperatorId(){
 		return operatorId;
