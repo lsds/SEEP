@@ -34,6 +34,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
+		k.setClassLoader(owner.getRuntimeClassLoader());
 		k.register(DataTuple.class);
 		k.register(BatchDataTuple.class);
 		return k;

@@ -89,6 +89,7 @@ public class CoreRE {
 		processingUnit.setOpReady(opId);
 		if(processingUnit.allOperatorsReady()){
 			NodeManager.nLogger.info("-> All operators in this unit are ready. Initializing communications...");
+			processingUnit.initOperators();
 			initializeCommunications();
 		}
 	}

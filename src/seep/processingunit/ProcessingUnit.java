@@ -155,6 +155,13 @@ public class ProcessingUnit {
 		this.mostUpstream.processData(fake);
 	}
 	
+	public void initOperators(){
+		for(Operator o : mapOP_ID.values()){
+			// FIXME: check what exceptions may arise here and handle them properly
+			o.setUp();
+		}
+	}
+	
 	/** Runtime methods **/
 	
 	public void processData(DataTuple data){
@@ -202,6 +209,13 @@ public class ProcessingUnit {
 				aioobe.printStackTrace();
 			}
 		}
+	}
+	
+	/** System configuration settings used by the developers **/
+	
+	public void disableCheckpointForOperator(int opId){
+		// Just remove the state to backup
+		mapOP_S.remove(opId);
 	}
 	
 	public synchronized void stopConnection(int opID) {
@@ -282,30 +296,34 @@ public class ProcessingUnit {
 	
 	private void backupState(){
 		int numberOfStates = mapOP_S.values().size();
-		//Create the array of backup states
-		BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
-		BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
-		// We fill the array with the states
-		/// \fixme{UGLY STUFF}
-		Collection<State> aux = mapOP_S.values();
-		ArrayList<State> statesToBackup = new ArrayList<State>(aux);
-		for(int i = 0; i < numberOfStates ; i++){
-			State current = statesToBackup.get(i);
-			BackupOperatorState bs = new BackupOperatorState();
-			bs.setOpId(current.getOwnerId());
-			bs.setState(current);
-			bs.setStateClass(current.getStateTag());
-			backupState[i] = bs;
-		}
-		NodeManager.nLogger.info("-> Backuping the "+backupState.length+" states in this node");
-		//Build the ControlTuple msg
-		backupNodeState.setBackupOperatorState(backupState);
-		ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);
-		//Finally send the backup state
+		// If there is something to backup...
+		// FIXME: this should anyway be avoided by controlling whether the statebackupworker needs to execute, according to this value
+		if(numberOfStates > 0){
+			//Create the array of backup states
+			BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
+			BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
+			// We fill the array with the states
+			/// \fixme{UGLY STUFF}
+			Collection<State> aux = mapOP_S.values();
+			ArrayList<State> statesToBackup = new ArrayList<State>(aux);
+			for(int i = 0; i < numberOfStates ; i++){
+				State current = statesToBackup.get(i);
+				BackupOperatorState bs = new BackupOperatorState();
+				bs.setOpId(current.getOwnerId());
+				bs.setState(current);
+				bs.setStateClass(current.getStateTag());
+				backupState[i] = bs;
+			}
+			NodeManager.nLogger.info("-> Backuping the "+backupState.length+" states in this node");
+			//Build the ControlTuple msg
+			backupNodeState.setBackupOperatorState(backupState);
+			ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);
+			//Finally send the backup state
 //System.out.println("Sending BACKUP to : "+backupUpstreamIndex+" OPID: "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
-		owner.sendBackupState(ctB);
-//		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
-//		ack(currentTsData);
+			owner.sendBackupState(ctB);
+//			controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
+//			ack(currentTsData);
+		}
 	}
 	
 	public void installState(InitOperatorState[] initOperatorState){

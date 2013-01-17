@@ -57,6 +57,10 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public void setProcessingUnit(ProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
 	}
+	
+	/** Mandatory methods to implement by developers **/
+	
+	public abstract void setUp();
 
 	public abstract void processData(DataTuple dt);
 	
@@ -73,6 +77,13 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt, value, false);
 		processingUnit.sendData(dt, targets);
+	}
+	
+	/** System Configuration Settings **/
+	
+	public void disableCheckpointing(){
+		// Disable checkpointing the state for operator with operatorId
+		processingUnit.disableCheckpointForOperator(operatorId);
 	}
 	
 	/** Experimental methods **/
