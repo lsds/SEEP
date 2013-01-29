@@ -7,6 +7,7 @@ public class DataConsumer implements Runnable {
 	private CoreRE owner;
 	private InputQueue inputQueue;
 	private boolean doWork = true;
+	private boolean block = false;
 	
 	public void setDoWork(boolean doWork){
 		this.doWork = doWork;
@@ -20,11 +21,16 @@ public class DataConsumer implements Runnable {
 	@Override
 	public void run() {
 		while(doWork){
-//			System.out.println("CONSUMER->going to pull data");
 			DataTuple data = inputQueue.pull();
-//			System.out.println("CONSUMER->Data pulled");
-			//owner.processData(data);
-			owner.forwardData(data);
+			if(owner.checkSystemStatus()){
+				owner.forwardData(data);
+			}
+			else{
+				System.out.println("Trash in DATA CONSUMER");
+			}
 		}
 	}
+	
+	/** RUNTIME CONTROL METHODS **/
+	
 }

@@ -1,8 +1,13 @@
 package seep.infrastructure;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -14,11 +19,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+
 import seep.Main;
 import seep.P;
 import seep.comm.NodeManagerCommunication;
 import seep.comm.RuntimeCommunicationTools;
+import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.ControlTuple;
+import seep.comm.serialization.DataTuple;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.monitor.MonitorManager;
 import seep.operator.Operator;
@@ -244,53 +254,21 @@ public class Infrastructure {
 		}
 	}
 	
-	//public void setUp(String path) throws CodeDeploymentException{
-	public void _setUp() throws CodeDeploymentException{
-		NodeManager.nLogger.info("-> Deploying CODE to attached node");
-		FileInputStream fis = null;
-		long fileSize = 0;
-		byte[] data = null;
-		try {
-			//Open stream to file
-			NodeManager.nLogger.info("Opening stream to file: "+pathToQueryDefinition);
-			File f = new File(pathToQueryDefinition);
-			fis = new FileInputStream(f);
-			fileSize = f.length();
-			//Read file data
-			data = new byte[(int)fileSize];
-			int readBytesFromFile = fis.read(data);
-			//Check if we have read correctly
-			if(readBytesFromFile != fileSize){
-				NodeManager.nLogger.warning("Mismatch between read bytes and file size");
-			}
-			//Send data to operators
-			for(Operator op: ops){
-				sendCode(op, data);
-			}
-			//Close the stream
-			fis.close();
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		finally{
-			try {
-				fis.close();
-			} 
-			catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+	public void setUp(Operator op){
+		byte data[] = getDataFromFile(pathToQueryDefinition);
+		NodeManager.nLogger.info("Sending code to new op: "+op.getOperatorId());
+		sendCode(op, data);
 	}
 	
 	public void broadcastState(State s){
 		for(Operator op: ops){
+			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+			bcu.sendObject(node, s);
+		}
+	}
+	
+	public void broadcastState(Operator op){
+		for(State s : states){
 			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
 			bcu.sendObject(node, s);
 		}
@@ -625,6 +603,48 @@ public class Infrastructure {
 		return null;
 	}
 	
+	public void parseFileForNetflix() {
+		File f = new File("data.txt");
+		File o = new File("data.bin");
+		
+		Kryo k = new Kryo();
+		k.register(DataTuple.class);
+		k.register(BatchDataTuple.class);
+		try {
+			//OUT
+			FileOutputStream fos = new FileOutputStream(o);
+			Output output = new Output(fos);
+			
+			//IN
+			FileReader fr = new FileReader(f);
+			BufferedReader br = new BufferedReader(fr);
+			String currentLine = null;
+			
+			//PARSE
+			while((currentLine = br.readLine()) != null){
+				DataTuple dt = new DataTuple();
+				String[] tokens = currentLine.split(",");
+				dt.setUserId(Integer.parseInt(tokens[1]));
+				dt.setItemId(Integer.parseInt(tokens[0]));
+				dt.setRating(Integer.parseInt(tokens[2]));
+				
+				k.writeObject(output, dt);
+				//Flush the buffer to the stream
+				output.flush();
+			}
+			fos.close();
+			br.close();
+		} 
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	/** THIS FUNCTIONS WILL BE REPLACED WITH THE ACTUAL IDENTIFIER OF THE QUERY THE OP IS PART OF  **/
 	
 	public void addOperator(Operator o) {
@@ -632,5 +652,4 @@ public class Infrastructure {
 		elements.put(o.getOperatorId(), o);
 		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
-	
 }

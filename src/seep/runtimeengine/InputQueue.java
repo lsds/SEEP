@@ -47,4 +47,21 @@ public class InputQueue {
 		}
 		return null;
 	}
+	
+	public void clean(){
+		try {
+			MetricsReader.eventsInputQueue.dec();
+			inputQueue.take();
+		} 
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("INPUT QUEUE SIZE BEFORE CLEANING: "+MetricsReader.eventsInputQueue.getCount());
+		System.out.println("BEFORE- REAL SIZE OF INPUT QUEUE: "+inputQueue.size());
+		MetricsReader.eventsInputQueue.clear();
+		inputQueue.clear();
+		System.out.println("AFTER- REAL SIZE OF INPUT QUEUE: "+inputQueue.size());
+		System.out.println("INPUT QUEUE SIZE AFTER CLEANING: "+MetricsReader.eventsInputQueue.getCount());
+	}
 }

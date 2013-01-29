@@ -129,6 +129,12 @@ public class ControlTuple {
 		this.initRI = initRI;
 	}
 	
+	public ControlTuple makeGenericAck(int nodeId){
+		this.type = CoreRE.ControlTupleType.ACK;
+		this.ack = new Ack(nodeId, 0);
+		return this;
+	}
+	
 	public ControlTuple makeStateAck(int nodeId, int mostUpstreamOpId){
 		this.type = CoreRE.ControlTupleType.STATE_ACK;
 		this.stateAck = new StateAck(nodeId, mostUpstreamOpId);
@@ -190,9 +196,9 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInitNodeState(int nodeId, InitOperatorState[] initOperatorState){
+	public ControlTuple makeInitNodeState(int senderOperatorId, int nodeId, InitOperatorState[] initOperatorState){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
-		this.initNodeState = new InitNodeState(nodeId, initOperatorState);
+		this.initNodeState = new InitNodeState(senderOperatorId, nodeId, initOperatorState);
 		return this;
 	}
 	

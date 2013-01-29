@@ -8,22 +8,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 import seep.buffer.Buffer;
-import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
-import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.InitNodeState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.infrastructure.NodeManager;
-import seep.operator.EndPoint;
 import seep.operator.State;
-import seep.operator.StateSplitI;
-import seep.operator.StatefulOperator;
-import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.PUContext;
 import seep.processingunit.ProcessingUnit;
@@ -59,29 +54,8 @@ public class CoreProcessingLogic implements Serializable{
 	public void storeBackupRI(BackupRI backupRI){
 		//Get operator Class
 		String operatorType = backupRI.getOperatorType();
-		
-System.out.println("#################");
-System.out.println("#################");
-System.out.println("###### PREV");
-if(backupRoutingInformation.containsKey(operatorType)){
-System.out.println("TYPE: "+backupRoutingInformation.get(operatorType));
-}
-else{
-System.out.println("NULL");
-}
 		//Save in the provided map the backupRI for this upstream, if there are replicas then we will have replicated info here...
 		backupRoutingInformation.put(operatorType, backupRI);
-		
-		
-System.out.println("###### POST");
-if(backupRoutingInformation.containsKey(operatorType)){
-System.out.println("OPID: "+backupRoutingInformation.get(operatorType));
-}
-else{
-System.out.println("NULL");
-}
-System.out.println("#################");
-System.out.println("#################");
 	}
 	
 	/**  installRI receives a message with the routing information that this operator must implement 
@@ -131,31 +105,6 @@ System.out.println("KEY: "+operatorType);
 		owner.getControlDispatcher().sendUpstream(ct, upstreamIndex);
 	}
 	
-	/*Checkpoint the state that it has received in the corresponding buffer (The buffer of the connection from which it received the state)*/
-	/// \todo{there is a double check (unnecesary) of the nature of downStream variable}
-//	public synchronized void processBackupState(BackupOperatorState ct){
-//long a = System.currentTimeMillis();
-//		//Get operator id
-//		int opId = ct.getOpId();
-//		//Get buffer for this operator and save the backupState of downstream operator
-//		CommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
-//		if (downStream instanceof CommunicationChannel) {
-//			CommunicationChannel connection = (CommunicationChannel) downStream;
-////System.out.println("comparing "+connection.reconf_ts+" with: "+ct.getTsE());
-//			if (connection.reconf_ts <= ct.getTs_e()) {
-//				//(downstreamBuffers.get(opId)).replaceBackupState(ct);
-////				System.out.println("replacing backupState");
-//				puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
-//			}
-//		}
-//		else{
-//			/// \todo{for local operators (residing in same machine) provide a tagging interface so that all operators have a structure in downloadType vector<>}
-//			System.out.println("############ processBackupSTATE NON CCI");
-//		}
-//long e = System.currentTimeMillis();
-////System.out.println("### Process backup state: "+(e-a));
-//	}
-	
 	public void processBackupState(BackupNodeState ct){
 		int opId = ct.getUpstreamOpId();
 		CommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
@@ -168,22 +117,6 @@ System.out.println("KEY: "+operatorType);
 			NodeManager.nLogger.warning("-> Received state generated after the beginning of the reconfigure process");
 		}
 	}
-
-//	@Deprecated
-//	private void startReplayer( CommunicationChannel oi ) {
-//		oi.setSharedIterator(oi.getBuffer().iterator());
-//		//send state and this would trigger the replay buffer
-//		StateReplayer replayer = new StateReplayer(oi);
-//		Thread replayerT = new Thread(replayer);
-//		NodeManager.nLogger.info("stateReplayer running");
-//		replayerT.start();
-//	}
-//		
-//	@Deprecated
-//	public void startReplayer(int opID) {
-//		CommunicationChannel oi = puCtx.getCCIfromOpId(opID, "d");
-//		startReplayer(oi);
-//	}
 
 	//Send ACK tuples to the upstream nodes and update TS_ACK
 	/// \todo{now this method is syncrhonized, with ACK Tile mechanism we can avoid most of the method, but it is not finished yet}
@@ -239,7 +172,7 @@ System.out.println("KEY: "+operatorType);
 		
 		BackupNodeState backupNodeState = puCtx.getBuffer(oldOpId).getBackupState();
 		BackupOperatorState backupOperatorState = backupNodeState.getBackupOperatorStateWithOpId(oldOpId);
-		State stateToSplit = backupOperatorState.getState().getStateImpl();
+		State stateToSplit = backupOperatorState.getState();
 		int stateCheckpointInterval = stateToSplit.getCheckpointInterval();
 		String stateTag = stateToSplit.getStateTag();
 		long data_ts = stateToSplit.getData_ts();
@@ -381,9 +314,10 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 		InitOperatorState[] initOperatorState = new InitOperatorState[backupOperatorState.length];
 		for(int i = 0; i< initOperatorState.length; i++){
 			BackupOperatorState current = backupOperatorState[i];
-			initOperatorState[i] = new InitOperatorState(current.getOpId(), current.getState());
+			// Create initOperatorState with the id of the operator that will own the state and the state itself
+			initOperatorState[i] = new InitOperatorState(current.getState().getOwnerId(), current.getState());
 		}
-		ControlTuple ct = new ControlTuple().makeInitNodeState(owner.getNodeDescr().getNodeId(), initOperatorState);
+		ControlTuple ct = new ControlTuple().makeInitNodeState(pu.getMostDownstream().getOperatorId(), owner.getNodeDescr().getNodeId(), initOperatorState);
 		
 		try {
 			owner.getControlDispatcher().initStateMessage(ct, controlDownstreamSocket.getOutputStream());
@@ -397,34 +331,23 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 	public void processInitState(InitNodeState ct){
 		//Reconfigure backup stream index
 		//Pick one of the opIds of the message
-		int opId = ct.getInitOperatorState()[0].getOpId();
+		int opId = ct.getSenderOperatorId();
 		owner.manageBackupUpstreamIndex(opId);
-System.out.println("CONTROL THREAD: changing operator status to initialising");
 		//Clean the data processing channel from remaining tuples in old batch
+		NodeManager.nLogger.info("Changing to INITIALISING STATE, stopping all incoming comm");
 		pu.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
-//		stopDataProcessingChannel();
-		//Manage ts...
+//		pu.cleanInputQueue();
 		//Give state to processing unit for it to manage it
 		pu.installState(ct.getInitOperatorState());
-		
-//		if (subclassOperator instanceof StatefulOperator){
-//			NodeManager.nLogger.info("-> Installing INIT state");
-//			((StatefulOperator)subclassOperator).installState(ct.getState());
-//			NodeManager.nLogger.info("-> State has been installed");
-//		}
-//		else{
-//			NodeManager.nLogger.info("-> Stateless operator, not installing state");
-//		}
-		
-		pu.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
-System.out.println("CONTROL THREAD: restarting data processing...");
 		//Once the state has been installed, recover dataProcessingChannel
-//		restartDataProcessingChannel();
 		
 		//Send a msg to ask for the rest of information. (tuple replaying)
 		NodeManager.nLogger.info("-> Sending STATE_ACK");
 		ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getMostUpstream().getOperatorId());
 		owner.getControlDispatcher().sendAllUpstreams(rb);
+//		pu.cleanInputQueue();
+		pu.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
+		System.out.println("Changing to NORMAL mode, recovering data processing");
 	}
 	
 	

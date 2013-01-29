@@ -178,53 +178,41 @@ return null;
 		NodeManager.nLogger.info("Routing Engine Configured");
 	}
 	
+	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		for(Integer lt : logicalTargets){
+			targets = downstreamRoutingImpl.get(lt).routeToAll(targets);
+		}
+		return targets;
+	}
+	
+	public ArrayList<Integer> forwardToAllDownstream(DataTuple dt){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		if(requiresQueryData){
+			ArrayList<Integer> logicalTargets = routeLayerOne(dt, -1);
+			targets = routeToAll(logicalTargets);
+		}
+		else{
+			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).routeToAll();
+		}
+		return targets;
+	}
+	
 	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		//If it is necessary to query data to guess (logic)downstream
 		if(requiresQueryData){
-//			System.out.println("REQUIRES QUERY DATA");
 			ArrayList<Integer> logicalTargets = routeLayerOne(dt, value);
-//			System.out.println("LOGICAL TARGETS: "+logicalTargets.size());
 			targets = routeLayerTwo(logicalTargets, value);
 		}
 		else{
-//			System.out.println("NO query data");
-			//Otherwise, we use the default RoutingImpl
-//			/**TSTING **/
-//			
-//			RoutingStrategyI rsi = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
-//			if(rsi instanceof StatelessRoutingImpl){
-//				System.out.println("STATELESS DOWNSTREAM");
-//			}
-//			else if (rsi instanceof StatefulRoutingImpl){
-//				System.out.println("STATEFUL DOWNSTREAM");
-//				ArrayList<Integer> keys = ((StatefulRoutingImpl)rsi).getDownstreamNodeKeys();
-//				if(!keys.isEmpty()){
-//					System.out.println("KEYS: "+keys.toString());
-//				}
-//				else{
-//					System.out.println("KEYS is empty");
-//				}
-//				
-//				ArrayList<Integer> indexes = ((StatefulRoutingImpl)rsi).getKeyToDownstreamRealIndex();
-//				if(!indexes.isEmpty()){
-//					System.out.println("INDEXES: "+indexes.toString());
-//				}
-//				else{
-//					System.out.println("INDEXES is empty");
-//				}
-//			}
-
-//			/**TSTING **/
-			
 			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
-//			targets = routingImpl.route(value);
 		}
 		return targets;
 	}
 	
 	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
-		int contentValue = 0;
+		int contentValue = -1;
 		try {
 			contentValue = (Integer)queryFunction.invoke(dt);
 		}

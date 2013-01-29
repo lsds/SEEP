@@ -107,12 +107,18 @@ public class ElasticInfrastructureUtils {
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
 		NodeManager.nLogger.info("Created new Op: "+newOp.toString());
+		// Send query to the new node
+		inf.setUp(newOp);
 		//deploy new Operator
 		//conn to new node
 		inf.deploy(newOp);
 		//ConfigureCommunications
 		//conn to new node
 		inf.init(newOp);
+		// Make the new operator aware of the states in the system
+		inf.broadcastState(newOp);
+		// Send the SET-RUNTIME to the new op
+		inf.initRuntime(newOp);
 		//add upstream conn
 		//conn to down nodes
 /**WAIT FOR ANSWER**/
@@ -132,6 +138,7 @@ public class ElasticInfrastructureUtils {
 	}
 	
 	private void sendSystemConfiguredToReplica(Operator replica){
+		NodeManager.nLogger.info("COMMAND: system_ready to: "+replica.getOperatorId());
 		inf.deployConnection("system_ready", replica, null, "");
 	}
 	
@@ -159,7 +166,7 @@ public class ElasticInfrastructureUtils {
 					opIds.add(opIdToParallelize);
 					opIds.add(newOpId);
 					ControlTuple ct = new ControlTuple().makeResume(opIds);
-					
+					NodeManager.nLogger.info("COMMAND: resume to: "+upstream.opID());
 					rct.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}
 			}
@@ -192,7 +199,7 @@ public class ElasticInfrastructureUtils {
 					isStateful = true;
 				}
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
-					NodeManager.nLogger.info("-> scale_out to: "+upstream.opID());
+					NodeManager.nLogger.info("COMMAND: scale_out to: "+upstream.opID());
 					
 					ControlTuple ct = new ControlTuple().makeScaleOut(opIdToParallelize, newOpId, isStateful);
 					
@@ -242,6 +249,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		for(PlacedOperator op : newOp.getOpContext().upstreams){
 			//deploy new connection with all of them?
 			opToContact = inf.getElements().get(op.opID());
+			NodeManager.nLogger.info("COMMAND: add_downstream to: "+op.opID());
 			inf.deployConnection("add_downstream", opToContact, opToAdd, newOp.getClass().getName());
 		}
 	}
@@ -252,6 +260,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		for(PlacedOperator op : newOp.getOpContext().downstreams){
 			opToContact = inf.getElements().get(op.opID());
 			//the operator that must change, the id of the new replica, the type of operator splitting
+			NodeManager.nLogger.info("COMMAND: add_upstream to: "+op.opID());
 			inf.deployConnection("add_upstream", opToContact, opToAdd, newOp.getClass().getName());
 		}
 	}
@@ -276,7 +285,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			Object[] args = new Object[2];
 			// new replica op id
 			args[0] = newOpId;
-			// null state since it will be inserted on runtime by the system
+			// null state. the real will be inserted on runtime. Check this in server to handle potential error
 			args[1] = null;
 			instance = constructor.newInstance(args);
 			// Cast instance to operator

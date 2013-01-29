@@ -106,6 +106,10 @@ public class OperatorContext implements Serializable{
 		return downstream.size(); 
 	}
 	
+	public int getUpstreamSize(){
+		return upstream.size();
+	}
+	
 	public OperatorStaticInformation getDownstreamLocation(int opID) {
 		return downstream.get(findOpIndex(opID, connectionsD));
 	}

@@ -14,12 +14,13 @@ import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
-import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.State;
+import seep.operator.StatefulOperator;
 import seep.runtimeengine.CommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
@@ -92,7 +93,11 @@ public class ProcessingUnit {
 		mapOP_ID.put(o.getOperatorId(), o);
 		//If the operator is stateful, we extract its state and store it in the provisioned map
 		if(o instanceof StatefulOperator){
-			mapOP_S.put(o.getOperatorId(), o.getState());
+			// This may happen when operators are added dynamically and no human has added a state
+			o.getState();
+			if(o.getState() != null){
+				mapOP_S.put(o.getOperatorId(), o.getState());
+			}
 		}
 		// Overwritten till last instantiation. If there are movements within the same node, then this wont be valid
 		mostDownstream = o;
@@ -188,9 +193,9 @@ public class ProcessingUnit {
 	}
 
 	public void sendData(DataTuple dt, ArrayList<Integer> targets){
-		for(Integer target : targets){
+		for(int i = 0; i<targets.size(); i++){
+			int target = targets.get(i);
 			try{
-//			System.out.println("TARGET: "+target.toString());
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE
 				if(dest instanceof CommunicationChannel){
@@ -209,6 +214,12 @@ public class ProcessingUnit {
 				aioobe.printStackTrace();
 			}
 		}
+	}
+	
+	public void cleanInputQueue(){
+		System.out.println("Going to clean");
+		owner.cleanInputQueue();
+		System.out.println("Returning from cleaning...");
 	}
 	
 	/** System configuration settings used by the developers **/
@@ -305,10 +316,14 @@ public class ProcessingUnit {
 			// We fill the array with the states
 			/// \fixme{UGLY STUFF}
 			Collection<State> aux = mapOP_S.values();
+			// Not using constructor with 
 			ArrayList<State> statesToBackup = new ArrayList<State>(aux);
+			
+			System.out.println("States to backup size: "+statesToBackup.size());
 			for(int i = 0; i < numberOfStates ; i++){
 				State current = statesToBackup.get(i);
 				BackupOperatorState bs = new BackupOperatorState();
+				// current is null in a parallelized operator
 				bs.setOpId(current.getOwnerId());
 				bs.setState(current);
 				bs.setStateClass(current.getStateTag());
@@ -327,16 +342,21 @@ public class ProcessingUnit {
 	}
 	
 	public void installState(InitOperatorState[] initOperatorState){
+		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
+		NodeManager.nLogger.info("Installing state in the operator");
 		// Simply replace the state and update operator references
+		System.out.println("I receive "+initOperatorState.length+" states to recover");
 		for(int i = 0; i < initOperatorState.length; i++){
 			InitOperatorState current = initOperatorState[i];
 			int stateOwnerId = current.getOpId();
+			System.out.println("This state ownerID is:  "+stateOwnerId);
 			State state = current.getState();
 			// Replace state
 			mapOP_S.put(stateOwnerId, state);
 			// And reference in operator
 			((StatefulOperator)mapOP_ID.get(stateOwnerId)).replaceState(state);
 		}
+		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	
 	
@@ -368,14 +388,16 @@ public class ProcessingUnit {
 		/** Dynamic change of operator information **/
 	
 	public void addDownstream(int opId, OperatorStaticInformation location){
-		OperatorContext opContext = mapOP_ID.get(opId).getOpContext();
+		// First pick the most downstream operator, and add the downstream to that one
+		OperatorContext opContext = mapOP_ID.get(mostDownstream.getOperatorId()).getOpContext();
 		opContext.addDownstream(opId);
 		opContext.setDownstreamOperatorStaticInformation(opId, location);
 		ctx.configureNewDownstreamCommunication(opId, location);
 	}
 	
 	public void addUpstream(int opId, OperatorStaticInformation location){
-		OperatorContext opContext = mapOP_ID.get(opId).getOpContext();
+		// First pick the most upstream operator, and add the upstream to that one
+		OperatorContext opContext = mapOP_ID.get(mostUpstream.getOperatorId()).getOpContext();
 		opContext.addUpstream(opId);
 		opContext.setUpstreamOperatorStaticInformation(opId, location);
 		ctx.configureNewUpstreamCommunication(opId, location);

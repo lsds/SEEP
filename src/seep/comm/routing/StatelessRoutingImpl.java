@@ -98,6 +98,17 @@ public class StatelessRoutingImpl implements RoutingStrategyI{
 			//return something cause interface implementation...
 			return -1;
 		}
+
+		@Override
+		public ArrayList<Integer> routeToAll(ArrayList<Integer> targets) {
+			return new ArrayList<Integer>(virtualIndexToRealIndex.values());
+		}
+
+		@Override
+		public ArrayList<Integer> routeToAll() {
+			ArrayList<Integer> targets = new ArrayList<Integer>();
+			return routeToAll(targets);
+		}
 	
 //		public StatelessRoutingImpl(int splitWindow){
 //		//value minus one to take into consideration value = 0

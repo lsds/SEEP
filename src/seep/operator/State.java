@@ -75,9 +75,4 @@ public abstract class State implements Serializable{
 	}
 	
 	public abstract State[] splitState(State toSplit, int key);
-//	public abstract int getCounter();
-//	public abstract void generateBackupState();
-//	public abstract void installState(State is);
-//	public abstract long getBackupTime();
-	
 }

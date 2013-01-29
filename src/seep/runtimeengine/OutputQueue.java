@@ -10,7 +10,6 @@ import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
-import seep.operator.Operator;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -90,12 +89,12 @@ public class OutputQueue {
 //				if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.getTick) > ExecutionConfiguration.maxLatencyAllowed ){
 				if(channelRecord.getChannelBatchSize() == 0){
 					BatchDataTuple msg = channelRecord.getBatch();
-							channelRecord.setTick(currentTime);
+					channelRecord.setTick(currentTime);
 					
 					k.writeObject(output, msg);
 					//Flush the buffer to the stream
 					output.flush();
-						channelRecord.cleanBatch();
+					channelRecord.cleanBatch();
 					
 					if(P.valueFor("eftMechanismEnabled").equals("true")){
 //							buffer.save(msg);

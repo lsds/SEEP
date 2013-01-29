@@ -4,7 +4,15 @@ public class InitNodeState {
 
 	private int nodeId;
 	private InitOperatorState[] initOperatorState;
+	//
+	private int senderOperatorId;
 	
+	public int getSenderOperatorId() {
+		return senderOperatorId;
+	}
+	public void setSenderOperatorId(int senderOperatorId) {
+		this.senderOperatorId = senderOperatorId;
+	}
 	public int getNodeId() {
 		return nodeId;
 	}
@@ -18,7 +26,10 @@ public class InitNodeState {
 		this.initOperatorState = initOperatorState;
 	}
 	
-	public InitNodeState(int nodeId, InitOperatorState[] initOperatorState){
+	public InitNodeState(){	}
+	
+	public InitNodeState(int senderOperatorId, int nodeId, InitOperatorState[] initOperatorState){
+		this.senderOperatorId = senderOperatorId;
 		this.nodeId = nodeId;
 		this.initOperatorState = initOperatorState;
 	}

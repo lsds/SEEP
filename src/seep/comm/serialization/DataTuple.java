@@ -51,10 +51,19 @@ public class DataTuple {
 	private int userId;
 	private int itemId;
 	private int rating;
+	private boolean requiresUpdate;
 	private ArrayList userVector;
-	private ArrayList<Integer> partialRecommendationVector;
+	private ArrayList partialRecommendationVector;
 	private ArrayList noRec;
 	private int recommendation;
+	
+	public boolean getRequiresUpdate(){
+		return requiresUpdate;
+	}
+	
+	public void setRequiresUpdate(boolean requiresUpdate){
+		this.requiresUpdate = requiresUpdate;
+	}
 	
 	public int getUserId() {
 		return userId;
@@ -88,11 +97,11 @@ public class DataTuple {
 		this.userVector = userVector;
 	}
 	
-	public ArrayList<Integer> getPartialRecommendationVector(){
+	public ArrayList getPartialRecommendationVector(){
 		return partialRecommendationVector;
 	}
 	
-	public void setPartialRecommendationVector(ArrayList<Integer> partialRecommendationVector){
+	public void setPartialRecommendationVector(ArrayList partialRecommendationVector){
 		this.partialRecommendationVector = partialRecommendationVector;
 	}
 	

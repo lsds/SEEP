@@ -9,6 +9,8 @@ public class BackupOperatorState {
 	private State state;
 	private String stateClass;
 	
+	public BackupOperatorState(){}
+	
 	public void setStateClass(String stateClass){
 		this.stateClass = stateClass;
 	}

@@ -212,20 +212,12 @@ public class MonitorManager implements Runnable{
 		}
 		
 		private synchronized void decider(int opId, long queueSize){
-		
-			
-//			try {
-//				Thread.sleep(2000);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
 			Operator toScale = inf.getOperatorById(opId);
 			
 			if(!scalingOut){
 				synchronized(inf){
 					scalingOut = true;
-					inf.getEiu().alert(opId);
+//					inf.getEiu().alert(opId);
 					scalingOut = false;
 				}
 			}
@@ -234,7 +226,7 @@ public class MonitorManager implements Runnable{
 					if(!scalingOut){
 						synchronized(inf){
 							scalingOut = true;
-							inf.getEiu().alert(opId);
+//							inf.getEiu().alert(opId);
 							scalingOut = false;
 						}
 					}
@@ -260,7 +252,7 @@ public class MonitorManager implements Runnable{
 				if(n > 30000){
 //					System.out.println("bigger than 30K, and triggers is: "+triggers);
 //					if(triggers > 5){
-						System.out.println("To Decisor");
+						System.out.println("To decider");
 						decider(m.getOpId(), n);
 //						triggers = 0;
 					}

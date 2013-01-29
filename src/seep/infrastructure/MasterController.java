@@ -93,6 +93,10 @@ public class MasterController {
 							System.out.println("BYE");
 							System.exit(0);
 							break;
+						case 10:
+							System.out.println("Parsing txt file...");
+							inf.parseFileForNetflix();
+							break;
 						default:
 							System.out.println("Wrong option. Try again...");
 					}
@@ -266,5 +270,6 @@ public class MasterController {
 		System.out.println("4- Parallelize Operator Manually");
 		System.out.println("5- Stop system console (EXP)");
 		System.out.println("6- Exit");
+		System.out.println("10- Parse txt file to binary kryo");
 	}
 }

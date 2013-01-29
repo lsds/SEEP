@@ -56,13 +56,12 @@ public class IncomingDataHandlerWorker implements Runnable{
 					long incomingTs = datatuple.getTs();
 					owner.setTsData(incomingTs);
 					//Put data in inputQueue
-					//HACK FOR EXPERIMENT
-//					if(owner.getClass().toString().equals("class seep.operator.collection.mapreduceexample.Map")){
-//						iq.pushOrShed(datatuple);
-//					}
-//					else{
+					if(owner.checkSystemStatus()){
 						iq.push(datatuple);
-//					}
+					}
+					else{
+						System.out.println("trash in TCP buffers");
+					}
 				}
 			}
 			NodeManager.nLogger.severe("-> Data connection closing...");

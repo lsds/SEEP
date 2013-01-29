@@ -63,6 +63,9 @@ public class CoreRE {
 		this.rcl = rcl;
 		processingUnit = new ProcessingUnit(this);
 		coreProcessLogic = new CoreProcessingLogic();
+//		ControlTuple b = new ControlTuple();
+//		b.setType(ControlTupleType.ACK);
+//		genericAck = b;
 	}
 	
 	public RuntimeClassLoader getRuntimeClassLoader(){
@@ -119,7 +122,7 @@ public class CoreRE {
 	public void setRuntime(){
 		
 		/// At this point I need information about what connections I need to establish
-		PUContext puCtx = processingUnit.setUpProcessingUnit();
+		puCtx = processingUnit.setUpProcessingUnit();
 		processingUnit.setOutputQueue(outputQueue);
 		
 		/// INSTANTIATION
@@ -136,6 +139,9 @@ public class CoreRE {
 		genericAck = b;
 		
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" instantiated");
+		
+		/// INSTANTIATION OF THE BRIDGE OBJECT
+		
 		
 		/// INITIALIZATION
 
@@ -202,6 +208,20 @@ public class CoreRE {
 		//iDataH.destroy();
 		return true;
 	}
+	
+	public void cleanInputQueue(){
+		System.out.println("System STATUS before cleaning: "+processingUnit.getSystemStatus());
+		inputQueue.clean();
+		System.out.println("System STATUS after cleaning: "+processingUnit.getSystemStatus());
+	}
+
+	public boolean checkSystemStatus(){
+		// is it correct like this?
+		if(processingUnit.getSystemStatus().equals(ProcessingUnit.SystemStatus.NORMAL)){
+			return true;
+		}
+		return false;
+	}
 		
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
@@ -218,8 +238,8 @@ public class CoreRE {
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from NODE: "+ct.getInvalidateState().getNodeId());
-			processingUnit.invalidateState(ct.getInvalidateState().getNodeId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from NODE: "+ct.getInvalidateState().getOperatorId());
+			processingUnit.invalidateState(ct.getInvalidateState().getOperatorId());
 		}
 		/** INIT_MESSAGE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
@@ -232,7 +252,7 @@ public class CoreRE {
 			//Register this state as being managed by this operator
 			BackupNodeState backupNodeState = ct.getBackupState();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_NODE_STATE from NODE: "+backupNodeState.getNodeId());
-			processingUnit.registerManagedState(backupNodeState.getNodeId());
+			processingUnit.registerManagedState(backupNodeState.getUpstreamOpId());
 			coreProcessLogic.processBackupState(backupNodeState);
 		}
 		/** STATE_ACK message **/
@@ -241,6 +261,7 @@ public class CoreRE {
 			int opId = ct.getStateAck().getMostUpstreamOpId();
 			NodeManager.nLogger.info("-> Received STATE_ACK from Node: "+nodeId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
+			
 //			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
 			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
@@ -268,7 +289,7 @@ public class CoreRE {
 					newOpIndex = op.index();
 			}
 			// Get index of the scaling operator
-			int oldOpIndex = processingUnit.getMostDownstream().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();;
+			int oldOpIndex = processingUnit.getMostDownstream().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
@@ -321,7 +342,7 @@ public class CoreRE {
 		
 		try{
 			ip = InetAddress.getByName(rc.getIp());
-		} 
+		}
 		catch (UnknownHostException uhe) {
 			NodeManager.nLogger.severe("-> Node "+nodeDescr.getNodeId()+" EXCEPTION while getting IP from msg "+uhe.getMessage());
 			uhe.printStackTrace();
@@ -498,7 +519,8 @@ System.out.println("backupUpstreamIndex: "+backupUpstreamIndex+ "upIndex: "+upIn
 			NodeManager.nLogger.info("-> Upstream backup has changed...");
 			//Invalidate old Upstream state
 			ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
-			controlDispatcher.sendUpstream(ct, nodeDescr.getNodeId());
+			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
+			//controlDispatcher.sendUpstream(ct, nodeDescr.getNodeId());
 		
 			//Update my information
 			backupUpstreamIndex = upIndex;

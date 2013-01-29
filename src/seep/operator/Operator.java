@@ -19,6 +19,12 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public Operator subclassOperator = null;
 	public ProcessingUnit processingUnit = null;
 	private Router router = null;
+	// By default value
+	private DataAbstractionMode dataAbs = DataAbstractionMode.ONE_AT_A_TIME;
+	
+	public enum DataAbstractionMode{
+		ONE_AT_A_TIME, WINDOW, ORDERE, UPSTREAM_BARRIER
+	}
 	
 	public Operator(int operatorId, State state){
 		this.operatorId = operatorId;
@@ -73,9 +79,15 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		processingUnit.sendData(dt, targets);
 	}
 	
-	public void sendDown(DataTuple dt, int value){
+	public void sendDownRouteByValue(DataTuple dt, int value){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt, value, false);
+		processingUnit.sendData(dt, targets);
+	}
+	
+	public void sendDownAll(DataTuple dt){
+		// When routing to all, targets are all the logical downstreamoperators
+		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
 		processingUnit.sendData(dt, targets);
 	}
 	
@@ -86,13 +98,11 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		processingUnit.disableCheckpointForOperator(operatorId);
 	}
 	
-	/** Experimental methods **/
+	/** Data Delivery methods **/
 	
-	public boolean upstreamJoinOnBarrier(){
-		// TODO
-		return false;
+	public void setDataAbstractionMode(DataAbstractionMode mode){
+		this.dataAbs = mode;
 	}
-	
 	
 	/** Implementation of QuerySpecificationI **/
 	
@@ -136,26 +146,11 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		//TODO implement static scaleOut
 	}
 	
+	/** HELPER METHODS **/
+	
 	@Override 
 	public String toString() {
 		return "Operator [operatorId=" + operatorId + ", opContext="
 				+ opContext + "]";
 	}
 }
-
-
-//public void sendNow(DataTuple dt){
-//	/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
-//	processingUnit.sendData(dt, Integer.MIN_VALUE, true);
-//}
-//
-//public void sendNow(DataTuple dt, int value){
-//	processingUnit.sendData(dt, value, true);
-//}
-
-
-//public Operator(int operatorId){
-//	this.operatorId = operatorId;
-//	subclassOperator = this;
-//	System.out.println("WHO AM I?? : "+subclassOperator.getClass().getName());
-//}
