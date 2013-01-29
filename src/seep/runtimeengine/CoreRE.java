@@ -3,6 +3,7 @@ package seep.runtimeengine;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import seep.Main;
 import seep.comm.ControlHandler;
@@ -18,6 +19,7 @@ import seep.infrastructure.NodeManager;
 import seep.infrastructure.WorkerNodeDescription;
 import seep.operator.Operator;
 import seep.operator.OperatorStaticInformation;
+import seep.operator.Operator.DataAbstractionMode;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.PUContext;
 import seep.processingunit.ProcessingUnit;
@@ -40,7 +42,8 @@ public class CoreRE {
 
 	private CoreProcessingLogic coreProcessLogic;
 
-	private InputQueue inputQueue;
+	private DataStructureAdapter dsa;
+//	private InputQueue inputQueue;
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
 	private ControlDispatcher controlDispatcher;
@@ -99,9 +102,17 @@ public class CoreRE {
 	
 	public void initializeCommunications(){
 		outputQueue = new OutputQueue();
-		// At this moment we are only creating one input stream for the most upstream operator we manage, we need 
-		// a data structure and proper access to support more than one, but its not difficult to do so
-		inputQueue = new InputQueue();
+		
+		// SET UP the data strcuture adapter, depending on the operators
+		
+		dsa = new DataStructureAdapter();
+		/// INSTANTIATION OF THE BRIDGE OBJECT
+		// We get the dataabstractionmode from the most upstream operator
+		DataAbstractionMode dam = processingUnit.getMostUpstream().getDataAbstractionMode();
+		// We configure the dataStructureAdapter with this mode, and put the number of upstreams, required by some modes
+		dsa.setUp(dam, processingUnit.getMostUpstream().getOpContext().upstreams.size());
+		
+		// Start communications and worker threads
 		int inC = processingUnit.getMostUpstream().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getMostUpstream().getOpContext().getOperatorStaticInformation().getInD();
 		//Control worker
@@ -111,7 +122,8 @@ public class CoreRE {
 		idh = new IncomingDataHandler(this, inD);
 		iDataH = new Thread(idh);
 		//Consumer worker
-		dataConsumer = new DataConsumer(this, inputQueue);
+//		dataConsumer = new DataConsumer(this, inputQueue);
+		dataConsumer = new DataConsumer(this, dsa);
 		dConsumerH = new Thread(dataConsumer);
 
 		dConsumerH.start();
@@ -140,7 +152,6 @@ public class CoreRE {
 		
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" instantiated");
 		
-		/// INSTANTIATION OF THE BRIDGE OBJECT
 		
 		
 		/// INITIALIZATION
@@ -177,8 +188,12 @@ public class CoreRE {
 		return ts_data;
 	}
 	
-	public InputQueue getInputQueue(){
-		return inputQueue;
+//	public InputQueue getInputQueue(){
+//		return inputQueue;
+//	}
+	
+	public DataStructureAdapter getDSA(){
+		return dsa;
 	}
 	
 	public long getTs_ack() {
@@ -190,6 +205,10 @@ public class CoreRE {
 	}
 	
 	public void forwardData(DataTuple data){
+		processingUnit.processData(data);
+	}
+	
+	public void forwardData(ArrayList<DataTuple> data){
 		processingUnit.processData(data);
 	}
 	
@@ -209,11 +228,11 @@ public class CoreRE {
 		return true;
 	}
 	
-	public void cleanInputQueue(){
-		System.out.println("System STATUS before cleaning: "+processingUnit.getSystemStatus());
-		inputQueue.clean();
-		System.out.println("System STATUS after cleaning: "+processingUnit.getSystemStatus());
-	}
+//	public void cleanInputQueue(){
+//		System.out.println("System STATUS before cleaning: "+processingUnit.getSystemStatus());
+//		inputQueue.clean();
+//		System.out.println("System STATUS after cleaning: "+processingUnit.getSystemStatus());
+//	}
 
 	public boolean checkSystemStatus(){
 		// is it correct like this?
@@ -394,6 +413,7 @@ public class CoreRE {
 				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
 				int upstreamSize = processingUnit.getMostUpstream().getOpContext().upstreams.size();
 				reconfigureUpstreamBackupIndex(upstreamSize);
+				dsa.reconfigureNumUpstream(upstreamSize);
 			}
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}

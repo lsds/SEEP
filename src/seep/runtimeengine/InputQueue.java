@@ -1,5 +1,6 @@
 package seep.runtimeengine;
 
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -7,7 +8,7 @@ import seep.P;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.monitor.MetricsReader;
 
-public class InputQueue {
+public class InputQueue implements DataStructureI{
 
 	private BlockingQueue<DataTuple> inputQueue;
 	
@@ -63,5 +64,11 @@ public class InputQueue {
 		inputQueue.clear();
 		System.out.println("AFTER- REAL SIZE OF INPUT QUEUE: "+inputQueue.size());
 		System.out.println("INPUT QUEUE SIZE AFTER CLEANING: "+MetricsReader.eventsInputQueue.getCount());
+	}
+
+	@Override
+	public ArrayList<DataTuple> pull_from_barrier() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

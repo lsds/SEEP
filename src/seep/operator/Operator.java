@@ -23,7 +23,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	private DataAbstractionMode dataAbs = DataAbstractionMode.ONE_AT_A_TIME;
 	
 	public enum DataAbstractionMode{
-		ONE_AT_A_TIME, WINDOW, ORDERE, UPSTREAM_BARRIER
+		ONE_AT_A_TIME, WINDOW, ORDERED, UPSTREAM_SYNC_BARRIER
 	}
 	
 	public Operator(int operatorId, State state){
@@ -70,6 +70,8 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 
 	public abstract void processData(DataTuple dt);
 	
+	public abstract void processData(ArrayList<DataTuple> ldt);
+	
 	/** Methods used by the developers to send data **/
 	
 	public void sendDown(DataTuple dt){
@@ -99,6 +101,10 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	}
 	
 	/** Data Delivery methods **/
+	
+	public DataAbstractionMode getDataAbstractionMode(){
+		return dataAbs;
+	}
 	
 	public void setDataAbstractionMode(DataAbstractionMode mode){
 		this.dataAbs = mode;

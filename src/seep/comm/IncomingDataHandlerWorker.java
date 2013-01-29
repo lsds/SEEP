@@ -9,6 +9,7 @@ import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.InputQueue;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -43,7 +44,8 @@ public class IncomingDataHandlerWorker implements Runnable{
 	public void run() {
 		try{
 			//Get inputQueue from owner
-			InputQueue iq = owner.getInputQueue();
+//			InputQueue iq = owner.getInputQueue();
+			DataStructureAdapter dsa = owner.getDSA();
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
 			Input i = new Input(is);
@@ -57,7 +59,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 					owner.setTsData(incomingTs);
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
-						iq.push(datatuple);
+						dsa.push(datatuple);
 					}
 					else{
 						System.out.println("trash in TCP buffers");

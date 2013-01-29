@@ -162,7 +162,6 @@ public class ProcessingUnit {
 	
 	public void initOperators(){
 		for(Operator o : mapOP_ID.values()){
-			// FIXME: check what exceptions may arise here and handle them properly
 			o.setUp();
 		}
 	}
@@ -170,6 +169,29 @@ public class ProcessingUnit {
 	/** Runtime methods **/
 	
 	public void processData(DataTuple data){
+		// Try to acquire the lock for processing data
+		while(!lockState.compareAndSet(0,1)){
+			// If not successfull wait till is available
+			synchronized(lockState){
+				try{
+					lockState.wait();
+				}
+				catch(InterruptedException ie){
+					ie.printStackTrace();
+				}
+			}
+		}
+		// If successful process the data
+		// TODO: Adjust timestamp of state
+		mostUpstream.processData(data);
+		//Set the lock free again
+		lockState.set(0);
+		synchronized(lockState){
+			lockState.notify();
+		}
+	}
+	
+	public void processData(ArrayList<DataTuple> data){
 		// Try to acquire the lock for processing data
 		while(!lockState.compareAndSet(0,1)){
 			// If not successfull wait till is available
@@ -216,11 +238,11 @@ public class ProcessingUnit {
 		}
 	}
 	
-	public void cleanInputQueue(){
-		System.out.println("Going to clean");
-		owner.cleanInputQueue();
-		System.out.println("Returning from cleaning...");
-	}
+//	public void cleanInputQueue(){
+//		System.out.println("Going to clean");
+//		owner.cleanInputQueue();
+//		System.out.println("Returning from cleaning...");
+//	}
 	
 	/** System configuration settings used by the developers **/
 	
