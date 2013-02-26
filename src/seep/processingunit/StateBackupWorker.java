@@ -44,6 +44,19 @@ public class StateBackupWorker implements Runnable, Serializable{
 //		o.generateBackupState();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
+			System.out.println("#####################################");
+			System.out.println("#####################################");
+			System.out.println("#####################################");
+			System.out.println("#####################################");
+			System.out.println("        ");
+			System.out.println("        ");
+			System.out.println("CHECK-INT -> "+checkpointInterval);
+			System.out.println("        ");
+			System.out.println("        ");
+			System.out.println("#####################################");
+			System.out.println("#####################################");
+			System.out.println("#####################################");
+			System.out.println("#####################################");
 			if(elapsedTime > checkpointInterval){
 				//synch this call
 				if(P.valueFor("eftMechanismEnabled").equals("true")){
@@ -53,6 +66,9 @@ public class StateBackupWorker implements Runnable, Serializable{
 						processingUnit.checkpointAndBackupState();
 //							o.generateBackupState();
 //						}
+					}
+					else{
+						System.out.println("!!!!!!!!!!!!!!!!! STATUS IS INITIALISING STATE, this wont work");
 					}
 				}
 				initTime = System.currentTimeMillis();

@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
@@ -18,12 +17,10 @@ import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.infrastructure.QueryPlan;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
-import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
 
@@ -117,6 +114,8 @@ public class ElasticInfrastructureUtils {
 		inf.init(newOp);
 		// Make the new operator aware of the states in the system
 		inf.broadcastState(newOp);
+		// and also aware of the payloads
+//		inf.broadcastObject(newOp);
 		// Send the SET-RUNTIME to the new op
 		inf.initRuntime(newOp);
 		//add upstream conn
@@ -285,8 +284,10 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			Object[] args = new Object[2];
 			// new replica op id
 			args[0] = newOpId;
-			// null state. the real will be inserted on runtime. Check this in server to handle potential error
-			args[1] = null;
+			// State injection. Pick the already existing operator, getState, clone it and then change the operatorId
+			State copyOfState = (State) inf.getOperatorById(opId).getState().clone();
+			copyOfState.setOwnerId(newOpId);
+			args[1] = copyOfState;
 			instance = constructor.newInstance(args);
 			// Cast instance to operator
 			op = (Operator)instance;
@@ -326,7 +327,6 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			if(opId == op.getOperatorId()){
 				//op.getOpContext().copyContext(newOp);
 				for(PlacedOperator up : op.getOpContext().upstreams){
-					
 					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()), false);
 				}
 				for(PlacedOperator down : op.getOpContext().downstreams){

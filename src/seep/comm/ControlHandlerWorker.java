@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.ArrayList;
-
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;

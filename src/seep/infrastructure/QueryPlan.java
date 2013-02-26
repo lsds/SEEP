@@ -16,6 +16,7 @@ public class QueryPlan {
 	
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	private ArrayList<State> states = new ArrayList<State>();
+	private ArrayList<Object> objectsToRegister = new ArrayList<Object>();
 	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
@@ -29,6 +30,10 @@ public class QueryPlan {
 	
 	public ArrayList<State> getStates(){
 		return states;
+	}
+	
+	public ArrayList<Object> getObjectsToRegister(){
+		return objectsToRegister;
 	}
 
 	public Map<Integer, QuerySpecificationI> getElements() {
@@ -61,6 +66,11 @@ public class QueryPlan {
 	public void registerState(State s){
 		states.add(s);
 		NodeManager.nLogger.info("Added new State to Query");
+	}
+	
+	public void registerDataTuple(Object dt){
+		objectsToRegister.add(dt);
+		NodeManager.nLogger.info("Added new Object to register in Query");
 	}
 	
 	public void addOperator(Operator o) {

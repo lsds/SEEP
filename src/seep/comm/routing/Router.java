@@ -208,6 +208,11 @@ return null;
 		else{
 			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
 		}
+		
+//		for(Integer t : targets){
+//			System.out.println("SENT TO: "+t);
+//		}
+		
 		return targets;
 	}
 	

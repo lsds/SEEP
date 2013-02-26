@@ -162,6 +162,7 @@ public class CoreRE {
 		// After configuring the upstream backup index, we start the stateBackupWorker thread if the node is stateful
 		if(processingUnit.isNodeStateful()){
 			processingUnit.createAndRunStateBackupWorker();
+			NodeManager.nLogger.info("-> State Worker working on "+nodeDescr.getNodeId());
 		}
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 	}

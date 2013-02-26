@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.RootTuple;
 import seep.infrastructure.NodeManager;
 import seep.processingunit.ProcessingUnit;
 
@@ -68,11 +69,18 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	public abstract void setUp();
 
+	//public abstract void processData(DataTuple dt);
 	public abstract void processData(DataTuple dt);
 	
 	public abstract void processData(ArrayList<DataTuple> ldt);
 	
 	/** Methods used by the developers to send data **/
+	
+	public void sendDownToIndex(DataTuple dt, int idx){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		targets.add(idx);
+		processingUnit.sendData(dt, targets);
+	}
 	
 	public void sendDown(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}

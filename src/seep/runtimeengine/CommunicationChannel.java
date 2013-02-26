@@ -110,7 +110,7 @@ public class CommunicationChannel implements EndPoint{
 	public void addDataToBatch(DataTuple dt){
 		batch.addTuple(dt);
 		channelBatchSize--;
-		last_ts = dt.getTs();
+		last_ts = dt.getTimestamp();
 	}
 	
 	public int getChannelBatchSize(){

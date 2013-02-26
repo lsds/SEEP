@@ -2,9 +2,21 @@ package seep.operator;
 
 import java.io.Serializable;
 
-public abstract class State implements Serializable{
+public abstract class State implements Serializable, Cloneable{
 
 	private static final long serialVersionUID = 1L;
+	
+	public State clone(){
+		
+		try {
+			return (State) super.clone();
+		}
+		catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
 	
 	private int ownerId;
 	private String stateTag;

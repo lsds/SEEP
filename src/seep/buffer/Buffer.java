@@ -66,7 +66,7 @@ public class Buffer implements Serializable{
 			long timeStamp = 0;
 			numOfTuplesPerBatch = next.getBatchSize();
 			//Accessing last index cause that is the newest tuple in the batch
-			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTs();
+			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTimestamp();
 //System.out.println("#events: "+numOfTuplesPerBatch+" timeStamp: "+timeStamp+" ts: "+ts);
 			if (timeStamp <= ts) iter.remove();
 			else break;

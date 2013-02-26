@@ -1,13 +1,11 @@
 package seep.infrastructure;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -18,9 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
 
 import seep.Main;
 import seep.P;
@@ -38,6 +33,9 @@ import seep.operator.QuerySpecificationI;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
@@ -266,6 +264,13 @@ public class Infrastructure {
 			bcu.sendObject(node, s);
 		}
 	}
+//	
+//	public void broadcastObject(Object o){
+//		for(Operator op: ops){
+//			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+//			bcu.sendObject(node, o);
+//		}
+//	}
 	
 	public void broadcastState(Operator op){
 		for(State s : states){
@@ -273,6 +278,13 @@ public class Infrastructure {
 			bcu.sendObject(node, s);
 		}
 	}
+//	
+//	public void broadcastObject(Operator op){
+//		for(Object o : objects){
+//			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+//			bcu.sendObject(node, o);
+//		}
+//	}
 	
 	public void deploy() throws OperatorDeploymentException {
 
@@ -294,6 +306,12 @@ public class Infrastructure {
 			//Send every state to all the worker nodes
 			broadcastState(s);
 		}
+//		
+//		//Broadcast the registered payloads to all the worker nodes
+//		for(Object o : objects){
+//			//Send objects to register to all worker nodes
+//			broadcastObject(o);
+//		}
 		
 		//Finally, we tell the nodes to initialize all communications, all is ready to run
 		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
@@ -634,11 +652,11 @@ public class Infrastructure {
 			}
 			fos.close();
 			br.close();
-		} 
+		}
 		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

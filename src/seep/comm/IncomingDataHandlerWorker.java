@@ -10,7 +10,6 @@ import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.DataStructureAdapter;
-import seep.runtimeengine.InputQueue;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -55,7 +54,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 				batchDataTuple = k.readObject(i, BatchDataTuple.class);
 				ArrayList<DataTuple> batch = batchDataTuple.getTuples();
 				for(DataTuple datatuple : batch){
-					long incomingTs = datatuple.getTs();
+					long incomingTs = datatuple.getTimestamp();
 					owner.setTsData(incomingTs);
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){

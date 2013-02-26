@@ -60,7 +60,7 @@ public class ProcessingUnit {
 	}
 	
 	public boolean isNodeStateful(){
-		// If its not empty is because a previous operator let there its state
+		// If its not empty is because a previous operator put there its state
 		return !mapOP_S.isEmpty();
 	}
 	
@@ -91,12 +91,19 @@ public class ProcessingUnit {
 		}
 		o.setProcessingUnit(this);
 		mapOP_ID.put(o.getOperatorId(), o);
+		
+		// To identify the monitor with the op id instead of the node id
+		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
+		
 		//If the operator is stateful, we extract its state and store it in the provisioned map
 		if(o instanceof StatefulOperator){
 			// This may happen when operators are added dynamically and no human has added a state
 			o.getState();
 			if(o.getState() != null){
 				mapOP_S.put(o.getOperatorId(), o.getState());
+			}
+			else{
+				System.out.println("!!!!!!!!!! WARNING INITIAL STATE IS NULL, MAP WITHOUT PUT");
 			}
 		}
 		// Overwritten till last instantiation. If there are movements within the same node, then this wont be valid
@@ -182,6 +189,9 @@ public class ProcessingUnit {
 			}
 		}
 		// If successful process the data
+		// Instrumentation
+		//MetricsReader.eventsPerSecond.mark();
+		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
 		mostUpstream.processData(data);
 		//Set the lock free again
@@ -205,6 +215,9 @@ public class ProcessingUnit {
 			}
 		}
 		// If successful process the data
+		// Instrumentation
+//		MetricsReader.eventsPerSecond.mark();
+		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
 		mostUpstream.processData(data);
 		//Set the lock free again
@@ -267,23 +280,6 @@ public class ProcessingUnit {
 		outputQueue.stop();
 		ctx.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
-	
-//	public void sendData(DataTuple dt, int value, boolean now) {
-//		ArrayList<Integer> targets = router.forward(dt, value, now);
-//		for(Integer target : targets){
-//			try{
-////			System.out.println("TARGET: "+target.toString());
-//				EndPoint dest = puCtx.getDownstreamTypeConnection().elementAt(target);
-//				outputQueue.sendToDownstream(dt, dest, now, false);
-//			}
-//			catch(ArrayIndexOutOfBoundsException aioobe){
-//				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+puCtx.getDownstreamTypeConnection().size());
-//				aioobe.printStackTrace();
-//			}
-//		}
-//		
-//		
-//	}
 	
 	/** Operator information management **/
 	

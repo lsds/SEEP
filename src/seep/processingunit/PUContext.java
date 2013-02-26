@@ -63,6 +63,12 @@ public class PUContext {
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
 		
+//		System.out.println("operator set is: "+operatorSet.size());
+//		for(Operator op : operatorSet){
+//			System.out.println("Op: "+op.getId());
+//		}
+		
+		
 		for(Operator op : operatorSet){
 			configureDownstreamAndUpstreamConnections(op);
 		}	

@@ -1,14 +1,14 @@
 package seep.operator.workers;
 
-import seep.runtimeengine.CoreRE;
-
-import java.io.*;
+import java.io.Serializable;
 
 /**
 * ACKWorker. This runnable object is in charge of watching to the last processed tuple and generating an ACK when this has changed.
 */
 
 public class ACKWorker implements Runnable, Serializable{
+
+	private static final long serialVersionUID = 1L;
 
 	@Override
 	public void run() {
