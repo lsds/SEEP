@@ -60,6 +60,7 @@ public class NodeManager{
 	private Thread monitorT = null;
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
+//		nLogger.setLevel(java.util.logging.Level.SEVERE);
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
 		this.ownPort = ownPort;

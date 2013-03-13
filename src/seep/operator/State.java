@@ -1,6 +1,15 @@
 package seep.operator;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+
+import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
+import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
+import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
 public abstract class State implements Serializable, Cloneable{
 
@@ -17,6 +26,32 @@ public abstract class State implements Serializable, Cloneable{
 		}
 		return null;
 	}
+	
+	public static State deepCopy(State original, RuntimeClassLoader rcl){
+		Object obj = null;
+	    try {
+	    	// Write the object out to a byte array
+	        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
+	        synchronized(original){
+	        	out.writeObject(original);
+	        	out.flush();
+	        	out.close();
+	        }
+	        // Make an input stream from the byte array and read
+	        // a copy of the object back in.
+	        ExtendedObjectInputStream in = new ExtendedObjectInputStream(new ByteArrayInputStream(bos.toByteArray()), rcl);
+	        obj = in.readObject();
+	    }
+	    catch(IOException e) {
+	    	e.printStackTrace();
+	    }
+	    catch(ClassNotFoundException cnfe) {
+	        cnfe.printStackTrace();
+	    }
+	    return (State) obj;
+	}
+	
 	
 	private int ownerId;
 	private String stateTag;
@@ -66,7 +101,7 @@ public abstract class State implements Serializable, Cloneable{
 	
 	public State(State toCopy){
 		//This copy-constructor wont be used for anything more than copying
-		this.checkpointInterval = 0;
+		this.checkpointInterval = toCopy.checkpointInterval;
 		this.ownerId = toCopy.ownerId;
 		this.stateTag = toCopy.stateTag;
 		this.stateImpl = toCopy.stateImpl;

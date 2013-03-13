@@ -16,7 +16,7 @@ public class QueryPlan {
 	
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	private ArrayList<State> states = new ArrayList<State>();
-	private ArrayList<Object> objectsToRegister = new ArrayList<Object>();
+	private ArrayList<ScaleOutIntentBean> scIntents = new ArrayList<ScaleOutIntentBean>();
 	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
@@ -32,8 +32,8 @@ public class QueryPlan {
 		return states;
 	}
 	
-	public ArrayList<Object> getObjectsToRegister(){
-		return objectsToRegister;
+	public ArrayList<ScaleOutIntentBean> getScaleOutIntents(){
+		return scIntents;
 	}
 
 	public Map<Integer, QuerySpecificationI> getElements() {
@@ -68,15 +68,16 @@ public class QueryPlan {
 		NodeManager.nLogger.info("Added new State to Query");
 	}
 	
-	public void registerDataTuple(Object dt){
-		objectsToRegister.add(dt);
-		NodeManager.nLogger.info("Added new Object to register in Query");
-	}
-	
 	public void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);
 		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
+	}
+	
+	public void scaleOut(Operator opToScaleOut, int newOpId, Node newProvisionedNode){
+		// Register the intent to scale out
+		ScaleOutIntentBean soib = new ScaleOutIntentBean(opToScaleOut, newOpId, newProvisionedNode);
+		scIntents.add(soib);
 	}
 	
 	public void place(Operator o, Node n){

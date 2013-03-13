@@ -111,6 +111,14 @@ System.out.println("KEY: "+operatorType);
 		long ts_e = ct.getBackupOperatorStateWithOpId(ct.getUpstreamOpId()).getState().getData_ts();
 		///\todo{ check if ts_e is the last thing processed by the most upstream op in the downstream node, or the most downstream op in the down node}
 		if(downStream.reconf_ts <= ts_e){
+			/** DONT really understand the objective of the next 6 lines, CHECK**/
+			int eopId = -5;
+			if(puCtx.getBuffer(opId).getBackupState() != null){
+				if(puCtx.getBuffer(opId).getBackupState().getBackupOperatorState() != null){
+					eopId = puCtx.getBuffer(opId).getBackupState().getBackupOperatorState()[0].getOpId();
+				}
+			}
+			/** **/
 			puCtx.getBuffer(opId).replaceBackupNodeState(ct);
 		}
 		else{
@@ -169,14 +177,24 @@ System.out.println("KEY: "+operatorType);
 	public void splitState(int oldOpId, int newOpId, int key) {
 //		StateSplitI operatorToSplit = (StateSplitI)owner.getSubclassOperator();
 //		BackupOperatorState oldState = puCtx.getBuffer(oldOpId).getBackupState();
-		
 		BackupNodeState backupNodeState = puCtx.getBuffer(oldOpId).getBackupState();
+		for(BackupOperatorState bos : backupNodeState.getBackupOperatorState()){
+			System.out.println("% Got Buffer from OP: "+oldOpId+" and BOS opId is: "+bos.getOpId());
+		}
+		
+		/** Small hack
 		BackupOperatorState backupOperatorState = backupNodeState.getBackupOperatorStateWithOpId(oldOpId);
+		**/
+		/** DUE to the last refactorization, we added a layer of indirection, making an explicit differentiation between node and operator state.
+		 * the problem of this approach is that it was breaking here. I have to access the state directly, something that without the node layer
+		 * was assumed. With the node layer, tough, the system looks for the particular ID, that might have been lost in previous calls to splitState**/
+		BackupOperatorState backupOperatorState = backupNodeState.getBackupOperatorState()[0];
+		
+		
 		State stateToSplit = backupOperatorState.getState();
 		int stateCheckpointInterval = stateToSplit.getCheckpointInterval();
 		String stateTag = stateToSplit.getStateTag();
 		long data_ts = stateToSplit.getData_ts();
-		
 		State splitted[] = stateToSplit.splitState(stateToSplit, key);
 		// Create the two states, and fill the necessary info, as ts, etc.
 		//Set the old partition
@@ -201,18 +219,26 @@ System.out.println("KEY: "+operatorType);
 		NodeManager.nLogger.severe("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
 		
 		// Replace state in the old operator
+		
 		backupNodeState.replaceOpBackupWithId(oldOpId, oldPartition);
 		BackupNodeState newBackupNodeState = new BackupNodeState();
+//		BackupNodeState oldBackupNodeState = new BackupNodeState();
 		// Create the new state for the new replica
 		BackupOperatorState[] newBackupOperatorState = new BackupOperatorState[1];
+//		BackupOperatorState[] oldBackupOperatorState = new BackupOperatorState[1]; // ASDF
 		newBackupOperatorState[0] = newPartition;
+//		oldBackupOperatorState[0] = oldPartition; // ASDF
 		newBackupNodeState.setBackupOperatorState(newBackupOperatorState);
+//		puCtx.getBuffer(oldOpId).replaceBackupNodeState(oldBackupNodeState); // ASDF
 		puCtx.getBuffer(newOpId).replaceBackupNodeState(newBackupNodeState);
 		//Indicate that we are now managing both these states
 		NodeManager.nLogger.severe("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
 		// We state we manage the state of the old and new ops replicas
 		pu.registerManagedState(oldOpId);
 		pu.registerManagedState(newOpId);
+		
+		
+		System.out.println("% After SPLIT, oldOpId: "+puCtx.getBuffer(oldOpId).getBackupState().getBackupOperatorState()[0].getOpId()+" newOpId: "+puCtx.getBuffer(newOpId).getBackupState().getBackupOperatorState()[0].getOpId());
 	}
 	
 	public synchronized void scaleOut(ScaleOutInfo scaleOutInfo, int newOpIndex, int oldOpIndex){
@@ -317,8 +343,7 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 			// Create initOperatorState with the id of the operator that will own the state and the state itself
 			initOperatorState[i] = new InitOperatorState(current.getState().getOwnerId(), current.getState());
 		}
-		ControlTuple ct = new ControlTuple().makeInitNodeState(pu.getMostDownstream().getOperatorId(), owner.getNodeDescr().getNodeId(), initOperatorState);
-		
+		ControlTuple ct = new ControlTuple().makeInitNodeState(pu.getMostDownstream().getOperatorId(), owner.getNodeDescr().getNodeId(), initOperatorState);		
 		try {
 			owner.getControlDispatcher().initStateMessage(ct, controlDownstreamSocket.getOutputStream());
 		} 

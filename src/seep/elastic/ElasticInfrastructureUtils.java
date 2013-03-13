@@ -17,6 +17,7 @@ import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.ScaleOutIntentBean;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 import seep.operator.State;
@@ -134,6 +135,14 @@ public class ElasticInfrastructureUtils {
 		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
 		sendSystemConfiguredToReplica(newOp);
 		//sendSendInitToMinUpstream(opIdToParallelize,newOpId);
+	}
+	
+	public void executeStaticScaleOutFromIntent(ArrayList<ScaleOutIntentBean> soib){
+		// Go through intents and execute all of them, or prompt back an ERROR if not possible
+		
+		// TODO
+		
+		
 	}
 	
 	private void sendSystemConfiguredToReplica(Operator replica){

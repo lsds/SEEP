@@ -49,6 +49,9 @@ public class Buffer implements Serializable{
 	}
 	
 	public void replaceBackupNodeState(BackupNodeState bs) {
+//		if(this.bs.getBackupOperatorState() != null && bs.getBackupOperatorState() != null){
+//		System.out.println("% Buffer. replacing old state: "+this.bs.getBackupOperatorState()[0].getOpId()+" with "+bs.getBackupOperatorState()[0].getOpId());
+//		}
 		this.bs = bs;
 	}
 

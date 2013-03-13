@@ -97,8 +97,8 @@ public class Infrastructure {
 		elements = qp.getElements();
 		src = qp.getSrc();
 		snk = qp.getSnk();
-		
 		queryToNodesMapping = qp.getMapOperatorToNode();
+		eiu.executeStaticScaleOutFromIntent(qp.getScaleOutIntents());
 	}
 	
 	public void setPathToQueryDefinition(String pathToQueryDefinition){

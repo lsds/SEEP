@@ -7,10 +7,8 @@ import seep.comm.serialization.DataTuple;
 public class DataConsumer implements Runnable {
 
 	private CoreRE owner;
-//	private InputQueue inputQueue;
 	private DataStructureAdapter dataAdapter;
 	private boolean doWork = true;
-	private boolean block = false;
 	
 	public void setDoWork(boolean doWork){
 		this.doWork = doWork;

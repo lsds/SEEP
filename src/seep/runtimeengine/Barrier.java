@@ -2,15 +2,20 @@ package seep.runtimeengine;
 
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.SynchronousQueue;
 
 import seep.comm.serialization.DataTuple;
 
+/** 
+ * Reason why the barrier is implemented with the Phaser of Java 7 instead of a common CyclicBarrier of previous java is because of its robust support
+ * for dynamicity. Only this feature justified changing the version of the language. 
+ * **/
+
 public class Barrier implements DataStructureI {
 
-	private CyclicBarrier staticBarrier;
+	private Phaser staticBarrier;
+	
 	private ArrayList<DataTuple> data = new ArrayList<DataTuple>();
 	private DeliverWorker dw;
 	
@@ -18,20 +23,28 @@ public class Barrier implements DataStructureI {
 	
 	public Barrier(int initialNumberOfThreads){
 		dw = new DeliverWorker();
-		staticBarrier = new CyclicBarrier(initialNumberOfThreads, dw);
+		staticBarrier = new Phaser(initialNumberOfThreads){
+			protected boolean onAdvance(int phase, int parties) {
+				ArrayList<DataTuple> copy = new ArrayList<DataTuple>(data);
+				data.clear();
+				try {
+//					System.out.println("putting data after barrier");
+					sbq.put(copy);
+//					System.out.println("data put");
+				} 
+				catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				return false;
+			}
+		};
 	}
 	
 	public void reconfigureBarrier(int numThreads){
-		System.out.println("Reseting barrier");
-//		data.clear();
-		synchronized(staticBarrier){
-			int waiting = staticBarrier.getNumberWaiting();
-			staticBarrier.reset();
-			System.out.println("Barrier is now reset, there were "+waiting+" threads waiting");
-			staticBarrier = null;
-			staticBarrier = new CyclicBarrier(numThreads, dw);
-			System.out.println("And new barrier created with: "+numThreads);
-		}
+		// is this enough?
+//		System.out.println("reconfiguring barrier");
+		staticBarrier.register();
+//		System.out.println("barrier reconfigured");
 	}
 	
 	@Override
@@ -42,12 +55,10 @@ public class Barrier implements DataStructureI {
 	public ArrayList<DataTuple> pull_from_barrier(){
 		ArrayList<DataTuple> toRet = null;
 		try {
-//System.out.println("PULL- waiting to take");
 			toRet =  sbq.take();
-//System.out.println("PULL- took");
+//			System.out.println("data got from queue");
 		} 
 		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return toRet;
@@ -60,19 +71,9 @@ public class Barrier implements DataStructureI {
 			data.add(dt);
 		}
 		// And wait on the barrier
-		try {
-//System.out.println("PUSH- waiting in the barrier");
-			staticBarrier.await();
-//System.out.println("PUSH- barrier crossed");
-		}
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		catch (BrokenBarrierException e) {
-			staticBarrier.reset();
-			e.printStackTrace();
-		}
+//		System.out.println("waiting in barrier");
+		staticBarrier.arriveAndAwaitAdvance();
+//		System.out.println("after waiting in barrier");
 	}
 	
 	public class DeliverWorker implements Runnable{
@@ -80,12 +81,9 @@ public class Barrier implements DataStructureI {
 			ArrayList<DataTuple> copy = new ArrayList<DataTuple>(data);
 			data.clear();
 			try {
-//System.out.println("PUSH- Waiting to put");
 				sbq.put(copy);
-//System.out.println("PUSH- put");
 			} 
 			catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

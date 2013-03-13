@@ -218,6 +218,7 @@ public class CoreRE {
 	}
 
 	public void setBackupUpstreamIndex(int backupUpstreamIndex) {
+		System.out.println("% current backupIdx: "+this.backupUpstreamIndex+" changes to: "+backupUpstreamIndex);
 		this.backupUpstreamIndex = backupUpstreamIndex;
 	}
 	
@@ -490,8 +491,9 @@ public class CoreRE {
 //		int newIndex = opContext.findUpstream(opId).index();
 		int newIndex = processingUnit.getMostUpstream().getOpContext().findUpstream(opId).index();
 		if(backupUpstreamIndex != -1 && newIndex != backupUpstreamIndex){
-//			ControlTuple ct = coreProcessLogic.buildInvalidateMsg(backupUpstreamIndex);
-			ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
+			//ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
+			ControlTuple ct = new ControlTuple().makeInvalidateMessage(processingUnit.getMostUpstream().getOperatorId());
+			
 			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
 		}
 		//Set the new backup upstream index, this has been sent by the manager.
@@ -499,11 +501,13 @@ public class CoreRE {
 	}
 	
 	public void sendBackupState(ControlTuple ctB){
-		NodeManager.nLogger.info("-> Backuping to NODE index: "+backupUpstreamIndex);
+		int stateOwnerId = ctB.getBackupState().getBackupOperatorState()[0].getOpId();
+		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
 	
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)
+	// This method is called only once during initialisation of the node (from setRuntime)
 	public void configureUpstreamIndex(int upstreamSize){
 		int ownInfo = Router.customHash(getNodeDescr().getNodeId());
 //		int upstreamSize = opContext.upstreams.size();
@@ -517,7 +521,8 @@ public class CoreRE {
 		upIndex = (upIndex < 0) ? upIndex*-1 : upIndex;
 		
 		//Update my information
-		backupUpstreamIndex = upIndex;
+		System.out.println("% ConfigureUpstreamIndex");
+		this.setBackupUpstreamIndex(upIndex);
 		NodeManager.nLogger.info("-> The new Upstream backup INDEX is: "+backupUpstreamIndex);
 	}
 	
@@ -530,8 +535,6 @@ public class CoreRE {
 		int upIndex = ownInfo%upstreamSize;
 		//Since ownInfo (hashed) may be negative, this enforces the final value is always positive.
 		upIndex = (upIndex < 0) ? upIndex*-1 : upIndex;
-		//int upId = opContext.getUpOpIdFromIndex(upIndex);
-System.out.println("backupUpstreamIndex: "+backupUpstreamIndex+ "upIndex: "+upIndex);
 		//If the upstream is different from previous sent, then additional management is necessary
 		//In particular, invalidate the management of my state in the previous operator in charge to do so...
 		//... and notify the new operator in charge of my OPID
@@ -539,17 +542,17 @@ System.out.println("backupUpstreamIndex: "+backupUpstreamIndex+ "upIndex: "+upIn
 		if(upIndex != backupUpstreamIndex){
 			NodeManager.nLogger.info("-> Upstream backup has changed...");
 			//Invalidate old Upstream state
-			ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
+			//ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
+			ControlTuple ct = new ControlTuple().makeInvalidateMessage(processingUnit.getMostUpstream().getOperatorId());
 			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
-			//controlDispatcher.sendUpstream(ct, nodeDescr.getNodeId());
 		
 			//Update my information
-			backupUpstreamIndex = upIndex;
+			System.out.println("% ReconfigureUpstreamIndex");
+			this.setBackupUpstreamIndex(upIndex);
 			
 			//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 			if(isNodeStateful()){
 				NodeManager.nLogger.info("-> sending BACKUP_STATE to the new manager of my state");
-//				((StatefulOperator)owner.subclassOperator).generateBackupState();
 				processingUnit.checkpointAndBackupState();
 			}
 		}

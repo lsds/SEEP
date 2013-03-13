@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.RootTuple;
+import seep.infrastructure.Infrastructure;
+import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.processingunit.ProcessingUnit;
 
@@ -154,10 +156,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		//router.routeValueToDownstream(operand, value, opId);
 		opContext.routeValueToDownstream(operand, value, opId);
 		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
-	}
-	
-	public void scaleOut(Operator toScaleOut){
-		//TODO implement static scaleOut
 	}
 	
 	/** HELPER METHODS **/
