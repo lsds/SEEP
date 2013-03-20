@@ -7,6 +7,7 @@ import java.util.ArrayList;
 
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.DataStructureAdapter;
@@ -35,9 +36,9 @@ public class IncomingDataHandlerWorker implements Runnable{
 		//optimize here kryo
 		Kryo k = new Kryo();
 		k.setClassLoader(owner.getRuntimeClassLoader());
-		k.register(BatchDataTuple.class);
 		k.register(DataTuple.class);
-		k.register(ArrayList.class);
+		k.register(ArrayList.class, new ArrayListSerializer());
+		k.register(BatchDataTuple.class);
 		return k;
 	}
 	

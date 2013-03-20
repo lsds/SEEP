@@ -100,7 +100,7 @@ public class Infrastructure {
 		snk = qp.getSnk();
 		// At this point we check the partitioning options
 		// This first option is the recommended only when one knows what she's doing.
-		ArrayList<ScaleOutIntentBean> soib = null;
+		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
 		if(!qp.getScaleOutIntents().isEmpty()){
 			NodeManager.nLogger.info("-> Manual static scale out");
 			soib = eiu.staticInstantiateNewReplicaOperator(qp.getScaleOutIntents(), qp);
