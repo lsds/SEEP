@@ -2,6 +2,7 @@ package seep.infrastructure;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import seep.P;
@@ -17,12 +18,13 @@ public class QueryPlan {
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	private ArrayList<State> states = new ArrayList<State>();
 	private ArrayList<ScaleOutIntentBean> scIntents = new ArrayList<ScaleOutIntentBean>();
+	private Map<Operator, Integer> partitionRequirements = new LinkedHashMap<Operator, Integer>(0);
 	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
 	//Mapping of operators to node
-	private Map<Integer, ArrayList<Operator>> mapOperatorToNode = new HashMap<Integer, ArrayList<Operator>>();
+	private Map<Integer, ArrayList<Operator>> mapOperatorToNode = new LinkedHashMap<Integer, ArrayList<Operator>>();
 	
 	public ArrayList<Operator> getOps() {
 		return ops;
@@ -38,6 +40,10 @@ public class QueryPlan {
 
 	public Map<Integer, QuerySpecificationI> getElements() {
 		return elements;
+	}
+	
+	public Map<Operator, Integer> getPartitionRequirements(){
+		return partitionRequirements;
 	}
 
 	public ArrayList<Operator> getSrc() {
@@ -74,6 +80,12 @@ public class QueryPlan {
 		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
 	}
 	
+	/** This is the preferred function, that will automatically load balance the static partitioning**/
+	public void scaleOut(Operator opToScaleOut, int numPartitions){
+		partitionRequirements.put(opToScaleOut, numPartitions);
+	}
+	
+	/** This function is provided in case the user wants to manually define which partitions to be done**/
 	public void scaleOut(Operator opToScaleOut, int newOpId, Node newProvisionedNode){
 		// Register the intent to scale out
 		ScaleOutIntentBean soib = new ScaleOutIntentBean(opToScaleOut, newOpId, newProvisionedNode);

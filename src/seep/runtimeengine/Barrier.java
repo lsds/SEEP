@@ -17,20 +17,16 @@ public class Barrier implements DataStructureI {
 	private Phaser staticBarrier;
 	
 	private ArrayList<DataTuple> data = new ArrayList<DataTuple>();
-	private DeliverWorker dw;
 	
 	private BlockingQueue<ArrayList<DataTuple>> sbq = new SynchronousQueue<ArrayList<DataTuple>>();
 	
 	public Barrier(int initialNumberOfThreads){
-		dw = new DeliverWorker();
 		staticBarrier = new Phaser(initialNumberOfThreads){
 			protected boolean onAdvance(int phase, int parties) {
 				ArrayList<DataTuple> copy = new ArrayList<DataTuple>(data);
 				data.clear();
 				try {
-//					System.out.println("putting data after barrier");
 					sbq.put(copy);
-//					System.out.println("data put");
 				} 
 				catch (InterruptedException e) {
 					e.printStackTrace();
@@ -41,10 +37,12 @@ public class Barrier implements DataStructureI {
 	}
 	
 	public void reconfigureBarrier(int numThreads){
-		// is this enough?
-//		System.out.println("reconfiguring barrier");
+		// Dynamic tiering of the hierarchical phaser
+		// Check the num of Threads. 
+		// If it hits a given threshold (static or dynamic) 
+		// partition the parties into two phasers
+		// register those in the master one
 		staticBarrier.register();
-//		System.out.println("barrier reconfigured");
 	}
 	
 	@Override
@@ -56,7 +54,6 @@ public class Barrier implements DataStructureI {
 		ArrayList<DataTuple> toRet = null;
 		try {
 			toRet =  sbq.take();
-//			System.out.println("data got from queue");
 		} 
 		catch (InterruptedException e) {
 			e.printStackTrace();
@@ -71,21 +68,6 @@ public class Barrier implements DataStructureI {
 			data.add(dt);
 		}
 		// And wait on the barrier
-//		System.out.println("waiting in barrier");
 		staticBarrier.arriveAndAwaitAdvance();
-//		System.out.println("after waiting in barrier");
-	}
-	
-	public class DeliverWorker implements Runnable{
-		public void run(){
-			ArrayList<DataTuple> copy = new ArrayList<DataTuple>(data);
-			data.clear();
-			try {
-				sbq.put(copy);
-			} 
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 }

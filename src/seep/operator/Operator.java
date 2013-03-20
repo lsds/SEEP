@@ -5,9 +5,6 @@ import java.util.ArrayList;
 
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.RootTuple;
-import seep.infrastructure.Infrastructure;
-import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.processingunit.ProcessingUnit;
 
@@ -162,7 +159,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	@Override 
 	public String toString() {
-		return "Operator [operatorId=" + operatorId + ", opContext="
-				+ opContext + "]";
+		return "Operator [operatorId="+operatorId+", opContext= "+opContext+"]";
 	}
 }

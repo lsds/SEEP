@@ -9,6 +9,9 @@ import java.net.InetAddress;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import seep.comm.NodeManagerCommunication;
 import seep.comm.RuntimeCommunicationTools;
@@ -17,6 +20,7 @@ import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.Infrastructure;
 import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.QueryPlan;
 import seep.infrastructure.ScaleOutIntentBean;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
@@ -98,51 +102,180 @@ public class ElasticInfrastructureUtils {
 		//connect new operator to downstreams and upstreams
 		configureOperatorContext(opIdToParallelize, newOp);
 		//Get operator to parallelize
+		
 		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
 		//Get pre-configured router and assign to new operator
 		Router copyOfRouter = opToParallelize.getRouter();
 		newOp.setRouter(copyOfRouter);
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
-		NodeManager.nLogger.info("Created new Op: "+newOp.toString());
+		System.out.println("7.1");
+		//NodeManager.nLogger.info("Created new Op: "+newOp.toString());
+		System.out.println("7.5");
 		// Send query to the new node
 		inf.setUp(newOp);
+		System.out.println("8");
 		//deploy new Operator
 		//conn to new node
 		inf.deploy(newOp);
+		System.out.println("9");
 		//ConfigureCommunications
 		//conn to new node
 		inf.init(newOp);
+		System.out.println("10");
 		// Make the new operator aware of the states in the system
 		inf.broadcastState(newOp);
+		System.out.println("11");
 		// and also aware of the payloads
 //		inf.broadcastObject(newOp);
 		// Send the SET-RUNTIME to the new op
 		inf.initRuntime(newOp);
+		System.out.println("12");
 		//add upstream conn
 		//conn to down nodes
 /**WAIT FOR ANSWER**/
 		addUpstreamConnections(newOp);
+		System.out.println("13");
 		//conn to previous nodes
 		addDownstreamConnections(newOp);
+		System.out.println("14");
 /**UNTIL HERE**/
 		//conn to previous node
 		sendScaleOutMessageToUpstreams(opIdToParallelize, newOpId);
+		System.out.println("15");
 		//conn to previous node
 /**HERE AGAIN WAIT FOR ANSWER**/
 		sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
+		System.out.println("16");
 /**FINALIZE SCALE OUT PROTOCOL**/
 		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
 		sendSystemConfiguredToReplica(newOp);
+		System.out.println("17");
 		//sendSendInitToMinUpstream(opIdToParallelize,newOpId);
+	}
+	
+	// One option to scale out automatically operators, statically
+	public ArrayList<ScaleOutIntentBean> staticInstantiationNewReplicaOperators(QueryPlan qp){
+		// We have to return an arraylist of scaleoutintent that gives the operators to scale out ordered.
+		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
+		// Get the operators to scale out
+		Map<Operator, Integer> partitions = qp.getPartitionRequirements();
+		// We perform the balancing per operator (in order, which is enforced by the map implementation used)
+		for(Operator op : partitions.keySet()){
+			// Per number of partitions
+			
+			/// \fixme{ automatic assignation of id lets 90 ops per partition, and make sure nodeId is different}
+			int newOpId = 10 + (op.getOperatorId()*100);
+			int nodeId = -1 * newOpId;
+			// the list where replicas will be saved
+			ArrayList<Operator> listOfReplicas = new ArrayList<Operator>();
+			listOfReplicas.add(op);
+			int accessIdx = 0;
+			// We have to scale out the number of partitions minus one -> [partitions.get(op)-1]
+			for(int i = 0; i<(partitions.get(op)-1); i++){
+				Node newNode = new Node(nodeId);
+				//oldOpId, newOpId, newNode, qp
+				int oldOpId = listOfReplicas.get(accessIdx).getOperatorId();
+				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp);
+				// First modify accessIdx for next iteration
+				if(listOfReplicas.size()-1 == accessIdx){
+					// So it will be reset
+					accessIdx = 0;
+					// Add to the end
+					listOfReplicas.add(newReplica);
+				}
+				else{
+					// Add right next to the just scaled out op
+					listOfReplicas.add((accessIdx+1), newReplica);
+					// We jump the new addition and go to the next op
+					accessIdx += 2;
+				}
+				// Then add the new replica to the array
+				//listOfReplicas.add((accessIdx+1), newReplica);
+				// Add scaleout intent to the list (ordered)
+				ScaleOutIntentBean so = new ScaleOutIntentBean(inf.getOperatorById(oldOpId), newOpId, newNode);
+				so.setNewReplicaInstantiation(newReplica);
+				soib.add(so);
+				nodeId--;
+				newOpId++;
+			}
+		}
+		return soib;
+	} 
+	
+	// One option to scale out manually operators, statically.
+	public ArrayList<ScaleOutIntentBean> staticInstantiateNewReplicaOperator(ArrayList<ScaleOutIntentBean> soib, QueryPlan qp){
+		// Go through intents and execute all of them, or prompt back an ERROR if not possible
+		for(ScaleOutIntentBean so : soib){
+			//addOperator
+			int oldOpId = so.getOpToScaleOut().getOperatorId();
+			int newOpId = so.getNewOpId();
+			//Operator opToScaleOut = so.getOpToScaleOut();
+			Node newNode = so.getNewProvisionedNode();
+			
+			
+//			Operator newOp = addOperator(oldOpId, newOpId);
+//			// Register new op associated to new node in the infrastructure
+//			qp.place(newOp, newNode);
+//			// conf operator context
+//			configureOperatorContext(oldOpId, newOp);
+//			// router for the new op
+//			Router copyOfRouter = opToScaleOut.getRouter();
+//			newOp.setRouter(copyOfRouter);
+//			// inf place new and update context
+//			System.out.println("checking new node: "+newNode.toString());
+//			inf.placeNew(newOp, newNode);
+//			inf.updateContextLocations(newOp);
+//			NodeManager.nLogger.info("STATIC Created new Op: "+newOp.toString());
+			
+			Operator newOp = staticScaleOut(oldOpId, newOpId, newNode, qp);
+			
+			// upstream and downstream conns are statically established at this point
+			// scale out to upstream. this is just about configuring the router properly, anything else, no message interchange (obviously)
+			so.setNewReplicaInstantiation(newOp);
+		}
+		return soib;
+	}
+	
+	private Operator staticScaleOut(int oldOpId, int newOpId, Node newNode, QueryPlan qp){
+		Operator opToScaleOut = inf.getOperatorById(oldOpId);
+		Operator newOp = addOperator(oldOpId, newOpId);
+		// Register new op associated to new node in the infrastructure
+		qp.place(newOp, newNode);
+		// conf operator context
+		configureOperatorContext(oldOpId, newOp);
+		// router for the new op
+		Router copyOfRouter = opToScaleOut.getRouter();
+		newOp.setRouter(copyOfRouter);
+		// inf place new and update context
+		System.out.println("checking new node: "+newNode.toString());
+		inf.placeNew(newOp, newNode);
+		inf.updateContextLocations(newOp);
+		NodeManager.nLogger.info("STATIC Created new Op: "+newOp.toString());
+		return newOp;
 	}
 	
 	public void executeStaticScaleOutFromIntent(ArrayList<ScaleOutIntentBean> soib){
 		// Go through intents and execute all of them, or prompt back an ERROR if not possible
-		
-		// TODO
-		
-		
+		for(ScaleOutIntentBean so : soib){
+			int oldOpId = so.getOpToScaleOut().getOperatorId();
+			int newOpId = so.getNewOpId();
+			Operator newOp = so.getNewOperatorInstantiation();
+			// upstream and downstream conns are statically established at this point
+			// scale out to upstream. this is just about configuring the router properly, anything else, no message interchange (obviously)
+			for(PlacedOperator op : newOp.getOpContext().upstreams){
+				Operator toConf = inf.getOperatorById(op.opID());
+				Router r = toConf.getRouter();
+				int oldOpIndex = toConf.getOpContext().findDownstream(oldOpId).index();
+				int newOpIndex = -1;
+				for(PlacedOperator op_aux: toConf.getOpContext().downstreams) {
+					if (op_aux.opID() == newOpId){
+						newOpIndex = op_aux.index();
+					}
+				}
+				r.newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+			}
+		}
 	}
 	
 	private void sendSystemConfiguredToReplica(Operator replica){
@@ -313,16 +446,20 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		catch(IllegalAccessException iae){
 			System.out.println("While instantiating...: "+iae.getMessage());
 			iae.printStackTrace();
-		} catch (SecurityException se) {
+		} 
+		catch (SecurityException se) {
 			System.out.println("While instantiating...: "+se.getMessage());
 			se.printStackTrace();
-		} catch (NoSuchMethodException e) {
+		} 
+		catch (NoSuchMethodException e) {
 			System.out.println("While instantiating...: "+e.getMessage());
 			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
+		} 
+		catch (IllegalArgumentException e) {
 			System.out.println("While instantiating...: "+e.getMessage());
 			e.printStackTrace();
-		} catch (InvocationTargetException e) {
+		} 
+		catch (InvocationTargetException e) {
 			System.out.println("While instantiating...: "+e.getMessage());
 			e.printStackTrace();
 		}

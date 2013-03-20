@@ -15,6 +15,7 @@ import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
+import seep.comm.routing.StatefulRoutingImpl;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
 import seep.operator.State;
@@ -28,6 +29,8 @@ import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
  */
 
 public class NodeManager{
+	
+	private StatefulRoutingImpl sri = new StatefulRoutingImpl(5);
 	
 	private WorkerNodeDescription nodeDescr;
 	

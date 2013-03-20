@@ -1,6 +1,7 @@
 package seep.comm;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.ServerSocket;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;
@@ -62,6 +63,11 @@ public class ControlHandler implements Runnable{
 				newConn.start();
 			}
 			controlServerSocket.close();
+		}
+		catch(BindException be){
+			NodeManager.nLogger.severe("-> BIND EXC IO Error "+be.getMessage());
+			NodeManager.nLogger.severe("-> controlServerSocket.toString: "+controlServerSocket.toString());
+			be.printStackTrace();
 		}
 		catch(IOException io){
 			NodeManager.nLogger.severe("-> ControlHandler. While listening incoming conns "+io.getMessage());

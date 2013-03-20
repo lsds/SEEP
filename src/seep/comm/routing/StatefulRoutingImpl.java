@@ -1,9 +1,11 @@
 package seep.comm.routing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class StatefulRoutingImpl implements RoutingStrategyI{
+public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		
+	private static final long serialVersionUID = 1L;
 	//These structures store the information for doing consistent hashing
 	//downstreamNodeKeys stores the keys (within the INTEGER space of keys) where each node lies
 	private ArrayList<Integer> downstreamNodeKeys = null;

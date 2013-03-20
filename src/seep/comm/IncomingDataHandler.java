@@ -1,6 +1,7 @@
 package seep.comm;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.ServerSocket;
 
 import seep.infrastructure.NodeManager;
@@ -49,6 +50,11 @@ public class IncomingDataHandler implements Runnable{
 				uid++;
 			}
 			incDataServerSocket.close();
+		}
+		catch(BindException be){
+			NodeManager.nLogger.severe("-> BIND EXC IO Error "+be.getMessage());
+			NodeManager.nLogger.severe("-> Was trying to connect to: "+connPort);
+			be.printStackTrace();
 		}
 		catch(IOException io){
 			NodeManager.nLogger.severe("-> IncomingDataHandler. While listening incoming conns "+io.getMessage());

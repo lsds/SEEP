@@ -21,6 +21,7 @@ import seep.Main;
 import seep.P;
 import seep.comm.NodeManagerCommunication;
 import seep.comm.RuntimeCommunicationTools;
+import seep.comm.routing.Router;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
@@ -73,7 +74,7 @@ public class Infrastructure {
 	
 	private RuntimeCommunicationTools rct = new RuntimeCommunicationTools();
 	private NodeManagerCommunication bcu = new NodeManagerCommunication();
-	private ElasticInfrastructureUtils eiu = new ElasticInfrastructureUtils(this);
+	private ElasticInfrastructureUtils eiu;
 
 	private ManagerWorker manager = null;
 	private MonitorManager monitorManager = null;
@@ -97,8 +98,53 @@ public class Infrastructure {
 		elements = qp.getElements();
 		src = qp.getSrc();
 		snk = qp.getSnk();
+		// At this point we check the partitioning options
+		// This first option is the recommended only when one knows what she's doing.
+		ArrayList<ScaleOutIntentBean> soib = null;
+		if(!qp.getScaleOutIntents().isEmpty()){
+			NodeManager.nLogger.info("-> Manual static scale out");
+			soib = eiu.staticInstantiateNewReplicaOperator(qp.getScaleOutIntents(), qp);
+		}
+		// The default and preferred option, used 
+		else if (!qp.getPartitionRequirements().isEmpty()){
+			NodeManager.nLogger.info("-> Automatic static scale out");
+			soib = eiu.staticInstantiationNewReplicaOperators(qp);
+		}
+		System.out.println("");
+		System.out.println("");
+		System.out.println("");
+		for(ScaleOutIntentBean so : soib){
+			System.out.println("### SCALE OUT ###");
+			System.out.println(so);
+			System.out.println("scaling OP: "+so.getOpToScaleOut().toString());
+			System.out.println("new replica OP: "+so.getNewOperatorInstantiation().toString());
+		}
+		System.out.println("");
+		System.out.println("");
+		System.out.println("");
 		queryToNodesMapping = qp.getMapOperatorToNode();
-		eiu.executeStaticScaleOutFromIntent(qp.getScaleOutIntents());
+		configureRouterStatically();
+		eiu.executeStaticScaleOutFromIntent(soib);
+	}
+	
+	public void configureRouterStatically(){
+		for(Operator op: ops){
+			String queryFunction = op.getOpContext().getQueryFunction();
+			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
+			Router r = new Router(queryFunction, routeInfo);
+			// Configure routing implementations of the operator
+			ArrayList<Operator> downstream = new ArrayList<Operator>();
+			for(PlacedOperator po : op.getOpContext().downstreams){
+				downstream.add(this.getOperatorById(po.opID()));
+			}
+			//r.configureRoutingImpl(op.getOpContext());
+			r.configureRoutingImpl(op.getOpContext(), downstream);
+			op.setRouter(r);
+		}
+	}
+	
+	public void setEiu(ElasticInfrastructureUtils eiu){
+		this.eiu = eiu;
 	}
 	
 	public void setPathToQueryDefinition(String pathToQueryDefinition){
@@ -253,9 +299,13 @@ public class Infrastructure {
 	}
 	
 	public void setUp(Operator op){
+		System.out.println("7.6");
 		byte data[] = getDataFromFile(pathToQueryDefinition);
+		System.out.println("7.7");
 		NodeManager.nLogger.info("Sending code to new op: "+op.getOperatorId());
+		System.out.println("7.8");
 		sendCode(op, data);
+		System.out.println("7.9");
 	}
 	
 	public void broadcastState(State s){
@@ -352,9 +402,17 @@ public class Infrastructure {
 	
 	public void sendCode(Operator op, byte[] data){
 		///\fixme{once there are more than one op per node this code will need to be fixed}
+		System.out.println("1");
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		System.out.println("2");
+//		if(node == null){
+//			System.out.println("el puto nodo es nULL cojones puta madre calva de cristo");
+//			System.exit(0);
+//		}
 		Infrastructure.nLogger.info("-> Infrastructure. Sending CODE to node: "+node.toString());
+		System.out.println("3");
 		bcu.sendFile(node, data);
+		System.out.println("4");
 	}
 
 	public void deploy(Operator op) {

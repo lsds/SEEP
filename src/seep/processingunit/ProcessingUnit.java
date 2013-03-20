@@ -187,16 +187,23 @@ public class ProcessingUnit {
 //		ArrayList<Operator> operatorSet = (ArrayList<Operator>) mapOP_ID.values();
 		Collection<Operator> operatorSet = mapOP_ID.values();
 		ctx.configureOperatorConnections(operatorSet);
+		
+		/** Routers are, since version 0.2, configured statically in the master node, to enable static scale out **/
+		
 		//Create and configure routers
-		for(Operator op : operatorSet){
-			// Initialize and set the routing information
-			String queryFunction = op.getOpContext().getQueryFunction();
-			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
-			Router r = new Router(queryFunction, routeInfo);
-			// Configure routing implementations of the operator
-			r.configureRoutingImpl(op.getOpContext());
-			op.setRouter(r);
-		}
+//		for(Operator op : operatorSet){
+//			// Initialize and set the routing information
+//			String queryFunction = op.getOpContext().getQueryFunction();
+//			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
+//			
+//			// Check whether router is null. If it is null, do the following, otherwise it has been pre-configured in the master
+//			/** Move this to do statically at master node
+//			Router r = new Router(queryFunction, routeInfo);
+//			// Configure routing implementations of the operator
+//			r.configureRoutingImpl(op.getOpContext());
+//			op.setRouter(r);
+//			**/
+//		}
 		return ctx;
 	}
 	

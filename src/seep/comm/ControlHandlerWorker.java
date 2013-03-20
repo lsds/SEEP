@@ -3,8 +3,23 @@ package seep.comm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.net.Socket;
+import java.util.ArrayList;
+
 import seep.comm.serialization.ControlTuple;
+import seep.comm.serialization.controlhelpers.Ack;
+import seep.comm.serialization.controlhelpers.BackupNodeState;
+import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.controlhelpers.BackupRI;
+import seep.comm.serialization.controlhelpers.InitNodeState;
+import seep.comm.serialization.controlhelpers.InitOperatorState;
+import seep.comm.serialization.controlhelpers.InitRI;
+import seep.comm.serialization.controlhelpers.InvalidateState;
+import seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import seep.comm.serialization.controlhelpers.Resume;
+import seep.comm.serialization.controlhelpers.ScaleOutInfo;
+import seep.comm.serialization.controlhelpers.StateAck;
 import seep.infrastructure.NodeManager;
 import seep.runtimeengine.CoreRE;
 
@@ -35,6 +50,19 @@ public class ControlHandlerWorker implements Runnable{
 		Kryo k = new Kryo();
 		k.setClassLoader(owner.getRuntimeClassLoader());
 		k.register(ControlTuple.class);
+		k.register(Ack.class);
+		k.register(BackupNodeState.class);
+		k.register(BackupOperatorState.class);
+		k.register(Resume.class);
+		k.register(ScaleOutInfo.class);
+		k.register(StateAck.class);
+		k.register(ArrayList.class);
+		k.register(BackupRI.class);
+		k.register(InitNodeState.class);
+		k.register(InitOperatorState.class);
+		k.register(InitRI.class);
+		k.register(InvalidateState.class);
+		k.register(ReconfigureConnection.class);
 		return k;
 	}
 

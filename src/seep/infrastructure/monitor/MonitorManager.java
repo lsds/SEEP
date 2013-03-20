@@ -256,7 +256,8 @@ public class MonitorManager implements Runnable{
 						decider(m.getOpId(), n);
 //						triggers = 0;
 					}
-					System.out.println("OP: "+m.getOpId()+" IQL: "+n);
+					String opName = inf.getOpType(m.getOpId());
+					System.out.println("OP: "+m.getOpId()+" "+opName+" IQL: "+n);
 				}
 				
 				/**END TEMPORAL HACK**/

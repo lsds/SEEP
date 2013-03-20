@@ -9,7 +9,9 @@ import java.util.zip.CRC32;
 
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
+import seep.operator.Operator;
 import seep.operator.OperatorContext;
+import seep.operator.StatefulOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
 
@@ -148,7 +150,40 @@ return null;
 		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
 	}
 	
-	public void configureRoutingImpl(OperatorContext opContext){
+	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
+		RoutingStrategyI rs = null;
+		int opId = 0;
+		System.out.println("ORIGINAL DOWN SIZE: "+downstream.size());
+		for(Integer id : opContext.getOriginalDownstream()){
+			Operator down = null;
+			for(Operator o : downstream){
+				if(o.getOperatorId() == id){
+					down = o;
+				}
+			}
+			int index = opContext.getDownOpIndexFromOpId(id);
+			if(! (down instanceof StatefulOperator)){
+				int numDownstreams = downstream.size();
+				rs = new StatelessRoutingImpl(1, index, numDownstreams);
+			}
+			else if(down instanceof StatefulOperator){
+				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
+				rs = new StatefulRoutingImpl(index);
+			}
+			System.out.println("ADDED");
+			//If more than one downstream type, then put the new rs with the opId
+			if(opContext.downstreams.size() > 1){
+				downstreamRoutingImpl.put(opId, rs);
+			}
+			//Otherwise, store the rs in the reserved place of downstreamRoutingImpl
+			else if (opContext.downstreams.size() == 1){
+				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
+			}
+		}
+		NodeManager.nLogger.info("Routing Engine Configured");
+	}
+	
+	public void configureRoutingImpl2(OperatorContext opContext){
 		RoutingStrategyI rs = null;
 		int opId = 0;
 		//For every downstream in the original query graph
@@ -259,7 +294,7 @@ return null;
 	}
 	
 	/** this can be moved along with downTypeToLoadBalancer */
-	public int configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
+	private int configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
 		//We gather the load balancer for the operator splitting (the old one)
 		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
 if(rs == null){

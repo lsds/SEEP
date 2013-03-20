@@ -39,6 +39,7 @@ public class MasterController {
 		prop.loadProperties();
 		inf = new Infrastructure(Integer.parseInt(P.valueFor("mainPort")));
 		eiu = new ElasticInfrastructureUtils(inf);
+		inf.setEiu(eiu);
 		inf.startInfrastructure();
 		NodeManager.nLogger.info("-> DONE");
 	}
