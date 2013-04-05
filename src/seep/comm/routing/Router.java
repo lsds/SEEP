@@ -21,7 +21,10 @@ public class Router implements Serializable{
 
 	private static CRC32 crc32 = new CRC32();
 	
-	private Method queryFunction = null;
+//	@Deprecated
+//	private Method queryFunction = null;
+	
+	private String queryAttribute = null;
 	private boolean requiresQueryData = false;
 		
 	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
@@ -45,25 +48,27 @@ public class Router implements Serializable{
 		if(query != null){
 			this.requiresQueryData = true;
 		}
-		this.queryFunction = this.initializeQueryFunction(query);
+//		this.queryFunction = this.initializeQueryFunction(query);
+		this.queryAttribute = query;
 		this.routeInfo = routeInfo;
 	}
 	
-	/// \fixme{how to make this generic so that it always knows which class to query?}
-	public Method initializeQueryFunction(String query){
-		if(query != null){
-			NodeManager.nLogger.info("Initializing method to query stream data...");
-			try {
-				Class<DataTuple> c = DataTuple.class;
-				queryFunction = c.getMethod(query);
-				return queryFunction;
-			}
-			catch (NoSuchMethodException nsme){
-				nsme.printStackTrace();
-			}
-		}
-		return null;
-	}
+//	/// \fixme{how to make this generic so that it always knows which class to query?}
+//	@Deprecated
+//	public Method initializeQueryFunction(String query){
+//		if(query != null){
+//			NodeManager.nLogger.info("Initializing method to query stream data...");
+//			try {
+//				Class<DataTuple> c = DataTuple.class;
+//				queryFunction = c.getMethod(query);
+//				return queryFunction;
+//			}
+//			catch (NoSuchMethodException nsme){
+//				nsme.printStackTrace();
+//			}
+//		}
+//		return null;
+//	}
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
@@ -252,24 +257,29 @@ return null;
 	}
 	
 	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
-		int contentValue = -1;
-		try {
-			contentValue = (Integer)queryFunction.invoke(dt);
-		}
-		catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		int contentValue = dt.getInt(queryAttribute);
 		return routeInfo.get(contentValue);
 	}
+	
+//	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
+//		int contentValue = -1;
+//		try {
+//			contentValue = (Integer)queryFunction.invoke(dt);
+//		}
+//		catch (IllegalArgumentException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		catch (IllegalAccessException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		catch (InvocationTargetException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		return routeInfo.get(contentValue);
+//	}
 	
 	public ArrayList<Integer> routeLayerTwo(ArrayList<Integer> logicalTargets, int value){
 		ArrayList<Integer> targets = new ArrayList<Integer>();

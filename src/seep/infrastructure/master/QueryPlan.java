@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import seep.P;
+import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 import seep.operator.State;

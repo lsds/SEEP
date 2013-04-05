@@ -2,6 +2,7 @@ package seep.operator;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
@@ -142,18 +143,34 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 //		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
 	}
 	
-	public void setRoutingQueryFunction(String queryFunction_methodName){
-//		router.setQueryFunction(queryFunction_methodName);
-		opContext.setQueryFunction(queryFunction_methodName);
-		NodeManager.nLogger.info("Configured Routing Query Function: "+queryFunction_methodName+" in Operator: "+this.toString());
+//	public void setRoutingQueryFunction(String queryFunction_methodName){
+////		router.setQueryFunction(queryFunction_methodName);
+//		opContext.setQueryFunction(queryFunction_methodName);
+//		NodeManager.nLogger.info("Configured Routing Query Function: "+queryFunction_methodName+" in Operator: "+this.toString());
+//	}
+//	
+//	public void route(Router.RelationalOperator operand, int value, Operator toConnect){
+//		int opId = toConnect.getOperatorId();
+//		//router.routeValueToDownstream(operand, value, opId);
+//		opContext.routeValueToDownstream(operand, value, opId);
+//		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
+//	}
+	
+	public void route(String attributToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
+		int opId = toConnect.getOperatorId();
+		opContext.setQueryAttribute(attributToQuery);
+		opContext.routeValueToDownstream(operand, valueToMatch, opId);
+		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+valueToMatch+" to Operator: "+toConnect.toString());
 	}
 	
-	public void route(Router.RelationalOperator operand, int value, Operator toConnect){
-		int opId = toConnect.getOperatorId();
-		//router.routeValueToDownstream(operand, value, opId);
-		opContext.routeValueToDownstream(operand, value, opId);
-		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
+	public void _declareWorkingAttributes(List<String> attributes){
+		opContext.setDeclaredWorkingAttributes(attributes);
 	}
+	
+//	@Deprecated
+//	public void declareWorkingAttributes(String... attributes){
+//		opContext.setDeclaredWorkingAttributes(Arrays.asList(attributes));
+//	}
 	
 	/** HELPER METHODS **/
 	

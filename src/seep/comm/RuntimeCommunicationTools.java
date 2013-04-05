@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import seep.comm.serialization.ControlTuple;
-import seep.infrastructure.Infrastructure;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.master.Infrastructure;
 import seep.operator.OperatorStaticInformation;
 
 import com.esotericsoftware.kryo.Kryo;

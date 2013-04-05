@@ -102,11 +102,4 @@ public class Dispatcher implements Serializable{
 			}
 		}
 	}
-//
-////	@Deprecated
-////	public void sendMinUpstream(ControlTuple ct) {
-////		int index = opContext.minimumUpstream().index();
-////		sendUpstream(ct, index);
-////	}
-
 }

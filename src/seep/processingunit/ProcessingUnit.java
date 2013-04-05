@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 
@@ -229,7 +230,7 @@ public class ProcessingUnit {
 	
 	public void startDataProcessing(){
 		/// \todo{Find a better way to start the operator...}
-		DataTuple fake = new DataTuple();
+		DataTuple fake = DataTuple.getNoopDataTuple();
 		this.mostUpstream.processData(fake);
 	}
 	
@@ -237,6 +238,20 @@ public class ProcessingUnit {
 		for(Operator o : mapOP_ID.values()){
 			o.setUp();
 		}
+	}
+	
+	public Map<String, Integer> createTupleAttributeMapper(){
+		Map<String, Integer> idxMapper = new HashMap<String, Integer>();
+		List<String> declaredWorkingAttributes = mostUpstream.getOpContext().getDeclaredWorkingAttributes();
+		if(declaredWorkingAttributes != null){
+			for(int i = 0; i<declaredWorkingAttributes.size(); i++){
+				idxMapper.put(declaredWorkingAttributes.get(i), i);
+			}
+		}
+		else{
+			NodeManager.nLogger.warning("-> No tuple MAPPER. This is fine as far as I am a SRC");
+		}
+		return idxMapper;
 	}
 	
 	/** Runtime methods **/
@@ -289,6 +304,7 @@ public class ProcessingUnit {
 				if(dest instanceof CommunicationChannel){
 					///\fixme{do some proper thing with var now}
 					boolean now = false;
+//					System.out.println("ATTRS: "+dt.size());
 					outputQueue.sendToDownstream(dt, dest, now, false);
 				}
 				// LOCAL

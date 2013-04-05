@@ -3,6 +3,7 @@ package seep.comm;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
+import java.util.Map;
 
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.monitor.MetricsReader;
@@ -18,6 +19,7 @@ public class IncomingDataHandler implements Runnable{
 	private CoreRE owner;
 	private int connPort;
 	private boolean goOn;
+	private Map<String, Integer> idxMapper;
 
 	public int getConnPort(){
 		return connPort;
@@ -27,11 +29,12 @@ public class IncomingDataHandler implements Runnable{
 		this.connPort = connPort;
 	}
 
-	public IncomingDataHandler(CoreRE owner, int connPort){
+	public IncomingDataHandler(CoreRE owner, int connPort, Map<String, Integer> idxMapper){
 		this.owner = owner;
 		this.connPort = connPort;
 		//this.selector = initSelector();
 		this.goOn = true;
+		this.idxMapper = idxMapper;
 	}
 
 	public void run(){
@@ -44,7 +47,7 @@ public class IncomingDataHandler implements Runnable{
 			//Upstream id
 			int uid = 0;
 			while(goOn){
-				Thread newConn = new Thread(new IncomingDataHandlerWorker(uid, incDataServerSocket.accept(), owner));
+				Thread newConn = new Thread(new IncomingDataHandlerWorker(uid, incDataServerSocket.accept(), owner, idxMapper));
 				newConn.start();
 				MetricsReader.numberIncomingDataHandlerWorkers.inc();
 				uid++;

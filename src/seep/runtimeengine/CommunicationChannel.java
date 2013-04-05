@@ -12,6 +12,8 @@ import seep.P;
 import seep.buffer.Buffer;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.BatchTuplePayload;
+import seep.comm.serialization.messages.TuplePayload;
 import seep.operator.EndPoint;
 
 /**
@@ -33,10 +35,12 @@ public class CommunicationChannel implements EndPoint{
 	
 	public long reconf_ts;
 	private long last_ts;
-	private Iterator<BatchDataTuple> sharedIterator;
+//	private Iterator<BatchDataTuple> sharedIterator;
+	private Iterator<BatchTuplePayload> sharedIterator;
 	
 	//Batch information for this channel
-	private BatchDataTuple batch = new BatchDataTuple();
+//	private BatchDataTuple batch = new BatchDataTuple();
+	private BatchTuplePayload batch = new BatchTuplePayload();
 	private int channelBatchSize = Integer.parseInt(P.valueFor("batchLimit"));
 	private long tick = 0;
 
@@ -70,11 +74,19 @@ public class CommunicationChannel implements EndPoint{
 		return downstreamControlSocket;
 	}
 	
-	public void setSharedIterator(Iterator<BatchDataTuple> i){
+//	public void setSharedIterator(Iterator<BatchDataTuple> i){
+//		this.sharedIterator = i;
+//	}
+	
+	public void setSharedIterator(Iterator<BatchTuplePayload> i){
 		this.sharedIterator = i;
 	}
 	
-	public Iterator<BatchDataTuple> getSharedIterator(){
+//	public Iterator<BatchDataTuple> getSharedIterator(){
+//		return sharedIterator;
+//	}
+	
+	public Iterator<BatchTuplePayload> getSharedIterator(){
 		return sharedIterator;
 	}
 	
@@ -102,15 +114,26 @@ public class CommunicationChannel implements EndPoint{
 		return stop;
 	}
 	
-	public BatchDataTuple getBatch(){
+//	public BatchDataTuple getBatch(){
+//		return batch;
+//	}
+	
+	public BatchTuplePayload getBatch(){
 		return batch;
 	}
 	
 	/// \fixme{batching is broken after changing serialization mechanism, check this}
-	public void addDataToBatch(DataTuple dt){
-		batch.addTuple(dt);
+//	public void addDataToBatch(DataTuple dt){
+//		batch.addTuple(dt);
+//		channelBatchSize--;
+//		last_ts = dt.getTimestamp();
+//	}
+	
+	public void addDataToBatch(TuplePayload payload){
+//		System.out.println("TX: "+payload.attrValues.size());
+		batch.addTuple(payload);
 		channelBatchSize--;
-		last_ts = dt.getTimestamp();
+		last_ts = payload.timestamp;
 	}
 	
 	public int getChannelBatchSize(){

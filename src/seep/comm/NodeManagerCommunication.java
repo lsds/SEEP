@@ -9,9 +9,9 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import seep.infrastructure.Infrastructure;
-import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.master.Infrastructure;
+import seep.infrastructure.master.Node;
 import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**

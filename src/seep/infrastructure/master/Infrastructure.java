@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -25,7 +25,13 @@ import seep.comm.routing.Router;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.BatchTuplePayload;
+import seep.comm.serialization.messages.Payload;
+import seep.comm.serialization.messages.TuplePayload;
+import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.elastic.ElasticInfrastructureUtils;
+import seep.infrastructure.NodeManager;
+import seep.infrastructure.OperatorDeploymentException;
 import seep.infrastructure.monitor.MonitorManager;
 import seep.operator.Operator;
 import seep.operator.OperatorContext;
@@ -129,9 +135,10 @@ public class Infrastructure {
 	
 	public void configureRouterStatically(){
 		for(Operator op: ops){
-			String queryFunction = op.getOpContext().getQueryFunction();
+//			String queryFunction = op.getOpContext().getQueryFunction();
+			String queryAttribute = op.getOpContext().getQueryAttribute();
 			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
-			Router r = new Router(queryFunction, routeInfo);
+			Router r = new Router(queryAttribute, routeInfo);
 			// Configure routing implementations of the operator
 			ArrayList<Operator> downstream = new ArrayList<Operator>();
 			for(PlacedOperator po : op.getOpContext().downstreams){
@@ -680,12 +687,15 @@ public class Infrastructure {
 	}
 	
 	public void parseFileForNetflix() {
+		System.out.println("SEVERE: PROBLEM HERE, tuples have changed");
 		File f = new File("data.txt");
 		File o = new File("data.bin");
 		
 		Kryo k = new Kryo();
-		k.register(DataTuple.class);
-		k.register(BatchDataTuple.class);
+		k.register(ArrayList.class, new ArrayListSerializer());
+		k.register(Payload.class);
+		k.register(TuplePayload.class);
+		k.register(BatchTuplePayload.class);
 		try {
 			//OUT
 			FileOutputStream fos = new FileOutputStream(o);
@@ -697,12 +707,24 @@ public class Infrastructure {
 			String currentLine = null;
 			
 			//PARSE
+			
+			Map<String, Integer> mapper = new HashMap<String, Integer>();
+			ArrayList<String> artList = new ArrayList<String>();
+			artList.add("userId");
+			artList.add("itemId");
+			artList.add("rating");
+			for(int i = 0; i<artList.size(); i++){
+				System.out.println("MAP: "+artList.get(i));
+				mapper.put(artList.get(i), i);
+			}
+			
 			while((currentLine = br.readLine()) != null){
-				DataTuple dt = new DataTuple();
+				DataTuple dt = new DataTuple(mapper, new TuplePayload());
 				String[] tokens = currentLine.split(",");
-				dt.setUserId(Integer.parseInt(tokens[1]));
-				dt.setItemId(Integer.parseInt(tokens[0]));
-				dt.setRating(Integer.parseInt(tokens[2]));
+//				dt.setUserId(Integer.parseInt(tokens[1]));
+//				dt.setItemId(Integer.parseInt(tokens[0]));
+//				dt.setRating(Integer.parseInt(tokens[2]));
+				dt.setValues(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[0]), Integer.parseInt(tokens[2]));
 				
 				k.writeObject(output, dt);
 				//Flush the buffer to the stream

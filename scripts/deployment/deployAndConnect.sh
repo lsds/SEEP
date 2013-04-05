@@ -9,7 +9,7 @@ echo "copy deploy-local"
 scp -i ../authEC2.pem deploy-local ubuntu@$INSTANCE:/home/ubuntu
 #scp -i authEC2.pem authEC2.pem ec2-user@$INSTANCE:/home/ec2-user
 echo "copy jar"
-scp -i ../authEC2.pem ../../dist/SEEPv0.1-20130318.jar ubuntu@$INSTANCE:/home/ubuntu
+scp -i ../authEC2.pem ../../dist/SEEPv0.1-20130402.jar ubuntu@$INSTANCE:/home/ubuntu
 echo "copy query"
 scp -i ../authEC2.pem ../../../cf-stream/dist/cf-stream.jar ubuntu@$INSTANCE:/home/ubuntu
 echo "copy config-file"

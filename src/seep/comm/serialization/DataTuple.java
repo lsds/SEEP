@@ -1,125 +1,134 @@
 package seep.comm.serialization;
 
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
-public class DataTuple implements Serializable{
+import seep.comm.serialization.messages.Payload;
+import seep.comm.serialization.messages.TuplePayload;
+
+public class DataTuple implements DataTupleI, Serializable{
 
 	private static final long serialVersionUID = 1L;
+	private TuplePayload payload;
+	private final Map<String, Integer> idxMapper;
 
-	private int tupleSchemaId;
-	private long timestamp;
-	private int id;
+	public DataTuple(Map<String, Integer> idxMapper, TuplePayload payload){
+		this.payload = payload;
+		//this.attrValues = payload.attrValues;
+		this.idxMapper = idxMapper;
+	}
 	
-	// Required empty constructor for Kryo serialization
+	/** DEBUG METHODS */
+	
+	public HashMap<String, Integer> getMap(){
+		return (HashMap<String, Integer>) idxMapper;
+	}
+	
+	public int size(){
+//		if(payload == null || payload.attrValues == null) return 0;
+		return payload.attrValues.size();
+	}
+	
+	/** */
+	
 	public DataTuple(){
-		
+		idxMapper = new HashMap<String, Integer>();
+	}
+	
+	public static DataTuple getNoopDataTuple(){
+		return new DataTuple();
+	}
+	
+	public TuplePayload getPayload(){
+		return payload;
+	}
+	
+	public void set(TuplePayload tuplePayload){
+		this.payload = tuplePayload;
+	}
+	
+	public void setValues(Object...objects){
+		payload.attrValues = new Payload(objects);
+//		System.out.println("PRE-SIZE "+payload.attrValues.size());
+//		if(payload.attrValues.size() == 3){
+//			for(int i = 0; i<objects.length; i++){
+//				System.out.println(i+" "+objects[i]);
+//			}
+//		}
+//		System.out.println("POST-SIZE "+payload.attrValues.size());
+	}
+	
+	@Override
+	public Byte getByte(String attribute) {
+		return (Byte)payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public int getTupleSchemaId(){
-		return tupleSchemaId;
-	}
-	
-	public long getTimestamp() {
-		return timestamp;
+	@Override
+	public byte[] getByteArray(String attribute) {
+		return (byte[])payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public void setTimestamp(long timestamp) {
-		this.timestamp = timestamp;
-	}
-	
-	public void setId(int id){
-		this.id = id;
-	}
-	
-	public int getId(){
-		return id;
-	}
-	
-	public DataTuple(int tupleSchemaId){
-		this.tupleSchemaId = tupleSchemaId;
-	}
-	
-	public DataTuple(int tupleSchemaId, long timestamp, int id){
-		this.tupleSchemaId = tupleSchemaId;
-		this.timestamp = timestamp;
-		this.id = id;
+	@Override
+	public Character getChar(String attribute) {
+		return (Character)payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-
-	//Ad-hoc for experimentation
-	
-	
-	private int userId;
-	private int itemId;
-	private int rating;
-	private boolean requiresUpdate;
-	private ArrayList userVector;
-	private ArrayList partialRecommendationVector;
-	private ArrayList noRec;
-	private int recommendation;
-	
-	public boolean getRequiresUpdate(){
-		return requiresUpdate;
-	}
-	
-	public void setRequiresUpdate(boolean requiresUpdate){
-		this.requiresUpdate = requiresUpdate;
-	}
-	
-	public int getUserId() {
-		return userId;
+	@Override
+	public Double getDouble(String attribute) {
+		return (Double)payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public void setUserId(int userId) {
-		this.userId = userId;
+	@Override
+	public double[] getDoubleArray(String attribute) {
+		return (double[])payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public int getItemId() {
-		return itemId;
+	@Override
+	public Float getFloat(String attribute) {
+		return (Float)payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public void setItemId(int itemId) {
-		this.itemId = itemId;
+	@Override
+	public Integer getInt(String attribute) {
+		return (Integer)payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public int getRating() {
-		return rating;
+	@Override
+	public int[] getIntArray(String attribute) {
+		return (int[])payload.attrValues.get(idxMapper.get(attribute));
 	}
 
-	public void setRating(int rating) {
-		this.rating = rating;
+	@Override
+	public Long getLong(String attribute) {
+		return (Long)payload.attrValues.get(idxMapper.get(attribute));
+	}
+
+	@Override
+	public Short getShort(String attribute) {
+		return (Short)payload.attrValues.get(idxMapper.get(attribute));
+	}
+
+	@Override
+	public String getString(String attribute) {
+		return (String)payload.attrValues.get(idxMapper.get(attribute));
+	}
+
+	@Override
+	public String[] getStringArray(String attribute) {
+		return (String[])payload.attrValues.get(idxMapper.get(attribute));
+	}
+
+	@Override
+	public Object getValue(String attribute) {
+//		System.out.println("getValue = attrValues.size -> "+payload.attrValues.size()+" accessed in "+idxMapper.get(attribute));
+		return (Object)payload.attrValues.get(idxMapper.get(attribute));
 	}
 	
-	public ArrayList getUserVector(){
-		return userVector;
+	@Override
+	public boolean getBoolean(String attribute){
+//		System.out.println("getBoolean = attrValues.size -> "+payload.attrValues.size()+" accessed in "+idxMapper.get(attribute));
+		return (Boolean)payload.attrValues.get(idxMapper.get(attribute));
 	}
 	
-	public void setUserVector(ArrayList userVector){
-		this.userVector = userVector;
-	}
-	
-	public ArrayList getPartialRecommendationVector(){
-		return partialRecommendationVector;
-	}
-	
-	public void setPartialRecommendationVector(ArrayList partialRecommendationVector){
-		this.partialRecommendationVector = partialRecommendationVector;
-	}
-	
-	public ArrayList getNoRec(){
-		return noRec;
-	}
-	
-	public void setNoRec(ArrayList noRec){
-		this.noRec = noRec;
-	}
-	
-	public int getRecommendation(){
-		return recommendation;
-	}
-	
-	public void setRecommendation(int recommendation){
-		this.recommendation = recommendation;
-	}
 }

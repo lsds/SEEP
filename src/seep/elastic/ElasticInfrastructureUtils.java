@@ -17,11 +17,11 @@ import seep.comm.NodeManagerCommunication;
 import seep.comm.RuntimeCommunicationTools;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
-import seep.infrastructure.Infrastructure;
-import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
-import seep.infrastructure.QueryPlan;
-import seep.infrastructure.ScaleOutIntentBean;
+import seep.infrastructure.master.Infrastructure;
+import seep.infrastructure.master.Node;
+import seep.infrastructure.master.QueryPlan;
+import seep.infrastructure.master.ScaleOutIntentBean;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 import seep.operator.State;
@@ -480,6 +480,8 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 				}
 				//Copy the original operators to the new operatorContext
 				newOp.setOriginalDownstream(op.getOpContext().getOriginalDownstream());
+				//Copy the tuple declaration fields
+				newOp._declareWorkingAttributes(op.getOpContext().getDeclaredWorkingAttributes());
 			}
 		}
 	}

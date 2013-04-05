@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,6 +12,8 @@ import java.net.URLClassLoader;
 
 import seep.P;
 import seep.elastic.ElasticInfrastructureUtils;
+import seep.infrastructure.NodeManager;
+import seep.infrastructure.OperatorDeploymentException;
 
 
 public class MasterController {

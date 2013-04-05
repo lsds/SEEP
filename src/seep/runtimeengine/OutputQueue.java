@@ -1,13 +1,17 @@
 package seep.runtimeengine;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import seep.P;
 import seep.buffer.Buffer;
-import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.BatchTuplePayload;
+import seep.comm.serialization.messages.Payload;
+import seep.comm.serialization.messages.TuplePayload;
+import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 
@@ -27,8 +31,20 @@ public class OutputQueue {
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
-		k.register(DataTuple.class);
-		k.register(BatchDataTuple.class);
+		
+//		k.register(DataTuple.class);
+//		k.register(BatchDataTuple.class);
+		
+		k.register(ArrayList.class, new ArrayListSerializer());
+		k.register(Payload.class);
+		k.register(TuplePayload.class);
+		k.register(BatchTuplePayload.class);
+		
+//		k.register(BatchTuplePayload.class);
+//		k.register(TuplePayload.class);
+//		k.register(Payload.class);
+//		k.register(ArrayList.class, new ArrayListSerializer());
+		
 		return k;
 	}
 	
@@ -80,7 +96,7 @@ public class OutputQueue {
 			}
 			if(!stop.get()){
 				if(!beacon){
-					channelRecord.addDataToBatch(tuple);
+					channelRecord.addDataToBatch(tuple.getPayload());
 				}
 				//If it is mandated to send the tuple now (URGENT), then channelBatchSize is put to 0
 				if(now) channelRecord.resetChannelBatchSize();
@@ -88,7 +104,8 @@ public class OutputQueue {
 				/// \todo{Add the following line for include the batch timing mechanism}
 //				if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.getTick) > ExecutionConfiguration.maxLatencyAllowed ){
 				if(channelRecord.getChannelBatchSize() == 0){
-					BatchDataTuple msg = channelRecord.getBatch();
+//					BatchDataTuple msg = channelRecord.getBatch();
+					BatchTuplePayload msg = channelRecord.getBatch();
 					channelRecord.setTick(currentTime);
 					
 					k.writeObject(output, msg);
@@ -120,7 +137,8 @@ public class OutputQueue {
 	public void replay(CommunicationChannel oi){
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){
-					BatchDataTuple batch = oi.getSharedIterator().next();
+//					BatchDataTuple batch = oi.getSharedIterator().next();
+					BatchTuplePayload batch = oi.getSharedIterator().next();
 					Output output = oi.getOutput();
 					k.writeObject(output, batch);
 					output.flush();
@@ -130,13 +148,15 @@ public class OutputQueue {
 	}
 	
 	public void replayTuples(CommunicationChannel cci) {
-		Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
+//		Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
+		Iterator<BatchTuplePayload> sharedIterator = cci.getBuffer().iterator();
 		Output output = cci.getOutput();
 		int bufferSize = cci.getBuffer().size();
 		int controlThreshold = (int)(bufferSize)/10;
 		int replayed = 0;
 		while(sharedIterator.hasNext()) {
-			BatchDataTuple dt = sharedIterator.next();
+//			BatchDataTuple dt = sharedIterator.next();
+			BatchTuplePayload dt = sharedIterator.next();
 			k.writeObject(output, dt);
 			output.flush();
 			replayed++;

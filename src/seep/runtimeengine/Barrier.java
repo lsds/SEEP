@@ -20,9 +20,27 @@ public class Barrier implements DataStructureI {
 	
 	private BlockingQueue<ArrayList<DataTuple>> sbq = new SynchronousQueue<ArrayList<DataTuple>>();
 	
+	private long lastTimestamp = 0;
+	private int repetitions = 0;
+	private long cummulatedTime = 0;
+	
 	public Barrier(int initialNumberOfThreads){
 		staticBarrier = new Phaser(initialNumberOfThreads){
 			protected boolean onAdvance(int phase, int parties) {
+				long now = System.currentTimeMillis();
+				if(lastTimestamp != 0){
+					cummulatedTime += (now-lastTimestamp);
+					lastTimestamp = now;
+					repetitions++;
+					if(repetitions == 5000){
+						System.out.println("AVG barrier time: "+(cummulatedTime)+" ms");
+						repetitions = 0;
+						cummulatedTime = 0;
+					}
+				}
+				else{
+					lastTimestamp = now;
+				}
 				ArrayList<DataTuple> copy = new ArrayList<DataTuple>(data);
 				data.clear();
 				try {

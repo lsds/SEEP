@@ -15,7 +15,7 @@ import com.esotericsoftware.kryo.io.Input;
 import seep.Main;
 import seep.P;
 import seep.comm.serialization.MetricsTuple;
-import seep.infrastructure.Infrastructure;
+import seep.infrastructure.master.Infrastructure;
 import seep.operator.Operator;
 import seep.runtimeengine.CoreRE;
 

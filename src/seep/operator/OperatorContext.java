@@ -5,9 +5,10 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 import seep.comm.routing.Router.RelationalOperator;
-import seep.infrastructure.Node;
+import seep.infrastructure.master.Node;
 
 public class OperatorContext implements Serializable{
 
@@ -23,17 +24,32 @@ public class OperatorContext implements Serializable{
 	private ArrayList<Integer> originalDownstream = new ArrayList<Integer>();
 	
 	/** VAR -> Routing related information for this operator **/
-	private String queryFunction = null;
+//	private String queryFunction = null;
+	private String queryAttribute = null;
 	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
+	/** Tuple dependent information **/
+	private List<String> declaredWorkingAttributes;
 	
 	public OperatorContext(){
 		
 	}
 	
-	public String getQueryFunction(){
-		return queryFunction;
+//	public String getQueryFunction(){
+//		return queryFunction;
+//	}
+	
+	public String getQueryAttribute(){
+		return queryAttribute;
+	}
+	
+	public void setDeclaredWorkingAttributes(List<String> declaredWorkingAttributes){
+		this.declaredWorkingAttributes = declaredWorkingAttributes;
+	}
+	
+	public List<String> getDeclaredWorkingAttributes(){
+		return declaredWorkingAttributes;
 	}
 	
 	public HashMap<Integer, ArrayList<Integer>> getRouteInfo(){
@@ -164,8 +180,12 @@ public class OperatorContext implements Serializable{
 		connectionsU.add(opID);
 	}
 	
-	public void setQueryFunction(String queryFunction){
-		this.queryFunction = queryFunction;
+//	public void setQueryFunction(String queryFunction){
+//		this.queryFunction = queryFunction;
+//	}
+	
+	public void setQueryAttribute(String queryAttribute){
+		this.queryAttribute = queryAttribute;
 	}
 	
 	//if less or greater is than a given value. if equal could be with many values, with range is a special case as well

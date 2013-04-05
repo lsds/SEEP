@@ -162,7 +162,7 @@ public class NodeManager{
 //				System.out.println("Reading class descriptor: "+osc.toString());
 				//Lazy load of the required class in case is an operator
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
-					NodeManager.nLogger.info("-> Received Unknown Class. Using custom class loader to resolve it");
+					NodeManager.nLogger.info("-> Received Unknown Class ->"+osc.getName()+"<- Using custom class loader to resolve it");
 					Class<?> baseI = rcl.loadClass(osc.getName());
 					
 //					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});

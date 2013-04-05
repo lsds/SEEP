@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 /**
 * ESFTRuntimeException. This class models an exception ocurred during runtime phase

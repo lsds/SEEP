@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Map;
 
 import seep.Main;
 import seep.comm.ControlHandler;
@@ -14,9 +15,9 @@ import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
-import seep.infrastructure.Node;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.WorkerNodeDescription;
+import seep.infrastructure.master.Node;
 import seep.operator.Operator;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.Operator.DataAbstractionMode;
@@ -95,12 +96,14 @@ public class CoreRE {
 		processingUnit.setOpReady(opId);
 		if(processingUnit.allOperatorsReady()){
 			NodeManager.nLogger.info("-> All operators in this unit are ready. Initializing communications...");
+			// Once the operators are in the node, we extract and declare how they will handle data tuples
+			Map<String, Integer> idxMapper = processingUnit.createTupleAttributeMapper();
 			processingUnit.initOperators();
-			initializeCommunications();
+			initializeCommunications(idxMapper);
 		}
 	}
 	
-	public void initializeCommunications(){
+	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
 		outputQueue = new OutputQueue();
 		
 		// SET UP the data strcuture adapter, depending on the operators
@@ -119,7 +122,7 @@ public class CoreRE {
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch);
 		//Data worker
-		idh = new IncomingDataHandler(this, inD);
+		idh = new IncomingDataHandler(this, inD, tupleIdxMapper);
 		iDataH = new Thread(idh);
 		//Consumer worker
 //		dataConsumer = new DataConsumer(this, inputQueue);
@@ -151,8 +154,6 @@ public class CoreRE {
 		genericAck = b;
 		
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" instantiated");
-		
-		
 		
 		/// INITIALIZATION
 

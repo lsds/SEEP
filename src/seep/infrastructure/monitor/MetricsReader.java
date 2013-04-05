@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit;
 
 import seep.comm.IncomingDataHandler;
 import seep.processingunit.ProcessingUnit;
-import seep.runtimeengine.Barrier;
 import seep.runtimeengine.InputQueue;
 
 import com.yammer.metrics.Metrics;
@@ -23,6 +22,7 @@ public class MetricsReader {
 	final public static Meter eventsPerSecond = Metrics.newMeter(ProcessingUnit.class, "get-events", "events", TimeUnit.SECONDS);
 	// Events processed, manual counter
 	final public static Counter eventsProcessed = Metrics.newCounter(ProcessingUnit.class, "total-events");
+	// 
 	
 	public MetricsReader(){
 		

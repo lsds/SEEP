@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 
 import java.io.BufferedReader;
@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 import seep.P;
+import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 

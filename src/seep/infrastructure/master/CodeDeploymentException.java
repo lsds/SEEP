@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 public class CodeDeploymentException extends Exception {
 

@@ -8,6 +8,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.messages.BatchTuplePayload;
 import seep.operator.State;
 
 /**
@@ -18,11 +19,13 @@ public class Buffer implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
-	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
+//	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
+	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
 	
 	private BackupNodeState bs = null;
 
-	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
+//	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
+	public Iterator<BatchTuplePayload> iterator() { return buff.iterator(); }
 
 	public Buffer(){
 		//state cannot be null. before backuping it would be null and this provokes bugs
@@ -55,21 +58,28 @@ public class Buffer implements Serializable{
 		this.bs = bs;
 	}
 
-	public void save(BatchDataTuple batch){
+	public void save(BatchTuplePayload batch){
 		buff.add(batch);
 	}
+	
+//	public void save(BatchDataTuple batch){
+//		buff.add(batch);
+//	}
 	
 /// \test trim() should be tested
 	public void trim(long ts){
 //System.out.println("TO TRIM");
-		Iterator<BatchDataTuple> iter = buff.iterator();
+//		Iterator<BatchDataTuple> iter = buff.iterator();
+		Iterator<BatchTuplePayload> iter = buff.iterator();
 		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
-			BatchDataTuple next = iter.next();
+//			BatchDataTuple next = iter.next();
+			BatchTuplePayload next = iter.next();
 			long timeStamp = 0;
-			numOfTuplesPerBatch = next.getBatchSize();
+			numOfTuplesPerBatch = next.batchSize;
 			//Accessing last index cause that is the newest tuple in the batch
-			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTimestamp();
+//			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTimestamp();
+			timeStamp = next.getTuple(numOfTuplesPerBatch-1).timestamp;
 //System.out.println("#events: "+numOfTuplesPerBatch+" timeStamp: "+timeStamp+" ts: "+ts);
 			if (timeStamp <= ts) iter.remove();
 			else break;

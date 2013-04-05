@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 import java.net.InetAddress;
 import java.io.Serializable;

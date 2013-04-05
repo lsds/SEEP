@@ -19,5 +19,6 @@ public interface DataTupleI {
 	public Float getFloat(String attribute);
 	public Double getDouble(String attribute);
 	public double[] getDoubleArray(String attribute);
+	public boolean getBoolean(String attribute);
 	
 }

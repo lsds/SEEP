@@ -1,4 +1,4 @@
-package seep.infrastructure;
+package seep.infrastructure.master;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
