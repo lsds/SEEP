@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 
-import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupNodeState;

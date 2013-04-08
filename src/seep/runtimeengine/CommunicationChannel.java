@@ -2,19 +2,17 @@ package seep.runtimeengine;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.*;
+import java.net.Socket;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.esotericsoftware.kryo.io.Output;
-
 import seep.P;
 import seep.buffer.Buffer;
-import seep.comm.serialization.BatchDataTuple;
-import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.messages.BatchTuplePayload;
 import seep.comm.serialization.messages.TuplePayload;
 import seep.operator.EndPoint;
+
+import com.esotericsoftware.kryo.io.Output;
 
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
