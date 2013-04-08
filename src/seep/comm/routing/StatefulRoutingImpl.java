@@ -1,9 +1,11 @@
 package seep.comm.routing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class StatefulRoutingImpl implements RoutingStrategyI{
+public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		
+	private static final long serialVersionUID = 1L;
 	//These structures store the information for doing consistent hashing
 	//downstreamNodeKeys stores the keys (within the INTEGER space of keys) where each node lies
 	private ArrayList<Integer> downstreamNodeKeys = null;
@@ -69,8 +71,6 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 	//explain +1
 		keyToDownstreamRealIndex.add(oldVirtualIndex+1, newOpIndex);
 		downstreamNodeKeys.add(oldVirtualIndex, newKey);
-
-			
 		return newKey;
 	}
 		
@@ -101,5 +101,17 @@ public class StatefulRoutingImpl implements RoutingStrategyI{
 //		System.out.println("WARNING...route(int value) in StatefulRoutingImpl");
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		return route(targets, value);
+	}
+	
+	@Override
+	public ArrayList<Integer> routeToAll(){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		return routeToAll(targets);
+	}
+
+	@Override
+	public ArrayList<Integer> routeToAll(ArrayList<Integer> targets) {
+		// Just returning the whole set of real indexes ??
+		return keyToDownstreamRealIndex;
 	}
 }

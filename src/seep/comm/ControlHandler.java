@@ -1,11 +1,10 @@
 package seep.comm;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.ServerSocket;
-
 import seep.infrastructure.NodeManager;
-import seep.operator.Operator;
-import seep.operator.QuerySpecificationI;
+import seep.runtimeengine.CoreRE;
 
 /** 
 * ControlHandler. This class is in charge of managing control connections and attach them to a given thread that is in charge of serving them.
@@ -13,18 +12,18 @@ import seep.operator.QuerySpecificationI;
 
 public class ControlHandler implements Runnable{
 
-	//The operator that owns this control handler
-	private Operator owner;
+	//The core that owns this control handler
+	private CoreRE owner;
 	//The connection port that this controlhandler must use
 	private int connPort;
 	//This variable controls if this Runnable should keep running or not
 	private boolean goOn;
 
-	public QuerySpecificationI getOwner(){
+	public CoreRE getOwner(){
 		return owner;
 	}
 	
-	public void setOwner(Operator owner){
+	public void setOwner(CoreRE owner){
 		this.owner = owner;
 	}
 
@@ -44,18 +43,19 @@ public class ControlHandler implements Runnable{
 		this.goOn = goOn;
 	}
 
-	public ControlHandler(Operator owner, int connPort){
+	public ControlHandler(CoreRE owner, int connPort){
 		this.owner = owner;
 		this.connPort = connPort;
 		this.goOn = true;
 	}
-
+	
 	public void run(){
 		ServerSocket controlServerSocket = null;
 		try{
 			//Establish listening port
     		controlServerSocket = new ServerSocket(connPort);
 			controlServerSocket.setReuseAddress(true);
+			NodeManager.nLogger.info("-> ControlHandler listening in port: "+connPort);
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
@@ -64,10 +64,14 @@ public class ControlHandler implements Runnable{
 			}
 			controlServerSocket.close();
 		}
+		catch(BindException be){
+			NodeManager.nLogger.severe("-> BIND EXC IO Error "+be.getMessage());
+			NodeManager.nLogger.severe("-> controlServerSocket.toString: "+controlServerSocket.toString());
+			be.printStackTrace();
+		}
 		catch(IOException io){
 			NodeManager.nLogger.severe("-> ControlHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
 		}
 	}
-	
 }	

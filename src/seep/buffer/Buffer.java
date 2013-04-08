@@ -6,8 +6,10 @@ import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.comm.serialization.BatchDataTuple;
-import seep.comm.serialization.controlhelpers.BackupState;
-import seep.comm.serialization.controlhelpers.StateI;
+import seep.comm.serialization.controlhelpers.BackupNodeState;
+import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.messages.BatchTuplePayload;
+import seep.operator.State;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -17,20 +19,18 @@ public class Buffer implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
-	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
+//	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
+	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
 	
-	private BackupState bs = null;
+	private BackupNodeState bs = null;
 
-	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
+//	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
+	public Iterator<BatchTuplePayload> iterator() { return buff.iterator(); }
 
 	public Buffer(){
 		//state cannot be null. before backuping it would be null and this provokes bugs
 //\bug The constructor in Buffer is operator dependant, this must be fixed by means of interfaces that make it independent.
-		BackupState initState = new BackupState();
-		initState.setOpId(0);
-		initState.setTs_e(0);
-		StateI state = null;
-		initState.setState(state);
+		BackupNodeState initState = new BackupNodeState();
 		bs = initState;
 	}
 	
@@ -38,36 +38,48 @@ public class Buffer implements Serializable{
 		return buff.size();
 	}
 
-	public BackupState getBackupState(){
+	public BackupNodeState getBackupState(){
 		return bs;
 	}
 
-	public void saveStateAndTrim(BackupState bs){
+	public void saveStateAndTrim(BackupNodeState bs){
 		//Save state
 		this.bs = bs;
+		long ts_e = bs.getBackupOperatorStateWithOpId(bs.getUpstreamOpId()).getState().getData_ts();
+		
 		//Trim buffer, eliminating those tuples that are represented by this state
-		trim(bs.getTs_e());
+		trim(ts_e);
 	}
 	
-	public void replaceBackupState(BackupState bs) {
+	public void replaceBackupNodeState(BackupNodeState bs) {
+//		if(this.bs.getBackupOperatorState() != null && bs.getBackupOperatorState() != null){
+//		System.out.println("% Buffer. replacing old state: "+this.bs.getBackupOperatorState()[0].getOpId()+" with "+bs.getBackupOperatorState()[0].getOpId());
+//		}
 		this.bs = bs;
 	}
 
-	public void save(BatchDataTuple batch){
+	public void save(BatchTuplePayload batch){
 		buff.add(batch);
 	}
+	
+//	public void save(BatchDataTuple batch){
+//		buff.add(batch);
+//	}
 	
 /// \test trim() should be tested
 	public void trim(long ts){
 //System.out.println("TO TRIM");
-		Iterator<BatchDataTuple> iter = buff.iterator();
+//		Iterator<BatchDataTuple> iter = buff.iterator();
+		Iterator<BatchTuplePayload> iter = buff.iterator();
 		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
-			BatchDataTuple next = iter.next();
+//			BatchDataTuple next = iter.next();
+			BatchTuplePayload next = iter.next();
 			long timeStamp = 0;
-			numOfTuplesPerBatch = next.getBatchSize();
+			numOfTuplesPerBatch = next.batchSize;
 			//Accessing last index cause that is the newest tuple in the batch
-			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTs();
+//			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTimestamp();
+			timeStamp = next.getTuple(numOfTuplesPerBatch-1).timestamp;
 //System.out.println("#events: "+numOfTuplesPerBatch+" timeStamp: "+timeStamp+" ts: "+ts);
 			if (timeStamp <= ts) iter.remove();
 			else break;

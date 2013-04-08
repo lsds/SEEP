@@ -5,12 +5,12 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
-
 import seep.P;
 import seep.comm.serialization.MetricsTuple;
 import seep.infrastructure.NodeManager;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
 
 /**
 * Monitor. This class implements runnable and is in charge of retrieving information from the system. There is a monitor in each node that is being used by the system.
@@ -18,7 +18,7 @@ import seep.infrastructure.NodeManager;
 
 public class Monitor implements Runnable{
 
-	private int opId = -1000;
+	private int nodeId;
 	private Kryo k = null;
 	private Output output = null;
 	
@@ -30,8 +30,8 @@ public class Monitor implements Runnable{
 		return k;
 	}
 	
-	public void setOpId(int opId) {
-		this.opId = opId;
+	public void setNodeId(int opId) {
+		this.nodeId = opId;
 	}
 	
 	public void stopMonitor(){
@@ -43,7 +43,7 @@ public class Monitor implements Runnable{
 		long inputQueueEvents = MetricsReader.eventsInputQueue.getCount();
 		long numberIncomingdataHandlerWorkers = MetricsReader.numberIncomingDataHandlerWorkers.getCount();
 		MetricsTuple mt = new MetricsTuple();
-		mt.setOpId(opId);
+		mt.setOpId(nodeId);
 		mt.setInputQueueEvents(inputQueueEvents);
 		mt.setNumberIncomingDataHandlerWorkers(numberIncomingdataHandlerWorkers);
 		k.writeObject(output, mt);

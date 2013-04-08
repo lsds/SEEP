@@ -16,6 +16,8 @@ public class RuntimeClassLoader extends URLClassLoader{
 	public Class<?> loadClass(String name){
 		try {
 			return super.loadClass(name);
+//			return Class.forName( name, false, this );
+//			return Class.forName(name);
 		} 
 		catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -23,5 +25,4 @@ public class RuntimeClassLoader extends URLClassLoader{
 		}
 		return null;
 	}
-
 }

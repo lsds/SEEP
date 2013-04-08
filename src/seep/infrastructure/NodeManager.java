@@ -6,22 +6,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
-import seep.comm.serialization.DataTuple;
+import seep.comm.routing.StatefulRoutingImpl;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
+import seep.operator.State;
+import seep.runtimeengine.CoreRE;
 import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
 import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
@@ -32,6 +30,13 @@ import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
 public class NodeManager{
 	
+	private StatefulRoutingImpl sri = new StatefulRoutingImpl(5);
+	
+	private WorkerNodeDescription nodeDescr;
+	
+	private CoreRE core = null;
+	
+	//private RuntimeClassLoader rcl = null;
 	private RuntimeClassLoader rcl = null;
 	
 	//Endpoint of the central node
@@ -48,7 +53,6 @@ public class NodeManager{
 	
 	static public long clock = 0;
 	
-	static public Map<Integer, Operator> mapOP_ID = new HashMap<Integer, Operator>();
 	
 	static public Monitor nodeMonitor = new Monitor();
 	static public int second;
@@ -59,38 +63,35 @@ public class NodeManager{
 	private Thread monitorT = null;
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
+//		nLogger.setLevel(java.util.logging.Level.SEVERE);
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
 		this.ownPort = ownPort;
 		
+		try {
+			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
+		} 
+		catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
 
-	public void newOperatorInstantiation(Object o) throws OperatorInstantiationException {
-//System.out.println("MONITOR THREAD STATE: "+monitorT);
-		if(monitorT == null){
-			int opId = ((Operator)o).getOperatorId();
-			nodeMonitor.setOpId(opId);
-			monitorT = new Thread(nodeMonitor);
-			monitorT.start();
-			nLogger.info("-> Node Monitor running");
-		}
-		mapOP_ID.put(((Operator)o).getOperatorId(), (Operator)o);
-		((Operator)o).instantiateOperator();
-	}
+//	public void newOperatorInitialization(Object o) throws OperatorInitializationException {
+////		mapOP_ID.get(((Integer)o).intValue()).initializeCommunications();
+//		core.setOpReady((Integer)o);
+//	}
 
-	public void newOperatorInitialization(Object o) throws OperatorInitializationException {
-		mapOP_ID.get(((Integer)o).intValue()).initializeCommunications();
-	}
-
-	public void startOperator(Integer opToInitialize) {
-		int opId = opToInitialize.intValue();
-//		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-		DataTuple dt = new DataTuple(-5);
-		dt.setTs(0);
-		nLogger.info("-> Starting system");
-		mapOP_ID.get(opId).processData(dt);
-	}
+//	public void startOperator(Integer opToInitialize) {
+//		int opId = opToInitialize.intValue();
+////		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
+//		DataTuple dt = new DataTuple(-5);
+//		dt.setTs(0);
+//		nLogger.info("-> Starting system");
+//		mapOP_ID.get(opId).processData(dt);
+//	}
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
@@ -123,15 +124,20 @@ public class NodeManager{
 //		}
 	}
 	
-	
 	public void init(){
-		//Send bootstrap information
-		bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
+		//Get unique identifier for this node
+		int nodeId = nodeDescr.getNodeId();
+		//Initialize node engine ( CoreRE + ProcessingUnit )
+		CoreRE core = new CoreRE(nodeDescr, rcl);
+		//Initialize monitor
+		nodeMonitor.setNodeId(nodeId);
+		monitorT = new Thread(nodeMonitor);
+		monitorT.start();
+		nLogger.info("-> Node Monitor running");
 		//Local variables
 		ServerSocket serverSocket = null;
 		PrintWriter out = null;
 		ExtendedObjectInputStream ois = null;
-		ExtendedObjectInputStream hack = null;
 		
 		Object o = null;
 		boolean listen = true;
@@ -141,6 +147,8 @@ public class NodeManager{
 			serverSocket = new ServerSocket(ownPort);
 			NodeManager.nLogger.info("NODEMANAGER: Waiting for incoming requests on port: "+ownPort);
 			Socket clientSocket = null;
+			//Send bootstrap information
+			bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
 			while(listen){
 				//Accept incoming connections
 				clientSocket = serverSocket.accept();
@@ -151,18 +159,23 @@ public class NodeManager{
 //				hack = rcl.getEOIS(clientSocket.getInputStream());
 				//Read the serialized object sent.
 				ObjectStreamClass osc = ois.readClassDescriptor();
-				System.out.println("Reading class descriptor: "+osc.toString());
+//				System.out.println("Reading class descriptor: "+osc.toString());
 				//Lazy load of the required class in case is an operator
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
-					System.out.println("Loading class with CUSTOM CLASSLOADER: "+osc.getName());
+					NodeManager.nLogger.info("-> Received Unknown Class ->"+osc.getName()+"<- Using custom class loader to resolve it");
 					Class<?> baseI = rcl.loadClass(osc.getName());
-					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
-					Object[] initargs = new Object[1];
-					initargs[0] = -666;
-					Object base = constructor.newInstance(initargs);
-					System.out.println("Mock object id: "+((Operator)base).getOperatorId());
+					
+//					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
+//					Object[] initargs = new Object[1];
+//					initargs[0] = -666;
+//					Object base = constructor.newInstance(initargs);
 					o = ois.readObject();
-					System.out.println("REAL object id: "+((Operator)o).getOperatorId());
+					if(o instanceof Operator){
+						NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
+					}
+					else if (o instanceof State){
+						NodeManager.nLogger.info("-> STATE resolved, Class: "+o.getClass().getName());
+					}
 				}
 				else{
 					o = ois.readObject();
@@ -171,33 +184,37 @@ public class NodeManager{
 //				o = ois.readObject();
 				//Check the class of the object received and initialized accordingly
 				if(o instanceof Operator){
-					this.newOperatorInstantiation(o);
+					core.pushOperator((Operator)o);
+					//this.newOperatorInstantiation(o);
 				}
 				else if(o instanceof Integer){
-					this.newOperatorInitialization(o);
+//					this.newOperatorInitialization(o);
+					core.setOpReady((Integer)o);
 				}
 				else if(o instanceof String){
 					String tokens[] = ((String)o).split(" ");
 					System.out.println("Tokens received: "+tokens[0]);
 					if(tokens[0].equals("CODE")){
+						NodeManager.nLogger.info("-> CODE Command");
 						//Send ACK back
 						out.println("ack");
 						// Establish subconnection to receive the code
-						System.out.println("Waiting for receiving the file");
+						NodeManager.nLogger.info("-> Waiting for receiving the file");
 						Socket subConnection = serverSocket.accept();
 						DataInputStream dis = new DataInputStream(subConnection.getInputStream());
 						int codeSize = dis.readInt();
 						byte[] serializedFile = new byte[codeSize];
 						dis.readFully(serializedFile);
 						int bytesRead = serializedFile.length;
-						System.out.println("Code is "+codeSize+ ": Read bytes is: "+bytesRead);
 						if(bytesRead != codeSize){
 							NodeManager.nLogger.warning("Mismatch between read and file size");
+						}
+						else{
+							NodeManager.nLogger.info("-> CODE received completely");
 						}
 						//Here I have the serialized bytes of the file, we materialize the real file
 						//For now the name of the file is always query.jar
 						FileOutputStream fos = new FileOutputStream(new File("query.jar"));
-						System.out.println("READ "+serializedFile.length+" bytes");
 						fos.write(serializedFile);
 						fos.close();
 						dis.close();
@@ -205,13 +222,17 @@ public class NodeManager{
 						out.println("ack");
 						//At this point we should have the file on disk
 						File pathToCode = new File("query.jar");
-						System.out.println("PATH TO NEW CODE: "+pathToCode.getAbsolutePath());
-						System.out.println("Exists??? "+pathToCode.exists());
 						if(pathToCode.exists()){
+							NodeManager.nLogger.info("-> Loading CODE from: "+pathToCode.getAbsolutePath());
 							loadCodeToRuntime(pathToCode);
+						}
+						else{
+							NodeManager.nLogger.severe("-> No access to the CODE");
 						}
 					}
 					if(tokens[0].equals("STOP")){
+						NodeManager.nLogger.info("-> STOP Command");
+						core.stopDataProcessing();
 						listen = false;
 						out.println("ack");
 						o = null;
@@ -221,18 +242,25 @@ public class NodeManager{
 						//since listen=false now, finish the loop
 						continue;
 					}
+					if(tokens[0].equals("SET-RUNTIME")){
+						NodeManager.nLogger.info("-> SET-RUNTIME Command");
+						core.setRuntime();
+						out.println("ack");
+					}
 					if(tokens[0].equals("START")){
-						System.out.println("SEC: RECEIVED ORDER TO START this: "+tokens[1]);
+						NodeManager.nLogger.info("-> START Command");
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
 //                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-                        DataTuple dt = new DataTuple(-5);
-                        dt.setTs(0);
-                        Integer aux = new Integer(tokens[1]);
-                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);
+//                        DataTuple dt = new DataTuple(-5);
+//                        dt.setTs(0);
+//                        Integer aux = new Integer(tokens[1]);
+//                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);
+                        core.startDataProcessing();
 					}
 					if(tokens[0].equals("CLOCK")){
+						NodeManager.nLogger.info("-> CLOCK Command");
 						NodeManager.clock = System.currentTimeMillis();
 						out.println("ack");
 					}
@@ -256,22 +284,6 @@ public class NodeManager{
 			System.out.println("IllegalThreadStateException, no problem, monitor thing");
 			itse.printStackTrace();
 		} 
-		catch (OperatorInstantiationException e) {
-			NodeManager.nLogger.warning("Error while instantiating operator");
-			e.printStackTrace();
-		}
-		catch (OperatorInitializationException e) {
-			NodeManager.nLogger.warning("Error while initializing operator");
-			e.printStackTrace();
-		}
-		catch (InstantiationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
 		catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -280,18 +292,10 @@ public class NodeManager{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
 		catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 	
 	

@@ -2,7 +2,6 @@ package seep.comm;
 
 import java.io.Serializable;
 
-import seep.Main;
 import seep.P;
 
 /// This class ticks the dispatcher every maxLatencyAllowed to update the clocks of the downstream channels

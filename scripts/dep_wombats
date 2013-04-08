@@ -1,52 +1,53 @@
 JAR=$1
 echo $JAR
 
-scp config.properties rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-scp $JAR rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
-scp config.properties rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
-scp $JAR rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
-scp config.properties rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
-scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
-
+#scp config.properties rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#scp $JAR rc3011@wombat01.doc.res.ic.ac.uk:/home/rc3011
+#scp config.properties rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
+#scp $JAR rc3011@wombat02.doc.res.ic.ac.uk:/home/rc3011
+#scp config.properties rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
+#scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat04.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat05.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
+
+scp config.properties rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat06.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat07.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat08.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat10.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat10.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat09.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat10.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat10.doc.res.ic.ac.uk:/home/rc3011
 
 #scp $JAR rc3011@koala2.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@koala2.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@koala1.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@koala1.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat11.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat11.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat12.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat12.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat13.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat13.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat14.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat14.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+
+scp $JAR rc3011@wombat11.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat11.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat12.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat12.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat13.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat13.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat14.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat14.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat15.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat16.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat17.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat18.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat19.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat20.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat21.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat22.doc.res.ic.ac.uk:/home/rc3011
@@ -57,6 +58,7 @@ scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat24.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat25.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat25.doc.res.ic.ac.uk:/home/rc3011
+
 #scp $JAR rc3011@wombat26.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat26.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat27.doc.res.ic.ac.uk:/home/rc3011
@@ -64,6 +66,7 @@ scp $JAR rc3011@wombat03.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat28.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat28.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat29.doc.res.ic.ac.uk:/home/rc3011
+#scp config.properties rc3011@wombat29.doc.res.ic.ac.uk:/home/rc3011
+
 #scp config.properties rc3011@possum.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@possum.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat29.doc.res.ic.ac.uk:/home/rc3011

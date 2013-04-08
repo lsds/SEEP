@@ -1,6 +1,5 @@
 package seep.operator;
 
-import seep.comm.routing.Router;
 
 public interface QuerySpecificationI {
 
@@ -12,12 +11,12 @@ public interface QuerySpecificationI {
 
 	public void connectTo(QuerySpecificationI down, boolean originalQuery);
 	
-	public void setRoutingQueryFunction(String queryFunction_methodName);
+//	public void setRoutingQueryFunction(String queryFunction_methodName);
 	
-	public void route(Router.RelationalOperator operand, int value, Operator toConnect);
+//	public void route(Router.RelationalOperator operand, int value, Operator toConnect);
 	
-	public void scaleOut(Operator toScaleOut);
-	
+//	public void declareWorkingAttributes(String... attributes);
+		
 	///\fixme{this should be done automatically}
 //	public void set();
 

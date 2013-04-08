@@ -2,18 +2,16 @@ package seep.comm;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import seep.infrastructure.Infrastructure;
 import seep.infrastructure.NodeManager;
-import seep.infrastructure.Node;
+import seep.infrastructure.master.Infrastructure;
+import seep.infrastructure.master.Node;
 import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class InitRI {
 
-	private int opId;
+	private int nodeId;
 	private ArrayList<Integer> index;
 	private ArrayList<Integer> key;
 	
@@ -12,17 +12,17 @@ public class InitRI {
 		
 	}
 	
-	public InitRI(int opId, ArrayList<Integer> index, ArrayList<Integer> key){
-		this.opId = opId;
+	public InitRI(int nodeId, ArrayList<Integer> index, ArrayList<Integer> key){
+		this.nodeId = nodeId;
 		this.index = index;
 		this.key = key;
 	}
 	
-	public int getOpId() {
-		return opId;
+	public int getNodeId() {
+		return nodeId;
 	}
-	public void setOpId(int opId) {
-		this.opId = opId;
+	public void setNodeId(int nodeId) {
+		this.nodeId = nodeId;
 	}
 	public ArrayList<Integer> getIndex() {
 		return index;
