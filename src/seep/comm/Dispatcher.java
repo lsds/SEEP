@@ -7,7 +7,7 @@ import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.operator.EndPoint;
 import seep.processingunit.PUContext;
-import seep.runtimeengine.CommunicationChannel;
+import seep.runtimeengine.SynchronousCommunicationChannel;
 import seep.runtimeengine.OutputQueue;
 
 /**
@@ -96,7 +96,7 @@ public class Dispatcher implements Serializable{
 	public void batchTimeOut(){
 		DataTuple dt = null;
 		for(EndPoint channelRecord : puCtx.getDownstreamTypeConnection()){
-			if(channelRecord instanceof CommunicationChannel){
+			if(channelRecord instanceof SynchronousCommunicationChannel){
 				//Tick with beacon for every destination, so that this can update their clocks
 //				sendToDownstream(dt, channelRecord, false, true);
 			}

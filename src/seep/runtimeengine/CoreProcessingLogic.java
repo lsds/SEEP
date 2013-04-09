@@ -107,7 +107,7 @@ System.out.println("KEY: "+operatorType);
 	
 	public void processBackupState(BackupNodeState ct){
 		int opId = ct.getUpstreamOpId();
-		CommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
+		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
 		long ts_e = ct.getBackupOperatorStateWithOpId(ct.getUpstreamOpId()).getState().getData_ts();
 		///\todo{ check if ts_e is the last thing processed by the most upstream op in the downstream node, or the most downstream op in the down node}
 		if(downStream.reconf_ts <= ts_e){
@@ -294,7 +294,7 @@ System.out.println("KEY: "+operatorType);
 		
 		/** BLOCK OF CODE TO REFACTOR **/
 		//. stop sending data to op1 remember last data sent
-		CommunicationChannel oldConnection = ((CommunicationChannel)puCtx.getDownstreamTypeConnection().get(oldOpIndex));
+		SynchronousCommunicationChannel oldConnection = ((SynchronousCommunicationChannel)puCtx.getDownstreamTypeConnection().get(oldOpIndex));
 		// necessary to ignore state checkpoints of the old operator before split.
 		long last_ts = oldConnection.getLast_ts();
 		oldConnection.setReconf_ts(last_ts);
@@ -329,7 +329,7 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 	
 	public void replayState(int opId) {
 		//Get channel information
-		CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
+		SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 		Buffer buffer = cci.getBuffer();
 		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
 

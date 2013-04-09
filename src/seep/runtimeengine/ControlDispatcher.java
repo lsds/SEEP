@@ -40,8 +40,8 @@ public class ControlDispatcher {
 			CoreRE operatorObj = (CoreRE) obj;
 			operatorObj.processControlTuple(ct, null);
 		}
-		else if (obj instanceof CommunicationChannel){
-			Socket socket = ((CommunicationChannel) obj).getDownstreamControlSocket();
+		else if (obj instanceof SynchronousCommunicationChannel){
+			Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
 			Output output = null;
 			try{
 				output = new Output(socket.getOutputStream());
@@ -63,8 +63,8 @@ public class ControlDispatcher {
 			CoreRE operatorObj = (CoreRE) obj;
 			operatorObj.processControlTuple(ct, null);
 		}
-		else if (obj instanceof CommunicationChannel){
-			Socket socket = ((CommunicationChannel) obj).getDownstreamControlSocket();
+		else if (obj instanceof SynchronousCommunicationChannel){
+			Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
 			Output output = null;
 			try{
 				output = new Output(socket.getOutputStream());

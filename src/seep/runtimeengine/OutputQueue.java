@@ -79,7 +79,7 @@ public class OutputQueue {
 	
 	public void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
 
-		CommunicationChannel channelRecord = (CommunicationChannel) dest;
+		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
@@ -134,7 +134,7 @@ public class OutputQueue {
 		}
 	}
 	
-	public void replay(CommunicationChannel oi){
+	public void replay(SynchronousCommunicationChannel oi){
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){
 //					BatchDataTuple batch = oi.getSharedIterator().next();
@@ -147,7 +147,7 @@ public class OutputQueue {
 		System.out.println("Dis.replay: "+b);
 	}
 	
-	public void replayTuples(CommunicationChannel cci) {
+	public void replayTuples(SynchronousCommunicationChannel cci) {
 //		Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
 		Iterator<BatchTuplePayload> sharedIterator = cci.getBuffer().iterator();
 		Output output = cci.getOutput();

@@ -2,7 +2,13 @@ package seep.processingunit;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,7 +22,8 @@ import seep.operator.EndPoint;
 import seep.operator.Operator;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.OperatorContext.PlacedOperator;
-import seep.runtimeengine.CommunicationChannel;
+import seep.runtimeengine.AsynchronousCommunicationChannel;
+import seep.runtimeengine.SynchronousCommunicationChannel;
 
 
 public class PUContext {
@@ -30,6 +37,9 @@ public class PUContext {
 	private Vector<EndPoint> downstreamTypeConnection = null;
 	private Vector<EndPoint> upstreamTypeConnection = null;
 	
+	// Selector for asynchrony in downstream connections
+	private Selector selector;
+	
 	//map in charge of storing the buffers that this operator is using
 	/// \todo{the signature of this attribute must change to the one written below}
 	//private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
@@ -38,6 +48,13 @@ public class PUContext {
 	
 	public PUContext(WorkerNodeDescription nodeDescr){
 		this.nodeDescr = nodeDescr;
+		try {
+			this.selector = SelectorProvider.provider().openSelector();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public Vector<EndPoint> getDownstreamTypeConnection() {
@@ -48,7 +65,7 @@ public class PUContext {
 		return upstreamTypeConnection;
 	}
 	
-	public void configureDownstreamAndUpstreamConnections(Operator op){
+	private void configureDownstreamAndUpstreamConnections(Operator op){
 		//Gather nature of downstream operators, i.e. local or remote
 		for(PlacedOperator down: op.getOpContext().downstreams){
 			configureNewDownstreamCommunication(down.opID(),down.location());
@@ -74,6 +91,11 @@ public class PUContext {
 		}	
 	}
 	
+	/**
+	 * This function creates a (always) synchronous communication channel with the specified upstream operator
+	 * @param opID
+	 * @param loc
+	 */
 	public void configureNewUpstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = nodeDescr.getIp();
 		if(loc.getMyNode().getIp().equals(localIp)){
@@ -85,11 +107,16 @@ public class PUContext {
 		}
 		//remote
 		else if (!(loc.getMyNode().getIp().equals(localIp))){
-			createRemoteCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
-			NodeManager.nLogger.info("-> PUContext. New remote upstream conn to OP-"+opID);
+			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
+			NodeManager.nLogger.info("-> PUContext. New remote upstream (sync) conn to OP-"+opID);
 		}
 	}
 
+	/**
+	 * This function creates an asynchronous communication channel with the specified downstream operator
+	 * @param opID
+	 * @param loc
+	 */
 	public void configureNewDownstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = nodeDescr.getIp();
 		//Check if downstream node is remote or local, and check that it is not a Sink
@@ -103,12 +130,46 @@ public class PUContext {
 		}
 		else if(!(loc.getMyNode().getIp().equals(localIp))){
 			//If remote, create communication with other point
-			createRemoteCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
-			NodeManager.nLogger.info("-> PUContext. New remote downstream conn to OP-"+opID);
+			createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
+			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
+			NodeManager.nLogger.info("-> PUContext. New remote downstream (async) conn to OP-"+opID);
 		}
 	}
 	
-	private void createRemoteCommunication(int opID, InetAddress ip, int portD, int portC, String type){
+	
+	private void createRemoteAsynchronousCommunication(int opId, InetAddress ip, int port){
+		NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+port);
+		try {
+			// Create a non-blocking socket channel
+			SocketChannel socketChannel = SocketChannel.open();
+			socketChannel.configureBlocking(false);
+			// establish connection
+			socketChannel.connect(new InetSocketAddress(ip, port));
+			// finally we register this socket to the selector for the async behaviour
+			
+			/**
+			 * bytebuffer thingy here...how and when to attach. Better to put the kryo output... that will write to a buffer anyway...
+			 */
+			
+			
+			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, new Object());
+			socketChannel.register(selector, SelectionKey.OP_WRITE);
+			//Finally create the metadata structure associated to this connection
+			Buffer buf = new Buffer();
+			AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf);
+			downstreamTypeConnection.add(acc);
+			remoteDownstream.add(acc);
+			// Set the buffer
+			downstreamBuffers.put((port-40000), buf);
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
+	private void createRemoteSynchronousCommunication(int opID, InetAddress ip, int portD, int portC, String type){
 		Socket socketD = null;
 		Socket socketC = null;
 		try{
@@ -119,7 +180,7 @@ public class PUContext {
 					socketC = new Socket(ip, portC);
 				}
 				Buffer buffer = new Buffer();
-				CommunicationChannel con = new CommunicationChannel(opID, socketD, socketC, buffer);
+				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, buffer);
 				downstreamTypeConnection.add(con);
 				remoteDownstream.add(con);
 /// \todo{here a 40000 is used, change this line to make it properly}
@@ -128,7 +189,7 @@ public class PUContext {
 			else if(type.equals("up")){
 				NodeManager.nLogger.info("-> Trying remote upstream conn to: "+ip.toString()+"/"+portC);
 				socketC = new Socket(ip, portC);
-				CommunicationChannel con = new CommunicationChannel(opID, null, socketC, null);
+				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, null);
 				upstreamTypeConnection.add(con);
 				remoteUpstream.add(con);
 			}
@@ -150,18 +211,18 @@ public class PUContext {
 	}
 	
 	
-	public CommunicationChannel getCCIfromOpId(int opId, String type){
+	public SynchronousCommunicationChannel getCCIfromOpId(int opId, String type){
 		if(type.equals("d")){
 			for(EndPoint ep : downstreamTypeConnection){
 				if(ep.getOperatorId() == opId){
-					return (CommunicationChannel)ep;
+					return (SynchronousCommunicationChannel)ep;
 				}
 			}
 		}
 		else if(type.equals("u")){
 			for(EndPoint ep : upstreamTypeConnection){
 				if(ep.getOperatorId() == opId){
-					return (CommunicationChannel)ep;
+					return (SynchronousCommunicationChannel)ep;
 				}
 			}
 		}
@@ -187,7 +248,7 @@ public class PUContext {
 					Socket controlS = new Socket(newIp, controlPort);
 					Buffer buf = downstreamBuffers.get(opId);
 					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
-					CommunicationChannel cci = new CommunicationChannel(opId, dataS, controlS, buf);
+					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, buf);
 					downstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){
@@ -200,7 +261,7 @@ public class PUContext {
 				try{
 					Socket controlS = new Socket(newIp, controlPort);
 					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
-					CommunicationChannel cci = new CommunicationChannel(opId, null, controlS, null);
+					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, null);
 					upstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){
@@ -211,82 +272,3 @@ public class PUContext {
 		NodeManager.nLogger.info("-> PUContext. Conns of OP-"+opId+" updated");
 	}
 }
-
-//public CommunicationChannel getCCIfromOpId(int opId, String type){
-//if(type.equals("d")){
-//	for(PlacedOperator down: downstreams){
-//		if(down.opID() == opId){
-//			if(downstreamTypeConnection.elementAt(down.index()) instanceof CommunicationChannel){
-//				return (CommunicationChannel)downstreamTypeConnection.elementAt(down.index());
-//			}
-//		}
-//	}
-//}
-//else if(type.equals("u")){
-//	for(PlacedOperator up: downstreams){
-//		if(up.opID() == opId){
-//			if(upstreamTypeConnection.elementAt(up.index()) instanceof CommunicationChannel){
-//				return (CommunicationChannel)upstreamTypeConnection.elementAt(up.index());
-//			}	
-//		}
-//	}
-//}
-//return null;
-//}
-	
-//	public void updateConnection(int opId, InetAddress newIp){
-//		InetAddress localIp = nodeDescr.getIp();
-//	
-//		
-//		for(PlacedOperator down: downstreams){
-//			if(down.opID() == opId){
-//				if(down.location().getMyNode().getIp().equals(localIp)){
-//					System.out.println("PROBLEM HERE!!!!!!");
-///// \todo {when introducing local operators there is a whole new bunch of possibilities to handle}
-//					//This means that a previous remote operator is now local, so, previous operator buffers should be replayed
-//					//destroyed, and this new operator should create the new buffer for their downstream connection.
-//				}
-//				else{
-//					try{
-//						Socket dataS = new Socket(newIp, down.location().getInD());
-//						Socket controlS = new Socket(newIp, down.location().getInC());
-//						Buffer buf = downstreamBuffers.get(opId);
-//
-//						CommunicationChannel cci = new CommunicationChannel(dataS, controlS, buf);
-//						downstreamTypeConnection.set(down.index(), cci);
-//					}
-//					catch(IOException io){
-//						System.out.println("While re-creating socket: "+io.getMessage());
-//					}
-//				}
-//			}
-//		}
-//		for(PlacedOperator up: upstreams){
-//			if(up.opID() == opId){
-//				if(up.location().getMyNode().getIp().equals(localIp)){
-//					System.out.println("PROBLEM HERE!!!!!!");
-//					//This means that a previous remote operator is now local, so, previous operator buffers should be replayed
-//					//destroyed, and this new operator should create the new buffer for their downstream connection. 
-///// \todo {when introducing local operators there is a whole new bunch of possibilities to handle}
-//				}
-//				else{
-//					try{
-//						Socket controlS = new Socket(newIp, up.location().getInC());
-//						CommunicationChannel cci = new CommunicationChannel(null, controlS, null);
-//						upstreamTypeConnection.set(up.index(), cci);
-//					}
-//					catch(IOException io){
-//						System.out.println("While re-creating socket: "+io.getMessage());
-//					}
-//				}
-//				
-//			}
-//			//FIXME this should dissapear...
-///// \test {Work without this -2}
-////			else if (up.opID() == -2){
-////				//Sources are always remote
-////				createRemoteCommunication(up.location().getMyNode().getIp(), 0, up.location().getInC(), "up");
-////			}
-//		}
-//		NodeManager.nLogger.info("-> OperatorContext. Conns of OP-"+opId+" updated");
-//	}

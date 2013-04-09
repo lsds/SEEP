@@ -17,7 +17,7 @@ import com.esotericsoftware.kryo.io.Output;
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
 */
-public class CommunicationChannel implements EndPoint{
+public class SynchronousCommunicationChannel implements EndPoint{
 
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
@@ -42,7 +42,7 @@ public class CommunicationChannel implements EndPoint{
 	private int channelBatchSize = Integer.parseInt(P.valueFor("batchLimit"));
 	private long tick = 0;
 
-	public CommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Buffer buffer){
+	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Buffer buffer){
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
 		this.downstreamControlSocket = downstreamSocketC;

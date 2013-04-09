@@ -21,7 +21,7 @@ import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
-import seep.runtimeengine.CommunicationChannel;
+import seep.runtimeengine.SynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
 
@@ -182,6 +182,13 @@ public class ProcessingUnit {
 		mapOP_ID.get(opId).setReady(true);
 	}
 	
+	public PUContext setUpRemoteConnections(){
+		Collection<Operator> operatorSet = mapOP_ID.values();
+		ctx.configureOperatorConnections(operatorSet);
+		return ctx;
+	}
+	
+	@Deprecated
 	public PUContext setUpProcessingUnit(){
 		//Create connections between operators
 //		ArrayList<Operator> operatorSet = (ArrayList<Operator>) mapOP_ID.values();
@@ -300,7 +307,7 @@ public class ProcessingUnit {
 			try{
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE
-				if(dest instanceof CommunicationChannel){
+				if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
 					boolean now = false;
 //					System.out.println("ATTRS: "+dt.size());

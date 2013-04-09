@@ -138,6 +138,7 @@ public class CoreRE {
 		
 		/// At this point I need information about what connections I need to establish
 		puCtx = processingUnit.setUpProcessingUnit();
+		puCtx = processingUnit.setUpRemoteConnections();
 		processingUnit.setOutputQueue(outputQueue);
 		
 		/// INSTANTIATION
@@ -285,7 +286,7 @@ public class CoreRE {
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 			
 //			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
-			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
+			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
 //			operatorStatus = OperatorStatus.NORMAL;
 		}
@@ -434,7 +435,7 @@ public class CoreRE {
 			processingUnit.stopConnection(opId);
 			/// \todo{avoid this deprecated function}
 			//opCommonProcessLogic.startReplayer(opID);
-			CommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
+			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
 		}
 		/** CONFIG SOURCE RATE message **/
