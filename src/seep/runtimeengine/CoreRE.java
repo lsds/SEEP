@@ -3,12 +3,14 @@ package seep.runtimeengine;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Map;
 
 import seep.Main;
 import seep.comm.ControlHandler;
 import seep.comm.IncomingDataHandler;
+import seep.comm.OutgoingDataHandlerWorker;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
@@ -49,6 +51,7 @@ public class CoreRE {
 	private Thread dConsumerH = null;
 	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
+	private OutgoingDataHandlerWorker odhw = null;
 	
 	private Thread controlH = null;
 	private ControlHandler ch = null;
@@ -137,9 +140,14 @@ public class CoreRE {
 	public void setRuntime(){
 		
 		/// At this point I need information about what connections I need to establish
-		puCtx = processingUnit.setUpProcessingUnit();
+//		puCtx = processingUnit.setUpProcessingUnit();
 		puCtx = processingUnit.setUpRemoteConnections();
-		processingUnit.setOutputQueue(outputQueue);
+		
+//		processingUnit.setOutputQueue(outputQueue);
+		Selector s = puCtx.getConfiguredSelector();
+		odhw = new OutgoingDataHandlerWorker(s);
+		Thread odhw_t = new Thread(odhw);
+		odhw_t.start();
 		
 		/// INSTANTIATION
 		/** MORE REFACTORING HERE **/

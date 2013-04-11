@@ -15,6 +15,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+
 import seep.buffer.Buffer;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.WorkerNodeDescription;
@@ -63,6 +66,10 @@ public class PUContext {
 	
 	public Vector<EndPoint> getUpstreamTypeConnection() {
 		return upstreamTypeConnection;
+	}
+	
+	public Selector getConfiguredSelector(){
+		return selector;
 	}
 	
 	private void configureDownstreamAndUpstreamConnections(Operator op){
@@ -131,7 +138,7 @@ public class PUContext {
 		else if(!(loc.getMyNode().getIp().equals(localIp))){
 			//If remote, create communication with other point
 			createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
-			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
+//			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
 			NodeManager.nLogger.info("-> PUContext. New remote downstream (async) conn to OP-"+opID);
 		}
 	}
@@ -145,18 +152,13 @@ public class PUContext {
 			socketChannel.configureBlocking(false);
 			// establish connection
 			socketChannel.connect(new InetSocketAddress(ip, port));
-			// finally we register this socket to the selector for the async behaviour
-			
-			/**
-			 * bytebuffer thingy here...how and when to attach. Better to put the kryo output... that will write to a buffer anyway...
-			 */
-			
-			
-			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, new Object());
-			socketChannel.register(selector, SelectionKey.OP_WRITE);
+			// We create an output where to write serialized data (kryo stuff), we link o to both the socketChannel and to the asynccomchannel
+			Output o = new Output(1024);
+			// finally we register this socket to the selector for the async behaviour, and we link o, so that outgoingDataHandler can access it.
+			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, o);
 			//Finally create the metadata structure associated to this connection
 			Buffer buf = new Buffer();
-			AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf);
+			AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf, o);
 			downstreamTypeConnection.add(acc);
 			remoteDownstream.add(acc);
 			// Set the buffer

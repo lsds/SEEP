@@ -5,43 +5,25 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.Iterator;
 
-import seep.comm.serialization.messages.BatchTuplePayload;
-import seep.comm.serialization.messages.Payload;
-import seep.comm.serialization.messages.TuplePayload;
-import seep.comm.serialization.serializers.ArrayListSerializer;
+import seep.infrastructure.NodeManager;
 
-import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
 
 public class OutgoingDataHandlerWorker implements Runnable{
 
 	// TX data
 	private Selector selector;
 	
-	// Serialization data
-	private Kryo k;
-	
 	private boolean goOn = true;
 	
-	public OutgoingDataHandlerWorker(){
-		this.k = this.initializeKryo();
-	}
-	
-	private Kryo initializeKryo(){
-		//optimize here kryo
-		Kryo k = new Kryo();
-		k.register(ArrayList.class, new ArrayListSerializer());
-		k.register(Payload.class);
-		k.register(TuplePayload.class);
-		k.register(BatchTuplePayload.class);
-		return k;
+	public OutgoingDataHandlerWorker(Selector selector){
+		this.selector = selector;
 	}
 	
 	@Override
 	public void run() {
-	
 	
 		while(goOn){
 			try {
@@ -77,10 +59,18 @@ public class OutgoingDataHandlerWorker implements Runnable{
 	private void write(SelectionKey key){
 		// Retrieve socket
 		SocketChannel sc = (SocketChannel) key.channel();
-		// And retrieve byteBuffer with the data.
-		ByteBuffer bb = (ByteBuffer) key.attachment();
-		
-		
+		// And retrieve Output with the (underlying) buffer with data.
+		Output o = (Output) key.attachment();
+		ByteBuffer bb = ByteBuffer.wrap(o.getBuffer());
+		try {
+			synchronized(bb){
+				sc.write(bb);
+			}
+		}
+		catch (IOException e) {
+			NodeManager.nLogger.severe("-> While trying to write in the aync sc: "+e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 }

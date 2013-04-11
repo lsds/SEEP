@@ -21,7 +21,7 @@ import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
-import seep.runtimeengine.SynchronousCommunicationChannel;
+import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
 
@@ -136,7 +136,7 @@ public class ProcessingUnit {
 	}
 	
 	/** SETUP methods **/
-	
+	@Deprecated
 	public void setOutputQueue(OutputQueue outputQueue){
 		this.outputQueue = outputQueue;
 	}
@@ -307,11 +307,12 @@ public class ProcessingUnit {
 			try{
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE
-				if(dest instanceof SynchronousCommunicationChannel){
-					///\fixme{do some proper thing with var now}
-					boolean now = false;
-//					System.out.println("ATTRS: "+dt.size());
-					outputQueue.sendToDownstream(dt, dest, now, false);
+				if(dest instanceof AsynchronousCommunicationChannel){
+					
+					((AsynchronousCommunicationChannel)dest).writeData(dt);
+					
+					// OLD SYNCH SEND
+//					outputQueue.sendToDownstream(dt, dest, now, false);
 				}
 				// LOCAL
 				else if(dest instanceof Operator){

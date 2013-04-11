@@ -57,7 +57,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				//Create the kryo output for this socket
 				output = new Output(bos);
 			}
-		} 
+		}
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
