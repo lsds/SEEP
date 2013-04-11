@@ -72,30 +72,37 @@ public class IncomingDataHandlerWorker implements Runnable{
 
 			while(goOn){
 //				batchDataTuple = k.readObject(i, BatchDataTuple.class);
-				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
-//				ArrayList<DataTuple> batch = batchDataTuple.getTuples();
-				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
-//				for(DataTuple datatuple : batch){
-				for(TuplePayload t_payload : batch){
-					//long incomingTs = datatuple.getTimestamp();
-					long incomingTs = t_payload.timestamp;
-					owner.setTsData(incomingTs);
-					//Put data in inputQueue
-					if(owner.checkSystemStatus()){
-						//dsa.push(datatuple);
-//						System.out.println("PRE-SET: "+reg.size());
-						DataTuple reg = new DataTuple(idxMapper, t_payload);
-//						System.out.println("POST-SET: "+reg.size());
-						//reg.set(t_payload);
-//						System.out.println("Forwarding DT with size: "+reg.size());
-						dsa.push(reg);
-						//dsa.push(new DataTuple(idxMapper ,t_payload));
-					}
-					else{
-						System.out.println("trash in TCP buffers");
-					}
-				}
+//				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+				TuplePayload tp = k.readObject(i, TuplePayload.class);
+System.out.println("OGT");
+System.exit(0);
+				DataTuple reg = new DataTuple(idxMapper, tp);
+				dsa.push(reg);
 			}
+//			
+////				ArrayList<DataTuple> batch = batchDataTuple.getTuples();
+//				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
+////				for(DataTuple datatuple : batch){
+//				for(TuplePayload t_payload : batch){
+//					//long incomingTs = datatuple.getTimestamp();
+//					long incomingTs = t_payload.timestamp;
+//					owner.setTsData(incomingTs);
+//					//Put data in inputQueue
+//					if(owner.checkSystemStatus()){
+//						//dsa.push(datatuple);
+////						System.out.println("PRE-SET: "+reg.size());
+//						DataTuple reg = new DataTuple(idxMapper, t_payload);
+////						System.out.println("POST-SET: "+reg.size());
+//						//reg.set(t_payload);
+////						System.out.println("Forwarding DT with size: "+reg.size());
+//						dsa.push(reg);
+//						//dsa.push(new DataTuple(idxMapper ,t_payload));
+//					}
+//					else{
+//						System.out.println("trash in TCP buffers");
+//					}
+//				}
+//			}
 			NodeManager.nLogger.severe("-> Data connection closing...");
 			upstreamSocket.close();
 		}

@@ -1,13 +1,9 @@
 package seep.runtimeengine;
 
-import java.util.ArrayList;
+import java.nio.channels.Selector;
 
 import seep.buffer.Buffer;
 import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.messages.BatchTuplePayload;
-import seep.comm.serialization.messages.Payload;
-import seep.comm.serialization.messages.TuplePayload;
-import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.operator.EndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -17,27 +13,21 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 
 	private int opId;
 	private Buffer buf;
-	
+	private Selector s;
 	
 	//Serialization tools
 	private Kryo k;
 	private Output o;
 	
-	public AsynchronousCommunicationChannel(int opId, Buffer buf, Output o){
+	public AsynchronousCommunicationChannel(int opId, Buffer buf, Output o, Kryo k){
 		this.opId = opId;
 		this.buf = buf;
 		this.o = o;
-		this.k = initializeKryo();
+		this.k = k;
 	}
 	
-	private Kryo initializeKryo(){
-		//optimize here kryo
-		Kryo k = new Kryo();
-		k.register(ArrayList.class, new ArrayListSerializer());
-		k.register(Payload.class);
-		k.register(TuplePayload.class);
-		k.register(BatchTuplePayload.class);
-		return k;
+	public void setSelector(Selector s){
+		this.s = s;
 	}
 	
 	@Override
@@ -51,6 +41,8 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 	
 	public void writeData(DataTuple dt){
 		k.writeObject(o, dt.getPayload());
+//		s.wakeup();
+		o.flush();
 	}
 
 }
