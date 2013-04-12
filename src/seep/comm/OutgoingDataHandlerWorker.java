@@ -28,10 +28,10 @@ public class OutgoingDataHandlerWorker implements Runnable{
 		while(goOn){
 			try {
 				
-System.out.println("first exec");
+//System.out.println("first exec");
 				// Check events
 				selector.select();
-System.out.println(".");
+//System.out.println(".");
 				
 				//Iterate on the events if any
 				Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
@@ -79,17 +79,14 @@ System.out.println(".");
 	private void write(SelectionKey key){
 		// Retrieve socket
 		SocketChannel sc = (SocketChannel) key.channel();
-		// And retrieve Output with the (underlying) buffer with data.
-		Output o = (Output) key.attachment();
-		ByteBuffer bb = ByteBuffer.wrap(o.getBuffer());
+		// And retrieve native ByteBuffer
+		ByteBuffer nb = (ByteBuffer) key.attachment();
+		
 		try {
-			synchronized(bb){
-				//System.out.println("output has: "+o.total());
-				//System.out.println("trying to send: "+bb.remaining()+" bytes");
-				System.out.println("bb: "+bb.toString());
-				bb.flip();
-				sc.write(bb);
-				bb.compact();
+			synchronized(nb){
+//				System.out.println("BB: "+nb.toString());
+				nb.position(0);
+				sc.write(nb);
 			}
 		}
 		catch (IOException e) {

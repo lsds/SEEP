@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Vector;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
 import com.esotericsoftware.kryo.io.Output;
 
 import seep.buffer.Buffer;
@@ -168,10 +169,15 @@ public class PUContext {
 			socketChannel.configureBlocking(false);
 			// establish connection
 			socketChannel.connect(new InetSocketAddress(ip, port));
-			// We create an output where to write serialized data (kryo stuff), we link o to both the socketChannel and to the asynccomchannel
-			Output o = new Output(16);
-			// finally we register this socket to the selector for the async behaviour, and we link o, so that outgoingDataHandler can access it.
-			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, o);
+			// We create an output where to write serialized data (kryo stuff), and we associate a native byte buffer in a bytebufferoutputstream
+			
+			ByteBuffer nativeBuffer = ByteBuffer.allocate(16);
+			nativeBuffer.clear();
+			ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
+			
+			Output o = new Output(bbos, 16);
+			// finally we register this socket to the selector for the async behaviour, and we link nativeBuffer, for the selector to access it directly
+			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, nativeBuffer);
 			boolean connSuccess = socketChannel.finishConnect();
 			if(!connSuccess){
 				NodeManager.nLogger.severe("Failed connection to: "+key.toString());

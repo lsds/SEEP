@@ -309,7 +309,7 @@ public class ProcessingUnit {
 				// REMOTE
 				if(dest instanceof AsynchronousCommunicationChannel){
 					
-					((AsynchronousCommunicationChannel)dest).writeData(dt);
+					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
 					
 					// OLD SYNCH SEND
 //					outputQueue.sendToDownstream(dt, dest, now, false);

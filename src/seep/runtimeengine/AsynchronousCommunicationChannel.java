@@ -39,9 +39,14 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 		return o;
 	}
 	
-	public void writeData(DataTuple dt){
+	public void writeDataToOutputBuffer(DataTuple dt){
+		// This writes the serialized message to the byte[] that output is backing up
+		System.out.println("before writing: ");
+		System.out.println("Total "+o.total());
+		byte[] backupArray = o.getBuffer();
+		System.out.println("Size: "+backupArray.length);
+		System.out.println("o.position: "+ o.position());
 		k.writeObject(o, dt.getPayload());
-//		s.wakeup();
 		o.flush();
 	}
 
