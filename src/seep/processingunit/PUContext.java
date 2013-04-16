@@ -15,12 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
-import com.esotericsoftware.kryo.io.Output;
-
 import seep.buffer.Buffer;
-import seep.comm.serialization.messages.BatchTuplePayload;
 import seep.comm.serialization.messages.Payload;
 import seep.comm.serialization.messages.TuplePayload;
 import seep.comm.serialization.serializers.ArrayListSerializer;
@@ -32,6 +27,10 @@ import seep.operator.OperatorStaticInformation;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.SynchronousCommunicationChannel;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
+import com.esotericsoftware.kryo.io.Output;
 
 
 public class PUContext {
@@ -53,10 +52,7 @@ public class PUContext {
 	//private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	static public Map<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
-	public Kryo k;
-	
 	public PUContext(WorkerNodeDescription nodeDescr){
-		this.k = initializeKryo();
 		this.nodeDescr = nodeDescr;
 		try {
 			this.selector = SelectorProvider.provider().openSelector();
@@ -65,16 +61,6 @@ public class PUContext {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-	
-	private Kryo initializeKryo(){
-		//optimize here kryo
-		Kryo k = new Kryo();
-		k.register(ArrayList.class, new ArrayListSerializer());
-		k.register(Payload.class);
-		k.register(TuplePayload.class);
-		k.register(BatchTuplePayload.class);
-		return k;
 	}
 	
 	public Vector<EndPoint> getDownstreamTypeConnection() {
@@ -172,21 +158,33 @@ public class PUContext {
 			// We create an output where to write serialized data (kryo stuff), and we associate a native byte buffer in a bytebufferoutputstream
 			
 			ByteBuffer nativeBuffer = ByteBuffer.allocate(16);
-			nativeBuffer.clear();
 			ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
+//			ByteBufferOutputStream bbos = new ByteBufferOutputStream(16);
 			
-			Output o = new Output(bbos, 16);
+			Output o = new Output(bbos);
 			// finally we register this socket to the selector for the async behaviour, and we link nativeBuffer, for the selector to access it directly
-			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, nativeBuffer);
+//			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, nativeBuffer);
+			
+			//Finally create the metadata structure associated to this connection
+			Buffer buf = new Buffer();
+			AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf, o, nativeBuffer);
+			acc.setSelector(selector);
+			
+			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, acc);
+			// To make sure conn is established...
+			try {
+				Thread.sleep(10);
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			boolean connSuccess = socketChannel.finishConnect();
 			if(!connSuccess){
 				NodeManager.nLogger.severe("Failed connection to: "+key.toString());
 				System.exit(0);
 			}
-			//Finally create the metadata structure associated to this connection
-			Buffer buf = new Buffer();
-			AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf, o, k);
-			acc.setSelector(selector);
+			
 			downstreamTypeConnection.add(acc);
 			remoteDownstream.add(acc);
 			// Set the buffer

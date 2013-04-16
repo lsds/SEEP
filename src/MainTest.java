@@ -1,44 +1,113 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+
+import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.Payload;
+import seep.comm.serialization.messages.TuplePayload;
+import seep.comm.serialization.serializers.ArrayListSerializer;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+
 /** SYNC STATE **/
 
 public class MainTest{
 
-	public static void main(String args[]){
-		C c = new C();
-		Th th = new Th(c);
-		Thread t = new Thread(th);
-		System.out.println("Start Thread");
-		t.start();
-		int cn = 0;
-		while(true){
-			try {
-				//synchronized(c){
-				//Check if its free, and if it is free, indicate 1 (this thread edits)
-				c.ai.compareAndSet(0, 1);
-				// If it was set, proceed
-				if(c.ai.get() == 1){
-					String message = c.getHello();
-					System.out.println(message + " c: "+cn);
-					cn++;
-					//After proceeding, just reset the value again to free
-					c.ai.set(0);
-//					synchronized(c){
-//						c.notify();
-//					}
-				}
-//				else{
-//					synchronized(c){
-//						c.wait();
-//					}
-//				}
-				//}
-				Thread.sleep(200);
-				
-			} 
-			catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+	public void testByteBuffer(){
+		
+		File sm = new File("sharedMemory");
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(sm);
+		} 
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		
+		ByteBuffer nativeBuffer = ByteBuffer.allocate(32);
+		ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
+		
+		Output o = new Output(bbos);
+		// finally we register this socket to the selector for the async behaviour, and we link nativeBuffer, for the selector to access it directly
+		Kryo k = new Kryo();
+		
+		DataTuple dt = new DataTuple(null, new TuplePayload());
+		dt.setValues("hija");
+		
+//		C c = new C();
+//		c.id = 1548;
+//		ArrayList<Integer> l = new ArrayList<Integer>();
+//		l.add(5);
+//		l.add(55);
+//		l.add(555);
+//		c.l = l;
+		
+		System.out.println("write object to o->bbos");
+		k.register(ArrayList.class, new ArrayListSerializer());
+		k.register(Payload.class);
+		k.register(TuplePayload.class);
+		k.writeObject(o, dt.getPayload());
+		
+		dt.setValues("hioj");
+		k.writeObject(o, dt.getPayload());
+		
+		System.out.println("flush to bytebuffer");
+		o.flush();
+		
+		ByteBuffer aux = ((ByteBufferOutputStream)o.getOutputStream()).getByteBuffer();
+		System.out.println("AUX: "+aux.toString());
+		
+		System.out.println("serialized object in bytes, now write this to disk");
+		
+		try {
+			fos.write(aux.array(), 0, aux.position());
+			fos.close();
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		System.out.println("Read from disk");
+		
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(sm);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Input i = new Input(fis);
+		TuplePayload tp = k.readObject(i, TuplePayload.class);
+		
+		for(Object integer : tp.attrValues){
+			System.out.println("1int: "+integer);
+		}
+		
+		TuplePayload tp2 = k.readObject(i, TuplePayload.class);
+		for(Object integer : tp2.attrValues){
+			System.out.println("2int: "+integer);
+		}
+		
+//		for(int integer : c.l){
+//			System.out.println("List element: "+integer);
+//		}
+		
+		
+	}
+	
+	public static void main(String args[]){
+		
+		MainTest mt = new MainTest();
+		mt.testByteBuffer();
 	}
 }
 

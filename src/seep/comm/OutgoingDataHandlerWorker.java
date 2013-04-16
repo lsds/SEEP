@@ -7,8 +7,14 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.TuplePayload;
 import seep.infrastructure.NodeManager;
+import seep.runtimeengine.AsynchronousCommunicationChannel;
 
+import com.esotericsoftware.kryo.io.ByteBufferInputStream;
+import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
+import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 public class OutgoingDataHandlerWorker implements Runnable{
@@ -80,18 +86,35 @@ public class OutgoingDataHandlerWorker implements Runnable{
 		// Retrieve socket
 		SocketChannel sc = (SocketChannel) key.channel();
 		// And retrieve native ByteBuffer
-		ByteBuffer nb = (ByteBuffer) key.attachment();
+		AsynchronousCommunicationChannel acc = (AsynchronousCommunicationChannel) key.attachment();
 		
-		try {
-			synchronized(nb){
-//				System.out.println("BB: "+nb.toString());
-				nb.position(0);
-				sc.write(nb);
+		// Socket is ready to write, check if batch is complete or not...
+		if(acc.isBatchAvailable()){
+			Output o = acc.getOutput();
+			// Pick the buffer to send
+			ByteBuffer nb = ((ByteBufferOutputStream)o.getOutputStream()).getByteBuffer();
+			try {
+				synchronized(nb){
+					nb.flip();
+					int bytesWritten = sc.write(nb);
+					nb.clear();
+					o.clear();
+	                synchronized(acc){
+	                	acc.resetBatch();
+	                	acc.notify();
+	                }
+//	                if(bytesWritten > 0){
+//	                	System.out.println("!!!! bytes written: "+bytesWritten);
+//	                	for(int i = 0; i<nb.array().length; i++){
+//	                		System.out.print(nb.array()[i]);
+//	                	}
+//	                }
+				}
 			}
-		}
-		catch (IOException e) {
-			NodeManager.nLogger.severe("-> While trying to write in the aync sc: "+e.getMessage());
-			e.printStackTrace();
+			catch (IOException e) {
+				NodeManager.nLogger.severe("-> While trying to write in the aync sc: "+e.getMessage());
+				e.printStackTrace();
+			}
 		}
 	}
 

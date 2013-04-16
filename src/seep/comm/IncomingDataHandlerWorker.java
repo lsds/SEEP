@@ -1,5 +1,6 @@
 package seep.comm;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
@@ -41,22 +42,11 @@ public class IncomingDataHandlerWorker implements Runnable{
 		//optimize here kryo
 		Kryo k = new Kryo();
 		k.setClassLoader(owner.getRuntimeClassLoader());
-//		k.register(DataTuple.class);
-//		k.register(Object.class);
-		
 		
 		k.register(ArrayList.class, new ArrayListSerializer());
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
-		k.register(BatchTuplePayload.class);
-		
-		
 //		k.register(BatchTuplePayload.class);
-//		k.register(TuplePayload.class);
-//		k.register(Payload.class);
-//		k.register(ArrayList.class, new ArrayListSerializer());
-		
-//		k.register(BatchDataTuple.class);
 		return k;
 	}
 	
@@ -66,16 +56,20 @@ public class IncomingDataHandlerWorker implements Runnable{
 			DataStructureAdapter dsa = owner.getDSA();
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
+//			BufferedInputStream is = new BufferedInputStream(upstreamSocket.getInputStream());
 			Input i = new Input(is);
 //			BatchDataTuple batchDataTuple = null;
-			BatchTuplePayload batchTuplePayload = null;
+//			BatchTuplePayload batchTuplePayload = null;
 
 			while(goOn){
 //				batchDataTuple = k.readObject(i, BatchDataTuple.class);
 //				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+//System.out.println("Reading...");
+
+//int r = i.readInt();
 				TuplePayload tp = k.readObject(i, TuplePayload.class);
-System.out.println("OGT");
-System.exit(0);
+//System.out.println("OGT read: "+r);
+//System.exit(0);
 				DataTuple reg = new DataTuple(idxMapper, tp);
 				dsa.push(reg);
 			}

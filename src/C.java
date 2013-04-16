@@ -1,12 +1,10 @@
-class C extends B{
-		private String hello = "Hello";
-		
-		public String getHello(){
-			return hello;
-		}
+import java.util.ArrayList;
+
+public class C {
+		public int id;
+		public ArrayList<Integer> l = new ArrayList<Integer>();
 		
 		public C(){
-			ex = this;
+			
 		}
-
 	}

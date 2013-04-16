@@ -1,9 +1,14 @@
 package seep.runtimeengine;
 
+import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
+import java.util.ArrayList;
 
 import seep.buffer.Buffer;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.Payload;
+import seep.comm.serialization.messages.TuplePayload;
+import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.operator.EndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -19,11 +24,29 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 	private Kryo k;
 	private Output o;
 	
-	public AsynchronousCommunicationChannel(int opId, Buffer buf, Output o, Kryo k){
+	//Native buffer
+	private ByteBuffer nativeBuffer;
+	
+	//Batching variables
+	private int batchSize = 1;
+	int currentBatchSize = 0;
+	
+	public AsynchronousCommunicationChannel(int opId, Buffer buf, Output o, ByteBuffer nativeBuffer){
 		this.opId = opId;
 		this.buf = buf;
 		this.o = o;
-		this.k = k;
+		this.k = this.initializeKryo();
+		this.nativeBuffer = nativeBuffer;
+	}
+	
+	private Kryo initializeKryo(){
+		//optimize here kryo
+		Kryo k = new Kryo();
+		k.register(ArrayList.class, new ArrayListSerializer());
+		k.register(Payload.class);
+		k.register(TuplePayload.class);
+//		k.register(BatchTuplePayload.class);
+		return k;
 	}
 	
 	public void setSelector(Selector s){
@@ -39,15 +62,57 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 		return o;
 	}
 	
+	public ByteBuffer getNativeBuffer(){
+		return nativeBuffer;
+	}
+	
+	public Kryo getKryo(){
+		return k;
+	}
+	
+	public void resetBatch(){
+		currentBatchSize = 0;
+		readyToWrite = false;
+	}
+	
+	boolean readyToWrite = false;
+	
+	public boolean isBatchAvailable(){
+		return readyToWrite;
+	}
+	
 	public void writeDataToOutputBuffer(DataTuple dt){
 		// This writes the serialized message to the byte[] that output is backing up
-		System.out.println("before writing: ");
-		System.out.println("Total "+o.total());
-		byte[] backupArray = o.getBuffer();
-		System.out.println("Size: "+backupArray.length);
-		System.out.println("o.position: "+ o.position());
-		k.writeObject(o, dt.getPayload());
-		o.flush();
+//		if(currentBatchSize < batchSize){
+//			System.out.println("curren: "+currentBatchSize+" < totallimit: "+batchSize);
+			k.writeObject(o, dt.getPayload());
+
+			currentBatchSize++;
+			if(currentBatchSize == batchSize){
+//				System.out.println("current: "+currentBatchSize+" == batchlimit "+batchSize);
+
+//				System.out.println("o.position: "+ o.position());
+				// Write to buffer
+				o.flush();
+				synchronized(this){
+					readyToWrite = true;
+					try {
+//						System.out.println("Waiting...");
+						this.wait();
+//						System.out.println("Unblocked!");
+						
+						// Reset the batch
+						currentBatchSize = 0;
+//						System.out.println("After flushing");
+					}
+					catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
+			}
+//		}
 	}
 
 }
