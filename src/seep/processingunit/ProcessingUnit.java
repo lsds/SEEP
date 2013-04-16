@@ -24,6 +24,7 @@ import seep.operator.StatefulOperator;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.OutputQueue;
+import seep.runtimeengine.SynchronousCommunicationChannel;
 
 /**
  * mutex or lockstate in this class are the by default java mechanism, and my custom made locking mech. Mine performs slightly better but it is far less
@@ -136,7 +137,6 @@ public class ProcessingUnit {
 	}
 	
 	/** SETUP methods **/
-	@Deprecated
 	public void setOutputQueue(OutputQueue outputQueue){
 		this.outputQueue = outputQueue;
 	}
@@ -306,13 +306,17 @@ public class ProcessingUnit {
 			int target = targets.get(i);
 			try{
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
-				// REMOTE
+				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){
 					
 					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
 					
-					// OLD SYNCH SEND
-//					outputQueue.sendToDownstream(dt, dest, now, false);
+				}
+				// REMOTE SYNC
+				else if(dest instanceof SynchronousCommunicationChannel){
+					///\fixme{do some proper thing with var now}
+					boolean now = false;
+					outputQueue.sendToDownstream(dt, dest, now, false);
 				}
 				// LOCAL
 				else if(dest instanceof Operator){

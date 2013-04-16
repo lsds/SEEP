@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import seep.Main;
+import seep.P;
 import seep.comm.ControlHandler;
 import seep.comm.IncomingDataHandler;
 import seep.comm.OutgoingDataHandlerWorker;
@@ -108,9 +109,8 @@ public class CoreRE {
 	
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
 		outputQueue = new OutputQueue();
-		
+//		processingUnit.setOutputQueue(outputQueue);
 		// SET UP the data strcuture adapter, depending on the operators
-		
 		dsa = new DataStructureAdapter();
 		/// INSTANTIATION OF THE BRIDGE OBJECT
 		// We get the dataabstractionmode from the most upstream operator
@@ -140,14 +140,19 @@ public class CoreRE {
 	public void setRuntime(){
 		
 		/// At this point I need information about what connections I need to establish
-//		puCtx = processingUnit.setUpProcessingUnit();
 		puCtx = processingUnit.setUpRemoteConnections();
 		
-//		processingUnit.setOutputQueue(outputQueue);
-		Selector s = puCtx.getConfiguredSelector();
-		odhw = new OutgoingDataHandlerWorker(s);
-		Thread odhw_t = new Thread(odhw);
-		odhw_t.start();
+		if (P.valueFor("synchronousOutput").equals("true")){
+			processingUnit.setOutputQueue(outputQueue);
+			NodeManager.nLogger.info("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
+		}
+		else{
+			Selector s = puCtx.getConfiguredSelector();
+			odhw = new OutgoingDataHandlerWorker(s);
+			Thread odhw_t = new Thread(odhw);
+			odhw_t.start();
+			NodeManager.nLogger.info("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
+		}
 		
 		/// INSTANTIATION
 		/** MORE REFACTORING HERE **/

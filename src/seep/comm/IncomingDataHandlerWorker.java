@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Map;
 
+import seep.P;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.messages.BatchTuplePayload;
 import seep.comm.serialization.messages.Payload;
@@ -46,57 +47,60 @@ public class IncomingDataHandlerWorker implements Runnable{
 		k.register(ArrayList.class, new ArrayListSerializer());
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
-//		k.register(BatchTuplePayload.class);
+		k.register(BatchTuplePayload.class);
 		return k;
 	}
 	
 	public void run() {
+		
+		/** Experimental asyn **/
 		try{
 			//Get inputQueue from owner
 			DataStructureAdapter dsa = owner.getDSA();
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
-//			BufferedInputStream is = new BufferedInputStream(upstreamSocket.getInputStream());
-			Input i = new Input(is);
-//			BatchDataTuple batchDataTuple = null;
-//			BatchTuplePayload batchTuplePayload = null;
+			BufferedInputStream bis = new BufferedInputStream(is, 8192);
+			Input i = new Input(bis);
 
 			while(goOn){
-//				batchDataTuple = k.readObject(i, BatchDataTuple.class);
-//				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
-//System.out.println("Reading...");
-
-//int r = i.readInt();
 				TuplePayload tp = k.readObject(i, TuplePayload.class);
-//System.out.println("OGT read: "+r);
-//System.exit(0);
 				DataTuple reg = new DataTuple(idxMapper, tp);
 				dsa.push(reg);
 			}
-//			
-////				ArrayList<DataTuple> batch = batchDataTuple.getTuples();
-//				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
-////				for(DataTuple datatuple : batch){
-//				for(TuplePayload t_payload : batch){
-//					//long incomingTs = datatuple.getTimestamp();
-//					long incomingTs = t_payload.timestamp;
-//					owner.setTsData(incomingTs);
-//					//Put data in inputQueue
-//					if(owner.checkSystemStatus()){
-//						//dsa.push(datatuple);
-////						System.out.println("PRE-SET: "+reg.size());
-//						DataTuple reg = new DataTuple(idxMapper, t_payload);
-////						System.out.println("POST-SET: "+reg.size());
-//						//reg.set(t_payload);
-////						System.out.println("Forwarding DT with size: "+reg.size());
-//						dsa.push(reg);
-//						//dsa.push(new DataTuple(idxMapper ,t_payload));
-//					}
-//					else{
-//						System.out.println("trash in TCP buffers");
-//					}
-//				}
-//			}
+		}
+		catch(IOException io){
+			NodeManager.nLogger.severe("-> IncDataHandlerWorker. IO Error "+io.getMessage());
+			io.printStackTrace();
+		}
+		
+
+		
+		/** experimental sync **/
+		try{
+			//Get inputQueue from owner
+			DataStructureAdapter dsa = owner.getDSA();
+			//Get inputStream of incoming connection
+			InputStream is = upstreamSocket.getInputStream();
+			BufferedInputStream bis = new BufferedInputStream(is);
+			Input i = new Input(bis);
+			BatchTuplePayload batchTuplePayload = null;
+
+			while(goOn){
+				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
+				for(TuplePayload t_payload : batch){
+					long incomingTs = t_payload.timestamp;
+					owner.setTsData(incomingTs);
+					//Put data in inputQueue
+					if(owner.checkSystemStatus()){
+						DataTuple reg = new DataTuple(idxMapper, t_payload);
+						dsa.push(reg);
+					}
+					else{
+						System.out.println("trash in TCP buffers");
+					}
+				}
+			}
 			NodeManager.nLogger.severe("-> Data connection closing...");
 			upstreamSocket.close();
 		}

@@ -30,47 +30,24 @@ public class OutgoingDataHandlerWorker implements Runnable{
 	
 	@Override
 	public void run() {
-	
 		while(goOn){
 			try {
-				
-//System.out.println("first exec");
 				// Check events
-				selector.select();
-//System.out.println(".");
-				
+				selector.select();	
 				//Iterate on the events if any
 				Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
-//System.out.println("Selected key: "+selector.selectedKeys().toString());
-//if(selector.selectedKeys().isEmpty()){
-//	SelectionKey sk = (SelectionKey) (selector.keys().toArray())[0];
-//System.out.println("selection keys: "+sk.toString());
-//System.out.println("interest ops "+sk.interestOps());
-//System.out.println("ready ops "+sk.readyOps());
-//System.out.println("attachement "+((Output)sk.attachment()).toString());
-//System.out.println("channel "+sk.channel().toString());
-//System.exit(0);
-//}
 				while(selectedKeys.hasNext()){
 					// We choose one key
 					SelectionKey key = (SelectionKey) selectedKeys.next();
-//System.out.println("first key: "+key.toString());
-					selectedKeys.remove();
-					
+					selectedKeys.remove();	
 					// Sanity check
 					if(!key.isValid()){
-//System.out.println("NO VALID");
 						continue;
 					}
-//System.out.println("VALID");
 					// Check the write event
 					if(key.isWritable()){
-//System.out.println("WRITABLE");
 						write(key);
-//System.exit(0);
 					}
-//System.out.println("NO WRITABLE");
-//System.exit(0);
 				}
 			}
 			catch (IOException e) {
@@ -98,17 +75,11 @@ public class OutgoingDataHandlerWorker implements Runnable{
 					nb.flip();
 					int bytesWritten = sc.write(nb);
 					nb.clear();
-					o.clear();
+//					o.clear();
 	                synchronized(acc){
 	                	acc.resetBatch();
 	                	acc.notify();
 	                }
-//	                if(bytesWritten > 0){
-//	                	System.out.println("!!!! bytes written: "+bytesWritten);
-//	                	for(int i = 0; i<nb.array().length; i++){
-//	                		System.out.print(nb.array()[i]);
-//	                	}
-//	                }
 				}
 			}
 			catch (IOException e) {
@@ -117,5 +88,4 @@ public class OutgoingDataHandlerWorker implements Runnable{
 			}
 		}
 	}
-
 }

@@ -15,10 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
+import seep.P;
 import seep.buffer.Buffer;
-import seep.comm.serialization.messages.Payload;
-import seep.comm.serialization.messages.TuplePayload;
-import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.WorkerNodeDescription;
 import seep.operator.EndPoint;
@@ -28,7 +26,6 @@ import seep.operator.OperatorContext.PlacedOperator;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.SynchronousCommunicationChannel;
 
-import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
 import com.esotericsoftware.kryo.io.Output;
 
@@ -139,10 +136,16 @@ public class PUContext {
 			}
 		}
 		else if(!(loc.getMyNode().getIp().equals(localIp))){
-			//If remote, create communication with other point
-			createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
-//			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
-			NodeManager.nLogger.info("-> PUContext. New remote downstream (async) conn to OP-"+opID);
+			//If remote, create communication with other point			
+			if (P.valueFor("synchronousOutput").equals("true")){
+				createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
+				NodeManager.nLogger.info("-> PUContext. New remote downstream (SYNC) conn to OP-"+opID);
+			}
+			else{
+				createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
+				NodeManager.nLogger.info("-> PUContext. New remote downstream (ASYNC) conn to OP-"+opID);
+			}
+			
 		}
 	}
 	
@@ -157,7 +160,7 @@ public class PUContext {
 			socketChannel.connect(new InetSocketAddress(ip, port));
 			// We create an output where to write serialized data (kryo stuff), and we associate a native byte buffer in a bytebufferoutputstream
 			
-			ByteBuffer nativeBuffer = ByteBuffer.allocate(16);
+			ByteBuffer nativeBuffer = ByteBuffer.allocateDirect(1024);
 			ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
 //			ByteBufferOutputStream bbos = new ByteBufferOutputStream(16);
 			

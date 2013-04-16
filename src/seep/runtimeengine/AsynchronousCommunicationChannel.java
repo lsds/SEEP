@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 
+import seep.P;
 import seep.buffer.Buffer;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.messages.Payload;
@@ -28,7 +29,7 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 	private ByteBuffer nativeBuffer;
 	
 	//Batching variables
-	private int batchSize = 1;
+	private int batchSize = new Integer(P.valueFor("batchLimit"));
 	int currentBatchSize = 0;
 	
 	public AsynchronousCommunicationChannel(int opId, Buffer buf, Output o, ByteBuffer nativeBuffer){
