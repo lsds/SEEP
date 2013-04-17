@@ -15,7 +15,6 @@ import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 import seep.comm.NodeManagerCommunication;
-import seep.comm.routing.StatefulRoutingImpl;
 import seep.infrastructure.monitor.Monitor;
 import seep.operator.Operator;
 import seep.operator.State;
@@ -28,14 +27,10 @@ import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
  * operators that are within that node.
  */
 
-public class NodeManager{
-	
-	private StatefulRoutingImpl sri = new StatefulRoutingImpl(5);
+public class NodeManager{	
 	
 	private WorkerNodeDescription nodeDescr;
-	
-	private CoreRE core = null;
-	
+		
 	//private RuntimeClassLoader rcl = null;
 	private RuntimeClassLoader rcl = null;
 	
@@ -57,9 +52,7 @@ public class NodeManager{
 	static public Monitor nodeMonitor = new Monitor();
 	static public int second;
 	static public double throughput;
-	
-	private Socket connMaster;
-	
+		
 	private Thread monitorT = null;
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
@@ -141,7 +134,6 @@ public class NodeManager{
 		
 		Object o = null;
 		boolean listen = true;
-		boolean initializationSuccess = false;
 		
 		try{
 			serverSocket = new ServerSocket(ownPort);
@@ -185,7 +177,6 @@ public class NodeManager{
 				//Check the class of the object received and initialized accordingly
 				if(o instanceof Operator){
 					core.pushOperator((Operator)o);
-					//this.newOperatorInstantiation(o);
 				}
 				else if(o instanceof Integer){
 //					this.newOperatorInitialization(o);

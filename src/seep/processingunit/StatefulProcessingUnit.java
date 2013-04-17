@@ -14,6 +14,7 @@ import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.WorkerNodeDescription;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
@@ -84,20 +85,20 @@ import seep.runtimeengine.SynchronousCommunicationChannel;
  * **/
 
 
-public class ProcessingUnit {
+public class StatefulProcessingUnit implements IProcessingUnit{
 
 	private CoreRE owner = null;
+	
 	private PUContext ctx = null;
 	private SystemStatus systemStatus = SystemStatus.NORMAL;
 
-	//Operators managed by this processing unit [ opId<Integer> - op<Operator> ]
-	static public Map<Integer, Operator> mapOP_ID = new HashMap<Integer, Operator>();
-	//Map between operator id and state [opId<Integer> - State]
-	private Map<Integer, State> mapOP_S = new HashMap<Integer, State>();
 	// Mutex between data processing and state backup
 	private Semaphore mutex = new Semaphore(1);
-	private Operator mostUpstream = null;
-	private Operator mostDownstream = null;
+
+	//Operator and state managed by this processingUnit
+	private Operator runningOp = null;
+	private State runningOpState = null;
+
 	
 	private OutputQueue outputQueue = null;
 	
@@ -105,150 +106,104 @@ public class ProcessingUnit {
 	private Thread stateWorker;
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	
-	public ProcessingUnit(CoreRE owner){
+	public StatefulProcessingUnit(CoreRE owner){
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr());
 	}
-	
-	public Operator getMostUpstream(){
-		return mostUpstream;
+
+	@Override
+	public Operator getOperator(){
+		return runningOp;
 	}
-	
-	public Operator getMostDownstream(){
-		return mostDownstream;
-	}
-	
+
+	@Override
 	public boolean isNodeStateful(){
-		// If its not empty is because a previous operator put there its state
-		return !mapOP_S.isEmpty();
+		return true;
 	}
 	
+	@Override
 	public SystemStatus getSystemStatus(){
 		return systemStatus;
 	}
 	
+	@Override
 	public void setSystemStatus(SystemStatus systemStatus){
 		this.systemStatus = systemStatus;
 	}
 	
-	//This enum is for aiding in the implementation of the protocols
-	public enum SystemStatus {
-		NORMAL, WAITING_FOR_STATE_ACK, INITIALISING_STATE//, REPLAYING_BUFFER//, RECONFIGURING_COMM
-	}
-	
 	/** SETUP methods **/
+	@Override
 	public void setOutputQueue(OutputQueue outputQueue){
 		this.outputQueue = outputQueue;
 	}
 	
+	@Override
 	public void newOperatorInstantiation(Operator o) {
 		NodeManager.nLogger.info("-> Instantiating Operator");
 		//Detect the first submitted operator
-		if(mapOP_ID.isEmpty()){
-			mostUpstream = o;
+		if(runningOp == null){
+			runningOp = o;
+		}
+		else{
+			NodeManager.nLogger.warning("-> The operator in this node is being overwritten");
 		}
 		o.setProcessingUnit(this);
-		mapOP_ID.put(o.getOperatorId(), o);
-		
 		// To identify the monitor with the op id instead of the node id
 		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
-		
-		//If the operator is stateful, we extract its state and store it in the provisioned map
-		if(o instanceof StatefulOperator){
-			// This may happen when operators are added dynamically and no human has added a state
-			o.getState();
-			if(o.getState() != null){
-				mapOP_S.put(o.getOperatorId(), o.getState());
-			}
-			else{
-				System.out.println("!!!!!!!!!! WARNING INITIAL STATE IS NULL, MAP WITHOUT PUT");
-			}
+		State s;
+		if((s = o.getState()) != null){
+			runningOpState = s;
 		}
-		// Overwritten till last instantiation. If there are movements within the same node, then this wont be valid
-		mostDownstream = o;
+		else{
+			NodeManager.nLogger.warning("-> Initial state is null...");
+		}
 	}
 
-	public boolean allOperatorsReady(){
-		for(Operator o : mapOP_ID.values()){
-			if(!o.getReady()){
-				return false;
-			}
-		}
-		return true;
+	@Override
+	public boolean isOperatorReady(){
+		return runningOp.getReady();
 	}
 	
+	@Override
 	public void setOpReady(int opId) {
 		NodeManager.nLogger.info("-> Setting operator ready");
-		mapOP_ID.get(opId).setReady(true);
+		runningOp.setReady(true);
 	}
 	
+	@Override
 	public PUContext setUpRemoteConnections(){
-		Collection<Operator> operatorSet = mapOP_ID.values();
-		ctx.configureOperatorConnections(operatorSet);
-		return ctx;
-	}
-	
-	@Deprecated
-	public PUContext setUpProcessingUnit(){
-		//Create connections between operators
-//		ArrayList<Operator> operatorSet = (ArrayList<Operator>) mapOP_ID.values();
-		Collection<Operator> operatorSet = mapOP_ID.values();
-		ctx.configureOperatorConnections(operatorSet);
-		
-		/** Routers are, since version 0.2, configured statically in the master node, to enable static scale out **/
-		
-		//Create and configure routers
-//		for(Operator op : operatorSet){
-//			// Initialize and set the routing information
-//			String queryFunction = op.getOpContext().getQueryFunction();
-//			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
-//			
-//			// Check whether router is null. If it is null, do the following, otherwise it has been pre-configured in the master
-//			/** Move this to do statically at master node
-//			Router r = new Router(queryFunction, routeInfo);
-//			// Configure routing implementations of the operator
-//			r.configureRoutingImpl(op.getOpContext());
-//			op.setRouter(r);
-//			**/
-//		}
+		ctx.configureOperatorConnections(runningOp);
 		return ctx;
 	}
 	
 	public void createAndRunStateBackupWorker(){
 		// Create and run state backup worker
 		NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
-		sbw = new StateBackupWorker(this, mapOP_S);
+		sbw = new StateBackupWorker(this, runningOpState);
 		stateWorker = new Thread(sbw);
-//		stateWorker.setPriority(Thread.MAX_PRIORITY);
 		stateWorker.start();
 	}
 	
 	public int getStateCheckpointInterval(){
-		int checkpointInterval = Integer.MAX_VALUE;
-		for(State s : mapOP_S.values()){
-			int currentCheckpointInterval = s.getCheckpointInterval();
-			if(currentCheckpointInterval < checkpointInterval){
-				checkpointInterval = currentCheckpointInterval;
-			}
-		}
-		return checkpointInterval;
+		return runningOpState.getCheckpointInterval();
 	}
 	
+	@Override
 	public void startDataProcessing(){
 		/// \todo{Find a better way to start the operator...}
 		DataTuple fake = DataTuple.getNoopDataTuple();
-		this.mostUpstream.processData(fake);
+		this.runningOp.processData(fake);
 	}
 	
-	public void initOperators(){
-		for(Operator o : mapOP_ID.values()){
-			o.setUp();
-		}
+	@Override
+	public void initOperator(){
+		runningOp.setUp();
 	}
 	
+	@Override
 	public Map<String, Integer> createTupleAttributeMapper(){
 		Map<String, Integer> idxMapper = new HashMap<String, Integer>();
-		List<String> declaredWorkingAttributes = mostUpstream.getOpContext().getDeclaredWorkingAttributes();
+		List<String> declaredWorkingAttributes = runningOp.getOpContext().getDeclaredWorkingAttributes();
 		if(declaredWorkingAttributes != null){
 			for(int i = 0; i<declaredWorkingAttributes.size(); i++){
 				idxMapper.put(declaredWorkingAttributes.get(i), i);
@@ -262,6 +217,7 @@ public class ProcessingUnit {
 	
 	/** Runtime methods **/
 	
+	@Override
 	public void processData(DataTuple data){
 		// Get the mutex
 		try {
@@ -276,11 +232,12 @@ public class ProcessingUnit {
 		//MetricsReader.eventsPerSecond.mark();
 		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
-		mostUpstream.processData(data);
+		runningOp.processData(data);
 		// Release the mutex
 		mutex.release();
 	}
 	
+	@Override
 	public void processData(ArrayList<DataTuple> data){
 		// Get the mutex
 		try {
@@ -294,11 +251,12 @@ public class ProcessingUnit {
 		
 		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
-		mostUpstream.processData(data);
+		runningOp.processData(data);
 		// Release the mutex
 		mutex.release();
 	}
 
+	@Override
 	public void sendData(DataTuple dt, ArrayList<Integer> targets){
 		// Here user code (operator) returns from execution, so release mutex
 		mutex.release();
@@ -308,9 +266,7 @@ public class ProcessingUnit {
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){
-					
 					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
-					
 				}
 				// REMOTE SYNC
 				else if(dest instanceof SynchronousCommunicationChannel){
@@ -343,42 +299,38 @@ public class ProcessingUnit {
 	
 	public void disableCheckpointForOperator(int opId){
 		// Just remove the state to backup
-		mapOP_S.remove(opId);
+		runningOpState = null;
 	}
 	
+	@Override
 	public synchronized void stopConnection(int opID) {
 		//Stop incoming data, a new thread is replaying
-//		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
-		
-		/**
-		 * hack done on july the third 2012 to get parallel recovery results.
-		 *  we make sure that conn is only stop once
-		 */
-//if (replaySemaphore.get() > 0){
-//	return;
-//}
-		
-//		replaySemaphore.incrementAndGet();
 		outputQueue.stop();
 		ctx.getCCIfromOpId(opID, "d").getStop().set(true);
 	}
 	
 	/** Operator information management **/
-	
+	@Override
 	public void reconfigureOperatorLocation(int opId, InetAddress ip){
-		mapOP_ID.get(opId).getOpContext().changeLocation(opId, ip);
+		runningOp.getOpContext().changeLocation(opId, ip);
 	}
 	
+	@Override
 	public void reconfigureOperatorConnection(int opId, InetAddress ip){
-		ctx.updateConnection(opId, ip);
+		if(runningOp.getOperatorId() == opId){
+			ctx.updateConnection(runningOp, ip);
+		}
+		else{
+			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
+		}
 	}
 	
 	public ArrayList<Integer> getRouterIndexesInformation(int opId){
-		return mostDownstream.getRouter().getIndexesInformation(opId);
+		return runningOp.getRouter().getIndexesInformation(opId);
 	}
 	
 	public ArrayList<Integer> getRouterKeysInformation(int opId){
-		return mostDownstream.getRouter().getKeysInformation(opId);
+		return runningOp.getRouter().getKeysInformation(opId);
 	}
 	
 	/** State Management Stuff **/
@@ -393,65 +345,102 @@ public class ProcessingUnit {
 	}
 	
 	private void backupState(){
-
-		int numberOfStates = 0;
-		ArrayList<State> statesToBackup = null;
-		numberOfStates = mapOP_S.values().size();
-		statesToBackup = new ArrayList<State>(mapOP_S.values());
-		// If there is something to backup...
-		// FIXME: this should anyway be avoided by controlling whether the statebackupworker needs to execute, according to this value
-		if(numberOfStates > 0){
-			//Create the array of backup states
-			BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
-			BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
-			// We fill the array with the states
-			for(int i = 0; i < numberOfStates ; i++){
-				State toBackup = null;
-				int ownerId = statesToBackup.get(i).getOwnerId();
-				int checkpointInterval = statesToBackup.get(i).getCheckpointInterval();
-				long data_ts = statesToBackup.get(i).getData_ts();
-				String stateTag = statesToBackup.get(i).getStateTag();
-				
-				long startmutex = System.currentTimeMillis();
-				
-				try {
-					mutex.acquire();
-				} 
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-				long startcopy = System.currentTimeMillis();
-				toBackup = State.deepCopy(statesToBackup.get(i), owner.getRuntimeClassLoader());
-				long stopcopy = System.currentTimeMillis();
-				System.out.println("Deep COPY: "+(stopcopy-startcopy));
-				mutex.release();
-				
-				long stopmutex = System.currentTimeMillis();
-				System.out.println("MUTEX: "+(stopmutex-startmutex));
-				toBackup.setOwnerId(ownerId);
-				toBackup.setCheckpointInterval(checkpointInterval);
-				toBackup.setData_ts(data_ts);
-				toBackup.setStateTag(stateTag);
-				
-				BackupOperatorState bs = new BackupOperatorState();
-				// current is null in a parallelised operator
-				bs.setOpId(toBackup.getOwnerId());
-				bs.setState(toBackup);
-				bs.setStateClass(toBackup.getStateTag());
-				backupState[i] = bs;
-			}
-			NodeManager.nLogger.info("-> Backuping the "+backupState.length+" states in this node");
-			//Build the ControlTuple msg
-			backupNodeState.setBackupOperatorState(backupState);
+		if(runningOpState != null){
+			BackupOperatorState bs = new BackupOperatorState();;
+			State toBackup = null;
+			int ownerId = runningOpState.getOwnerId();
+			int checkpointInterval = runningOpState.getCheckpointInterval();
+			long data_ts = runningOpState.getData_ts();
+			String stateTag = runningOpState.getStateTag();
+			long startmutex = System.currentTimeMillis();
 			
-			ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);
+			try {
+				mutex.acquire();
+			} 
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			long startcopy = System.currentTimeMillis();
+			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
+			long stopcopy = System.currentTimeMillis();
+			System.out.println("Deep COPY: "+(stopcopy-startcopy));
+			mutex.release();
+			
+			long stopmutex = System.currentTimeMillis();
+			System.out.println("MUTEX: "+(stopmutex-startmutex));
+			toBackup.setOwnerId(ownerId);
+			toBackup.setCheckpointInterval(checkpointInterval);
+			toBackup.setData_ts(data_ts);
+			toBackup.setStateTag(stateTag);
+			
+			bs.setOpId(toBackup.getOwnerId());
+			bs.setState(toBackup);
+			bs.setStateClass(toBackup.getStateTag());
+			
+			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 			//Finally send the backup state
-			ctB.getBackupState().getBackupOperatorState()[0].getOpId();
 			owner.sendBackupState(ctB);
 		}
 	}
+	
+//	private void _backupState(){
+//		// If there is something to backup...
+//		// FIXME: this should anyway be avoided by controlling whether the statebackupworker needs to execute, according to this value
+//		if(runningOpState != null){
+//			//Create the array of backup states
+//			BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
+//			BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
+//			
+//			// We fill the array with the states
+//			for(int i = 0; i < numberOfStates ; i++){
+//				State toBackup = null;
+//				int ownerId = statesToBackup.get(i).getOwnerId();
+//				int checkpointInterval = statesToBackup.get(i).getCheckpointInterval();
+//				long data_ts = statesToBackup.get(i).getData_ts();
+//				String stateTag = statesToBackup.get(i).getStateTag();
+//				
+//				long startmutex = System.currentTimeMillis();
+//				
+//				try {
+//					mutex.acquire();
+//				} 
+//				catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				
+//				long startcopy = System.currentTimeMillis();
+//				toBackup = State.deepCopy(statesToBackup.get(i), owner.getRuntimeClassLoader());
+//				long stopcopy = System.currentTimeMillis();
+//				System.out.println("Deep COPY: "+(stopcopy-startcopy));
+//				mutex.release();
+//				
+//				long stopmutex = System.currentTimeMillis();
+//				System.out.println("MUTEX: "+(stopmutex-startmutex));
+//				toBackup.setOwnerId(ownerId);
+//				toBackup.setCheckpointInterval(checkpointInterval);
+//				toBackup.setData_ts(data_ts);
+//				toBackup.setStateTag(stateTag);
+//				
+//				BackupOperatorState bs = new BackupOperatorState();
+//				// current is null in a parallelised operator
+//				bs.setOpId(toBackup.getOwnerId());
+//				bs.setState(toBackup);
+//				bs.setStateClass(toBackup.getStateTag());
+//				backupState[i] = bs;
+//			}
+//			NodeManager.nLogger.info("-> Backuping the "+backupState.length+" states in this node");
+//			//Build the ControlTuple msg
+//			backupNodeState.setBackupOperatorState(backupState);
+//			
+//			ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);
+//			//Finally send the backup state
+//			ctB.getBackupState().getBackupOperatorState()[0].getOpId();
+//			owner.sendBackupState(ctB);
+//		}
+//	}
 	
 	public void installState(InitOperatorState[] initOperatorState){
 		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
@@ -464,16 +453,16 @@ public class ProcessingUnit {
 			System.out.println("This state ownerID is:  "+stateOwnerId);
 			State state = current.getState();
 			// Replace state
-			mapOP_S.put(stateOwnerId, state);
+			this.runningOpState = state;
 			// And reference in operator
-			((StatefulOperator)mapOP_ID.get(stateOwnerId)).replaceState(state);
+			((StatefulOperator)runningOp).replaceState(state);
 		}
 		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	
 	
 		/** Who manages which state? **/
-	
+	@Override
 	public synchronized void invalidateState(int opId) {
 		System.out.println("% We will invalidate management of state for: "+opId);
 		//If the states figures as being managed we removed it
@@ -489,33 +478,37 @@ public class ProcessingUnit {
 		}
 	}
 	
+	@Override
 	public synchronized void registerManagedState(int opId) {
 		//If the state does not figure as being managed, we include it
 		if(!listOfManagedStates.contains(opId)){
-			NodeManager.nLogger.info("% -> New STATE registered for NODE: "+opId);
+			NodeManager.nLogger.info("% -> New STATE registered for Operator: "+opId);
 			listOfManagedStates.add(opId);
 		}
 	}
 	
+	@Override
 	public boolean isManagingStateOf(int opId) {
 		return listOfManagedStates.contains(opId) ? true : false;
 	}
 	
 	/** Dynamic change of operator information **/
-	
+	@Override
 	public void addDownstream(int opId, OperatorStaticInformation location){
 		// First pick the most downstream operator, and add the downstream to that one
-		OperatorContext opContext = mapOP_ID.get(mostDownstream.getOperatorId()).getOpContext();
+		OperatorContext opContext = runningOp.getOpContext();
 		opContext.addDownstream(opId);
 		opContext.setDownstreamOperatorStaticInformation(opId, location);
 		ctx.configureNewDownstreamCommunication(opId, location);
 	}
 	
+	@Override
 	public void addUpstream(int opId, OperatorStaticInformation location){
 		// First pick the most upstream operator, and add the upstream to that one
-		OperatorContext opContext = mapOP_ID.get(mostUpstream.getOperatorId()).getOpContext();
+		OperatorContext opContext = runningOp.getOpContext();
 		opContext.addUpstream(opId);
 		opContext.setUpstreamOperatorStaticInformation(opId, location);
 		ctx.configureNewUpstreamCommunication(opId, location);
 	}
+
 }

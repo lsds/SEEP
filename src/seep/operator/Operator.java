@@ -7,7 +7,7 @@ import java.util.List;
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
-import seep.processingunit.ProcessingUnit;
+import seep.processingunit.StatefulProcessingUnit;
 
 public abstract class Operator implements Serializable, QuerySpecificationI, EndPoint{
 	
@@ -18,7 +18,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	private State state = null;
 	private boolean ready = false;
 	public Operator subclassOperator = null;
-	public ProcessingUnit processingUnit = null;
+	public StatefulProcessingUnit processingUnit = null;
 	private Router router = null;
 	// By default value
 	private DataAbstractionMode dataAbs = DataAbstractionMode.ONE_AT_A_TIME;
@@ -61,7 +61,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		return subclassOperator;
 	}
 	
-	public void setProcessingUnit(ProcessingUnit processingUnit){
+	public void setProcessingUnit(StatefulProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
 	}
 	

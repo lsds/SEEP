@@ -20,8 +20,9 @@ import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.infrastructure.NodeManager;
 import seep.operator.State;
 import seep.operator.OperatorContext.PlacedOperator;
+import seep.processingunit.IProcessingUnit;
 import seep.processingunit.PUContext;
-import seep.processingunit.ProcessingUnit;
+import seep.processingunit.StatefulProcessingUnit;
 
 
 public class CoreProcessingLogic implements Serializable{
@@ -29,7 +30,7 @@ public class CoreProcessingLogic implements Serializable{
 	private static final long serialVersionUID = 1L;
 	
 	private CoreRE owner;
-	private ProcessingUnit pu;
+	private IProcessingUnit pu;
 	private PUContext puCtx;
 	
 	
@@ -39,7 +40,7 @@ public class CoreProcessingLogic implements Serializable{
 	public void setOpContext(PUContext puCtx) {
 		this.puCtx = puCtx;
 	}
-	public void setProcessingUnit(ProcessingUnit processingUnit){
+	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.pu = processingUnit;
 	}
 	
@@ -72,17 +73,17 @@ public class CoreProcessingLogic implements Serializable{
 		ArrayList<Integer> downstreamIds = new ArrayList<Integer>();
 		for(Integer index : indexes){
 			// opId from the most downstream operator
-			int opId = pu.getMostDownstream().getOpContext().getDownOpIdFromIndex(index);
+			int opId = pu.getOperator().getOpContext().getDownOpIdFromIndex(index);
 			downstreamIds.add(opId);
 		}
 		// Reconfigure routing info of the most downstream operator
-		pu.getMostDownstream().getRouter().reconfigureRoutingInformation(downstreamIds, indexes, keys);
+		pu.getOperator().getRouter().reconfigureRoutingInformation(downstreamIds, indexes, keys);
 	}
 	
 	public void sendRoutingInformation(int opId, String operatorType){
 		//Get index from opId
 		int upstreamIndex = 0;
-		for(PlacedOperator op : pu.getMostUpstream().getOpContext().upstreams){
+		for(PlacedOperator op : pu.getOperator().getOpContext().upstreams){
 			if(op.opID() == opId){
 				 upstreamIndex = op.index();
 			}
@@ -155,7 +156,7 @@ System.out.println("KEY: "+operatorType);
 		downstreamLastAck.put(opId, current_ts);
 			//FIXME if I remove a downstream (scale down) I should remove from map/clear the map
 	/// \todo {scaling down operators introduce a new bunch of possibilities}
-		if(downstreamLastAck.size() != pu.getMostDownstream().getOpContext().downstreams.size()) {
+		if(downstreamLastAck.size() != pu.getOperator().getOpContext().downstreams.size()) {
 		//			System.out.println("missing some acks suppressing ACK");
 		}
 		else if (minWithCurrent==minWithoutCurrent) {
@@ -259,7 +260,7 @@ System.out.println("KEY: "+operatorType);
 		else{
 			NodeManager.nLogger.info("-> Scaling out STATELESS op");
 //			configureNewDownstreamStatelessOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
-			pu.getMostDownstream().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+			pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 	}
 	
@@ -270,7 +271,7 @@ System.out.println("KEY: "+operatorType);
 		if(pu.isManagingStateOf(oldOpId)){
 			NodeManager.nLogger.info("-> Splitting state");
 			splitState(oldOpId, newOpId, newKey);
-			pu.setSystemStatus(ProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
+			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
 			//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 			NodeManager.nLogger.info("-> Generating and sending RI backup");
 //			backupRoutingInformation(oldOpId);
@@ -279,7 +280,7 @@ System.out.println("KEY: "+operatorType);
 			NodeManager.nLogger.info("-> NOT in charge of split state");
 		}
 		
-		pu.setSystemStatus(ProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
+		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
 		//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 		NodeManager.nLogger.info("-> Generating and sending RI backup");
 //		backupRoutingInformation(oldOpId);
@@ -305,21 +306,21 @@ System.out.println("KEY: "+operatorType);
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
 
-		newKey = pu.getMostDownstream().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		newKey = pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		return newKey;
 		
 	}
 	
 	private void backupRoutingInformation(int oldOpId) {
 		//Get routing information of the operator that has scaled out
-		ArrayList<Integer> indexes = pu.getRouterIndexesInformation(oldOpId);
-		ArrayList<Integer> keys = pu.getRouterKeysInformation(oldOpId);
+		ArrayList<Integer> indexes = ((StatefulProcessingUnit)pu).getRouterIndexesInformation(oldOpId);
+		ArrayList<Integer> keys = ((StatefulProcessingUnit)pu).getRouterKeysInformation(oldOpId);
 System.out.println("BACKUP INDEXES: "+indexes.toString());
 System.out.println("BACKUP KEYS: "+keys.toString());
 
 		//Create message
-System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getName());
-		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getNodeDescr().getNodeId(), indexes, keys, pu.getMostDownstream().getClass().getName());
+System.out.println("REGISTERED CLASS: "+pu.getOperator().getClass().getName());
+		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getNodeDescr().getNodeId(), indexes, keys, pu.getOperator().getClass().getName());
 		//Send message to downstreams (for now, all downstreams)
 		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
 		for(Integer index : indexes){
@@ -343,7 +344,7 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 			// Create initOperatorState with the id of the operator that will own the state and the state itself
 			initOperatorState[i] = new InitOperatorState(current.getState().getOwnerId(), current.getState());
 		}
-		ControlTuple ct = new ControlTuple().makeInitNodeState(pu.getMostDownstream().getOperatorId(), owner.getNodeDescr().getNodeId(), initOperatorState);		
+		ControlTuple ct = new ControlTuple().makeInitNodeState(pu.getOperator().getOperatorId(), owner.getNodeDescr().getNodeId(), initOperatorState);		
 		try {
 			owner.getControlDispatcher().initStateMessage(ct, controlDownstreamSocket.getOutputStream());
 		} 
@@ -360,18 +361,18 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 		owner.manageBackupUpstreamIndex(opId);
 		//Clean the data processing channel from remaining tuples in old batch
 		NodeManager.nLogger.info("Changing to INITIALISING STATE, stopping all incoming comm");
-		pu.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
+		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE);
 //		pu.cleanInputQueue();
 		//Give state to processing unit for it to manage it
-		pu.installState(ct.getInitOperatorState());
+		((StatefulProcessingUnit)pu).installState(ct.getInitOperatorState());
 		//Once the state has been installed, recover dataProcessingChannel
 		
 		//Send a msg to ask for the rest of information. (tuple replaying)
 		NodeManager.nLogger.info("-> Sending STATE_ACK");
-		ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getMostUpstream().getOperatorId());
+		ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
 		owner.getControlDispatcher().sendAllUpstreams(rb);
 //		pu.cleanInputQueue();
-		pu.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
+		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
 		System.out.println("Changing to NORMAL mode, recovering data processing");
 	}
 	
@@ -383,7 +384,7 @@ System.out.println("REGISTERED CLASS: "+pu.getMostDownstream().getClass().getNam
 		//if(owner.subclassOperator instanceof StatefulOperator){
 System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!!!!#############");
 //			((StatefulOperator)owner.subclassOperator).generateBackupState();
-			pu.checkpointAndBackupState();
+			((StatefulProcessingUnit)pu).checkpointAndBackupState();
 		}
 	}
 }

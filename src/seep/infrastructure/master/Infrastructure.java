@@ -111,7 +111,7 @@ public class Infrastructure {
 			NodeManager.nLogger.info("-> Manual static scale out");
 			soib = eiu.staticInstantiateNewReplicaOperator(qp.getScaleOutIntents(), qp);
 		}
-		// The default and preferred option, used 
+		// The default and preferred option, used
 		else if (!qp.getPartitionRequirements().isEmpty()){
 			NodeManager.nLogger.info("-> Automatic static scale out");
 			soib = eiu.staticInstantiationNewReplicaOperators(qp);
@@ -129,6 +129,7 @@ public class Infrastructure {
 		System.out.println("");
 		System.out.println("");
 		queryToNodesMapping = qp.getMapOperatorToNode();
+		/** In the future (maybe) here we will transform multi-operator per node into a single user-defined function (one operator) **/
 		configureRouterStatically();
 		eiu.executeStaticScaleOutFromIntent(soib);
 	}

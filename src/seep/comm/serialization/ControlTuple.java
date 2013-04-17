@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupNodeState;
+import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.InitNodeState;
 import seep.comm.serialization.controlhelpers.InitRI;
@@ -20,7 +21,9 @@ public class ControlTuple {
 	private CoreRE.ControlTupleType type;
 	
 	private Ack ack;
-	private BackupNodeState backupState;
+	@Deprecated
+	private BackupNodeState _backupState;
+	private BackupOperatorState backupState;
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
 	private Resume resume;
@@ -58,13 +61,23 @@ public class ControlTuple {
 	public void setAck(Ack ack) {
 		this.ack = ack;
 	}
-	public BackupNodeState getBackupState() {
+	
+//	@Deprecated
+//	public BackupNodeState getBackupState() {
+//		return backupState;
+//	}
+	
+	public BackupOperatorState getBackupState(){
 		return backupState;
 	}
 	
-	public void setBackupState(BackupNodeState backupState) {
+	public void setBackupState(BackupOperatorState backupState){
 		this.backupState = backupState;
 	}
+	
+//	public void setBackupState(BackupNodeState backupState) {
+//		this.backupState = backupState;
+//	}
 	
 	public ReconfigureConnection getReconfigureConnection() {
 		return reconfigureConnection;
@@ -141,11 +154,18 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeBackupState(BackupNodeState bs){
-		this.type = CoreRE.ControlTupleType.BACKUP_NODE_STATE;
+	public ControlTuple makeBackupState(BackupOperatorState bs){
+		this.type = CoreRE.ControlTupleType.BACKUP_OP_STATE;
 		this.backupState = bs;
 		return this;
 	}
+	
+//	@Deprecated
+//	public ControlTuple makeBackupState(BackupNodeState bs){
+//		this.type = CoreRE.ControlTupleType.BACKUP_NODE_STATE;
+//		this.backupState = bs;
+//		return this;
+//	}
 	
 	public ControlTuple makeResume(ArrayList<Integer> opIds){
 		this.type = CoreRE.ControlTupleType.RESUME;

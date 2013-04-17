@@ -3,7 +3,7 @@ package seep.infrastructure.monitor;
 import java.util.concurrent.TimeUnit;
 
 import seep.comm.IncomingDataHandler;
-import seep.processingunit.ProcessingUnit;
+import seep.processingunit.StatefulProcessingUnit;
 import seep.runtimeengine.InputQueue;
 
 import com.yammer.metrics.Metrics;
@@ -19,9 +19,9 @@ public class MetricsReader {
 	// To indicate the number of upstream connections (incoming data worker threads) that are working in this node
 	final public static Counter numberIncomingDataHandlerWorkers = Metrics.newCounter(IncomingDataHandler.class, "dataThreads-idh");
 	// To indicate the number of events / second being processed by this node
-	final public static Meter eventsPerSecond = Metrics.newMeter(ProcessingUnit.class, "get-events", "events", TimeUnit.SECONDS);
+	final public static Meter eventsPerSecond = Metrics.newMeter(StatefulProcessingUnit.class, "get-events", "events", TimeUnit.SECONDS);
 	// Events processed, manual counter
-	final public static Counter eventsProcessed = Metrics.newCounter(ProcessingUnit.class, "total-events");
+	final public static Counter eventsProcessed = Metrics.newCounter(StatefulProcessingUnit.class, "total-events");
 	// 
 	
 	public MetricsReader(){

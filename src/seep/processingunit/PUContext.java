@@ -82,20 +82,11 @@ public class PUContext {
 		}
 	}
 	
-	public void configureOperatorConnections(Collection<Operator> operatorSet) {
+	public void configureOperatorConnections(Operator op) {
 		
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
-		
-//		System.out.println("operator set is: "+operatorSet.size());
-//		for(Operator op : operatorSet){
-//			System.out.println("Op: "+op.getId());
-//		}
-		
-		
-		for(Operator op : operatorSet){
-			configureDownstreamAndUpstreamConnections(op);
-		}	
+		configureDownstreamAndUpstreamConnections(op);	
 	}
 	
 	/**
@@ -105,15 +96,16 @@ public class PUContext {
 	 */
 	public void configureNewUpstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = nodeDescr.getIp();
-		if(loc.getMyNode().getIp().equals(localIp)){
-			if(ProcessingUnit.mapOP_ID.containsKey(opID)){
-				//Store reference in upstreamTypeConnection, store operator(local) or socket(remote)
-				upstreamTypeConnection.add(ProcessingUnit.mapOP_ID.get(opID));
-				NodeManager.nLogger.info("-> PUContext. New local upstream conn to OP-"+opID);
-			}
-		}
+//		if(loc.getMyNode().getIp().equals(localIp)){
+//			if(StatefulProcessingUnit.mapOP_ID.containsKey(opID)){
+//				//Store reference in upstreamTypeConnection, store operator(local) or socket(remote)
+//				upstreamTypeConnection.add(StatefulProcessingUnit.mapOP_ID.get(opID));
+//				NodeManager.nLogger.info("-> PUContext. New local upstream conn to OP-"+opID);
+//			}
+//		}
 		//remote
-		else if (!(loc.getMyNode().getIp().equals(localIp))){
+//		else 
+		if (!(loc.getMyNode().getIp().equals(localIp))){
 			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
 			NodeManager.nLogger.info("-> PUContext. New remote upstream (sync) conn to OP-"+opID);
 		}
@@ -126,16 +118,17 @@ public class PUContext {
 	 */
 	public void configureNewDownstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = nodeDescr.getIp();
-		//Check if downstream node is remote or local, and check that it is not a Sink
-		if(loc.getMyNode().getIp().equals(localIp)){
-			//Access downstream reference in map with op_id
-			if (ProcessingUnit.mapOP_ID.containsKey(opID)) {
-				//Store reference in downstreamTypeConnection, store operator(local) or socket(remote)
-				downstreamTypeConnection.add(ProcessingUnit.mapOP_ID.get(opID));
-				NodeManager.nLogger.info("-> PUContext. New local downstream conn to OP-"+opID);
-			}
-		}
-		else if(!(loc.getMyNode().getIp().equals(localIp))){
+//		//Check if downstream node is remote or local, and check that it is not a Sink
+//		if(loc.getMyNode().getIp().equals(localIp)){
+//			//Access downstream reference in map with op_id
+//			if (StatefulProcessingUnit.mapOP_ID.containsKey(opID)) {
+//				//Store reference in downstreamTypeConnection, store operator(local) or socket(remote)
+//				downstreamTypeConnection.add(StatefulProcessingUnit.mapOP_ID.get(opID));
+//				NodeManager.nLogger.info("-> PUContext. New local downstream conn to OP-"+opID);
+//			}
+//		}
+//		else 
+		if(!(loc.getMyNode().getIp().equals(localIp))){
 			//If remote, create communication with other point			
 			if (P.valueFor("synchronousOutput").equals("true")){
 				createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
@@ -160,7 +153,7 @@ public class PUContext {
 			socketChannel.connect(new InetSocketAddress(ip, port));
 			// We create an output where to write serialized data (kryo stuff), and we associate a native byte buffer in a bytebufferoutputstream
 			
-			ByteBuffer nativeBuffer = ByteBuffer.allocateDirect(1024);
+			ByteBuffer nativeBuffer = ByteBuffer.allocateDirect(20000);
 			ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
 //			ByteBufferOutputStream bbos = new ByteBufferOutputStream(16);
 			
@@ -266,8 +259,8 @@ public class PUContext {
 	
 	/** Dynamic Reconfiguration **/
 	
-	public void updateConnection(int opId, InetAddress newIp){
-		Operator opToReconfigure = ProcessingUnit.mapOP_ID.get(opId);
+	public void updateConnection(Operator opToReconfigure, InetAddress newIp){
+		int opId = opToReconfigure.getOperatorId();
 		int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
 		int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();
 	

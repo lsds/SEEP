@@ -16,18 +16,19 @@ public class StateBackupWorker implements Runnable, Serializable{
 	
 	private long initTime = 0;
 	
-	private ProcessingUnit processingUnit;
+	private StatefulProcessingUnit processingUnit;
 	private boolean goOn = true;
 	private int checkpointInterval = 0;
 	private Map<Integer, State> mapOP_S;
+	private State state;
 	
 	public void stop(){
 		this.goOn = false;
 	}
 
-	public StateBackupWorker(ProcessingUnit processingUnit, Map<Integer, State> mapOPS){
+	public StateBackupWorker(StatefulProcessingUnit processingUnit, State s){
 		this.processingUnit = processingUnit;
-		this.mapOP_S = mapOPS;
+		this.state = s;
 	}
 	
 	public void run(){
@@ -47,7 +48,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 				//synch this call
 				if(P.valueFor("eftMechanismEnabled").equals("true")){
 					//if not initialisin state...
-					if(!processingUnit.getSystemStatus().equals(ProcessingUnit.SystemStatus.INITIALISING_STATE)){
+					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						processingUnit.checkpointAndBackupState();
 					}
 				}
