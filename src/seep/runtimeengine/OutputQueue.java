@@ -31,20 +31,10 @@ public class OutputQueue {
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
-		
-//		k.register(DataTuple.class);
-//		k.register(BatchDataTuple.class);
-		
 		k.register(ArrayList.class, new ArrayListSerializer());
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
-		
-//		k.register(BatchTuplePayload.class);
-//		k.register(TuplePayload.class);
-//		k.register(Payload.class);
-//		k.register(ArrayList.class, new ArrayListSerializer());
-		
 		return k;
 	}
 	
