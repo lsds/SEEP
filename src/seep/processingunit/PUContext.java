@@ -267,7 +267,6 @@ public class PUContext {
 	/** Dynamic Reconfiguration **/
 	
 	public void updateConnection(int opId, InetAddress newIp){
-		InetAddress localIp = nodeDescr.getIp();
 		Operator opToReconfigure = ProcessingUnit.mapOP_ID.get(opId);
 		int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
 		int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();

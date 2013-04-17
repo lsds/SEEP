@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Random;
 
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.messages.Payload;
@@ -20,6 +21,28 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class MainTest{
 
+	class Worker implements Runnable{
+
+		ArrayList<Integer> data;
+		int initRange = 0;
+		int endRange = 4999;
+		
+		public Worker(ArrayList<Integer> data){
+			this.data = data;
+		}
+		
+		@Override
+		public void run() {
+			System.out.println("Hi, Im: "+Thread.currentThread().getId());
+			Random gen = new Random(2424);
+			while(true){
+				// access to index and 
+				int index = gen.nextInt(5000);
+				data.set(1, index);
+			}
+		}
+	}
+	
 	public void testByteBuffer(){
 		
 		File sm = new File("sharedMemory");
@@ -104,10 +127,28 @@ public class MainTest{
 		
 	}
 	
+	public void testConcurrentAccessWithBlockingFree(){
+		// shared data structure
+		ArrayList<Integer> data = new ArrayList<Integer>();
+		// initialize data
+		for(int i = 0; i<5000; i++)
+		{
+			data.add(5);
+		}
+		// create and run workers
+		Thread t1 = new Thread(new Worker(data));
+		Thread t2 = new Thread(new Worker(data));
+		t1.start();
+		t2.start();
+	}
+	
 	public static void main(String args[]){
 		
 		MainTest mt = new MainTest();
-		mt.testByteBuffer();
+		//mt.testByteBuffer();
+		
+		
+		mt.testConcurrentAccessWithBlockingFree();
 	}
 }
 
