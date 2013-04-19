@@ -7,38 +7,53 @@ import java.util.List;
 import seep.comm.routing.Router;
 import seep.comm.serialization.DataTuple;
 import seep.infrastructure.NodeManager;
+import seep.processingunit.IProcessingUnit;
 import seep.processingunit.StatefulProcessingUnit;
 
 public abstract class Operator implements Serializable, QuerySpecificationI, EndPoint{
-	
+
 	private static final long serialVersionUID = 1L;
-	
+
 	private int operatorId;
 	private OperatorContext opContext = new OperatorContext();
 	private State state = null;
 	private boolean ready = false;
 	public Operator subclassOperator = null;
-	public StatefulProcessingUnit processingUnit = null;
+	public IProcessingUnit processingUnit = null;
 	private Router router = null;
 	// By default value
 	private DataAbstractionMode dataAbs = DataAbstractionMode.ONE_AT_A_TIME;
-	
+
 	public enum DataAbstractionMode{
 		ONE_AT_A_TIME, WINDOW, ORDERED, UPSTREAM_SYNC_BARRIER
 	}
+
+//	public Operator(int operatorId, State state){
+//		this.operatorId = operatorId;
+//		this.state = state;
+//		subclassOperator = this;
+//	}
+
+	public Operator(){}
 	
-	public Operator(int operatorId, State state){
-		this.operatorId = operatorId;
-		this.state = state;
-		subclassOperator = this;
-	}
+	/** Instantiation methods **/
 	
-	public State getState(){
-		return state;
+	public void setOperatorId(int opId){
+		this.operatorId = opId;
 	}
 	
 	public void setState(State state){
 		this.state = state;
+	}
+	
+	public void setSubclassOperator(){
+		subclassOperator = this;
+	}
+	
+	/** Other methods **/
+	
+	public State getState(){
+		return state;
 	}
 	
 	public void setReady(boolean ready){
@@ -61,7 +76,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		return subclassOperator;
 	}
 	
-	public void setProcessingUnit(StatefulProcessingUnit processingUnit){
+	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
 	}
 	
@@ -82,14 +97,14 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		processingUnit.sendData(dt, targets);
 	}
 	
-	public void sendDown(DataTuple dt){
+	public synchronized void sendDown(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
 		processingUnit.sendData(dt, targets);
 	}
 	
-	public void sendDownRouteByValue(DataTuple dt, int value){
+	public synchronized void sendDownRouteByValue(DataTuple dt, int value){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt, value, false);
 		processingUnit.sendData(dt, targets);
@@ -105,7 +120,11 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	public void disableCheckpointing(){
 		// Disable checkpointing the state for operator with operatorId
-		processingUnit.disableCheckpointForOperator(operatorId);
+		((StatefulProcessingUnit)processingUnit).disableCheckpointForOperator(operatorId);
+	}
+	
+	public void disableMultiCoreSupport(){
+		processingUnit.disableMultiCoreSupport();
 	}
 	
 	/** Data Delivery methods **/
@@ -138,8 +157,9 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	public void connectTo(QuerySpecificationI down, boolean originalQuery) {
 		opContext.addDownstream(down.getOperatorId());
-		if(originalQuery)opContext.addOriginalDownstream(down.getOperatorId());
+		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
+		
 //		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
 	}
 	
@@ -156,9 +176,9 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 //		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
 //	}
 	
-	public void route(String attributToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
+	public void route(String attributeToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
 		int opId = toConnect.getOperatorId();
-		opContext.setQueryAttribute(attributToQuery);
+		opContext.setQueryAttribute(attributeToQuery);
 		opContext.routeValueToDownstream(operand, valueToMatch, opId);
 		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+valueToMatch+" to Operator: "+toConnect.toString());
 	}
@@ -166,6 +186,16 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public void _declareWorkingAttributes(List<String> attributes){
 		opContext.setDeclaredWorkingAttributes(attributes);
 	}
+	
+	public void _declareWorkingAttributes(List<String> attributes, String key){
+		opContext.setKeyAttribute(key);
+		opContext.setDeclaredWorkingAttributes(attributes);
+	}
+	
+//	public void declareWorkingAttributes(String... attributes){
+//		List<String> attrs = Arrays.asList(attributes);
+//		opContext.setDeclaredWorkingAttributes(attrs);
+//	}
 	
 //	@Deprecated
 //	public void declareWorkingAttributes(String... attributes){

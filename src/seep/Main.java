@@ -5,8 +5,8 @@ import java.net.UnknownHostException;
 
 import seep.infrastructure.OperatorDeploymentException;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.api.QueryPlan;
 import seep.infrastructure.master.MasterController;
-import seep.infrastructure.master.QueryPlan;
 
 /**
 * Main. The entry point of the whole system. This can be executed as Main (master Node) or as secondary.

@@ -77,13 +77,10 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 	/// \todo{OPTIMIZE THIS METHOD}
 	public ArrayList<Integer> route(ArrayList<Integer> targets, int value) {
 		int hash = Router.customHash(value);
-		//int hash = value;
 		int realIndex = -1;
 		/** for(Integer nodeKey : downstreamNodeKeys){ */
 		for(int i = 0; i<downstreamNodeKeys.size(); i++){
 			int nodeKey = downstreamNodeKeys.get(i);
-	//System.out.println("DNK: "+downstreamNodeKeys);
-	//System.out.println("DOW: "+keyToDownstreamRealIndex);
 			//If yes then we have the node to route the info
 			if(hash < nodeKey){
 				realIndex = keyToDownstreamRealIndex.get(i);

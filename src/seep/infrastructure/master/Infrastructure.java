@@ -32,6 +32,8 @@ import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorDeploymentException;
+import seep.infrastructure.api.QueryPlan;
+import seep.infrastructure.api.ScaleOutIntentBean;
 import seep.infrastructure.monitor.MonitorManager;
 import seep.operator.Operator;
 import seep.operator.OperatorContext;

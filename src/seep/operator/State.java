@@ -13,44 +13,6 @@ public abstract class State implements Serializable, Cloneable{
 
 	private static final long serialVersionUID = 1L;
 	
-	public State clone(){
-		
-		try {
-			return (State) super.clone();
-		}
-		catch (CloneNotSupportedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
-	public static State deepCopy(State original, RuntimeClassLoader rcl){
-		Object obj = null;
-	    try {
-	    	// Write the object out to a byte array
-	        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
-	        synchronized(original){
-	        	out.writeObject(original);
-	        	out.flush();
-	        	out.close();
-	        }
-	        // Make an input stream from the byte array and read
-	        // a copy of the object back in.
-	        ExtendedObjectInputStream in = new ExtendedObjectInputStream(new ByteArrayInputStream(bos.toByteArray()), rcl);
-	        obj = in.readObject();
-	    }
-	    catch(IOException e) {
-	    	e.printStackTrace();
-	    }
-	    catch(ClassNotFoundException cnfe) {
-	        cnfe.printStackTrace();
-	    }
-	    return (State) obj;
-	}
-	
-	
 	private int ownerId;
 	private String stateTag;
 	private State stateImpl;
@@ -119,5 +81,40 @@ public abstract class State implements Serializable, Cloneable{
 		this.stateImpl = stateImpl;
 	}
 	
-	public abstract State[] splitState(State toSplit, int key);
+	public State clone(){
+		
+		try {
+			return (State) super.clone();
+		}
+		catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static State deepCopy(State original, RuntimeClassLoader rcl){
+		Object obj = null;
+	    try {
+	    	// Write the object out to a byte array
+	        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
+	        synchronized(original){
+	        	out.writeObject(original);
+	        	out.flush();
+	        	out.close();
+	        }
+	        // Make an input stream from the byte array and read
+	        // a copy of the object back in.
+	        ExtendedObjectInputStream in = new ExtendedObjectInputStream(new ByteArrayInputStream(bos.toByteArray()), rcl);
+	        obj = in.readObject();
+	    }
+	    catch(IOException e) {
+	    	e.printStackTrace();
+	    }
+	    catch(ClassNotFoundException cnfe) {
+	        cnfe.printStackTrace();
+	    }
+	    return (State) obj;
+	}
 }

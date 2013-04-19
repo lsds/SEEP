@@ -1,7 +1,6 @@
 package seep.processingunit;
 
 import java.io.Serializable;
-import java.util.Map;
 
 import seep.P;
 import seep.operator.State;
@@ -19,7 +18,6 @@ public class StateBackupWorker implements Runnable, Serializable{
 	private StatefulProcessingUnit processingUnit;
 	private boolean goOn = true;
 	private int checkpointInterval = 0;
-	private Map<Integer, State> mapOP_S;
 	private State state;
 	
 	public void stop(){
@@ -41,7 +39,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 			e1.printStackTrace();
 		}
 		processingUnit.checkpointAndBackupState();
-		checkpointInterval = processingUnit.getStateCheckpointInterval();
+		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
 			if(elapsedTime > checkpointInterval){

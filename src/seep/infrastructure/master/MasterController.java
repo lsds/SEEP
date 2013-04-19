@@ -14,6 +14,7 @@ import seep.P;
 import seep.elastic.ElasticInfrastructureUtils;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.OperatorDeploymentException;
+import seep.infrastructure.api.QueryPlan;
 
 
 public class MasterController {

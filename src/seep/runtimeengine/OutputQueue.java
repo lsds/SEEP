@@ -67,7 +67,7 @@ public class OutputQueue {
 		replaySemaphore.incrementAndGet();
 	}
 	
-	public void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
+	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
 
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		Buffer buffer = channelRecord.getBuffer();

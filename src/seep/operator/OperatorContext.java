@@ -31,6 +31,7 @@ public class OperatorContext implements Serializable{
 	
 	/** Tuple dependent information **/
 	private List<String> declaredWorkingAttributes;
+	private String keyAttribute = null;
 	
 	public OperatorContext(){
 		
@@ -42,6 +43,14 @@ public class OperatorContext implements Serializable{
 	
 	public String getQueryAttribute(){
 		return queryAttribute;
+	}
+	
+	public String getKeyAttribute(){
+		return keyAttribute;
+	}
+	
+	public void setKeyAttribute(String key){
+		this.keyAttribute = key;
 	}
 	
 	public void setDeclaredWorkingAttributes(List<String> declaredWorkingAttributes){

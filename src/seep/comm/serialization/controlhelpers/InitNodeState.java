@@ -2,8 +2,8 @@ package seep.comm.serialization.controlhelpers;
 
 public class InitNodeState {
 
-	private int nodeId;
-	private InitOperatorState[] initOperatorState;
+	private int opId;
+	private InitOperatorState initOperatorState;
 	//
 	private int senderOperatorId;
 	
@@ -13,24 +13,24 @@ public class InitNodeState {
 	public void setSenderOperatorId(int senderOperatorId) {
 		this.senderOperatorId = senderOperatorId;
 	}
-	public int getNodeId() {
-		return nodeId;
+	public int getOpId() {
+		return opId;
 	}
-	public void setNodeId(int nodeId) {
-		this.nodeId = nodeId;
+	public void setOpId(int opId) {
+		this.opId = opId;
 	}
-	public InitOperatorState[] getInitOperatorState() {
+	public InitOperatorState getInitOperatorState() {
 		return initOperatorState;
 	}
-	public void setInitOperatorState(InitOperatorState[] initOperatorState) {
+	public void setInitOperatorState(InitOperatorState initOperatorState) {
 		this.initOperatorState = initOperatorState;
 	}
 	
 	public InitNodeState(){	}
 	
-	public InitNodeState(int senderOperatorId, int nodeId, InitOperatorState[] initOperatorState){
+	public InitNodeState(int senderOperatorId, int nodeId, InitOperatorState initOperatorState){
 		this.senderOperatorId = senderOperatorId;
-		this.nodeId = nodeId;
+		this.opId = nodeId;
 		this.initOperatorState = initOperatorState;
 	}
 	

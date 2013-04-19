@@ -7,6 +7,8 @@ import java.util.Map;
 import seep.comm.serialization.DataTuple;
 import seep.operator.Operator;
 import seep.operator.OperatorStaticInformation;
+import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
 
 public interface IProcessingUnit {
@@ -61,5 +63,11 @@ public interface IProcessingUnit {
 	public void addDownstream(int opId, OperatorStaticInformation location);
 	
 	public void addUpstream(int opId, OperatorStaticInformation location);
+	
+	public void launchMultiCoreMechanism(CoreRE core, DataStructureAdapter dsa);
+	
+	public void disableMultiCoreSupport();
+	
+	public boolean isMultiCoreEnabled();
 	
 }

@@ -3,17 +3,16 @@ package seep.comm.serialization;
 import java.util.ArrayList;
 
 import seep.comm.serialization.controlhelpers.Ack;
-import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.BackupRI;
-import seep.comm.serialization.controlhelpers.InitNodeState;
-import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
+import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InvalidateState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
+import seep.operator.State;
 import seep.runtimeengine.CoreRE;
 
 public class ControlTuple {
@@ -21,13 +20,11 @@ public class ControlTuple {
 	private CoreRE.ControlTupleType type;
 	
 	private Ack ack;
-	@Deprecated
-	private BackupNodeState _backupState;
 	private BackupOperatorState backupState;
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
 	private Resume resume;
-	private InitNodeState initNodeState;
+	private InitOperatorState initState;
 	private StateAck stateAck;
 	private InvalidateState invalidateState;
 	private BackupRI backupRI;
@@ -102,12 +99,12 @@ public class ControlTuple {
 		this.resume = resume;
 	}
 	
-	public InitNodeState getInitNodeState() {
-		return initNodeState;
+	public InitOperatorState getInitOperatorState() {
+		return initState;
 	}
 	
-	public void setInitNodeState(InitNodeState initNodeState) {
-		this.initNodeState = initNodeState;
+	public void setInitOperatorState(InitOperatorState initOperatorState) {
+		this.initState = initOperatorState;
 	}
 	
 	public StateAck getStateAck() {
@@ -216,9 +213,16 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInitNodeState(int senderOperatorId, int nodeId, InitOperatorState[] initOperatorState){
+//	@Deprecated
+//	public ControlTuple makeInitNodeState(int senderOperatorId, int nodeId, InitOperatorState initOperatorState){
+//		this.type = CoreRE.ControlTupleType.INIT_STATE;
+//		this.initNodeState = new InitNodeState(senderOperatorId, nodeId, initOperatorState);
+//		return this;
+//	}
+	
+	public ControlTuple makeInitOperatorState(int senderOperatorId, State initOperatorState){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
-		this.initNodeState = new InitNodeState(senderOperatorId, nodeId, initOperatorState);
+		this.initState = new InitOperatorState(senderOperatorId, initOperatorState);
 		return this;
 	}
 	

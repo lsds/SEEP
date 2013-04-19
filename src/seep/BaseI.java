@@ -1,6 +1,6 @@
 package seep;
 
-import seep.infrastructure.master.QueryPlan;
+import seep.infrastructure.api.QueryPlan;
 
 public interface BaseI {
 

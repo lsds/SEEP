@@ -9,8 +9,6 @@ import java.net.InetAddress;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import seep.comm.NodeManagerCommunication;
@@ -18,10 +16,10 @@ import seep.comm.RuntimeCommunicationTools;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.infrastructure.NodeManager;
+import seep.infrastructure.api.QueryPlan;
+import seep.infrastructure.api.ScaleOutIntentBean;
 import seep.infrastructure.master.Infrastructure;
 import seep.infrastructure.master.Node;
-import seep.infrastructure.master.QueryPlan;
-import seep.infrastructure.master.ScaleOutIntentBean;
 import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 import seep.operator.State;
@@ -421,18 +419,23 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			// We load the class
 			Class<?> operatorClass = ucl.loadClass(className);
 			// By reflection we extract the constructor for this class
-			Class<?> parameterTypes[] = {int.class, seep.operator.State.class};
+			Class<?> parameterTypes[] = {};
+			
 			constructor = operatorClass.getConstructor(parameterTypes);
-			Object[] args = new Object[2];
-			// new replica op id
-			args[0] = newOpId;
+			
 			// State injection. Pick the already existing operator, getState, clone it and then change the operatorId
 			State copyOfState = (State) inf.getOperatorById(opId).getState().clone();
 			copyOfState.setOwnerId(newOpId);
-			args[1] = copyOfState;
-			instance = constructor.newInstance(args);
+
+			instance = constructor.newInstance();
 			// Cast instance to operator
 			op = (Operator)instance;
+			
+			op.setOperatorId(newOpId);
+			op.setState(copyOfState);
+			op.setSubclassOperator();
+			
+			
 			//op = (Operator) Class.forName(className).getConstructor(int.class).newInstance(newOpId);
 		}
 		catch(ClassNotFoundException cnfe){

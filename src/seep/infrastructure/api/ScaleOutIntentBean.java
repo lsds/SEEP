@@ -1,5 +1,6 @@
-package seep.infrastructure.master;
+package seep.infrastructure.api;
 
+import seep.infrastructure.master.Node;
 import seep.operator.Operator;
 
 public class ScaleOutIntentBean {

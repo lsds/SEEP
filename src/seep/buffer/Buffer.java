@@ -5,11 +5,8 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import seep.comm.serialization.BatchDataTuple;
-import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.messages.BatchTuplePayload;
-import seep.operator.State;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -22,7 +19,7 @@ public class Buffer implements Serializable{
 //	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
 	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
 	
-	private BackupNodeState bs = null;
+	private BackupOperatorState bs = null;
 
 //	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
 	public Iterator<BatchTuplePayload> iterator() { return buff.iterator(); }
@@ -30,7 +27,7 @@ public class Buffer implements Serializable{
 	public Buffer(){
 		//state cannot be null. before backuping it would be null and this provokes bugs
 //\bug The constructor in Buffer is operator dependant, this must be fixed by means of interfaces that make it independent.
-		BackupNodeState initState = new BackupNodeState();
+		BackupOperatorState initState = new BackupOperatorState();
 		bs = initState;
 	}
 	
@@ -38,20 +35,20 @@ public class Buffer implements Serializable{
 		return buff.size();
 	}
 
-	public BackupNodeState getBackupState(){
+	public BackupOperatorState getBackupState(){
 		return bs;
 	}
 
-	public void saveStateAndTrim(BackupNodeState bs){
+	public void saveStateAndTrim(BackupOperatorState bs){
 		//Save state
 		this.bs = bs;
-		long ts_e = bs.getBackupOperatorStateWithOpId(bs.getUpstreamOpId()).getState().getData_ts();
+		long ts_e = bs.getState().getData_ts();
 		
 		//Trim buffer, eliminating those tuples that are represented by this state
 		trim(ts_e);
 	}
 	
-	public void replaceBackupNodeState(BackupNodeState bs) {
+	public void replaceBackupOperatorState(BackupOperatorState bs) {
 //		if(this.bs.getBackupOperatorState() != null && bs.getBackupOperatorState() != null){
 //		System.out.println("% Buffer. replacing old state: "+this.bs.getBackupOperatorState()[0].getOpId()+" with "+bs.getBackupOperatorState()[0].getOpId());
 //		}

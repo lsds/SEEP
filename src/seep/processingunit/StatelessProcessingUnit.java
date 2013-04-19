@@ -2,18 +2,43 @@ package seep.processingunit;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import seep.comm.serialization.DataTuple;
+import seep.infrastructure.NodeManager;
+import seep.infrastructure.monitor.MetricsReader;
+import seep.operator.EndPoint;
 import seep.operator.Operator;
+import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
+import seep.operator.Partitionable;
+import seep.operator.State;
+import seep.processingunit.IProcessingUnit.SystemStatus;
+import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
+import seep.runtimeengine.SynchronousCommunicationChannel;
 
 public class StatelessProcessingUnit implements IProcessingUnit {
 
 	private CoreRE owner;
 	private PUContext ctx;
+	
+	private SystemStatus systemStatus = SystemStatus.NORMAL;
+	
+	private Operator runningOp = null;
+	
+	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
+	private OutputQueue outputQueue = null;
+	
+	//Multi-core support
+	private Executor pool;
+	private boolean multiCoreEnabled = true;
 	
 	public StatelessProcessingUnit(CoreRE owner){
 		this.owner = owner;
@@ -22,50 +47,75 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	
 	@Override
 	public void addDownstream(int opId, OperatorStaticInformation location) {
-		// TODO Auto-generated method stub
-
+		// First pick the most downstream operator, and add the downstream to that one
+		OperatorContext opContext = runningOp.getOpContext();
+		opContext.addDownstream(opId);
+		opContext.setDownstreamOperatorStaticInformation(opId, location);
+		ctx.configureNewDownstreamCommunication(opId, location);
 	}
 
 	@Override
 	public void addUpstream(int opId, OperatorStaticInformation location) {
-		// TODO Auto-generated method stub
-
+		// First pick the most upstream operator, and add the upstream to that one
+		OperatorContext opContext = runningOp.getOpContext();
+		opContext.addUpstream(opId);
+		opContext.setUpstreamOperatorStaticInformation(opId, location);
+		ctx.configureNewUpstreamCommunication(opId, location);
 	}
 
 	@Override
 	public Map<String, Integer> createTupleAttributeMapper() {
-		// TODO Auto-generated method stub
-		return null;
+		Map<String, Integer> idxMapper = new HashMap<String, Integer>();
+		List<String> declaredWorkingAttributes = runningOp.getOpContext().getDeclaredWorkingAttributes();
+		if(declaredWorkingAttributes != null){
+			for(int i = 0; i<declaredWorkingAttributes.size(); i++){
+				idxMapper.put(declaredWorkingAttributes.get(i), i);
+			}
+		}
+		else{
+			NodeManager.nLogger.warning("-> No tuple MAPPER. This is fine as far as I am a SRC");
+		}
+		return idxMapper;
 	}
 
 	@Override
 	public Operator getOperator() {
-		// TODO Auto-generated method stub
-		return null;
+		return runningOp;
 	}
 
 	@Override
 	public SystemStatus getSystemStatus() {
-		// TODO Auto-generated method stub
-		return null;
+		return systemStatus;
+	}
+	
+	public boolean isMultiCoreEnabled(){
+		return multiCoreEnabled;
 	}
 
 	@Override
 	public void initOperator() {
-		// TODO Auto-generated method stub
-
+		runningOp.setUp();
 	}
 
 	@Override
 	public void invalidateState(int opId) {
-		// TODO Auto-generated method stub
-
+		System.out.println("% We will invalidate management of state for: "+opId);
+		//If the states figures as being managed we removed it
+		int index = 0;
+		if((index = listOfManagedStates.indexOf(opId)) != -1){
+			System.out.println("% I was managing state for OP: "+opId+" NOT ANYMORE");
+			listOfManagedStates.remove(index);
+		}
+		// and then we clean both the buffer and the mapping in downstreamBuffers.
+		if(PUContext.downstreamBuffers.get(opId) != null){
+			//First of all, we empty the buffer
+			PUContext.downstreamBuffers.get(opId).replaceBackupOperatorState(null);
+		}
 	}
 
 	@Override
 	public boolean isManagingStateOf(int opId) {
-		// TODO Auto-generated method stub
-		return false;
+		return listOfManagedStates.contains(opId) ? true : false;
 	}
 
 	@Override
@@ -75,86 +125,147 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public boolean isOperatorReady() {
-		// TODO Auto-generated method stub
-		return false;
+		return runningOp.getReady();
 	}
 
 	@Override
 	public void newOperatorInstantiation(Operator o) {
-		// TODO Auto-generated method stub
-
+		NodeManager.nLogger.info("-> Instantiating Operator");
+		//Detect the first submitted operator
+		if(runningOp == null){
+			runningOp = o;
+		}
+		else{
+			NodeManager.nLogger.warning("-> The operator in this node is being overwritten");
+		}
+		o.setProcessingUnit(this);
+		// To identify the monitor with the op id instead of the node id
+		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
 	}
 
 	@Override
 	public void processData(DataTuple data) {
-		// TODO Auto-generated method stub
+		MetricsReader.eventsProcessed.inc();
+		// TODO: Adjust timestamp of state
+		runningOp.processData(data);
 
 	}
 
 	@Override
 	public void processData(ArrayList<DataTuple> data) {
-		// TODO Auto-generated method stub
-
+		MetricsReader.eventsProcessed.inc();
+		// TODO: Adjust timestamp of state
+		runningOp.processData(data);
 	}
 
 	@Override
 	public void reconfigureOperatorConnection(int opId, InetAddress ip) {
-		// TODO Auto-generated method stub
-
+		if(runningOp.getOperatorId() == opId){
+			ctx.updateConnection(runningOp, ip);
+		}
+		else{
+			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
+		}
 	}
 
 	@Override
 	public void reconfigureOperatorLocation(int opId, InetAddress ip) {
-		// TODO Auto-generated method stub
-
+		runningOp.getOpContext().changeLocation(opId, ip);
 	}
 
 	@Override
 	public void registerManagedState(int opId) {
-		// TODO Auto-generated method stub
-
+		//If the state does not figure as being managed, we include it
+		if(!listOfManagedStates.contains(opId)){
+			NodeManager.nLogger.info("% -> New STATE registered for Operator: "+opId);
+			listOfManagedStates.add(opId);
+		}
 	}
 
 	@Override
 	public void sendData(DataTuple dt, ArrayList<Integer> targets) {
-		// TODO Auto-generated method stub
-
+		for(int i = 0; i<targets.size(); i++){
+			int target = targets.get(i);
+			try{
+				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+				// REMOTE ASYNC
+				if(dest instanceof AsynchronousCommunicationChannel){
+					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
+				}
+				// REMOTE SYNC
+				else if(dest instanceof SynchronousCommunicationChannel){
+					///\fixme{do some proper thing with var now}
+					boolean now = false;
+					outputQueue.sendToDownstream(dt, dest, now, false);
+				}
+				// LOCAL
+				else if(dest instanceof Operator){
+					Operator operatorObj = (Operator) dest;
+					operatorObj.processData(dt);
+				}
+			}
+			catch(ArrayIndexOutOfBoundsException aioobe){
+				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+ctx.getDownstreamTypeConnection().size());
+				aioobe.printStackTrace();
+			}
+		}
 	}
 
 	@Override
 	public void setOpReady(int opId) {
-		// TODO Auto-generated method stub
-
+		NodeManager.nLogger.info("-> Setting operator ready");
+		runningOp.setReady(true);
 	}
 
 	@Override
 	public void setOutputQueue(OutputQueue outputQueue) {
-		// TODO Auto-generated method stub
-
+		this.outputQueue = outputQueue;
 	}
 
 	@Override
 	public void setSystemStatus(SystemStatus systemStatus) {
-		// TODO Auto-generated method stub
-
+		this.systemStatus = systemStatus;
 	}
 
 	@Override
 	public PUContext setUpRemoteConnections() {
-		// TODO Auto-generated method stub
-		return null;
+		ctx.configureOperatorConnections(runningOp);
+		return ctx;
 	}
 
 	@Override
 	public void startDataProcessing() {
-		// TODO Auto-generated method stub
+		/// \todo{Find a better way to start the operator...}
+		DataTuple fake = DataTuple.getNoopDataTuple();
+		this.runningOp.processData(fake);
 
 	}
 
 	@Override
 	public void stopConnection(int opId) {
-		// TODO Auto-generated method stub
+		//Stop incoming data, a new thread is replaying
+		outputQueue.stop();
+		ctx.getCCIfromOpId(opId, "d").getStop().set(true);
+	}
 
+	@Override
+	public void launchMultiCoreMechanism(CoreRE core, DataStructureAdapter dsa) {
+		// Different strategies depending on whether the state is partitionable or not
+		int numberOfProcessors = Runtime.getRuntime().availableProcessors();
+		int numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
+		
+		pool = Executors.newFixedThreadPool(numberOfWorkerThreads);
+		// Populate pool with threads
+		for(int i = 0; i<numberOfWorkerThreads; i++){
+			pool.execute(new StatelessProcessingWorker(dsa, runningOp));
+		}
+		
+		
+	}
+
+	@Override
+	public void disableMultiCoreSupport() {
+		multiCoreEnabled = false;
 	}
 
 }

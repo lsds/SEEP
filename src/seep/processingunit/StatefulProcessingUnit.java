@@ -2,28 +2,29 @@ package seep.processingunit;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.infrastructure.NodeManager;
-import seep.infrastructure.WorkerNodeDescription;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.EndPoint;
 import seep.operator.Operator;
 import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
+import seep.operator.Partitionable;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
 import seep.runtimeengine.SynchronousCommunicationChannel;
 
@@ -99,18 +100,26 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	private Operator runningOp = null;
 	private State runningOpState = null;
 
-	
 	private OutputQueue outputQueue = null;
 	
 	private StateBackupWorker sbw;
 	private Thread stateWorker;
+	private boolean isCheckpointEnabled = true;
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
+	
+	//Multi-core support
+	private Executor pool;
+	private boolean multiCoreEnabled = true;
 	
 	public StatefulProcessingUnit(CoreRE owner){
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr());
 	}
 
+	public boolean isCheckpointEnabled(){
+		return isCheckpointEnabled;
+	}
+	
 	@Override
 	public Operator getOperator(){
 		return runningOp;
@@ -129,6 +138,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	@Override
 	public void setSystemStatus(SystemStatus systemStatus){
 		this.systemStatus = systemStatus;
+	}
+	
+	@Override
+	public boolean isMultiCoreEnabled() {
+		return multiCoreEnabled;
 	}
 	
 	/** SETUP methods **/
@@ -150,9 +164,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		o.setProcessingUnit(this);
 		// To identify the monitor with the op id instead of the node id
 		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
-		State s;
-		if((s = o.getState()) != null){
-			runningOpState = s;
+		if(o.getState() != null){
+			runningOpState = o.getState();
 		}
 		else{
 			NodeManager.nLogger.warning("-> Initial state is null...");
@@ -179,6 +192,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public void createAndRunStateBackupWorker(){
 		// Create and run state backup worker
 		NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
+		if(this == null || runningOpState == null){
+			System.out.println("NULL runningopstate");
+			System.exit(0);
+		}
 		sbw = new StateBackupWorker(this, runningOpState);
 		stateWorker = new Thread(sbw);
 		stateWorker.start();
@@ -242,7 +259,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// Get the mutex
 		try {
 			mutex.acquire();
-		} catch (InterruptedException e) {
+		} 
+		catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -289,7 +307,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// Note that if user code finishes after this call, the mutex will be released after processData anyway, so it is safe to get the mutex here.
 		try {
 			mutex.acquire();
-		} catch (InterruptedException e) {
+		} 
+		catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -299,7 +318,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	public void disableCheckpointForOperator(int opId){
 		// Just remove the state to backup
-		runningOpState = null;
+		isCheckpointEnabled = false;
 	}
 	
 	@Override
@@ -442,21 +461,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 //		}
 //	}
 	
-	public void installState(InitOperatorState[] initOperatorState){
+	public void installState(InitOperatorState initOperatorState){
 		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 		NodeManager.nLogger.info("Installing state in the operator");
 		// Simply replace the state and update operator references
-		System.out.println("I receive "+initOperatorState.length+" states to recover");
-		for(int i = 0; i < initOperatorState.length; i++){
-			InitOperatorState current = initOperatorState[i];
-			int stateOwnerId = current.getOpId();
-			System.out.println("This state ownerID is:  "+stateOwnerId);
-			State state = current.getState();
-			// Replace state
-			this.runningOpState = state;
-			// And reference in operator
-			((StatefulOperator)runningOp).replaceState(state);
-		}
+		int stateOwnerId = initOperatorState.getState().getOwnerId();
+		System.out.println("This state ownerID is:  "+stateOwnerId);
+		State state = initOperatorState.getState();
+		// Replace state
+		this.runningOpState = state;
+		// And reference in operator
+		((StatefulOperator)runningOp).replaceState(state);
 		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	
@@ -474,7 +489,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// and then we clean both the buffer and the mapping in downstreamBuffers.
 		if(PUContext.downstreamBuffers.get(opId) != null){
 			//First of all, we empty the buffer
-			PUContext.downstreamBuffers.get(opId).replaceBackupNodeState(null);
+			PUContext.downstreamBuffers.get(opId).replaceBackupOperatorState(null);
 		}
 	}
 	
@@ -511,4 +526,27 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		ctx.configureNewUpstreamCommunication(opId, location);
 	}
 
+	@Override
+	public void launchMultiCoreMechanism(CoreRE owner, DataStructureAdapter dsa) {
+		// Different strategies depending on whether the state is partitionable or not
+		int numberOfProcessors = Runtime.getRuntime().availableProcessors();
+		int numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
+		if(runningOpState instanceof Partitionable){
+			pool = Executors.newFixedThreadPool(numberOfWorkerThreads);
+			// Populate pool with threads
+			for(int i = 0; i<numberOfWorkerThreads; i++){
+				pool.execute(new StatefulProcessingWorker(dsa, runningOp, runningOpState));
+			}
+		}
+		else{
+			// Lock the state somehow
+			
+		}
+		
+	}
+
+	@Override
+	public void disableMultiCoreSupport() {
+		multiCoreEnabled = false;
+	}
 }

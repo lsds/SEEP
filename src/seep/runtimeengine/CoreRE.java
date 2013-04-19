@@ -15,7 +15,6 @@ import seep.comm.OutgoingDataHandlerWorker;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
@@ -50,7 +49,6 @@ public class CoreRE {
 	private CoreProcessingLogic coreProcessLogic;
 
 	private DataStructureAdapter dsa;
-//	private InputQueue inputQueue;
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
 	private ControlDispatcher controlDispatcher;
@@ -71,10 +69,7 @@ public class CoreRE {
 		
 	public CoreRE(WorkerNodeDescription nodeDescr, RuntimeClassLoader rcl){
 		this.nodeDescr = nodeDescr;
-		this.rcl = rcl;
-		
-		//processingUnit = new ProcessingUnit(this);
-		
+		this.rcl = rcl;		
 		coreProcessLogic = new CoreProcessingLogic();
 //		ControlTuple b = new ControlTuple();
 //		b.setType(ControlTupleType.ACK);
@@ -91,11 +86,6 @@ public class CoreRE {
 	
 	public ControlDispatcher getControlDispatcher(){
 		return controlDispatcher;
-	}
-	
-	@Deprecated
-	public boolean isNodeStateful(){
-		return processingUnit.isNodeStateful();
 	}
 	
 	public void pushOperator(Operator o){
@@ -121,7 +111,6 @@ public class CoreRE {
 	
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
 		outputQueue = new OutputQueue();
-//		processingUnit.setOutputQueue(outputQueue);
 		// SET UP the data strcuture adapter, depending on the operators
 		dsa = new DataStructureAdapter();
 		/// INSTANTIATION OF THE BRIDGE OBJECT
@@ -144,7 +133,7 @@ public class CoreRE {
 		dataConsumer = new DataConsumer(this, dsa);
 		dConsumerH = new Thread(dataConsumer);
 
-		dConsumerH.start();
+//		dConsumerH.start();
 		controlH.start();
 		iDataH.start();
 	}
@@ -154,6 +143,7 @@ public class CoreRE {
 		/// At this point I need information about what connections I need to establish
 		puCtx = processingUnit.setUpRemoteConnections();
 		
+		// Set up output communication module
 		if (P.valueFor("synchronousOutput").equals("true")){
 			processingUnit.setOutputQueue(outputQueue);
 			NodeManager.nLogger.info("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
@@ -165,6 +155,28 @@ public class CoreRE {
 			odhw_t.start();
 			NodeManager.nLogger.info("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
 		}
+		
+		// Set up multi-core support structures
+		if(P.valueFor("multicoreSupport").equals("true")){
+			if(processingUnit.isMultiCoreEnabled()){
+				processingUnit.launchMultiCoreMechanism(this, dsa);
+				NodeManager.nLogger.info("-> Multi core support enabled");
+			}
+			else{
+				// Start the consumer thread.
+				dConsumerH.start();
+				NodeManager.nLogger.info("-> Multi core support not enabled in this node");
+			}
+		}
+		else{
+			// Start the consumer thread.
+			dConsumerH.start();
+			NodeManager.nLogger.info("-> SYSTEM CONFIGUREF FOR NO MULTICORE");
+		}
+		
+		
+//		controlH.start();
+//		iDataH.start();
 		
 		/// INSTANTIATION
 		/** MORE REFACTORING HERE **/
@@ -188,8 +200,10 @@ public class CoreRE {
 		configureUpstreamIndex(upstreamSize);
 		// After configuring the upstream backup index, we start the stateBackupWorker thread if the node is stateful
 		if(processingUnit.isNodeStateful()){
-			((StatefulProcessingUnit)processingUnit).createAndRunStateBackupWorker();
-			NodeManager.nLogger.info("-> State Worker working on "+nodeDescr.getNodeId());
+			if(((StatefulProcessingUnit)processingUnit).isCheckpointEnabled()){
+				((StatefulProcessingUnit)processingUnit).createAndRunStateBackupWorker();
+				NodeManager.nLogger.info("-> State Worker working on "+nodeDescr.getNodeId());
+			}
 		}
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 	}
@@ -291,16 +305,16 @@ public class CoreRE {
 		}
 		/** INIT_MESSAGE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitNodeState().getNodeId());
-			coreProcessLogic.processInitState(ct.getInitNodeState());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitOperatorState().getOpId());
+			coreProcessLogic.processInitState(ct.getInitOperatorState());
 		}
 		/** BACKUP_STATE message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_OP_STATE)){
 			//If communications are not being reconfigured
 			//Register this state as being managed by this operator
 			BackupOperatorState backupOperatorState = ct.getBackupState();
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_NODE_STATE from NODE: "+backupOperatorState.getNodeId());
-			processingUnit.registerManagedState(backupOperatorState.getUpstreamOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_OP_STATE from Op: "+backupOperatorState.getOpId());
+			processingUnit.registerManagedState(backupOperatorState.getOpId());
 			coreProcessLogic.processBackupState(backupOperatorState);
 		}
 		/** STATE_ACK message **/
@@ -528,7 +542,7 @@ public class CoreRE {
 	}
 	
 	public void sendBackupState(ControlTuple ctB){
-		int stateOwnerId = ctB.getBackupState().getBackupOperatorState()[0].getOpId();
+		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
@@ -585,107 +599,3 @@ public class CoreRE {
 		}
 	}
 }
-
-
-//public CoreRE getSubclassOperator() {
-//return subclassOperator;
-//}
-//
-//public Dispatcher getDispatcher(){
-//return dispatcher;
-//}
-
-//public Router getRouter(){
-////If router is to be retrieved, it has previously been initialized
-//return router;
-//}
-//
-//public void setRouter(Router router){
-//this.router = router;
-//}
-
-//public ControlTuple buildInvalidateMsg(int backupUpstreamIndex) {
-//ControlTuple ct = new ControlTuple(CoreRE.ControlTupleType.INVALIDATE_STATE, owner.getOperatorId());
-////Send invalidation message to old upstream
-//NodeManager.nLogger.info("-> sending INVALIDATE_STATE to OP "+opContext.getUpOpIdFromIndex(backupUpstreamIndex));
-//return ct;
-//}
-
-////Recover the state to Normal, so the receiver thread can go on with its work
-//private void restartDataProcessingChannel() {
-//	processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.NORMAL);
-//	
-//}
-//
-////Indicate to receiver thread that the operator is initialising the state, so no tuples must be processed
-//private void stopDataProcessingChannel() {
-//	processingUnit.setSystemStatus(ProcessingUnit.SystemStatus.INITIALISING_STATE);
-//}
-
-
-/** this hacked sent was added on 17 october 2012 to avoid refactoring the inner system to allow a operator configured with a stateful down to send
- * 
-public void hackRouter(){
-	for(Integer id : opContext.getOriginalDownstream()){
-		PlacedOperator down = opContext.findDownstream(id);
-		int index = down.index();
-		int numDownstreams = opContext.getDownstreamSize();
-		StatelessRoutingImpl rs = new StatelessRoutingImpl(1, index, numDownstreams);
-		System.out.println("ROUTER HACKED");
-		//If more than one downstream type, then put the new rs with the opId
-		router.setNewLoadBalancer(id, rs);
-	}
-}
-as a stateless **/
-
-//public void instantiateOperator() throws OperatorInstantiationException{
-//
-//opCommonProcessLogic.setOwner(this);
-//opCommonProcessLogic.setOpContext(opContext);
-//inputQueue = new InputQueue();
-//outputQueue = new OutputQueue();
-//dispatcher = new Dispatcher(opContext, outputQueue);
-////Configure routing to downstream
-//router.configureRoutingImpl(opContext);
-//
-////Control worker
-//ch = new ControlHandler(this, opContext.getOperatorStaticInformation().getInC());
-//controlH = new Thread(ch);
-////Data worker
-//idh = new IncomingDataHandler(this, opContext.getOperatorStaticInformation().getInD());
-//iDataH = new Thread(idh);
-////Consumer worker
-//dataConsumer = new DataConsumer(this, inputQueue);
-//dConsumerH = new Thread(dataConsumer);
-//
-//dConsumerH.start();
-//controlH.start();
-//iDataH.start();
-//
-////initialize the genericAck message to answer some specific messages.
-//ControlTuple b = new ControlTuple();
-//b.setType(ControlTupleType.ACK);
-//genericAck = b;
-//
-//NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" instantiated");
-//}
-
-/// \todo {return a proper boolean after check...}
-//public void initializeCommunications() throws OperatorInitializationException{
-//dispatcher.setOpContext(opContext);
-//router.initializeQueryFunction();
-////Once Router is configured, we assign it to dispatcher that will make use of it on runtime
-//dispatcher.setRouter(router);
-//opContext.configureCommunication();
-//
-////Choose the upstreamBackupIndex for this operator
-//opCommonProcessLogic.configureUpstreamIndex();
-//
-//NodeManager.nLogger.info("-> OP"+this.getOperatorId()+" comm initialized");
-//}
-
-//public CoreRE(int opID){
-////	this.operatorId = opID;
-////	opContext = new RuntimeContext();
-////	opCommonProcessLogic = new CoreProcessingLogic();
-//}
