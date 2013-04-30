@@ -48,15 +48,16 @@ public class DataTuple implements DataTupleI, Serializable{
 		this.payload = tuplePayload;
 	}
 	
-	public void setValues(Object...objects){
+	public void setValuesMutable(Object...objects){
 		payload.attrValues = new Payload(objects);
-//		System.out.println("PRE-SIZE "+payload.attrValues.size());
-//		if(payload.attrValues.size() == 3){
-//			for(int i = 0; i<objects.length; i++){
-//				System.out.println(i+" "+objects[i]);
-//			}
-//		}
-//		System.out.println("POST-SIZE "+payload.attrValues.size());
+	}
+	
+	/** EXPERIMENTAL **/
+	public DataTuple setValues(Object...objects){
+		TuplePayload tp = new TuplePayload();
+		tp.attrValues = new Payload(objects);
+		DataTuple dt = new DataTuple(idxMapper, tp);
+		return dt;
 	}
 	
 	@Override
@@ -129,6 +130,11 @@ public class DataTuple implements DataTupleI, Serializable{
 	public boolean getBoolean(String attribute){
 //		System.out.println("getBoolean = attrValues.size -> "+payload.attrValues.size()+" accessed in "+idxMapper.get(attribute));
 		return (Boolean)payload.attrValues.get(idxMapper.get(attribute));
+	}
+	
+	@Override
+	public String toString(){
+		return payload.toString();
 	}
 	
 }

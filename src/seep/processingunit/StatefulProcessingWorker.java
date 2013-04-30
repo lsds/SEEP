@@ -1,6 +1,14 @@
 package seep.processingunit;
 
+import java.util.ArrayList;
+
+import com.esotericsoftware.kryo.Kryo;
+
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.messages.BatchTuplePayload;
+import seep.comm.serialization.messages.Payload;
+import seep.comm.serialization.messages.TuplePayload;
+import seep.comm.serialization.serializers.ArrayListSerializer;
 import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.State;
@@ -13,6 +21,8 @@ public class StatefulProcessingWorker implements Runnable{
 	private InputQueue iq;
 	private Operator runningOp;
 	private State state;
+	
+	private Kryo k;
 	
 	public StatefulProcessingWorker(DataStructureAdapter dsa, Operator op, State s) {
 		if(dsa.getDSO() instanceof InputQueue){

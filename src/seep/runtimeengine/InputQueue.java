@@ -41,7 +41,7 @@ public class InputQueue implements DataStructureI{
 		try {
 			MetricsReader.eventsInputQueue.dec();
 			return inputQueue.take();
-		} 
+		}
 		catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

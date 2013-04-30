@@ -16,4 +16,14 @@ public class Payload extends ArrayList<Object>{
 			add(o);
 		}
 	}
+	
+	@Override
+	public String toString(){
+		StringBuffer sb = new StringBuffer();
+		sb.append("VAL ");
+		for(Object o : this){
+			sb.append(o+" ");
+		}
+		return sb.toString();
+	}
 }

@@ -1,6 +1,7 @@
 package seep.runtimeengine;
 
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,6 +27,7 @@ public class OutputQueue {
 	
 	public OutputQueue(){
 		this.k = initializeKryo();
+		
 	}
 	
 	private Kryo initializeKryo(){
@@ -67,14 +69,16 @@ public class OutputQueue {
 		replaySemaphore.incrementAndGet();
 	}
 	
+	
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
-
+		
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
+		
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
 		//Output for this socket
-		Output output = channelRecord.getOutput();
+//		Output output = channelRecord.getOutput();
 		try{
 			//To send tuple
 			if(replay.compareAndSet(true, false)){
@@ -93,15 +97,28 @@ public class OutputQueue {
 				long currentTime = System.currentTimeMillis();
 				/// \todo{Add the following line for include the batch timing mechanism}
 //				if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.getTick) > ExecutionConfiguration.maxLatencyAllowed ){
-				if(channelRecord.getChannelBatchSize() == 0){
+				
+				/** shouldnt be less than 0 ever... **/
+				
+				if(channelRecord.getChannelBatchSize() <= 0){
 //					BatchDataTuple msg = channelRecord.getBatch();
-					BatchTuplePayload msg = channelRecord.getBatch();
+//					BatchTuplePayload msg = channelRecord.getBatch();
 					channelRecord.setTick(currentTime);
 					
-					k.writeObject(output, msg);
+//					synchronized(channelRecord.getBatch()){
+//					synchronized(channelRecord.getOutput()){
+//					synchronized(k){
+						k.writeObject(channelRecord.getOutput(), channelRecord.getBatch());
+					
+					
 					//Flush the buffer to the stream
-					output.flush();
-					channelRecord.cleanBatch();
+						channelRecord.getOutput().flush();
+					
+						channelRecord.cleanBatch();
+//					} // k
+//					} // output
+//					} // msg
+					
 					
 					if(P.valueFor("eftMechanismEnabled").equals("true")){
 //							buffer.save(msg);
@@ -122,6 +139,16 @@ public class OutputQueue {
 			NodeManager.nLogger.severe("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 			ie.printStackTrace();
 		}
+//		catch(Exception e){
+//			System.out.println("MSG: "+e.getMessage());
+//			System.out.println("Info about K: ");
+//			System.out.println(k.toString());
+//			System.out.println("depth "+k.getDepth());
+//			
+//			e.printStackTrace();
+//			System.exit(-1);
+//		}
+		// Release the mutex
 	}
 	
 	public void replay(SynchronousCommunicationChannel oi){

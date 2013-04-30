@@ -7,7 +7,7 @@ public class BatchTuplePayload {
 	public int batchSize = 0;
 	public ArrayList<TuplePayload> batch = new ArrayList<TuplePayload>();
 	
-	public void addTuple(TuplePayload payload){
+	public synchronized void addTuple(TuplePayload payload){
 		batch.add(payload);
 	}
 	

@@ -531,6 +531,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// Different strategies depending on whether the state is partitionable or not
 		int numberOfProcessors = Runtime.getRuntime().availableProcessors();
 		int numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
+		/** Fixed policy at the moment **/
+		numberOfWorkerThreads = 4;
 		if(runningOpState instanceof Partitionable){
 			pool = Executors.newFixedThreadPool(numberOfWorkerThreads);
 			// Populate pool with threads
@@ -542,7 +544,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			// Lock the state somehow
 			
 		}
-		
 	}
 
 	@Override
