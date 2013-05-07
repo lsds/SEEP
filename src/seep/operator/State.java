@@ -59,14 +59,14 @@ public abstract class State implements Serializable, Cloneable{
 		// Empty constructor for serialization purposes
 	}
 	
-	public State(State toCopy){
-		//This copy-constructor wont be used for anything more than copying
-		this.checkpointInterval = toCopy.checkpointInterval;
-		this.ownerId = toCopy.ownerId;
-		this.stateTag = toCopy.stateTag;
-		this.stateImpl = toCopy.stateImpl;
-		this.data_ts = toCopy.data_ts;
-	}
+//	public State(State toCopy){
+//		//This copy-constructor wont be used for anything more than copying
+//		this.checkpointInterval = toCopy.checkpointInterval;
+//		this.ownerId = toCopy.ownerId;
+//		this.stateTag = toCopy.stateTag;
+//		this.stateImpl = toCopy.stateImpl;
+//		this.data_ts = toCopy.data_ts;
+//	}
 	
 	//TODO by now checkpoints will be performed only temporarily
 	public State(int ownerId, int checkpointInterval){

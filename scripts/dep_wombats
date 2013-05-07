@@ -63,8 +63,8 @@ scp $JAR rc3011@wombat26.doc.res.ic.ac.uk:/home/rc3011
 scp config.properties rc3011@wombat26.doc.res.ic.ac.uk:/home/rc3011
 scp $JAR rc3011@wombat27.doc.res.ic.ac.uk:/home/rc3011
 scp config.properties rc3011@wombat27.doc.res.ic.ac.uk:/home/rc3011
-#scp $JAR rc3011@wombat28.doc.res.ic.ac.uk:/home/rc3011
-#scp config.properties rc3011@wombat28.doc.res.ic.ac.uk:/home/rc3011
+scp $JAR rc3011@wombat28.doc.res.ic.ac.uk:/home/rc3011
+scp config.properties rc3011@wombat28.doc.res.ic.ac.uk:/home/rc3011
 #scp $JAR rc3011@wombat29.doc.res.ic.ac.uk:/home/rc3011
 #scp config.properties rc3011@wombat29.doc.res.ic.ac.uk:/home/rc3011
 

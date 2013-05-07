@@ -1,7 +1,6 @@
 package seep.runtimeengine;
 
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -101,24 +100,14 @@ public class OutputQueue {
 				/** shouldnt be less than 0 ever... **/
 				
 				if(channelRecord.getChannelBatchSize() <= 0){
-//					BatchDataTuple msg = channelRecord.getBatch();
-//					BatchTuplePayload msg = channelRecord.getBatch();
 					channelRecord.setTick(currentTime);
 					
-//					synchronized(channelRecord.getBatch()){
-//					synchronized(channelRecord.getOutput()){
-//					synchronized(k){
-						k.writeObject(channelRecord.getOutput(), channelRecord.getBatch());
-					
+					k.writeObject(channelRecord.getOutput(), channelRecord.getBatch());
 					
 					//Flush the buffer to the stream
-						channelRecord.getOutput().flush();
+					channelRecord.getOutput().flush();
 					
-						channelRecord.cleanBatch();
-//					} // k
-//					} // output
-//					} // msg
-					
+					channelRecord.cleanBatch();
 					
 					if(P.valueFor("eftMechanismEnabled").equals("true")){
 //							buffer.save(msg);
@@ -139,16 +128,6 @@ public class OutputQueue {
 			NodeManager.nLogger.severe("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 			ie.printStackTrace();
 		}
-//		catch(Exception e){
-//			System.out.println("MSG: "+e.getMessage());
-//			System.out.println("Info about K: ");
-//			System.out.println(k.toString());
-//			System.out.println("depth "+k.getDepth());
-//			
-//			e.printStackTrace();
-//			System.exit(-1);
-//		}
-		// Release the mutex
 	}
 	
 	public void replay(SynchronousCommunicationChannel oi){

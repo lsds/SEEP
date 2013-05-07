@@ -95,6 +95,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 
 	// Mutex between data processing and state backup
 	private Semaphore mutex = new Semaphore(1);
+	
+	private Semaphore executorMutex;
 
 	//Operator and state managed by this processingUnit
 	private Operator runningOp = null;
@@ -110,6 +112,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	//Multi-core support
 	private Executor pool;
 	private boolean multiCoreEnabled = true;
+	private int numberOfWorkerThreads;
 	
 	public StatefulProcessingUnit(CoreRE owner){
 		this.owner = owner;
@@ -373,9 +376,18 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			String stateTag = runningOpState.getStateTag();
 			long startmutex = System.currentTimeMillis();
 			
+			// Mutex for executor (in case multicore)
+			try {
+				executorMutex.acquire(numberOfWorkerThreads);
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			// Mutex for data processing
 			try {
 				mutex.acquire();
-			} 
+			}
 			catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -386,6 +398,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			long stopcopy = System.currentTimeMillis();
 			System.out.println("Deep COPY: "+(stopcopy-startcopy));
 			mutex.release();
+			executorMutex.release(numberOfWorkerThreads);
 			
 			long stopmutex = System.currentTimeMillis();
 			System.out.println("MUTEX: "+(stopmutex-startmutex));
@@ -403,63 +416,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			owner.sendBackupState(ctB);
 		}
 	}
-	
-//	private void _backupState(){
-//		// If there is something to backup...
-//		// FIXME: this should anyway be avoided by controlling whether the statebackupworker needs to execute, according to this value
-//		if(runningOpState != null){
-//			//Create the array of backup states
-//			BackupNodeState backupNodeState = new BackupNodeState(owner.getNodeDescr().getNodeId(), mostUpstream.getOperatorId());
-//			BackupOperatorState[] backupState = new BackupOperatorState[numberOfStates];
-//			
-//			// We fill the array with the states
-//			for(int i = 0; i < numberOfStates ; i++){
-//				State toBackup = null;
-//				int ownerId = statesToBackup.get(i).getOwnerId();
-//				int checkpointInterval = statesToBackup.get(i).getCheckpointInterval();
-//				long data_ts = statesToBackup.get(i).getData_ts();
-//				String stateTag = statesToBackup.get(i).getStateTag();
-//				
-//				long startmutex = System.currentTimeMillis();
-//				
-//				try {
-//					mutex.acquire();
-//				} 
-//				catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//				
-//				long startcopy = System.currentTimeMillis();
-//				toBackup = State.deepCopy(statesToBackup.get(i), owner.getRuntimeClassLoader());
-//				long stopcopy = System.currentTimeMillis();
-//				System.out.println("Deep COPY: "+(stopcopy-startcopy));
-//				mutex.release();
-//				
-//				long stopmutex = System.currentTimeMillis();
-//				System.out.println("MUTEX: "+(stopmutex-startmutex));
-//				toBackup.setOwnerId(ownerId);
-//				toBackup.setCheckpointInterval(checkpointInterval);
-//				toBackup.setData_ts(data_ts);
-//				toBackup.setStateTag(stateTag);
-//				
-//				BackupOperatorState bs = new BackupOperatorState();
-//				// current is null in a parallelised operator
-//				bs.setOpId(toBackup.getOwnerId());
-//				bs.setState(toBackup);
-//				bs.setStateClass(toBackup.getStateTag());
-//				backupState[i] = bs;
-//			}
-//			NodeManager.nLogger.info("-> Backuping the "+backupState.length+" states in this node");
-//			//Build the ControlTuple msg
-//			backupNodeState.setBackupOperatorState(backupState);
-//			
-//			ControlTuple ctB = new ControlTuple().makeBackupState(backupNodeState);
-//			//Finally send the backup state
-//			ctB.getBackupState().getBackupOperatorState()[0].getOpId();
-//			owner.sendBackupState(ctB);
-//		}
-//	}
 	
 	public void installState(InitOperatorState initOperatorState){
 		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
@@ -530,14 +486,15 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public void launchMultiCoreMechanism(CoreRE owner, DataStructureAdapter dsa) {
 		// Different strategies depending on whether the state is partitionable or not
 		int numberOfProcessors = Runtime.getRuntime().availableProcessors();
-		int numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
+		numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
 		/** Fixed policy at the moment **/
 		numberOfWorkerThreads = 4;
 		if(runningOpState instanceof Partitionable){
+			executorMutex = new Semaphore(numberOfWorkerThreads, true);
 			pool = Executors.newFixedThreadPool(numberOfWorkerThreads);
 			// Populate pool with threads
 			for(int i = 0; i<numberOfWorkerThreads; i++){
-				pool.execute(new StatefulProcessingWorker(dsa, runningOp, runningOpState));
+				pool.execute(new StatefulProcessingWorker(dsa, runningOp, runningOpState, executorMutex));
 			}
 		}
 		else{
