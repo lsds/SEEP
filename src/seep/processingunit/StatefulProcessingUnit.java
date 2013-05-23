@@ -111,12 +111,13 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	//Multi-core support
 	private Executor pool;
-	private boolean multiCoreEnabled = true;
+	private boolean multiCoreEnabled;
 	private int numberOfWorkerThreads;
 	
-	public StatefulProcessingUnit(CoreRE owner){
+	public StatefulProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr());
+		this.multiCoreEnabled = multiCoreEnabled;
 	}
 
 	public boolean isCheckpointEnabled(){
@@ -377,28 +378,37 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			long startmutex = System.currentTimeMillis();
 			
 			// Mutex for executor (in case multicore)
-			try {
-				executorMutex.acquire(numberOfWorkerThreads);
-			}
-			catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if(multiCoreEnabled){
+				try {
+					executorMutex.acquire(numberOfWorkerThreads);
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			// Mutex for data processing
-			try {
-				mutex.acquire();
-			}
-			catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			else{
+				
+				try {
+					mutex.acquire();
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			
 			long startcopy = System.currentTimeMillis();
 			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
 			long stopcopy = System.currentTimeMillis();
 			System.out.println("Deep COPY: "+(stopcopy-startcopy));
-			mutex.release();
-			executorMutex.release(numberOfWorkerThreads);
+			if(multiCoreEnabled){
+				executorMutex.release(numberOfWorkerThreads);
+			}
+			else{
+				mutex.release();
+			}
 			
 			long stopmutex = System.currentTimeMillis();
 			System.out.println("MUTEX: "+(stopmutex-startmutex));

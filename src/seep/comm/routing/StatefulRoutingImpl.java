@@ -73,6 +73,35 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		downstreamNodeKeys.add(oldVirtualIndex, newKey);
 		return newKey;
 	}
+	
+	public int newStaticReplica(int oldOpIndex, int newOpIndex) {
+		//map real index to virtual index
+	/**		int oldVirtualIndex = reverseMap(oldOpIndex); */
+		int oldVirtualIndex = keyToDownstreamRealIndex.indexOf(oldOpIndex);
+		//store newOpIndex as a virtualIndex
+			
+	/**		virtualIndexToRealIndex.put(virtualIndex, newOpIndex); */
+	//System.out.println("OLD_VIRTUAL_INDEX: "+oldVirtualIndex);
+		//. decide where to split key space
+		int key = downstreamNodeKeys.get(oldVirtualIndex); 
+		//previous key is the min value if there was just one operator or the key of the previous operator to oldOpIndex
+		int previousKey = oldVirtualIndex == 0 ? Integer.MIN_VALUE : downstreamNodeKeys.get(oldVirtualIndex-1);
+		//the new key is the medium point between key and previous key
+		long maxInteger = Integer.MAX_VALUE;
+		long difference = (key == Integer.MAX_VALUE && previousKey == Integer.MIN_VALUE) ? (maxInteger-Integer.MIN_VALUE) : (key-previousKey);
+		difference = (difference < 0) ? (difference * -1) : difference;
+
+		long aux = key - (difference/2);
+		int newKey = (int)aux;
+	//System.out.println("KEY: "+key+" PREV_KEY: "+previousKey+" DIF: "+difference+" AUX: "+aux+" NEW_KEY: "+newKey);
+
+		// install the new key and operator for dispatching, from this moment new tuples are buffered on
+		// store in oldOpIndex, the value of newOpIndex, (so insert by the left)
+	//explain +1
+		keyToDownstreamRealIndex.add(oldVirtualIndex+1, newOpIndex);
+		downstreamNodeKeys.add(oldVirtualIndex, newKey);
+		return newKey;
+	}
 		
 	/// \todo{OPTIMIZE THIS METHOD}
 	public ArrayList<Integer> route(ArrayList<Integer> targets, int value) {

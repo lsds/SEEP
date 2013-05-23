@@ -12,6 +12,7 @@ import seep.infrastructure.NodeManager;
 import seep.operator.Operator;
 import seep.operator.OperatorContext;
 import seep.operator.StatefulOperator;
+import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
 
@@ -167,9 +168,12 @@ return null;
 				}
 			}
 			int index = opContext.getDownOpIndexFromOpId(id);
-			if(! (down instanceof StatefulOperator)){
+			if(down instanceof StatelessOperator){
 				int numDownstreams = downstream.size();
+				NodeManager.nLogger.info("Configuring Static Stateless Routing Impl with "+numDownstreams+" downstreams");
+				/// \todo{check this hack}
 				rs = new StatelessRoutingImpl(1, index, numDownstreams);
+//				rs = new StatelessRoutingImpl(1, index, 0);
 			}
 			else if(down instanceof StatefulOperator){
 				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
@@ -288,6 +292,21 @@ return null;
 		}
 		return targets;
 	}
+	
+	public int newStaticOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+		int key = -1;
+		if(requiresQueryData){
+			return configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		}
+		else{
+			//Otherwise, we use the default RoutingImpl
+//			key = routingImpl.newReplica(oldOpIndex, newOpIndex);
+			
+			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newStaticReplica(oldOpIndex, newOpIndex);
+		}
+		return key;
+	}
+	
 	
 	public int newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key = -1;

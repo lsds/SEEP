@@ -24,6 +24,7 @@ import seep.operator.Operator;
 import seep.operator.QuerySpecificationI;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
+import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 
 
@@ -271,7 +272,8 @@ public class ElasticInfrastructureUtils {
 						newOpIndex = op_aux.index();
 					}
 				}
-				r.newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+				//r.newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+				r.newStaticOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 			}
 		}
 	}
@@ -420,22 +422,21 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			Class<?> operatorClass = ucl.loadClass(className);
 			// By reflection we extract the constructor for this class
 			Class<?> parameterTypes[] = {};
-			
 			constructor = operatorClass.getConstructor(parameterTypes);
 			
-			// State injection. Pick the already existing operator, getState, clone it and then change the operatorId
-			State copyOfState = (State) inf.getOperatorById(opId).getState().clone();
-			copyOfState.setOwnerId(newOpId);
-
 			instance = constructor.newInstance();
 			// Cast instance to operator
 			op = (Operator)instance;
 			
+			Operator toScaleOut = inf.getOperatorById(opId);
+			if(toScaleOut instanceof StatefulOperator){
+				// State injection. Pick the already existing operator, getState, clone it and then change the operatorId
+				State copyOfState = (State) inf.getOperatorById(opId).getState().clone();
+				copyOfState.setOwnerId(newOpId);
+				op.setState(copyOfState);
+			}
 			op.setOperatorId(newOpId);
-			op.setState(copyOfState);
 			op.setSubclassOperator();
-			
-			
 			//op = (Operator) Class.forName(className).getConstructor(int.class).newInstance(newOpId);
 		}
 		catch(ClassNotFoundException cnfe){

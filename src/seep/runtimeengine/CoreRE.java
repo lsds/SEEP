@@ -89,11 +89,12 @@ public class CoreRE {
 	}
 	
 	public void pushOperator(Operator o){
+		boolean multicoreSupport = P.valueFor("multicoreSupport").equals("true") ? true : false; 
 		if(o.getOpContext().getOperatorStaticInformation().isStatefull() ){
-			processingUnit = new StatefulProcessingUnit(this);
+			processingUnit = new StatefulProcessingUnit(this, multicoreSupport);
 		}
 		else{
-			processingUnit = new StatelessProcessingUnit(this);
+			processingUnit = new StatelessProcessingUnit(this, multicoreSupport);
 		}
 		processingUnit.newOperatorInstantiation(o);
 	}

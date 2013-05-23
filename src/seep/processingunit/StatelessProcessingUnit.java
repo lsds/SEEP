@@ -38,11 +38,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	
 	//Multi-core support
 	private Executor pool;
-	private boolean multiCoreEnabled = true;
+	private boolean multiCoreEnabled;
 	
-	public StatelessProcessingUnit(CoreRE owner){
+	public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr());
+		this.multiCoreEnabled = multiCoreEnabled;
 	}
 	
 	@Override
@@ -187,6 +188,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		for(int i = 0; i<targets.size(); i++){
 			int target = targets.get(i);
 			try{
+//	System.out.println("SEND TO: "+target+" SIZE: "+ctx.getDownstreamTypeConnection().size()+" targetSize: "+targets.size());
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){

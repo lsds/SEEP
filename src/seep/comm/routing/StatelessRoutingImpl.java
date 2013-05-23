@@ -20,9 +20,9 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 	private HashMap<Integer, Integer> virtualIndexToRealIndex = new HashMap<Integer, Integer>();
 	private int virtualIndex = 0;
 		
-	public void setNumberOfDownstreams(int numberOfDownstreams){
-		this.numberOfDownstreams = numberOfDownstreams;
-	}
+//	public void setNumberOfDownstreams(int numberOfDownstreams){
+//		this.numberOfDownstreams = numberOfDownstreams;
+//	}
 		
 	public StatelessRoutingImpl(int splitWindow, int index, int numOfDownstreams){
 		this.splitWindow = splitWindow-1;
@@ -67,12 +67,15 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 //			ArrayList<Integer> logicTargets = routeLayerOne();			
 //System.out.println("ANY");
 		ArrayList<Integer> targets = new ArrayList<Integer>();
+//System.out.println("##########");
+//System.out.println("Rem window: "+remainingWindow);
 		if(remainingWindow == 0){
 			//Reinitialize the window size
 			remainingWindow = splitWindow;
 			// update target and reinitialize filterValue
 //System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
 			target = downstreamIndex++%numberOfDownstreams;
+//System.out.println("TARGET: "+target);
 			// get the real index from the virtual one.
 			//target = virtualIndexToRealIndex.get(target);
 			targets.add(target);
@@ -94,9 +97,27 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		virtualIndex++;
 		
 		//Update the number of downstreams
+//System.out.println("PREV: "+numberOfDownstreams);
 		numberOfDownstreams++;
+//System.out.println("POST: "+numberOfDownstreams);
 		//return something cause interface implementation...
 		return -1;
+	}
+	
+	public int newStaticReplica(int oldOpIndex, int newOpIndex){
+		//In this case oldOpIndex does not do anything
+		//System.out.println("#### There is a NEW SPLIT here, newOpIndex: "+newOpIndex);
+				//First of all, we map the real index to virtual index
+		//System.out.println("MAPPING virtualIndex: "+virtualIndex+" to realIndex: "+newOpIndex);
+				virtualIndexToRealIndex.put(virtualIndex, newOpIndex);
+				virtualIndex++;
+				
+				//Update the number of downstreams
+//		System.out.println("PREV: "+numberOfDownstreams);
+//				
+//		System.out.println("POST: "+numberOfDownstreams);
+				//return something cause interface implementation...
+				return -1;
 	}
 		
 	@Override
