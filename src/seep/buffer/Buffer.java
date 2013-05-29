@@ -1,5 +1,11 @@
 package seep.buffer;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
@@ -7,6 +13,9 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.messages.BatchTuplePayload;
+import seep.infrastructure.monitor.MetricsReader;
+import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
+import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -16,12 +25,10 @@ public class Buffer implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
-//	private Deque<BatchDataTuple> buff = new LinkedBlockingDeque<BatchDataTuple>();
 	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
 	
 	private BackupOperatorState bs = null;
 
-//	public Iterator<BatchDataTuple> iterator() { return buff.iterator(); }
 	public Iterator<BatchTuplePayload> iterator() { return buff.iterator(); }
 
 	public Buffer(){
@@ -43,43 +50,52 @@ public class Buffer implements Serializable{
 		//Save state
 		this.bs = bs;
 		long ts_e = bs.getState().getData_ts();
-		
 		//Trim buffer, eliminating those tuples that are represented by this state
 		trim(ts_e);
 	}
 	
 	public void replaceBackupOperatorState(BackupOperatorState bs) {
-//		if(this.bs.getBackupOperatorState() != null && bs.getBackupOperatorState() != null){
-//		System.out.println("% Buffer. replacing old state: "+this.bs.getBackupOperatorState()[0].getOpId()+" with "+bs.getBackupOperatorState()[0].getOpId());
-//		}
+		// In-memory
+		long smem = System.currentTimeMillis();
 		this.bs = bs;
+		long emem = System.currentTimeMillis();
+		// On-disk
+		try {
+	    	// Write the object out to a byte array
+	        FileOutputStream fos = new FileOutputStream("tempBackup");
+	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(fos);
+	        
+	        out.writeObject(bs);
+	        out.flush();
+	        out.close();
+	    }
+	    catch(IOException e) {
+	    	e.printStackTrace();
+	    }
+	    long enddisk = System.currentTimeMillis();
+	    System.out.println("MEM: "+(emem-smem)+" DISK: "+(enddisk-emem));
 	}
 
 	public void save(BatchTuplePayload batch){
 		buff.add(batch);
+		MetricsReader.loggedEvents.inc();
 	}
-	
-//	public void save(BatchDataTuple batch){
-//		buff.add(batch);
-//	}
 	
 /// \test trim() should be tested
 	public void trim(long ts){
-//System.out.println("TO TRIM");
-//		Iterator<BatchDataTuple> iter = buff.iterator();
 		Iterator<BatchTuplePayload> iter = buff.iterator();
 		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
-//			BatchDataTuple next = iter.next();
 			BatchTuplePayload next = iter.next();
 			long timeStamp = 0;
 			numOfTuplesPerBatch = next.batchSize;
 			//Accessing last index cause that is the newest tuple in the batch
-//			timeStamp = next.getTuple(numOfTuplesPerBatch-1).getTimestamp();
+//System.out.println("TRIMMING: access to "+(numOfTuplesPerBatch-1)+" size: "+next.size());
 			timeStamp = next.getTuple(numOfTuplesPerBatch-1).timestamp;
-//System.out.println("#events: "+numOfTuplesPerBatch+" timeStamp: "+timeStamp+" ts: "+ts);
 			if (timeStamp <= ts) iter.remove();
 			else break;
 		}
+		MetricsReader.loggedEvents.clear();
+		MetricsReader.loggedEvents.inc(buff.size());
 	}
 }

@@ -253,6 +253,12 @@ public class PUContext {
 		return null;
 	}
 	
+//	public void printDownstreamTypeConnection(){
+//		for(EndPoint ep : downstreamTypeConnection){
+//			System.out.println("OP: "+ep.getOperatorId());
+//		}
+//	}
+	
 	public Buffer getBuffer(int opId) {
 		return downstreamBuffers.get(opId);
 	}

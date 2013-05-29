@@ -26,7 +26,6 @@ public class OutputQueue {
 	
 	public OutputQueue(){
 		this.k = initializeKryo();
-		
 	}
 	
 	private Kryo initializeKryo(){
@@ -101,17 +100,19 @@ public class OutputQueue {
 				
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
-					
-					k.writeObject(channelRecord.getOutput(), channelRecord.getBatch());
+					BatchTuplePayload msg = channelRecord.getBatch();
+					k.writeObject(channelRecord.getOutput(), msg);
 					
 					//Flush the buffer to the stream
 					channelRecord.getOutput().flush();
 					
-					channelRecord.cleanBatch();
-					
+					// We log the data
 					if(P.valueFor("eftMechanismEnabled").equals("true")){
-//							buffer.save(msg);
+						buffer.save(msg);
 					}
+					// Anf finally we reset the batch
+//					channelRecord.cleanBatch(); // RACE CONDITION ??
+					channelRecord.cleanBatch2();
 				}
 			}
 			else if (!beacon){

@@ -9,6 +9,7 @@ public class BatchTuplePayload {
 	
 	public synchronized void addTuple(TuplePayload payload){
 		batch.add(payload);
+		batchSize++;
 	}
 	
 	public void clear(){
@@ -22,5 +23,9 @@ public class BatchTuplePayload {
 	
 	public BatchTuplePayload(){
 		
+	}
+	
+	public int size(){
+		return batch.size();
 	}
 }

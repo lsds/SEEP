@@ -91,6 +91,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 				for(TuplePayload t_payload : batch){
 					long incomingTs = t_payload.timestamp;
 					owner.setTsData(incomingTs);
+//System.out.println("new data ts: "+incomingTs);
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);

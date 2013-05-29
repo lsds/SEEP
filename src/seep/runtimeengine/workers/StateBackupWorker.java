@@ -1,9 +1,10 @@
-package seep.processingunit;
+package seep.runtimeengine.workers;
 
 import java.io.Serializable;
 
 import seep.P;
 import seep.operator.State;
+import seep.processingunit.StatefulProcessingUnit;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.
@@ -47,7 +48,11 @@ public class StateBackupWorker implements Runnable, Serializable{
 				if(P.valueFor("eftMechanismEnabled").equals("true")){
 					//if not initialisin state...
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
-						processingUnit.checkpointAndBackupState();
+						long startCheckpoint = System.currentTimeMillis();
+//						processingUnit.checkpointAndBackupState();
+						processingUnit.directCheckpointAndBackupState();
+						long stopCheckpoint = System.currentTimeMillis();
+						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));
 					}
 				}
 				initTime = System.currentTimeMillis();

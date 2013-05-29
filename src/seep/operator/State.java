@@ -97,7 +97,7 @@ public abstract class State implements Serializable, Cloneable{
 		Object obj = null;
 	    try {
 	    	// Write the object out to a byte array
-	        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+	        ByteArrayOutputStream bos = new ByteArrayOutputStream(1000000000);
 	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
 	        synchronized(original){
 	        	out.writeObject(original);
@@ -106,7 +106,10 @@ public abstract class State implements Serializable, Cloneable{
 	        }
 	        // Make an input stream from the byte array and read
 	        // a copy of the object back in.
-	        ExtendedObjectInputStream in = new ExtendedObjectInputStream(new ByteArrayInputStream(bos.toByteArray()), rcl);
+	        byte[] temp = bos.toByteArray();
+	        System.out.println("Serialised size: "+temp.length+" bytes");
+	        ExtendedObjectInputStream in = new ExtendedObjectInputStream(new ByteArrayInputStream(temp), rcl);
+//	        ExtendedObjectInputStream in = new ExtendedObjectInputStream(new ByteArrayInputStream(bos.toByteArray()), rcl);
 	        obj = in.readObject();
 	    }
 	    catch(IOException e) {

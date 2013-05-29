@@ -22,7 +22,6 @@ import seep.P;
 import seep.comm.NodeManagerCommunication;
 import seep.comm.RuntimeCommunicationTools;
 import seep.comm.routing.Router;
-import seep.comm.serialization.BatchDataTuple;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.messages.BatchTuplePayload;

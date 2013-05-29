@@ -1,8 +1,12 @@
 package seep.comm.serialization.controlhelpers;
 
+import java.io.Serializable;
+
 import seep.operator.State;
 
-public class BackupOperatorState {
+public class BackupOperatorState implements Serializable{
+
+	private static final long serialVersionUID = 1L;
 
 	private int opId;
 	

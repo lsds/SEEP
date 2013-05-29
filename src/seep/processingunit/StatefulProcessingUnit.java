@@ -27,6 +27,8 @@ import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
 import seep.runtimeengine.SynchronousCommunicationChannel;
+import seep.runtimeengine.workers.ACKWorker;
+import seep.runtimeengine.workers.StateBackupWorker;
 
 /**
  * mutex or lockstate in this class are the by default java mechanism, and my custom made locking mech. Mine performs slightly better but it is far less
@@ -361,15 +363,57 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	/** State operations **/
 	public void checkpointAndBackupState(){
 		// Backup state
-		long startBackup = System.currentTimeMillis();
 		backupState();
-		long stopBackup = System.currentTimeMillis();
-		System.out.println("Total BACKUP: "+(stopBackup-startBackup));
+	}
+	
+	public void directCheckpointAndBackupState(){
+		directBackupState();
+	}
+	
+	private void directBackupState(){
+		if(runningOpState != null){
+			BackupOperatorState bs = new BackupOperatorState();			
+			// Mutex for executor (in case multicore)
+			if(multiCoreEnabled){
+				try {
+					executorMutex.acquire(numberOfWorkerThreads);
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			// Mutex for data processing
+			else{
+				
+				try {
+					mutex.acquire();
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			bs.setOpId(runningOpState.getOwnerId());
+			bs.setState(runningOpState);
+			bs.setStateClass(runningOpState.getStateTag());
+			
+			ControlTuple ctB = new ControlTuple().makeBackupState(bs);			
+			owner.sendBackupState(ctB);
+			
+			if(multiCoreEnabled){
+				executorMutex.release(numberOfWorkerThreads);
+			}
+			else{
+				mutex.release();
+			}
+		}
 	}
 	
 	private void backupState(){
 		if(runningOpState != null){
-			BackupOperatorState bs = new BackupOperatorState();;
+			BackupOperatorState bs = new BackupOperatorState();
 			State toBackup = null;
 			int ownerId = runningOpState.getOwnerId();
 			int checkpointInterval = runningOpState.getCheckpointInterval();
@@ -402,7 +446,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			long startcopy = System.currentTimeMillis();
 			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
 			long stopcopy = System.currentTimeMillis();
-			System.out.println("Deep COPY: "+(stopcopy-startcopy));
+			System.out.println("% Deep COPY: "+(stopcopy-startcopy));
 			if(multiCoreEnabled){
 				executorMutex.release(numberOfWorkerThreads);
 			}
@@ -411,7 +455,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			}
 			
 			long stopmutex = System.currentTimeMillis();
-			System.out.println("MUTEX: "+(stopmutex-startmutex));
+			System.out.println("% mutex: "+(stopmutex-startmutex));
 			toBackup.setOwnerId(ownerId);
 			toBackup.setCheckpointInterval(checkpointInterval);
 			toBackup.setData_ts(data_ts);
@@ -516,5 +560,22 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	@Override
 	public void disableMultiCoreSupport() {
 		multiCoreEnabled = false;
+	}
+
+	@Override
+	public void createAndRunAckWorker() {
+		ACKWorker ackWorker = new ACKWorker(this); 
+		Thread ackT = new Thread(ackWorker);
+		ackT.start();
+	}
+
+	@Override
+	public long getLastACK() {
+		return owner.getTsData();
+	}
+
+	@Override
+	public void emitACK(long currentTs) {
+		owner.ack(currentTs);
 	}
 }

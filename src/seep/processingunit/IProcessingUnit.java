@@ -69,5 +69,15 @@ public interface IProcessingUnit {
 	public void disableMultiCoreSupport();
 	
 	public boolean isMultiCoreEnabled();
+
+	public void createAndRunAckWorker();
+
+	public long getLastACK();
+
+	public void emitACK(long currentTs);
+	
+	public ArrayList<Integer> getRouterIndexesInformation(int opId);
+	
+	public ArrayList<Integer> getRouterKeysInformation(int opId);
 	
 }

@@ -67,6 +67,10 @@ public class QueryPlan {
 	
 	public Operator newStatefulSource(Operator op, int opId, State s, List<String> attributes){
 		// Configure operator
+		if(s.getOwnerId() != opId){
+			NodeManager.nLogger.severe("Operator id: "+opId+" does not own state: "+s.getOwnerId());
+			System.exit(0);
+		}
 		this.newStatefulOperator(op, opId, s, attributes);
 		this.setSource(op);
 		return op;
@@ -82,6 +86,10 @@ public class QueryPlan {
 	
 	public Operator newStatefulSink(Operator op, int opId, State s, List<String> attributes){
 		// Configure operator
+		if(s.getOwnerId() != opId){
+			NodeManager.nLogger.severe("Operator id: "+opId+" does not own state: "+s.getOwnerId());
+			System.exit(0);
+		}
 		this.newStatefulOperator(op, opId, s, attributes);
 		this.setSink(op);
 		
@@ -108,6 +116,10 @@ public class QueryPlan {
 	
 	public Operator newStatefulOperator(Operator op, int opId, State s, List<String> attributes){
 		// Configure operator
+		if(s.getOwnerId() != opId){
+			NodeManager.nLogger.severe("Operator id: "+opId+" does not own state: "+s.getOwnerId());
+			System.exit(0);
+		}
 		op.setOperatorId(opId);
 		op.setState(s);
 		op.setSubclassOperator();

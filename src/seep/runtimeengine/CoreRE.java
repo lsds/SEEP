@@ -15,6 +15,7 @@ import seep.comm.OutgoingDataHandlerWorker;
 import seep.comm.routing.Router;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
+import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
@@ -41,8 +42,6 @@ public class CoreRE {
 	private IProcessingUnit processingUnit = null;
 	private PUContext puCtx = null;
 	private RuntimeClassLoader rcl = null;
-	
-	public int ackCounter = 0;
 	
 	private int backupUpstreamIndex = -1;
 
@@ -207,6 +206,15 @@ public class CoreRE {
 			}
 		}
 		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
+		
+		// If ackworker is active
+		if(P.valueFor("ackWorkerActive").equals("true")){
+			//If this is the sink operator (extremely ugly)
+			if(processingUnit.getOperator().getOpContext().downstreams.size() == 0){
+				processingUnit.createAndRunAckWorker();
+				NodeManager.nLogger.info("-> ACK Worker working on "+nodeDescr.getNodeId());
+			}
+		}
 	}
 	
 	public void startDataProcessing(){
@@ -288,16 +296,13 @@ public class CoreRE {
 		
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
-		/** ACK message **/
 		ControlTupleType ctt = ct.getType();
+		/** ACK message **/
 		if(ctt.equals(ControlTupleType.ACK)) {
-//long a = System.currentTimeMillis();
-			if(ct.getAck().getTs() >= ts_ack){
-				ackCounter++;
-				coreProcessLogic.processAck(ct.getAck());
+			Ack ack = ct.getAck();
+			if(ack.getTs() >= ts_ack){
+				coreProcessLogic.processAck(ack);
 			}
-//long b = System.currentTimeMillis() - a;
-//System.out.println("*processAck: "+b);
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
@@ -545,7 +550,7 @@ public class CoreRE {
 	public void sendBackupState(ControlTuple ctB){
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
+		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
 	}
 	
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)

@@ -23,6 +23,7 @@ import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
 import seep.runtimeengine.SynchronousCommunicationChannel;
+import seep.runtimeengine.workers.ACKWorker;
 
 public class StatelessProcessingUnit implements IProcessingUnit {
 
@@ -268,6 +269,31 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public void disableMultiCoreSupport() {
 		multiCoreEnabled = false;
+	}
+
+	@Override
+	public void createAndRunAckWorker() {
+		ACKWorker ackWorker = new ACKWorker(this); 
+		Thread ackT = new Thread(ackWorker);
+		ackT.start();
+	}
+
+	@Override
+	public long getLastACK() {
+		return owner.getTsData();
+	}
+
+	@Override
+	public void emitACK(long currentTs) {
+		owner.ack(currentTs);
+	}
+
+	public ArrayList<Integer> getRouterIndexesInformation(int opId){
+		return runningOp.getRouter().getIndexesInformation(opId);
+	}
+	
+	public ArrayList<Integer> getRouterKeysInformation(int opId){
+		return runningOp.getRouter().getKeysInformation(opId);
 	}
 
 }

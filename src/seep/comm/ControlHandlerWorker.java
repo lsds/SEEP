@@ -3,9 +3,9 @@ package seep.comm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.BindException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.controlhelpers.Ack;
@@ -25,6 +25,7 @@ import seep.runtimeengine.CoreRE;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 /** 
 * ControlHandlerWorker. This class is in charge of managing control messages.
@@ -48,11 +49,13 @@ public class ControlHandlerWorker implements Runnable{
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
-		k.setClassLoader(owner.getRuntimeClassLoader());
+		k.setClassLoader(owner.getRuntimeClassLoader());		
 		k.register(ControlTuple.class);
+
+		k.register(HashMap.class, new MapSerializer());
+		k.register(BackupOperatorState.class);		
 		k.register(Ack.class);
 		k.register(BackupNodeState.class);
-		k.register(BackupOperatorState.class);
 		k.register(Resume.class);
 		k.register(ScaleOutInfo.class);
 		k.register(StateAck.class);
@@ -75,12 +78,12 @@ public class ControlHandlerWorker implements Runnable{
 			//Establish input stream, which receives serialized objects
 			is = incomingSocket.getInputStream();
 			os = incomingSocket.getOutputStream();
-			Input i = new Input(is);
+			Input i = new Input(is, 1000000000);
 			//Read the connection to get the data
 			while(goOn){
 //				tuple = Seep.ControlTuple.parseDelimitedFrom(is);
 				tuple = k.readObject(i, ControlTuple.class);
-				System.out.println("RECEIVED");
+//				System.out.println("RECEIVED");
 /// \todo {what is the underlying problem that makes tuple potentially be null?}
 				if(tuple != null){
 					owner.processControlTuple(tuple, os);

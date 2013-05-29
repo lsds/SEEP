@@ -108,17 +108,16 @@ System.out.println("KEY: "+operatorType);
 	public void processBackupState(BackupOperatorState ct){
 		int opId = ct.getOpId();
 		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
-//		long ts_e = ct.getBackupOperatorStateWithOpId(opId).getState().getData_ts();
 		long ts_e = ct.getState().getData_ts();
 		///\todo{ check if ts_e is the last thing processed by the most upstream op in the downstream node, or the most downstream op in the down node}
 		if(downStream.reconf_ts <= ts_e){
 			/** DONT really understand the objective of the next 6 lines, CHECK**/
-			int eopId = -5;
-			if(puCtx.getBuffer(opId).getBackupState() != null){
-				if(puCtx.getBuffer(opId).getBackupState() != null){
-					eopId = puCtx.getBuffer(opId).getBackupState().getOpId();
-				}
-			}
+//			int eopId = -5;
+//			if(puCtx.getBuffer(opId).getBackupState() != null){
+//				if(puCtx.getBuffer(opId).getBackupState() != null){
+//					eopId = puCtx.getBuffer(opId).getBackupState().getOpId();
+//				}
+//			}
 			/** **/
 			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
 		}
@@ -129,6 +128,8 @@ System.out.println("KEY: "+operatorType);
 
 	//Send ACK tuples to the upstream nodes and update TS_ACK
 	/// \todo{now this method is syncrhonized, with ACK Tile mechanism we can avoid most of the method, but it is not finished yet}
+	//FIXME if I remove a downstream (scale down) I should remove from map/clear the map
+	/// \todo {scaling down operators introduce a new bunch of possibilities}
 	public synchronized void processAck(Ack ct){
 		int opId = ct.getOpId();
 		long current_ts = ct.getTs();
@@ -136,11 +137,7 @@ System.out.println("KEY: "+operatorType);
 		long minWithCurrent = current_ts;
 		long minWithoutCurrent = Long.MAX_VALUE;
 		Buffer buffer = puCtx.getBuffer(opId);
-		if(buffer != null){
-			buffer.trim(current_ts);
-		}
-		//i.e. if the operator is stateless (we should use a tagging interface). Stateless and NOT first operator
-//		if ((owner.subclassOperator instanceof StatelessOperator) && !((opContext.upstreams.size()) == 0)) {
+		buffer.trim(current_ts);
 		for( Map.Entry<Integer, Long> entry: downstreamLastAck.entrySet()) {
 			long ts = entry.getValue();
 			if (entry.getKey() != opId) {
@@ -154,23 +151,7 @@ System.out.println("KEY: "+operatorType);
 			counter++;
 		}
 		downstreamLastAck.put(opId, current_ts);
-			//FIXME if I remove a downstream (scale down) I should remove from map/clear the map
-	/// \todo {scaling down operators introduce a new bunch of possibilities}
-		if(downstreamLastAck.size() != pu.getOperator().getOpContext().downstreams.size()) {
-		//			System.out.println("missing some acks suppressing ACK");
-		}
-		else if (minWithCurrent==minWithoutCurrent) {
-		//			System.out.println("min did not changed, suppress ACK");
-		}
-		else{
-			owner.ack(minWithCurrent);
-		}
-//		}
-		//if the operator is stateful, we backpropagate the ACK directly. with batching, we will always propagate unique ACK's
-		//else if (owner.subclassOperator instanceof StatefullOperator){
-//		else{
-//			owner.ack(current_ts);
-//		}
+		owner.ack(minWithCurrent);
 		// To indicate that this is the last ack processed by this operator
 		owner.setTs_ack(current_ts);
 	}
@@ -320,8 +301,10 @@ System.out.println("KEY: "+operatorType);
 	
 	private void backupRoutingInformation(int oldOpId) {
 		//Get routing information of the operator that has scaled out
-		ArrayList<Integer> indexes = ((StatefulProcessingUnit)pu).getRouterIndexesInformation(oldOpId);
-		ArrayList<Integer> keys = ((StatefulProcessingUnit)pu).getRouterKeysInformation(oldOpId);
+//		ArrayList<Integer> indexes = ((StatefulProcessingUnit)pu).getRouterIndexesInformation(oldOpId);
+//		ArrayList<Integer> keys = ((StatefulProcessingUnit)pu).getRouterKeysInformation(oldOpId);
+		ArrayList<Integer> indexes = pu.getRouterIndexesInformation(oldOpId);
+		ArrayList<Integer> keys = pu.getRouterKeysInformation(oldOpId);
 System.out.println("BACKUP INDEXES: "+indexes.toString());
 System.out.println("BACKUP KEYS: "+keys.toString());
 
