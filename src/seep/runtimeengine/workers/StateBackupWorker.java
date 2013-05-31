@@ -49,8 +49,9 @@ public class StateBackupWorker implements Runnable, Serializable{
 					//if not initialisin state...
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						long startCheckpoint = System.currentTimeMillis();
-//						processingUnit.checkpointAndBackupState();
-						processingUnit.directCheckpointAndBackupState();
+						processingUnit.checkpointAndBackupState();
+//						processingUnit.directCheckpointAndBackupState();
+//						processingUnit.blindCheckpointAndBackupState();
 						long stopCheckpoint = System.currentTimeMillis();
 						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));
 					}

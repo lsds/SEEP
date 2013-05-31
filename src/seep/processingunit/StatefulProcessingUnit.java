@@ -1,5 +1,8 @@
 package seep.processingunit;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +16,7 @@ import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.EndPoint;
@@ -29,6 +33,8 @@ import seep.runtimeengine.OutputQueue;
 import seep.runtimeengine.SynchronousCommunicationChannel;
 import seep.runtimeengine.workers.ACKWorker;
 import seep.runtimeengine.workers.StateBackupWorker;
+import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
+import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
  * mutex or lockstate in this class are the by default java mechanism, and my custom made locking mech. Mine performs slightly better but it is far less
@@ -363,16 +369,97 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	/** State operations **/
 	public void checkpointAndBackupState(){
 		// Backup state
-		backupState();
+		long tsToAck = backupState();
+		if(tsToAck != -1){
+			owner.ack(tsToAck);
+		}
 	}
 	
 	public void directCheckpointAndBackupState(){
-		directBackupState();
+		long tsToAck = directBackupState();
+		if(tsToAck != -1){
+			owner.ack(tsToAck);
+		}
 	}
 	
-	private void directBackupState(){
+	public void blindCheckpointAndBackupState(){
+		long tsToAck = blindBackupState();
+		if(tsToAck != -1){
+			owner.ack(tsToAck);
+		}
+	}
+	
+	private long blindBackupState(){
+		long last_data_proc = -1;
 		if(runningOpState != null){
-			BackupOperatorState bs = new BackupOperatorState();			
+			RawData rw = new RawData();
+			// Mutex for executor (in case multicore)
+
+			if(multiCoreEnabled){
+				try {
+					executorMutex.acquire(numberOfWorkerThreads);
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			// Mutex for data processing
+			else{
+				try {
+					mutex.acquire();
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			last_data_proc = owner.getTsData();
+			rw.setTs(last_data_proc);
+			rw.setOpId(runningOpState.getOwnerId());
+			byte[] rawData = toRawData(runningOpState);
+			rw.setData(rawData);
+		
+			ControlTuple ctB = new ControlTuple().makeRawData(rw);
+			owner.sendRawData(ctB);
+
+			if(multiCoreEnabled){
+				executorMutex.release(numberOfWorkerThreads);
+			}
+			else{
+				mutex.release();
+			}
+		}
+		return last_data_proc;
+	}
+	
+	private byte[] toRawData(State s){
+		byte[] data = null;
+		try {
+	    	// Write the object out to a byte array
+	        ByteArrayOutputStream bos = new ByteArrayOutputStream(1000000);
+	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
+	        synchronized(s){
+	        	out.writeObject(s);
+	        	out.flush();
+	        	out.close();
+	        }
+	        // Make an input stream from the byte array and read
+	        // a copy of the object back in.
+	        data = bos.toByteArray();
+	        System.out.println("SER SIZE: "+data.length+" bytes");
+	    }
+	    catch(IOException e) {
+	    	e.printStackTrace();
+	    }
+	    return data;
+	}
+	
+	private long directBackupState(){
+		long last_data_proc = -1;
+		if(runningOpState != null){
+			BackupOperatorState bs = new BackupOperatorState();
 			// Mutex for executor (in case multicore)
 			if(multiCoreEnabled){
 				try {
@@ -385,7 +472,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			}
 			// Mutex for data processing
 			else{
-				
 				try {
 					mutex.acquire();
 				}
@@ -394,7 +480,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					e.printStackTrace();
 				}
 			}
-			
+			last_data_proc = owner.getTsData();
+			runningOpState.setData_ts(last_data_proc);
 			bs.setOpId(runningOpState.getOwnerId());
 			bs.setState(runningOpState);
 			bs.setStateClass(runningOpState.getStateTag());
@@ -409,9 +496,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				mutex.release();
 			}
 		}
+		return last_data_proc;
 	}
 	
-	private void backupState(){
+	private long backupState(){
+		long last_data_proc = -1;
 		if(runningOpState != null){
 			BackupOperatorState bs = new BackupOperatorState();
 			State toBackup = null;
@@ -442,9 +531,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					e.printStackTrace();
 				}
 			}
+			last_data_proc = owner.getTsData();
 			
 			long startcopy = System.currentTimeMillis();
-			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
+			
+//			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
+			
+			toBackup = (State) owner.getControlDispatcher().deepCopy(runningOpState);
+			
 			long stopcopy = System.currentTimeMillis();
 			System.out.println("% Deep COPY: "+(stopcopy-startcopy));
 			if(multiCoreEnabled){
@@ -458,7 +552,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			System.out.println("% mutex: "+(stopmutex-startmutex));
 			toBackup.setOwnerId(ownerId);
 			toBackup.setCheckpointInterval(checkpointInterval);
-			toBackup.setData_ts(data_ts);
+			toBackup.setData_ts(last_data_proc);
 			toBackup.setStateTag(stateTag);
 			
 			bs.setOpId(toBackup.getOwnerId());
@@ -467,8 +561,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			
 			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 			//Finally send the backup state
-			owner.sendBackupState(ctB);
+//			owner.sendBackupState(ctB);
 		}
+		return last_data_proc;
 	}
 	
 	public void installState(InitOperatorState initOperatorState){

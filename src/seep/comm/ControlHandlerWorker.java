@@ -16,6 +16,7 @@ import seep.comm.serialization.controlhelpers.InitNodeState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InvalidateState;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
@@ -53,7 +54,9 @@ public class ControlHandlerWorker implements Runnable{
 		k.register(ControlTuple.class);
 
 		k.register(HashMap.class, new MapSerializer());
-		k.register(BackupOperatorState.class);		
+		k.register(BackupOperatorState.class);
+		k.register(byte[].class);
+		k.register(RawData.class);
 		k.register(Ack.class);
 		k.register(BackupNodeState.class);
 		k.register(Resume.class);

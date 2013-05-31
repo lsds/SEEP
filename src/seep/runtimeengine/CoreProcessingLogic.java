@@ -14,10 +14,12 @@ import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.infrastructure.NodeManager;
 import seep.operator.Partitionable;
 import seep.operator.State;
+import seep.operator.StatelessOperator;
 import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.IProcessingUnit;
 import seep.processingunit.PUContext;
@@ -109,6 +111,8 @@ System.out.println("KEY: "+operatorType);
 		int opId = ct.getOpId();
 		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
 		long ts_e = ct.getState().getData_ts();
+		// We use the ts data from the state to trim our buffers and forward backwards.
+		//processAck(opId, ts_e);
 		///\todo{ check if ts_e is the last thing processed by the most upstream op in the downstream node, or the most downstream op in the down node}
 		if(downStream.reconf_ts <= ts_e){
 			/** DONT really understand the objective of the next 6 lines, CHECK**/
@@ -125,6 +129,19 @@ System.out.println("KEY: "+operatorType);
 			NodeManager.nLogger.warning("-> Received state generated after the beginning of the reconfigure process");
 		}
 	}
+	
+	public void processRawData(RawData rw){
+		int opId = rw.getOpId();
+		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
+		long ts_e = rw.getTs();
+		if(downStream.reconf_ts <= ts_e){
+//			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
+			puCtx.getBuffer(opId).replaceRawData(rw);
+		}
+		else{
+			NodeManager.nLogger.warning("-> Received data generated after the beginning of a reconfigure process");
+		}
+	}
 
 	//Send ACK tuples to the upstream nodes and update TS_ACK
 	/// \todo{now this method is syncrhonized, with ACK Tile mechanism we can avoid most of the method, but it is not finished yet}
@@ -133,6 +150,10 @@ System.out.println("KEY: "+operatorType);
 	public synchronized void processAck(Ack ct){
 		int opId = ct.getOpId();
 		long current_ts = ct.getTs();
+		processAck(opId, current_ts);
+	}
+	
+	private synchronized void processAck(int opId, long current_ts){
 		int counter = 0;
 		long minWithCurrent = current_ts;
 		long minWithoutCurrent = Long.MAX_VALUE;
@@ -151,7 +172,10 @@ System.out.println("KEY: "+operatorType);
 			counter++;
 		}
 		downstreamLastAck.put(opId, current_ts);
-		owner.ack(minWithCurrent);
+		// Forward only if stateless. Stateful operator forward the state instead
+		if(pu.getOperator() instanceof StatelessOperator){
+			owner.ack(minWithCurrent);
+		}
 		// To indicate that this is the last ack processed by this operator
 		owner.setTs_ack(current_ts);
 	}

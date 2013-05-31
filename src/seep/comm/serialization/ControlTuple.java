@@ -8,6 +8,7 @@ import seep.comm.serialization.controlhelpers.BackupRI;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InvalidateState;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
@@ -29,8 +30,9 @@ public class ControlTuple {
 	private InvalidateState invalidateState;
 	private BackupRI backupRI;
 	private InitRI initRI;
+	private RawData rawData;
 	
-	
+
 	public ControlTuple(){}
 	
 	public ControlTuple(CoreRE.ControlTupleType type, int opId, long ts){
@@ -139,6 +141,14 @@ public class ControlTuple {
 		this.initRI = initRI;
 	}
 	
+	public RawData getRawData() {
+		return rawData;
+	}
+
+	public void setRawData(RawData rawData) {
+		this.rawData = rawData;
+	}
+	
 	public ControlTuple makeGenericAck(int nodeId){
 		this.type = CoreRE.ControlTupleType.ACK;
 		this.ack = new Ack(nodeId, 0);
@@ -154,6 +164,12 @@ public class ControlTuple {
 	public ControlTuple makeBackupState(BackupOperatorState bs){
 		this.type = CoreRE.ControlTupleType.BACKUP_OP_STATE;
 		this.backupState = bs;
+		return this;
+	}
+	
+	public ControlTuple makeRawData(RawData rw){
+		this.type = CoreRE.ControlTupleType.RAW_DATA;
+		this.rawData = rw;
 		return this;
 	}
 	

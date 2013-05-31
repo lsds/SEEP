@@ -19,6 +19,7 @@ import seep.comm.serialization.controlhelpers.InitNodeState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InvalidateState;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
@@ -45,7 +46,9 @@ public class ControlDispatcher {
 		k.register(ControlTuple.class);
 		
 		k.register(HashMap.class, new MapSerializer());
-		k.register(BackupOperatorState.class);		
+		k.register(BackupOperatorState.class);
+		k.register(byte[].class);
+		k.register(RawData.class);
 		k.register(Ack.class);
 		k.register(BackupNodeState.class);
 		k.register(Resume.class);
@@ -128,6 +131,7 @@ public class ControlDispatcher {
 				synchronized (largeOutput){
 					long startWrite = System.currentTimeMillis();
 					k.writeObject(largeOutput, ct);
+					System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
 					largeOutput.flush();
 					long stopWrite = System.currentTimeMillis();
 					System.out.println("% Write socket: "+(stopWrite-startWrite));
@@ -177,6 +181,14 @@ public class ControlDispatcher {
 		Output output = new Output(os);
 		k.writeObject(output, initStateMsg);
 		output.flush();
+	}
+	
+	public Object deepCopy(Object toCopy){
+		long s = System.currentTimeMillis();
+		Object o = k.copy(toCopy);
+		long e = System.currentTimeMillis();
+		System.out.println("TOTAL-Kryo-SER: "+(e-s));
+		return k.copy(toCopy);
 	}
 	
 }

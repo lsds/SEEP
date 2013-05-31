@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.messages.BatchTuplePayload;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
@@ -28,6 +29,7 @@ public class Buffer implements Serializable{
 	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
 	
 	private BackupOperatorState bs = null;
+	private RawData rw = null;
 
 	public Iterator<BatchTuplePayload> iterator() { return buff.iterator(); }
 
@@ -60,20 +62,25 @@ public class Buffer implements Serializable{
 		this.bs = bs;
 		long emem = System.currentTimeMillis();
 		// On-disk
-		try {
-	    	// Write the object out to a byte array
-	        FileOutputStream fos = new FileOutputStream("tempBackup");
-	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(fos);
-	        
-	        out.writeObject(bs);
-	        out.flush();
-	        out.close();
-	    }
-	    catch(IOException e) {
-	    	e.printStackTrace();
-	    }
-	    long enddisk = System.currentTimeMillis();
-	    System.out.println("MEM: "+(emem-smem)+" DISK: "+(enddisk-emem));
+//		try {
+//	    	// Write the object out to a byte array
+//	        FileOutputStream fos = new FileOutputStream("tempBackup");
+//	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(fos);
+//	        
+//	        out.writeObject(bs);
+//	        out.flush();
+//	        out.close();
+//	    }
+//	    catch(IOException e) {
+//	    	e.printStackTrace();
+//	    }
+//	    long enddisk = System.currentTimeMillis();
+//	    System.out.println("MEM: "+(emem-smem)+" DISK: "+(enddisk-emem));
+	}
+	
+	public void replaceRawData(RawData rw){
+		System.out.println("Storing: "+rw.getData().length+" bytes");
+		this.rw = rw;
 	}
 
 	public void save(BatchTuplePayload batch){
@@ -83,6 +90,7 @@ public class Buffer implements Serializable{
 	
 /// \test trim() should be tested
 	public void trim(long ts){
+		long startTrim = System.currentTimeMillis();
 		Iterator<BatchTuplePayload> iter = buff.iterator();
 		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
@@ -90,11 +98,14 @@ public class Buffer implements Serializable{
 			long timeStamp = 0;
 			numOfTuplesPerBatch = next.batchSize;
 			//Accessing last index cause that is the newest tuple in the batch
+//System.out.println("TRIMMING: ts-> "+ts);
 //System.out.println("TRIMMING: access to "+(numOfTuplesPerBatch-1)+" size: "+next.size());
 			timeStamp = next.getTuple(numOfTuplesPerBatch-1).timestamp;
 			if (timeStamp <= ts) iter.remove();
 			else break;
 		}
+		long endTrim = System.currentTimeMillis();
+//System.out.println("%% TOTAL TRIM: "+(endTrim-startTrim));
 		MetricsReader.loggedEvents.clear();
 		MetricsReader.loggedEvents.inc(buff.size());
 	}

@@ -17,6 +17,7 @@ import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
+import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.infrastructure.NodeManager;
@@ -228,7 +229,7 @@ public class CoreRE {
 	
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, BACKUP_NODE_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
-		BACKUP_RI, INIT_RI
+		BACKUP_RI, INIT_RI, RAW_DATA
 	}
 	
 	public synchronized void setTsData(long ts_data){
@@ -314,7 +315,7 @@ public class CoreRE {
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitOperatorState().getOpId());
 			coreProcessLogic.processInitState(ct.getInitOperatorState());
 		}
-		/** BACKUP_STATE message **/
+		/** STATE_BACKUP message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_OP_STATE)){
 			//If communications are not being reconfigured
 			//Register this state as being managed by this operator
@@ -322,6 +323,14 @@ public class CoreRE {
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_OP_STATE from Op: "+backupOperatorState.getOpId());
 			processingUnit.registerManagedState(backupOperatorState.getOpId());
 			coreProcessLogic.processBackupState(backupOperatorState);
+		}
+		else if(ctt.equals(ControlTupleType.RAW_DATA)){
+			RawData rw = ct.getRawData();
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv RAW DATA from Op: "+rw.getOpId());
+			// is state anyway, we register it...
+			processingUnit.registerManagedState(rw.getOpId());
+//			coreProcessLogic.processBackupState(backupOperatorState);
+			coreProcessLogic.processRawData(rw);
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
@@ -550,6 +559,12 @@ public class CoreRE {
 	public void sendBackupState(ControlTuple ctB){
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+	}
+	
+	public void sendRawData(ControlTuple ctB){
+		int dataOwnerId = ctB.getRawData().getOpId();
+		NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
 	}
 	
