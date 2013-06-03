@@ -89,6 +89,7 @@ public class Buffer implements Serializable{
 	}
 	
 /// \test trim() should be tested
+/// \todo more efficient way of trimming buffer. -> removeAll(collection to be removed)
 	public void trim(long ts){
 		long startTrim = System.currentTimeMillis();
 		Iterator<BatchTuplePayload> iter = buff.iterator();

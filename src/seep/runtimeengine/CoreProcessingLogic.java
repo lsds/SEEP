@@ -173,9 +173,9 @@ System.out.println("KEY: "+operatorType);
 		}
 		downstreamLastAck.put(opId, current_ts);
 		// Forward only if stateless. Stateful operator forward the state instead
-		if(pu.getOperator() instanceof StatelessOperator){
+//		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
 			owner.ack(minWithCurrent);
-		}
+//		}
 		// To indicate that this is the last ack processed by this operator
 		owner.setTs_ack(current_ts);
 	}

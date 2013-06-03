@@ -52,7 +52,6 @@ public class ControlHandlerWorker implements Runnable{
 		Kryo k = new Kryo();
 		k.setClassLoader(owner.getRuntimeClassLoader());		
 		k.register(ControlTuple.class);
-
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
 		k.register(byte[].class);

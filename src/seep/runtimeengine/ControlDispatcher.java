@@ -43,8 +43,8 @@ public class ControlDispatcher {
 	
 	private Kryo initializeKryo(){
 		k = new Kryo();
+
 		k.register(ControlTuple.class);
-		
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
 		k.register(byte[].class);
@@ -124,6 +124,8 @@ public class ControlDispatcher {
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
 		Output output = null;
+		BackupOperatorState bos = ct.getBackupState();
+		System.out.println("About to send: "+bos.getOpId());
 		try{
 			//output = new Output(socket.getOutputStream(), 1000000000);
 			largeOutput.setOutputStream(socket.getOutputStream());
@@ -185,6 +187,8 @@ public class ControlDispatcher {
 	
 	public Object deepCopy(Object toCopy){
 		long s = System.currentTimeMillis();
+		System.out.println("CLASS: "+toCopy.getClass().toString());
+		k.register(toCopy.getClass());
 		Object o = k.copy(toCopy);
 		long e = System.currentTimeMillis();
 		System.out.println("TOTAL-Kryo-SER: "+(e-s));

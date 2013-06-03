@@ -54,6 +54,9 @@ public class Monitor implements Runnable{
 	public void run(){
 		//Initialize kryo to send the serialized data
 		initializeKryo();
+		
+		initializeLocalReporter();
+		
 		try{
 			//Establish connection with the monitor manager.
 			InetAddress addrMon = InetAddress.getByName(P.valueFor("mainAddr"));
@@ -64,8 +67,10 @@ public class Monitor implements Runnable{
 			output = new Output(out);
 			//Monitoring interval
 			int sleepInterval = 1000*(Integer.parseInt(P.valueFor("monitorInterval"))-1);
+			
 			//Runtime monitor loop
 			while(listen){
+				//Remote info
 				Thread.sleep(sleepInterval);
 				sendMonitorInfo();
 			}
@@ -80,5 +85,11 @@ public class Monitor implements Runnable{
 			NodeManager.nLogger.warning("When trying to sleep: "+ie.getMessage());
 			ie.printStackTrace();
 		}
+	}
+	
+	public void initializeLocalReporter(){
+		LocalReporterMonitor lrm = new LocalReporterMonitor();
+		Thread t = new Thread(lrm);
+		t.start();
 	}
 }

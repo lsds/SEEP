@@ -324,6 +324,7 @@ public class CoreRE {
 			processingUnit.registerManagedState(backupOperatorState.getOpId());
 			coreProcessLogic.processBackupState(backupOperatorState);
 		}
+		/** RAW_DATA message **/
 		else if(ctt.equals(ControlTupleType.RAW_DATA)){
 			RawData rw = ct.getRawData();
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv RAW DATA from Op: "+rw.getOpId());

@@ -382,6 +382,13 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 	}
 	
+	public void directParallelCheckpointAndBackupState(){
+		long tsToAck = directParallelBackupState();
+		if(tsToAck != -1){
+			owner.ack(tsToAck);
+		}
+	}
+	
 	public void blindCheckpointAndBackupState(){
 		long tsToAck = blindBackupState();
 		if(tsToAck != -1){
@@ -499,6 +506,60 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		return last_data_proc;
 	}
 	
+	private long directParallelBackupState(){
+		long last_data_proc = -1;
+		if(runningOpState != null){
+			BackupOperatorState bs0 = new BackupOperatorState();
+			BackupOperatorState bs1 = new BackupOperatorState();
+			// Mutex for executor (in case multicore)
+			if(multiCoreEnabled){
+				try {
+					executorMutex.acquire(numberOfWorkerThreads);
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			// Mutex for data processing
+			else{
+				try {
+					mutex.acquire();
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			last_data_proc = owner.getTsData();
+			runningOpState.setData_ts(last_data_proc);
+			// change 0 for proper key
+long a = System.currentTimeMillis();
+			State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
+long b = System.currentTimeMillis();
+System.out.println("partitioning time: "+(b-a));
+			bs0.setOpId(runningOpState.getOwnerId());
+			bs0.setState(partitions[0]);
+			bs0.setStateClass(runningOpState.getStateTag());
+			
+			bs1.setOpId(runningOpState.getOwnerId());
+			bs1.setState(partitions[1]);
+			bs1.setStateClass(runningOpState.getStateTag());
+			
+			ControlTuple ctB = new ControlTuple().makeBackupState(bs0);
+			ControlTuple ctB2 = new ControlTuple().makeBackupState(bs1);
+			owner.sendBackupState(ctB);
+			
+			if(multiCoreEnabled){
+				executorMutex.release(numberOfWorkerThreads);
+			}
+			else{
+				mutex.release();
+			}
+		}
+		return last_data_proc;
+	}
+	
 	private long backupState(){
 		long last_data_proc = -1;
 		if(runningOpState != null){
@@ -535,9 +596,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			
 			long startcopy = System.currentTimeMillis();
 			
-//			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
+			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
 			
-			toBackup = (State) owner.getControlDispatcher().deepCopy(runningOpState);
+//			toBackup = (State) owner.getControlDispatcher().deepCopy(runningOpState);
 			
 			long stopcopy = System.currentTimeMillis();
 			System.out.println("% Deep COPY: "+(stopcopy-startcopy));
@@ -561,7 +622,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			
 			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 			//Finally send the backup state
-//			owner.sendBackupState(ctB);
+			owner.sendBackupState(ctB);
 		}
 		return last_data_proc;
 	}
