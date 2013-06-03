@@ -1,8 +1,12 @@
-package seep.runtimeengine;
+package seep.runtimeengine.workers;
 
 import java.util.ArrayList;
 
 import seep.comm.serialization.DataTuple;
+import seep.runtimeengine.Barrier;
+import seep.runtimeengine.CoreRE;
+import seep.runtimeengine.DataStructureAdapter;
+import seep.runtimeengine.InputQueue;
 
 public class DataConsumer implements Runnable {
 

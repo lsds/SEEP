@@ -22,6 +22,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
+	private Socket blindSocket;
 	private Buffer buffer;
 	
 	private Output output = null;
@@ -42,10 +43,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int channelBatchSize = Integer.parseInt(P.valueFor("batchLimit"));
 	private long tick = 0;
 
-	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Buffer buffer){
+	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, Buffer buffer){
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
 		this.downstreamControlSocket = downstreamSocketC;
+		this.blindSocket = blindSocket;
 		this.buffer = buffer;
 		try {
 			/// \fixme{this must be fixed, different CONSTRUCTORS, please...}
@@ -70,6 +72,10 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	public Socket getDownstreamControlSocket(){
 		return downstreamControlSocket;
+	}
+	
+	public Socket getBlindSocket(){
+		return blindSocket;
 	}
 	
 //	public void setSharedIterator(Iterator<BatchDataTuple> i){

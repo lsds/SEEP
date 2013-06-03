@@ -196,6 +196,7 @@ public class PUContext {
 	private void createRemoteSynchronousCommunication(int opID, InetAddress ip, int portD, int portC, String type){
 		Socket socketD = null;
 		Socket socketC = null;
+		Socket socketBlind = null;
 		try{
 			if(type.equals("down")){
 				NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+portD);
@@ -203,8 +204,10 @@ public class PUContext {
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
 				}
+				socketBlind = new Socket(ip, 39999);
 				Buffer buffer = new Buffer();
-				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, buffer);
+				
+				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
 				downstreamTypeConnection.add(con);
 				remoteDownstream.add(con);
 /// \todo{here a 40000 is used, change this line to make it properly}
@@ -213,7 +216,7 @@ public class PUContext {
 			else if(type.equals("up")){
 				NodeManager.nLogger.info("-> Trying remote upstream conn to: "+ip.toString()+"/"+portC);
 				socketC = new Socket(ip, portC);
-				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, null);
+				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
 				upstreamTypeConnection.add(con);
 				remoteUpstream.add(con);
 			}
@@ -275,9 +278,10 @@ public class PUContext {
 				try{
 					Socket dataS = new Socket(newIp, dataPort);
 					Socket controlS = new Socket(newIp, controlPort);
+					Socket blindS = new Socket(newIp, 39999);
 					Buffer buf = downstreamBuffers.get(opId);
 					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
-					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, buf);
+					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, blindS, buf);
 					downstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){
@@ -289,8 +293,9 @@ public class PUContext {
 			if(ep.getOperatorId() == opId){
 				try{
 					Socket controlS = new Socket(newIp, controlPort);
+					Socket blindS = new Socket(newIp, 39999);
 					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
-					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, null);
+					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, blindS, null);
 					upstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){

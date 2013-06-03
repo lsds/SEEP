@@ -18,12 +18,12 @@ import seep.operator.OperatorStaticInformation;
 import seep.operator.Partitionable;
 import seep.operator.State;
 import seep.processingunit.IProcessingUnit.SystemStatus;
+import seep.reliable.ACKWorker;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
 import seep.runtimeengine.SynchronousCommunicationChannel;
-import seep.runtimeengine.workers.ACKWorker;
 
 public class StatelessProcessingUnit implements IProcessingUnit {
 

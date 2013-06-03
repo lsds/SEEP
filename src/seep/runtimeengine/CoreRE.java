@@ -31,6 +31,9 @@ import seep.processingunit.IProcessingUnit;
 import seep.processingunit.PUContext;
 import seep.processingunit.StatefulProcessingUnit;
 import seep.processingunit.StatelessProcessingUnit;
+import seep.reliable.BackupHandler;
+import seep.reliable.BackupHandlerWorker;
+import seep.runtimeengine.workers.DataConsumer;
 import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
 /**
@@ -59,6 +62,8 @@ public class CoreRE {
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
+	private BackupHandler bh = null;
+	private Thread backupH = null;
 	
 	static ControlTuple genericAck;
 	
@@ -123,6 +128,7 @@ public class CoreRE {
 		// Start communications and worker threads
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInD();
+		int inBT = 39999;
 		//Control worker
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch);
@@ -130,13 +136,20 @@ public class CoreRE {
 		idh = new IncomingDataHandler(this, inD, tupleIdxMapper);
 		iDataH = new Thread(idh);
 		//Consumer worker
-//		dataConsumer = new DataConsumer(this, inputQueue);
 		dataConsumer = new DataConsumer(this, dsa);
 		dConsumerH = new Thread(dataConsumer);
 
 //		dConsumerH.start();
 		controlH.start();
 		iDataH.start();
+		
+		// If some downstream is stateful, then we have to run the backupHandler
+		if(processingUnit.getOperator().getOpContext().isDownstreamStateful()){
+			// Backup worker
+			bh = new BackupHandler(this, inBT);
+			backupH = new Thread(bh);
+			backupH.start();
+		}
 	}
 	
 	public void setRuntime(){
@@ -561,6 +574,12 @@ public class CoreRE {
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+	}
+	
+	public void sendBlindData(ControlTuple ctB){
+		int stateOwnerId = ctB.getBackupState().getOpId();
+		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+		controlDispatcher.sendUpstream_blind(ctB, backupUpstreamIndex);
 	}
 	
 	public void sendRawData(ControlTuple ctB){

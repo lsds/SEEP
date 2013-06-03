@@ -26,13 +26,13 @@ import seep.operator.OperatorStaticInformation;
 import seep.operator.Partitionable;
 import seep.operator.State;
 import seep.operator.StatefulOperator;
+import seep.reliable.ACKWorker;
+import seep.reliable.StateBackupWorker;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
 import seep.runtimeengine.DataStructureAdapter;
 import seep.runtimeengine.OutputQueue;
 import seep.runtimeengine.SynchronousCommunicationChannel;
-import seep.runtimeengine.workers.ACKWorker;
-import seep.runtimeengine.workers.StateBackupWorker;
 import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
 import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
@@ -394,6 +394,57 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		if(tsToAck != -1){
 			owner.ack(tsToAck);
 		}
+	}
+	
+	public void blindParallelCheckpointAndBackupState(){
+		long tsToAck = blindParallelBackupState();
+		if(tsToAck != -1){
+			owner.ack(tsToAck);
+		}
+	}
+	
+	private long blindParallelBackupState(){
+		long last_data_proc = -1;
+		if(runningOpState != null){
+			BackupOperatorState bs = new BackupOperatorState();
+			// Mutex for executor (in case multicore)
+			if(multiCoreEnabled){
+				try {
+					executorMutex.acquire(numberOfWorkerThreads);
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			// Mutex for data processing
+			else{
+				try {
+					mutex.acquire();
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			last_data_proc = owner.getTsData();
+			runningOpState.setData_ts(last_data_proc);
+			bs.setOpId(runningOpState.getOwnerId());
+			bs.setState(runningOpState);
+			bs.setStateClass(runningOpState.getStateTag());
+			
+			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
+			//owner.sendBackupState(ctB);
+			owner.sendBlindData(ctB);
+			
+			if(multiCoreEnabled){
+				executorMutex.release(numberOfWorkerThreads);
+			}
+			else{
+				mutex.release();
+			}
+		}
+		return last_data_proc;
 	}
 	
 	private long blindBackupState(){

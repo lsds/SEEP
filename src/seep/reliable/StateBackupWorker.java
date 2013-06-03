@@ -1,4 +1,4 @@
-package seep.runtimeengine.workers;
+package seep.reliable;
 
 import java.io.Serializable;
 
@@ -50,9 +50,10 @@ public class StateBackupWorker implements Runnable, Serializable{
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						long startCheckpoint = System.currentTimeMillis();
 //						processingUnit.checkpointAndBackupState();
-						processingUnit.directCheckpointAndBackupState();
+//						processingUnit.directCheckpointAndBackupState();
 //						processingUnit.directParallelCheckpointAndBackupState();
 //						processingUnit.blindCheckpointAndBackupState();
+						processingUnit.blindParallelCheckpointAndBackupState();
 						long stopCheckpoint = System.currentTimeMillis();
 						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));
 					}

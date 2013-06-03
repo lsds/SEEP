@@ -149,6 +149,35 @@ public class ControlDispatcher {
 		System.out.println("% Send : "+(stopSend-startSend));
 	}
 	
+	public void sendUpstream_blind(ControlTuple ct, int index){
+		long startSend = System.currentTimeMillis();
+		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
+		Socket socket = ((SynchronousCommunicationChannel) obj).getBlindSocket();
+		Output output = null;
+		BackupOperatorState bos = ct.getBackupState();
+		System.out.println("About to send: "+bos.getOpId());
+		try{
+			largeOutput.setOutputStream(socket.getOutputStream());
+			synchronized(socket){
+				synchronized (largeOutput){
+					long startWrite = System.currentTimeMillis();
+					k.writeObject(largeOutput, ct);
+					System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
+					largeOutput.flush();
+					long stopWrite = System.currentTimeMillis();
+					System.out.println("% Write socket: "+(stopWrite-startWrite));
+//					output.close();
+				}
+			}
+		}
+		catch(IOException io){
+			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			io.printStackTrace();
+		}
+		long stopSend = System.currentTimeMillis();
+		System.out.println("% Send : "+(stopSend-startSend));
+	}
+	
 	public void sendDownstream(ControlTuple ct, int index){
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
 		if(obj instanceof CoreRE){

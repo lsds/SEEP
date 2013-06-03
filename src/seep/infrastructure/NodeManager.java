@@ -243,11 +243,6 @@ public class NodeManager{
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
-//                        Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-//                        DataTuple dt = new DataTuple(-5);
-//                        dt.setTs(0);
-//                        Integer aux = new Integer(tokens[1]);
-//                        (NodeManager.mapOP_ID.get(aux.intValue())).processData(dt);
                         core.startDataProcessing();
 					}
 					if(tokens[0].equals("CLOCK")){
