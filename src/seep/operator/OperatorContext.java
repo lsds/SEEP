@@ -111,11 +111,11 @@ public class OperatorContext implements Serializable{
 	//Check if all downstreamms are stateful
 	public boolean isDownstreamStateful() {
 		for(PlacedOperator op : downstreams){
-			if(!(op.location().isStatefull())){
-				return false;
+			if((op.location().isStatefull())){
+				return true;
 			}
 		}
-		return true;
+		return false;
 	}
 	
 	public PlacedOperator minimumUpstream() {

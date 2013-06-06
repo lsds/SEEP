@@ -10,7 +10,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -131,6 +130,7 @@ public class PUContext {
 		if(!(loc.getMyNode().getIp().equals(localIp))){
 			//If remote, create communication with other point			
 			if (P.valueFor("synchronousOutput").equals("true")){
+				
 				createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
 				NodeManager.nLogger.info("-> PUContext. New remote downstream (SYNC) conn to OP-"+opID);
 			}
@@ -197,6 +197,8 @@ public class PUContext {
 		Socket socketD = null;
 		Socket socketC = null;
 		Socket socketBlind = null;
+		int blindPort = new Integer(P.valueFor("blindSocket"));
+		
 		try{
 			if(type.equals("down")){
 				NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+portD);
@@ -204,7 +206,7 @@ public class PUContext {
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
 				}
-				socketBlind = new Socket(ip, 39999);
+				
 				Buffer buffer = new Buffer();
 				
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
@@ -216,6 +218,7 @@ public class PUContext {
 			else if(type.equals("up")){
 				NodeManager.nLogger.info("-> Trying remote upstream conn to: "+ip.toString()+"/"+portC);
 				socketC = new Socket(ip, portC);
+				socketBlind = new Socket(ip, blindPort);
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
 				upstreamTypeConnection.add(con);
 				remoteUpstream.add(con);
@@ -272,13 +275,15 @@ public class PUContext {
 		int opId = opToReconfigure.getOperatorId();
 		int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
 		int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();
+		int blindPort = new Integer(P.valueFor("blindSocket"));
 	
 		for(EndPoint ep : downstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
 				try{
 					Socket dataS = new Socket(newIp, dataPort);
 					Socket controlS = new Socket(newIp, controlPort);
-					Socket blindS = new Socket(newIp, 39999);
+					//Socket blindS = new Socket(newIp, blindPort);
+					Socket blindS = null;
 					Buffer buf = downstreamBuffers.get(opId);
 					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
 					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, blindS, buf);
@@ -293,7 +298,7 @@ public class PUContext {
 			if(ep.getOperatorId() == opId){
 				try{
 					Socket controlS = new Socket(newIp, controlPort);
-					Socket blindS = new Socket(newIp, 39999);
+					Socket blindS = new Socket(newIp, blindPort);
 					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
 					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, blindS, null);
 					upstreamTypeConnection.set(index, cci);

@@ -104,10 +104,12 @@ public class ControlDispatcher {
 		Output output = null;
 		try{
 			output = new Output(socket.getOutputStream());
-			synchronized(socket){
-				synchronized (output){
-					k.writeObject(output, ct);
-					output.flush();
+			synchronized(k){
+				synchronized(socket){
+					synchronized (output){
+						k.writeObject(output, ct);
+						output.flush();
+					}
 				}
 			}
 		}
@@ -118,6 +120,7 @@ public class ControlDispatcher {
 	}
 	
 	private Output largeOutput = new Output(1000000000);
+//	private Output largeOutput = new Output();
 	
 	public void sendUpstream_large(ControlTuple ct, int index){
 		long startSend = System.currentTimeMillis();
@@ -129,15 +132,17 @@ public class ControlDispatcher {
 		try{
 			//output = new Output(socket.getOutputStream(), 1000000000);
 			largeOutput.setOutputStream(socket.getOutputStream());
-			synchronized(socket){
-				synchronized (largeOutput){
-					long startWrite = System.currentTimeMillis();
-					k.writeObject(largeOutput, ct);
-					System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
-					largeOutput.flush();
-					long stopWrite = System.currentTimeMillis();
-					System.out.println("% Write socket: "+(stopWrite-startWrite));
+			synchronized(k){
+				synchronized(socket){
+					synchronized (largeOutput){
+						long startWrite = System.currentTimeMillis();
+						k.writeObject(largeOutput, ct);
+						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
+						largeOutput.flush();
+						long stopWrite = System.currentTimeMillis();
+						System.out.println("% Write socket: "+(stopWrite-startWrite));
 //					output.close();
+					}
 				}
 			}
 		}
@@ -152,21 +157,26 @@ public class ControlDispatcher {
 	public void sendUpstream_blind(ControlTuple ct, int index){
 		long startSend = System.currentTimeMillis();
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		Socket socket = ((SynchronousCommunicationChannel) obj).getBlindSocket();
-		Output output = null;
-		BackupOperatorState bos = ct.getBackupState();
-		System.out.println("About to send: "+bos.getOpId());
+		//Reopen socket before sending... only if closed
+		// closed?
+		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
+//		BackupOperatorState bos = ct.getBackupState();
+//		System.out.println("About to send: "+bos.getOpId());
 		try{
 			largeOutput.setOutputStream(socket.getOutputStream());
-			synchronized(socket){
-				synchronized (largeOutput){
-					long startWrite = System.currentTimeMillis();
-					k.writeObject(largeOutput, ct);
-					System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
-					largeOutput.flush();
-					long stopWrite = System.currentTimeMillis();
-					System.out.println("% Write socket: "+(stopWrite-startWrite));
-//					output.close();
+//			output = new Output(socket.getOutputStream());
+//			System.out.println("WRITING TO: "+socket.toString());
+			synchronized(k){
+				synchronized(socket){
+					synchronized (largeOutput){
+						long startWrite = System.currentTimeMillis();
+						k.writeObject(largeOutput, ct);
+						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
+						largeOutput.flush();
+						largeOutput.close();
+						long stopWrite = System.currentTimeMillis();
+						System.out.println("% Write socket: "+(stopWrite-startWrite));
+					}
 				}
 			}
 		}
@@ -180,19 +190,22 @@ public class ControlDispatcher {
 	
 	public void sendDownstream(ControlTuple ct, int index){
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
-		if(obj instanceof CoreRE){
-			CoreRE operatorObj = (CoreRE) obj;
-			operatorObj.processControlTuple(ct, null);
-		}
-		else if (obj instanceof SynchronousCommunicationChannel){
+//		if(obj instanceof CoreRE){
+//			CoreRE operatorObj = (CoreRE) obj;
+//			operatorObj.processControlTuple(ct, null);
+//		}
+//		else if (obj instanceof SynchronousCommunicationChannel){
+		if (obj instanceof SynchronousCommunicationChannel){
 			Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
 			Output output = null;
 			try{
 				output = new Output(socket.getOutputStream());
-				synchronized (socket){
+				synchronized(k){
+					synchronized (socket){
 //					tuple.writeDelimitedTo(socket.getOutputStream());
-					k.writeObject(output, ct);
-					output.flush();
+						k.writeObject(output, ct);
+						output.flush();
+					}
 				}
 			}
 			catch(IOException io){
@@ -204,24 +217,30 @@ public class ControlDispatcher {
 	
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
 		Output output = new Output(os);
-		k.writeObject(output, genericAck);
+		synchronized(k){
+			k.writeObject(output, genericAck);
+		}
 		output.flush();
 	}
 	
 	public void initStateMessage(ControlTuple initStateMsg, OutputStream os){
 		Output output = new Output(os);
-		k.writeObject(output, initStateMsg);
+		synchronized(k){
+			k.writeObject(output, initStateMsg);
+		}
 		output.flush();
 	}
 	
 	public Object deepCopy(Object toCopy){
 		long s = System.currentTimeMillis();
 		System.out.println("CLASS: "+toCopy.getClass().toString());
-		k.register(toCopy.getClass());
-		Object o = k.copy(toCopy);
-		long e = System.currentTimeMillis();
-		System.out.println("TOTAL-Kryo-SER: "+(e-s));
-		return k.copy(toCopy);
+		synchronized(k){
+			k.register(toCopy.getClass());
+			Object o = k.copy(toCopy);
+			long e = System.currentTimeMillis();
+			System.out.println("TOTAL-Kryo-SER: "+(e-s));
+			return k.copy(toCopy);
+		}
 	}
 	
 }

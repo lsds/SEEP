@@ -128,7 +128,7 @@ public class CoreRE {
 		// Start communications and worker threads
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInD();
-		int inBT = 39999;
+		int inBT = new Integer(P.valueFor("blindSocket"));
 		//Control worker
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch);
@@ -143,13 +143,14 @@ public class CoreRE {
 		controlH.start();
 		iDataH.start();
 		
+		/// \todo{FIX THIS. cREATE ONLY IF ANY DOWNSTREAM IS STATEFUL}
 		// If some downstream is stateful, then we have to run the backupHandler
-		if(processingUnit.getOperator().getOpContext().isDownstreamStateful()){
+//		if(processingUnit.getOperator().getOpContext().isDownstreamStateful()){
 			// Backup worker
 			bh = new BackupHandler(this, inBT);
 			backupH = new Thread(bh);
 			backupH.start();
-		}
+//		}
 	}
 	
 	public void setRuntime(){
@@ -312,6 +313,7 @@ public class CoreRE {
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
 		ControlTupleType ctt = ct.getType();
 		/** ACK message **/
+		
 		if(ctt.equals(ControlTupleType.ACK)) {
 			Ack ack = ct.getAck();
 			if(ack.getTs() >= ts_ack){

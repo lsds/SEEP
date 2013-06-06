@@ -406,7 +406,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	private long blindParallelBackupState(){
 		long last_data_proc = -1;
 		if(runningOpState != null){
-			BackupOperatorState bs = new BackupOperatorState();
+			BackupOperatorState bs0 = new BackupOperatorState();
+			BackupOperatorState bs1 = new BackupOperatorState();
 			// Mutex for executor (in case multicore)
 			if(multiCoreEnabled){
 				try {
@@ -427,15 +428,30 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					e.printStackTrace();
 				}
 			}
+			
 			last_data_proc = owner.getTsData();
 			runningOpState.setData_ts(last_data_proc);
-			bs.setOpId(runningOpState.getOwnerId());
-			bs.setState(runningOpState);
-			bs.setStateClass(runningOpState.getStateTag());
 			
-			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
-			//owner.sendBackupState(ctB);
-			owner.sendBlindData(ctB);
+			// change 0 for proper key
+			long a = System.currentTimeMillis();
+			State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
+			long b = System.currentTimeMillis();
+			System.out.println("partitioning time: "+(b-a));
+			
+			bs0.setOpId(runningOpState.getOwnerId());
+			bs0.setState(partitions[0]);
+//			bs0.setState(runningOpState);
+			bs0.setStateClass(runningOpState.getStateTag());
+			
+			bs1.setOpId(runningOpState.getOwnerId());
+			bs1.setState(partitions[1]);
+			bs1.setStateClass(runningOpState.getStateTag());
+			
+			ControlTuple ctB = new ControlTuple().makeBackupState(bs0);
+			ControlTuple ctB2 = new ControlTuple().makeBackupState(bs1);
+			
+			/** A-B **/
+//			owner.sendBlindData(ctB);
 			
 			if(multiCoreEnabled){
 				executorMutex.release(numberOfWorkerThreads);
@@ -443,6 +459,12 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			else{
 				mutex.release();
 			}
+			owner.sendBlindData(ctB);
+			bs0 = null;
+			bs1 = null;
+			ctB = null;
+			ctB2 = null;
+//			owner.sendBlindData(ctB2);
 		}
 		return last_data_proc;
 	}

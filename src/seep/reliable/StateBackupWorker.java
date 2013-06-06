@@ -39,7 +39,8 @@ public class StateBackupWorker implements Runnable, Serializable{
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		processingUnit.checkpointAndBackupState();
+//		processingUnit.checkpointAndBackupState();
+		processingUnit.blindParallelCheckpointAndBackupState();
 		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
@@ -54,6 +55,12 @@ public class StateBackupWorker implements Runnable, Serializable{
 //						processingUnit.directParallelCheckpointAndBackupState();
 //						processingUnit.blindCheckpointAndBackupState();
 						processingUnit.blindParallelCheckpointAndBackupState();
+						
+//						long startGC = System.currentTimeMillis();
+//						System.gc();
+//						long stopGC = System.currentTimeMillis();
+//						System.out.println("%% Total GC: "+(stopGC-startGC));
+						
 						long stopCheckpoint = System.currentTimeMillis();
 						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));
 					}

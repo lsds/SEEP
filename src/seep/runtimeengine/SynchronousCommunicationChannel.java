@@ -2,6 +2,7 @@ package seep.runtimeengine;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,6 +76,19 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	}
 	
 	public Socket getBlindSocket(){
+		return blindSocket;
+	}
+	
+	public Socket reOpenBlindSocket(){
+		InetAddress ip = blindSocket.getInetAddress();
+		int port = blindSocket.getPort();
+		try {
+			blindSocket = new Socket(ip, port);
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return blindSocket;
 	}
 	

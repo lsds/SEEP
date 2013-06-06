@@ -57,12 +57,12 @@ public class BackupHandler implements Runnable{
 		try{
 			//Establish listening port
     		backupServerSocket = new ServerSocket(connPort);
-			backupServerSocket.setReuseAddress(true);
+//			backupServerSocket.setReuseAddress(true);
 			NodeManager.nLogger.info("-> BackupHandler listening in port: "+connPort);
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
-				String machine = backupServerSocket.getInetAddress().toString();
+				String machine = backupServerSocket.getInetAddress().getHostAddress();
 				String file = null;
 				if(mapNode.containsKey(machine)){
 					file = mapNode.get(machine);

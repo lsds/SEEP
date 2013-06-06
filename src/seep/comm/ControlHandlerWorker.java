@@ -88,6 +88,11 @@ public class ControlHandlerWorker implements Runnable{
 //				System.out.println("RECEIVED");
 /// \todo {what is the underlying problem that makes tuple potentially be null?}
 				if(tuple != null){
+//					if(tuple.getType() == null){
+//						System.out.println("MIERDA");
+//						System.out.println("RCVD FROM: "+incomingSocket.toString());
+//						System.exit(0);
+//					}
 					owner.processControlTuple(tuple, os);
 				}
 				else{
