@@ -136,6 +136,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public Operator getOperator(){
 		return runningOp;
 	}
+	
+	@Override
+	public CoreRE getOwner(){
+		return owner;
+	}
 
 	@Override
 	public boolean isNodeStateful(){
@@ -402,6 +407,63 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			owner.ack(tsToAck);
 		}
 	}
+	
+	public void lockFreeParallelCheckpointAndBackupState(){
+		long tsToAck = lockFreeParallelBackupState();
+		if(tsToAck != -1){
+			owner.ack(tsToAck);
+		}
+	}
+	
+	private long lockFreeParallelBackupState(){
+		long last_data_proc = -1;
+		if(runningOpState != null){
+			BackupOperatorState bs = new BackupOperatorState();
+			
+			// Set dirty mode (lock free)
+			((Partitionable)runningOpState).setDirtyMode(true);
+			
+			// Set ts for consistency, etc...
+			last_data_proc = owner.getTsData();
+			runningOpState.setData_ts(last_data_proc);
+			
+			//  the send through the network (optimistic)
+//			bs.setOpId(runningOpState.getOwnerId());
+//			bs.setState(runningOpState);
+//			bs.setStateClass(runningOpState.getStateTag());
+//			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
+//			owner.sendBackupState(ctB);
+			
+			// STREAMING THROUGH THE NETWORK (enforcing constant memory consumption here)
+			ArrayList<Object> microBatch;
+			int it = 0;
+			int size = ((Partitionable)runningOpState).getSize();
+			System.out.println("SIZE of state to stream is: "+size);
+			while(it < size){
+				microBatch = ((Partitionable)runningOpState).streamSplitState(runningOpState, it);
+				it = it + microBatch.size();
+				bs.setOpId(runningOpState.getOwnerId());
+				bs.setState(new StreamData(microBatch));
+				bs.setStateClass(runningOpState.getStateTag());
+				
+				ControlTuple ctB = new ControlTuple().makeBackupState(bs);
+//				owner.sendBackupState(ctB);
+				owner.sendBlindData(ctB);
+			}
+			
+			bs = null;
+			
+			// We reconcile the dirty state with the previous state. Has to always be last op since changes dirtyMode
+			long startR = System.currentTimeMillis();
+			((Partitionable)runningOpState).reconcile();
+			long stopR = System.currentTimeMillis();
+			System.out.println("STREAMED: "+it+" size? "+size);
+			System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
+		}
+		return last_data_proc;
+	}
+	
+	
 	
 	private long blindParallelBackupState(){
 		long last_data_proc = -1;

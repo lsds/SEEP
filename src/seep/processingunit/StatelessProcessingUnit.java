@@ -84,6 +84,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public Operator getOperator() {
 		return runningOp;
 	}
+	
+	@Override
+	public CoreRE getOwner(){
+		return owner;
+	}
 
 	@Override
 	public SystemStatus getSystemStatus() {

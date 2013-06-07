@@ -35,21 +35,20 @@ public class BackupHandlerWorker implements Runnable{
 		this.owner = owner;
 		// Create pipedStreams
 		this.pos = new PipedOutputStream();
-		this.pis = new PipedInputStream(10000000);
+		this.pis = new PipedInputStream(10000);
 		this.fileName = fileName;
-		
+
 		RandomAccessFile raf = null;
 		try {
 			raf = new RandomAccessFile("memorymaptest.dat", "rw");
-		
+
 			FileChannel fc = raf.getChannel();
-		
+
 			mbb1 = fc.map(FileChannel.MapMode.READ_WRITE, 0, 1000000000);
 		}
 		catch(Exception e){
-			
+
 		}
-		
 	}
 	
 	public void init(long ts){
@@ -90,7 +89,7 @@ public class BackupHandlerWorker implements Runnable{
 	
 	
 	public void noop(){
-		byte[] buffer = new byte[10000000];
+		byte[] buffer = new byte[10000];
 		System.out.println("PELOTAS");
 		int bytesRead = 0;
 		BufferedInputStream bis;
@@ -112,7 +111,7 @@ public class BackupHandlerWorker implements Runnable{
 	public void pipedWrite(){
 		this.init(System.currentTimeMillis());
 //		while(goOn){
-			byte[] buffer = new byte[10000000];
+			byte[] buffer = new byte[10000];
 			
 			try {
 				BufferedInputStream bis = new BufferedInputStream(incomingSocket.getInputStream());
@@ -141,7 +140,7 @@ public class BackupHandlerWorker implements Runnable{
 			try {
 				bis = new BufferedInputStream(incomingSocket.getInputStream());
 				int bytesRead = 0;
-				byte[] buffer = new byte[10000000];
+				byte[] buffer = new byte[10000];
 				while ((bytesRead = bis.read(buffer)) != -1) {
 					//pos.write(buffer, 0, bytesRead);
             		mbb1.put(buffer, 0, bytesRead);

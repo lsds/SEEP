@@ -18,6 +18,8 @@ public interface IProcessingUnit {
 		NORMAL, WAITING_FOR_STATE_ACK, INITIALISING_STATE//, REPLAYING_BUFFER//, RECONFIGURING_COMM
 	}
 	
+	public CoreRE getOwner();
+	
 	public Operator getOperator();
 		
 	public boolean isNodeStateful();

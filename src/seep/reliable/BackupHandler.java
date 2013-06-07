@@ -62,12 +62,13 @@ public class BackupHandler implements Runnable{
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
-				String machine = backupServerSocket.getInetAddress().getHostAddress();
+//				String machine = backupServerSocket.getInetAddress().getHostAddress();
 				String file = null;
-				if(mapNode.containsKey(machine)){
-					file = mapNode.get(machine);
-				}
+//				if(mapNode.containsKey(machine)){
+//					file = mapNode.get(machine);
+//				}
 				Thread newConn = new Thread(new BackupHandlerWorker(backupServerSocket.accept(), owner, file));
+				
 				newConn.start();
 			}
 			backupServerSocket.close();
@@ -81,7 +82,5 @@ public class BackupHandler implements Runnable{
 			NodeManager.nLogger.severe("-> BackupHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
 		}
-		
 	}
-
 }

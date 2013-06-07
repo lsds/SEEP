@@ -243,7 +243,7 @@ public class CoreRE {
 	
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, BACKUP_NODE_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
-		BACKUP_RI, INIT_RI, RAW_DATA
+		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL
 	}
 	
 	public synchronized void setTsData(long ts_data){
@@ -313,7 +313,6 @@ public class CoreRE {
 	public void processControlTuple(ControlTuple ct, OutputStream os) {
 		ControlTupleType ctt = ct.getType();
 		/** ACK message **/
-		
 		if(ctt.equals(ControlTupleType.ACK)) {
 			Ack ack = ct.getAck();
 			if(ack.getTs() >= ts_ack){
@@ -329,6 +328,16 @@ public class CoreRE {
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitOperatorState().getOpId());
 			coreProcessLogic.processInitState(ct.getInitOperatorState());
+		}
+		/** OPEN_SIGNAL message **/
+		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from NODE: "+ct.getInvalidateState().getOperatorId());
+			
+		}
+		/** CLOSE_SIGNAL message **/
+		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from NODE: "+ct.getInvalidateState().getOperatorId());
+			
 		}
 		/** STATE_BACKUP message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_OP_STATE)){
@@ -556,6 +565,20 @@ public class CoreRE {
 	public void ack(long ts) {
 		ControlTuple ack = new ControlTuple(ControlTupleType.ACK, processingUnit.getOperator().getOperatorId(), ts);
 		controlDispatcher.sendAllUpstreams(ack);
+	}
+	
+	public void signalOpenBackupSession(){
+		int opId = processingUnit.getOperator().getOperatorId();
+		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
+		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup();
+		controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
+	}
+	
+	public void signalCloseBackupSession(){
+		int opId = processingUnit.getOperator().getOperatorId();
+		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
+		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup();
+		controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
 	}
 
 	public void manageBackupUpstreamIndex(int opId){

@@ -54,7 +54,13 @@ public class StateBackupWorker implements Runnable, Serializable{
 //						processingUnit.directCheckpointAndBackupState();
 //						processingUnit.directParallelCheckpointAndBackupState();
 //						processingUnit.blindCheckpointAndBackupState();
-						processingUnit.blindParallelCheckpointAndBackupState();
+//						processingUnit.blindParallelCheckpointAndBackupState();
+						
+						processingUnit.getOwner().signalOpenBackupSession();
+						
+						processingUnit.lockFreeParallelCheckpointAndBackupState();
+						
+						processingUnit.getOwner().signalCloseBackupSession();
 						
 //						long startGC = System.currentTimeMillis();
 //						System.gc();

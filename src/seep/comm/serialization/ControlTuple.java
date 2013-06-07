@@ -247,4 +247,14 @@ public class ControlTuple {
 		this.invalidateState = new InvalidateState(opIdToInvalidate);
 		return this;
 	}
+	
+	public ControlTuple makeOpenSignalBackup(){
+		this.type = CoreRE.ControlTupleType.OPEN_BACKUP_SIGNAL;
+		return this;
+	}
+	
+	public ControlTuple makeCloseSignalBackup(){
+		this.type = CoreRE.ControlTupleType.CLOSE_BACKUP_SIGNAL;
+		return this;
+	}
 }

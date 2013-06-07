@@ -1,22 +1,16 @@
 package seep.buffer;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.messages.BatchTuplePayload;
 import seep.infrastructure.monitor.MetricsReader;
-import seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
-import seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -27,6 +21,7 @@ public class Buffer implements Serializable{
 	private static final long serialVersionUID = 1L;
 
 	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
+//	private HashSet<BatchTuplePayload> bufff = new LinkedHashSet<BatchTuplePayload>();
 	
 	private BackupOperatorState bs = null;
 	private RawData rw = null;
@@ -99,14 +94,12 @@ public class Buffer implements Serializable{
 			long timeStamp = 0;
 			numOfTuplesPerBatch = next.batchSize;
 			//Accessing last index cause that is the newest tuple in the batch
-//System.out.println("TRIMMING: ts-> "+ts);
-//System.out.println("TRIMMING: access to "+(numOfTuplesPerBatch-1)+" size: "+next.size());
+
 			timeStamp = next.getTuple(numOfTuplesPerBatch-1).timestamp;
 			if (timeStamp <= ts) iter.remove();
 			else break;
 		}
 		long endTrim = System.currentTimeMillis();
-//System.out.println("%% TOTAL TRIM: "+(endTrim-startTrim));
 		MetricsReader.loggedEvents.clear();
 		MetricsReader.loggedEvents.inc(buff.size());
 	}
