@@ -1,6 +1,9 @@
 package seep.runtimeengine;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -119,6 +122,34 @@ public class ControlDispatcher {
 		}
 	}
 	
+	public void sendUpstreamWaitForReply(ControlTuple ct, int index){
+		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
+		Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
+		Output output = null;
+		BufferedReader in = null;
+		try{
+			output = new Output(socket.getOutputStream());
+			synchronized(k){
+				synchronized(socket){
+					synchronized (output){
+						k.writeObject(output, ct);
+						output.flush();
+						in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+						String reply = null;
+						System.out.println("waiting to read answer/reply");
+						reply = in.readLine();
+						System.out.println("READ");
+						// We actually dont care about the reply...
+					}
+				}
+			}
+		}
+		catch(IOException io){
+			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			io.printStackTrace();
+		}
+	}
+	
 	private Output largeOutput = new Output(1000000000);
 //	private Output largeOutput = new Output();
 	
@@ -186,6 +217,21 @@ public class ControlDispatcher {
 		}
 		long stopSend = System.currentTimeMillis();
 		System.out.println("% Send : "+(stopSend-startSend));
+	}
+	
+	public void sendUpstream_blind_metadata(int data, int index){
+		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
+		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
+		try{
+			DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+			dos.writeInt(data);
+			dos.flush();
+			dos.close();
+		}
+		catch(IOException io){
+			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			io.printStackTrace();
+		}
 	}
 	
 	public void sendDownstream(ControlTuple ct, int index){

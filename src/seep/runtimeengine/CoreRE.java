@@ -1,6 +1,11 @@
 package seep.runtimeengine;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
@@ -331,13 +336,24 @@ public class CoreRE {
 		}
 		/** OPEN_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from NODE: "+ct.getInvalidateState().getOperatorId());
-			
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from NODE: "+ct.getOpenSignal().getOpId());
+			bh.openSession();
+			PrintWriter out = new PrintWriter(os, true);
+			out.println("ack");
+			System.out.println("ANSWER OPen signal");
 		}
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from NODE: "+ct.getInvalidateState().getOperatorId());
-			
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from NODE: "+ct.getCloseSignal().getOpId());
+			bh.closeSession();
+//			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os));
+//			try {
+//				bw.write("ack");
+//			} 
+//			catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 		}
 		/** STATE_BACKUP message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_OP_STATE)){
@@ -570,14 +586,15 @@ public class CoreRE {
 	public void signalOpenBackupSession(){
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
-		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup();
-		controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
+		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
+//		controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
+		controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
 	}
 	
 	public void signalCloseBackupSession(){
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
-		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup();
+		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId);
 		controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
 	}
 
@@ -605,6 +622,10 @@ public class CoreRE {
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream_blind(ctB, backupUpstreamIndex);
+	}
+	
+	public void sendBlindMetaData(int data){
+		controlDispatcher.sendUpstream_blind_metadata(data, backupUpstreamIndex);
 	}
 	
 	public void sendRawData(ControlTuple ctB){

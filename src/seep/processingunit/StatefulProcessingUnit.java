@@ -439,7 +439,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			int it = 0;
 			int size = ((Partitionable)runningOpState).getSize();
 			System.out.println("SIZE of state to stream is: "+size);
+			int aux = 0;
 			while(it < size){
+				aux++;
 				microBatch = ((Partitionable)runningOpState).streamSplitState(runningOpState, it);
 				it = it + microBatch.size();
 				bs.setOpId(runningOpState.getOwnerId());
@@ -448,6 +450,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				
 				ControlTuple ctB = new ControlTuple().makeBackupState(bs);
 //				owner.sendBackupState(ctB);
+				
+//				owner.sendBlindMetaData(0);
 				owner.sendBlindData(ctB);
 			}
 			
@@ -458,6 +462,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			((Partitionable)runningOpState).reconcile();
 			long stopR = System.currentTimeMillis();
 			System.out.println("STREAMED: "+it+" size? "+size);
+			System.out.println("MSG SENT: "+aux);
 			System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
 		}
 		return last_data_proc;

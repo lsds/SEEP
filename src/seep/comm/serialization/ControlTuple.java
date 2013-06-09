@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.BackupRI;
+import seep.comm.serialization.controlhelpers.CloseSignal;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
 import seep.comm.serialization.controlhelpers.InvalidateState;
+import seep.comm.serialization.controlhelpers.OpenSignal;
 import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
@@ -31,6 +33,8 @@ public class ControlTuple {
 	private BackupRI backupRI;
 	private InitRI initRI;
 	private RawData rawData;
+	private OpenSignal openSignal;
+	private CloseSignal closeSignal;
 	
 
 	public ControlTuple(){}
@@ -149,6 +153,22 @@ public class ControlTuple {
 		this.rawData = rawData;
 	}
 	
+	public OpenSignal getOpenSignal() {
+		return openSignal;
+	}
+
+	public void setOpenSignal(OpenSignal openSignal) {
+		this.openSignal = openSignal;
+	}
+
+	public CloseSignal getCloseSignal() {
+		return closeSignal;
+	}
+
+	public void setCloseSignal(CloseSignal closeSignal) {
+		this.closeSignal = closeSignal;
+	}
+	
 	public ControlTuple makeGenericAck(int nodeId){
 		this.type = CoreRE.ControlTupleType.ACK;
 		this.ack = new Ack(nodeId, 0);
@@ -248,13 +268,15 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeOpenSignalBackup(){
+	public ControlTuple makeOpenSignalBackup(int opId){
 		this.type = CoreRE.ControlTupleType.OPEN_BACKUP_SIGNAL;
+		this.openSignal = new OpenSignal(opId);
 		return this;
 	}
 	
-	public ControlTuple makeCloseSignalBackup(){
+	public ControlTuple makeCloseSignalBackup(int opId){
 		this.type = CoreRE.ControlTupleType.CLOSE_BACKUP_SIGNAL;
+		this.closeSignal = new CloseSignal(opId);
 		return this;
 	}
 }
