@@ -114,6 +114,9 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
 		processingUnit.sendData(dt, targets);
+		
+//		ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
+//		processingUnit.sendData(dt, targets);
 	}
 	
 	/** System Configuration Settings **/

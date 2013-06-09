@@ -254,12 +254,33 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	@Override
 	public void processData(DataTuple data){
 		// Get the mutex
-		try {
-			mutex.acquire();
-		} 
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+//		try {
+//			mutex.acquire();
+//		} 
+//		catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		
+		if(multiCoreEnabled){
+			try {
+				executorMutex.acquire(numberOfWorkerThreads);
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		// Mutex for data processing
+		else{
+			try {
+				mutex.acquire();
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		// Instrumentation
@@ -268,19 +289,46 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// TODO: Adjust timestamp of state
 		runningOp.processData(data);
 		// Release the mutex
-		mutex.release();
+//		mutex.release();
+		if(multiCoreEnabled){
+			executorMutex.release(numberOfWorkerThreads);
+		}
+		else{
+			mutex.release();
+		}
 	}
 	
 	@Override
 	public void processData(ArrayList<DataTuple> data){
 		// Get the mutex
-		try {
-			mutex.acquire();
-		} 
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+//		try {
+//			mutex.acquire();
+//		} 
+//		catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		if(multiCoreEnabled){
+			try {
+				executorMutex.acquire(numberOfWorkerThreads);
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
+		// Mutex for data processing
+		else{
+			try {
+				mutex.acquire();
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		// Instrumentation
 //		MetricsReader.eventsPerSecond.mark();
 		
@@ -288,13 +336,28 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// TODO: Adjust timestamp of state
 		runningOp.processData(data);
 		// Release the mutex
-		mutex.release();
+//		mutex.release();
+		
+		if(multiCoreEnabled){
+			executorMutex.release(numberOfWorkerThreads);
+		}
+		else{
+			mutex.release();
+		}
 	}
 
 	@Override
 	public void sendData(DataTuple dt, ArrayList<Integer> targets){
 		// Here user code (operator) returns from execution, so release mutex
-		mutex.release();
+//		mutex.release();
+		
+		if(multiCoreEnabled){
+			executorMutex.release(numberOfWorkerThreads);
+		}
+		else{
+			mutex.release();
+		}
+		
 		for(int i = 0; i<targets.size(); i++){
 			int target = targets.get(i);
 			try{
@@ -322,12 +385,32 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 		// Here, user code can potentially keep modifying state, acquire the mutex
 		// Note that if user code finishes after this call, the mutex will be released after processData anyway, so it is safe to get the mutex here.
-		try {
-			mutex.acquire();
-		} 
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+//		try {
+//			mutex.acquire();
+//		} 
+//		catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		if(multiCoreEnabled){
+			try {
+				executorMutex.acquire(numberOfWorkerThreads);
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		// Mutex for data processing
+		else{
+			try {
+				mutex.acquire();
+			}
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
