@@ -40,7 +40,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 			e1.printStackTrace();
 		}
 //		processingUnit.checkpointAndBackupState();
-		processingUnit.blindParallelCheckpointAndBackupState();
+		processingUnit.lockFreeParallelCheckpointAndBackupState();
 		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;

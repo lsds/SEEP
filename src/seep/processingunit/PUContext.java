@@ -271,10 +271,11 @@ public class PUContext {
 	
 	/** Dynamic Reconfiguration **/
 	
-	public void updateConnection(Operator opToReconfigure, InetAddress newIp){
-		int opId = opToReconfigure.getOperatorId();
-		int dataPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInD();
-		int controlPort = opToReconfigure.getOpContext().getOperatorStaticInformation().getInC();
+	public void updateConnection(int opRecId, Operator opToReconfigure, InetAddress newIp){
+		int opId = opRecId;
+		int dataPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInD();
+		int controlPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInC();
+
 		int blindPort = new Integer(P.valueFor("blindSocket"));
 	
 		for(EndPoint ep : downstreamTypeConnection){
@@ -282,7 +283,6 @@ public class PUContext {
 				try{
 					Socket dataS = new Socket(newIp, dataPort);
 					Socket controlS = new Socket(newIp, controlPort);
-					//Socket blindS = new Socket(newIp, blindPort);
 					Socket blindS = null;
 					Buffer buf = downstreamBuffers.get(opId);
 					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
@@ -290,7 +290,7 @@ public class PUContext {
 					downstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){
-					System.out.println("While re-creating socket: "+io.getMessage());
+					System.out.println("While re-creating DOWNSTREAM socket: "+io.getMessage());
 				}
 			}
 		}
@@ -304,7 +304,7 @@ public class PUContext {
 					upstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){
-					System.out.println("While re-creating socket: "+io.getMessage());
+					System.out.println("While re-creating UPSTREAM socket: "+io.getMessage());
 				}
 			}
 		}

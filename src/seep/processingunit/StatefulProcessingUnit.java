@@ -17,6 +17,7 @@ import seep.comm.serialization.DataTuple;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.RawData;
+import seep.comm.serialization.controlhelpers.StateChunk;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.monitor.MetricsReader;
 import seep.operator.EndPoint;
@@ -436,12 +437,12 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	@Override
 	public void reconfigureOperatorConnection(int opId, InetAddress ip){
-		if(runningOp.getOperatorId() == opId){
-			ctx.updateConnection(runningOp, ip);
-		}
-		else{
-			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
-		}
+		//if(runningOp.getOperatorId() == opId){
+			ctx.updateConnection(opId, runningOp, ip);
+		//}
+//		else{
+//			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
+//		}
 	}
 	
 	public ArrayList<Integer> getRouterIndexesInformation(int opId){
@@ -501,51 +502,66 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	private long lockFreeParallelBackupState(){
 		long last_data_proc = -1;
 		if(runningOpState != null){
-			BackupOperatorState bs = new BackupOperatorState();
-			
+			int opId = runningOpState.getOwnerId();
+			String stateTag = runningOpState.getStateTag();
 			// Set dirty mode (lock free)
 			((Partitionable)runningOpState).setDirtyMode(true);
 			
 			// Set ts for consistency, etc...
 			last_data_proc = owner.getTsData();
 			runningOpState.setData_ts(last_data_proc);
-			
-			//  the send through the network (optimistic)
-//			bs.setOpId(runningOpState.getOwnerId());
-//			bs.setState(runningOpState);
-//			bs.setStateClass(runningOpState.getStateTag());
-//			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
-//			owner.sendBackupState(ctB);
-			
+
 			// STREAMING THROUGH THE NETWORK (enforcing constant memory consumption here)
 			ArrayList<Object> microBatch;
 			int it = 0;
 			int size = ((Partitionable)runningOpState).getSize();
-			System.out.println("SIZE of state to stream is: "+size);
-			int aux = 0;
-			while(it < size){
-				aux++;
-				microBatch = ((Partitionable)runningOpState).streamSplitState(runningOpState, it);
-				it = it + microBatch.size();
-				bs.setOpId(runningOpState.getOwnerId());
-				bs.setState(new StreamData(microBatch));
-				bs.setStateClass(runningOpState.getStateTag());
-				
-				ControlTuple ctB = new ControlTuple().makeBackupState(bs);
-//				owner.sendBackupState(ctB);
-				
-//				owner.sendBlindMetaData(0);
-				owner.sendBlindData(ctB);
-			}
+//			System.out.println("SIZE of state to stream is: "+size);
+			int sequenceNumber = 0;
+			NodeManager.nLogger.info("% -> Backuping state with owner: "+opId);
 			
-			bs = null;
+			int partitioningKey = 0;
+			int totalChunks = ((Partitionable)runningOpState).getTotalNumberOfChunks();
+			((Partitionable)runningOpState).setUpIterator();
+			//while(it < size){
+			while(((Partitionable)runningOpState).getIterator().hasNext()){
+				
+				StreamData sd = ((Partitionable)runningOpState).streamSplitState(runningOpState, it, partitioningKey);
+				// finished
+				if(sd == null){
+					StreamData[] chunks = ((Partitionable)runningOpState).getRemainingData();
+					microBatch = chunks[0].microBatch;
+					ControlTuple ctB = new ControlTuple().makeStateChunk(opId, chunks[0].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch));
+					sequenceNumber++;
+					owner.sendBlindData(ctB, chunks[0].partition);
+					((Partitionable)runningOpState).resetStructures(chunks[0].partition);
+//					System.out.println("f");
+					
+					microBatch = chunks[1].microBatch;
+					ControlTuple ctB2 = new ControlTuple().makeStateChunk(opId, chunks[1].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch));
+					sequenceNumber++;
+					owner.sendBlindData(ctB2, chunks[1].partition);
+					((Partitionable)runningOpState).resetStructures(chunks[1].partition);
+//					System.out.println("f");
+					break;
+				}
+				microBatch = sd.microBatch;
+				it = it + microBatch.size();
+				ControlTuple ctB = new ControlTuple().makeStateChunk(opId, sd.partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch));
+				sequenceNumber++;
+				owner.sendBlindData(ctB, sd.partition);
+				((Partitionable)runningOpState).resetStructures(sd.partition);
+//				System.out.println("n");
+			}
+			// We inform our CORE of the number of chunks of the last backup
+			owner.setTotalNumberOfStateChunks(sequenceNumber);
 			
 			// We reconcile the dirty state with the previous state. Has to always be last op since changes dirtyMode
 			long startR = System.currentTimeMillis();
 			((Partitionable)runningOpState).reconcile();
 			long stopR = System.currentTimeMillis();
-			System.out.println("STREAMED: "+it+" size? "+size);
-			System.out.println("MSG SENT: "+aux);
+//			System.out.println("STREAMED: "+it+" size? "+size);
+			System.out.println("MSG SENT: "+sequenceNumber);
+			System.out.println("TOTAL SEQ NUMER: "+totalChunks);
 			System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
 		}
 		return last_data_proc;
@@ -609,7 +625,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			else{
 				mutex.release();
 			}
-			owner.sendBlindData(ctB);
+			// fake argument
+			int hint = 0;
+			owner.sendBlindData(ctB, hint);
 			bs0 = null;
 			bs1 = null;
 			ctB = null;
@@ -862,6 +880,16 @@ System.out.println("partitioning time: "+(b-a));
 		// And reference in operator
 		((StatefulOperator)runningOp).replaceState(state);
 		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
+	}
+	
+	
+	public void mergeChunkToState(StateChunk chunk){
+		if(chunk == null){
+			((Partitionable)runningOpState).appendChunk(null);
+			return;
+		}
+		State s = chunk.getState();
+		((Partitionable)runningOpState).appendChunk(s);
 	}
 	
 	

@@ -1,7 +1,14 @@
 package seep.runtimeengine;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,12 +17,20 @@ import java.util.Map;
 import seep.buffer.Buffer;
 import seep.comm.serialization.ControlTuple;
 import seep.comm.serialization.controlhelpers.Ack;
+import seep.comm.serialization.controlhelpers.BackupNodeState;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.BackupRI;
+import seep.comm.serialization.controlhelpers.InitNodeState;
 import seep.comm.serialization.controlhelpers.InitOperatorState;
 import seep.comm.serialization.controlhelpers.InitRI;
+import seep.comm.serialization.controlhelpers.InvalidateState;
 import seep.comm.serialization.controlhelpers.RawData;
+import seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import seep.comm.serialization.controlhelpers.ReplayStateInfo;
+import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
+import seep.comm.serialization.controlhelpers.StateAck;
+import seep.comm.serialization.controlhelpers.StateChunk;
 import seep.infrastructure.NodeManager;
 import seep.operator.Partitionable;
 import seep.operator.State;
@@ -24,6 +39,13 @@ import seep.operator.OperatorContext.PlacedOperator;
 import seep.processingunit.IProcessingUnit;
 import seep.processingunit.PUContext;
 import seep.processingunit.StatefulProcessingUnit;
+import seep.processingunit.StreamStateChunk;
+import seep.reliable.BackupHandler;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 
 public class CoreProcessingLogic implements Serializable{
@@ -34,6 +56,31 @@ public class CoreProcessingLogic implements Serializable{
 	private IProcessingUnit pu;
 	private PUContext puCtx;
 	
+	private Kryo k;
+	
+	public void initializeSerialization(){
+		k = new Kryo();
+		k.setClassLoader(owner.getRuntimeClassLoader());
+		k.register(ControlTuple.class);
+		k.register(StreamStateChunk.class);
+		k.register(StateChunk.class);
+		k.register(HashMap.class, new MapSerializer());
+		k.register(BackupOperatorState.class);
+		k.register(byte[].class);
+		k.register(RawData.class);
+		k.register(Ack.class);
+		k.register(BackupNodeState.class);
+		k.register(Resume.class);
+		k.register(ScaleOutInfo.class);
+		k.register(StateAck.class);
+		k.register(ArrayList.class);
+		k.register(BackupRI.class);
+		k.register(InitNodeState.class);
+		k.register(InitOperatorState.class);
+		k.register(InitRI.class);
+		k.register(InvalidateState.class);
+		k.register(ReconfigureConnection.class);
+	}
 	
 	public void setOwner(CoreRE owner) {
 		this.owner = owner;
@@ -173,9 +220,9 @@ System.out.println("KEY: "+operatorType);
 		}
 		downstreamLastAck.put(opId, current_ts);
 		// Forward only if stateless. Stateful operator forward the state instead
-//		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
+		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
 			owner.ack(minWithCurrent);
-//		}
+		}
 		// To indicate that this is the last ack processed by this operator
 		owner.setTs_ack(current_ts);
 	}
@@ -391,5 +438,136 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 //			((StatefulOperator)owner.subclassOperator).generateBackupState();
 			((StatefulProcessingUnit)pu).checkpointAndBackupState();
 		}
+	}
+	
+	public void directReplayState(ReplayStateInfo rsi, BackupHandler bh){
+		// Stream to one or multiple nodes?
+		File folder = new File("backup/");
+		// this basically means that is because of a failure
+		if(rsi.isStreamToSingleNode()){
+			int opId = rsi.getOldOpId();
+			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
+//			SynchronousCommunicationChannel oldConnection = ((SynchronousCommunicationChannel)puCtx.getDownstreamTypeConnection().get(oldOpIndex));
+			System.out.println("OPID getting socket: "+opId);
+			if(cci == null){
+				System.out.println("CCI is null");
+				System.exit(0);
+			}
+			Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
+			NodeManager.nLogger.info("-> Request to stream to a single node");
+			
+			String lastSessionName = bh.getLastBackupSessionName();
+			ArrayList<File> filesToStream = new ArrayList<File>();
+			int totalNumberChunks = 0;
+			// Read folder and filter out files to send through the network
+			try {
+				Output output = new Output(controlDownstreamSocket.getOutputStream());
+				for(File chunkFile : folder.listFiles()){
+					String chunkName = chunkFile.getName();
+					if(matchSession(chunkName, lastSessionName)){
+						totalNumberChunks++;
+						filesToStream.add(chunkFile);
+						System.out.println("Filename: "+chunkName);
+						Input i = new Input(new FileInputStream(chunkFile));
+						ControlTuple ct = k.readObject(i, ControlTuple.class);
+						ct.getStateChunk().setTotalChunks(bh.getBackupHandler().size());
+						k.writeObject(output, ct);
+						output.flush();
+						i.close();
+						System.out.println("CT: "+ct.toString());
+					}
+				}
+			}
+			catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+//			try{
+//				BufferedOutputStream bos = new BufferedOutputStream(controlDownstreamSocket.getOutputStream(), 100000);
+//				BufferedInputStream bis = null;
+//				byte[] buf = new byte[100000];
+//				//for(int i = 0; i<totalNumberChunks; i++){
+//				for(int i = 0; i<1; i++){
+////					bos = new BufferedOutputStream(controlDownstreamSocket.getOutputStream(), 100000);
+//					bis = new BufferedInputStream(new FileInputStream(filesToStream.get(i)), 100000);
+//					int bytesRead = 0;
+//					while((bytesRead = bis.read(buf)) != -1){
+//						bos.write(buf, 0, bytesRead);
+////						controlDownstreamSocket.getOutputStream().write(buf, 0, bytesRead);
+//					}
+////					bos.close();
+//					bos.flush();
+//					bis.close();
+//				}
+//			}
+//			catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+		}
+		else{
+			NodeManager.nLogger.info("-> Request to stream to multiple nodes");
+			
+		}
+	}
+	
+	private int totalExpectedChunks = -1;
+	private int totalNumberOfChunks = -1;
+	public void setTotalNumberOfChunks(int totalNumberOfChunks){
+		this.totalNumberOfChunks = totalNumberOfChunks;
+	}
+	private int totalReceivedChunks;
+	
+	public void handleNewChunk(StateChunk stateChunk){
+		if(totalExpectedChunks == -1){
+			totalExpectedChunks = stateChunk.getTotalChunks();
+		}
+//		totalReceivedChunks++;
+//		System.out.println("CHUNKS: "+totalReceivedChunks+"/"+totalExpectedChunks);
+//		if(totalReceivedChunks == totalExpectedChunks){
+//			// reset variables
+//			totalReceivedChunks = 0;
+//			totalExpectedChunks = -1; 
+//		}
+		((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);
+		totalReceivedChunks++;
+		System.out.println("CHUNKS: "+totalReceivedChunks+"/"+totalExpectedChunks);
+		if(totalReceivedChunks == totalExpectedChunks){
+			// reset variables
+			totalReceivedChunks = 0;
+			totalExpectedChunks = -1;
+			((StatefulProcessingUnit)pu).mergeChunkToState(null);
+			
+//			//Once state is recovered, then we do this
+			ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
+			owner.getControlDispatcher().sendAllUpstreams(rb);
+			
+			
+			
+			
+//			int opId = stateChunk.getOpId();
+//			owner.manageBackupUpstreamIndex(opId);
+//			//Clean the data processing channel from remaining tuples in old batch
+//			NodeManager.nLogger.info("Changing to INITIALISING STATE, stopping all incoming comm");
+//			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE);
+//			
+//			
+//			//Send a msg to ask for the rest of information. (tuple replaying)
+//			NodeManager.nLogger.info("-> Sending STATE_ACK");
+//			ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
+//			owner.getControlDispatcher().sendAllUpstreams(rb);
+////			pu.cleanInputQueue();
+//			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
+//			System.out.println("Changing to NORMAL mode, recovering data processing");
+		}
+	}
+	
+	private boolean matchSession(String fileName, String sessionName){
+		String[] splits = fileName.split("_");
+		return splits[1].equals(sessionName);
 	}
 }

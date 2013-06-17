@@ -46,8 +46,10 @@ public class OutputQueue {
 			replaySemaphore.set(0);
 			return;
 		}
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore decrements: "+replaySemaphore.toString());
+
+		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore changes from: "+replaySemaphore.toString());
 		replaySemaphore.decrementAndGet();
+		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore to: "+replaySemaphore.toString());
 		synchronized(this){
 			this.notify();
 		}
@@ -55,8 +57,7 @@ public class OutputQueue {
 	
 	public synchronized void stop() {
 		//Stop incoming data, a new thread is replaying
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore increments: "+replaySemaphore.toString());
-		
+		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore changes from: "+replaySemaphore.toString());
 		/**
 		 * hack done on july the third 2012 to get parallel recovery results.
 		 *  we make sure that conn is only stop once
@@ -65,11 +66,12 @@ public class OutputQueue {
 //	return;
 //}
 		replaySemaphore.incrementAndGet();
+		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore to: "+replaySemaphore.toString());
 	}
 	
 	
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
-		
+//System.out.println("A");
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		Buffer buffer = channelRecord.getBuffer();
@@ -79,14 +81,21 @@ public class OutputQueue {
 //		Output output = channelRecord.getOutput();
 		try{
 			//To send tuple
+//System.out.println("B");
 			if(replay.compareAndSet(true, false)){
+//System.out.println("C");
+//				System.out.println("WE ARE IN REPLAY OUTPUTQUEUE");
 				replay(channelRecord);
 				replay.set(false);
 				stop.set(false);
+//				System.out.println("finished REPLAY OUTPUTQUUE");
 				//At this point, this operator has finished replaying the tuples
 				NodeManager.setSystemStable();
 			}
+//System.out.println("D");
 			if(!stop.get()){
+//System.out.println("E");
+//				System.out.println("SEND IN OTUPUTQUEUE");
 				if(!beacon){
 					channelRecord.addDataToBatch(tuple.getPayload());
 				}
@@ -98,17 +107,26 @@ public class OutputQueue {
 				
 				/** shouldnt be less than 0 ever... **/
 				
+//				System.out.println("Before getting to send batch OUTPUTEUQUE");
+//System.out.println("F");
 				if(channelRecord.getChannelBatchSize() <= 0){
+//System.out.println("G");
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
 					k.writeObject(channelRecord.getOutput(), msg);
-					
+//System.out.println("H");
 					//Flush the buffer to the stream
 					channelRecord.getOutput().flush();
 					
 					// We log the data
 					if(P.valueFor("eftMechanismEnabled").equals("true")){
-						buffer.save(msg);
+						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
+						if(P.valueFor("TTT").equals("TRUE")){
+							
+						}
+						else{
+							buffer.save(msg);
+						}
 					}
 					// Anf finally we reset the batch
 //					channelRecord.cleanBatch(); // RACE CONDITION ??
@@ -116,12 +134,16 @@ public class OutputQueue {
 				}
 			}
 			else if (!beacon){
+//System.out.println("I");
 				//Is there any thread replaying?
 				while(replaySemaphore.get() >= 1){
+//System.out.println("J");
 					//If so, wait.
 					synchronized(this){
+//System.out.println("K");
 						this.wait();
 					}
+//System.out.println("L");
 				}
 			}
 		}

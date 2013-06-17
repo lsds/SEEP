@@ -1,11 +1,7 @@
 package seep.runtimeengine;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
@@ -24,7 +20,9 @@ import seep.comm.serialization.controlhelpers.Ack;
 import seep.comm.serialization.controlhelpers.BackupOperatorState;
 import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import seep.comm.serialization.controlhelpers.ReplayStateInfo;
 import seep.comm.serialization.controlhelpers.Resume;
+import seep.comm.serialization.controlhelpers.StateChunk;
 import seep.infrastructure.NodeManager;
 import seep.infrastructure.WorkerNodeDescription;
 import seep.infrastructure.master.Node;
@@ -37,7 +35,6 @@ import seep.processingunit.PUContext;
 import seep.processingunit.StatefulProcessingUnit;
 import seep.processingunit.StatelessProcessingUnit;
 import seep.reliable.BackupHandler;
-import seep.reliable.BackupHandlerWorker;
 import seep.runtimeengine.workers.DataConsumer;
 import seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
@@ -71,6 +68,7 @@ public class CoreRE {
 	private Thread backupH = null;
 	
 	static ControlTuple genericAck;
+	private int totalNumberOfChunks = -1;
 	
 	// Timestamp of the last data tuple processed by this operator
 	private long ts_data = 0;
@@ -191,7 +189,7 @@ public class CoreRE {
 		else{
 			// Start the consumer thread.
 			dConsumerH.start();
-			NodeManager.nLogger.info("-> SYSTEM CONFIGUREF FOR NO MULTICORE");
+			NodeManager.nLogger.info("-> SYSTEM CONFIGURED FOR NO MULTICORE");
 		}
 		
 		
@@ -203,6 +201,7 @@ public class CoreRE {
 		coreProcessLogic.setOwner(this);
 		coreProcessLogic.setProcessingUnit(processingUnit);
 		coreProcessLogic.setOpContext(puCtx);
+		coreProcessLogic.initializeSerialization();
 		
 		controlDispatcher = new ControlDispatcher(puCtx);
 
@@ -248,7 +247,7 @@ public class CoreRE {
 	
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, BACKUP_NODE_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
-		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL
+		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, REPLAY_STATE, STATE_CHUNK
 	}
 	
 	public synchronized void setTsData(long ts_data){
@@ -346,14 +345,8 @@ public class CoreRE {
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from NODE: "+ct.getCloseSignal().getOpId());
 			bh.closeSession();
-//			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os));
-//			try {
-//				bw.write("ack");
-//			} 
-//			catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+			
+//			coreProcessLogic.directReplayState(new ReplayStateInfo(1, 1, true), bh);
 		}
 		/** STATE_BACKUP message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_OP_STATE)){
@@ -375,14 +368,26 @@ public class CoreRE {
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
-			int nodeId = ct.getStateAck().getNodeId();
 			int opId = ct.getStateAck().getMostUpstreamOpId();
-			NodeManager.nLogger.info("-> Received STATE_ACK from Node: "+nodeId);
+			NodeManager.nLogger.info("-> Received STATE_ACK from Op: "+opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 			
 //			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
+//			outputQueue.start();
+			
+//			outputQueue = new OutputQueue();
+//			processingUnit.setOutputQueue(outputQueue);
+//			dataConsumer = new DataConsumer(this, dsa);
+//			dConsumerH = new Thread(dataConsumer);
+//			dConsumerH.start();
+			
 			outputQueue.replayTuples(cci);
+
+			// These two following lines are to make live the fucking thread again when a failure happens.
+			dConsumerH = new Thread(dataConsumer);
+			dConsumerH.start();
+
 //			operatorStatus = OperatorStatus.NORMAL;
 		}
 		/** BACKUP_RI message **/
@@ -410,6 +415,20 @@ public class CoreRE {
 			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
 			controlDispatcher.ackControlMessage(genericAck, os);
+		}
+		/** REPLAY_STATE **/
+		else if(ctt.equals(ControlTupleType.REPLAY_STATE)){
+			//Replay the state that this node keeps
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.REPLAY_STATE");
+			coreProcessLogic.directReplayState(ct.getReplayStateInfo(), bh);
+		}
+		/** STATE_CHUNK **/
+		else if(ctt.equals(ControlTupleType.STATE_CHUNK)){
+			// One out of n chunks of state received
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.STATE_CHUNK");
+			StateChunk chunk = ct.getStateChunk();
+//			System.out.println("CHUNK rcvd: "+chunk.getSequenceNumber());
+			coreProcessLogic.handleNewChunk(chunk);
 		}
 		/** RESUME message **/
 		else if (ctt.equals(ControlTupleType.RESUME)) {
@@ -473,7 +492,13 @@ public class CoreRE {
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
 			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
+				
+				
+				
 				processingUnit.stopConnection(opId);
+				
+				
+				
 			}
 			processingUnit.reconfigureOperatorConnection(opId, ip);
 			
@@ -481,17 +506,28 @@ public class CoreRE {
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
 			if(command.equals("reconfigure_D")){
-				// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
-				if(processingUnit.isManagingStateOf(opId)){
-					/** WHILE REFACTORING THE FOLLOWING IF WAS REMOVED, this was here for a reason **/
-//					if(subclassOperator instanceof StateSplitI){
-						//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-					NodeManager.nLogger.info("-> Replaying State");
-					coreProcessLogic.replayState(opId);
-//					}
+				
+				/** 1st mode. Send state from Buffer class **/
+				if(P.valueFor("ftDiskMode").equals("false")){
+					// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
+					if(processingUnit.isManagingStateOf(opId)){
+						/** WHILE REFACTORING THE FOLLOWING IF WAS REMOVED, this was here for a reason **/
+//						if(subclassOperator instanceof StateSplitI){
+							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
+						NodeManager.nLogger.info("-> Replaying State");
+						coreProcessLogic.replayState(opId);
+//						}
+					}
+					else{
+						NodeManager.nLogger.info("-> NOT in charge of managing this state");
+					}
 				}
+				/** Large scale mode. Stream state chunks from disk **/
 				else{
-					NodeManager.nLogger.info("-> NOT in charge of managing this state");
+					// We create a new replayState request. Coming from the op to recover
+					// opId (op to recover), 1 (fake), true (is failure recovery)
+					coreProcessLogic.directReplayState(new ReplayStateInfo(opId, 1, true), bh);
+					
 				}
 			}
 //			operatorStatus = OperatorStatus.NORMAL;
@@ -594,7 +630,7 @@ public class CoreRE {
 	public void signalCloseBackupSession(){
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
-		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId);
+		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
 		controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
 	}
 
@@ -618,10 +654,10 @@ public class CoreRE {
 		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
 	}
 	
-	public void sendBlindData(ControlTuple ctB){
-		int stateOwnerId = ctB.getBackupState().getOpId();
-		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-		controlDispatcher.sendUpstream_blind(ctB, backupUpstreamIndex);
+	public void sendBlindData(ControlTuple ctB, int hint){
+		int stateOwnerId = ctB.getStateChunk().getOpId();
+//		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+		controlDispatcher.sendUpstream_blind(ctB, backupUpstreamIndex, hint);
 	}
 	
 	public void sendBlindMetaData(int data){
@@ -632,6 +668,11 @@ public class CoreRE {
 		int dataOwnerId = ctB.getRawData().getOpId();
 		NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+	}
+	
+	public void setTotalNumberOfStateChunks(int number){
+		this.totalNumberOfChunks = number;
+		//coreProcessLogic.setTotalNumberOfChunks(number);
 	}
 	
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)

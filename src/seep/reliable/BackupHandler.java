@@ -1,5 +1,6 @@
 package seep.reliable;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
@@ -56,7 +57,7 @@ public class BackupHandler implements Runnable{
 		this.goOn = goOn;
 	}
 	
-	public String getLastBackupSessionNane(){
+	public String getLastBackupSessionName(){
 		return lastSessionName;
 	}
 	
@@ -65,11 +66,14 @@ public class BackupHandler implements Runnable{
 		this.owner = owner;
 		this.connPort = port;
 		this.goOn = true;
+		File newFile = new File("backup/");
+		newFile.mkdirs();
 	}
 	
 	long s_sessiontime = 0;
 	
 	public void openSession(){
+		NodeManager.nLogger.info("New Backup session opened");
 		s_sessiontime = System.currentTimeMillis();
 		// We let this to open connections
 		isSessionClosed.set(false);
@@ -115,9 +119,9 @@ public class BackupHandler implements Runnable{
 			//Establish listening port
     		backupServerSocket = new ServerSocket(connPort);
 			NodeManager.nLogger.info("-> BackupHandler listening in port: "+connPort);
+			NodeManager.nLogger.info("-> BackupHandler is waiting for opening session");
 			//while goOn is active
 			while(goOn){
-				NodeManager.nLogger.info("-> BackupHandler is waiting for opening session");
 				// We check if a session is closed, and wait, or open, and receive stuff
 				if(isSessionClosed.get()){
 					// Closed session, we reset the transmission number and wait
@@ -133,7 +137,6 @@ public class BackupHandler implements Runnable{
 					}
 				}
 				else{
-					NodeManager.nLogger.info("New Backup session opened");
 					transNumber++;
 					// With an opened session we wait for connections and pass the sessionName and the transmission number
 					BackupHandlerWorker bhw = new BackupHandlerWorker(backupServerSocket.accept(), this, sessionName, transNumber);

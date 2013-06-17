@@ -43,10 +43,15 @@ public class DataConsumer implements Runnable {
 //				System.out.println("### Yes, im in mode2, so using the barrier...");
 				ArrayList<DataTuple> ldata = dataAdapter.pullBarrier();
 //				System.out.println("### Unblocked, got the data");
+				System.out.println("C");
 				if(owner.checkSystemStatus()){
+					System.out.println("D");
 					owner.forwardData(ldata);
 				}
 			}
 		}
+		System.out.println("DATA CONSUMER: IM DEAD");
+		System.exit(0);
+		
 	}
 }

@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,9 +28,11 @@ import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
+import seep.comm.serialization.controlhelpers.StateChunk;
 import seep.infrastructure.NodeManager;
 import seep.operator.EndPoint;
 import seep.processingunit.PUContext;
+import seep.processingunit.StreamStateChunk;
 
 public class ControlDispatcher {
 
@@ -46,8 +49,9 @@ public class ControlDispatcher {
 	
 	private Kryo initializeKryo(){
 		k = new Kryo();
-
 		k.register(ControlTuple.class);
+		k.register(StreamStateChunk.class);
+		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
 		k.register(byte[].class);
@@ -185,7 +189,7 @@ public class ControlDispatcher {
 		System.out.println("% Send : "+(stopSend-startSend));
 	}
 	
-	public void sendUpstream_blind(ControlTuple ct, int index){
+	public void sendUpstream_blind(ControlTuple ct, int index, int data){
 		long startSend = System.currentTimeMillis();
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		//Reopen socket before sending... only if closed
@@ -201,12 +205,16 @@ public class ControlDispatcher {
 				synchronized(socket){
 					synchronized (largeOutput){
 						long startWrite = System.currentTimeMillis();
+						
+						DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+						dos.writeInt(data);
+						
 						k.writeObject(largeOutput, ct);
-						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
+//						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
 						largeOutput.flush();
 						largeOutput.close();
 						long stopWrite = System.currentTimeMillis();
-						System.out.println("% Write socket: "+(stopWrite-startWrite));
+//						System.out.println("% Write socket: "+(stopWrite-startWrite));
 					}
 				}
 			}
@@ -216,7 +224,7 @@ public class ControlDispatcher {
 			io.printStackTrace();
 		}
 		long stopSend = System.currentTimeMillis();
-		System.out.println("% Send : "+(stopSend-startSend));
+//		System.out.println("% Send : "+(stopSend-startSend));
 	}
 	
 	public void sendUpstream_blind_metadata(int data, int index){

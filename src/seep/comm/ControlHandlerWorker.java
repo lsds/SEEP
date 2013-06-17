@@ -21,7 +21,9 @@ import seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
+import seep.comm.serialization.controlhelpers.StateChunk;
 import seep.infrastructure.NodeManager;
+import seep.processingunit.StreamStateChunk;
 import seep.runtimeengine.CoreRE;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -50,8 +52,10 @@ public class ControlHandlerWorker implements Runnable{
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
-		k.setClassLoader(owner.getRuntimeClassLoader());		
+		k.setClassLoader(owner.getRuntimeClassLoader());
 		k.register(ControlTuple.class);
+		k.register(StreamStateChunk.class);
+		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
 		k.register(byte[].class);
@@ -80,7 +84,7 @@ public class ControlHandlerWorker implements Runnable{
 			//Establish input stream, which receives serialized objects
 			is = incomingSocket.getInputStream();
 			os = incomingSocket.getOutputStream();
-			Input i = new Input(is, 1000000000);
+			Input i = new Input(is, 100000);
 			//Read the connection to get the data
 			while(goOn){
 //				tuple = Seep.ControlTuple.parseDelimitedFrom(is);

@@ -12,9 +12,11 @@ import seep.comm.serialization.controlhelpers.InvalidateState;
 import seep.comm.serialization.controlhelpers.OpenSignal;
 import seep.comm.serialization.controlhelpers.RawData;
 import seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import seep.comm.serialization.controlhelpers.ReplayStateInfo;
 import seep.comm.serialization.controlhelpers.Resume;
 import seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import seep.comm.serialization.controlhelpers.StateAck;
+import seep.comm.serialization.controlhelpers.StateChunk;
 import seep.operator.State;
 import seep.runtimeengine.CoreRE;
 
@@ -35,7 +37,8 @@ public class ControlTuple {
 	private RawData rawData;
 	private OpenSignal openSignal;
 	private CloseSignal closeSignal;
-	
+	private ReplayStateInfo replayStateInfo;
+	private StateChunk stateChunk;
 
 	public ControlTuple(){}
 	
@@ -169,6 +172,22 @@ public class ControlTuple {
 		this.closeSignal = closeSignal;
 	}
 	
+	public ReplayStateInfo getReplayStateInfo() {
+		return replayStateInfo;
+	}
+
+	public void setReplayStateInfo(ReplayStateInfo replayStateInfo) {
+		this.replayStateInfo = replayStateInfo;
+	}
+	
+	public StateChunk getStateChunk() {
+		return stateChunk;
+	}
+
+	public void setStateChunk(StateChunk stateChunk) {
+		this.stateChunk = stateChunk;
+	}
+	
 	public ControlTuple makeGenericAck(int nodeId){
 		this.type = CoreRE.ControlTupleType.ACK;
 		this.ack = new Ack(nodeId, 0);
@@ -274,9 +293,26 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeCloseSignalBackup(int opId){
+	public ControlTuple makeCloseSignalBackup(int opId, int totalNumberOfChunks){
 		this.type = CoreRE.ControlTupleType.CLOSE_BACKUP_SIGNAL;
-		this.closeSignal = new CloseSignal(opId);
+		this.closeSignal = new CloseSignal(opId, totalNumberOfChunks);
 		return this;
+	}
+	
+	public ControlTuple makeReplayStateInfo(int oldOpId, int newOpId, boolean singleNode){
+		this.type = CoreRE.ControlTupleType.REPLAY_STATE;
+		this.replayStateInfo = new ReplayStateInfo(oldOpId, newOpId, singleNode);
+		return this;
+	}
+	
+	public ControlTuple makeStateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state){
+		this.type = CoreRE.ControlTupleType.STATE_CHUNK;
+		this.stateChunk = new StateChunk(opId, partitionNumber, sequenceNumber, totalChunks, state);
+		return this;
+	}
+	
+	@Override
+	public String toString(){
+		return "ControlTuple."+this.type;
 	}
 }

@@ -1,6 +1,9 @@
 package seep.operator;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+
+import seep.processingunit.StreamData;
 
 public interface Partitionable {
 
@@ -10,6 +13,12 @@ public interface Partitionable {
 	public void setKeyAttribute(String keyAttribute);
 	public String getKeyAttribute();
 	public State[] splitState(State toSplit, int key);
-	public ArrayList<Object> streamSplitState(State toSplit, int iteration);
+	public StreamData streamSplitState(State toSplit, int iteration, int key);
+	public int getTotalNumberOfChunks();
+	public void setUpIterator();
+	public StreamData[] getRemainingData();
+	public Iterator getIterator();
+	public void appendChunk(State s);
+	public void resetStructures(int partition);
 	
 }

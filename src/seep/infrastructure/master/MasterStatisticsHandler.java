@@ -41,31 +41,34 @@ public class MasterStatisticsHandler {
 
 	//The system has finished scaling out or recovering
 	public synchronized void setSystemStableTime(long systemStable){
-		//new message received
-		msgReceived++;
-		double rate = ((double)(Main.eventR*Integer.parseInt(P.valueFor("sentenceSize"))/1000));
-		//compute time
-		//Once I have received all the required messages (from all the upstreams)
-System.out.println("RECV: "+msgReceived+" UPSize: "+numOfUpstreams);
-		if(msgReceived >= numOfUpstreams){
-			//If the system was recovering
-			if(recovering){
-				//All times are measured in the same machine
-				long recoveryTime = systemStable - crashStartTime;
-				crashStartTime = 0;
-				//reset the memory to process the following message
-				msgReceived = 0;
-				logData(rate, recoveryTime);
-			}
-			//If the system was scaling out
-			else if(scalingOut){
-				long parallelizationTime = systemStable - parallelizationStartTime;
-				parallelizationStartTime = 0;
-				//reset the memory to process the following message
-				msgReceived = 0;
-				logData(rate, parallelizationTime);
-			}
-		}
+		
+		System.out.println("%%% "+(System.currentTimeMillis()-crashStartTime));
+		
+//		//new message received
+//		msgReceived++;
+//		double rate = ((double)(Main.eventR*Integer.parseInt(P.valueFor("sentenceSize"))/1000));
+//		//compute time
+//		//Once I have received all the required messages (from all the upstreams)
+//System.out.println("RECV: "+msgReceived+" UPSize: "+numOfUpstreams);
+//		if(msgReceived >= numOfUpstreams){
+//			//If the system was recovering
+//			if(recovering){
+//				//All times are measured in the same machine
+//				long recoveryTime = systemStable - crashStartTime;
+//				crashStartTime = 0;
+//				//reset the memory to process the following message
+//				msgReceived = 0;
+//				logData(rate, recoveryTime);
+//			}
+//			//If the system was scaling out
+//			else if(scalingOut){
+//				long parallelizationTime = systemStable - parallelizationStartTime;
+//				parallelizationStartTime = 0;
+//				//reset the memory to process the following message
+//				msgReceived = 0;
+//				logData(rate, parallelizationTime);
+//			}
+//		}
 	}
 
 	private void logData(double rate, long totalTime) {

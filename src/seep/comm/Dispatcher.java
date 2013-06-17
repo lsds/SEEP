@@ -76,21 +76,21 @@ public class Dispatcher implements Serializable{
 		}
 	}
 	
-	public void sendData(DataTuple dt, int value, boolean now){
-//		System.out.println("get targets: ");
-		targets = router.forward(dt, value, now);
-		for(Integer target : targets){
-			try{
-//			System.out.println("TARGET: "+target.toString());
-				EndPoint dest = puCtx.getDownstreamTypeConnection().elementAt(target);
-				outputQueue.sendToDownstream(dt, dest, now, false);
-			}
-			catch(ArrayIndexOutOfBoundsException aioobe){
-				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+puCtx.getDownstreamTypeConnection().size());
-				aioobe.printStackTrace();
-			}
-		}
-	}
+//	public void sendData(DataTuple dt, int value, boolean now){
+////		System.out.println("get targets: ");
+//		targets = router.forward(dt, value, now);
+//		for(Integer target : targets){
+//			try{
+////			System.out.println("TARGET: "+target.toString());
+//				EndPoint dest = puCtx.getDownstreamTypeConnection().elementAt(target);
+//				outputQueue.sendToDownstream(dt, dest, now, false);
+//			}
+//			catch(ArrayIndexOutOfBoundsException aioobe){
+//				System.out.println("Targets size: "+targets.size()+" Target-Index: "+target+" downstreamSize: "+puCtx.getDownstreamTypeConnection().size());
+//				aioobe.printStackTrace();
+//			}
+//		}
+//	}
 	
 ////	//When batch timeout expires, this method ticks every possible destination to update the clocks
 	public void batchTimeOut(){

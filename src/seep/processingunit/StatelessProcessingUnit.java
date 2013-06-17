@@ -15,6 +15,7 @@ import seep.operator.EndPoint;
 import seep.operator.Operator;
 import seep.operator.OperatorContext;
 import seep.operator.OperatorStaticInformation;
+import seep.operator.OperatorContext.PlacedOperator;
 import seep.reliable.ACKWorker;
 import seep.runtimeengine.AsynchronousCommunicationChannel;
 import seep.runtimeengine.CoreRE;
@@ -162,14 +163,17 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		runningOp.processData(data);
 	}
 
+	/// \check{ one operator per node, so the below compairson is stupid. CHECK}
 	@Override
 	public void reconfigureOperatorConnection(int opId, InetAddress ip) {
-		if(runningOp.getOperatorId() == opId){
-			ctx.updateConnection(runningOp, ip);
-		}
-		else{
-			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
-		}
+//		System.out.println("COMPARING: "+runningOp.getOperatorId()+"with "+opId);
+//		if(runningOp.getOperatorId() == opId){
+//		System.out.println("UPDATE OP WITH NEW IP: "+ip.toString());
+		ctx.updateConnection(opId, runningOp, ip);
+//		}
+//		else{
+//			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
+//		}
 	}
 
 	@Override

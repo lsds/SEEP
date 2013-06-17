@@ -35,7 +35,7 @@ public class Main {
 		if(args.length == 0){
 			System.out.println("ARGS:");
 			System.out.println("Master <querySourceFile.jar> <MainClass>");
-			System.out.println("Worker");
+			System.out.println("Worker <localPort>");
 			System.exit(-1);
 		}
 
@@ -44,7 +44,7 @@ public class Main {
 		}
 		else if(args[0].equals("Worker")){
 			//secondary receives port and ip of master node
-			instance.executeSec();
+			instance.executeSec(args);
 		}
 		else{
 			System.out.println("Error. See Usage");
@@ -79,7 +79,7 @@ public class Main {
 		}
 	}
 	
-	private void executeSec(){
+	private void executeSec(String args[]){
 		//Read parameters from properties
 		int port = Integer.parseInt(P.valueFor("mainPort"));
 		InetAddress bindAddr = null;
@@ -90,7 +90,13 @@ public class Main {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		int ownPort = Integer.parseInt(P.valueFor("ownPort"));
+		int ownPort = 0;
+		if(args.length > 1){
+			ownPort = new Integer(args[1]);
+		}
+		else{
+			ownPort = Integer.parseInt(P.valueFor("ownPort"));
+		} 
 		
 		
 		// NodeManager instantiation

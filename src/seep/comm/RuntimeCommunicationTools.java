@@ -60,12 +60,21 @@ public class RuntimeCommunicationTools {
 	public void sendControlMsgWithoutACK(OperatorStaticInformation loc, ControlTuple ct, int socketId){
 		Socket connection = uniqueSocket.get(socketId);
 		try{
+			
+			
+			
+			//Output output = new Output(connection.getOutputStream());
+			
+			connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
+			Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
+			uniqueSocket.put(socketId, connection);
 			Output output = new Output(connection.getOutputStream());
-			if(connection == null){
-				connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
-				Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
-				uniqueSocket.put(socketId, connection);
-			}
+			
+//			if(connection == null){
+//				connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
+//				Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
+//				uniqueSocket.put(socketId, connection);
+//			}
 
 			k.writeObject(output, ct);
 			output.flush();

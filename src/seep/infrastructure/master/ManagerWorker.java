@@ -40,6 +40,7 @@ public class ManagerWorker implements Runnable {
 		private void crashCommand(String oldIP_txt, String oldPort_txt, String newIP_txt, String newPort_txt) throws UnknownHostException{
 			//get opId from ip
 			int opId = inf.getOpIdFromIp(InetAddress.getByName(oldIP_txt));
+			System.out.println("OLD OP ID IS FROM: "+opId);
 			if(opId == -1){
 				NodeManager.nLogger.severe("-> IP not bounded to an operator: "+oldIP_txt);
 				return;
@@ -81,6 +82,12 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 			//it also work just with IPs
 			
 			inf.updateU_D(oldIP,newIP, false);
+			
+			Operator toInit = inf.getOperatorById(opId);
+			
+			inf.broadcastState(toInit);
+			
+			inf.initRuntime(toInit);
 			//inf.updateUpDownOperators(InetAddress.getByName(token[1]), InetAddress.getByName(token[2]));
 		}
 		

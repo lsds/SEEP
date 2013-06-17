@@ -489,6 +489,7 @@ public class Infrastructure {
 							ControlTuple ctb = null;
 							//It needs to change its upstream conn
 							if(!parallelRecovery){
+								System.out.println("");
 								ctb = new ControlTuple().makeReconfigure(me.getOperatorId(), "reconfigure_D", newIp.getHostAddress());
 							}
 							else{

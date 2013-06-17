@@ -18,7 +18,8 @@ kill `ps aux | grep java | head -1 | cut -b 10-14`
 echo "Node killed"
 sleep $DELAY
 echo "Starting node..."
-java -jar dist/proto_ft_seep-20120416.jar Sec $FTMODEL $IPMASTER &
+#java -jar dist/proto_ft_seep-20120416.jar Sec $FTMODEL $IPMASTER &
+java -server -Xmx8g -jar SEEPv0.1-20130616.jar Worker
 sleep $DELAY
 
 #Send message to Central Manager

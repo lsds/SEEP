@@ -2,14 +2,12 @@ package seep.reliable;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-
-import seep.infrastructure.NodeManager;
-import seep.runtimeengine.CoreRE;
 
 public class BackupHandlerWorker implements Runnable{
 
@@ -51,22 +49,23 @@ public class BackupHandlerWorker implements Runnable{
 		BufferedInputStream bis;
 		DataInputStream dis;
 		try {
-			bis = new BufferedInputStream(incomingSocket.getInputStream());
-			
 			// Read the partition number
-//			dis = new DataInputStream(incomingSocket.getInputStream());
-//			int numPartition = dis.readInt();
+			dis = new DataInputStream(incomingSocket.getInputStream());
+			int numPartition = dis.readInt();
+			
+			bis = new BufferedInputStream(incomingSocket.getInputStream());
 			// Create the memory map file
 			RandomAccessFile raf = null;
 			try {
 				// file format: PX_Y_Z.bk, where X is the partition number, Y the sessionName and Z the sequence number
 				// so, P1_a_0.bk and P1_a_1.bk are consecutive files but P1_a_1.bk and P2_a_2.bk are not (different partitions).
-//				String fileName = "P"+numPartition+"_"+sessionName+"_"+this.transNumber+".bk";
-				String fileName = sessionName+"_"+this.transNumber+".bk";
+				String fileName = "backup/P"+numPartition+"_"+sessionName+"_"+this.transNumber+".bk";
+//				String fileName = sessionName+"_"+this.transNumber+".bk";
 				raf = new RandomAccessFile(fileName, "rw");
+			
 
 				FileChannel fc = raf.getChannel();
-
+				
 				mbb1 = fc.map(FileChannel.MapMode.READ_WRITE, 0, 1000000000);
 				owner.addBackupHandler(mbb1);
 			}
