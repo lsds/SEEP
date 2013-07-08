@@ -7,10 +7,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Random;
 
-import seep.comm.serialization.DataTuple;
-import seep.comm.serialization.messages.Payload;
-import seep.comm.serialization.messages.TuplePayload;
-import seep.comm.serialization.serializers.ArrayListSerializer;
+import uk.co.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.co.imperial.lsds.seep.comm.serialization.messages.Payload;
+import uk.co.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.co.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.ByteBufferOutputStream;

@@ -1,4 +1,4 @@
-import seep.buffer.*;
+import uk.co.imperial.lsds.seep.buffer.*;
 
 
 public class BufferTest {
