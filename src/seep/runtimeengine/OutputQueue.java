@@ -176,8 +176,12 @@ public class OutputQueue {
 		while(sharedIterator.hasNext()) {
 //			BatchDataTuple dt = sharedIterator.next();
 			BatchTuplePayload dt = sharedIterator.next();
-			k.writeObject(output, dt);
-			output.flush();
+			synchronized(output){
+				synchronized(k){
+					k.writeObject(output, dt);
+				}
+				output.flush();
+			}
 			replayed++;
 			/// \test {test this functionality. is this necessary?}
 			if((bufferSize-replayed) <= (controlThreshold+1)){

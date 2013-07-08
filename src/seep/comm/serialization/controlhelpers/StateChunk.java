@@ -1,5 +1,7 @@
 package seep.comm.serialization.controlhelpers;
 
+import java.util.ArrayList;
+
 import seep.operator.State;
 
 public class StateChunk {
@@ -9,15 +11,18 @@ public class StateChunk {
 	private int sequenceNumber;
 	private int totalChunks;
 	private State state;
+	private ArrayList<Integer> partitioningRange;
 	
+
 	public StateChunk(){}
 	
-	public StateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state){
+	public StateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
 		this.opId = opId;
 		this.partitionNumber = partitionNumber;
 		this.sequenceNumber = sequenceNumber;
 		this.totalChunks = totalChunks;
 		this.state = state;
+		this.partitioningRange = partitioningRange;
 	}
 	
 	public int getOpId() {
@@ -58,5 +63,13 @@ public class StateChunk {
 	
 	public State getState(){
 		return state;
+	}
+	
+	public ArrayList<Integer> getPartitioningRange() {
+		return partitioningRange;
+	}
+
+	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
+		this.partitioningRange = partitioningRange;
 	}
 }

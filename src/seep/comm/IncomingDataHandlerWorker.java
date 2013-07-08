@@ -98,7 +98,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 						dsa.push(reg);
 					}
 					else{
-						System.out.println("trash in TCP buffers");
+//						System.out.println("trash in TCP buffers");
 					}
 				}
 			}

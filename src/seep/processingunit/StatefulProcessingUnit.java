@@ -492,14 +492,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 	}
 	
-	public void lockFreeParallelCheckpointAndBackupState(){
-		long tsToAck = lockFreeParallelBackupState();
+	public void lockFreeParallelCheckpointAndBackupState(int[] partitioningRange){
+		long tsToAck = lockFreeParallelBackupState(partitioningRange);
 		if(tsToAck != -1){
 			owner.ack(tsToAck);
 		}
 	}
 	
-	private long lockFreeParallelBackupState(){
+	private long lockFreeParallelBackupState(int[] partitioningRange){
 		long last_data_proc = -1;
 		if(runningOpState != null){
 			int opId = runningOpState.getOwnerId();
@@ -519,36 +519,56 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			int sequenceNumber = 0;
 			NodeManager.nLogger.info("% -> Backuping state with owner: "+opId);
 			
-			int partitioningKey = 0;
 			int totalChunks = ((Partitionable)runningOpState).getTotalNumberOfChunks();
 			((Partitionable)runningOpState).setUpIterator();
 			//while(it < size){
+			int key = (partitioningRange[1]+partitioningRange[0])/2;
 			while(((Partitionable)runningOpState).getIterator().hasNext()){
 				
-				StreamData sd = ((Partitionable)runningOpState).streamSplitState(runningOpState, it, partitioningKey);
+				StreamData sd = ((Partitionable)runningOpState).streamSplitState(runningOpState, it, key);
 				// finished
 				if(sd == null){
 					StreamData[] chunks = ((Partitionable)runningOpState).getRemainingData();
 					microBatch = chunks[0].microBatch;
-					ControlTuple ctB = new ControlTuple().makeStateChunk(opId, chunks[0].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch));
+					ArrayList<Integer> newPartitioningRange0 = new ArrayList<Integer>();
+					newPartitioningRange0.add(partitioningRange[0]);
+					newPartitioningRange0.add(key);
+					ControlTuple ctB = new ControlTuple().makeStateChunk(opId, chunks[0].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange0);
 					sequenceNumber++;
 					owner.sendBlindData(ctB, chunks[0].partition);
+//					owner._sendBlindData(ctB, chunks[0].partition, chunks[0].partition);
 					((Partitionable)runningOpState).resetStructures(chunks[0].partition);
 //					System.out.println("f");
 					
 					microBatch = chunks[1].microBatch;
-					ControlTuple ctB2 = new ControlTuple().makeStateChunk(opId, chunks[1].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch));
+					ArrayList<Integer> newPartitioningRange1 = new ArrayList<Integer>();
+					newPartitioningRange1.add(partitioningRange[0]);
+					newPartitioningRange1.add(key);
+					ControlTuple ctB2 = new ControlTuple().makeStateChunk(opId, chunks[1].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange1);
 					sequenceNumber++;
 					owner.sendBlindData(ctB2, chunks[1].partition);
+//					owner._sendBlindData(ctB2, chunks[1].partition, chunks[1].partition);
 					((Partitionable)runningOpState).resetStructures(chunks[1].partition);
 //					System.out.println("f");
 					break;
 				}
 				microBatch = sd.microBatch;
 				it = it + microBatch.size();
-				ControlTuple ctB = new ControlTuple().makeStateChunk(opId, sd.partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch));
+				
+				// Configure new partitioningRange
+				ArrayList<Integer> newPartitioningRange = new ArrayList<Integer>();
+				if(sd.partition == 0){
+					newPartitioningRange.add(partitioningRange[0]);
+					newPartitioningRange.add(key);
+				}
+				else if(sd.partition == 1){
+					newPartitioningRange.add(key);
+					newPartitioningRange.add(partitioningRange[1]);
+				}
+				ControlTuple ctB = new ControlTuple().makeStateChunk(opId, sd.partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange);
 				sequenceNumber++;
 				owner.sendBlindData(ctB, sd.partition);
+//				owner._sendBlindData(ctB, sd.partition, sd.partition);
 				((Partitionable)runningOpState).resetStructures(sd.partition);
 //				System.out.println("n");
 			}
@@ -984,5 +1004,19 @@ System.out.println("partitioning time: "+(b-a));
 	@Override
 	public void emitACK(long currentTs) {
 		owner.ack(currentTs);
+	}
+
+	public void resetState() {
+		((Partitionable)runningOpState).resetState();
+		
+	}
+
+	public void configureNewPartitioningRange(
+			ArrayList<Integer> partitioningRange) {
+		sbw.setPartitioningRange(partitioningRange);
+	}
+	
+	public ArrayList<Integer> getPartitioningRange(){
+		return sbw.getPartitioningRange();
 	}
 }

@@ -92,4 +92,10 @@ public class MockState extends State implements Partitionable{
 		
 	}
 
+	@Override
+	public void resetState() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -20,5 +20,6 @@ public interface Partitionable {
 	public Iterator getIterator();
 	public void appendChunk(State s);
 	public void resetStructures(int partition);
+	public void resetState();
 	
 }

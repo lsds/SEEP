@@ -1,8 +1,11 @@
 package seep.reliable;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 
 import seep.P;
+import seep.infrastructure.NodeManager;
 import seep.operator.State;
 import seep.processingunit.StatefulProcessingUnit;
 
@@ -21,6 +24,9 @@ public class StateBackupWorker implements Runnable, Serializable{
 	private int checkpointInterval = 0;
 	private State state;
 	
+	// Original partitioning key
+	private int[] partitioningRange = new int[]{Integer.MIN_VALUE, Integer.MAX_VALUE};
+	
 	public void stop(){
 		this.goOn = false;
 	}
@@ -28,6 +34,19 @@ public class StateBackupWorker implements Runnable, Serializable{
 	public StateBackupWorker(StatefulProcessingUnit processingUnit, State s){
 		this.processingUnit = processingUnit;
 		this.state = s;
+	}
+	
+	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
+		this.partitioningRange[0] = partitioningRange.get(0);
+		this.partitioningRange[1] = partitioningRange.get(1);
+		NodeManager.nLogger.info("-> Configured new partitioning range. From: "+this.partitioningRange[0]+" to "+this.partitioningRange[1]);
+	}
+	
+	public ArrayList<Integer> getPartitioningRange(){
+		ArrayList<Integer> aux = new ArrayList<Integer>();
+		aux.add(partitioningRange[0]);
+		aux.add(partitioningRange[1]);
+		return aux;
 	}
 	
 	public void run(){
@@ -40,7 +59,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 			e1.printStackTrace();
 		}
 //		processingUnit.checkpointAndBackupState();
-		processingUnit.lockFreeParallelCheckpointAndBackupState();
+		processingUnit.lockFreeParallelCheckpointAndBackupState(partitioningRange);
 		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
@@ -58,10 +77,12 @@ public class StateBackupWorker implements Runnable, Serializable{
 						
 						// Blocking call
 						processingUnit.getOwner().signalOpenBackupSession();
+//						processingUnit.getOwner()._signalOpenBackupSession();
 						
-						processingUnit.lockFreeParallelCheckpointAndBackupState();
-						
+						processingUnit.lockFreeParallelCheckpointAndBackupState(partitioningRange);
+
 						processingUnit.getOwner().signalCloseBackupSession();
+//						processingUnit.getOwner()._signalCloseBackupSession();
 						
 //						long startGC = System.currentTimeMillis();
 //						System.gc();

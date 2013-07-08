@@ -3,11 +3,14 @@ package seep.reliable;
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import seep.infrastructure.NodeManager;
@@ -29,9 +32,9 @@ public class BackupHandler implements Runnable{
 	private int transNumber = -1;
 	private String lastSessionName = null;
 	
-	//Variables to keep the backup handler
-	private ArrayList<MappedByteBuffer> lastBackupHandlers = new ArrayList<MappedByteBuffer>();
-	private ArrayList<MappedByteBuffer> backupLastBackupHandlers = new ArrayList<MappedByteBuffer>();
+//	//Variables to keep the backup handler
+//	private ArrayList<MappedByteBuffer> lastBackupHandlers = new ArrayList<MappedByteBuffer>();
+//	private ArrayList<MappedByteBuffer> backupLastBackupHandlers = new ArrayList<MappedByteBuffer>();
 	
 	public CoreRE getOwner(){
 		return owner;
@@ -57,8 +60,12 @@ public class BackupHandler implements Runnable{
 		this.goOn = goOn;
 	}
 	
-	public String getLastBackupSessionName(){
-		return lastSessionName;
+//	public String _getLastBackupSessionName(){
+//		return lastSessionName;
+//	}
+	
+	public String getLastBackupSessionName(int opId){
+		return lastSessionNames.get(opId);
 	}
 	
 	
@@ -72,24 +79,61 @@ public class BackupHandler implements Runnable{
 	
 	long s_sessiontime = 0;
 	
-	public void openSession(){
-		NodeManager.nLogger.info("New Backup session opened");
+//	public void _openSession(int opId, SocketAddress remoteAddress){
+//		NodeManager.nLogger.info("New Backup session opened for OP: "+opId);
+//		s_sessiontime = System.currentTimeMillis();
+//		// We let this to open connections
+//		isSessionClosed.set(false);
+//		// We name the new session
+//		sessionName = new Long(System.currentTimeMillis()).toString();
+//		transNumber = -1;
+//		
+//		// We keep a backup of the last backup file handlers
+//		backupLastBackupHandlers = new ArrayList<MappedByteBuffer>(lastBackupHandlers);
+//		lastBackupHandlers.clear();
+//		synchronized(this){
+//			this.notify();
+//		}
+//	}
+	
+	private HashMap<InetAddress, BackupSessionInfo> openSessions = new HashMap<InetAddress, BackupSessionInfo>();
+	private HashMap<Integer, ArrayList<FileChannel>> sessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
+	private HashMap<Integer, ArrayList<FileChannel>> backupSessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
+	private HashMap<Integer, ArrayList<File>> sessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
+	private HashMap<Integer, ArrayList<File>> backupSessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
+	private HashMap<Integer, String> lastSessionNames = new HashMap<Integer, String>();
+	
+	public void openSession(int opId, InetAddress remoteAddress){
+		NodeManager.nLogger.info("New Backup session opened for OP: "+opId);
 		s_sessiontime = System.currentTimeMillis();
-		// We let this to open connections
-		isSessionClosed.set(false);
 		// We name the new session
 		sessionName = new Long(System.currentTimeMillis()).toString();
 		transNumber = -1;
 		
-		// We keep a backup of the last backup file handlers
-		backupLastBackupHandlers = new ArrayList<MappedByteBuffer>(lastBackupHandlers);
-		lastBackupHandlers.clear();
-		synchronized(this){
-			this.notify();
+		ArrayList<FileChannel> lastBackupHandlers = new ArrayList<FileChannel>();
+		ArrayList<File> lastBackupHandlersGCFiles = new ArrayList<File>();
+		// We backup the previous handlers if there are any
+		if(sessionHandlers.containsKey(opId)){
+			backupSessionHandlers.put(opId, sessionHandlers.get(opId));
+			backupSessionHandlersGCFiles.put(opId, sessionHandlersGCFiles.get(opId));
 		}
+		// And we put the new ones here
+		sessionHandlers.put(opId, lastBackupHandlers);
+		sessionHandlersGCFiles.put(opId, lastBackupHandlersGCFiles);
+//		BackupSessionHandlerWorker bhw = new BackupSessionHandlerWorker(opId, lastBackupHandlers, this, sessionName, transNumber);
+		BackupSessionInfo bsi = new BackupSessionInfo(opId, lastBackupHandlers, this, sessionName, transNumber);
+		
+		openSessions.put(remoteAddress, bsi);
+		System.out.println("NEW SESSION: "+remoteAddress.toString());
+//		Thread t = new Thread(bhw);
+//		t.start();
+		
+//		synchronized(this){
+//			this.notify();
+//		}
 	}
 	
-	public void closeSession(){
+	public void _closeSession(int opId, SocketAddress remoteAddress){
 		// We reset the transNumber for the next session
 //		transNumber = 0;
 		// We configure the last session name as the one just finished
@@ -97,20 +141,45 @@ public class BackupHandler implements Runnable{
 		isSessionClosed.set(true);
 		System.out.println("TOTAL SESSION TIME: "+(System.currentTimeMillis() - s_sessiontime));
 	}
+	
+	public void closeSession(int opId, InetAddress remoteAddress){
+		lastSessionNames.put(opId, openSessions.get(remoteAddress).getSessionName());
+		openSessions.remove(remoteAddress);
+		System.out.println("TOTAL SESSION TIME: "+(System.currentTimeMillis() - s_sessiontime));
+		
+		// If the session went well, then we get rid of the old files
+		if(backupSessionHandlers.containsKey(opId)){
+			ArrayList<FileChannel> oldFiles = backupSessionHandlers.get(opId);
+			for(FileChannel f : oldFiles){
+//				try {
+//					f.close();
+//				} 
+//				catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+			}
+			ArrayList<File> toRemove = backupSessionHandlersGCFiles.get(opId);
+			for(File f : toRemove){
+//				f.delete();
+			}
+		}
+	}
 
-	public void addBackupHandler(MappedByteBuffer mbb){
-		this.lastBackupHandlers.add(mbb);
+	public void addBackupHandler(int opId, FileChannel fc, File f){
+		sessionHandlers.get(opId).add(fc);
+		sessionHandlersGCFiles.get(opId).add(f);
 	}
 	
-	public ArrayList<MappedByteBuffer> getBackupHandler(){
-		if(isSessionClosed.get()){
-			return lastBackupHandlers;
-		}
-		else{
-			//this option or better yet: wait for current session to finish
-			return backupLastBackupHandlers;
-		}
-	}
+//	public ArrayList<MappedByteBuffer> getBackupHandler(){
+//		if(isSessionClosed.get()){
+//			return lastBackupHandlers;
+//		}
+//		else{
+//			//this option or better yet: wait for current session to finish
+//			return backupLastBackupHandlers;
+//		}
+//	}
 	
 	@Override
 	public void run() {
@@ -123,26 +192,33 @@ public class BackupHandler implements Runnable{
 			//while goOn is active
 			while(goOn){
 				// We check if a session is closed, and wait, or open, and receive stuff
-				if(isSessionClosed.get()){
-					// Closed session, we reset the transmission number and wait
-//					transNumber = -1;
-					synchronized(this){
-						try {
-							this.wait();
-						}
-						catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+//				if(isSessionClosed.get()){
+//					// Closed session, we reset the transmission number and wait
+////					transNumber = -1;
+//					synchronized(this){
+//						try {
+//							this.wait();
+//						}
+//						catch (InterruptedException e) {
+//							// TODO Auto-generated catch block
+//							e.printStackTrace();
+//						}
+//					}
+//				}
+//				else{
+//					transNumber++;
+					Socket incomingConn = backupServerSocket.accept();
+					InetAddress incomingAddr = incomingConn.getInetAddress();
+					if(openSessions.containsKey(incomingAddr)){
+						BackupSessionInfo bsi = openSessions.get(incomingAddr);
+						bsi.incrementTransNumber();
+						// With an opened session we wait for connections and pass the sessionName and the transmission number
+						BackupHandlerWorker bhw = new BackupHandlerWorker(bsi.getOpId(), incomingConn, this, bsi.getSessionName(), bsi.getTransNumber());
+						Thread newConn = new Thread(bhw);
+						newConn.start();
 					}
-				}
-				else{
-					transNumber++;
-					// With an opened session we wait for connections and pass the sessionName and the transmission number
-					BackupHandlerWorker bhw = new BackupHandlerWorker(backupServerSocket.accept(), this, sessionName, transNumber);
-					Thread newConn = new Thread(bhw);
-					newConn.start();
-				}
+					
+//				}
 			}
 			backupServerSocket.close();
 		}
@@ -154,6 +230,41 @@ public class BackupHandler implements Runnable{
 		catch(IOException io){
 			NodeManager.nLogger.severe("-> BackupHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
+		}
+	}
+	
+	class BackupSessionInfo{
+		private int opId;
+		private ArrayList<FileChannel> lastBackupHandlers;
+		private BackupHandler owner;
+		private String sessionName;
+		private int transNumber;
+		private boolean work = true;
+		
+		public BackupSessionInfo(int opId,
+				ArrayList<FileChannel> lastBackupHandlers,
+				BackupHandler backupHandler, String sessionName, int transNumber) {
+			this.opId = opId;
+			this.lastBackupHandlers = lastBackupHandlers;
+			this.owner = backupHandler;
+			this.sessionName = sessionName;
+			this.transNumber = transNumber;
+		}
+		
+		public int getOpId(){
+			return opId;
+		}
+		
+		public String getSessionName(){
+			return sessionName;
+		}
+		
+		public int getTransNumber(){
+			return transNumber;
+		}
+		
+		public void incrementTransNumber(){
+			transNumber++;
 		}
 	}
 }

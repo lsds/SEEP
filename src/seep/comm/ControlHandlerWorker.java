@@ -3,7 +3,10 @@ package seep.comm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -97,7 +100,8 @@ public class ControlHandlerWorker implements Runnable{
 //						System.out.println("RCVD FROM: "+incomingSocket.toString());
 //						System.exit(0);
 //					}
-					owner.processControlTuple(tuple, os);
+					InetAddress ip = incomingSocket.getInetAddress();
+					owner.processControlTuple(tuple, os, ip);
 				}
 				else{
 					NodeManager.nLogger.severe("-> ControlHandlerWorker. TUPLE IS NULL !");

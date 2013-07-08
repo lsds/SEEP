@@ -3,6 +3,7 @@ package seep.runtimeengine;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import seep.infrastructure.NodeManager;
 import seep.infrastructure.WorkerNodeDescription;
 import seep.infrastructure.master.Node;
 import seep.operator.Operator;
+import seep.operator.StatelessOperator;
 import seep.operator.OperatorStaticInformation;
 import seep.operator.Operator.DataAbstractionMode;
 import seep.operator.OperatorContext.PlacedOperator;
@@ -313,8 +315,10 @@ public class CoreRE {
 		return false;
 	}
 		
+	boolean gotit = false;
+	
 	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
-	public void processControlTuple(ControlTuple ct, OutputStream os) {
+	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
 		ControlTupleType ctt = ct.getType();
 		/** ACK message **/
 		if(ctt.equals(ControlTupleType.ACK)) {
@@ -336,7 +340,7 @@ public class CoreRE {
 		/** OPEN_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from NODE: "+ct.getOpenSignal().getOpId());
-			bh.openSession();
+			bh.openSession(ct.getOpenSignal().getOpId(), remoteAddress);
 			PrintWriter out = new PrintWriter(os, true);
 			out.println("ack");
 			System.out.println("ANSWER OPen signal");
@@ -344,7 +348,7 @@ public class CoreRE {
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from NODE: "+ct.getCloseSignal().getOpId());
-			bh.closeSession();
+			bh.closeSession(ct.getCloseSignal().getOpId(), remoteAddress);
 			
 //			coreProcessLogic.directReplayState(new ReplayStateInfo(1, 1, true), bh);
 		}
@@ -368,6 +372,12 @@ public class CoreRE {
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
+			if(!gotit){
+				gotit = true;
+			}
+			else{
+				return;
+			}
 			int opId = ct.getStateAck().getMostUpstreamOpId();
 			NodeManager.nLogger.info("-> Received STATE_ACK from Op: "+opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
@@ -384,9 +394,11 @@ public class CoreRE {
 			
 			outputQueue.replayTuples(cci);
 
-			// These two following lines are to make live the fucking thread again when a failure happens.
-			dConsumerH = new Thread(dataConsumer);
-			dConsumerH.start();
+			// In case of failure, the thread may have died, in such case we make it runnable again.
+//			if(dConsumerH.getState() != Thread.State.TERMINATED){
+				dConsumerH = new Thread(dataConsumer);
+				dConsumerH.start();
+//			}
 
 //			operatorStatus = OperatorStatus.NORMAL;
 		}
@@ -403,18 +415,38 @@ public class CoreRE {
 		}
 		/** SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
-			//Ack the message, we do not need to wait until the end
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
-			// Get index of new replica operator
-			int newOpIndex = -1;
-			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
-				if (op.opID() == ct.getScaleOutInfo().getNewOpId())
-					newOpIndex = op.index();
+			if(P.valueFor("soccpaper").equals("false") || processingUnit.getOperator() instanceof StatelessOperator){
+				//Ack the message, we do not need to wait until the end
+				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
+				// Get index of new replica operator
+				int newOpIndex = -1;
+				for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
+					if (op.opID() == ct.getScaleOutInfo().getNewOpId())
+						newOpIndex = op.index();
+				}
+				// Get index of the scaling operator
+				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
+				coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
+				controlDispatcher.ackControlMessage(genericAck, os);
 			}
-			// Get index of the scaling operator
-			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
-			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
-			controlDispatcher.ackControlMessage(genericAck, os);
+			else{
+				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
+				int oldOpId = ct.getScaleOutInfo().getOldOpId();
+				int newOpId = ct.getScaleOutInfo().getNewOpId();
+				
+				int newOpIndex = -1;
+				for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
+					if (op.opID() == ct.getScaleOutInfo().getNewOpId())
+						newOpIndex = op.index();
+				}
+				// Get index of the scaling operator
+				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
+				coreProcessLogic.backupRoutingInformation(oldOpId);
+				coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
+				
+				coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
+				controlDispatcher.ackControlMessage(genericAck, os);
+			}
 		}
 		/** REPLAY_STATE **/
 		else if(ctt.equals(ControlTupleType.REPLAY_STATE)){
@@ -619,12 +651,34 @@ public class CoreRE {
 		controlDispatcher.sendAllUpstreams(ack);
 	}
 	
-	public void signalOpenBackupSession(){
+	@Deprecated
+	public void _signalOpenBackupSession(){
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
 		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
 //		controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
+//		controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
+		System.out.println("open session to 0");
+		controlDispatcher.sendUpstreamWaitForReply(openSignal, 0);
+		System.out.println("open session to 1");
+		controlDispatcher.sendUpstreamWaitForReply(openSignal, 1);
+	}
+	
+	public void signalOpenBackupSession(){
+		int opId = processingUnit.getOperator().getOperatorId();
+		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
+		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
 		controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
+	}
+	
+	@Deprecated
+	public void _signalCloseBackupSession(){
+		int opId = processingUnit.getOperator().getOperatorId();
+		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
+		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
+//		controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
+		controlDispatcher.sendUpstream(closeSignal, 0);
+		controlDispatcher.sendUpstream(closeSignal, 1);
 	}
 	
 	public void signalCloseBackupSession(){
@@ -652,6 +706,13 @@ public class CoreRE {
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
 		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+	}
+	
+	@Deprecated
+	public void _sendBlindData(ControlTuple ctB, int hint, int hack){
+		int stateOwnerId = ctB.getStateChunk().getOpId();
+//		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+		controlDispatcher.sendUpstream_blind(ctB, hack, hint);
 	}
 	
 	public void sendBlindData(ControlTuple ctB, int hint){
@@ -722,7 +783,10 @@ public class CoreRE {
 			//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 			if(processingUnit.isNodeStateful()){
 				NodeManager.nLogger.info("-> sending BACKUP_STATE to the new manager of my state");
-				((StatefulProcessingUnit)processingUnit).checkpointAndBackupState();
+				//((StatefulProcessingUnit)processingUnit).checkpointAndBackupState();
+				ArrayList<Integer> pr = ((StatefulProcessingUnit)processingUnit).getPartitioningRange();
+				int[] pr1 = new int[]{pr.get(0), pr.get(1)};
+				((StatefulProcessingUnit)processingUnit).lockFreeParallelCheckpointAndBackupState(pr1);
 			}
 		}
 	}
