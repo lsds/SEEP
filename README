@@ -1,11 +1,9 @@
-build -> This directory stores the build classes
+build
 build.xml -> Ant configuration file
 changelog -> self-explaining
-dist -> This directory stores the distribution of the software, i.e, jar file
+dist -> To store the jar (onejar) file
 doc -> Some doxygen generated documentation
 DoxyFile -> The doxygen configuration file
-lib -> this directory stores the external libs used within the software
-res -> external resources used by the software
-scripts -> These scripts are used by the software to get runtime statistics. They are also used by us to deploy, etc
+lib -> external libs
 src -> self-explaining
 todo -> self-explaining

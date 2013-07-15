@@ -1,3 +1,13 @@
+15/7/2013
+- Design and implement star fault tolerance
+- Make master API robust
+- Clean up user interface
+- New deployment scripts (based on Fabric)
+- Change Kryo debug 2.20 for Kryo 2.21 (production)
+- Clean up code
+- Refactor fault tolerance with new design (again...)
+
+
 13/9/2012 Raul
 This todos are ordered by priority level.
 - Refactor internal routing providing clean external interfaces. (X)
@@ -22,7 +32,7 @@ At this point we have a robust API and robust routing mechanism.
 - Refactor internal routing.
 - bottom-up clean of code, from the internal routing mechanisms, to the external API
 - Define and refine a low level API to describe, configure and connect operators, with state, split keys and other additional information.
-- Integrate zookeeper to maintain synchronization when executing protocols
+- Integrate zookeeper to maintain synchronization when executing protocols (?)
 - Refine routing information backup to avoid all-to-all communication
 - Attend to old TODOS and inconsistencies when backuping state
 - Pluggable serialization mechanism. In particular, change protocolbuffers by Kryo and make possible to define own mechanism.
