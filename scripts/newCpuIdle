@@ -1,1 +1,0 @@
-top -b -d 1 -n 1 | grep id | cut -b 36-39 | head -1
