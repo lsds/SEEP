@@ -1,3 +1,4 @@
+package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -8,16 +9,23 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-import uk.co.imperial.lsds.seep.buffer.*;
+public class MagicTest {
 
-
-public class BufferTest {
-
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Buffer buffer = new Buffer();
+	public Class composeClass(){
+		Class c = new Base().getClass();
+		
+		return null;
 	}
-
+	
+	public static void main(String args[]){
+	
+		MagicTest mt = new MagicTest();
+		
+		Class composed = mt.composeClass();
+		
+	}
+	
+	class Base{
+		
+	}
 }

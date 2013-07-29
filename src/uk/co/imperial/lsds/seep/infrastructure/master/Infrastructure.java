@@ -588,12 +588,13 @@ public class Infrastructure {
 		rct.sendControlMsg(opToContact.getOpContext().getOperatorStaticInformation(), ct, opToContact.getOperatorId());
 	}
 	
+	@Deprecated
 	public void configureSourceRate(int numberEvents, int time){
 		
 		ControlTuple tuple = new ControlTuple().makeReconfigureSourceRate(numberEvents, "configureSourceRate", time);
 		
-		Main.eventR = numberEvents;
-		Main.period = time;
+//		Main.eventR = numberEvents;
+//		Main.period = time;
 		for(Operator source : src){
 			rct.sendControlMsg(source.getOpContext().getOperatorStaticInformation(), tuple, source.getOperatorId());
 		}

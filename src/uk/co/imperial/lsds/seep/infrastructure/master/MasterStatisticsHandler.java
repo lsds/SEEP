@@ -14,8 +14,6 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import uk.co.imperial.lsds.seep.Main;
-import uk.co.imperial.lsds.seep.P;
 
 /**
  * MasterStatisticsHandler. This class is in the master node and is in charge of retrieving the performance times of the system
@@ -81,6 +79,7 @@ public class MasterStatisticsHandler {
 //		}
 	}
 
+	@Deprecated
 	private void logData(double rate, long totalTime) {
 		try{
 			BufferedWriter bw = new BufferedWriter(new FileWriter("tests/time.dat", true));
@@ -88,13 +87,13 @@ public class MasterStatisticsHandler {
 				scalingOut = false;
 				System.out.println("PARALLELIZATION TIME: "+totalTime);
 				//0 means parallelization
-				bw.write("0 "+Main.eventR+" "+totalTime+" "+numberRunningMachines);
+//				bw.write("0 "+Main.eventR+" "+totalTime+" "+numberRunningMachines);
 			}
 			else if(recovering){
 				recovering = false;
 				System.out.println("RECOVERY TIME: "+totalTime);
 				//1 means fault
-				bw.write("1 "+Main.eventR+" "+totalTime+" "+numberRunningMachines);
+//				bw.write("1 "+Main.eventR+" "+totalTime+" "+numberRunningMachines);
 			}
 			bw.newLine();
 			bw.close();

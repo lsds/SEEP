@@ -19,18 +19,10 @@ import uk.co.imperial.lsds.seep.infrastructure.api.QueryPlan;
 import uk.co.imperial.lsds.seep.infrastructure.master.MasterController;
 
 /**
-* Main. The entry point of the whole system. This can be executed as Main (master Node) or as secondary.
+* Main. This can be executed as Main (master Node) or as secondary.
 */
 
 public class Main {
-	
-	//Runtime variable globals
-	///\fixme{remove this shit}
-	public static int eventR;
-	public static int period;
-	public static boolean maxRate;
-	public static boolean eftMechanismEnabled;
-	public static int numberOfXWays;
 	
 	//Properties variable
 	static P p = new P();
@@ -84,7 +76,6 @@ public class Main {
 			mc.start();
 		} 
 		catch (OperatorDeploymentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -97,7 +88,6 @@ public class Main {
 			bindAddr = InetAddress.getByName(P.valueFor("mainAddr"));
 		} 
 		catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		int ownPort = 0;
@@ -106,7 +96,7 @@ public class Main {
 		}
 		else{
 			ownPort = Integer.parseInt(P.valueFor("ownPort"));
-		} 
+		}
 		
 		
 		// NodeManager instantiation

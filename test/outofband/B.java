@@ -1,3 +1,4 @@
+package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -8,23 +9,15 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-public class MagicTest {
+import java.util.concurrent.atomic.AtomicInteger;
 
-	public Class composeClass(){
-		Class c = new Base().getClass();
+
+abstract class B{
+		protected B ex;
 		
-		return null;
+		public AtomicInteger ai = new AtomicInteger();
+		
+		public B getEx(){
+			return ex;
+		}
 	}
-	
-	public static void main(String args[]){
-	
-		MagicTest mt = new MagicTest();
-		
-		Class composed = mt.composeClass();
-		
-	}
-	
-	class Base{
-		
-	}
-}

@@ -613,19 +613,19 @@ public class CoreRE {
 		}
 		/** CONFIG SOURCE RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
-		else if (command.equals("configureSourceRate")){
-			controlDispatcher.ackControlMessage(genericAck, os);
-			int numberEvents = rc.getOpId();
-			int time = rc.getInC();
-			if(numberEvents == 0 && time == 0){
-				Main.maxRate = true;
-			}
-			else{
-				Main.maxRate = false;
-				Main.eventR = numberEvents;
-				Main.period = time;
-			}
-		}
+//		else if (command.equals("configureSourceRate")){
+//			controlDispatcher.ackControlMessage(genericAck, os);
+//			int numberEvents = rc.getOpId();
+//			int time = rc.getInC();
+//			if(numberEvents == 0 && time == 0){
+//				Main.maxRate = true;
+//			}
+//			else{
+//				Main.maxRate = false;
+//				Main.eventR = numberEvents;
+//				Main.period = time;
+//			}
+//		}
 		/** SAVE RESULTS RATE message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
 		else if (command.equals("saveResults")){
@@ -638,17 +638,17 @@ public class CoreRE {
 		}
 		/** DEACTIVATE elft mechanism message **/
 		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
-		else if (command.equals("deactivateMechanisms")){
-			controlDispatcher.ackControlMessage(genericAck, os);
-			if(Main.eftMechanismEnabled){
-				NodeManager.nLogger.info("--> Desactivated ESFT mechanisms.");
-				Main.eftMechanismEnabled = false;
-			}
-			else{
-				NodeManager.nLogger.info("--> Activated ESFT mechanisms.");
-				Main.eftMechanismEnabled = true;
-			}
-		}
+//		else if (command.equals("deactivateMechanisms")){
+//			controlDispatcher.ackControlMessage(genericAck, os);
+//			if(Main.eftMechanismEnabled){
+//				NodeManager.nLogger.info("--> Desactivated ESFT mechanisms.");
+//				Main.eftMechanismEnabled = false;
+//			}
+//			else{
+//				NodeManager.nLogger.info("--> Activated ESFT mechanisms.");
+//				Main.eftMechanismEnabled = true;
+//			}
+//		}
 		/** NOT RECOGNIZED message **/
 		else{
 			NodeManager.nLogger.warning("-> Op.processCommand, command not recognized");

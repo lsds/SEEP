@@ -1,3 +1,4 @@
+package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -8,12 +9,16 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.co.imperial.lsds.seep;
+import uk.co.imperial.lsds.seep.buffer.*;
 
-import uk.co.imperial.lsds.seep.infrastructure.api.QueryPlan;
 
-public interface BaseI {
+public class BufferTest {
 
-	public QueryPlan compose();
-	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		Buffer buffer = new Buffer();
+	}
+
 }
