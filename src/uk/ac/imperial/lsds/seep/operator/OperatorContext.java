@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Matteo Migliavacca - Definition of inner classes and method implementation
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
@@ -16,9 +17,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router.RelationalOperator;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 public class OperatorContext implements Serializable{
 
@@ -32,9 +35,10 @@ public class OperatorContext implements Serializable{
 	private ArrayList<OperatorStaticInformation> upstream = new ArrayList<OperatorStaticInformation>();
 	private ArrayList<OperatorStaticInformation> downstream = new ArrayList<OperatorStaticInformation>();
 	private ArrayList<Integer> originalDownstream = new ArrayList<Integer>();
+	// store the type of input data ingestion mode per upstream operator. <OpId - InputDataIngestionMode>
+	private Map<Integer, InputDataIngestionMode> inputDataIngestionModePerUpstream = new HashMap<Integer, InputDataIngestionMode>();
 	
 	/** VAR -> Routing related information for this operator **/
-//	private String queryFunction = null;
 	private String queryAttribute = null;
 	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
@@ -46,10 +50,6 @@ public class OperatorContext implements Serializable{
 	public OperatorContext(){
 		
 	}
-	
-//	public String getQueryFunction(){
-//		return queryFunction;
-//	}
 	
 	public String getQueryAttribute(){
 		return queryAttribute;
@@ -73,6 +73,14 @@ public class OperatorContext implements Serializable{
 	
 	public HashMap<Integer, ArrayList<Integer>> getRouteInfo(){
 		return routeInfo;
+	}
+	
+	public Map<Integer, InputDataIngestionMode> getInputDataIngestionModePerUpstream(){
+		return inputDataIngestionModePerUpstream;
+	}
+	
+	public void setInputDataIngestionModePerUpstream(int opId, InputDataIngestionMode mode){
+		inputDataIngestionModePerUpstream.put(opId, mode);
 	}
 	
 	public int getDownOpIdFromIndex(int index){
@@ -198,11 +206,7 @@ public class OperatorContext implements Serializable{
 	public void addUpstream(int opID) {
 		connectionsU.add(opID);
 	}
-	
-//	public void setQueryFunction(String queryFunction){
-//		this.queryFunction = queryFunction;
-//	}
-	
+
 	public void setQueryAttribute(String queryAttribute){
 		this.queryAttribute = queryAttribute;
 	}

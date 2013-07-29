@@ -43,13 +43,13 @@ public class DataStructureAdapter {
 		return dso.pull_from_barrier();
 	}
 	
-	public void setUp(Operator.DataAbstractionMode dam, int numUpstreams){
+	public void setUp(Operator.InputDataIngestionMode dam, int numUpstreams){
 		// For processing one event per iteration, the queue is the best abstraction
-		if(dam.equals(Operator.DataAbstractionMode.ONE_AT_A_TIME)){
+		if(dam.equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
 			InputQueue iq = new InputQueue();
 			dso = iq;
 		}
-		else if(dam.equals(Operator.DataAbstractionMode.UPSTREAM_SYNC_BARRIER)){
+		else if(dam.equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 			Barrier b = new Barrier(numUpstreams);
 			dso = b;
 		}

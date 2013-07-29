@@ -32,17 +32,8 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public IProcessingUnit processingUnit = null;
 	private Router router = null;
 	// By default value
-	private DataAbstractionMode dataAbs = DataAbstractionMode.ONE_AT_A_TIME;
+	private InputDataIngestionMode dataAbs = InputDataIngestionMode.ONE_AT_A_TIME;
 
-	public enum DataAbstractionMode{
-		ONE_AT_A_TIME, WINDOW, ORDERED, UPSTREAM_SYNC_BARRIER
-	}
-
-//	public Operator(int operatorId, State state){
-//		this.operatorId = operatorId;
-//		this.state = state;
-//		subclassOperator = this;
-//	}
 
 	public Operator(){}
 	
@@ -124,9 +115,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
 		processingUnit.sendData(dt, targets);
-		
-//		ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
-//		processingUnit.sendData(dt, targets);
 	}
 	
 	/** System Configuration Settings **/
@@ -142,11 +130,13 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	/** Data Delivery methods **/
 	
-	public DataAbstractionMode getDataAbstractionMode(){
+	public InputDataIngestionMode getInputDataIngestionMode(){
 		return dataAbs;
 	}
 	
-	public void setDataAbstractionMode(DataAbstractionMode mode){
+	//Should not use this method, as this information is defined in queryspecificationI
+	@Deprecated
+	public void setDataAbstractionMode(InputDataIngestionMode mode){
 		this.dataAbs = mode;
 	}
 	
@@ -172,22 +162,17 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		opContext.addDownstream(down.getOperatorId());
 		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
-		
-//		NodeManager.nLogger.info("Operator: "+this.toString()+" is now connected to Operator: "+down.toString());
+		// Store in opContext the inputDataIngestionMode, if not defined, the default: One-at-a-time
+		down.getOpContext().setInputDataIngestionModePerUpstream(getOperatorId(), QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME);
 	}
 	
-//	public void setRoutingQueryFunction(String queryFunction_methodName){
-////		router.setQueryFunction(queryFunction_methodName);
-//		opContext.setQueryFunction(queryFunction_methodName);
-//		NodeManager.nLogger.info("Configured Routing Query Function: "+queryFunction_methodName+" in Operator: "+this.toString());
-//	}
-//	
-//	public void route(Router.RelationalOperator operand, int value, Operator toConnect){
-//		int opId = toConnect.getOperatorId();
-//		//router.routeValueToDownstream(operand, value, opId);
-//		opContext.routeValueToDownstream(operand, value, opId);
-//		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+value+" to Operator: "+toConnect.toString());
-//	}
+	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery){
+		opContext.addDownstream(down.getOperatorId());
+		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
+		down.getOpContext().addUpstream(getOperatorId());
+		// Store in the opContext of the downstream I am adding, the inputdataingestion mode that I demand
+		down.getOpContext().setInputDataIngestionModePerUpstream(getOperatorId(), mode);
+	}
 	
 	public void route(String attributeToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
 		int opId = toConnect.getOperatorId();
@@ -204,17 +189,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		opContext.setKeyAttribute(key);
 		opContext.setDeclaredWorkingAttributes(attributes);
 	}
-	
-//	public void declareWorkingAttributes(String... attributes){
-//		List<String> attrs = Arrays.asList(attributes);
-//		opContext.setDeclaredWorkingAttributes(attrs);
-//	}
-	
-//	@Deprecated
-//	public void declareWorkingAttributes(String... attributes){
-//		opContext.setDeclaredWorkingAttributes(Arrays.asList(attributes));
-//	}
-	
+
 	/** HELPER METHODS **/
 	
 	@Override 

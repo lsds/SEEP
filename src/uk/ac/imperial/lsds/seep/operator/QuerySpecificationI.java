@@ -13,7 +13,11 @@ package uk.ac.imperial.lsds.seep.operator;
 
 public interface QuerySpecificationI {
 
-	int getOperatorId();
+	public enum InputDataIngestionMode{
+		ONE_AT_A_TIME, WINDOW, ORDERED, UPSTREAM_SYNC_BARRIER
+	}
+	
+	public int getOperatorId();
 
 	OperatorContext getOpContext();
 	
@@ -21,13 +25,6 @@ public interface QuerySpecificationI {
 
 	public void connectTo(QuerySpecificationI down, boolean originalQuery);
 	
-//	public void setRoutingQueryFunction(String queryFunction_methodName);
-	
-//	public void route(Router.RelationalOperator operand, int value, Operator toConnect);
-	
-//	public void declareWorkingAttributes(String... attributes);
-		
-	///\fixme{this should be done automatically}
-//	public void set();
+	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery);
 
 }

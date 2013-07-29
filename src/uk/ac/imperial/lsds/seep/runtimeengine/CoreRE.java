@@ -13,13 +13,11 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.ControlHandler;
 import uk.ac.imperial.lsds.seep.comm.IncomingDataHandler;
@@ -40,8 +38,8 @@ import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-import uk.ac.imperial.lsds.seep.operator.Operator.DataAbstractionMode;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
+import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
@@ -136,7 +134,7 @@ public class CoreRE {
 		dsa = new DataStructureAdapter();
 		/// INSTANTIATION OF THE BRIDGE OBJECT
 		// We get the dataabstractionmode from the most upstream operator
-		DataAbstractionMode dam = processingUnit.getOperator().getDataAbstractionMode();
+		InputDataIngestionMode dam = processingUnit.getOperator().getInputDataIngestionMode();
 		// We configure the dataStructureAdapter with this mode, and put the number of upstreams, required by some modes
 		dsa.setUp(dam, processingUnit.getOperator().getOpContext().upstreams.size());
 		
