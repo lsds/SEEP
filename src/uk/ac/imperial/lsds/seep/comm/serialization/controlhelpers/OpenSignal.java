@@ -1,4 +1,3 @@
-package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -9,16 +8,22 @@ package outofband;
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-import uk.ac.imperial.lsds.seep.buffer.*;
+package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
+public class OpenSignal {
 
-public class BufferTest {
-
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Buffer buffer = new Buffer();
+	private int opId;
+	
+	public OpenSignal(){}
+	
+	public OpenSignal(int opId){
+		this.opId = opId;
 	}
-
+	
+	public int getOpId() {
+		return opId;
+	}
+	public void setOpId(int opId) {
+		this.opId = opId;
+	}
 }

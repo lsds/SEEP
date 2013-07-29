@@ -1,4 +1,3 @@
-package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -9,16 +8,24 @@ package outofband;
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-import uk.ac.imperial.lsds.seep.buffer.*;
+package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
+public class InvalidateState {
 
-public class BufferTest {
+	private int operatorId;
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Buffer buffer = new Buffer();
+	public InvalidateState(){
+	}
+	
+	public InvalidateState(int nodeId){
+		this.operatorId = nodeId;
+	}
+	
+	public int getOperatorId() {
+		return operatorId;
 	}
 
+	public void setOperatorId(int nodeId) {
+		this.operatorId = nodeId;
+	}
 }

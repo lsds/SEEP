@@ -1,4 +1,3 @@
-package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -9,16 +8,12 @@ package outofband;
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-import uk.ac.imperial.lsds.seep.buffer.*;
+package uk.ac.imperial.lsds.seep.operator;
 
 
-public class BufferTest {
+public interface StatefulOperator{
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Buffer buffer = new Buffer();
-	}
+	public State getState();
+	public void replaceState(State state);
 
 }

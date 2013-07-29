@@ -1,4 +1,3 @@
-package outofband;
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -9,16 +8,16 @@ package outofband;
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-import uk.ac.imperial.lsds.seep.buffer.*;
+package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.util.ArrayList;
 
-public class BufferTest {
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Buffer buffer = new Buffer();
-	}
+public interface DataStructureI {
 
+	public void push(DataTuple dt);
+	public DataTuple pull();
+	public ArrayList<DataTuple> pull_from_barrier();
+	
 }
