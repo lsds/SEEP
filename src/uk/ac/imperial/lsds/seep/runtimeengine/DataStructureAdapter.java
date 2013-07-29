@@ -11,58 +11,67 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.Operator;
+import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 public class DataStructureAdapter {
-
-	private DataStructureI dso;
 	
-	public DataStructureI getDSO(){
-		return dso;
+	private Map<Integer, DataStructureI> dsoMap = new HashMap<Integer, DataStructureI>();
+	
+	public DataStructureI getDataStructureIForOp(int opId){
+		return dsoMap.get(opId);
 	}
 	
-	public void setDSO(DataStructureI dso){
-		this.dso = dso;
+	public void setDSOForOp(int opId, DataStructureI dso){
+		dsoMap.put(opId, dso);
 	}
 	
 	public DataStructureAdapter(){
 		
 	}
 	
-	public void push(DataTuple dt){
-		dso.push(dt);
-	}
+//	public void push(DataTuple dt){
+//		dso.push(dt);
+//	}
+//	
+//	public DataTuple pull(){
+//		return dso.pull();
+//	}
+//	
+//	public ArrayList<DataTuple> pullBarrier(){
+//		return dso.pull_from_barrier();
+//	}
 	
-	public DataTuple pull(){
-		return dso.pull();
-	}
-	
-	public ArrayList<DataTuple> pullBarrier(){
-		return dso.pull_from_barrier();
-	}
-	
-	public void setUp(Operator.InputDataIngestionMode dam, int numUpstreams){
+	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
 		// For processing one event per iteration, the queue is the best abstraction
-		if(dam.equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
-			InputQueue iq = new InputQueue();
-			dso = iq;
-		}
-		else if(dam.equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
-			Barrier b = new Barrier(numUpstreams);
-			dso = b;
+		for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
+			if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
+				InputQueue iq = new InputQueue();
+				dsoMap.put(entry.getKey(), iq);
+			}
+			else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+				Barrier b = new Barrier(numUpstreams);
+				dsoMap.put(entry.getKey(), b);
+			}
 		}
 	}
 	
 	/** SPECIFIC METHODS **/
 	
+	/// \fixme{REQUIRES opID to understand how to update the barrier.}
+	/// \fixme{In general it is necessary to revisit these methods when downstream and upstreams are dynamically added}
+	@Deprecated
 	public void reconfigureNumUpstream(int upstreamSize){
 		// Number of upstream has changed, this affects the barrier
 		System.out.println("NEW UPSTREAM SIZE: "+upstreamSize);
-		if(dso instanceof Barrier){
-			System.out.println("Calling to reconfigure barrier");
-			((Barrier)dso).reconfigureBarrier(upstreamSize);
-		}
+//		if(dso instanceof Barrier){
+//			System.out.println("Calling to reconfigure barrier");
+//			((Barrier)dso).reconfigureBarrier(upstreamSize);
+//		}
 	}
 }

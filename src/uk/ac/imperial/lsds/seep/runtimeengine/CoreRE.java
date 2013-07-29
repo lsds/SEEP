@@ -16,6 +16,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.P;
@@ -130,14 +131,14 @@ public class CoreRE {
 	
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
 		outputQueue = new OutputQueue();
-		// SET UP the data strcuture adapter, depending on the operators
+
+		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
-		/// INSTANTIATION OF THE BRIDGE OBJECT
-		// We get the dataabstractionmode from the most upstream operator
-		InputDataIngestionMode dam = processingUnit.getOperator().getInputDataIngestionMode();
-		// We configure the dataStructureAdapter with this mode, and put the number of upstreams, required by some modes
-		dsa.setUp(dam, processingUnit.getOperator().getOpContext().upstreams.size());
-		
+		// We get the inputDataIngestion mode map, that consists of inputDataIngestion modes per upstream
+		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getInputDataIngestionModeMap();
+		// We configure the dataStructureAdapter with this mode (per upstream), and put additional info required for some modes
+		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext().upstreams.size());
+
 		// Start communications and worker threads
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInD();

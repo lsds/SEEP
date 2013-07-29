@@ -23,14 +23,11 @@ import com.esotericsoftware.kryo.Kryo;
 
 public class StatefulProcessingWorker implements Runnable{
 
-//	private DataStructureAdapter dsa;
 	private InputQueue iq;
 	private Operator runningOp;
 	private State state;
-	
 	private Semaphore executorMutex;
 	
-//	private Kryo k;
 	
 	public StatefulProcessingWorker(DataStructureAdapter dsa, Operator op, State s, Semaphore executorMutex) {
 		if(dsa.getDSO() instanceof InputQueue){

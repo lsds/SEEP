@@ -38,7 +38,7 @@ import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
  * operators that are within that node.
  */
 
-public class NodeManager{	
+public class NodeManager{
 	
 	private WorkerNodeDescription nodeDescr;
 		
@@ -82,20 +82,6 @@ public class NodeManager{
 		
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
-
-//	public void newOperatorInitialization(Object o) throws OperatorInitializationException {
-////		mapOP_ID.get(((Integer)o).intValue()).initializeCommunications();
-//		core.setOpReady((Integer)o);
-//	}
-
-//	public void startOperator(Integer opToInitialize) {
-//		int opId = opToInitialize.intValue();
-////		Seep.DataTuple.Builder dt = Seep.DataTuple.newBuilder();
-//		DataTuple dt = new DataTuple(-5);
-//		dt.setTs(0);
-//		nLogger.info("-> Starting system");
-//		mapOP_ID.get(opId).processData(dt);
-//	}
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){

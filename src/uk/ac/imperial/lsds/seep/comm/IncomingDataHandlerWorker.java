@@ -13,10 +13,12 @@ package uk.ac.imperial.lsds.seep.comm;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Map;
 
+import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
@@ -26,6 +28,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializ
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
+import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -87,8 +90,12 @@ public class IncomingDataHandlerWorker implements Runnable{
 		
 		/** experimental sync **/
 		try{
-			//Get inputQueue from owner
+			//Get bridge adapter from owner
 			DataStructureAdapter dsa = owner.getDSA();
+			// Get incomingOp id
+			///fixme{Extract remote opId from port}
+			uid = ((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getPort() - new Integer(P.valueFor("dataSocket"));
+			DataStructureI dso = dsa.getDataStructureIForOp(uid);
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
 			BufferedInputStream bis = new BufferedInputStream(is);
@@ -105,7 +112,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
-						dsa.push(reg);
+						dso.push(reg);
 					}
 					else{
 //						System.out.println("trash in TCP buffers");

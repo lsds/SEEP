@@ -48,6 +48,7 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
+import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
@@ -140,9 +141,28 @@ public class Infrastructure {
 		System.out.println("");
 		System.out.println("");
 		queryToNodesMapping = qp.getMapOperatorToNode();
-		/** In the future (maybe) here we will transform multi-operator per node into a single user-defined function (one operator) **/
 		configureRouterStatically();
 		eiu.executeStaticScaleOutFromIntent(soib);
+		
+		// Finally we set up the InputDataIngestionMode per operator
+		///fixme{Wasteful method, but no performance critical anyway}
+		for(Operator op : ops){
+			// Never will be empty, as there are no sources here (so all operators will have at least one upstream
+			makeDataIngestionModeLocalToOp(op);
+		}
+		// Finally do the inversion with sink, since this also has upstream operators.
+		makeDataIngestionModeLocalToOp(snk);
+	}
+	
+	private void makeDataIngestionModeLocalToOp(Operator op){
+		// Never will be empty, as there are no sources here (so all operators will have at least one upstream
+		for(Entry<Integer, InputDataIngestionMode> entry : op.getOpContext().getInputDataIngestionModePerUpstream().entrySet()){
+			for(Operator upstream : ops){
+				if(upstream.getOperatorId() == entry.getKey()){
+					upstream.setInputDataIngestionModeForUpstream(op.getOperatorId(), entry.getValue()); //Make dist info local to operator
+				}
+			}
+		}
 	}
 	
 	public void configureRouterStatically(){

@@ -12,7 +12,9 @@ package uk.ac.imperial.lsds.seep.operator;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -32,7 +34,9 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public IProcessingUnit processingUnit = null;
 	private Router router = null;
 	// By default value
-	private InputDataIngestionMode dataAbs = InputDataIngestionMode.ONE_AT_A_TIME;
+//	private InputDataIngestionMode dataAbs = InputDataIngestionMode.ONE_AT_A_TIME;
+	
+	private Map<Integer, InputDataIngestionMode> inputDataIngestionMode = new HashMap<Integer, InputDataIngestionMode>();
 
 
 	public Operator(){}
@@ -130,15 +134,28 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	/** Data Delivery methods **/
 	
-	public InputDataIngestionMode getInputDataIngestionMode(){
-		return dataAbs;
+//	@Deprecated
+//	public InputDataIngestionMode getInputDataIngestionMode(){
+//		return dataAbs;
+//	}
+	
+	public InputDataIngestionMode getInputDataIngestionModeForUpstream(int opId){
+		return inputDataIngestionMode.get(opId);
+	}
+	
+	public Map<Integer, InputDataIngestionMode> getInputDataIngestionModeMap(){
+		return inputDataIngestionMode;
+	}
+	
+	public void setInputDataIngestionModeForUpstream(int opId, InputDataIngestionMode mode){
+		this.inputDataIngestionMode.put(opId, mode);
 	}
 	
 	//Should not use this method, as this information is defined in queryspecificationI
-	@Deprecated
-	public void setDataAbstractionMode(InputDataIngestionMode mode){
-		this.dataAbs = mode;
-	}
+//	@Deprecated
+//	public void setDataAbstractionMode(InputDataIngestionMode mode){
+//		this.dataAbs = mode;
+//	}
 	
 	/** Implementation of QuerySpecificationI **/
 	
