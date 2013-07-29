@@ -1,12 +1,13 @@
-Seep is an experimental system that is being developed at LSDS@Imperial. 
-The first release is due by the end of 2013. (See NOTICE file)
+Seep is an experimental stream processing platform that is being developed by the Large-Scale Distributed Systems (LSDS) research group at Imperial College London. 
 
-build -> self-explanatory 
+The system is currently under heavy development and should be considered an alpha release.
+
+build -> binary build files
 build.xml -> Ant configuration file 
-changelog -> self-explanatory 
-dist -> To store the jar (onejar) file 
-doc -> Some doxygen generated documentation 
-DoxyFile -> The doxygen configuration file 
+changelog -> list of system changes
+dist -> jar distribution file (onejar) 
+doc -> Doxygen generated documentation 
+DoxyFile -> Doxygen configuration file 
 lib -> external libs 
-src -> self-explanatory 
-todo -> self-explanatory
+src -> source files
+todo -> list of open items
