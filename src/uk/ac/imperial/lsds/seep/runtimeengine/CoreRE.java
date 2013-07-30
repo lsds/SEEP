@@ -293,6 +293,10 @@ public class CoreRE {
 		return processingUnit.getOriginalUpstreamFromOpId(opId);
 	}
 	
+	public int getOpIdFromInetAddress(InetAddress ip){
+		return processingUnit.getOpIdFromUpstreamIp(ip);
+	}
+	
 	//TODO To refine this method...
 	/// \todo {this method should work when an operator must be killed in a proper way}
 	public boolean killHandlers(){

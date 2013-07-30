@@ -10,7 +10,6 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.processingunit;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -44,7 +43,6 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
@@ -1032,5 +1030,10 @@ System.out.println("partitioning time: "+(b-a));
 	
 	public ArrayList<Integer> getPartitioningRange(){
 		return sbw.getPartitioningRange();
+	}
+
+	@Override
+	public int getOpIdFromUpstreamIp(InetAddress ip) {
+		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
 	}
 }

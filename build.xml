@@ -37,7 +37,7 @@
     <!-- Put everything in ${build} into the jDDS-${DSTAMP}.jar file -->
     <jar jarfile="${dist}/SEEPv0.1-${DSTAMP}.jar" basedir="${build}">
 	<manifest>
-		<attribute name="Main-Class" value="seep/Main" />
+		<attribute name="Main-Class" value="uk/ac/imperial/lsds/seep/Main" />
 	</manifest>
 	<fileset dir="${build}" includes="**/*.class"/>
 	<zipfileset src="lib/kryo-debug-2.20-all.jar" excludes="META-INF/*"/>

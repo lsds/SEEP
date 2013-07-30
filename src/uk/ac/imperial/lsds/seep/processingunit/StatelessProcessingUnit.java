@@ -25,7 +25,6 @@ import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
@@ -313,6 +312,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	
 	public ArrayList<Integer> getRouterKeysInformation(int opId){
 		return runningOp.getRouter().getKeysInformation(opId);
+	}
+
+	@Override
+	public int getOpIdFromUpstreamIp(InetAddress ip) {
+		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
 	}
 
 }

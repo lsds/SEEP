@@ -18,7 +18,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
@@ -90,14 +89,20 @@ public class IncomingDataHandlerWorker implements Runnable{
 			//Get bridge adapter from owner
 			DataStructureAdapter dsa = owner.getDSA();
 			// Get incomingOp id
-			
-			
-			///\fixme{Extract remote opId from port}
-			///\fixme{This uid must come from the instantiator of this class, and be the one of the original operator, rather than replicas}
-			int opId = ((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getPort() - new Integer(P.valueFor("dataSocket"));
+			int opId = owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress());
 			int originalOpId = owner.getOriginalUpstreamFromOpId(opId);
 			
-			DataStructureI dso = dsa.getDataStructureIForOp(originalOpId);
+			System.out.println("Getting DSO for op: "+originalOpId);
+			DataStructureI dso = null;
+			dso = dsa.getDataStructureIForOp(originalOpId);
+			if(dsa.getUniqueDso() != null){
+				dso = dsa.getUniqueDso();
+				NodeManager.nLogger.info("-> Unique data adapter in this node");
+			}
+			else{
+				dso = dsa.getDataStructureIForOp(originalOpId);
+				NodeManager.nLogger.info("-> Multiple data adapters in this node");
+			}
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
 			BufferedInputStream bis = new BufferedInputStream(is);

@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
@@ -31,7 +32,17 @@ public class DataStructureAdapter {
 	}
 	
 	public DataStructureI getDataStructureIForOp(int opId){
-		return dsoMap.get(opId);
+		System.out.println("SIZE MAP: "+dsoMap.size());
+		for(Entry<Integer, DataStructureI> entry : dsoMap.entrySet()){
+			System.out.println("KEY: "+entry.getKey()+" VAL: "+entry.getValue());
+		}
+		if(dsoMap.containsKey(opId)){
+			return dsoMap.get(opId);
+		}
+		else{
+			NodeManager.nLogger.severe("-> ERROR. No adapter for given opId, not possible to forward data to operator.");
+			return null;
+		}
 	}
 	
 	public int getNumberOfModes(){
@@ -47,8 +58,17 @@ public class DataStructureAdapter {
 	}
 	
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
+		
+		
+		for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
+			System.out.println("OP: "+entry.getKey());
+			System.out.println("MODE: "+entry.getValue());
+		}
+		
+		
 		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
 		if(iimMap.size() > 1){
+			NodeManager.nLogger.info("-> Setting up multiple inputDataIngestionModes");
 			// For processing one event per iteration, the queue is the best abstraction
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
 				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
@@ -62,6 +82,7 @@ public class DataStructureAdapter {
 			}
 		}
 		else if(iimMap.size() == 1){
+			NodeManager.nLogger.info("-> Setting up a unique InputDataIngestionMode");
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
 				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();

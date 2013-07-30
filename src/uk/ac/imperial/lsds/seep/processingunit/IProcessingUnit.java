@@ -94,4 +94,5 @@ public interface IProcessingUnit {
 	
 	public int getOriginalUpstreamFromOpId(int opId);
 	
+	public int getOpIdFromUpstreamIp(InetAddress ip);
 }

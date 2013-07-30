@@ -85,7 +85,9 @@ public class OperatorContext implements Serializable{
 	
 	public int getOriginalUpstreamFromOpId(int opId){
 		///\todo{implement this}
+		System.out.println("UPSTREAM location size: "+upstream.size());
 		for(OperatorStaticInformation op : upstream){
+			System.out.println("OPID: "+op.getOpId()+" and looking for: "+opId);
 			if(op.getOpId() == opId){
 				return op.getOriginalOpId();
 			}
@@ -100,6 +102,18 @@ public class OperatorContext implements Serializable{
 			if(op.getOriginalOpId() == originalOpId) total++;
 		}
 		return total;
+	}
+	
+	public int getOpIdFromUpstreamIp(InetAddress ip){
+		for(OperatorStaticInformation op : upstream){
+			System.out.println("compare: "+op.getMyNode().getIp()+" opId: "+op.getOpId());
+			System.out.println("with: "+ip);
+			if(op.getMyNode().getIp().equals(ip)){
+				return op.getOpId();
+			}
+		}
+		///\fixme{make operators id consistent, or propagate errors with exceptions otherwise}
+		return -1000;
 	}
 	
 	public int getDownOpIdFromIndex(int index){
