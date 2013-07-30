@@ -116,51 +116,38 @@ public class ElasticInfrastructureUtils {
 		//Get pre-configured router and assign to new operator
 		Router copyOfRouter = opToParallelize.getRouter();
 		newOp.setRouter(copyOfRouter);
-		inf.placeNew(newOp, newNode);
+//		inf.placeNew(newOp, newNode);
+		inf.placeNewParallelReplica(opToParallelize, newOp, newNode);
 		inf.updateContextLocations(newOp);
-		System.out.println("7.1");
 		//NodeManager.nLogger.info("Created new Op: "+newOp.toString());
-		System.out.println("7.5");
 		// Send query to the new node
 		inf.setUp(newOp);
-		System.out.println("8");
 		//deploy new Operator
 		//conn to new node
 		inf.deploy(newOp);
-		System.out.println("9");
 		//ConfigureCommunications
 		//conn to new node
 		inf.init(newOp);
-		System.out.println("10");
 		// Make the new operator aware of the states in the system
 		inf.broadcastState(newOp);
-		System.out.println("11");
 		// and also aware of the payloads
-//		inf.broadcastObject(newOp);
 		// Send the SET-RUNTIME to the new op
 		inf.initRuntime(newOp);
-		System.out.println("12");
 		//add upstream conn
 		//conn to down nodes
 /**WAIT FOR ANSWER**/
 		addUpstreamConnections(newOp);
-		System.out.println("13");
 		//conn to previous nodes
 		addDownstreamConnections(newOp);
-		System.out.println("14");
 /**UNTIL HERE**/
 		//conn to previous node
 		sendScaleOutMessageToUpstreams(opIdToParallelize, newOpId);
-		System.out.println("15");
 		//conn to previous node
 /**HERE AGAIN WAIT FOR ANSWER**/
 		sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
-		System.out.println("16");
 /**FINALIZE SCALE OUT PROTOCOL**/
 		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
 		sendSystemConfiguredToReplica(newOp);
-		System.out.println("17");
-		//sendSendInitToMinUpstream(opIdToParallelize,newOpId);
 	}
 	
 	// One option to scale out automatically operators, statically

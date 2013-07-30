@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 public class ReconfigureConnection {
 
 	private int opId;
+	private int originalOpId;
 	private String command;
 	private String ip;
 	private int node_port;
@@ -35,8 +36,9 @@ public class ReconfigureConnection {
 		this.ip = ip;
 	}
 	
-	public ReconfigureConnection(int opId, String command, String ip,int nodePort, int inC, int inD, boolean operatorNature, String operatorType) {
+	public ReconfigureConnection(int opId, int originalOpId, String command, String ip,int nodePort, int inC, int inD, boolean operatorNature, String operatorType) {
 		this.opId = opId;
+		this.originalOpId = originalOpId;
 		this.command = command;
 		this.ip = ip;
 		this.node_port = nodePort;
@@ -55,48 +57,71 @@ public class ReconfigureConnection {
 	public int getOpId() {
 		return opId;
 	}
+	
+	public int getOriginalOpId(){
+		return originalOpId;
+	}
+	
 	public void setOpId(int opId) {
 		this.opId = opId;
 	}
+	
+	public void setOriginalOpId(int opId){
+		this.originalOpId = opId;
+	}
+	
 	public String getCommand() {
 		return command;
 	}
+	
 	public void setCommand(String command) {
 		this.command = command;
 	}
+	
 	public String getIp() {
 		return ip;
 	}
+	
 	public void setIp(String ip) {
 		this.ip = ip;
 	}
+	
 	public int getNode_port() {
 		return node_port;
 	}
+	
 	public void setNode_port(int nodePort) {
 		node_port = nodePort;
 	}
+	
 	public int getInC() {
 		return inC;
 	}
+	
 	public void setInC(int inC) {
 		this.inC = inC;
 	}
+	
 	public int getInD() {
 		return inD;
 	}
+	
 	public void setInD(int inD) {
 		this.inD = inD;
 	}
+	
 	public boolean getOperatorNature() {
 		return operatorNature;
 	}
+	
 	public void setOperatorNature(boolean operatorNature) {
 		this.operatorNature = operatorNature;
 	}
+	
 	public String getOperatorType() {
 		return operatorType;
 	}
+	
 	public void setOperatorType(String operatorType) {
 		this.operatorType = operatorType;
 	}

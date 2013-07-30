@@ -22,6 +22,9 @@ public class OperatorStaticInformation implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
+	private int opId;
+	private int originalOpId;
+	
 	private Node myNode;
 
 	private int inC;
@@ -29,6 +32,14 @@ public class OperatorStaticInformation implements Serializable{
 	
 	private boolean isStatefull;
 
+	public int getOpId(){
+		return opId;
+	}
+	
+	public int getOriginalOpId(){
+		return originalOpId;
+	}
+	
 	public Node getMyNode(){
 		return myNode;
 	}
@@ -62,14 +73,16 @@ public class OperatorStaticInformation implements Serializable{
 	}
 
 	public OperatorStaticInformation setNode(Node newNode){
-		return new OperatorStaticInformation(newNode, inC, inD, isStatefull);
+		return new OperatorStaticInformation(opId, originalOpId, newNode, inC, inD, isStatefull);
 	}
 	
 	@Override public String toString() {
 		return "node: " + myNode + "inC: " + inC + "inD: " + inD;
 	}
 
-	public OperatorStaticInformation(Node myNode, int inC, int inD, boolean isStatefull){
+	public OperatorStaticInformation(int opId, int originalOpId, Node myNode, int inC, int inD, boolean isStatefull){
+		this.opId = opId;
+		this.originalOpId = originalOpId;
 		this.myNode = myNode;
 		this.inC = inC;
 		this.inD = inD;

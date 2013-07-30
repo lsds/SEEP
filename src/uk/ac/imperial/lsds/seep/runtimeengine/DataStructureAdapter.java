@@ -10,12 +10,10 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
@@ -48,18 +46,6 @@ public class DataStructureAdapter {
 		dsoMap.put(opId, dso);
 	}
 	
-//	public void push(DataTuple dt){
-//		uniqueDso.push(dt);
-//	}
-//	
-//	public DataTuple pull(){
-//		return uniqueDso.pull();
-//	}
-//	
-//	public ArrayList<DataTuple> pullBarrier(){
-//		return uniqueDso.pull_from_barrier();
-//	}
-	
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
 		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
 		if(iimMap.size() > 1){
@@ -91,15 +77,13 @@ public class DataStructureAdapter {
 	
 	/** SPECIFIC METHODS **/
 	
-	/// \fixme{REQUIRES opID to understand how to update the barrier.}
-	/// \fixme{In general it is necessary to revisit these methods when downstream and upstreams are dynamically added}
-	@Deprecated
-	public void reconfigureNumUpstream(int upstreamSize){
+	public void reconfigureNumUpstream(int originalOpId, int upstreamSize){
 		// Number of upstream has changed, this affects the barrier
 		System.out.println("NEW UPSTREAM SIZE: "+upstreamSize);
-//		if(dso instanceof Barrier){
-//			System.out.println("Calling to reconfigure barrier");
-//			((Barrier)dso).reconfigureBarrier(upstreamSize);
-//		}
+		DataStructureI barrier = dsoMap.get(originalOpId);
+		if(barrier instanceof Barrier){
+			System.out.println("Calling to reconfigure barrier");
+			((Barrier)barrier).reconfigureBarrier(upstreamSize);
+		}
 	}
 }

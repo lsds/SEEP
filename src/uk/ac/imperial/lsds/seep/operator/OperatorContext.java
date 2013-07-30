@@ -35,9 +35,9 @@ public class OperatorContext implements Serializable{
 	private ArrayList<OperatorStaticInformation> upstream = new ArrayList<OperatorStaticInformation>();
 	private ArrayList<OperatorStaticInformation> downstream = new ArrayList<OperatorStaticInformation>();
 	private ArrayList<Integer> originalDownstream = new ArrayList<Integer>();
+	
 	// store the type of input data ingestion mode per upstream operator. <OpId - InputDataIngestionMode>
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionModePerUpstream = new HashMap<Integer, InputDataIngestionMode>();
-	
 	/** VAR -> Routing related information for this operator **/
 	private String queryAttribute = null;
 	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
@@ -81,6 +81,25 @@ public class OperatorContext implements Serializable{
 	
 	public void setInputDataIngestionModePerUpstream(int opId, InputDataIngestionMode mode){
 		inputDataIngestionModePerUpstream.put(opId, mode);
+	}
+	
+	public int getOriginalUpstreamFromOpId(int opId){
+		///\todo{implement this}
+		for(OperatorStaticInformation op : upstream){
+			if(op.getOpId() == opId){
+				return op.getOriginalOpId();
+			}
+		}
+		///\fixme{make operators id consistent, or propagate errors with exceptions otherwise}
+		return -1000;
+	}
+	
+	public int getUpstreamNumberOfType(int originalOpId){
+		int total = 0;
+		for(OperatorStaticInformation op : upstream){
+			if(op.getOriginalOpId() == originalOpId) total++;
+		}
+		return total;
 	}
 	
 	public int getDownOpIdFromIndex(int index){

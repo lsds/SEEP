@@ -159,6 +159,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 	
 	@Override
+	public int getOriginalUpstreamFromOpId(int opId) {
+		return runningOp.getOpContext().getOriginalUpstreamFromOpId(opId);
+	}
+	
+	@Override
 	public SystemStatus getSystemStatus(){
 		return systemStatus;
 	}
@@ -966,7 +971,6 @@ System.out.println("partitioning time: "+(b-a));
 	
 	@Override
 	public void addUpstream(int opId, OperatorStaticInformation location){
-		// First pick the most upstream operator, and add the upstream to that one
 		OperatorContext opContext = runningOp.getOpContext();
 		opContext.addUpstream(opId);
 		opContext.setUpstreamOperatorStaticInformation(opId, location);

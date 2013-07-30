@@ -289,6 +289,10 @@ public class CoreRE {
 		this.backupUpstreamIndex = backupUpstreamIndex;
 	}
 	
+	public int getOriginalUpstreamFromOpId(int opId){
+		return processingUnit.getOriginalUpstreamFromOpId(opId);
+	}
+	
 	//TODO To refine this method...
 	/// \todo {this method should work when an operator must be killed in a proper way}
 	public boolean killHandlers(){
@@ -305,9 +309,10 @@ public class CoreRE {
 		return false;
 	}
 		
+	/// \fixme{Fix this}
 	boolean gotit = false;
 	
-	/// \todo{reduce messages here. ACK, RECONFIGURE, BCK_STATE, rename{send_init, init_ok, init_state}}
+	
 	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
 		ControlTupleType ctt = ct.getType();
 		/** ACK message **/
@@ -552,7 +557,10 @@ public class CoreRE {
 		/** ADD DOWN or ADD UP message **/
 		else if(command.equals("add_downstream") || command.equals("add_upstream")){
 //			operatorStatus = OperatorStatus.RECONFIGURING_COMM;
-			OperatorStaticInformation loc = new OperatorStaticInformation(new Node(ip, rc.getNode_port()), rc.getInC(), rc.getInD(), rc.getOperatorNature());
+			// at this point we need opId and originalOpId
+			
+			OperatorStaticInformation loc = new OperatorStaticInformation(opId, rc.getOriginalOpId(), 
+					new Node(ip, rc.getNode_port()), rc.getInC(), rc.getInD(), rc.getOperatorNature());
 			if(command.equals("add_downstream")){
 				processingUnit.addDownstream(opId, loc);
 			}
@@ -561,10 +569,14 @@ public class CoreRE {
 				processingUnit.addUpstream(opId, loc);
 				//Send to that upstream the routing information I am storing (in case there are ri).
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
-				//Re-Check the upstreamBackupIndex. Re-check what upstream to send the backup state.
+				
+				// Check how many replicas of this operator are at the moment and reconfigure barrier with this number.
+				// This is necessary for cases where there is more than one InputDataIngestionMode
+				int originalOpId = processingUnit.getOriginalUpstreamFromOpId(opId);
+				int upstreamSizeForBarrier = processingUnit.getOperator().getOpContext().getUpstreamNumberOfType(originalOpId);
 				int upstreamSize = processingUnit.getOperator().getOpContext().upstreams.size();
 				reconfigureUpstreamBackupIndex(upstreamSize);
-				dsa.reconfigureNumUpstream(upstreamSize);
+				dsa.reconfigureNumUpstream(originalOpId, upstreamSizeForBarrier);
 			}
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}

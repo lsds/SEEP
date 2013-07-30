@@ -137,6 +137,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public boolean isNodeStateful() {
 		return false;
 	}
+	
+	@Override
+	public int getOriginalUpstreamFromOpId(int opId) {
+		return runningOp.getOpContext().getOriginalUpstreamFromOpId(opId);
+	}
 
 	@Override
 	public boolean isOperatorReady() {

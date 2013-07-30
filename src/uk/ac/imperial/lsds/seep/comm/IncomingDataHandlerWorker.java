@@ -18,7 +18,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
@@ -35,16 +34,14 @@ import com.esotericsoftware.kryo.io.Input;
 
 public class IncomingDataHandlerWorker implements Runnable{
 
-	private int uid = 0;
 	private Socket upstreamSocket = null;
 	private CoreRE owner = null;
 	private boolean goOn;
 	private Map<String, Integer> idxMapper;
 	private Kryo k = null;
 	
-	public IncomingDataHandlerWorker(int uid, Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper){
+	public IncomingDataHandlerWorker(Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper){
 		//upstream id
-		this.uid = uid;
 		this.upstreamSocket = upstreamSocket;
 		this.owner = owner;
 		this.goOn = true;
@@ -93,9 +90,14 @@ public class IncomingDataHandlerWorker implements Runnable{
 			//Get bridge adapter from owner
 			DataStructureAdapter dsa = owner.getDSA();
 			// Get incomingOp id
-			///fixme{Extract remote opId from port}
-			uid = ((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getPort() - new Integer(P.valueFor("dataSocket"));
-			DataStructureI dso = dsa.getDataStructureIForOp(uid);
+			
+			
+			///\fixme{Extract remote opId from port}
+			///\fixme{This uid must come from the instantiator of this class, and be the one of the original operator, rather than replicas}
+			int opId = ((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getPort() - new Integer(P.valueFor("dataSocket"));
+			int originalOpId = owner.getOriginalUpstreamFromOpId(opId);
+			
+			DataStructureI dso = dsa.getDataStructureIForOp(originalOpId);
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
 			BufferedInputStream bis = new BufferedInputStream(is);

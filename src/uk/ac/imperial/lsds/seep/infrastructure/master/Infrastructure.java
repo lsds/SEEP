@@ -338,13 +338,9 @@ public class Infrastructure {
 	}
 	
 	public void setUp(Operator op){
-		System.out.println("7.6");
 		byte data[] = getDataFromFile(pathToQueryDefinition);
-		System.out.println("7.7");
 		NodeManager.nLogger.info("Sending code to new op: "+op.getOperatorId());
-		System.out.println("7.8");
 		sendCode(op, data);
-		System.out.println("7.9");
 	}
 	
 	public void broadcastState(State s){
@@ -353,13 +349,6 @@ public class Infrastructure {
 			bcu.sendObject(node, s);
 		}
 	}
-//	
-//	public void broadcastObject(Object o){
-//		for(Operator op: ops){
-//			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-//			bcu.sendObject(node, o);
-//		}
-//	}
 	
 	public void broadcastState(Operator op){
 		for(State s : states){
@@ -367,13 +356,6 @@ public class Infrastructure {
 			bcu.sendObject(node, s);
 		}
 	}
-//	
-//	public void broadcastObject(Operator op){
-//		for(Object o : objects){
-//			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-//			bcu.sendObject(node, o);
-//		}
-//	}
 	
 	public void deploy() throws OperatorDeploymentException {
 
@@ -395,12 +377,6 @@ public class Infrastructure {
 			//Send every state to all the worker nodes
 			broadcastState(s);
 		}
-//		
-//		//Broadcast the registered payloads to all the worker nodes
-//		for(Object o : objects){
-//			//Send objects to register to all worker nodes
-//			broadcastObject(o);
-//		}
 		
 		//Finally, we tell the nodes to initialize all communications, all is ready to run
 		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
@@ -441,17 +417,9 @@ public class Infrastructure {
 	
 	public void sendCode(Operator op, byte[] data){
 		///\fixme{once there are more than one op per node this code will need to be fixed}
-		System.out.println("1");
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		System.out.println("2");
-//		if(node == null){
-//			System.out.println("el puto nodo es nULL cojones puta madre calva de cristo");
-//			System.exit(0);
-//		}
 		Infrastructure.nLogger.info("-> Infrastructure. Sending CODE to node: "+node.toString());
-		System.out.println("3");
 		bcu.sendFile(node, data);
-		System.out.println("4");
 	}
 
 	public void deploy(Operator op) {
@@ -572,7 +540,30 @@ public class Infrastructure {
 	public void placeNew(Operator o, Node n) {
 		int opId = o.getOperatorId();
 		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
-		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
+//		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
+		// Note that opId and originalOpId are the same value here, since placeNew places only original operators in the query
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, opId, n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
+		o.getOpContext().setOperatorStaticInformation(l);
+		
+		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
+			int downID = downDescr.opID();
+			QuerySpecificationI downOp = elements.get(downID);
+			downOp.getOpContext().setUpstreamOperatorStaticInformation(opId, l);
+		}
+
+		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
+			int upID = upDescr.opID();
+			QuerySpecificationI upOp = elements.get(upID);
+			upOp.getOpContext().setDownstreamOperatorStaticInformation(opId, l);
+		}
+	}
+	
+	public void placeNewParallelReplica(Operator originalOp, Operator o, Node n){
+		int opId = o.getOperatorId();
+		int originalOpId = originalOp.getOpContext().getOperatorStaticInformation().getOpId();
+		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
+		
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
 		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
@@ -596,11 +587,12 @@ public class Infrastructure {
 		if(opToAdd != null){
 			int opId = opToAdd.getOperatorId();
 			ip = opToAdd.getOpContext().getOperatorStaticInformation().getMyNode().getIp().getHostAddress();
+			int originalOpId = opToAdd.getOpContext().getOperatorStaticInformation().getOriginalOpId();
 			int node_port = opToAdd.getOpContext().getOperatorStaticInformation().getMyNode().getPort();
 			int in_c = opToAdd.getOpContext().getOperatorStaticInformation().getInC();
 			int in_d = opToAdd.getOpContext().getOperatorStaticInformation().getInD();
 			boolean operatorNature = opToAdd.getOpContext().getOperatorStaticInformation().isStatefull();
-			ct = new ControlTuple().makeReconfigure(opId, command, ip, node_port, in_c, in_d, operatorNature, operatorType);
+			ct = new ControlTuple().makeReconfigure(opId, originalOpId, command, ip, node_port, in_c, in_d, operatorNature, operatorType);
 		}
 		else{
 			ct = new ControlTuple().makeReconfigure(0, command, ip);

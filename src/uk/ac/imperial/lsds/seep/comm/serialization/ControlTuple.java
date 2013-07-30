@@ -247,9 +247,11 @@ public class ControlTuple {
 		return this;
 	}
 
-	public ControlTuple makeReconfigure(int opId, String command, String ip, int nodePort, int inC, int inD, boolean operatorNature, String operatorType) {
+	public ControlTuple makeReconfigure(int opId, int originalOpId, String command, 
+			String ip, int nodePort, int inC, int inD, boolean operatorNature, String operatorType) {
 		this.type = CoreRE.ControlTupleType.RECONFIGURE;
-		this.reconfigureConnection = new ReconfigureConnection(opId, command, ip, nodePort, inC, inD, operatorNature, operatorType);
+		this.reconfigureConnection = new ReconfigureConnection(opId, originalOpId, command, 
+				ip, nodePort, inC, inD, operatorNature, operatorType);
 		return this;
 	}
 	

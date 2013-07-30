@@ -57,10 +57,9 @@ public class IncomingDataHandler implements Runnable{
 			//Upstream id
 			int uid = 0;
 			while(goOn){
-				Thread newConn = new Thread(new IncomingDataHandlerWorker(uid, incDataServerSocket.accept(), owner, idxMapper));
+				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper));
 				newConn.start();
 				MetricsReader.numberIncomingDataHandlerWorkers.inc();
-				uid++;
 			}
 			incDataServerSocket.close();
 		}

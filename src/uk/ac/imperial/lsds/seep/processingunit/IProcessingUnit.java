@@ -92,4 +92,6 @@ public interface IProcessingUnit {
 	
 	public ArrayList<Integer> getRouterKeysInformation(int opId);
 	
+	public int getOriginalUpstreamFromOpId(int opId);
+	
 }
