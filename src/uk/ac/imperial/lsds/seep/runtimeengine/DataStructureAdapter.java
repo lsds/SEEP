@@ -10,12 +10,10 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
@@ -25,6 +23,14 @@ public class DataStructureAdapter {
 	
 	public DataStructureI getDataStructureIForOp(int opId){
 		return dsoMap.get(opId);
+	}
+	
+	public int getNumberOfModes(){
+		return dsoMap.size();
+	}
+	
+	public Map<Integer, DataStructureI> getInputDataIngestionModeMap(){
+		return dsoMap;
 	}
 	
 	public void setDSOForOp(int opId, DataStructureI dso){
