@@ -40,37 +40,34 @@ public class DataConsumer implements Runnable {
 	public void run() {
 		int mode = 0;
 		Map<Integer, DataStructureI> inputDataModeMap = dataAdapter.getInputDataIngestionModeMap();
-		for(Entry<Integer, DataStructureI> entry : inputDataModeMap.entrySet()){
-			DataConsumerWorker dcw = new DataConsumerWorker(entry.getValue());
-			Thread worker = new Thread(dcw);
-			worker.start();
+		// For performance reasons we make the differentiation between cases where more than 1 inputdataIngestion mode...
+		if(inputDataModeMap.size() > 1){
+			for(Entry<Integer, DataStructureI> entry : inputDataModeMap.entrySet()){
+				DataConsumerWorker dcw = new DataConsumerWorker(entry.getValue());
+				Thread worker = new Thread(dcw);
+				worker.start();
+			}
 		}
-//		if(dataAdapter.getDSO() instanceof InputQueue){
-//			mode = 1;
-//		}
-//		else if(dataAdapter.getDSO() instanceof Barrier){
-//			mode = 2;
-//		}
-//		if(mode == 1){
-//			while(doWork){
-//				DataTuple data = dataAdapter.pull();
-//				if(owner.checkSystemStatus()){
-//					owner.forwardData(data);
-//				}
-//			}
-//		}
-//		else if(mode == 2){
-//			while(doWork){
-////				System.out.println("### Yes, im in mode2, so using the barrier...");
-//				ArrayList<DataTuple> ldata = dataAdapter.pull_from_barrier();
-////				System.out.println("### Unblocked, got the data");
-//				System.out.println("C");
-//				if(owner.checkSystemStatus()){
-//					System.out.println("D");
-//					owner.forwardData(ldata);
-//				}
-//			}
-//		}
+		//... and only one, case that we can exploit for performance reasons
+		else{
+			DataStructureI dso = dataAdapter.getUniqueDso();
+			if(dso instanceof InputQueue){
+				while(doWork){
+					DataTuple data = dso.pull();
+					if(owner.checkSystemStatus()){
+						owner.forwardData(data);
+					}
+				}
+			}
+			else if(dso instanceof Barrier){
+				while(doWork){
+					ArrayList<DataTuple> ldata = dso.pull_from_barrier();
+					if(owner.checkSystemStatus()){
+						owner.forwardData(ldata);
+					}
+				}
+			}
+		}
 	}
 	
 	class DataConsumerWorker implements Runnable{

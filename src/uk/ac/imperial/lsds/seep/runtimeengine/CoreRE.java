@@ -16,7 +16,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.P;
@@ -90,9 +89,6 @@ public class CoreRE {
 		this.nodeDescr = nodeDescr;
 		this.rcl = rcl;		
 		coreProcessLogic = new CoreProcessingLogic();
-//		ControlTuple b = new ControlTuple();
-//		b.setType(ControlTupleType.ACK);
-//		genericAck = b;
 	}
 	
 	public RuntimeClassLoader getRuntimeClassLoader(){
@@ -153,7 +149,6 @@ public class CoreRE {
 		dataConsumer = new DataConsumer(this, dsa);
 		dConsumerH = new Thread(dataConsumer);
 
-//		dConsumerH.start();
 		controlH.start();
 		iDataH.start();
 		
@@ -202,11 +197,7 @@ public class CoreRE {
 			dConsumerH.start();
 			NodeManager.nLogger.info("-> SYSTEM CONFIGURED FOR NO MULTICORE");
 		}
-		
-		
-//		controlH.start();
-//		iDataH.start();
-		
+
 		/// INSTANTIATION
 		/** MORE REFACTORING HERE **/
 		coreProcessLogic.setOwner(this);
@@ -269,10 +260,6 @@ public class CoreRE {
 		return ts_data;
 	}
 	
-//	public InputQueue getInputQueue(){
-//		return inputQueue;
-//	}
-	
 	public DataStructureAdapter getDSA(){
 		return dsa;
 	}
@@ -309,12 +296,6 @@ public class CoreRE {
 		//iDataH.destroy();
 		return true;
 	}
-	
-//	public void cleanInputQueue(){
-//		System.out.println("System STATUS before cleaning: "+processingUnit.getSystemStatus());
-//		inputQueue.clean();
-//		System.out.println("System STATUS after cleaning: "+processingUnit.getSystemStatus());
-//	}
 
 	public boolean checkSystemStatus(){
 		// is it correct like this?
@@ -533,13 +514,7 @@ public class CoreRE {
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
 			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
-				
-				
-				
 				processingUnit.stopConnection(opId);
-				
-				
-				
 			}
 			processingUnit.reconfigureOperatorConnection(opId, ip);
 			

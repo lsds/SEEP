@@ -19,8 +19,6 @@ import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.InputQueue;
 
-import com.esotericsoftware.kryo.Kryo;
-
 public class StatefulProcessingWorker implements Runnable{
 
 	private InputQueue iq;
@@ -28,10 +26,10 @@ public class StatefulProcessingWorker implements Runnable{
 	private State state;
 	private Semaphore executorMutex;
 	
-	
+	///\todo{for now, multicore is only supported in those operators with only one inputDataIngestionMode}
 	public StatefulProcessingWorker(DataStructureAdapter dsa, Operator op, State s, Semaphore executorMutex) {
-		if(dsa.getDSO() instanceof InputQueue){
-			this.iq = (InputQueue) dsa.getDSO();
+		if(dsa.getUniqueDso() != null){
+			this.iq = (InputQueue) dsa.getUniqueDso();
 		}
 		else{
 			NodeManager.nLogger.severe("-> Operation not permitted at this moment.. stateful multi-core on dist barrier");

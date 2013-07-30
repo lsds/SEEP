@@ -978,7 +978,7 @@ System.out.println("partitioning time: "+(b-a));
 		// Different strategies depending on whether the state is partitionable or not
 		int numberOfProcessors = Runtime.getRuntime().availableProcessors();
 		numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
-		/** Fixed policy at the moment **/
+		///\fixme{It's fine this for now, but find a formula such the previuos lines to establish the best number of Cores} 
 		numberOfWorkerThreads = 4;
 		if(runningOpState instanceof Partitionable){
 			executorMutex = new Semaphore(numberOfWorkerThreads, true);

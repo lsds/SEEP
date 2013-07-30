@@ -10,16 +10,27 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 public class DataStructureAdapter {
 	
 	private Map<Integer, DataStructureI> dsoMap = new HashMap<Integer, DataStructureI>();
+	private DataStructureI uniqueDso = null;
+	
+	public DataStructureAdapter(){
+		
+	}
+	
+	public DataStructureI getUniqueDso(){
+		return uniqueDso;
+	}
 	
 	public DataStructureI getDataStructureIForOp(int opId){
 		return dsoMap.get(opId);
@@ -37,32 +48,43 @@ public class DataStructureAdapter {
 		dsoMap.put(opId, dso);
 	}
 	
-	public DataStructureAdapter(){
-		
-	}
-	
 //	public void push(DataTuple dt){
-//		dso.push(dt);
+//		uniqueDso.push(dt);
 //	}
 //	
 //	public DataTuple pull(){
-//		return dso.pull();
+//		return uniqueDso.pull();
 //	}
 //	
 //	public ArrayList<DataTuple> pullBarrier(){
-//		return dso.pull_from_barrier();
+//		return uniqueDso.pull_from_barrier();
 //	}
 	
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
-		// For processing one event per iteration, the queue is the best abstraction
-		for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
-			if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
-				InputQueue iq = new InputQueue();
-				dsoMap.put(entry.getKey(), iq);
+		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
+		if(iimMap.size() > 1){
+			// For processing one event per iteration, the queue is the best abstraction
+			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
+				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
+					InputQueue iq = new InputQueue();
+					dsoMap.put(entry.getKey(), iq);
+				}
+				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+					Barrier b = new Barrier(numUpstreams);
+					dsoMap.put(entry.getKey(), b);
+				}
 			}
-			else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
-				Barrier b = new Barrier(numUpstreams);
-				dsoMap.put(entry.getKey(), b);
+		}
+		else if(iimMap.size() == 1){
+			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
+				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
+					InputQueue iq = new InputQueue();
+					uniqueDso = iq;
+				}
+				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+					Barrier b = new Barrier(numUpstreams);
+					uniqueDso= b;
+				}
 			}
 		}
 	}

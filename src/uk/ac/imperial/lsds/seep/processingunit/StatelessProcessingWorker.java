@@ -21,9 +21,10 @@ public class StatelessProcessingWorker implements Runnable{
 	private InputQueue iq;
 	private Operator runningOp;
 	
+	///\todo{for now, multicore is only supported in those operators with only one inputDataIngestionMode}
 	public StatelessProcessingWorker(DataStructureAdapter dsa, Operator runningOp) {
-		if(dsa.getDSO() instanceof InputQueue){
-			this.iq = (InputQueue) dsa.getDSO();
+		if(dsa.getUniqueDso() != null){
+			this.iq = (InputQueue) dsa.getUniqueDso();
 		}
 		else{
 			NodeManager.nLogger.severe("-> Operation not permitted at this moment.. stateful multi-core on dist barrier");

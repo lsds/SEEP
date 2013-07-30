@@ -278,8 +278,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		for(int i = 0; i<numberOfWorkerThreads; i++){
 			pool.execute(new StatelessProcessingWorker(dsa, runningOp));
 		}
-		
-		
 	}
 
 	@Override
