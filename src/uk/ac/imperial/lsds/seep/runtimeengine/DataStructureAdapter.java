@@ -32,10 +32,6 @@ public class DataStructureAdapter {
 	}
 	
 	public DataStructureI getDataStructureIForOp(int opId){
-		System.out.println("SIZE MAP: "+dsoMap.size());
-		for(Entry<Integer, DataStructureI> entry : dsoMap.entrySet()){
-			System.out.println("KEY: "+entry.getKey()+" VAL: "+entry.getValue());
-		}
 		if(dsoMap.containsKey(opId)){
 			return dsoMap.get(opId);
 		}
@@ -58,14 +54,6 @@ public class DataStructureAdapter {
 	}
 	
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
-		
-		
-		for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
-			System.out.println("OP: "+entry.getKey());
-			System.out.println("MODE: "+entry.getValue());
-		}
-		
-		
 		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
 		if(iimMap.size() > 1){
 			NodeManager.nLogger.info("-> Setting up multiple inputDataIngestionModes");

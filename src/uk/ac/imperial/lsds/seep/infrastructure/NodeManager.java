@@ -42,7 +42,6 @@ public class NodeManager{
 	
 	private WorkerNodeDescription nodeDescr;
 		
-	//private RuntimeClassLoader rcl = null;
 	private RuntimeClassLoader rcl = null;
 	
 	//Endpoint of the central node
@@ -67,7 +66,6 @@ public class NodeManager{
 	private Thread monitorT = null;
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
-//		nLogger.setLevel(java.util.logging.Level.SEVERE);
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
 		this.ownPort = ownPort;
@@ -76,7 +74,6 @@ public class NodeManager{
 			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
 		} 
 		catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -87,15 +84,8 @@ public class NodeManager{
 	static public void setSystemStable(){
 		String command = "systemStable \n";
 		try{
-			//if(connMaster == null){
 			Socket connMaster = new Socket(InetAddress.getByName("146.169.5.130"), Integer.parseInt("3500"));
-			//connMaster.setSoLinger(true, 0);
 			OutputStream os = connMaster.getOutputStream();
-				//connMaster.setReuseAddress(true);
-				//Server is expecting new conn with accept
-				
-			//}
-			//(connMaster.getOutputStream()).write(command.getBytes());
 			os.write(command.getBytes());
 			System.out.println("finished method!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 			Thread.sleep(100);

@@ -131,7 +131,8 @@ public class CoreRE {
 		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
 		// We get the inputDataIngestion mode map, that consists of inputDataIngestion modes per upstream
-		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getInputDataIngestionModeMap();
+		//Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getInputDataIngestionModeMap();
+		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
 		// We configure the dataStructureAdapter with this mode (per upstream), and put additional info required for some modes
 		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext().upstreams.size());
 

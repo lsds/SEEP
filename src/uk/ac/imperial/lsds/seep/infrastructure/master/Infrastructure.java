@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
-import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
@@ -48,10 +47,10 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
+import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -159,7 +158,10 @@ public class Infrastructure {
 		for(Entry<Integer, InputDataIngestionMode> entry : op.getOpContext().getInputDataIngestionModePerUpstream().entrySet()){
 			for(Operator upstream : ops){
 				if(upstream.getOperatorId() == entry.getKey()){
-					upstream.setInputDataIngestionModeForUpstream(op.getOperatorId(), entry.getValue()); //Make dist info local to operator
+					NodeManager.nLogger.info("-> Operator: "+op.getOperatorId()+" ingests data with: "+entry.getValue());
+					//upstream.setInputDataIngestionModeForUpstream(op.getOperatorId(), entry.getValue()); //Make dist info local to operator
+					// set this in op contxt, no op.
+					upstream.getOpContext().setInputDataIngestionModePerUpstream(op.getOperatorId(), entry.getValue());
 				}
 			}
 		}

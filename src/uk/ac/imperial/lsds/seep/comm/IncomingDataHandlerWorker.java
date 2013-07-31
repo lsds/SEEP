@@ -92,9 +92,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			int opId = owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress());
 			int originalOpId = owner.getOriginalUpstreamFromOpId(opId);
 			
-			System.out.println("Getting DSO for op: "+originalOpId);
 			DataStructureI dso = null;
-			dso = dsa.getDataStructureIForOp(originalOpId);
 			if(dsa.getUniqueDso() != null){
 				dso = dsa.getUniqueDso();
 				NodeManager.nLogger.info("-> Unique data adapter in this node");
