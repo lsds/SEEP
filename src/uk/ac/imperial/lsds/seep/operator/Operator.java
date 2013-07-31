@@ -32,10 +32,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	private boolean ready = false;
 	public Operator subclassOperator = null;
 	public IProcessingUnit processingUnit = null;
-	private Router router = null;
-	// By default value
-//	private InputDataIngestionMode dataAbs = InputDataIngestionMode.ONE_AT_A_TIME;
-	
+	private Router router = null;	
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionMode = new HashMap<Integer, InputDataIngestionMode>();
 
 
@@ -89,7 +86,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	public abstract void setUp();
 
-	//public abstract void processData(DataTuple dt);
 	public abstract void processData(DataTuple dt);
 	
 	public abstract void processData(ArrayList<DataTuple> ldt);
@@ -134,11 +130,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	/** Data Delivery methods **/
 	
-//	@Deprecated
-//	public InputDataIngestionMode getInputDataIngestionMode(){
-//		return dataAbs;
-//	}
-	
 	public InputDataIngestionMode getInputDataIngestionModeForUpstream(int opId){
 		return inputDataIngestionMode.get(opId);
 	}
@@ -150,12 +141,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public void setInputDataIngestionModeForUpstream(int opId, InputDataIngestionMode mode){
 		this.inputDataIngestionMode.put(opId, mode);
 	}
-	
-	//Should not use this method, as this information is defined in queryspecificationI
-//	@Deprecated
-//	public void setDataAbstractionMode(InputDataIngestionMode mode){
-//		this.dataAbs = mode;
-//	}
 	
 	/** Implementation of QuerySpecificationI **/
 	
@@ -176,11 +161,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	}
 	
 	public void connectTo(QuerySpecificationI down, boolean originalQuery) {
-		opContext.addDownstream(down.getOperatorId());
-		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
-		down.getOpContext().addUpstream(getOperatorId());
-		// Store in opContext the inputDataIngestionMode, if not defined, the default: One-at-a-time
-		down.getOpContext().setInputDataIngestionModePerUpstream(getOperatorId(), QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME);
+		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery);
 	}
 	
 	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery){
@@ -188,7 +169,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
 		// Store in the opContext of the downstream I am adding, the inputdataingestion mode that I demand
-		down.getOpContext().setInputDataIngestionModePerUpstream(getOperatorId(), mode);
+		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
 	}
 	
 	public void route(String attributeToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){

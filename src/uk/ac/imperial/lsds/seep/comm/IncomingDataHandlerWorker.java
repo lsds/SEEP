@@ -95,7 +95,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			DataStructureI dso = null;
 			if(dsa.getUniqueDso() != null){
 				dso = dsa.getUniqueDso();
-				NodeManager.nLogger.info("-> Unique data adapter in this node");
+				NodeManager.nLogger.info("-> Unique data adapter in this node: "+dso);
 			}
 			else{
 				dso = dsa.getDataStructureIForOp(originalOpId);

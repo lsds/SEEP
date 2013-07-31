@@ -62,10 +62,12 @@ public class DataStructureAdapter {
 				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();
 					dsoMap.put(entry.getKey(), iq);
+					NodeManager.nLogger.info("-> Ingest with InputQueue from "+entry.getKey());
 				}
 				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					Barrier b = new Barrier(numUpstreams);
 					dsoMap.put(entry.getKey(), b);
+					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());
 				}
 			}
 		}
@@ -75,10 +77,12 @@ public class DataStructureAdapter {
 				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();
 					uniqueDso = iq;
+					NodeManager.nLogger.info("-> Ingest with InputQueue from "+entry.getKey());
 				}
 				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					Barrier b = new Barrier(numUpstreams);
 					uniqueDso= b;
+					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());
 				}
 			}
 		}

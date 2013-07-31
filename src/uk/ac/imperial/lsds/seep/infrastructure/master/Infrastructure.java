@@ -127,18 +127,7 @@ public class Infrastructure {
 			NodeManager.nLogger.info("-> Automatic static scale out");
 			soib = eiu.staticInstantiationNewReplicaOperators(qp);
 		}
-		System.out.println("");
-		System.out.println("");
-		System.out.println("");
-		for(ScaleOutIntentBean so : soib){
-			System.out.println("### SCALE OUT ###");
-			System.out.println(so);
-			System.out.println("scaling OP: "+so.getOpToScaleOut().toString());
-			System.out.println("new replica OP: "+so.getNewOperatorInstantiation().toString());
-		}
-		System.out.println("");
-		System.out.println("");
-		System.out.println("");
+		///\todo{log what is going on here}
 		queryToNodesMapping = qp.getMapOperatorToNode();
 		configureRouterStatically();
 		eiu.executeStaticScaleOutFromIntent(soib);
@@ -155,12 +144,11 @@ public class Infrastructure {
 	
 	private void makeDataIngestionModeLocalToOp(Operator op){
 		// Never will be empty, as there are no sources here (so all operators will have at least one upstream
-		for(Entry<Integer, InputDataIngestionMode> entry : op.getOpContext().getInputDataIngestionModePerUpstream().entrySet()){
+		for(Entry<Integer, InputDataIngestionMode> entry : op.getInputDataIngestionModeMap().entrySet()){
 			for(Operator upstream : ops){
 				if(upstream.getOperatorId() == entry.getKey()){
-					NodeManager.nLogger.info("-> Operator: "+op.getOperatorId()+" ingests data with: "+entry.getValue());
-					//upstream.setInputDataIngestionModeForUpstream(op.getOperatorId(), entry.getValue()); //Make dist info local to operator
-					// set this in op contxt, no op.
+					NodeManager.nLogger.info("-> Op: "+upstream.getOperatorId()+" consume from Op: "+op.getOperatorId()+" with "+entry.getValue());
+					// Use opContext to make an operator understand how it consumes data from its upstream
 					upstream.getOpContext().setInputDataIngestionModePerUpstream(op.getOperatorId(), entry.getValue());
 				}
 			}
@@ -169,7 +157,6 @@ public class Infrastructure {
 	
 	public void configureRouterStatically(){
 		for(Operator op: ops){
-//			String queryFunction = op.getOpContext().getQueryFunction();
 			String queryAttribute = op.getOpContext().getQueryAttribute();
 			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
 			Router r = new Router(queryAttribute, routeInfo);
@@ -178,7 +165,6 @@ public class Infrastructure {
 			for(PlacedOperator po : op.getOpContext().downstreams){
 				downstream.add(this.getOperatorById(po.opID()));
 			}
-			//r.configureRoutingImpl(op.getOpContext());
 			r.configureRoutingImpl(op.getOpContext(), downstream);
 			op.setRouter(r);
 		}
