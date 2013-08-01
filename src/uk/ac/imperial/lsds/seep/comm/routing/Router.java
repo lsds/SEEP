@@ -279,10 +279,10 @@ return null;
 		return routeInfo.get(streamId);
 	}
 	
-	private ArrayList<Integer> physicalRouting(ArrayList<Integer> logicalTargets, int value){
+	private ArrayList<Integer> physicalRouting(ArrayList<Integer> logicalTargets, int key){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
-			targets = downstreamRoutingImpl.get(ltarget).route(targets, value);
+			targets = downstreamRoutingImpl.get(ltarget).route(targets, key);
 		}
 		return targets;
 	}

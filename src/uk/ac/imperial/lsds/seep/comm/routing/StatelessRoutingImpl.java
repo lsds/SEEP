@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.comm.routing;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 
@@ -50,6 +51,11 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 			// update target and reinitialize filterValue
 			target = downstreamIndex++%numberOfDownstreams;
 //System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
+			System.out.println("Real routing info is: ");
+			for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
+				System.out.println("VirtualIdx: "+entry.getKey()+" RealIdx: "+entry.getValue());
+			}
+			System.out.println("And we are asking for: "+target);
 			targetRealIndex = virtualIndexToRealIndex.get(target);
 	//System.out.println("NW routeStrem add realIndex: "+targetRealIndex );
 			//If the index was not present in the targets list, add it.
