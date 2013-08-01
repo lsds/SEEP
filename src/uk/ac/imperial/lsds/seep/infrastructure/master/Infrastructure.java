@@ -157,9 +157,11 @@ public class Infrastructure {
 	
 	public void configureRouterStatically(){
 		for(Operator op: ops){
-			String queryAttribute = op.getOpContext().getQueryAttribute();
+			//String queryAttribute = op.getOpContext().getQueryAttribute();
+			boolean requiresLogicalRouting = op.getOpContext().getRequiresLogicalRouting();
 			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
-			Router r = new Router(queryAttribute, routeInfo);
+//			Router r = new Router(queryAttribute, routeInfo);
+			Router r = new Router(requiresLogicalRouting, routeInfo);
 			// Configure routing implementations of the operator
 			ArrayList<Operator> downstream = new ArrayList<Operator>();
 			for(PlacedOperator po : op.getOpContext().downstreams){

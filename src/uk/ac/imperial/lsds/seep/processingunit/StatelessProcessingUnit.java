@@ -260,6 +260,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void startDataProcessing() {
 		/// \todo{Find a better way to start the operator...}
 		DataTuple fake = DataTuple.getNoopDataTuple();
+		fake = null;
 		this.runningOp.processData(fake);
 
 	}

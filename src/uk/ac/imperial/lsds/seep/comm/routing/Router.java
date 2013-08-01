@@ -11,8 +11,6 @@
 package uk.ac.imperial.lsds.seep.comm.routing;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.CRC32;
@@ -31,14 +29,11 @@ public class Router implements Serializable{
 	private static final long serialVersionUID = 1L;
 
 	private static CRC32 crc32 = new CRC32();
+
+//	private String queryAttribute = null;
 	
-//	@Deprecated
-//	private Method queryFunction = null;
-	
-	private String queryAttribute = null;
-	private boolean requiresQueryData = false;
-		
-	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
+	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
+	private boolean requiresLogicalRouting = false;
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
 	//This map stores the load balancer for each type of downstream. This map is related to routeInfo
@@ -47,7 +42,6 @@ public class Router implements Serializable{
 	//This structure rests here in case there is just one type of downstream, in case routeInfo is empty
 	// change this for a final int position in downstreamRoutingImpl ??
 	private final int INDEX_FOR_ROUTING_IMPL = 0; 
-//	private RoutingStrategyI routingImpl = null;
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -55,37 +49,24 @@ public class Router implements Serializable{
 		EQ
 	}
 	
-	public Router(String query, HashMap<Integer, ArrayList<Integer>> routeInfo){
-		if(query != null){
-			this.requiresQueryData = true;
-		}
-//		this.queryFunction = this.initializeQueryFunction(query);
-		this.queryAttribute = query;
+//	public Router(String query, HashMap<Integer, ArrayList<Integer>> routeInfo){
+//		if(query != null){
+//			this.requiresLogicalRouting = true;
+//		}
+////		this.queryAttribute = query;
+//		this.routeInfo = routeInfo;
+//	}
+	
+	public Router(boolean requiresLogicalRouting, HashMap<Integer, ArrayList<Integer>> routeInfo){
+		this.requiresLogicalRouting = requiresLogicalRouting;
 		this.routeInfo = routeInfo;
 	}
-	
-//	/// \fixme{how to make this generic so that it always knows which class to query?}
-//	@Deprecated
-//	public Method initializeQueryFunction(String query){
-//		if(query != null){
-//			NodeManager.nLogger.info("Initializing method to query stream data...");
-//			try {
-//				Class<DataTuple> c = DataTuple.class;
-//				queryFunction = c.getMethod(query);
-//				return queryFunction;
-//			}
-//			catch (NoSuchMethodException nsme){
-//				nsme.printStackTrace();
-//			}
-//		}
-//		return null;
-//	}
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
 try{
 		RoutingStrategyI rs = null;
-		if(!requiresQueryData){
+		if(!requiresLogicalRouting){
 			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
 			return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
 		}
@@ -103,7 +84,7 @@ return null;
 	public ArrayList<Integer> getKeysInformation(int oldOpId){
 try{
 		RoutingStrategyI rs = null;
-		if(!requiresQueryData){
+		if(!requiresLogicalRouting){
 			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
 			return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
 		}
@@ -117,28 +98,22 @@ System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
 return null;
 }
 	
-//	public void setQueryFunction(String query){
-//		this.query = query;
-//		//If a function is defined, the it is necessary to query the data
-//		this.requiresQueryData = true;
-//	}
-	
 	//if less or greater is than a given value. if equal could be with many values, with range is a special case as well
-	public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
-		//if it is operator EQUALS, use specific routeInfo
-		if(operator.equals(RelationalOperator.EQ)){
-			//If there was a downstream assigned for this value
-			if(routeInfo.containsKey(value)){
-				// add the new downstream
-				routeInfo.get(value).add(downstream);
-			}
-			else{
-				ArrayList<Integer> aux = new ArrayList<Integer>();
-				aux.add(downstream);
-				routeInfo.put(value,aux);
-			}
-		}
-	}
+//	public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
+//		//if it is operator EQUALS, use specific routeInfo
+//		if(operator.equals(RelationalOperator.EQ)){
+//			//If there was a downstream assigned for this value
+//			if(routeInfo.containsKey(value)){
+//				// add the new downstream
+//				routeInfo.get(value).add(downstream);
+//			}
+//			else{
+//				ArrayList<Integer> aux = new ArrayList<Integer>();
+//				aux.add(downstream);
+//				routeInfo.put(value,aux);
+//			}
+//		}
+//	}
 	
 	/**
 	 * this function must be executed when the operator is not initialized yet. at this point all it has is the main topology of the query
@@ -146,7 +121,7 @@ return null;
 	 * the downstream is not the original one. NEED to differentiate between main/execution graph. Or, make explicit whith type is and call as it is required
 	 * CHANGE-> actually the DIFFERENTIATION IS required
 	**/
-	public void _configureRoutingImpl(OperatorContext opContext){
+	/*public void _configureRoutingImpl(OperatorContext opContext){
 		RoutingStrategyI rs = null;
 		int opId = 0;
 		//For every downstream
@@ -164,7 +139,7 @@ return null;
 			downstreamRoutingImpl.put(opId, rs);
 		}
 		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
-	}
+	}*/
 	
 	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
 		RoutingStrategyI rs = null;
@@ -208,7 +183,6 @@ return null;
 		//For every downstream in the original query graph
 		System.out.println("ORIGINAL DOWN SIZE: "+opContext.getOriginalDownstream().size());
 		for(Integer id : opContext.getOriginalDownstream()){
-//		for(PlacedOperator down : opContext.downstreams){
 			PlacedOperator down = opContext.findDownstream(id);
 			int index = down.index();
 			if(!down.isStateful()){
@@ -242,8 +216,8 @@ return null;
 	
 	public ArrayList<Integer> forwardToAllDownstream(DataTuple dt){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-		if(requiresQueryData){
-			ArrayList<Integer> logicalTargets = routeLayerOne(dt, -1);
+		if(requiresLogicalRouting){
+			ArrayList<Integer> logicalTargets = logicalRouting(dt, -1);
 			targets = routeToAll(logicalTargets);
 		}
 		else{
@@ -252,50 +226,60 @@ return null;
 		return targets;
 	}
 	
-	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
-		ArrayList<Integer> targets = new ArrayList<Integer>();
-		//If it is necessary to query data to guess (logic)downstream
-		if(requiresQueryData){
-			ArrayList<Integer> logicalTargets = routeLayerOne(dt, value);
-			targets = routeLayerTwo(logicalTargets, value);
-		}
-		else{
-			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
-		}
-		
-//		for(Integer t : targets){
-//			System.out.println("SENT TO: "+t);
+//	@Deprecated
+//	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
+//		ArrayList<Integer> targets = new ArrayList<Integer>();
+//		
+//		// Check if i have data to query data. branches
+//		
+//		//If it is necessary to query data to guess (logic)downstream
+//		if(requiresQueryData){
+//			ArrayList<Integer> logicalTargets = logicalRouting(dt, value);
+//			targets = physicalRouting(logicalTargets, value);
 //		}
-		
+//		else{
+//			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+//		}
+//		return targets;
+//	}
+	
+	public ArrayList<Integer> forward(DataTuple dt){
+		///\fixme{ In this case, value is not necessary. Calling this method means that downstream is stateless, in which case 
+		/// value has no effect in the route method. Refactor here}
+		int value = 0;
+		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+	}
+	
+	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
+		targets = physicalRouting(logicalTargets, streamId);
 		return targets;
 	}
 	
-	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
-		int contentValue = dt.getInt(queryAttribute);
-		return routeInfo.get(contentValue);
+	public ArrayList<Integer> forward_splitKey(DataTuple dt, int key){
+		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(key);
 	}
 	
-//	public ArrayList<Integer> routeLayerOne(DataTuple dt, int value){
-//		int contentValue = -1;
-//		try {
-//			contentValue = (Integer)queryFunction.invoke(dt);
-//		}
-//		catch (IllegalArgumentException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		catch (IllegalAccessException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		catch (InvocationTargetException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		return routeInfo.get(contentValue);
-//	}
+	public ArrayList<Integer> forward_toOp_splitKey(DataTuple dt, int streamId, int key){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
+		targets = physicalRouting(logicalTargets, key);
+		return targets;
+	}
 	
-	public ArrayList<Integer> routeLayerTwo(ArrayList<Integer> logicalTargets, int value){
+	private ArrayList<Integer> logicalRouting(DataTuple dt, int streamId){
+		/// \todo{implement the new logical routing, based on named streams}
+		// Given a stream name, give me the logical operators to send data to.
+		
+		
+		//int contentValue = dt.getInt(queryAttribute);
+		
+		//return routeInfo.get(contentValue);
+		return routeInfo.get(streamId);
+	}
+	
+	private ArrayList<Integer> physicalRouting(ArrayList<Integer> logicalTargets, int value){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
 			targets = downstreamRoutingImpl.get(ltarget).route(targets, value);
@@ -305,13 +289,11 @@ return null;
 	
 	public int newStaticOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key = -1;
-		if(requiresQueryData){
+		if(requiresLogicalRouting){
 			return configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 		else{
 			//Otherwise, we use the default RoutingImpl
-//			key = routingImpl.newReplica(oldOpIndex, newOpIndex);
-			
 			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newStaticReplica(oldOpIndex, newOpIndex);
 		}
 		return key;
@@ -320,13 +302,11 @@ return null;
 	
 	public int newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key = -1;
-		if(requiresQueryData){
+		if(requiresLogicalRouting){
 			return configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 		else{
 			//Otherwise, we use the default RoutingImpl
-//			key = routingImpl.newReplica(oldOpIndex, newOpIndex);
-			
 			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newReplica(oldOpIndex, newOpIndex);
 		}
 		return key;
@@ -348,11 +328,9 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 		//And finally we return the new key computed
 		return key;
 	}
-
-	/**this function was made public on 17 oct 2012 to enable a higher level hack**/
 	
-	public void setNewLoadBalancer(int opId, RoutingStrategyI rs){
-		if(requiresQueryData){
+	private void setNewLoadBalancer(int opId, RoutingStrategyI rs){
+		if(requiresLogicalRouting){
 			downstreamRoutingImpl.put(opId, rs);
 		}
 		else{

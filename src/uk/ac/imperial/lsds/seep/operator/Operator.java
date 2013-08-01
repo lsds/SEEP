@@ -92,26 +92,39 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	/** Methods used by the developers to send data **/
 	
-	public void sendDownToIndex(DataTuple dt, int idx){
+	// Send downstream to non-stateful op or stateful non-parallelizable op
+	public synchronized void send(DataTuple dt){
+		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
+		// We check the targets with our routers
+		//ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
+		ArrayList<Integer> targets = router.forward(dt);
+		processingUnit.sendData(dt, targets);
+	}
+	
+	public synchronized void send_toIndex(DataTuple dt, int idx){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		targets.add(idx);
 		processingUnit.sendData(dt, targets);
 	}
 	
-	public synchronized void sendDown(DataTuple dt){
-		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
+	// Send downstream to stateful parallelizable
+	public synchronized void send_splitKey(DataTuple dt, int key){
 		// We check the targets with our routers
-		ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
+		ArrayList<Integer> targets = router.forward_splitKey(dt, key);
 		processingUnit.sendData(dt, targets);
 	}
 	
-	public synchronized void sendDownRouteByValue(DataTuple dt, int value){
-		// We check the targets with our routers
-		ArrayList<Integer> targets = router.forward(dt, value, false);
+	public synchronized void send_toStreamId(DataTuple dt, int streamId){
+		ArrayList<Integer> targets = router.forward_toOp(dt, streamId);
 		processingUnit.sendData(dt, targets);
 	}
 	
-	public void sendDownAll(DataTuple dt){
+	public synchronized void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
+		ArrayList<Integer> targets = router.forward_toOp_splitKey(dt, streamId, key);
+		processingUnit.sendData(dt, targets);
+	}
+	
+	public void send_all(DataTuple dt){
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
 		processingUnit.sendData(dt, targets);
