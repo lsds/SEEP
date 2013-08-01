@@ -38,9 +38,11 @@ public class OperatorContext implements Serializable{
 	
 	// store the type of input data ingestion mode per upstream operator. <OpId - InputDataIngestionMode>
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionModePerUpstream = new HashMap<Integer, InputDataIngestionMode>();
+	
 	/** VAR -> Routing related information for this operator **/
-	private String queryAttribute = null;
-	//This map stores static info (for different types of downstream operators). Content-value -> list of downstreams
+//	private String queryAttribute = null;
+//	private boolean requiresLogicalRouting = false;
+	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
 	/** Tuple dependent information **/
@@ -51,8 +53,17 @@ public class OperatorContext implements Serializable{
 		
 	}
 	
-	public String getQueryAttribute(){
-		return queryAttribute;
+//	public String getQueryAttribute(){
+//		return queryAttribute;
+//	}
+	
+//	public boolean getRequiresLogicalRouting(){
+//		return requiresLogicalRouting;
+//	}
+	
+	public boolean doesRequireLogicalRouting(){
+		///\todo{check if more than one downstream maps to same id}
+		return false;
 	}
 	
 	public String getKeyAttribute(){
@@ -235,24 +246,36 @@ public class OperatorContext implements Serializable{
 		connectionsU.add(opID);
 	}
 
-	public void setQueryAttribute(String queryAttribute){
-		this.queryAttribute = queryAttribute;
-	}
+//	public void setQueryAttribute(String queryAttribute){
+//		this.queryAttribute = queryAttribute;
+//	}
 	
 	//if less or greater is than a given value. if equal could be with many values, with range is a special case as well
-	public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
-		//if it is operator EQUALS, use specific routeInfo
-		if(operator.equals(RelationalOperator.EQ)){
-			//If there was a downstream assigned for this value
-			if(routeInfo.containsKey(value)){
-				// add the new downstream
-				routeInfo.get(value).add(downstream);
-			}
-			else{
-				ArrayList<Integer> aux = new ArrayList<Integer>();
-				aux.add(downstream);
-				routeInfo.put(value,aux);
-			}
+//	public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
+//		//if it is operator EQUALS, use specific routeInfo
+//		if(operator.equals(RelationalOperator.EQ)){
+//			//If there was a downstream assigned for this value
+//			if(routeInfo.containsKey(value)){
+//				// add the new downstream
+//				routeInfo.get(value).add(downstream);
+//			}
+//			else{
+//				ArrayList<Integer> aux = new ArrayList<Integer>();
+//				aux.add(downstream);
+//				routeInfo.put(value,aux);
+//			}
+//		}
+//	}
+	
+	public void routeValueToDownstream(int streamId, int downstream){
+		if(routeInfo.containsKey(streamId)){
+			// add the new downstream
+			routeInfo.get(streamId).add(downstream);
+		}
+		else{
+			ArrayList<Integer> aux = new ArrayList<Integer>();
+			aux.add(downstream);
+			routeInfo.put(streamId, aux);
 		}
 	}
 	

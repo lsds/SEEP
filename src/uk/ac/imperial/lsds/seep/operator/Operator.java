@@ -173,24 +173,27 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		this.opContext.setOriginalDownstream(originalDownstream);
 	}
 	
-	public void connectTo(QuerySpecificationI down, boolean originalQuery) {
-		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery);
+	public void connectTo(QuerySpecificationI down, boolean originalQuery, int streamId) {
+		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, streamId);
 	}
 	
-	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery){
+	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery, int streamId){
 		opContext.addDownstream(down.getOperatorId());
 		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
+		// We store routing info, an operator sends to a streamId, who knows the end-stream edge
+		opContext.routeValueToDownstream(streamId, down.getOperatorId());
 		// Store in the opContext of the downstream I am adding, the inputdataingestion mode that I demand
 		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
 	}
 	
-	public void route(String attributeToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
-		int opId = toConnect.getOperatorId();
-		opContext.setQueryAttribute(attributeToQuery);
-		opContext.routeValueToDownstream(operand, valueToMatch, opId);
-		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+valueToMatch+" to Operator: "+toConnect.toString());
-	}
+//	@Deprecated
+//	public void route(String attributeToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
+//		int opId = toConnect.getOperatorId();
+//		opContext.setQueryAttribute(attributeToQuery);
+//		opContext.routeValueToDownstream(operand, valueToMatch, opId);
+//		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+valueToMatch+" to Operator: "+toConnect.toString());
+//	}
 	
 	public void _declareWorkingAttributes(List<String> attributes){
 		opContext.setDeclaredWorkingAttributes(attributes);
