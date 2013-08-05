@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.routing.Router.RelationalOperator;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
@@ -62,8 +61,8 @@ public class OperatorContext implements Serializable{
 //	}
 	
 	public boolean doesRequireLogicalRouting(){
-		///\todo{check if more than one downstream maps to same id}
-		return false;
+		// If there are more than one addressable streamIds in the logicalRouting table, it does require specific routing
+		return routeInfo.size() > 1;
 	}
 	
 	public String getKeyAttribute(){

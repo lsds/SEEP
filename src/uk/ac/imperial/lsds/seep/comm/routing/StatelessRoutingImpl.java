@@ -50,7 +50,10 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 			remainingWindow = splitWindow;
 			// update target and reinitialize filterValue
 			target = downstreamIndex++%numberOfDownstreams;
-//System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
+			
+System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
+System.out.println("Down INDEX: "+downstreamIndex);
+System.out.println("Target: "+target);
 			System.out.println("Real routing info is: ");
 			for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
 				System.out.println("VirtualIdx: "+entry.getKey()+" RealIdx: "+entry.getValue());
@@ -67,6 +70,9 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		}
 		remainingWindow--;
 		/// \todo Return the real Index, got from the virtual one. Optimize this
+		for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
+			System.out.println("vidx: "+entry.getKey()+" ridx: "+entry.getValue());
+		}
 		targetRealIndex = virtualIndexToRealIndex.get(target);
 //System.out.println("W routeStrem add realIndex: "+virtualIndexToRealIndex.get(target));
 		if(!targets.contains(targetRealIndex)){
@@ -78,20 +84,12 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 	
 	//overriden to make ANY faster...
 	public ArrayList<Integer> route(int value){
-		
-//			/** LAYER ONE OF ROUTING.. done in both implementations */
-//			ArrayList<Integer> logicTargets = routeLayerOne();			
-//System.out.println("ANY");
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-//System.out.println("##########");
-//System.out.println("Rem window: "+remainingWindow);
 		if(remainingWindow == 0){
 			//Reinitialize the window size
 			remainingWindow = splitWindow;
 			// update target and reinitialize filterValue
-//System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
 			target = downstreamIndex++%numberOfDownstreams;
-//System.out.println("TARGET: "+target);
 			// get the real index from the virtual one.
 			//target = virtualIndexToRealIndex.get(target);
 			targets.add(target);
@@ -122,18 +120,11 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 	
 	public int newStaticReplica(int oldOpIndex, int newOpIndex){
 		//In this case oldOpIndex does not do anything
-		//System.out.println("#### There is a NEW SPLIT here, newOpIndex: "+newOpIndex);
-				//First of all, we map the real index to virtual index
-		//System.out.println("MAPPING virtualIndex: "+virtualIndex+" to realIndex: "+newOpIndex);
-				virtualIndexToRealIndex.put(virtualIndex, newOpIndex);
-				virtualIndex++;
-				
-				//Update the number of downstreams
-//		System.out.println("PREV: "+numberOfDownstreams);
-//				
-//		System.out.println("POST: "+numberOfDownstreams);
-				//return something cause interface implementation...
-				return -1;
+		//First of all, we map the real index to virtual index
+		virtualIndexToRealIndex.put(virtualIndex, newOpIndex);
+		virtualIndex++;
+		///\fixme{return something meaningful}
+		return -1;
 	}
 		
 	@Override
