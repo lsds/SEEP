@@ -143,7 +143,6 @@ return null;
 	
 	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
 		RoutingStrategyI rs = null;
-//		int opId = -1;
 		System.out.println("ORIGINAL DOWN SIZE: "+downstream.size());
 		// For each original downstream
 		for(Integer id : opContext.getOriginalDownstream()){
@@ -158,8 +157,6 @@ return null;
 			if(down instanceof StatelessOperator){
 				int numDownstreams = downstream.size();
 				NodeManager.nLogger.info("Configuring Static Stateless Routing Impl with "+numDownstreams+" downstreams");
-				/// \todo{check this hack}
-//				rs = new StatelessRoutingImpl(1, index, numDownstreams);
 				// At this point there can only be 1 downstream (an operator can have N downstream types,
 				//but only 1 instance of a given type Ni)
 				rs = new StatelessRoutingImpl(DEFAULT_SPLIT_WINDOW, index, 1);
@@ -183,36 +180,6 @@ return null;
 		}
 		NodeManager.nLogger.info("Routing Engine Configured");
 	}
-	
-	
-//	public void configureRoutingImpl2(OperatorContext opContext){
-//		RoutingStrategyI rs = null;
-//		int opId = 0;
-//		//For every downstream in the original query graph
-//		System.out.println("ORIGINAL DOWN SIZE: "+opContext.getOriginalDownstream().size());
-//		for(Integer id : opContext.getOriginalDownstream()){
-//			PlacedOperator down = opContext.findDownstream(id);
-//			int index = down.index();
-//			if(!down.isStateful()){
-//				int numDownstreams = opContext.getDownstreamSize();
-//				rs = new StatelessRoutingImpl(1, index, numDownstreams);
-//			}
-//			else if(down.isStateful()){
-//				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
-//				rs = new StatefulRoutingImpl(index);
-//			}
-//			System.out.println("ADDED");
-//			//If more than one downstream type, then put the new rs with the opId
-//			if(opContext.downstreams.size() > 1){
-//				downstreamRoutingImpl.put(opId, rs);
-//			}
-//			//Otherwise, store the rs in the reserved place of downstreamRoutingImpl
-//			else if (opContext.downstreams.size() == 1){
-//				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
-//			}
-//		}
-//		NodeManager.nLogger.info("Routing Engine Configured");
-//	}
 	
 	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
@@ -255,13 +222,7 @@ return null;
 		///\fixme{ In this case, value is not necessary. Calling this method means that downstream is stateless, in which case 
 		/// value has no effect in the route method. Refactor here}
 		int value = 0;
-//		ArrayList<Integer> targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value); 
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
-//		System.out.println("Check targets");
-//		for(Integer target : targets){
-//			System.out.println("TARGET ====> "+target);
-//		}
-//		return targets;
 	}
 	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
@@ -291,7 +252,6 @@ return null;
 	private ArrayList<Integer> physicalRouting(ArrayList<Integer> logicalTargets, int key){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
-			System.out.println("GET ltarget: "+ltarget);
 			targets = downstreamRoutingImpl.get(ltarget).route(targets, key);
 		}
 		return targets;

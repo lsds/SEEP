@@ -134,7 +134,8 @@ public class CoreRE {
 		//Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getInputDataIngestionModeMap();
 		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
 		// We configure the dataStructureAdapter with this mode (per upstream), and put additional info required for some modes
-		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext().upstreams.size());
+//		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext().upstreams.size());
+		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext());
 
 		// Start communications and worker threads
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
@@ -144,7 +145,7 @@ public class CoreRE {
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch);
 		//Data worker
-		idh = new IncomingDataHandler(this, inD, tupleIdxMapper);
+		idh = new IncomingDataHandler(this, inD, tupleIdxMapper, dsa);
 		iDataH = new Thread(idh);
 		//Consumer worker
 		dataConsumer = new DataConsumer(this, dsa);

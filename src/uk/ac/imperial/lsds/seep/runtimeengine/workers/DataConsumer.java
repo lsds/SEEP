@@ -38,7 +38,6 @@ public class DataConsumer implements Runnable {
 
 	@Override
 	public void run() {
-		int mode = 0;
 		Map<Integer, DataStructureI> inputDataModeMap = dataAdapter.getInputDataIngestionModeMap();
 		// For performance reasons we make the differentiation between cases where more than 1 inputdataIngestion mode...
 		if(inputDataModeMap.size() > 1){
@@ -73,13 +72,12 @@ public class DataConsumer implements Runnable {
 	class DataConsumerWorker implements Runnable{
 		
 		private DataStructureI dsi = null;
-		
 		public DataConsumerWorker(DataStructureI dsi){
 			this.dsi = dsi;
 		}
 
 		@Override
-		public void run() {
+		public void run() {			
 			if(dsi instanceof InputQueue){
 				while(doWork){
 					DataTuple data = dsi.pull();

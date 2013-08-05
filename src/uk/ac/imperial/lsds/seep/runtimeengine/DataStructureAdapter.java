@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Operator;
+import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 public class DataStructureAdapter {
@@ -53,7 +54,8 @@ public class DataStructureAdapter {
 		dsoMap.put(opId, dso);
 	}
 	
-	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
+//	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
+	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext){
 		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
 		if(iimMap.size() > 1){
 			NodeManager.nLogger.info("-> Setting up multiple inputDataIngestionModes");
@@ -65,7 +67,10 @@ public class DataStructureAdapter {
 					NodeManager.nLogger.info("-> Ingest with InputQueue from "+entry.getKey());
 				}
 				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
-					Barrier b = new Barrier(numUpstreams);
+					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
+					int originalOperatorOnBarrier = entry.getKey();
+					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					dsoMap.put(entry.getKey(), b);
 					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());
 				}
@@ -80,8 +85,11 @@ public class DataStructureAdapter {
 					NodeManager.nLogger.info("-> Ingest with InputQueue from "+entry.getKey());
 				}
 				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
-					Barrier b = new Barrier(numUpstreams);
-					uniqueDso= b;
+					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
+					int originalOperatorOnBarrier = entry.getKey();
+					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+					Barrier b = new Barrier(numberUpstreamsOnBarrier);
+					uniqueDso = b;
 					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());
 				}
 			}

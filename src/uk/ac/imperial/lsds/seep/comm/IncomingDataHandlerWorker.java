@@ -37,14 +37,16 @@ public class IncomingDataHandlerWorker implements Runnable{
 	private CoreRE owner = null;
 	private boolean goOn;
 	private Map<String, Integer> idxMapper;
+	private DataStructureAdapter dsa;
 	private Kryo k = null;
 	
-	public IncomingDataHandlerWorker(Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper){
+	public IncomingDataHandlerWorker(Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper, DataStructureAdapter dsa){
 		//upstream id
 		this.upstreamSocket = upstreamSocket;
 		this.owner = owner;
 		this.goOn = true;
 		this.idxMapper = idxMapper;
+		this.dsa = dsa;
 		this.k = initializeKryo();
 	}
 	
@@ -86,8 +88,6 @@ public class IncomingDataHandlerWorker implements Runnable{
 		
 		/** experimental sync **/
 		try{
-			//Get bridge adapter from owner
-			DataStructureAdapter dsa = owner.getDSA();
 			// Get incomingOp id
 			int opId = owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress());
 			int originalOpId = owner.getOriginalUpstreamFromOpId(opId);

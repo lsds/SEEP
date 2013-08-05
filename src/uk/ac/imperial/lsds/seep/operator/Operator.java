@@ -96,7 +96,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public synchronized void send(DataTuple dt){
 		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
 		// We check the targets with our routers
-		//ArrayList<Integer> targets = router.forward(dt, Integer.MIN_VALUE, false);
 		ArrayList<Integer> targets = router.forward(dt);
 		processingUnit.sendData(dt, targets);
 	}

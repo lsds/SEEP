@@ -13,7 +13,6 @@ package uk.ac.imperial.lsds.seep.comm.routing;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map.Entry;
 
 public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 
@@ -51,14 +50,14 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 			// update target and reinitialize filterValue
 			target = downstreamIndex++%numberOfDownstreams;
 			
-System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
-System.out.println("Down INDEX: "+downstreamIndex);
-System.out.println("Target: "+target);
-			System.out.println("Real routing info is: ");
-			for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
-				System.out.println("VirtualIdx: "+entry.getKey()+" RealIdx: "+entry.getValue());
-			}
-			System.out.println("And we are asking for: "+target);
+//System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
+//System.out.println("Down INDEX: "+downstreamIndex);
+//System.out.println("Target: "+target);
+//			System.out.println("Real routing info is: ");
+//			for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
+//				System.out.println("VirtualIdx: "+entry.getKey()+" RealIdx: "+entry.getValue());
+//			}
+//			System.out.println("And we are asking for: "+target);
 			targetRealIndex = virtualIndexToRealIndex.get(target);
 	//System.out.println("NW routeStrem add realIndex: "+targetRealIndex );
 			//If the index was not present in the targets list, add it.
@@ -70,9 +69,9 @@ System.out.println("Target: "+target);
 		}
 		remainingWindow--;
 		/// \todo Return the real Index, got from the virtual one. Optimize this
-		for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
-			System.out.println("vidx: "+entry.getKey()+" ridx: "+entry.getValue());
-		}
+//		for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
+//			System.out.println("vidx: "+entry.getKey()+" ridx: "+entry.getValue());
+//		}
 		targetRealIndex = virtualIndexToRealIndex.get(target);
 //System.out.println("W routeStrem add realIndex: "+virtualIndexToRealIndex.get(target));
 		if(!targets.contains(targetRealIndex)){
@@ -137,22 +136,4 @@ System.out.println("Target: "+target);
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		return routeToAll(targets);
 	}
-	
-//		public StatelessRoutingImpl(int splitWindow){
-//		//value minus one to take into consideration value = 0
-//		this.splitWindow = splitWindow-1;
-//		//Initialize the windows size to the configured window
-//		this.remainingWindow = this.splitWindow;
-//		//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
-//		this.numberOfDownstreams = 1;
-//	}
-	
-//	public StatelessRoutingImpl(){
-//		//value minus one to take into consideration value = 0
-//		this.splitWindow = 0;
-//		//Initialize the windows size to the configured window
-//		this.remainingWindow = this.splitWindow;
-//		//When creating there is just one replica, this is changed later when the user establishes replicas manually or there is a scale-out
-//		this.numberOfDownstreams = 1;
-//	}
 }

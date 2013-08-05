@@ -18,6 +18,7 @@ import java.util.Map;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
+import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 
 /**
 * IncomingDataHandler. This is in charge of managing incoming data connections and associate a thread to them
@@ -30,6 +31,7 @@ public class IncomingDataHandler implements Runnable{
 	private int connPort;
 	private boolean goOn;
 	private Map<String, Integer> idxMapper;
+	private DataStructureAdapter dsa;
 
 	public int getConnPort(){
 		return connPort;
@@ -39,12 +41,13 @@ public class IncomingDataHandler implements Runnable{
 		this.connPort = connPort;
 	}
 
-	public IncomingDataHandler(CoreRE owner, int connPort, Map<String, Integer> idxMapper){
+	public IncomingDataHandler(CoreRE owner, int connPort, Map<String, Integer> idxMapper, DataStructureAdapter dsa){
 		this.owner = owner;
 		this.connPort = connPort;
 		//this.selector = initSelector();
 		this.goOn = true;
 		this.idxMapper = idxMapper;
+		this.dsa = dsa;
 	}
 
 	public void run(){
@@ -57,7 +60,7 @@ public class IncomingDataHandler implements Runnable{
 			//Upstream id
 			int uid = 0;
 			while(goOn){
-				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper));
+				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper, dsa));
 				newConn.start();
 				MetricsReader.numberIncomingDataHandlerWorkers.inc();
 			}
