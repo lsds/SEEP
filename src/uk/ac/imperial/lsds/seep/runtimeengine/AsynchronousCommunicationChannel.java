@@ -93,6 +93,7 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 	}
 	
 	public void writeDataToOutputBuffer(DataTuple dt){
+		///\fixme{Handle timestamps for fault tolerance}
 		// This writes the serialized message to the byte[] that output is backing up
 //		if(currentBatchSize < batchSize){
 //			System.out.println("curren: "+currentBatchSize+" < totallimit: "+batchSize);

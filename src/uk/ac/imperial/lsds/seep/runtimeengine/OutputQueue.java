@@ -31,10 +31,12 @@ import com.esotericsoftware.kryo.io.Output;
 public class OutputQueue {
 
 	// replaySemaphore controls whether it is possible to send or not
+	private CoreRE owner = null;
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
 	
-	public OutputQueue(){
+	public OutputQueue(CoreRE owner){
+		this.owner = owner;
 		this.k = initializeKryo();
 	}
 	
@@ -68,74 +70,46 @@ public class OutputQueue {
 	public synchronized void stop() {
 		//Stop incoming data, a new thread is replaying
 		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore changes from: "+replaySemaphore.toString());
-		/**
-		 * hack done on july the third 2012 to get parallel recovery results.
-		 *  we make sure that conn is only stop once
-		 */
-//if (replaySemaphore.get() > 0){
-//	return;
-//}
 		replaySemaphore.incrementAndGet();
 		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore to: "+replaySemaphore.toString());
 	}
 	
 	
-	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest, boolean now, boolean beacon) {
-//System.out.println("A");
+	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
 		//Output for this socket
-//		Output output = channelRecord.getOutput();
 		try{
 			//To send tuple
-//System.out.println("B");
 			if(replay.compareAndSet(true, false)){
-//System.out.println("C");
-//				System.out.println("WE ARE IN REPLAY OUTPUTQUEUE");
 				replay(channelRecord);
 				replay.set(false);
 				stop.set(false);
-//				System.out.println("finished REPLAY OUTPUTQUUE");
 				//At this point, this operator has finished replaying the tuples
 				NodeManager.setSystemStable();
 			}
-//System.out.println("D");
 			if(!stop.get()){
-//System.out.println("E");
-//				System.out.println("SEND IN OTUPUTQUEUE");
-				if(!beacon){
-					channelRecord.addDataToBatch(tuple.getPayload());
-				}
-				//If it is mandated to send the tuple now (URGENT), then channelBatchSize is put to 0
-				if(now) channelRecord.resetChannelBatchSize();
+				TuplePayload tp = tuple.getPayload();
+				tp.timestamp = System.currentTimeMillis(); // assign local ack
+				channelRecord.addDataToBatch(tp);
 				long currentTime = System.currentTimeMillis();
-				/// \todo{Add the following line for include the batch timing mechanism}
-//				if(channelRecord.channelBatchSize == 0 || (currentTime - channelRecord.getTick) > ExecutionConfiguration.maxLatencyAllowed ){
-				
-				/** shouldnt be less than 0 ever... **/
-				
-//				System.out.println("Before getting to send batch OUTPUTEUQUE");
-//System.out.println("F");
 				if(channelRecord.getChannelBatchSize() <= 0){
-//System.out.println("G");
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
 					k.writeObject(channelRecord.getOutput(), msg);
-//System.out.println("H");
 					//Flush the buffer to the stream
 					channelRecord.getOutput().flush();
-					
-					// We log the data
+					// We save the data
 					if(P.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
 						if(P.valueFor("TTT").equals("TRUE")){
 							
 						}
 						else{
-							buffer.save(msg);
+							buffer.save(msg, msg.outputTs, owner.getIncomingTT());
 						}
 					}
 					// Anf finally we reset the batch
@@ -143,17 +117,11 @@ public class OutputQueue {
 					channelRecord.cleanBatch2();
 				}
 			}
-			else if (!beacon){
-//System.out.println("I");
-				//Is there any thread replaying?
-				while(replaySemaphore.get() >= 1){
-//System.out.println("J");
-					//If so, wait.
-					synchronized(this){
-//System.out.println("K");
-						this.wait();
-					}
-//System.out.println("L");
+			//Is there any thread replaying?
+			while(replaySemaphore.get() >= 1){
+				//If so, wait.
+				synchronized(this){
+					this.wait();
 				}
 			}
 		}
@@ -166,7 +134,6 @@ public class OutputQueue {
 	public void replay(SynchronousCommunicationChannel oi){
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){
-//					BatchDataTuple batch = oi.getSharedIterator().next();
 					BatchTuplePayload batch = oi.getSharedIterator().next();
 					Output output = oi.getOutput();
 					k.writeObject(output, batch);
@@ -177,14 +144,12 @@ public class OutputQueue {
 	}
 	
 	public void replayTuples(SynchronousCommunicationChannel cci) {
-//		Iterator<BatchDataTuple> sharedIterator = cci.getBuffer().iterator();
 		Iterator<BatchTuplePayload> sharedIterator = cci.getBuffer().iterator();
 		Output output = cci.getOutput();
 		int bufferSize = cci.getBuffer().size();
 		int controlThreshold = (int)(bufferSize)/10;
 		int replayed = 0;
 		while(sharedIterator.hasNext()) {
-//			BatchDataTuple dt = sharedIterator.next();
 			BatchTuplePayload dt = sharedIterator.next();
 			synchronized(output){
 				synchronized(k){

@@ -16,8 +16,10 @@ public class BatchTuplePayload {
 
 	public int batchSize = 0;
 	public ArrayList<TuplePayload> batch = new ArrayList<TuplePayload>();
+	public long outputTs = -1;
 	
 	public synchronized void addTuple(TuplePayload payload){
+		outputTs = payload.timestamp; //update the newest ts in the batch
 		batch.add(payload);
 		batchSize++;
 	}

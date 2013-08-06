@@ -43,6 +43,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
@@ -384,8 +385,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				// REMOTE SYNC
 				else if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
-					boolean now = false;
-					outputQueue.sendToDownstream(dt, dest, now, false);
+					outputQueue.sendToDownstream(dt, dest);
 				}
 				// LOCAL
 				else if(dest instanceof Operator){
@@ -400,14 +400,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 		// Here, user code can potentially keep modifying state, acquire the mutex
 		// Note that if user code finishes after this call, the mutex will be released after processData anyway, so it is safe to get the mutex here.
-//		try {
-//			mutex.acquire();
-//		} 
-//		catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		
 		if(multiCoreEnabled){
 			try {
 				executorMutex.acquire(numberOfWorkerThreads);
@@ -513,8 +505,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 	}
 	
-	private long lockFreeParallelBackupState(int[] partitioningRange){
+	private TimestampTracker lockFreeParallelBackupState(int[] partitioningRange){
 		long last_data_proc = -1;
+		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			int opId = runningOpState.getOwnerId();
 			String stateTag = runningOpState.getStateTag();
@@ -522,8 +515,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			((Partitionable)runningOpState).setDirtyMode(true);
 			
 			// Set ts for consistency, etc...
-			last_data_proc = owner.getTsData();
-			runningOpState.setData_ts(last_data_proc);
+			incomingTT = owner.getIncomingTT();
+//			last_data_proc = owner.getTsData();
+//			runningOpState.setData_ts(last_data_proc);
+			runningOpState.setData_ts(incomingTT);
 
 			// STREAMING THROUGH THE NETWORK (enforcing constant memory consumption here)
 			ArrayList<Object> microBatch;
@@ -598,13 +593,15 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			System.out.println("TOTAL SEQ NUMER: "+totalChunks);
 			System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
 		}
-		return last_data_proc;
+//		return last_data_proc;
+		return incomingTT;
 	}
 	
 	
 	
-	private long blindParallelBackupState(){
-		long last_data_proc = -1;
+	private TimestampTracker blindParallelBackupState(){
+//		long last_data_proc = -1;
+		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			BackupOperatorState bs0 = new BackupOperatorState();
 			BackupOperatorState bs1 = new BackupOperatorState();
@@ -629,8 +626,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				}
 			}
 			
-			last_data_proc = owner.getTsData();
-			runningOpState.setData_ts(last_data_proc);
+//			last_data_proc = owner.getTsData();
+//			runningOpState.setData_ts(last_data_proc);
+			incomingTT = owner.getIncomingTT();
+			runningOpState.setData_ts(incomingTT);
 			
 			// change 0 for proper key
 			long a = System.currentTimeMillis();
@@ -668,11 +667,13 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			ctB2 = null;
 //			owner.sendBlindData(ctB2);
 		}
-		return last_data_proc;
+		//return last_data_proc;
+		return incomingTT;
 	}
 	
-	private long blindBackupState(){
-		long last_data_proc = -1;
+	private TimestampTracker blindBackupState(){
+//		long last_data_proc = -1;
+		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			RawData rw = new RawData();
 			// Mutex for executor (in case multicore)
@@ -697,8 +698,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				}
 			}
 
-			last_data_proc = owner.getTsData();
-			rw.setTs(last_data_proc);
+//			last_data_proc = owner.getTsData();
+//			rw.setTs(last_data_proc);
+			incomingTT = owner.getIncomingTT();
 			rw.setOpId(runningOpState.getOwnerId());
 			byte[] rawData = toRawData(runningOpState);
 			rw.setData(rawData);
@@ -713,7 +715,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				mutex.release();
 			}
 		}
-		return last_data_proc;
+//		return last_data_proc;
+		return incomingTT;
 	}
 	
 	private byte[] toRawData(State s){
@@ -738,8 +741,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	    return data;
 	}
 	
-	private long directBackupState(){
-		long last_data_proc = -1;
+	private TimestampTracker directBackupState(){
+//		long last_data_proc = -1;
+		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			BackupOperatorState bs = new BackupOperatorState();
 			// Mutex for executor (in case multicore)
@@ -762,8 +766,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					e.printStackTrace();
 				}
 			}
-			last_data_proc = owner.getTsData();
-			runningOpState.setData_ts(last_data_proc);
+//			last_data_proc = owner.getTsData();
+//			runningOpState.setData_ts(last_data_proc);
+			incomingTT = owner.getIncomingTT();
+			runningOpState.setData_ts(incomingTT);
 			bs.setOpId(runningOpState.getOwnerId());
 			bs.setState(runningOpState);
 			bs.setStateClass(runningOpState.getStateTag());
@@ -778,11 +784,13 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				mutex.release();
 			}
 		}
-		return last_data_proc;
+//		return last_data_proc;
+		return incomingTT;
 	}
 	
-	private long directParallelBackupState(){
-		long last_data_proc = -1;
+	private TimestampTracker directParallelBackupState(){
+//		long last_data_proc = -1;
+		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			BackupOperatorState bs0 = new BackupOperatorState();
 			BackupOperatorState bs1 = new BackupOperatorState();
@@ -806,8 +814,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					e.printStackTrace();
 				}
 			}
-			last_data_proc = owner.getTsData();
-			runningOpState.setData_ts(last_data_proc);
+//			last_data_proc = owner.getTsData();
+//			runningOpState.setData_ts(last_data_proc);
+			incomingTT = owner.getIncomingTT();
+			runningOpState.setData_ts(incomingTT);
 			// change 0 for proper key
 long a = System.currentTimeMillis();
 			State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
@@ -832,17 +842,19 @@ System.out.println("partitioning time: "+(b-a));
 				mutex.release();
 			}
 		}
-		return last_data_proc;
+//		return last_data_proc;
+		return incomingTT;
 	}
 	
-	private long backupState(){
-		long last_data_proc = -1;
+	private TimestampTracker backupState(){
+		TimestampTracker incomingTT = null;
+//		long last_data_proc = -1;
 		if(runningOpState != null){
 			BackupOperatorState bs = new BackupOperatorState();
 			State toBackup = null;
 			int ownerId = runningOpState.getOwnerId();
 			int checkpointInterval = runningOpState.getCheckpointInterval();
-			long data_ts = runningOpState.getData_ts();
+			TimestampTracker data_ts = runningOpState.getData_ts();
 			String stateTag = runningOpState.getStateTag();
 			long startmutex = System.currentTimeMillis();
 			
@@ -867,7 +879,8 @@ System.out.println("partitioning time: "+(b-a));
 					e.printStackTrace();
 				}
 			}
-			last_data_proc = owner.getTsData();
+//			last_data_proc = owner.getTsData();
+			incomingTT = owner.getIncomingTT();
 			
 			long startcopy = System.currentTimeMillis();
 			
@@ -888,7 +901,8 @@ System.out.println("partitioning time: "+(b-a));
 			System.out.println("% mutex: "+(stopmutex-startmutex));
 			toBackup.setOwnerId(ownerId);
 			toBackup.setCheckpointInterval(checkpointInterval);
-			toBackup.setData_ts(last_data_proc);
+//			toBackup.setData_ts(last_data_proc);
+			toBackup.setData_ts(incomingTT);
 			toBackup.setStateTag(stateTag);
 			
 			bs.setOpId(toBackup.getOwnerId());
@@ -899,7 +913,8 @@ System.out.println("partitioning time: "+(b-a));
 			//Finally send the backup state
 			owner.sendBackupState(ctB);
 		}
-		return last_data_proc;
+//		return last_data_proc;
+		return incomingTT;
 	}
 	
 	public void installState(InitOperatorState initOperatorState){
@@ -1011,7 +1026,9 @@ System.out.println("partitioning time: "+(b-a));
 
 	@Override
 	public long getLastACK() {
-		return owner.getTsData();
+//		return owner.getTsData();
+		///\todo{check this is correct}
+		return owner.getTs_ack();
 	}
 
 	@Override

@@ -1,6 +1,6 @@
 Seep is an experimental stream processing platform that is being developed by the Large-Scale Distributed Systems (LSDS) research group at Imperial College London. 
 
-The system is currently under heavy development and should be considered an alpha release.
+The system is currently under heavy development and should be considered an alpha release. In particular, this is a "feature" branch. A "stable" branch will be created once the first release comes.
 
 build -> binary build files
 

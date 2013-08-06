@@ -107,20 +107,26 @@ public class IncomingDataHandlerWorker implements Runnable{
 			Input i = new Input(bis);
 			BatchTuplePayload batchTuplePayload = null;
 
+			long lastIncomingTs = -1;
+			
 			while(goOn){
 				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
 				for(TuplePayload t_payload : batch){
 					long incomingTs = t_payload.timestamp;
-					owner.setTsData(incomingTs);
-//System.out.println("new data ts: "+incomingTs);
+					// Check for already processed data
+					if(incomingTs <= lastIncomingTs){
+						continue;
+					}
+					owner.setTsData(opId, incomingTs);
+					lastIncomingTs = incomingTs;
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
 						dso.push(reg);
 					}
 					else{
-//						System.out.println("trash in TCP buffers");
+						///\todo{check for garbage in the tcp buffers}
 					}
 				}
 			}

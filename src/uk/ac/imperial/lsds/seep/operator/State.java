@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
@@ -26,7 +27,8 @@ public abstract class State implements Serializable, Cloneable{
 	private int ownerId;
 	private String stateTag;
 	private State stateImpl;
-	private long data_ts;
+//	private long data_ts;
+	private TimestampTracker data_ts;
 	private int checkpointInterval;
 		
 	public void setStateTag(String stateTag){
@@ -53,11 +55,19 @@ public abstract class State implements Serializable, Cloneable{
 		this.ownerId = ownerId;
 	}
 	
-	public long getData_ts(){
+//	public long getData_ts(){
+//		return data_ts;
+//	}
+	
+//	public void setData_ts(long data_ts){
+//		this.data_ts = data_ts;
+//	}
+	
+	public TimestampTracker getData_ts(){
 		return data_ts;
 	}
 	
-	public void setData_ts(long data_ts){
+	public void setData_ts(TimestampTracker data_ts){
 		this.data_ts = data_ts;
 	}
 	

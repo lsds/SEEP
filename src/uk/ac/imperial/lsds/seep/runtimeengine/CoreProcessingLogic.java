@@ -172,14 +172,6 @@ System.out.println("KEY: "+operatorType);
 		//processAck(opId, ts_e);
 		///\todo{ check if ts_e is the last thing processed by the most upstream op in the downstream node, or the most downstream op in the down node}
 		if(downStream.reconf_ts <= ts_e){
-			/** DONT really understand the objective of the next 6 lines, CHECK**/
-//			int eopId = -5;
-//			if(puCtx.getBuffer(opId).getBackupState() != null){
-//				if(puCtx.getBuffer(opId).getBackupState() != null){
-//					eopId = puCtx.getBuffer(opId).getBackupState().getOpId();
-//				}
-//			}
-			/** **/
 			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
 		}
 		else{
@@ -260,7 +252,8 @@ System.out.println("KEY: "+operatorType);
 		State stateToSplit = backupOperatorState.getState();
 		int stateCheckpointInterval = stateToSplit.getCheckpointInterval();
 		String stateTag = stateToSplit.getStateTag();
-		long data_ts = stateToSplit.getData_ts();
+//		long data_ts = stateToSplit.getData_ts();
+		TimestampTracker data_ts = stateToSplit.getData_ts();
 		State splitted[] = null;
 		if(stateToSplit instanceof Partitionable){
 			splitted = ((Partitionable)stateToSplit).splitState(stateToSplit, key);

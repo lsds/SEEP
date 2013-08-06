@@ -218,8 +218,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 				// REMOTE SYNC
 				else if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
-					boolean now = false;
-					outputQueue.sendToDownstream(dt, dest, now, false);
+					outputQueue.sendToDownstream(dt, dest);
 				}
 				// LOCAL
 				else if(dest instanceof Operator){
@@ -299,7 +298,9 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public long getLastACK() {
-		return owner.getTsData();
+		//return owner.getTsData();
+		///\todo{check this is correct}
+		return owner.getTs_ack();
 	}
 
 	@Override

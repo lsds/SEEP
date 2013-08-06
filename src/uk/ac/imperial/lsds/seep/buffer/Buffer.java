@@ -12,15 +12,14 @@ package uk.ac.imperial.lsds.seep.buffer;
 
 import java.io.Serializable;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 /**
 * Buffer class models the buffers for the connections between operators in our system
@@ -30,36 +29,41 @@ public class Buffer implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
-	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
-//	private HashSet<BatchTuplePayload> bufff = new LinkedHashSet<BatchTuplePayload>();
+//	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
+	
+	private Deque<OutputLogEntry> log = new LinkedBlockingDeque<OutputLogEntry>();
 	
 	private BackupOperatorState bs = null;
 	private RawData rw = null;
 
-	public Iterator<BatchTuplePayload> iterator() { return buff.iterator(); }
+//	public Iterator<BatchTuplePayload> iterator() { 
+//		return buff.iterator(); 
+//	}
+	
+	public Iterator<OutputLogEntry> iterator() { 
+		return log.iterator(); 
+	}
 
 	public Buffer(){
-		//state cannot be null. before backuping it would be null and this provokes bugs
-//\bug The constructor in Buffer is operator dependant, this must be fixed by means of interfaces that make it independent.
 		BackupOperatorState initState = new BackupOperatorState();
 		bs = initState;
 	}
 	
 	public int size(){
-		return buff.size();
+		return log.size();
 	}
 
 	public BackupOperatorState getBackupState(){
 		return bs;
 	}
 
-	public void saveStateAndTrim(BackupOperatorState bs){
-		//Save state
-		this.bs = bs;
-		long ts_e = bs.getState().getData_ts();
-		//Trim buffer, eliminating those tuples that are represented by this state
-		trim(ts_e);
-	}
+//	public void saveStateAndTrim(BackupOperatorState bs){
+//		//Save state
+//		this.bs = bs;
+//		long ts_e = bs.getState().getData_ts();
+//		//Trim buffer, eliminating those tuples that are represented by this state
+//		trim(ts_e);
+//	}
 	
 	public void replaceBackupOperatorState(BackupOperatorState bs) {
 		// In-memory
@@ -88,8 +92,8 @@ public class Buffer implements Serializable{
 		this.rw = rw;
 	}
 
-	public void save(BatchTuplePayload batch){
-		buff.add(batch);
+	public void save(BatchTuplePayload batch, long outputTs, TimestampTracker inputTs){
+		log.add(new OutputLogEntry(outputTs, inputTs, batch));
 		MetricsReader.loggedEvents.inc();
 	}
 	
@@ -97,10 +101,10 @@ public class Buffer implements Serializable{
 /// \todo more efficient way of trimming buffer. -> removeAll(collection to be removed)
 	public void trim(long ts){
 		long startTrim = System.currentTimeMillis();
-		Iterator<BatchTuplePayload> iter = buff.iterator();
+		Iterator<OutputLogEntry> iter = log.iterator();
 		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
-			BatchTuplePayload next = iter.next();
+			BatchTuplePayload next = iter.next().batch;
 			long timeStamp = 0;
 			numOfTuplesPerBatch = next.batchSize;
 			//Accessing last index cause that is the newest tuple in the batch
@@ -111,6 +115,6 @@ public class Buffer implements Serializable{
 		}
 		long endTrim = System.currentTimeMillis();
 		MetricsReader.loggedEvents.clear();
-		MetricsReader.loggedEvents.inc(buff.size());
+		MetricsReader.loggedEvents.inc(log.size());
 	}
 }

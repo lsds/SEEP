@@ -69,6 +69,7 @@ public class CoreRE {
 	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
 	private OutgoingDataHandlerWorker odhw = null;
+	private TimestampTracker incomingTT = new TimestampTracker();
 	
 	private Thread controlH = null;
 	private ControlHandler ch = null;
@@ -81,7 +82,7 @@ public class CoreRE {
 	private int totalNumberOfChunks = -1;
 	
 	// Timestamp of the last data tuple processed by this operator
-	private long ts_data = 0;
+//	private long ts_data = 0;
 	// Timestamp of the last ack processed by this operator
 	private long ts_ack;
 		
@@ -126,7 +127,7 @@ public class CoreRE {
 	}
 	
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
-		outputQueue = new OutputQueue();
+		outputQueue = new OutputQueue(this);
 
 		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
@@ -254,12 +255,16 @@ public class CoreRE {
 		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, REPLAY_STATE, STATE_CHUNK
 	}
 	
-	public synchronized void setTsData(long ts_data){
-		this.ts_data = ts_data;
+	public synchronized void setTsData(int stream, long ts_data){
+		this.incomingTT.set(stream, ts_data);
 	}
 
-	public synchronized long getTsData(){
-		return ts_data;
+	public synchronized long getTsData(int stream){
+		return incomingTT.get(stream);
+	}
+	
+	public TimestampTracker getIncomingTT(){
+		return incomingTT;
 	}
 	
 	public DataStructureAdapter getDSA(){
