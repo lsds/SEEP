@@ -39,6 +39,7 @@ public class ACKWorker implements Runnable, Serializable{
 		int sleep = new Integer(P.valueFor("ackEmitInterval"));
 		while(goOn){
 			TimestampTracker currentTsV = processingUnit.getLastACK();
+			System.out.println("ACKWorker: EmitACK");
 			processingUnit.emitACK(currentTsV);
 			try{
 				Thread.sleep(sleep);

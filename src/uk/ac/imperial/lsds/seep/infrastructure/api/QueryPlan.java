@@ -83,6 +83,8 @@ public class QueryPlan {
 		}
 		this.newStatefulOperator(op, opId, s, attributes);
 		this.setSource(op);
+		
+		op.getOpContext().setIsSource(true);
 		return op;
 	}
 	
@@ -91,6 +93,7 @@ public class QueryPlan {
 		this.newStatelessOperator(op, opId, attributes);
 		this.setSource(op);
 		
+		op.getOpContext().setIsSource(true);
 		return op;
 	}
 	
@@ -103,12 +106,16 @@ public class QueryPlan {
 		this.newStatefulOperator(op, opId, s, attributes);
 		this.setSink(op);
 		
+		op.getOpContext().setIsSink(true);
+		
 		return op;
 	}
 	
 	public Operator newStatelessSink(Operator op, int opId, List<String> attributes){
 		this.newStatelessOperator(op, opId, attributes);
 		this.setSink(op);
+		
+		op.getOpContext().setIsSink(true);
 		
 		return op;
 	}

@@ -57,4 +57,13 @@ public class TimestampTracker {
 		return true;
 	}
 	
+	@Override
+	public String toString(){
+		StringBuffer buffer = new StringBuffer();
+		for(Integer id : tsStream.keySet()){
+			buffer.append(id+": "+tsStream.get(id)+" ");
+		}
+		return buffer.toString();
+	}
+	
 }

@@ -236,7 +236,8 @@ public class CoreRE {
 		// If ackworker is active
 		if(P.valueFor("ackWorkerActive").equals("true")){
 			//If this is the sink operator (extremely ugly)
-			if(processingUnit.getOperator().getOpContext().downstreams.size() == 0){
+			//if(processingUnit.getOperator().getOpContext().downstreams.size() == 0){
+			if(processingUnit.getOperator().getOpContext().isSink()){
 				processingUnit.createAndRunAckWorker();
 				NodeManager.nLogger.info("-> ACK Worker working on "+nodeDescr.getNodeId());
 			}
@@ -332,6 +333,7 @@ public class CoreRE {
 		if(ctt.equals(ControlTupleType.ACK)) {
 			Ack ack = ct.getAck();
 			if(ack.getTs() >= ts_ack){
+				System.out.println("Received ACK");
 				coreProcessLogic.processAck(ack);
 			}
 		}

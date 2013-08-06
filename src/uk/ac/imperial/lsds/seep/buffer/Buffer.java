@@ -107,13 +107,16 @@ public class Buffer implements Serializable{
 			long timeStamp = 0;
 			timeStamp = next.outputTs; // the newest ts in the entry
 			if (timeStamp <= ts) {
+				System.out.println("Remove tuple with ts: "+timeStamp);
 				iter.remove();
 			}
 			else {
 				break;
 			}
 		}
-		oldest = log.getFirst().inputVTs;
+		if(!log.isEmpty()){
+			oldest = log.getFirst().inputVTs;
+		}
 //		long endTrim = System.currentTimeMillis();
 		MetricsReader.loggedEvents.clear();
 		MetricsReader.loggedEvents.inc(log.size());

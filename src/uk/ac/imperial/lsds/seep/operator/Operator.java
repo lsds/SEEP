@@ -34,7 +34,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	private Router router = null;	
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionMode = new HashMap<Integer, InputDataIngestionMode>();
 
-
 	public Operator(){
 		
 	}

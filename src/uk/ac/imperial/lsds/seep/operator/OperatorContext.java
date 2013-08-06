@@ -35,12 +35,10 @@ public class OperatorContext implements Serializable{
 	private ArrayList<OperatorStaticInformation> downstream = new ArrayList<OperatorStaticInformation>();
 	private ArrayList<Integer> originalDownstream = new ArrayList<Integer>();
 	
+	private boolean isSource = false;
+	private boolean isSink = false;
 	// store the type of input data ingestion mode per upstream operator. <OpId - InputDataIngestionMode>
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionModePerUpstream = new HashMap<Integer, InputDataIngestionMode>();
-	
-	/** VAR -> Routing related information for this operator **/
-//	private String queryAttribute = null;
-//	private boolean requiresLogicalRouting = false;
 	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
 	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
@@ -52,13 +50,21 @@ public class OperatorContext implements Serializable{
 		
 	}
 	
-//	public String getQueryAttribute(){
-//		return queryAttribute;
-//	}
+	public boolean isSource(){
+		return isSource;
+	}
 	
-//	public boolean getRequiresLogicalRouting(){
-//		return requiresLogicalRouting;
-//	}
+	public boolean isSink(){
+		return isSink;
+	}
+	
+	public void setIsSource(boolean isSource){
+		this.isSource = isSource;
+	}
+	
+	public void setIsSink(boolean isSink){
+		this.isSink = isSink;
+	}
 	
 	public boolean doesRequireLogicalRouting(){
 		// If there are more than one addressable streamIds in the logicalRouting table, it does require specific routing
