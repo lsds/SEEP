@@ -103,7 +103,7 @@ public class CoreProcessingLogic implements Serializable{
 	}
 	
 	//map where it is saved the ack received by each downstream
-	private Map<Integer, Long> downstreamLastAck = new HashMap<Integer, Long>();
+	private Map<Integer, TimestampTracker> downstreamLastAck = new HashMap<Integer, TimestampTracker>();
 	
 	//routing information, operatorCLASS - backupRI
 //	private Seep.BackupRI backupRI = null;
@@ -167,11 +167,11 @@ System.out.println("KEY: "+operatorType);
 	public void processBackupState(BackupOperatorState ct){
 		int opId = ct.getOpId();
 		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
-		long ts_e = ct.getState().getData_ts();
-		// We use the ts data from the state to trim our buffers and forward backwards.
-		//processAck(opId, ts_e);
-		///\todo{ check if ts_e is the last thing processed by the most upstream op in the downstream node, or the most downstream op in the down node}
-		if(downStream.reconf_ts <= ts_e){
+		TimestampTracker ts_e = ct.getState().getData_ts();
+		TimestampTracker smaller = TimestampTracker.returnSmaller(ts_e, downStream.getReconf_ts());
+		if(TimestampTracker.isSmallerOrEqual(downStream.getReconf_ts(), smaller)){
+			
+		//if(downStream.getReconf_ts() <= ts_e){
 			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
 		}
 		else{
@@ -182,8 +182,9 @@ System.out.println("KEY: "+operatorType);
 	public void processRawData(RawData rw){
 		int opId = rw.getOpId();
 		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
-		long ts_e = rw.getTs();
-		if(downStream.reconf_ts <= ts_e){
+		TimestampTracker ts_e = rw.getTs();
+		TimestampTracker smaller = TimestampTracker.returnSmaller(ts_e, downStream.getReconf_ts());
+		if(TimestampTracker.isSmallerOrEqual(downStream.getReconf_ts(), smaller)){
 //			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
 			puCtx.getBuffer(opId).replaceRawData(rw);
 		}
@@ -192,41 +193,64 @@ System.out.println("KEY: "+operatorType);
 		}
 	}
 
-	//Send ACK tuples to the upstream nodes and update TS_ACK
-	/// \todo{now this method is syncrhonized, with ACK Tile mechanism we can avoid most of the method, but it is not finished yet}
-	//FIXME if I remove a downstream (scale down) I should remove from map/clear the map
-	/// \todo {scaling down operators introduce a new bunch of possibilities}
 	public synchronized void processAck(Ack ct){
 		int opId = ct.getOpId();
-		long current_ts = ct.getTs();
-		processAck(opId, current_ts);
+		long ack_ts = ct.getTs();
+		processAck(opId, ack_ts);
 	}
 	
-	private synchronized void processAck(int opId, long current_ts){
-		int counter = 0;
-		long minWithCurrent = current_ts;
-		long minWithoutCurrent = Long.MAX_VALUE;
+//	private synchronized void _processAck(int opId, long ack_ts){
+//		// Trim local buffer
+//		Buffer buffer = puCtx.getBuffer(opId);
+//		buffer.trim(ack_ts);
+//		
+//		// Check when to send ack upstream
+//		int counter = 0;
+//		long minWithCurrent = ack_ts;
+//		long minWithoutCurrent = Long.MAX_VALUE;
+//		for( Map.Entry<Integer, Long> entry: downstreamLastAck.entrySet()) {
+//			long ts = entry.getValue();
+//			// Search for the minimum ack
+//			if (entry.getKey() != opId) {
+//				if(ts < minWithCurrent){ 
+//					minWithCurrent = ts;
+//				}
+//			}
+//			if(ts < minWithoutCurrent){
+//				minWithoutCurrent = ts;
+//			}
+//			counter++;
+//		}
+//		downstreamLastAck.put(opId, ack_ts);
+//		// Forward only if stateless. Stateful operator forward the state instead
+//		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
+//			owner.ack(minWithCurrent);
+//		}
+//		// To indicate that this is the last ack processed by this operator
+//		owner.setTs_ack(ack_ts);
+//	}
+	
+	private synchronized void processAck(int opId, long ack_ts){
+		// Trim local buffer
 		Buffer buffer = puCtx.getBuffer(opId);
-		buffer.trim(current_ts);
-		for( Map.Entry<Integer, Long> entry: downstreamLastAck.entrySet()) {
-			long ts = entry.getValue();
-			if (entry.getKey() != opId) {
-				if(ts < minWithCurrent){ 
-					minWithCurrent = ts;
+		TimestampTracker oldest = buffer.trim(ack_ts);
+		
+		// Check whether this operator is responsible to control when to backpropagate acks
+		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
+			// First assign this ackV to the opId 
+			downstreamLastAck.put(opId, oldest);
+			// Now we get the smaller one and backpropagate it (if we have seen at least once per downstream)
+			TimestampTracker toBackPropagate = null;
+			for(Integer id : downstreamLastAck.keySet()){
+				if(downstreamLastAck.containsKey(id)){
+					toBackPropagate = TimestampTracker.returnSmaller(toBackPropagate, downstreamLastAck.get(id));
 				}
 			}
-			if(ts < minWithoutCurrent){
-				minWithoutCurrent = ts;
+			// Here we have the smaller vector, that we use to backpropagate if it is not null
+			if(toBackPropagate != null){
+				owner.ack(toBackPropagate);
 			}
-			counter++;
 		}
-		downstreamLastAck.put(opId, current_ts);
-		// Forward only if stateless. Stateful operator forward the state instead
-		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
-			owner.ack(minWithCurrent);
-		}
-		// To indicate that this is the last ack processed by this operator
-		owner.setTs_ack(current_ts);
 	}
 	
 	public void splitState(int oldOpId, int newOpId, int key) {
@@ -367,7 +391,8 @@ System.out.println("KEY: "+operatorType);
 		SynchronousCommunicationChannel oldConnection = ((SynchronousCommunicationChannel)puCtx.getDownstreamTypeConnection().get(oldOpIndex));
 		// necessary to ignore state checkpoints of the old operator before split.
 		long last_ts = oldConnection.getLast_ts();
-		oldConnection.setReconf_ts(last_ts);
+		TimestampTracker last_tsV = oldConnection.getBuffer().getInputVTsForOutputTs(last_ts);
+		oldConnection.setReconf_ts(last_tsV);
 		/** END BLOCK OF CODE **/
 				
 		//Stop connections to perform the update

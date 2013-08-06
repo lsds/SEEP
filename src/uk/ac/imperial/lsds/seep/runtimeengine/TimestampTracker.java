@@ -31,4 +31,30 @@ public class TimestampTracker {
 		return tsStream.get(stream);
 	}
 	
+	public static TimestampTracker returnSmaller(TimestampTracker a, TimestampTracker b){
+		if(a == null) return b;
+		if(b == null) return a;
+		if(a.tsStream.size() != b.tsStream.size()) return null;
+		TimestampTracker tt = new TimestampTracker();
+		for(Integer id : a.tsStream.keySet()){ // for each component
+			long ats = a.get(id); // pick the smaller component (the one that trims less)
+			long bts = b.get(id);
+			if(ats < bts) tt.set(id, ats);
+			else tt.set(id, bts);
+		}
+		return tt;
+	}
+	
+	public static boolean isSmallerOrEqual(TimestampTracker a, TimestampTracker b){
+		if(a == null) return false;
+		if(b == null) return false;
+		if(a.tsStream.size() != b.tsStream.size()) return false;
+		for(Integer id : a.tsStream.keySet()){ // for each component
+			long ats = a.get(id); // pick the smaller component (the one that trims less)
+			long bts = b.get(id);
+			if(bts < ats) return false; // if any component is bigger, then false
+		}
+		return true;
+	}
+	
 }

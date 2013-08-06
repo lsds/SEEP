@@ -97,24 +97,36 @@ public class Buffer implements Serializable{
 		MetricsReader.loggedEvents.inc();
 	}
 	
-/// \test trim() should be tested
-/// \todo more efficient way of trimming buffer. -> removeAll(collection to be removed)
-	public void trim(long ts){
-		long startTrim = System.currentTimeMillis();
+	public TimestampTracker trim(long ts){
+		TimestampTracker oldest = null;
+//		long startTrim = System.currentTimeMillis();
 		Iterator<OutputLogEntry> iter = log.iterator();
-		int numOfTuplesPerBatch = 0;
 		while (iter.hasNext()) {
-			BatchTuplePayload next = iter.next().batch;
+			OutputLogEntry next = iter.next();
+			BatchTuplePayload batch = next.batch;
 			long timeStamp = 0;
-			numOfTuplesPerBatch = next.batchSize;
-			//Accessing last index cause that is the newest tuple in the batch
-
-			timeStamp = next.getTuple(numOfTuplesPerBatch-1).timestamp;
-			if (timeStamp <= ts) iter.remove();
-			else break;
+			timeStamp = next.outputTs; // the newest ts in the entry
+			if (timeStamp <= ts) {
+				iter.remove();
+			}
+			else {
+				break;
+			}
 		}
-		long endTrim = System.currentTimeMillis();
+		oldest = log.getFirst().inputVTs;
+//		long endTrim = System.currentTimeMillis();
 		MetricsReader.loggedEvents.clear();
 		MetricsReader.loggedEvents.inc(log.size());
+		return oldest;
+	}
+	
+	///fixme{just for testing, do binary search on structure}
+	public TimestampTracker getInputVTsForOutputTs(long output_ts){
+		for(OutputLogEntry l : log){
+			if(l.outputTs == output_ts){
+				return l.inputVTs;
+			}
+		}
+		return null;
 	}
 }

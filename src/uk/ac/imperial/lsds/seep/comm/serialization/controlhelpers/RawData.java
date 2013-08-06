@@ -10,10 +10,12 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
+
 public class RawData {
 
 	private int opId;
-	private long ts;
+	private TimestampTracker ts;
 	private byte[] data;
 	
 	public RawData(){}
@@ -31,11 +33,11 @@ public class RawData {
 		this.opId = nodeId;
 	}
 	
-	public long getTs() {
+	public TimestampTracker getTs() {
 		return ts;
 	}
 
-	public void setTs(long ts) {
+	public void setTs(TimestampTracker ts) {
 		this.ts = ts;
 	}
 	
