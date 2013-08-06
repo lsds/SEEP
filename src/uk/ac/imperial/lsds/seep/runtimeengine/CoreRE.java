@@ -16,7 +16,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.ControlHandler;
@@ -653,9 +655,17 @@ public class CoreRE {
 		}
 	}
 	
-	public void ack(long ts) {
-		ControlTuple ack = new ControlTuple(ControlTupleType.ACK, processingUnit.getOperator().getOperatorId(), ts);
-		controlDispatcher.sendAllUpstreams(ack);
+	public void ack(TimestampTracker tsVector) {
+		// ack per input channel
+		Iterator<Entry<Integer, Long>> i = tsVector.getTsStream();
+		while(i.hasNext()){
+			Entry<Integer, Long> channelInfo = i.next();
+			int opId = channelInfo.getKey();
+			long ts = channelInfo.getValue();
+			ControlTuple ack = new ControlTuple(ControlTupleType.ACK, processingUnit.getOperator().getOperatorId(), ts);
+			int index = processingUnit.getOperator().getOpContext().getUpOpIndexFromOpId(opId);
+			controlDispatcher.sendUpstream(ack, index);
+		}
 	}
 	
 	@Deprecated

@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
+import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
@@ -464,54 +465,58 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	/** State operations **/
 	public void checkpointAndBackupState(){
 		// Backup state
-		long tsToAck = backupState();
-		if(tsToAck != -1){
-			owner.ack(tsToAck);
+		TimestampTracker tsVToAck = backupState();
+		if(tsVToAck != null){
+			owner.ack(tsVToAck);
 		}
 	}
 	
 	public void directCheckpointAndBackupState(){
-		long tsToAck = directBackupState();
-		if(tsToAck != -1){
-			owner.ack(tsToAck);
+		TimestampTracker tsVToAck = directBackupState();
+		if(tsVToAck != null){
+			owner.ack(tsVToAck);
 		}
 	}
 	
 	public void directParallelCheckpointAndBackupState(){
-		long tsToAck = directParallelBackupState();
-		if(tsToAck != -1){
-			owner.ack(tsToAck);
+		TimestampTracker tsVToAck = directParallelBackupState();
+		if(tsVToAck != null){
+			owner.ack(tsVToAck);
 		}
 	}
 	
 	public void blindCheckpointAndBackupState(){
-		long tsToAck = blindBackupState();
-		if(tsToAck != -1){
-			owner.ack(tsToAck);
+		TimestampTracker tsVToAck = blindBackupState();
+		if(tsVToAck != null){
+			owner.ack(tsVToAck);
 		}
 	}
 	
 	public void blindParallelCheckpointAndBackupState(){
-		long tsToAck = blindParallelBackupState();
-		if(tsToAck != -1){
-			owner.ack(tsToAck);
+		TimestampTracker tsVToAck = blindParallelBackupState();
+		if(tsVToAck != null){
+			owner.ack(tsVToAck);
 		}
 	}
 	
 	public void lockFreeParallelCheckpointAndBackupState(int[] partitioningRange){
-		long tsToAck = lockFreeParallelBackupState(partitioningRange);
-		if(tsToAck != -1){
-			owner.ack(tsToAck);
+		TimestampTracker tsVToAck = lockFreeParallelBackupState(partitioningRange);
+		if(tsVToAck != null){
+			owner.ack(tsVToAck);
 		}
 	}
 	
 	private TimestampTracker lockFreeParallelBackupState(int[] partitioningRange){
-		long last_data_proc = -1;
+		/**
+		 * include otuputBuffers once the star-topology information is consistent
+		 */
+//		long last_data_proc = -1;
 		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			int opId = runningOpState.getOwnerId();
 			String stateTag = runningOpState.getStateTag();
 			// Set dirty mode (lock free)
+			ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers();
 			((Partitionable)runningOpState).setDirtyMode(true);
 			
 			// Set ts for consistency, etc...
@@ -598,7 +603,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 	
 	
-	
+	///\todo{to remove deprecated, include outputbuffers}
+	@Deprecated
 	private TimestampTracker blindParallelBackupState(){
 //		long last_data_proc = -1;
 		TimestampTracker incomingTT = null;
@@ -671,6 +677,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		return incomingTT;
 	}
 	
+	///\todo{to remove deprecated, include outputbuffers}
+	@Deprecated
 	private TimestampTracker blindBackupState(){
 //		long last_data_proc = -1;
 		TimestampTracker incomingTT = null;
@@ -741,6 +749,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	    return data;
 	}
 	
+	///\todo{to remove deprecated, include outputbuffers}
+	@Deprecated
 	private TimestampTracker directBackupState(){
 //		long last_data_proc = -1;
 		TimestampTracker incomingTT = null;
@@ -788,6 +798,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		return incomingTT;
 	}
 	
+	///\todo{to remove deprecated, include outputbuffers}
+	@Deprecated
 	private TimestampTracker directParallelBackupState(){
 //		long last_data_proc = -1;
 		TimestampTracker incomingTT = null;
@@ -885,7 +897,7 @@ System.out.println("partitioning time: "+(b-a));
 			long startcopy = System.currentTimeMillis();
 			
 			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
-			
+			ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers();
 //			toBackup = (State) owner.getControlDispatcher().deepCopy(runningOpState);
 			
 			long stopcopy = System.currentTimeMillis();
@@ -907,6 +919,7 @@ System.out.println("partitioning time: "+(b-a));
 			
 			bs.setOpId(toBackup.getOwnerId());
 			bs.setState(toBackup);
+			bs.setOutputBuffers(outputBuffers);
 			bs.setStateClass(toBackup.getStateTag());
 			
 			ControlTuple ctB = new ControlTuple().makeBackupState(bs);
@@ -1025,14 +1038,12 @@ System.out.println("partitioning time: "+(b-a));
 	}
 
 	@Override
-	public long getLastACK() {
-//		return owner.getTsData();
-		///\todo{check this is correct}
-		return owner.getTs_ack();
+	public TimestampTracker getLastACK() {
+		return owner.getIncomingTT();
 	}
 
 	@Override
-	public void emitACK(long currentTs) {
+	public void emitACK(TimestampTracker currentTs) {
 		owner.ack(currentTs);
 	}
 

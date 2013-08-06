@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
@@ -134,7 +135,7 @@ public class OutputQueue {
 	public void replay(SynchronousCommunicationChannel oi){
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){
-					BatchTuplePayload batch = oi.getSharedIterator().next();
+					BatchTuplePayload batch = oi.getSharedIterator().next().batch;
 					Output output = oi.getOutput();
 					k.writeObject(output, batch);
 					output.flush();
@@ -144,13 +145,13 @@ public class OutputQueue {
 	}
 	
 	public void replayTuples(SynchronousCommunicationChannel cci) {
-		Iterator<BatchTuplePayload> sharedIterator = cci.getBuffer().iterator();
+		Iterator<OutputLogEntry> sharedIterator = cci.getBuffer().iterator();
 		Output output = cci.getOutput();
 		int bufferSize = cci.getBuffer().size();
 		int controlThreshold = (int)(bufferSize)/10;
 		int replayed = 0;
 		while(sharedIterator.hasNext()) {
-			BatchTuplePayload dt = sharedIterator.next();
+			BatchTuplePayload dt = sharedIterator.next().batch;
 			synchronized(output){
 				synchronized(k){
 					k.writeObject(output, dt);

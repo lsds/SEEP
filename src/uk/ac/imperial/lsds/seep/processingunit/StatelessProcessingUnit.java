@@ -31,6 +31,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public class StatelessProcessingUnit implements IProcessingUnit {
 
@@ -297,14 +298,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	}
 
 	@Override
-	public long getLastACK() {
-		//return owner.getTsData();
-		///\todo{check this is correct}
-		return owner.getTs_ack();
+	public TimestampTracker getLastACK() {
+		return owner.getIncomingTT();
 	}
 
 	@Override
-	public void emitACK(long currentTs) {
+	public void emitACK(TimestampTracker currentTs) {
 		owner.ack(currentTs);
 	}
 

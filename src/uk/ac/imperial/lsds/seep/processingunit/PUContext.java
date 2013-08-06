@@ -26,6 +26,7 @@ import java.util.Vector;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
@@ -67,6 +68,16 @@ public class PUContext {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public ArrayList<OutputBuffer> getOutputBuffers(){
+		ArrayList<OutputBuffer> outputBuffers = new ArrayList<OutputBuffer>();
+		for(EndPoint ep : this.getDownstreamTypeConnection()){
+			if(ep instanceof SynchronousCommunicationChannel){
+				outputBuffers.add(new OutputBuffer(((SynchronousCommunicationChannel) ep).getBatch(), ep.getOperatorId()));
+			}
+		}
+		return outputBuffers;
 	}
 	
 	public Vector<EndPoint> getDownstreamTypeConnection() {

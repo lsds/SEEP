@@ -15,14 +15,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
-import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
@@ -44,13 +39,14 @@ import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.processingunit.StreamStateChunk;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
+
 public class ControlDispatcher {
 
 	private PUContext puCtx = null;
 	private Kryo k = null;
-	
-	// For use when backuping large state
-//	private Output controlOutput = new Output(1000000000);
 	
 	public ControlDispatcher(PUContext puCtx){
 		this.puCtx = puCtx;
@@ -84,7 +80,7 @@ public class ControlDispatcher {
 	public void sendAllUpstreams(ControlTuple ct){
 		for(int i = 0; i < puCtx.getUpstreamTypeConnection().size(); i++) {
 			sendUpstream(ct, i);
-		}		
+		}
 	}
 	
 //	public void sendUpstream2(ControlTuple ct, int index){

@@ -11,7 +11,9 @@
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 
+import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.operator.State;
 
 public class BackupOperatorState implements Serializable{
@@ -21,6 +23,7 @@ public class BackupOperatorState implements Serializable{
 	private int opId;
 	
 	private State state;
+	private ArrayList<OutputBuffer> outputBuffers = null;
 	private String stateClass;
 	
 	public BackupOperatorState(){}
@@ -28,20 +31,33 @@ public class BackupOperatorState implements Serializable{
 	public void setStateClass(String stateClass){
 		this.stateClass = stateClass;
 	}
+	
 	public String getStateClass(){
 		return stateClass;
 	}
+	
 	public int getOpId() {
 		return opId;
 	}
+	
 	public void setOpId(int opId) {
 		this.opId = opId;
 	}
+	
 	public State getState() {
 		return state;
 	}
+	
 	public void setState(State state) {
 		this.state = state;
+	}
+	
+	public ArrayList<OutputBuffer> getOutputBuffers(){
+		return outputBuffers;
+	}
+	
+	public void setOutputBuffers(ArrayList<OutputBuffer> outputBuffers){
+		this.outputBuffers = outputBuffers;
 	}
 	
 }

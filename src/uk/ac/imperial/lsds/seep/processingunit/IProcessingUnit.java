@@ -20,6 +20,7 @@ import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public interface IProcessingUnit {
 	
@@ -84,9 +85,9 @@ public interface IProcessingUnit {
 
 	public void createAndRunAckWorker();
 
-	public long getLastACK();
+	public TimestampTracker getLastACK();
 
-	public void emitACK(long currentTs);
+	public void emitACK(TimestampTracker currentTs);
 	
 	public ArrayList<Integer> getRouterIndexesInformation(int opId);
 	

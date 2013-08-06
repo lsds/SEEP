@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
@@ -46,7 +47,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	public long reconf_ts;
 	private long last_ts;
 //	private Iterator<BatchDataTuple> sharedIterator;
-	private Iterator<BatchTuplePayload> sharedIterator;
+	private Iterator<OutputLogEntry> sharedIterator;
 	
 	//Batch information for this channel
 //	private BatchDataTuple batch = new BatchDataTuple();
@@ -106,7 +107,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 //		this.sharedIterator = i;
 //	}
 	
-	public void setSharedIterator(Iterator<BatchTuplePayload> i){
+	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;
 	}
 	
@@ -114,7 +115,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 //		return sharedIterator;
 //	}
 	
-	public Iterator<BatchTuplePayload> getSharedIterator(){
+	public Iterator<OutputLogEntry> getSharedIterator(){
 		return sharedIterator;
 	}
 	

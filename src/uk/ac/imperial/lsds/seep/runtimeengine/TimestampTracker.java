@@ -11,11 +11,17 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 public class TimestampTracker {
 
 	// Saves the ts of the last tuple received through a given stream (identified with opId at the other side)
 	private HashMap<Integer, Long> tsStream = new HashMap<Integer, Long>();
+	
+	public Iterator<Entry<Integer, Long>> getTsStream(){
+		return tsStream.entrySet().iterator();
+	}
 	
 	public void set(int stream, long ts){
 		tsStream.put(stream, ts);

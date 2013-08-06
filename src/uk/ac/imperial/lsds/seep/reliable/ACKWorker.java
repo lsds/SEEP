@@ -14,6 +14,7 @@ import java.io.Serializable;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
+import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 /**
 * ACKWorker. This runnable object is in charge of watching to the last processed tuple and generating an ACK when this has changed.
@@ -25,7 +26,6 @@ public class ACKWorker implements Runnable, Serializable{
 	
 	private IProcessingUnit processingUnit = null;
 	private boolean goOn = true;
-	private long memory = 0;
 
 	public void stopACKWorker(){
 		this.goOn = false;
@@ -38,12 +38,8 @@ public class ACKWorker implements Runnable, Serializable{
 	public void run(){
 		int sleep = new Integer(P.valueFor("ackEmitInterval"));
 		while(goOn){
-			long currentTs = processingUnit.getLastACK();
-			if(currentTs > memory){
-				processingUnit.emitACK(currentTs);
-//System.out.println("EMITTING ACK");
-				memory = currentTs;
-			}
+			TimestampTracker currentTsV = processingUnit.getLastACK();
+			processingUnit.emitACK(currentTsV);
 			try{
 				Thread.sleep(sleep);
 			}
