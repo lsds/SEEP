@@ -98,7 +98,9 @@ public class Buffer implements Serializable{
 	}
 	
 	public TimestampTracker trim(long ts){
+		System.out.println("ACK: "+ts);
 		TimestampTracker oldest = null;
+		boolean matchFirstEntryToRemove = true;
 //		long startTrim = System.currentTimeMillis();
 		Iterator<OutputLogEntry> iter = log.iterator();
 		while (iter.hasNext()) {
@@ -107,6 +109,12 @@ public class Buffer implements Serializable{
 			long timeStamp = 0;
 			timeStamp = next.outputTs; // the newest ts in the entry
 			if (timeStamp <= ts) {
+				//Detect first entry to remove and store the inputVTs
+				if(matchFirstEntryToRemove){
+					///\todo{are we iterating from the tail or the head?}
+					matchFirstEntryToRemove = false;
+					oldest = next.inputVTs;
+				}
 				System.out.println("Remove tuple with ts: "+timeStamp);
 				iter.remove();
 			}
@@ -114,9 +122,9 @@ public class Buffer implements Serializable{
 				break;
 			}
 		}
-		if(!log.isEmpty()){
-			oldest = log.getFirst().inputVTs;
-		}
+//		if(!log.isEmpty()){
+//			oldest = log.getFirst().inputVTs;
+//		}
 //		long endTrim = System.currentTimeMillis();
 		MetricsReader.loggedEvents.clear();
 		MetricsReader.loggedEvents.inc(log.size());

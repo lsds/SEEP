@@ -333,7 +333,6 @@ public class CoreRE {
 		if(ctt.equals(ControlTupleType.ACK)) {
 			Ack ack = ct.getAck();
 			if(ack.getTs() >= ts_ack){
-				System.out.println("Received ACK");
 				coreProcessLogic.processAck(ack);
 			}
 		}

@@ -237,11 +237,13 @@ System.out.println("KEY: "+operatorType);
 		
 		// Check whether this operator is responsible to control when to backpropagate acks
 		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
-			System.out.println("-> See what to backpropagate: ");
-			// First assign this ackV to the opId 
-			downstreamLastAck.put(opId, oldest);
+			// First assign this ackV to the opId, in case it is updating a previous value
+			if(oldest != null){
+				downstreamLastAck.put(opId, oldest);
+			}
 			// Now we get the smaller one and backpropagate it (if we have seen at least once per downstream)
 			TimestampTracker toBackPropagate = null;
+			System.out.println("OLDEST : "+oldest);
 			for(Integer id : downstreamLastAck.keySet()){
 				System.out.println("OPID: "+id+" tt: "+downstreamLastAck.get(id));
 				toBackPropagate = TimestampTracker.returnSmaller(toBackPropagate, downstreamLastAck.get(id));
