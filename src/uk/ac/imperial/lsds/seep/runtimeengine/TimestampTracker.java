@@ -28,7 +28,12 @@ public class TimestampTracker {
 	}
 	
 	public long get(int stream){
-		return tsStream.get(stream);
+		if(tsStream.containsKey(stream)){
+			return tsStream.get(stream);
+		}
+		else{
+			return 0; // oldest ts possible
+		}
 	}
 	
 	public static TimestampTracker returnSmaller(TimestampTracker a, TimestampTracker b){

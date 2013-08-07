@@ -243,14 +243,14 @@ System.out.println("KEY: "+operatorType);
 			}
 			// Now we get the smaller one and backpropagate it (if we have seen at least once per downstream)
 			TimestampTracker toBackPropagate = null;
-			System.out.println("OLDEST : "+oldest);
+//			System.out.println("OLDEST : "+oldest);
 			for(Integer id : downstreamLastAck.keySet()){
-				System.out.println("OPID: "+id+" tt: "+downstreamLastAck.get(id));
+//				System.out.println("OPID: "+id+" tt: "+downstreamLastAck.get(id));
 				toBackPropagate = TimestampTracker.returnSmaller(toBackPropagate, downstreamLastAck.get(id));
 			}
 			// Here we have the smaller vector, that we use to backpropagate if it is not null
 			if(toBackPropagate != null){
-				System.out.println("TO backpropagate: "+toBackPropagate);
+//				System.out.println("TO backpropagate: "+toBackPropagate);
 				owner.ack(toBackPropagate);
 			}
 			else{

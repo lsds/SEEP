@@ -71,7 +71,6 @@ public class CoreRE {
 	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
 	private OutgoingDataHandlerWorker odhw = null;
-	private TimestampTracker incomingTT = new TimestampTracker();
 	
 	private Thread controlH = null;
 	private ControlHandler ch = null;
@@ -84,9 +83,9 @@ public class CoreRE {
 	private int totalNumberOfChunks = -1;
 	
 	// Timestamp of the last data tuple processed by this operator
-//	private long ts_data = 0;
-	// Timestamp of the last ack processed by this operator
-	private long ts_ack;
+	private TimestampTracker incomingTT = new TimestampTracker();
+	// Track last ack processed by this op
+	private TimestampTracker ts_ack_vector = new TimestampTracker();
 		
 	public CoreRE(WorkerNodeDescription nodeDescr, RuntimeClassLoader rcl){
 		this.nodeDescr = nodeDescr;
@@ -274,14 +273,6 @@ public class CoreRE {
 		return dsa;
 	}
 	
-	public long getTs_ack() {
-		return ts_ack;
-	}
-
-	public void setTs_ack(long tsAck) {
-		ts_ack = tsAck;
-	}
-	
 	public void forwardData(DataTuple data){
 		processingUnit.processData(data);
 	}
@@ -332,7 +323,13 @@ public class CoreRE {
 		/** ACK message **/
 		if(ctt.equals(ControlTupleType.ACK)) {
 			Ack ack = ct.getAck();
-			if(ack.getTs() >= ts_ack){
+			if(processingUnit.getOperator().getOpContext().isSink()){
+				System.out.println("Received OPId: "+ack.getOpId()+" TS: "+ack.getTs());
+				System.out.println("ACK-vector: "+ts_ack_vector);
+//				System.exit(-1);
+			}
+			if(ack.getTs() > ts_ack_vector.get(ack.getOpId())){ // Only if this ack is newer than the last registered
+				ts_ack_vector.set(ack.getOpId(), ack.getTs()); // then register for next time and process ack
 				coreProcessLogic.processAck(ack);
 			}
 		}
