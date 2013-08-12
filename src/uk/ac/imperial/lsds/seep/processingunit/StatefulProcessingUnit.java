@@ -26,7 +26,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
@@ -37,6 +36,8 @@ import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.Partitionable;
 import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
+import uk.ac.imperial.lsds.seep.operator.Streamable;
+import uk.ac.imperial.lsds.seep.operator.Versionable;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
@@ -318,14 +319,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	@Override
 	public void processData(ArrayList<DataTuple> data){
 		// Get the mutex
-//		try {
-//			mutex.acquire();
-//		} 
-//		catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		
 		if(multiCoreEnabled){
 			try {
 				executorMutex.acquire(numberOfWorkerThreads);
@@ -345,16 +338,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				e.printStackTrace();
 			}
 		}
-		
-		// Instrumentation
-//		MetricsReader.eventsPerSecond.mark();
-		
+	
 		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
 		runningOp.processData(data);
-		// Release the mutex
-//		mutex.release();
-		
+		// Release the mutex		
 		if(multiCoreEnabled){
 			executorMutex.release(numberOfWorkerThreads);
 		}
@@ -365,9 +353,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 
 	@Override
 	public void sendData(DataTuple dt, ArrayList<Integer> targets){
-		// Here user code (operator) returns from execution, so release mutex
-//		mutex.release();
-		
+		// Here user code (operator) returns from execution, so release mutex		
 		if(multiCoreEnabled){
 			executorMutex.release(numberOfWorkerThreads);
 		}
@@ -378,7 +364,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		for(int i = 0; i<targets.size(); i++){
 			int target = targets.get(i);
 			try{
-//System.out.println("SEND TO: "+target+" SIZE: "+ctx.getDownstreamTypeConnection().size()+" targetSize: "+targets.size());
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){
@@ -407,7 +392,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				executorMutex.acquire(numberOfWorkerThreads);
 			}
 			catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -472,34 +456,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 	}
 	
-	public void directCheckpointAndBackupState(){
-		TimestampTracker tsVToAck = directBackupState();
-		if(tsVToAck != null){
-			owner.ack(tsVToAck);
-		}
-	}
-	
-	public void directParallelCheckpointAndBackupState(){
-		TimestampTracker tsVToAck = directParallelBackupState();
-		if(tsVToAck != null){
-			owner.ack(tsVToAck);
-		}
-	}
-	
-	public void blindCheckpointAndBackupState(){
-		TimestampTracker tsVToAck = blindBackupState();
-		if(tsVToAck != null){
-			owner.ack(tsVToAck);
-		}
-	}
-	
-	public void blindParallelCheckpointAndBackupState(){
-		TimestampTracker tsVToAck = blindParallelBackupState();
-		if(tsVToAck != null){
-			owner.ack(tsVToAck);
-		}
-	}
-	
 	public void lockFreeParallelCheckpointAndBackupState(int[] partitioningRange){
 		TimestampTracker tsVToAck = lockFreeParallelBackupState(partitioningRange);
 		if(tsVToAck != null){
@@ -508,42 +464,47 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 	
 	private TimestampTracker lockFreeParallelBackupState(int[] partitioningRange){
+		// Initial check
+		if(!(runningOpState instanceof Versionable) || !(runningOpState instanceof Streamable)){
+			NodeManager.nLogger.severe("-> Trying to stream a non-streamable state");
+			// Make noise during debugging
+			System.exit(-666);
+			return null;
+		}
 		/**
 		 * include otuputBuffers once the star-topology information is consistent
 		 */
-//		long last_data_proc = -1;
 		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			int opId = runningOpState.getOwnerId();
 			String stateTag = runningOpState.getStateTag();
-			// Set dirty mode (lock free)
 			ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers();
-			((Partitionable)runningOpState).setDirtyMode(true);
+			// Set dirty mode (lock free)
+			((Versionable)runningOpState).setDirtyMode(true);
 			
 			// Set ts for consistency, etc...
 			incomingTT = owner.getIncomingTT();
-//			last_data_proc = owner.getTsData();
-//			runningOpState.setData_ts(last_data_proc);
+			///\todo{this assignment should go with the chunks ?? }
 			runningOpState.setData_ts(incomingTT);
 
 			// STREAMING THROUGH THE NETWORK (enforcing constant memory consumption here)
 			ArrayList<Object> microBatch;
 			int it = 0;
-			int size = ((Partitionable)runningOpState).getSize();
+			int size = ((Streamable)runningOpState).getSize();
 //			System.out.println("SIZE of state to stream is: "+size);
 			int sequenceNumber = 0;
 			NodeManager.nLogger.info("% -> Backuping state with owner: "+opId);
 			
-			int totalChunks = ((Partitionable)runningOpState).getTotalNumberOfChunks();
-			((Partitionable)runningOpState).setUpIterator();
+			int totalChunks = ((Streamable)runningOpState).getTotalNumberOfChunks();
+			((Streamable)runningOpState).setUpIterator();
 			//while(it < size){
 			int key = (partitioningRange[1]+partitioningRange[0])/2;
-			while(((Partitionable)runningOpState).getIterator().hasNext()){
+			while(((Streamable)runningOpState).getIterator().hasNext()){
 				
-				StreamData sd = ((Partitionable)runningOpState).streamSplitState(runningOpState, it, key);
+				StreamData sd = ((Streamable)runningOpState).streamSplitState(runningOpState, it, key);
 				// finished
 				if(sd == null){
-					StreamData[] chunks = ((Partitionable)runningOpState).getRemainingData();
+					StreamData[] chunks = ((Streamable)runningOpState).getRemainingData();
 					microBatch = chunks[0].microBatch;
 					ArrayList<Integer> newPartitioningRange0 = new ArrayList<Integer>();
 					newPartitioningRange0.add(partitioningRange[0]);
@@ -552,7 +513,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					sequenceNumber++;
 					owner.sendBlindData(ctB, chunks[0].partition);
 //					owner._sendBlindData(ctB, chunks[0].partition, chunks[0].partition);
-					((Partitionable)runningOpState).resetStructures(chunks[0].partition);
+					((Streamable)runningOpState).resetStructures(chunks[0].partition);
 //					System.out.println("f");
 					
 					microBatch = chunks[1].microBatch;
@@ -562,9 +523,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 					ControlTuple ctB2 = new ControlTuple().makeStateChunk(opId, chunks[1].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange1);
 					sequenceNumber++;
 					owner.sendBlindData(ctB2, chunks[1].partition);
-//					owner._sendBlindData(ctB2, chunks[1].partition, chunks[1].partition);
-					((Partitionable)runningOpState).resetStructures(chunks[1].partition);
-//					System.out.println("f");
+					((Streamable)runningOpState).resetStructures(chunks[1].partition);
 					break;
 				}
 				microBatch = sd.microBatch;
@@ -583,279 +542,19 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				ControlTuple ctB = new ControlTuple().makeStateChunk(opId, sd.partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange);
 				sequenceNumber++;
 				owner.sendBlindData(ctB, sd.partition);
-//				owner._sendBlindData(ctB, sd.partition, sd.partition);
-				((Partitionable)runningOpState).resetStructures(sd.partition);
-//				System.out.println("n");
+				((Streamable)runningOpState).resetStructures(sd.partition);
 			}
 			// We inform our CORE of the number of chunks of the last backup
 			owner.setTotalNumberOfStateChunks(sequenceNumber);
 			
 			// We reconcile the dirty state with the previous state. Has to always be last op since changes dirtyMode
 			long startR = System.currentTimeMillis();
-			((Partitionable)runningOpState).reconcile();
+			((Versionable)runningOpState).reconcile();
 			long stopR = System.currentTimeMillis();
-//			System.out.println("STREAMED: "+it+" size? "+size);
 			System.out.println("MSG SENT: "+sequenceNumber);
 			System.out.println("TOTAL SEQ NUMER: "+totalChunks);
 			System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
 		}
-//		return last_data_proc;
-		return incomingTT;
-	}
-	
-	
-	///\todo{to remove deprecated, include outputbuffers}
-	@Deprecated
-	private TimestampTracker blindParallelBackupState(){
-//		long last_data_proc = -1;
-		TimestampTracker incomingTT = null;
-		if(runningOpState != null){
-			BackupOperatorState bs0 = new BackupOperatorState();
-			BackupOperatorState bs1 = new BackupOperatorState();
-			// Mutex for executor (in case multicore)
-			if(multiCoreEnabled){
-				try {
-					executorMutex.acquire(numberOfWorkerThreads);
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			// Mutex for data processing
-			else{
-				try {
-					mutex.acquire();
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			
-//			last_data_proc = owner.getTsData();
-//			runningOpState.setData_ts(last_data_proc);
-			incomingTT = owner.getIncomingTT();
-			runningOpState.setData_ts(incomingTT);
-			
-			// change 0 for proper key
-			long a = System.currentTimeMillis();
-			State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
-			long b = System.currentTimeMillis();
-			System.out.println("partitioning time: "+(b-a));
-			
-			bs0.setOpId(runningOpState.getOwnerId());
-			bs0.setState(partitions[0]);
-//			bs0.setState(runningOpState);
-			bs0.setStateClass(runningOpState.getStateTag());
-			
-			bs1.setOpId(runningOpState.getOwnerId());
-			bs1.setState(partitions[1]);
-			bs1.setStateClass(runningOpState.getStateTag());
-			
-			ControlTuple ctB = new ControlTuple().makeBackupState(bs0);
-			ControlTuple ctB2 = new ControlTuple().makeBackupState(bs1);
-			
-			/** A-B **/
-//			owner.sendBlindData(ctB);
-			
-			if(multiCoreEnabled){
-				executorMutex.release(numberOfWorkerThreads);
-			}
-			else{
-				mutex.release();
-			}
-			// fake argument
-			int hint = 0;
-			owner.sendBlindData(ctB, hint);
-			bs0 = null;
-			bs1 = null;
-			ctB = null;
-			ctB2 = null;
-//			owner.sendBlindData(ctB2);
-		}
-		//return last_data_proc;
-		return incomingTT;
-	}
-	
-	///\todo{to remove deprecated, include outputbuffers}
-	@Deprecated
-	private TimestampTracker blindBackupState(){
-//		long last_data_proc = -1;
-		TimestampTracker incomingTT = null;
-		if(runningOpState != null){
-			RawData rw = new RawData();
-			// Mutex for executor (in case multicore)
-
-			if(multiCoreEnabled){
-				try {
-					executorMutex.acquire(numberOfWorkerThreads);
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			// Mutex for data processing
-			else{
-				try {
-					mutex.acquire();
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-
-//			last_data_proc = owner.getTsData();
-//			rw.setTs(last_data_proc);
-			incomingTT = owner.getIncomingTT();
-			rw.setOpId(runningOpState.getOwnerId());
-			byte[] rawData = toRawData(runningOpState);
-			rw.setData(rawData);
-		
-			ControlTuple ctB = new ControlTuple().makeRawData(rw);
-			owner.sendRawData(ctB);
-
-			if(multiCoreEnabled){
-				executorMutex.release(numberOfWorkerThreads);
-			}
-			else{
-				mutex.release();
-			}
-		}
-//		return last_data_proc;
-		return incomingTT;
-	}
-	
-	private byte[] toRawData(State s){
-		byte[] data = null;
-		try {
-	    	// Write the object out to a byte array
-	        ByteArrayOutputStream bos = new ByteArrayOutputStream(1000000);
-	        ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
-	        synchronized(s){
-	        	out.writeObject(s);
-	        	out.flush();
-	        	out.close();
-	        }
-	        // Make an input stream from the byte array and read
-	        // a copy of the object back in.
-	        data = bos.toByteArray();
-	        System.out.println("SER SIZE: "+data.length+" bytes");
-	    }
-	    catch(IOException e) {
-	    	e.printStackTrace();
-	    }
-	    return data;
-	}
-	
-	///\todo{to remove deprecated, include outputbuffers}
-	@Deprecated
-	private TimestampTracker directBackupState(){
-//		long last_data_proc = -1;
-		TimestampTracker incomingTT = null;
-		if(runningOpState != null){
-			BackupOperatorState bs = new BackupOperatorState();
-			// Mutex for executor (in case multicore)
-			if(multiCoreEnabled){
-				try {
-					executorMutex.acquire(numberOfWorkerThreads);
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			// Mutex for data processing
-			else{
-				try {
-					mutex.acquire();
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-//			last_data_proc = owner.getTsData();
-//			runningOpState.setData_ts(last_data_proc);
-			incomingTT = owner.getIncomingTT();
-			runningOpState.setData_ts(incomingTT);
-			bs.setOpId(runningOpState.getOwnerId());
-			bs.setState(runningOpState);
-			bs.setStateClass(runningOpState.getStateTag());
-			
-			ControlTuple ctB = new ControlTuple().makeBackupState(bs);			
-			owner.sendBackupState(ctB);
-			
-			if(multiCoreEnabled){
-				executorMutex.release(numberOfWorkerThreads);
-			}
-			else{
-				mutex.release();
-			}
-		}
-//		return last_data_proc;
-		return incomingTT;
-	}
-	
-	///\todo{to remove deprecated, include outputbuffers}
-	@Deprecated
-	private TimestampTracker directParallelBackupState(){
-//		long last_data_proc = -1;
-		TimestampTracker incomingTT = null;
-		if(runningOpState != null){
-			BackupOperatorState bs0 = new BackupOperatorState();
-			BackupOperatorState bs1 = new BackupOperatorState();
-			// Mutex for executor (in case multicore)
-			if(multiCoreEnabled){
-				try {
-					executorMutex.acquire(numberOfWorkerThreads);
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			// Mutex for data processing
-			else{
-				try {
-					mutex.acquire();
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-//			last_data_proc = owner.getTsData();
-//			runningOpState.setData_ts(last_data_proc);
-			incomingTT = owner.getIncomingTT();
-			runningOpState.setData_ts(incomingTT);
-			// change 0 for proper key
-long a = System.currentTimeMillis();
-			State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
-long b = System.currentTimeMillis();
-System.out.println("partitioning time: "+(b-a));
-			bs0.setOpId(runningOpState.getOwnerId());
-			bs0.setState(partitions[0]);
-			bs0.setStateClass(runningOpState.getStateTag());
-			
-			bs1.setOpId(runningOpState.getOwnerId());
-			bs1.setState(partitions[1]);
-			bs1.setStateClass(runningOpState.getStateTag());
-			
-			ControlTuple ctB = new ControlTuple().makeBackupState(bs0);
-			ControlTuple ctB2 = new ControlTuple().makeBackupState(bs1);
-			owner.sendBackupState(ctB);
-			
-			if(multiCoreEnabled){
-				executorMutex.release(numberOfWorkerThreads);
-			}
-			else{
-				mutex.release();
-			}
-		}
-//		return last_data_proc;
 		return incomingTT;
 	}
 	
@@ -945,16 +644,14 @@ System.out.println("partitioning time: "+(b-a));
 		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	
-	
 	public void mergeChunkToState(StateChunk chunk){
 		if(chunk == null){
-			((Partitionable)runningOpState).appendChunk(null);
+			((Streamable)runningOpState).appendChunk(null);
 			return;
 		}
 		State s = chunk.getState();
-		((Partitionable)runningOpState).appendChunk(s);
+		((Streamable)runningOpState).appendChunk(s);
 	}
-	
 	
 		/** Who manages which state? **/
 	@Override
@@ -1067,3 +764,286 @@ System.out.println("partitioning time: "+(b-a));
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
 	}
 }
+
+//public void directCheckpointAndBackupState(){
+//TimestampTracker tsVToAck = directBackupState();
+//if(tsVToAck != null){
+//	owner.ack(tsVToAck);
+//}
+//}
+//
+//public void directParallelCheckpointAndBackupState(){
+//TimestampTracker tsVToAck = directParallelBackupState();
+//if(tsVToAck != null){
+//	owner.ack(tsVToAck);
+//}
+//}
+//
+//public void blindCheckpointAndBackupState(){
+//TimestampTracker tsVToAck = blindBackupState();
+//if(tsVToAck != null){
+//	owner.ack(tsVToAck);
+//}
+//}
+//
+//public void blindParallelCheckpointAndBackupState(){
+//TimestampTracker tsVToAck = blindParallelBackupState();
+//if(tsVToAck != null){
+//	owner.ack(tsVToAck);
+//}
+//}
+
+/////\todo{to remove deprecated, include outputbuffers}
+//@Deprecated
+//private TimestampTracker directBackupState(){
+////	long last_data_proc = -1;
+//	TimestampTracker incomingTT = null;
+//	if(runningOpState != null){
+//		BackupOperatorState bs = new BackupOperatorState();
+//		// Mutex for executor (in case multicore)
+//		if(multiCoreEnabled){
+//			try {
+//				executorMutex.acquire(numberOfWorkerThreads);
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		// Mutex for data processing
+//		else{
+//			try {
+//				mutex.acquire();
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+////		last_data_proc = owner.getTsData();
+////		runningOpState.setData_ts(last_data_proc);
+//		incomingTT = owner.getIncomingTT();
+//		runningOpState.setData_ts(incomingTT);
+//		bs.setOpId(runningOpState.getOwnerId());
+//		bs.setState(runningOpState);
+//		bs.setStateClass(runningOpState.getStateTag());
+//		
+//		ControlTuple ctB = new ControlTuple().makeBackupState(bs);			
+//		owner.sendBackupState(ctB);
+//		
+//		if(multiCoreEnabled){
+//			executorMutex.release(numberOfWorkerThreads);
+//		}
+//		else{
+//			mutex.release();
+//		}
+//	}
+////	return last_data_proc;
+//	return incomingTT;
+//}
+//
+/////\todo{to remove deprecated, include outputbuffers}
+//@Deprecated
+//private TimestampTracker directParallelBackupState(){
+////	long last_data_proc = -1;
+//	TimestampTracker incomingTT = null;
+//	if(runningOpState != null){
+//		BackupOperatorState bs0 = new BackupOperatorState();
+//		BackupOperatorState bs1 = new BackupOperatorState();
+//		// Mutex for executor (in case multicore)
+//		if(multiCoreEnabled){
+//			try {
+//				executorMutex.acquire(numberOfWorkerThreads);
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		// Mutex for data processing
+//		else{
+//			try {
+//				mutex.acquire();
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+////		last_data_proc = owner.getTsData();
+////		runningOpState.setData_ts(last_data_proc);
+//		incomingTT = owner.getIncomingTT();
+//		runningOpState.setData_ts(incomingTT);
+//		// change 0 for proper key
+//long a = System.currentTimeMillis();
+//		State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
+//long b = System.currentTimeMillis();
+//System.out.println("partitioning time: "+(b-a));
+//		bs0.setOpId(runningOpState.getOwnerId());
+//		bs0.setState(partitions[0]);
+//		bs0.setStateClass(runningOpState.getStateTag());
+//		
+//		bs1.setOpId(runningOpState.getOwnerId());
+//		bs1.setState(partitions[1]);
+//		bs1.setStateClass(runningOpState.getStateTag());
+//		
+//		ControlTuple ctB = new ControlTuple().makeBackupState(bs0);
+//		ControlTuple ctB2 = new ControlTuple().makeBackupState(bs1);
+//		owner.sendBackupState(ctB);
+//		
+//		if(multiCoreEnabled){
+//			executorMutex.release(numberOfWorkerThreads);
+//		}
+//		else{
+//			mutex.release();
+//		}
+//	}
+////	return last_data_proc;
+//	return incomingTT;
+//}
+
+/////\todo{to remove deprecated, include outputbuffers}
+//@Deprecated
+//private TimestampTracker blindParallelBackupState(){
+////	long last_data_proc = -1;
+//	TimestampTracker incomingTT = null;
+//	if(runningOpState != null){
+//		BackupOperatorState bs0 = new BackupOperatorState();
+//		BackupOperatorState bs1 = new BackupOperatorState();
+//		// Mutex for executor (in case multicore)
+//		if(multiCoreEnabled){
+//			try {
+//				executorMutex.acquire(numberOfWorkerThreads);
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		// Mutex for data processing
+//		else{
+//			try {
+//				mutex.acquire();
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		
+////		last_data_proc = owner.getTsData();
+////		runningOpState.setData_ts(last_data_proc);
+//		incomingTT = owner.getIncomingTT();
+//		runningOpState.setData_ts(incomingTT);
+//		
+//		// change 0 for proper key
+//		long a = System.currentTimeMillis();
+//		State[] partitions = ((Partitionable)runningOpState).splitState(runningOpState, 0);
+//		long b = System.currentTimeMillis();
+//		System.out.println("partitioning time: "+(b-a));
+//		
+//		bs0.setOpId(runningOpState.getOwnerId());
+//		bs0.setState(partitions[0]);
+////		bs0.setState(runningOpState);
+//		bs0.setStateClass(runningOpState.getStateTag());
+//		
+//		bs1.setOpId(runningOpState.getOwnerId());
+//		bs1.setState(partitions[1]);
+//		bs1.setStateClass(runningOpState.getStateTag());
+//		
+//		ControlTuple ctB = new ControlTuple().makeBackupState(bs0);
+//		ControlTuple ctB2 = new ControlTuple().makeBackupState(bs1);
+//		
+//		/** A-B **/
+////		owner.sendBlindData(ctB);
+//		
+//		if(multiCoreEnabled){
+//			executorMutex.release(numberOfWorkerThreads);
+//		}
+//		else{
+//			mutex.release();
+//		}
+//		// fake argument
+//		int hint = 0;
+//		owner.sendBlindData(ctB, hint);
+//		bs0 = null;
+//		bs1 = null;
+//		ctB = null;
+//		ctB2 = null;
+////		owner.sendBlindData(ctB2);
+//	}
+//	//return last_data_proc;
+//	return incomingTT;
+//}
+//
+/////\todo{to remove deprecated, include outputbuffers}
+//@Deprecated
+//private TimestampTracker blindBackupState(){
+////	long last_data_proc = -1;
+//	TimestampTracker incomingTT = null;
+//	if(runningOpState != null){
+//		RawData rw = new RawData();
+//		// Mutex for executor (in case multicore)
+//
+//		if(multiCoreEnabled){
+//			try {
+//				executorMutex.acquire(numberOfWorkerThreads);
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		// Mutex for data processing
+//		else{
+//			try {
+//				mutex.acquire();
+//			}
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//
+////		last_data_proc = owner.getTsData();
+////		rw.setTs(last_data_proc);
+//		incomingTT = owner.getIncomingTT();
+//		rw.setOpId(runningOpState.getOwnerId());
+//		byte[] rawData = toRawData(runningOpState);
+//		rw.setData(rawData);
+//	
+//		ControlTuple ctB = new ControlTuple().makeRawData(rw);
+//		owner.sendRawData(ctB);
+//
+//		if(multiCoreEnabled){
+//			executorMutex.release(numberOfWorkerThreads);
+//		}
+//		else{
+//			mutex.release();
+//		}
+//	}
+////	return last_data_proc;
+//	return incomingTT;
+//}
+
+//private byte[] toRawData(State s){
+//byte[] data = null;
+//try {
+//	// Write the object out to a byte array
+//    ByteArrayOutputStream bos = new ByteArrayOutputStream(1000000);
+//    ExtendedObjectOutputStream out = new ExtendedObjectOutputStream(bos);
+//    synchronized(s){
+//    	out.writeObject(s);
+//    	out.flush();
+//    	out.close();
+//    }
+//    // Make an input stream from the byte array and read
+//    // a copy of the object back in.
+//    data = bos.toByteArray();
+//    System.out.println("SER SIZE: "+data.length+" bytes");
+//}
+//catch(IOException e) {
+//	e.printStackTrace();
+//}
+//return data;
+//}

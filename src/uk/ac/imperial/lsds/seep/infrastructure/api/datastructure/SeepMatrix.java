@@ -16,16 +16,14 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import uk.ac.imperial.lsds.seep.operator.Versionable;
+
 public class SeepMatrix extends Matrix{
 
 	private static final long serialVersionUID = 1L;
 	
 	private AtomicBoolean dirtyMode = new AtomicBoolean();
 	private Semaphore mutex = new Semaphore(1);
-	
-	public void setDirtyMode(boolean newValue){
-		this.dirtyMode.set(newValue);
-	}
 	
 	// We keep here the original index and the row. Original index to reduce the reconciliation time
 	private HashMap<Integer, ArrayList<Component>> dirtyState = new HashMap<Integer, ArrayList<Component>>();
@@ -38,6 +36,10 @@ public class SeepMatrix extends Matrix{
 	
 	public SeepMatrix(){
 		super();
+	}
+	
+	public void setDirtyMode(boolean newValue){
+		this.dirtyMode.set(newValue);
 	}
 	
 	public synchronized void reconcile(){

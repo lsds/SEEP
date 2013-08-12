@@ -15,7 +15,9 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class SeepMap<K, V> extends HashMap<Object, Object> {
+import uk.ac.imperial.lsds.seep.operator.Versionable;
+
+public class SeepMap<K, V> extends HashMap<Object, Object>{
 
 	private static final long serialVersionUID = 1L;
 	private HashMap<Object, Object> dirtyState = new HashMap<Object, Object>();
