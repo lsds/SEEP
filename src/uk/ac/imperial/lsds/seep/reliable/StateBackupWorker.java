@@ -12,7 +12,6 @@ package uk.ac.imperial.lsds.seep.reliable;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -34,6 +33,8 @@ public class StateBackupWorker implements Runnable, Serializable{
 	private int checkpointInterval = 0;
 	private State state;
 	
+	private final int CHECKPOINTMODE;
+	
 	// Original partitioning key
 	private int[] partitioningRange = new int[]{Integer.MIN_VALUE, Integer.MAX_VALUE};
 	
@@ -44,6 +45,16 @@ public class StateBackupWorker implements Runnable, Serializable{
 	public StateBackupWorker(StatefulProcessingUnit processingUnit, State s){
 		this.processingUnit = processingUnit;
 		this.state = s;
+		if(P.valueFor("checkpointMode").equals("large-state")){
+			this.CHECKPOINTMODE = 0;
+		}
+		else if(P.valueFor("checkpointMode").equals("light-state")){
+			this.CHECKPOINTMODE = 1;
+		}
+		else{
+			// safe default
+			this.CHECKPOINTMODE = 0;
+		}
 	}
 	
 	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
@@ -65,10 +76,56 @@ public class StateBackupWorker implements Runnable, Serializable{
 			Thread.sleep(2000);
 		}
 		catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-//		processingUnit.checkpointAndBackupState();
+		
+		if(CHECKPOINTMODE == 0){
+			executeLargeStateMechanism();
+		}
+		else if(CHECKPOINTMODE == 1){
+			executeLightStateMechanism();
+		}
+		else{
+			NodeManager.nLogger.severe("-> Not defined checkpoint mode");
+		}
+	}
+	
+	public void executeLightStateMechanism(){
+		processingUnit.checkpointAndBackupState();
+		checkpointInterval = state.getCheckpointInterval();
+		while(goOn){
+			long elapsedTime = System.currentTimeMillis() - initTime;
+			if(elapsedTime > checkpointInterval){
+				//synch this call
+				if(P.valueFor("eftMechanismEnabled").equals("true")){
+					//if not initialisin state...
+					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
+						long startCheckpoint = System.currentTimeMillis();
+						
+						// Blocking call
+						processingUnit.checkpointAndBackupState();
+
+						long stopCheckpoint = System.currentTimeMillis();
+						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));
+					}
+				}
+				initTime = System.currentTimeMillis();
+			}
+			else{
+				try {
+					int sleep = (int) (checkpointInterval - (System.currentTimeMillis() - initTime));
+					if(sleep > 0){
+						Thread.sleep(sleep);
+					}
+				}
+				catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	public void executeLargeStateMechanism(){
 		processingUnit.lockFreeParallelCheckpointAndBackupState(partitioningRange);
 		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
@@ -79,26 +136,12 @@ public class StateBackupWorker implements Runnable, Serializable{
 					//if not initialisin state...
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						long startCheckpoint = System.currentTimeMillis();
-//						processingUnit.checkpointAndBackupState();
-//						processingUnit.directCheckpointAndBackupState();
-//						processingUnit.directParallelCheckpointAndBackupState();
-//						processingUnit.blindCheckpointAndBackupState();
-//						processingUnit.blindParallelCheckpointAndBackupState();
 						
 						// Blocking call
 						processingUnit.getOwner().signalOpenBackupSession();
-//						processingUnit.getOwner()._signalOpenBackupSession();
-						
 						processingUnit.lockFreeParallelCheckpointAndBackupState(partitioningRange);
-
 						processingUnit.getOwner().signalCloseBackupSession();
-//						processingUnit.getOwner()._signalCloseBackupSession();
-						
-//						long startGC = System.currentTimeMillis();
-//						System.gc();
-//						long stopGC = System.currentTimeMillis();
-//						System.out.println("%% Total GC: "+(stopGC-startGC));
-						
+
 						long stopCheckpoint = System.currentTimeMillis();
 						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));
 					}

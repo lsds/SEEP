@@ -149,7 +149,6 @@ public class ControlDispatcher {
 						System.out.println("waiting to read answer/reply");
 						reply = in.readLine();
 						System.out.println("READ");
-						// We actually dont care about the reply...
 					}
 				}
 			}

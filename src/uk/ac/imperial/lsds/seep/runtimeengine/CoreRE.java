@@ -39,7 +39,6 @@ import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
-import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
@@ -156,7 +155,7 @@ public class CoreRE {
 		controlH.start();
 		iDataH.start();
 		
-		/// \todo{FIX THIS. cREATE ONLY IF ANY DOWNSTREAM IS STATEFUL}
+		/// \fixme{FIX THIS. cREATE ONLY IF ANY DOWNSTREAM IS STATEFUL}
 		// If some downstream is stateful, then we have to run the backupHandler
 //		if(processingUnit.getOperator().getOpContext().isDownstreamStateful()){
 			// Backup worker
@@ -254,7 +253,7 @@ public class CoreRE {
 	
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, BACKUP_NODE_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
-		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, REPLAY_STATE, STATE_CHUNK
+		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, REPLAY_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT
 	}
 	
 	public synchronized void setTsData(int stream, long ts_data){
@@ -345,11 +344,11 @@ public class CoreRE {
 		}
 		/** OPEN_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from NODE: "+ct.getOpenSignal().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from OP: "+ct.getOpenSignal().getOpId());
 			bh.openSession(ct.getOpenSignal().getOpId(), remoteAddress);
 			PrintWriter out = new PrintWriter(os, true);
 			out.println("ack");
-			System.out.println("ANSWER OPen signal");
+			NodeManager.nLogger.info("-> ACK Open Signal");
 		}
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
@@ -421,38 +420,38 @@ public class CoreRE {
 		}
 		/** SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
-			if(P.valueFor("soccpaper").equals("false") || processingUnit.getOperator() instanceof StatelessOperator){
-				//Ack the message, we do not need to wait until the end
+			
+			//Ack the message, we do not need to wait until the end
 				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
-				// Get index of new replica operator
-				int newOpIndex = -1;
-				for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
-					if (op.opID() == ct.getScaleOutInfo().getNewOpId())
-						newOpIndex = op.index();
-				}
-				// Get index of the scaling operator
-				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
-				coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
-				controlDispatcher.ackControlMessage(genericAck, os);
+			// Get index of new replica operator
+			int newOpIndex = -1;
+			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
+				if (op.opID() == ct.getScaleOutInfo().getNewOpId())
+					newOpIndex = op.index();
 			}
-			else{
-				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
-				int oldOpId = ct.getScaleOutInfo().getOldOpId();
-				int newOpId = ct.getScaleOutInfo().getNewOpId();
+			// Get index of the scaling operator
+			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
+			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
+			controlDispatcher.ackControlMessage(genericAck, os);
+		}
+		/** DISTRIBUTED_SCALE_OUT message **/
+		else if(ctt.equals(ControlTupleType.DISTRIBUTED_SCALE_OUT)){
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
+			int oldOpId = ct.getScaleOutInfo().getOldOpId();
+			int newOpId = ct.getScaleOutInfo().getNewOpId();
 				
-				int newOpIndex = -1;
-				for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
-					if (op.opID() == ct.getScaleOutInfo().getNewOpId())
-						newOpIndex = op.index();
-				}
-				// Get index of the scaling operator
-				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
-				coreProcessLogic.backupRoutingInformation(oldOpId);
-				coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
-				
-				coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
-				controlDispatcher.ackControlMessage(genericAck, os);
+			int newOpIndex = -1;
+			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
+				if (op.opID() == ct.getScaleOutInfo().getNewOpId())
+					newOpIndex = op.index();
 			}
+			// Get index of the scaling operator
+			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
+			coreProcessLogic.backupRoutingInformation(oldOpId);
+			coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
+				
+			coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
+			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/
 		else if(ctt.equals(ControlTupleType.REPLAY_STATE)){
@@ -684,6 +683,7 @@ public class CoreRE {
 		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
 		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
 		controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
+		NodeManager.nLogger.info("% -> SESSION opened from "+opId);
 	}
 	
 	@Deprecated

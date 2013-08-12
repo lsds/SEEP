@@ -17,7 +17,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,17 +29,26 @@ public class BackupHandler implements Runnable{
 	
 	//The core that owns this control handler
 	private CoreRE owner;
-	//The connection port that this controlhandler must use
+	//The connection port that this backupHandler must use
 	private int connPort;
 	//This variable controls if this Runnable should keep running or not
 	private boolean goOn;
-	//Variable to control is a session is running or not
+	//Variable to control if a session is running or not
 	private AtomicBoolean isSessionClosed = new AtomicBoolean(true);
 	
 	// Session related variables
 	private String sessionName = null;
 	private int transNumber = -1;
 	private String lastSessionName = null;
+	
+	private long s_sessiontime = 0;
+
+	private HashMap<InetAddress, BackupSessionInfo> openSessions = new HashMap<InetAddress, BackupSessionInfo>();
+	private HashMap<Integer, ArrayList<FileChannel>> sessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
+	private HashMap<Integer, ArrayList<FileChannel>> backupSessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
+	private HashMap<Integer, ArrayList<File>> sessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
+	private HashMap<Integer, ArrayList<File>> backupSessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
+	private HashMap<Integer, String> lastSessionNames = new HashMap<Integer, String>();
 	
 //	//Variables to keep the backup handler
 //	private ArrayList<MappedByteBuffer> lastBackupHandlers = new ArrayList<MappedByteBuffer>();
@@ -70,14 +78,9 @@ public class BackupHandler implements Runnable{
 		this.goOn = goOn;
 	}
 	
-//	public String _getLastBackupSessionName(){
-//		return lastSessionName;
-//	}
-	
 	public String getLastBackupSessionName(int opId){
 		return lastSessionNames.get(opId);
 	}
-	
 	
 	public BackupHandler(CoreRE owner, int port) {
 		this.owner = owner;
@@ -86,32 +89,6 @@ public class BackupHandler implements Runnable{
 		File newFile = new File("backup/");
 		newFile.mkdirs();
 	}
-	
-	long s_sessiontime = 0;
-	
-//	public void _openSession(int opId, SocketAddress remoteAddress){
-//		NodeManager.nLogger.info("New Backup session opened for OP: "+opId);
-//		s_sessiontime = System.currentTimeMillis();
-//		// We let this to open connections
-//		isSessionClosed.set(false);
-//		// We name the new session
-//		sessionName = new Long(System.currentTimeMillis()).toString();
-//		transNumber = -1;
-//		
-//		// We keep a backup of the last backup file handlers
-//		backupLastBackupHandlers = new ArrayList<MappedByteBuffer>(lastBackupHandlers);
-//		lastBackupHandlers.clear();
-//		synchronized(this){
-//			this.notify();
-//		}
-//	}
-	
-	private HashMap<InetAddress, BackupSessionInfo> openSessions = new HashMap<InetAddress, BackupSessionInfo>();
-	private HashMap<Integer, ArrayList<FileChannel>> sessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
-	private HashMap<Integer, ArrayList<FileChannel>> backupSessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
-	private HashMap<Integer, ArrayList<File>> sessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
-	private HashMap<Integer, ArrayList<File>> backupSessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
-	private HashMap<Integer, String> lastSessionNames = new HashMap<Integer, String>();
 	
 	public void openSession(int opId, InetAddress remoteAddress){
 		NodeManager.nLogger.info("New Backup session opened for OP: "+opId);
@@ -122,7 +99,7 @@ public class BackupHandler implements Runnable{
 		
 		ArrayList<FileChannel> lastBackupHandlers = new ArrayList<FileChannel>();
 		ArrayList<File> lastBackupHandlersGCFiles = new ArrayList<File>();
-		// We backup the previous handlers if there are any
+		// We backup the previous handlers if there are any, keeping association with the operator establishing the connection
 		if(sessionHandlers.containsKey(opId)){
 			backupSessionHandlers.put(opId, sessionHandlers.get(opId));
 			backupSessionHandlersGCFiles.put(opId, sessionHandlersGCFiles.get(opId));
@@ -130,17 +107,10 @@ public class BackupHandler implements Runnable{
 		// And we put the new ones here
 		sessionHandlers.put(opId, lastBackupHandlers);
 		sessionHandlersGCFiles.put(opId, lastBackupHandlersGCFiles);
-//		BackupSessionHandlerWorker bhw = new BackupSessionHandlerWorker(opId, lastBackupHandlers, this, sessionName, transNumber);
 		BackupSessionInfo bsi = new BackupSessionInfo(opId, lastBackupHandlers, this, sessionName, transNumber);
-		
+		// We log the open session, identifying it with the IP
 		openSessions.put(remoteAddress, bsi);
 		System.out.println("NEW SESSION: "+remoteAddress.toString());
-//		Thread t = new Thread(bhw);
-//		t.start();
-		
-//		synchronized(this){
-//			this.notify();
-//		}
 	}
 	
 	public void _closeSession(int opId, SocketAddress remoteAddress){
@@ -240,41 +210,6 @@ public class BackupHandler implements Runnable{
 		catch(IOException io){
 			NodeManager.nLogger.severe("-> BackupHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
-		}
-	}
-	
-	class BackupSessionInfo{
-		private int opId;
-		private ArrayList<FileChannel> lastBackupHandlers;
-		private BackupHandler owner;
-		private String sessionName;
-		private int transNumber;
-		private boolean work = true;
-		
-		public BackupSessionInfo(int opId,
-				ArrayList<FileChannel> lastBackupHandlers,
-				BackupHandler backupHandler, String sessionName, int transNumber) {
-			this.opId = opId;
-			this.lastBackupHandlers = lastBackupHandlers;
-			this.owner = backupHandler;
-			this.sessionName = sessionName;
-			this.transNumber = transNumber;
-		}
-		
-		public int getOpId(){
-			return opId;
-		}
-		
-		public String getSessionName(){
-			return sessionName;
-		}
-		
-		public int getTransNumber(){
-			return transNumber;
-		}
-		
-		public void incrementTransNumber(){
-			transNumber++;
 		}
 	}
 }

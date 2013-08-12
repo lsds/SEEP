@@ -225,6 +225,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public void createAndRunStateBackupWorker(){
 		// Create and run state backup worker
 		NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
+		///\fixme{fix this mess}
 		if(this == null || runningOpState == null){
 			System.out.println("NULL runningopstate");
 			System.exit(0);
