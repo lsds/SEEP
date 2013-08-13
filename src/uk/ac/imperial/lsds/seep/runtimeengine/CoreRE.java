@@ -155,14 +155,10 @@ public class CoreRE {
 		controlH.start();
 		iDataH.start();
 		
-		/// \fixme{FIX THIS. cREATE ONLY IF ANY DOWNSTREAM IS STATEFUL}
-		// If some downstream is stateful, then we have to run the backupHandler
-//		if(processingUnit.getOperator().getOpContext().isDownstreamStateful()){
-			// Backup worker
-			bh = new BackupHandler(this, inBT);
-			backupH = new Thread(bh);
-			backupH.start();
-//		}
+		// Backup worker
+		bh = new BackupHandler(this, inBT);
+		backupH = new Thread(bh);
+		backupH.start();
 	}
 	
 	public void setRuntime(){

@@ -154,10 +154,6 @@ public class ControlDispatcher {
 				synchronized(socket){
 					synchronized (largeOutput){
 						long startWrite = System.currentTimeMillis();
-						
-//						DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-//						dos.writeInt(data);
-						
 						k.writeObject(largeOutput, ct);
 //						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
 						largeOutput.flush();

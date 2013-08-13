@@ -16,7 +16,6 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,7 +44,9 @@ public class BackupHandler implements Runnable{
 
 	private HashMap<InetAddress, BackupSessionInfo> openSessions = new HashMap<InetAddress, BackupSessionInfo>();
 	private HashMap<Integer, ArrayList<FileChannel>> sessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
+	// To access rw files with backups
 	private HashMap<Integer, ArrayList<FileChannel>> backupSessionHandlers = new HashMap<Integer, ArrayList<FileChannel>>();
+	// To access the same files as above, with the possibility of removing them from the OS file system
 	private HashMap<Integer, ArrayList<File>> sessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
 	private HashMap<Integer, ArrayList<File>> backupSessionHandlersGCFiles = new HashMap<Integer, ArrayList<File>>();
 	private HashMap<Integer, String> lastSessionNames = new HashMap<Integer, String>();
@@ -60,14 +61,6 @@ public class BackupHandler implements Runnable{
 	
 	public void setOwner(CoreRE owner){
 		this.owner = owner;
-	}
-
-	public int getConnPort(){
-		return connPort;
-	}
-
-	public void setConnPort(int connPort){
-		this.connPort = connPort;
 	}
 
 	public boolean getGoOn(){
@@ -113,15 +106,6 @@ public class BackupHandler implements Runnable{
 		System.out.println("NEW SESSION: "+remoteAddress.toString());
 	}
 	
-	public void _closeSession(int opId, SocketAddress remoteAddress){
-		// We reset the transNumber for the next session
-//		transNumber = 0;
-		// We configure the last session name as the one just finished
-		lastSessionName = sessionName;
-		isSessionClosed.set(true);
-		System.out.println("TOTAL SESSION TIME: "+(System.currentTimeMillis() - s_sessiontime));
-	}
-	
 	public void closeSession(int opId, InetAddress remoteAddress){
 		lastSessionNames.put(opId, openSessions.get(remoteAddress).getSessionName());
 		openSessions.remove(remoteAddress);
@@ -150,17 +134,7 @@ public class BackupHandler implements Runnable{
 		sessionHandlers.get(opId).add(fc);
 		sessionHandlersGCFiles.get(opId).add(f);
 	}
-	
-//	public ArrayList<MappedByteBuffer> getBackupHandler(){
-//		if(isSessionClosed.get()){
-//			return lastBackupHandlers;
-//		}
-//		else{
-//			//this option or better yet: wait for current session to finish
-//			return backupLastBackupHandlers;
-//		}
-//	}
-	
+
 	@Override
 	public void run() {
 		ServerSocket backupServerSocket = null;
@@ -171,34 +145,20 @@ public class BackupHandler implements Runnable{
 			NodeManager.nLogger.info("-> BackupHandler is waiting for opening session");
 			//while goOn is active
 			while(goOn){
-				// We check if a session is closed, and wait, or open, and receive stuff
-//				if(isSessionClosed.get()){
-//					// Closed session, we reset the transmission number and wait
-////					transNumber = -1;
-//					synchronized(this){
-//						try {
-//							this.wait();
-//						}
-//						catch (InterruptedException e) {
-//							// TODO Auto-generated catch block
-//							e.printStackTrace();
-//						}
-//					}
-//				}
-//				else{
-//					transNumber++;
-					Socket incomingConn = backupServerSocket.accept();
-					InetAddress incomingAddr = incomingConn.getInetAddress();
-					if(openSessions.containsKey(incomingAddr)){
-						BackupSessionInfo bsi = openSessions.get(incomingAddr);
-						bsi.incrementTransNumber();
-						// With an opened session we wait for connections and pass the sessionName and the transmission number
-						BackupHandlerWorker bhw = new BackupHandlerWorker(bsi.getOpId(), incomingConn, this, bsi.getSessionName(), bsi.getTransNumber());
-						Thread newConn = new Thread(bhw);
-						newConn.start();
-					}
-					
-//				}
+				Socket incomingConn = backupServerSocket.accept();
+				InetAddress incomingAddr = incomingConn.getInetAddress();
+				if(openSessions.containsKey(incomingAddr)){
+					BackupSessionInfo bsi = openSessions.get(incomingAddr);
+					bsi.incrementTransNumber();
+					// With an opened session we wait for connections and pass the sessionName and the transmission number
+					BackupHandlerWorker bhw = new BackupHandlerWorker(bsi.getOpId(), incomingConn, this, bsi.getSessionName(), bsi.getTransNumber());
+					///\todo{Reduce the overhead of the thread creation at this point. Use a pool or reuse the same worker}
+					Thread newConn = new Thread(bhw);
+					newConn.start();
+				}
+				else{
+					NodeManager.nLogger.warning("Sent backup chunk from OPID. SESSION CLOSED HERE: "+incomingAddr);
+				}
 			}
 			backupServerSocket.close();
 		}
@@ -213,3 +173,24 @@ public class BackupHandler implements Runnable{
 		}
 	}
 }
+
+
+//public ArrayList<MappedByteBuffer> getBackupHandler(){
+//	if(isSessionClosed.get()){
+//		return lastBackupHandlers;
+//	}
+//	else{
+//		//this option or better yet: wait for current session to finish
+//		return backupLastBackupHandlers;
+//	}
+//}
+
+
+//public void _closeSession(int opId, SocketAddress remoteAddress){
+//// We reset the transNumber for the next session
+////transNumber = 0;
+//// We configure the last session name as the one just finished
+//lastSessionName = sessionName;
+//isSessionClosed.set(true);
+//System.out.println("TOTAL SESSION TIME: "+(System.currentTimeMillis() - s_sessiontime));
+//}

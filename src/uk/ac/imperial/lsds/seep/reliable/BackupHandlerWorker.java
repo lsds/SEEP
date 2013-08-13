@@ -11,7 +11,6 @@
 package uk.ac.imperial.lsds.seep.reliable;
 
 import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -19,12 +18,13 @@ import java.net.Socket;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+
 public class BackupHandlerWorker implements Runnable{
 
 	private int opId = -1;
 	private Socket incomingSocket = null;
 	private BackupHandler owner = null;
-	private boolean goOn = true;
 	private String sessionName = null;
 	private int transNumber = -1;
 
@@ -46,20 +46,15 @@ public class BackupHandlerWorker implements Runnable{
 	
 	public void memoryMappedFile(){
 		BufferedInputStream bis;
-		DataInputStream dis;
-		try {
-			// Read the partition number
-			dis = new DataInputStream(incomingSocket.getInputStream());
-			int numPartition = dis.readInt();
-			
+		try {		
 			bis = new BufferedInputStream(incomingSocket.getInputStream());
-			// Create the memory map file
+			// Create the memory map file and store the channels to manage these files later
 			RandomAccessFile raf = null;
+			String fileName = null;
 			try {
-				// file format: PX_Y_Z.bk, where X is the partition number, Y the sessionName and Z the sequence number
-				// so, P1_a_0.bk and P1_a_1.bk are consecutive files but P1_a_1.bk and P2_a_2.bk are not (different partitions).
-				String fileName = "backup/P"+numPartition+"_"+sessionName+"_"+this.transNumber+".bk";
-//				String fileName = sessionName+"_"+this.transNumber+".bk";
+				// file format: OPX_Y_Z.bk, where X is the opId, Y the sessionName and Z the sequence number
+				// so, OP1_a_0.bk and OP1_a_1.bk are consecutive files but OP1_a_1.bk and OP2_a_2.bk are not (different ops).
+				fileName = "backup/OP"+opId+"_"+sessionName+"_"+this.transNumber+".bk";
 				raf = new RandomAccessFile(fileName, "rw");
 				
 				FileChannel fc = raf.getChannel();
@@ -69,6 +64,7 @@ public class BackupHandlerWorker implements Runnable{
 				owner.addBackupHandler(opId, fc, f);
 			}
 			catch(Exception e){
+				NodeManager.nLogger.severe("-> While writing bk: "+fileName+" to disk = "+e.getMessage());
 				e.printStackTrace();
 			}
 			// Read the raw data and map to file
@@ -80,7 +76,7 @@ public class BackupHandlerWorker implements Runnable{
        	 	}
 		}
 		catch (IOException e) {
-			// TODO Auto-generated catch block
+			NodeManager.nLogger.severe("-> While managing backup chunk = "+e.getMessage());
 			e.printStackTrace();
 		}
 	}
