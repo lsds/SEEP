@@ -720,31 +720,30 @@ public class CoreRE {
 	public void sendBackupState(ControlTuple ctB){
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+//		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
 	
-	@Deprecated
-	public void _sendBlindData(ControlTuple ctB, int hint, int hack){
-		int stateOwnerId = ctB.getStateChunk().getOpId();
-//		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-		controlDispatcher.sendUpstream_blind(ctB, hack, hint);
+//	@Deprecated
+//	public void _sendBlindData(ControlTuple ctB, int hint, int hack){
+//		int stateOwnerId = ctB.getStateChunk().getOpId();
+////		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+//		controlDispatcher.sendUpstream_blind(ctB, hack, hint);
+//	}
+	
+	public void sendBlindData(ControlTuple ctB, int index){
+		controlDispatcher.sendUpstream_blind(ctB, index);
 	}
 	
-	public void sendBlindData(ControlTuple ctB, int hint){
-		int stateOwnerId = ctB.getStateChunk().getOpId();
-//		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-		controlDispatcher.sendUpstream_blind(ctB, backupUpstreamIndex, hint);
-	}
+//	public void sendBlindMetaData(int data){
+//		controlDispatcher.sendUpstream_blind_metadata(data, backupUpstreamIndex);
+//	}
 	
-	public void sendBlindMetaData(int data){
-		controlDispatcher.sendUpstream_blind_metadata(data, backupUpstreamIndex);
-	}
-	
-	public void sendRawData(ControlTuple ctB){
-		int dataOwnerId = ctB.getRawData().getOpId();
-		NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
-		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
-	}
+//	public void sendRawData(ControlTuple ctB){
+//		int dataOwnerId = ctB.getRawData().getOpId();
+//		NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
+//		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+//	}
 	
 	public void setTotalNumberOfStateChunks(int number){
 		this.totalNumberOfChunks = number;

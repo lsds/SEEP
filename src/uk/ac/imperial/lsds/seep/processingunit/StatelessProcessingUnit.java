@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
@@ -122,9 +123,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			listOfManagedStates.remove(index);
 		}
 		// and then we clean both the buffer and the mapping in downstreamBuffers.
-		if(PUContext.downstreamBuffers.get(opId) != null){
+//		if(PUContext.downstreamBuffers.get(opId) != null){
+		Buffer b = ctx.getBuffer(opId);
+		if(b != null){
 			//First of all, we empty the buffer
-			PUContext.downstreamBuffers.get(opId).replaceBackupOperatorState(null);
+			b.replaceBackupOperatorState(null);
 		}
 	}
 

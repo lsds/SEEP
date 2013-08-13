@@ -21,7 +21,6 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Vector;
 
 import uk.ac.imperial.lsds.seep.P;
@@ -51,13 +50,14 @@ public class PUContext {
 	private Vector<EndPoint> downstreamTypeConnection = null;
 	private Vector<EndPoint> upstreamTypeConnection = null;
 	
+	//The structure just stores the ip adresses of those nodes in the topology ready to receive state chunks
+	private ArrayList<InetAddress> starTopology = null; 
+	
 	// Selector for asynchrony in downstream connections
 	private Selector selector;
 	
 	//map in charge of storing the buffers that this operator is using
-	/// \todo{the signature of this attribute must change to the one written below}
-	//private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
-	static public Map<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
+	private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
 	public PUContext(WorkerNodeDescription nodeDescr){
 		this.nodeDescr = nodeDescr;
@@ -68,6 +68,18 @@ public class PUContext {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public int getStarTopologySize(){
+		return starTopology.size();
+	}
+	
+	public boolean addNodeToStarTopolocy(InetAddress ip){
+		return starTopology.add(ip);
+	}
+	
+	public ArrayList<InetAddress> getStarTopology(){
+		return starTopology;
 	}
 	
 	public ArrayList<OutputBuffer> getOutputBuffers(){
@@ -116,15 +128,6 @@ public class PUContext {
 	 */
 	public void configureNewUpstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = nodeDescr.getIp();
-//		if(loc.getMyNode().getIp().equals(localIp)){
-//			if(StatefulProcessingUnit.mapOP_ID.containsKey(opID)){
-//				//Store reference in upstreamTypeConnection, store operator(local) or socket(remote)
-//				upstreamTypeConnection.add(StatefulProcessingUnit.mapOP_ID.get(opID));
-//				NodeManager.nLogger.info("-> PUContext. New local upstream conn to OP-"+opID);
-//			}
-//		}
-		//remote
-//		else 
 		if (!(loc.getMyNode().getIp().equals(localIp))){
 			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
 			NodeManager.nLogger.info("-> PUContext. New remote upstream (sync) conn to OP-"+opID);
@@ -138,16 +141,6 @@ public class PUContext {
 	 */
 	public void configureNewDownstreamCommunication(int opID, OperatorStaticInformation loc) {
 		InetAddress localIp = nodeDescr.getIp();
-//		//Check if downstream node is remote or local, and check that it is not a Sink
-//		if(loc.getMyNode().getIp().equals(localIp)){
-//			//Access downstream reference in map with op_id
-//			if (StatefulProcessingUnit.mapOP_ID.containsKey(opID)) {
-//				//Store reference in downstreamTypeConnection, store operator(local) or socket(remote)
-//				downstreamTypeConnection.add(StatefulProcessingUnit.mapOP_ID.get(opID));
-//				NodeManager.nLogger.info("-> PUContext. New local downstream conn to OP-"+opID);
-//			}
-//		}
-//		else 
 		if(!(loc.getMyNode().getIp().equals(localIp))){
 			//If remote, create communication with other point			
 			if (P.valueFor("synchronousOutput").equals("true")){
@@ -163,7 +156,6 @@ public class PUContext {
 		}
 	}
 	
-	
 	private void createRemoteAsynchronousCommunication(int opId, InetAddress ip, int port){
 		NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+port);
 		try {
@@ -176,7 +168,6 @@ public class PUContext {
 			
 			ByteBuffer nativeBuffer = ByteBuffer.allocateDirect(20000);
 			ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
-//			ByteBufferOutputStream bbos = new ByteBufferOutputStream(16);
 			
 			Output o = new Output(bbos);
 			// finally we register this socket to the selector for the async behaviour, and we link nativeBuffer, for the selector to access it directly
@@ -279,13 +270,7 @@ public class PUContext {
 		}
 		return null;
 	}
-	
-//	public void printDownstreamTypeConnection(){
-//		for(EndPoint ep : downstreamTypeConnection){
-//			System.out.println("OP: "+ep.getOperatorId());
-//		}
-//	}
-	
+
 	public Buffer getBuffer(int opId) {
 		return downstreamBuffers.get(opId);
 	}
