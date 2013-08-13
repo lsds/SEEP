@@ -16,11 +16,15 @@ public class ReplayStateInfo {
 	private int newOpId;
 	private boolean streamToSingleNode;
 	
-	public ReplayStateInfo(){}
+	public ReplayStateInfo(){
+		
+	}
 	
 	public ReplayStateInfo(int oldOpId, int newOpId, boolean singleNode){
+		// Old an new opIds for cases when an operator scales out
 		this.oldOpId = oldOpId;
 		this.newOpId = newOpId;
+		// Streaming to a single node means that the node failed or the state is being reset for other unknown reason
 		this.streamToSingleNode = singleNode;
 	}
 	

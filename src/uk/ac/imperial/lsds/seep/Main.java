@@ -27,12 +27,21 @@ public class Main {
 	//Properties variable
 	static P p = new P();
 	
+	// Base ports
+	public static int CONTROL_SOCKET = 0;
+	public static int DATA_SOCKET = 0;
+	public static int BLIND_SOCKET = 0;
+	
 	public static void main(String args[]){
 		
 		Main instance = new Main();
 		//Load configuration properties from the config file
 		
 		p.loadProperties();
+		CONTROL_SOCKET = new Integer(P.valueFor("controlSocket"));
+		DATA_SOCKET = new Integer(P.valueFor("dataSocket"));
+		BLIND_SOCKET = new Integer(P.valueFor("blindSocket"));
+		
 		
 		if(args.length == 0){
 			System.out.println("ARGS:");

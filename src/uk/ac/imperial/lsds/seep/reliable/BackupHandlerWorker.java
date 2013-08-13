@@ -52,9 +52,9 @@ public class BackupHandlerWorker implements Runnable{
 			RandomAccessFile raf = null;
 			String fileName = null;
 			try {
-				// file format: OPX_Y_Z.bk, where X is the opId, Y the sessionName and Z the sequence number
-				// so, OP1_a_0.bk and OP1_a_1.bk are consecutive files but OP1_a_1.bk and OP2_a_2.bk are not (different ops).
-				fileName = "backup/OP"+opId+"_"+sessionName+"_"+this.transNumber+".bk";
+				// file format: OP_X_Y_Z.bk, where X is the opId, Y the sessionName and Z the sequence number
+				// so, OP_1_a_0.bk and OP_1_a_1.bk are consecutive files but OP_1_a_1.bk and OP_2_a_2.bk are not (different ops).
+				fileName = "backup/OP_"+opId+"_"+sessionName+"_"+this.transNumber+".bk";
 				raf = new RandomAccessFile(fileName, "rw");
 				
 				FileChannel fc = raf.getChannel();

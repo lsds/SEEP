@@ -141,7 +141,7 @@ public class ControlDispatcher {
 	public void sendUpstream_blind(ControlTuple ct, int index){
 		long startSend = System.currentTimeMillis();
 //		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		InetAddress ip_endpoint = puCtx.getStarTopology().get(index);
+		InetAddress ip_endpoint = ((DisposableCommunicationChannel)puCtx.getStarTopology().get(index)).getIp();
 		//Reopen socket before sending... only if closed
 //		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
 		try{

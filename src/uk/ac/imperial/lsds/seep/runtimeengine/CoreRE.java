@@ -417,22 +417,22 @@ public class CoreRE {
 		/** SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
 			
-			//Ack the message, we do not need to wait until the end
-				NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
 			// Get index of new replica operator
 			int newOpIndex = -1;
 			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
 				if (op.opID() == ct.getScaleOutInfo().getNewOpId())
 					newOpIndex = op.index();
-			}
+				}
 			// Get index of the scaling operator
 			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
+			//Ack the message
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** DISTRIBUTED_SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.DISTRIBUTED_SCALE_OUT)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.DISTRIBUTED_SCALE_OUT");
 			int oldOpId = ct.getScaleOutInfo().getOldOpId();
 			int newOpId = ct.getScaleOutInfo().getNewOpId();
 				

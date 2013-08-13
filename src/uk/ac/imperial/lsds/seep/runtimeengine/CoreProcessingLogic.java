@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
@@ -337,7 +338,6 @@ System.out.println("KEY: "+operatorType);
 	public synchronized void manageStreamScaleOut(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
-
 		pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 	}
 	
@@ -413,18 +413,12 @@ System.out.println("KEY: "+operatorType);
 	
 	public void backupRoutingInformation(int oldOpId) {
 		//Get routing information of the operator that has scaled out
-//		ArrayList<Integer> indexes = ((StatefulProcessingUnit)pu).getRouterIndexesInformation(oldOpId);
-//		ArrayList<Integer> keys = ((StatefulProcessingUnit)pu).getRouterKeysInformation(oldOpId);
 		ArrayList<Integer> indexes = pu.getRouterIndexesInformation(oldOpId);
 		ArrayList<Integer> keys = pu.getRouterKeysInformation(oldOpId);
-System.out.println("BACKUP INDEXES: "+indexes.toString());
-System.out.println("BACKUP KEYS: "+keys.toString());
-
 		//Create message
-System.out.println("REGISTERED CLASS: "+pu.getOperator().getClass().getName());
 		ControlTuple msg = new ControlTuple().makeBackupRI(owner.getNodeDescr().getNodeId(), indexes, keys, pu.getOperator().getClass().getName());
 		//Send message to downstreams (for now, all downstreams)
-		/// \todo{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
+		/// \fixme{make this more efficient, not sending to all (same mechanism upstreamIndexBackup than downstreamIndexBackup?)}
 		for(Integer index : indexes){
 			owner.getControlDispatcher().sendDownstream(msg, index);
 		}
@@ -481,33 +475,44 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		}
 	}
 	
+	public void directReplayState(ReplayStateInfo rsi, BackupHandler bh){
+		// Stream to one or multiple nodes?
+		File folder = new File("backup/");
+		// this basically means that is because of a failure
+		if(rsi.isStreamToSingleNode()){
+			directReplayStateFailure(rsi, bh, folder);
+		}
+		else{
+			directReplayStateScaleOut(rsi, bh, folder);
+		}
+	}
+	
 	private void directReplayStateFailure(ReplayStateInfo rsi, BackupHandler bh, File folder){
-		int opId = rsi.getOldOpId();
-		SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-		System.out.println("OPID getting socket: "+opId);
-		
-		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
-		NodeManager.nLogger.info("-> Request to stream to a single node");
-		
+		int opId = rsi.getOldOpId();		
+		InetAddress ip = puCtx.getDCCfromOpId(opId).getIp();
 		String lastSessionName = bh.getLastBackupSessionName(opId);
 		ArrayList<File> filesToStream = new ArrayList<File>();
 		int totalNumberChunks = 0;
+		
 		// Read folder and filter out files to send through the network
 		try {
-			Output output = new Output(controlDownstreamSocket.getOutputStream());
+			Socket controlSocket = new Socket(ip, (Main.CONTROL_SOCKET+opId));
+			NodeManager.nLogger.info("-> Request to stream to a single node");
+			
+			Output output = new Output(controlSocket.getOutputStream());
+			///\todo{Can't all this block of code just be avoided by accessing directly the channels}
+			// ok, cause there is no simple way to access to the filechannel names. We can use the file objects that are ready to
+			// garbage collect to access to this information, saving some valuable IO interactions with the disk, not only in this block
+			// but most improtnatly below, at deserialization time
 			for(File chunkFile : folder.listFiles()){
 				String chunkName = chunkFile.getName();
-				if(matchSession(chunkName, lastSessionName)){
+				if(matchSession(opId, chunkName, lastSessionName)){
 					totalNumberChunks++;
 					filesToStream.add(chunkFile);
 					System.out.println("Filename: "+chunkName);
 				}
 			}
-//			System.out.println("Total chunks: "+filesToStream.size());
-//			int fakechunksnumber = filesToStream.size()/2;
-//			int aux = 0;
-//			for(int ig = 0; ig<fakechunksnumber; ig++){
-//				aux++;
+
 			long timeread = 0;
 			long timewrite = 0;
 			for(File chunk : filesToStream){
@@ -540,13 +545,16 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		}
 	}
 	
+	///\fixme{REFACTOR this whole method. Now it is time to hash on key and then module the downstream. Also we have to access
+	// the routing information to make sure we are not doing anything wrong}
 	private void directReplayStateScaleOut(ReplayStateInfo rsi, final BackupHandler bh, File folder){
-		NodeManager.nLogger.info("-> SCALE-OUT");
+		NodeManager.nLogger.info("-> DISTRIBUTED-SCALE-OUT");
 		int oldOpId = rsi.getOldOpId();
 		int newOpId = rsi.getNewOpId();
+		
+		
 		SynchronousCommunicationChannel old_cci = puCtx.getCCIfromOpId(oldOpId, "d");
 		SynchronousCommunicationChannel new_cci = puCtx.getCCIfromOpId(newOpId, "d");
-		
 		Socket old_controlDownstreamSocket = old_cci.getDownstreamControlSocket();
 		Socket new_controlDownstreamSocket = new_cci.getDownstreamControlSocket();
 		
@@ -650,18 +658,6 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		}
 	}
 	
-	public void directReplayState(ReplayStateInfo rsi, BackupHandler bh){
-		// Stream to one or multiple nodes?
-		File folder = new File("backup/");
-		// this basically means that is because of a failure
-		if(rsi.isStreamToSingleNode()){
-			directReplayStateFailure(rsi, bh, folder);
-		}
-		else{
-			directReplayStateScaleOut(rsi, bh, folder);
-		}
-	}
-	
 	private int totalExpectedChunks = -1;
 	private int totalNumberOfChunks = -1;
 	public void setTotalNumberOfChunks(int totalNumberOfChunks){
@@ -716,8 +712,9 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		}
 	}
 	
-	private boolean matchSession(String fileName, String sessionName){
+	private boolean matchSession(int opId, String fileName, String sessionName){
 		String[] splits = fileName.split("_");
-		return splits[1].equals(sessionName);
+		
+		return (splits[2].equals(sessionName) && splits[1].equals(new Integer(opId).toString()));
 	}
 }

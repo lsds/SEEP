@@ -33,6 +33,7 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
+import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 
 import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
@@ -51,7 +52,7 @@ public class PUContext {
 	private Vector<EndPoint> upstreamTypeConnection = null;
 	
 	//The structure just stores the ip adresses of those nodes in the topology ready to receive state chunks
-	private ArrayList<InetAddress> starTopology = null; 
+	private ArrayList<EndPoint> starTopology = null; 
 	
 	// Selector for asynchrony in downstream connections
 	private Selector selector;
@@ -74,11 +75,21 @@ public class PUContext {
 		return starTopology.size();
 	}
 	
-	public boolean addNodeToStarTopolocy(InetAddress ip){
-		return starTopology.add(ip);
+	public boolean addNodeToStarTopolocy(int opId, InetAddress ip){
+		DisposableCommunicationChannel oscc = new DisposableCommunicationChannel(opId, ip);
+		return starTopology.add(oscc);
 	}
 	
-	public ArrayList<InetAddress> getStarTopology(){
+	public DisposableCommunicationChannel getDCCfromOpId(int opId){
+		for(EndPoint dcc : starTopology){
+			if(dcc.getOperatorId() == opId){
+				return (DisposableCommunicationChannel)dcc;
+			}
+		}
+		return null;
+	}
+	
+	public ArrayList<EndPoint> getStarTopology(){
 		return starTopology;
 	}
 	
