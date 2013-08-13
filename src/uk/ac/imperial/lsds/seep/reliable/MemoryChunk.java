@@ -8,22 +8,12 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seep.reliable;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 
-import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+public class MemoryChunk {
 
-public interface Streamable {
-
-	public int getSize();
-	public int getTotalNumberOfChunks(int chunkSize);
-	public Iterator getIterator();
-	public ArrayList<Object> streamSplitState(int chunkSize);
-//	public StreamData[] getRemainingData();
-	public void reset();
-	public void appendChunk(ArrayList<Object> s);
-	public Object getFromBackup(Object key);
+	public ArrayList<Object> chunk;
 	
 }

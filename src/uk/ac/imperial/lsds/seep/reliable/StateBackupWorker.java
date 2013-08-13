@@ -36,7 +36,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 	private final int CHECKPOINTMODE;
 	
 	// Original partitioning key
-	private int[] partitioningRange = new int[]{Integer.MIN_VALUE, Integer.MAX_VALUE};
+//	private int[] partitioningRange = new int[]{Integer.MIN_VALUE, Integer.MAX_VALUE};
 	
 	public void stop(){
 		this.goOn = false;
@@ -57,18 +57,18 @@ public class StateBackupWorker implements Runnable, Serializable{
 		}
 	}
 	
-	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
-		this.partitioningRange[0] = partitioningRange.get(0);
-		this.partitioningRange[1] = partitioningRange.get(1);
-		NodeManager.nLogger.info("-> Configured new partitioning range. From: "+this.partitioningRange[0]+" to "+this.partitioningRange[1]);
-	}
-	
-	public ArrayList<Integer> getPartitioningRange(){
-		ArrayList<Integer> aux = new ArrayList<Integer>();
-		aux.add(partitioningRange[0]);
-		aux.add(partitioningRange[1]);
-		return aux;
-	}
+//	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
+//		this.partitioningRange[0] = partitioningRange.get(0);
+//		this.partitioningRange[1] = partitioningRange.get(1);
+//		NodeManager.nLogger.info("-> Configured new partitioning range. From: "+this.partitioningRange[0]+" to "+this.partitioningRange[1]);
+//	}
+//	
+//	public ArrayList<Integer> getPartitioningRange(){
+//		ArrayList<Integer> aux = new ArrayList<Integer>();
+//		aux.add(partitioningRange[0]);
+//		aux.add(partitioningRange[1]);
+//		return aux;
+//	}
 	
 	public void run(){
 		initTime = System.currentTimeMillis();
@@ -126,7 +126,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 	}
 	
 	public void executeLargeStateMechanism(){
-		processingUnit.lockFreeParallelCheckpointAndBackupState(partitioningRange);
+		processingUnit.lockFreeParallelCheckpointAndBackupState();
 		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
@@ -139,7 +139,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 						
 						// Blocking call
 						processingUnit.getOwner().signalOpenBackupSession();
-						processingUnit.lockFreeParallelCheckpointAndBackupState(partitioningRange);
+						processingUnit.lockFreeParallelCheckpointAndBackupState();
 						processingUnit.getOwner().signalCloseBackupSession();
 
 						long stopCheckpoint = System.currentTimeMillis();

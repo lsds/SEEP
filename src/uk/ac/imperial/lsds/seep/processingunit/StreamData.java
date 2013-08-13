@@ -17,5 +17,7 @@ public class StreamData{
 	public ArrayList<Object> microBatch;
 	public int partition;
 			
-	public StreamData(){}
+	public StreamData(){
+		
+	}
 }

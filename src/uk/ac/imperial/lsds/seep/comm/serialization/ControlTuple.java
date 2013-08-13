@@ -28,6 +28,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 public class ControlTuple {
@@ -317,9 +318,15 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeStateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
+//	public ControlTuple makeStateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
+//		this.type = CoreRE.ControlTupleType.STATE_CHUNK;
+//		this.stateChunk = new StateChunk(opId, partitionNumber, sequenceNumber, totalChunks, state, partitioningRange);
+//		return this;
+//	}
+	
+	public ControlTuple makeStateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc){
 		this.type = CoreRE.ControlTupleType.STATE_CHUNK;
-		this.stateChunk = new StateChunk(opId, partitionNumber, sequenceNumber, totalChunks, state, partitioningRange);
+		this.stateChunk = new StateChunk(opId, seqNumber, totalChunks, mc);
 		return this;
 	}
 	

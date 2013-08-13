@@ -10,29 +10,35 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
-import java.util.ArrayList;
-
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
 public class StateChunk {
 
 	private int opId;
-	private int partitionNumber;
+//	private int partitionNumber;
 	private int sequenceNumber;
 	private int totalChunks;
-	private State state;
-	private ArrayList<Integer> partitioningRange;
+	private MemoryChunk mc;
+//	private State state;
+//	private ArrayList<Integer> partitioningRange;
 	
 
 	public StateChunk(){}
 	
-	public StateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
+//	public StateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
+//		this.opId = opId;
+//		this.partitionNumber = partitionNumber;
+//		this.sequenceNumber = sequenceNumber;
+//		this.totalChunks = totalChunks;
+//		this.state = state;
+//		this.partitioningRange = partitioningRange;
+//	}
+	
+	public StateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc){
 		this.opId = opId;
-		this.partitionNumber = partitionNumber;
-		this.sequenceNumber = sequenceNumber;
+		this.sequenceNumber = seqNumber;
 		this.totalChunks = totalChunks;
-		this.state = state;
-		this.partitioningRange = partitioningRange;
+		this.mc = mc;
 	}
 	
 	public int getOpId() {
@@ -42,14 +48,18 @@ public class StateChunk {
 	public void setOpId(int opId) {
 		this.opId = opId;
 	}
-
-	public int getPartitionNumber() {
-		return partitionNumber;
+	
+	public MemoryChunk getMemoryChunk(){
+		return mc;
 	}
 
-	public void setPartitionNumber(int partitionNumber) {
-		this.partitionNumber = partitionNumber;
-	}
+//	public int getPartitionNumber() {
+//		return partitionNumber;
+//	}
+//
+//	public void setPartitionNumber(int partitionNumber) {
+//		this.partitionNumber = partitionNumber;
+//	}
 
 	public int getSequenceNumber() {
 		return sequenceNumber;
@@ -67,19 +77,19 @@ public class StateChunk {
 		this.totalChunks = totalChunks;
 	}
 	
-	public void setState(State state){
-		this.state = state;
-	}
-	
-	public State getState(){
-		return state;
-	}
-	
-	public ArrayList<Integer> getPartitioningRange() {
-		return partitioningRange;
-	}
-
-	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
-		this.partitioningRange = partitioningRange;
-	}
+//	public void setState(State state){
+//		this.state = state;
+//	}
+//	
+//	public State getState(){
+//		return state;
+//	}
+//	
+//	public ArrayList<Integer> getPartitioningRange() {
+//		return partitioningRange;
+//	}
+//
+//	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
+//		this.partitioningRange = partitioningRange;
+//	}
 }

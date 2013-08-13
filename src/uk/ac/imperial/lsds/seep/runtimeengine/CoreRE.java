@@ -798,10 +798,8 @@ public class CoreRE {
 			//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 			if(processingUnit.isNodeStateful()){
 				NodeManager.nLogger.info("-> sending BACKUP_STATE to the new manager of my state");
-				//((StatefulProcessingUnit)processingUnit).checkpointAndBackupState();
-				ArrayList<Integer> pr = ((StatefulProcessingUnit)processingUnit).getPartitioningRange();
-				int[] pr1 = new int[]{pr.get(0), pr.get(1)};
-				((StatefulProcessingUnit)processingUnit).lockFreeParallelCheckpointAndBackupState(pr1);
+				
+				((StatefulProcessingUnit)processingUnit).lockFreeParallelCheckpointAndBackupState();
 			}
 		}
 	}

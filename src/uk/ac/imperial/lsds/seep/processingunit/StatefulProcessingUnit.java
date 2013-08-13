@@ -30,6 +30,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
+import uk.ac.imperial.lsds.seep.operator.LargeState;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
@@ -39,7 +40,9 @@ import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.Streamable;
 import uk.ac.imperial.lsds.seep.operator.Versionable;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker;
+import uk.ac.imperial.lsds.seep.reliable.StreamStateManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
@@ -456,105 +459,62 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 	}
 	
-	public void lockFreeParallelCheckpointAndBackupState(int[] partitioningRange){
-		TimestampTracker tsVToAck = lockFreeParallelBackupState(partitioningRange);
+	public void lockFreeParallelCheckpointAndBackupState(){
+		TimestampTracker tsVToAck = lockFreeParallelBackupState();
 		if(tsVToAck != null){
 			owner.ack(tsVToAck);
 		}
 	}
 	
-	private TimestampTracker lockFreeParallelBackupState(int[] partitioningRange){
-		// Initial check
-		if(!(runningOpState instanceof Versionable) || !(runningOpState instanceof Streamable)){
-			NodeManager.nLogger.severe("-> Trying to stream a non-streamable state");
-			// Make noise during debugging
+	private TimestampTracker lockFreeParallelBackupState(){
+		// Initial checks
+		if(runningOpState == null){
+			NodeManager.nLogger.severe("-> NULL state");
 			System.exit(-666);
 			return null;
 		}
-		/**
-		 * include otuputBuffers once the star-topology information is consistent
-		 */
-		TimestampTracker incomingTT = null;
-		if(runningOpState != null){
-			int opId = runningOpState.getOwnerId();
-			String stateTag = runningOpState.getStateTag();
-			ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers();
-			// Set dirty mode (lock free)
-			((Versionable)runningOpState).setDirtyMode(true);
-			
-			// Set ts for consistency, etc...
-			incomingTT = owner.getIncomingTT();
-			///\todo{this assignment should go with the chunks ?? }
-			runningOpState.setData_ts(incomingTT);
-
-			// STREAMING THROUGH THE NETWORK (enforcing constant memory consumption here)
-			ArrayList<Object> microBatch;
-			int it = 0;
-			int size = ((Streamable)runningOpState).getSize();
-//			System.out.println("SIZE of state to stream is: "+size);
-			int sequenceNumber = 0;
-			NodeManager.nLogger.info("% -> Backuping state with owner: "+opId);
-			
-			int totalChunks = ((Streamable)runningOpState).getTotalNumberOfChunks();
-			((Streamable)runningOpState).setUpIterator();
-			//while(it < size){
-			int key = (partitioningRange[1]+partitioningRange[0])/2;
-			while(((Streamable)runningOpState).getIterator().hasNext()){
-				
-				StreamData sd = ((Streamable)runningOpState).streamSplitState(runningOpState, it, key);
-				// finished
-				if(sd == null){
-					StreamData[] chunks = ((Streamable)runningOpState).getRemainingData();
-					microBatch = chunks[0].microBatch;
-					ArrayList<Integer> newPartitioningRange0 = new ArrayList<Integer>();
-					newPartitioningRange0.add(partitioningRange[0]);
-					newPartitioningRange0.add(key);
-					ControlTuple ctB = new ControlTuple().makeStateChunk(opId, chunks[0].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange0);
-					sequenceNumber++;
-					owner.sendBlindData(ctB, chunks[0].partition);
-//					owner._sendBlindData(ctB, chunks[0].partition, chunks[0].partition);
-					((Streamable)runningOpState).resetStructures(chunks[0].partition);
-//					System.out.println("f");
-					
-					microBatch = chunks[1].microBatch;
-					ArrayList<Integer> newPartitioningRange1 = new ArrayList<Integer>();
-					newPartitioningRange1.add(partitioningRange[0]);
-					newPartitioningRange1.add(key);
-					ControlTuple ctB2 = new ControlTuple().makeStateChunk(opId, chunks[1].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange1);
-					sequenceNumber++;
-					owner.sendBlindData(ctB2, chunks[1].partition);
-					((Streamable)runningOpState).resetStructures(chunks[1].partition);
-					break;
-				}
-				microBatch = sd.microBatch;
-				it = it + microBatch.size();
-				
-				// Configure new partitioningRange
-				ArrayList<Integer> newPartitioningRange = new ArrayList<Integer>();
-				if(sd.partition == 0){
-					newPartitioningRange.add(partitioningRange[0]);
-					newPartitioningRange.add(key);
-				}
-				else if(sd.partition == 1){
-					newPartitioningRange.add(key);
-					newPartitioningRange.add(partitioningRange[1]);
-				}
-				ControlTuple ctB = new ControlTuple().makeStateChunk(opId, sd.partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange);
-				sequenceNumber++;
-				owner.sendBlindData(ctB, sd.partition);
-				((Streamable)runningOpState).resetStructures(sd.partition);
-			}
-			// We inform our CORE of the number of chunks of the last backup
-			owner.setTotalNumberOfStateChunks(sequenceNumber);
-			
-			// We reconcile the dirty state with the previous state. Has to always be last op since changes dirtyMode
-			long startR = System.currentTimeMillis();
-			((Versionable)runningOpState).reconcile();
-			long stopR = System.currentTimeMillis();
-			System.out.println("MSG SENT: "+sequenceNumber);
-			System.out.println("TOTAL SEQ NUMER: "+totalChunks);
-			System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
+		if(!(runningOpState instanceof LargeState)){
+			NodeManager.nLogger.severe("-> Not Large STATE. wrong method");
+			System.exit(-666);
+			return null;
 		}
+//		if(!(runningOpState instanceof Versionable) || !(runningOpState instanceof Streamable)){
+//			NodeManager.nLogger.severe("-> Trying to stream a non-streamable state");
+//			// Make noise during debugging
+//			System.exit(-666);
+//			return null;
+//		}
+		
+		State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
+		
+		TimestampTracker incomingTT = null;
+		
+		int opId = runningOpState.getOwnerId();
+		ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers(); // copy of these buffers?
+		// Set ts for consistency, etc...
+		incomingTT = owner.getIncomingTT();
+		///\todo{this assignment should go with the chunks ?? }
+		runningOpState.setData_ts(incomingTT);
+		
+		((Versionable)vns).setDirtyMode(true);
+		// Create a manager for stream the state
+		StreamStateManager ssm = new StreamStateManager(((Streamable)vns));
+		
+		// Get and send all chunks
+		MemoryChunk mc = null;
+		int sequenceNumber = 0;
+		while((mc = ssm.getChunk()) != null){
+			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, sequenceNumber, ssm.getTotalNumberChunks(), mc);
+			sequenceNumber++;
+			owner.sendBlindData(chunkMessage);
+		}
+		long startR = System.currentTimeMillis();
+		((Versionable)runningOpState).reconcile();
+		long stopR = System.currentTimeMillis();
+		System.out.println("MSG SENT: "+sequenceNumber);
+		System.out.println("TOTAL SEQ NUMER: "+ssm.getTotalNumberChunks());
+		System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
+		
 		return incomingTT;
 	}
 	
@@ -649,8 +609,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			((Streamable)runningOpState).appendChunk(null);
 			return;
 		}
-		State s = chunk.getState();
-		((Streamable)runningOpState).appendChunk(s);
+		MemoryChunk mc = chunk.getMemoryChunk();
+		((Streamable)runningOpState).appendChunk(mc.chunk);
 	}
 	
 		/** Who manages which state? **/
@@ -750,20 +710,115 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		
 	}
 
-	public void configureNewPartitioningRange(
-			ArrayList<Integer> partitioningRange) {
-		sbw.setPartitioningRange(partitioningRange);
-	}
-	
-	public ArrayList<Integer> getPartitioningRange(){
-		return sbw.getPartitioningRange();
-	}
+//	public void configureNewPartitioningRange(
+//			ArrayList<Integer> partitioningRange) {
+//		sbw.setPartitioningRange(partitioningRange);
+//	}
+//	
+//	public ArrayList<Integer> getPartitioningRange(){
+//		return sbw.getPartitioningRange();
+//	}
 
 	@Override
 	public int getOpIdFromUpstreamIp(InetAddress ip) {
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
 	}
 }
+
+//private TimestampTracker lockFreeParallelBackupState(int[] partitioningRange){
+//// Initial check
+//if(!(runningOpState instanceof Versionable) || !(runningOpState instanceof Streamable)){
+//	NodeManager.nLogger.severe("-> Trying to stream a non-streamable state");
+//	// Make noise during debugging
+//	System.exit(-666);
+//	return null;
+//}
+///**
+// * include otuputBuffers once the star-topology information is consistent
+// */
+//TimestampTracker incomingTT = null;
+//if(runningOpState != null){
+//	int opId = runningOpState.getOwnerId();
+//	String stateTag = runningOpState.getStateTag();
+//	ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers();
+//	
+//	// Set dirty mode (lock free)
+//	((Versionable)runningOpState).setDirtyMode(true);
+//	
+//	// Set ts for consistency, etc...
+//	incomingTT = owner.getIncomingTT();
+//	///\todo{this assignment should go with the chunks ?? }
+//	runningOpState.setData_ts(incomingTT);
+//
+//	// Chunk memory
+//	ArrayList<Object> microBatch;
+//	int it = 0;
+//	int size = ((Streamable)runningOpState).getSize();
+//	int sequenceNumber = 0;
+//	NodeManager.nLogger.info("% -> Backuping state with owner: "+opId);
+//	
+//	int totalChunks = ((Streamable)runningOpState).getTotalNumberOfChunks();
+//	((Streamable)runningOpState).setUpIterator();
+//	//while(it < size){
+//	int key = (partitioningRange[1]+partitioningRange[0])/2;
+//	while(((Streamable)runningOpState).getIterator().hasNext()){
+//		
+//		StreamData sd = ((Streamable)runningOpState).streamSplitState(runningOpState, it, key);
+//		// finished
+//		if(sd == null){
+//			StreamData[] chunks = ((Streamable)runningOpState).getRemainingData();
+//			microBatch = chunks[0].microBatch;
+//			ArrayList<Integer> newPartitioningRange0 = new ArrayList<Integer>();
+//			newPartitioningRange0.add(partitioningRange[0]);
+//			newPartitioningRange0.add(key);
+//			ControlTuple ctB = new ControlTuple().makeStateChunk(opId, chunks[0].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange0);
+//			sequenceNumber++;
+//			owner.sendBlindData(ctB, chunks[0].partition);
+////			owner._sendBlindData(ctB, chunks[0].partition, chunks[0].partition);
+//			((Streamable)runningOpState).resetStructures(chunks[0].partition);
+////			System.out.println("f");
+//			
+//			microBatch = chunks[1].microBatch;
+//			ArrayList<Integer> newPartitioningRange1 = new ArrayList<Integer>();
+//			newPartitioningRange1.add(partitioningRange[0]);
+//			newPartitioningRange1.add(key);
+//			ControlTuple ctB2 = new ControlTuple().makeStateChunk(opId, chunks[1].partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange1);
+//			sequenceNumber++;
+//			owner.sendBlindData(ctB2, chunks[1].partition);
+//			((Streamable)runningOpState).resetStructures(chunks[1].partition);
+//			break;
+//		}
+//		microBatch = sd.microBatch;
+//		it = it + microBatch.size();
+//		
+//		// Configure new partitioningRange
+//		ArrayList<Integer> newPartitioningRange = new ArrayList<Integer>();
+//		if(sd.partition == 0){
+//			newPartitioningRange.add(partitioningRange[0]);
+//			newPartitioningRange.add(key);
+//		}
+//		else if(sd.partition == 1){
+//			newPartitioningRange.add(key);
+//			newPartitioningRange.add(partitioningRange[1]);
+//		}
+//		ControlTuple ctB = new ControlTuple().makeStateChunk(opId, sd.partition, sequenceNumber, totalChunks, new StreamStateChunk(microBatch), newPartitioningRange);
+//		sequenceNumber++;
+//		owner.sendBlindData(ctB, sd.partition);
+//		((Streamable)runningOpState).resetStructures(sd.partition);
+//	}
+//	// We inform our CORE of the number of chunks of the last backup
+//	owner.setTotalNumberOfStateChunks(sequenceNumber);
+//	
+//	// We reconcile the dirty state with the previous state. Has to always be last op since changes dirtyMode
+//	long startR = System.currentTimeMillis();
+//	((Versionable)runningOpState).reconcile();
+//	long stopR = System.currentTimeMillis();
+//	System.out.println("MSG SENT: "+sequenceNumber);
+//	System.out.println("TOTAL SEQ NUMER: "+totalChunks);
+//	System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
+//}
+//return incomingTT;
+//}
 
 //public void directCheckpointAndBackupState(){
 //TimestampTracker tsVToAck = directBackupState();
