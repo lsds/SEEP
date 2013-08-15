@@ -185,13 +185,3 @@ public class BackupHandler implements Runnable{
 //		return backupLastBackupHandlers;
 //	}
 //}
-
-
-//public void _closeSession(int opId, SocketAddress remoteAddress){
-//// We reset the transNumber for the next session
-////transNumber = 0;
-//// We configure the last session name as the one just finished
-//lastSessionName = sessionName;
-//isSessionClosed.set(true);
-//System.out.println("TOTAL SESSION TIME: "+(System.currentTimeMillis() - s_sessiontime));
-//}

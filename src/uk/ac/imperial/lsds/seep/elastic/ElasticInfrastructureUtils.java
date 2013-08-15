@@ -21,7 +21,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -41,14 +40,12 @@ public class ElasticInfrastructureUtils {
 
 	private Infrastructure inf = null;
 	private RuntimeCommunicationTools rct = null;
-	private NodeManagerCommunication bcu = null;
-	
 	private URLClassLoader ucl = null;
 	
 	public ElasticInfrastructureUtils(Infrastructure inf){
 		this.inf = inf;
 		this.rct = inf.getRCT();
-		this.bcu = inf.getBCU();
+		inf.getBCU();
 	}
 	
 	public void setClassLoader(URLClassLoader ucl){
@@ -279,19 +276,19 @@ public class ElasticInfrastructureUtils {
 		inf.deployConnection("system_ready", replica, null, "");
 	}
 	
-/// \test{when is this method used?}
-	private void sendSendInitToMinFailedNodeUpstream(int failedNode) {
-		ArrayList<Operator> ops = inf.getOps();
-		for (Operator o: ops) {
-			if (o.getOperatorId() == failedNode) {
-				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
-				ArrayList<Integer> opIds = new ArrayList<Integer>();
-				opIds.add(failedNode);
-				ControlTuple ct = new ControlTuple().makeResume(opIds);
-				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
-			}
-		}
-	}
+///// \test{when is this method used?}
+//	private void sendSendInitToMinFailedNodeUpstream(int failedNode) {
+//		ArrayList<Operator> ops = inf.getOps();
+//		for (Operator o: ops) {
+//			if (o.getOperatorId() == failedNode) {
+//				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
+//				ArrayList<Integer> opIds = new ArrayList<Integer>();
+//				opIds.add(failedNode);
+//				ControlTuple ct = new ControlTuple().makeResume(opIds);
+//				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
+//			}
+//		}
+//	}
 	
 	private void sendResumeMessageToUpstreams(int opIdToParallelize, int newOpId) {
 		ArrayList<Operator> ops = inf.getOps();
@@ -310,22 +307,22 @@ public class ElasticInfrastructureUtils {
 		}
 	}
 	
-	@Deprecated
-	private void sendSendInitToMinUpstream(int opIdToParallelize, int newOpId) {
-		ArrayList<Operator> ops = inf.getOps();
-		for (Operator o: ops) {
-			if (o.getOperatorId() == opIdToParallelize) {
-				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
-				
-				ArrayList<Integer> opIds = new ArrayList<Integer>();
-				opIds.add(opIdToParallelize);
-				opIds.add(newOpId);
-				ControlTuple ct = new ControlTuple().makeResume(opIds);
-				
-				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
-			}
-		}
-	}
+//	@Deprecated
+//	private void sendSendInitToMinUpstream(int opIdToParallelize, int newOpId) {
+//		ArrayList<Operator> ops = inf.getOps();
+//		for (Operator o: ops) {
+//			if (o.getOperatorId() == opIdToParallelize) {
+//				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
+//				
+//				ArrayList<Integer> opIds = new ArrayList<Integer>();
+//				opIds.add(opIdToParallelize);
+//				opIds.add(newOpId);
+//				ControlTuple ct = new ControlTuple().makeResume(opIds);
+//				
+//				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
+//			}
+//		}
+//	}
 
 	private void sendScaleOutMessageToUpstreams(int opIdToParallelize, int newOpId) {
 		ArrayList<Operator> ops = inf.getOps();

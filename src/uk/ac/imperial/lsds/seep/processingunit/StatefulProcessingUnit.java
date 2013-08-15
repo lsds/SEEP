@@ -701,7 +701,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 
 	public void resetState() {
 		((Partitionable)runningOpState).resetState();
-		
 	}
 
 	@Override

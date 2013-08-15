@@ -73,13 +73,6 @@ public class ManagerWorker implements Runnable {
 			}
 
 			System.out.println("MANAGER: Calling reDeploy... the IP: "+oldIP.toString());
-/* If the node failed, we dont want to use it anymore. If in the future it is up again and we want to use it, then we need to put it in the stack
-If we are going to place the operator in a new node, this node should be previously in our infrastructure.
-This avoids some problems when testing fault-tolerance mechanisms in an architecture with parallelized operators
-			Node oldNode = new Node(oldIP,oldPort);
-			inf.nodeStack.remove(oldNode);
-			inf.nodeStack.push(newNode);
-*/
 			Node newNode = new Node(newIP,newPort);
 			long init = System.currentTimeMillis();
 			inf.reDeploy(newNode);
@@ -90,6 +83,9 @@ This avoids some problems when testing fault-tolerance mechanisms in an architec
 			System.out.println("MANAGER: Updating upstream and downstream connections...");
 			//updateU_D could get nodes instead of IPs to build correct nodes, but
 			//it also work just with IPs
+			
+			// Tell star topology to stream state
+			inf.failure(opId);
 			
 			inf.updateU_D(oldIP,newIP, false);
 			

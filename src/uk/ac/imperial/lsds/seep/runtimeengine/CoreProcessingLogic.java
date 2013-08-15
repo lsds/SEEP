@@ -10,21 +10,18 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
-import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -38,7 +35,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReplayStateInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
@@ -68,6 +64,13 @@ public class CoreProcessingLogic implements Serializable{
 	private CoreRE owner;
 	private IProcessingUnit pu;
 	private PUContext puCtx;
+	
+	//map where it is saved the ack received by each downstream
+	private Map<Integer, TimestampTracker> downstreamLastAck = new HashMap<Integer, TimestampTracker>();
+	
+	//routing information, operatorCLASS - backupRI
+//	private Seep.BackupRI backupRI = null;
+	private HashMap<String, BackupRI> backupRoutingInformation = new HashMap<String, BackupRI>();
 	
 	private Kryo k;
 	
@@ -105,13 +108,6 @@ public class CoreProcessingLogic implements Serializable{
 		this.pu = processingUnit;
 	}
 	
-	//map where it is saved the ack received by each downstream
-	private Map<Integer, TimestampTracker> downstreamLastAck = new HashMap<Integer, TimestampTracker>();
-	
-	//routing information, operatorCLASS - backupRI
-//	private Seep.BackupRI backupRI = null;
-	private HashMap<String, BackupRI> backupRoutingInformation = new HashMap<String, BackupRI>();
-	
 	/// \todo{check if i can avoid operations in the data structure when receiving same msg again and again}
 	public void storeBackupRI(BackupRI backupRI){
 		//Get operator Class
@@ -119,12 +115,6 @@ public class CoreProcessingLogic implements Serializable{
 		//Save in the provided map the backupRI for this upstream, if there are replicas then we will have replicated info here...
 		backupRoutingInformation.put(operatorType, backupRI);
 	}
-	
-	/**  installRI receives a message with the routing information that this operator must implement 
-	 * there are N indexes, and thus, there must be N load balancers. Each of these load balancers must have the same indexes,
-	 * this is, the same routing information.
-	 * Consequently, I have to locate the load balancers that this operator has right now and change the routing information.
-	 * Then, create the new required ones with the new information**/
 	
 	public synchronized void installRI(InitRI initRI){
 		NodeManager.nLogger.info("-> Installing RI from Node: "+initRI.getNodeId());
@@ -149,16 +139,12 @@ public class CoreProcessingLogic implements Serializable{
 				 upstreamIndex = op.index();
 			}
 		}
-		System.out.println("## NEW UPSTREAM, op: "+opId+" type: "+operatorType);
 		//If i dont have backup for that upstream, I am not in charge...
-		System.out.println("BACKUPROUTINGINFO: "+backupRoutingInformation.toString());
-		System.out.println("OP TYPE: "+operatorType);
 		if(!backupRoutingInformation.containsKey(operatorType)){
 			NodeManager.nLogger.info("-> NO routing info to send");
 			return;
 		}
 		NodeManager.nLogger.info("-> Sending backupRI to upstream");
-System.out.println("KEY: "+operatorType);
 		//Otherwise I pick the backupRI msg from the data structure where i am storing these ones
 		BackupRI backupRI = backupRoutingInformation.get(operatorType);
 		//Form the message
@@ -181,57 +167,12 @@ System.out.println("KEY: "+operatorType);
 			NodeManager.nLogger.warning("-> Received state generated after the beginning of the reconfigure process");
 		}
 	}
-	
-	public void processRawData(RawData rw){
-		int opId = rw.getOpId();
-		SynchronousCommunicationChannel downStream = puCtx.getCCIfromOpId(opId, "d");
-		TimestampTracker ts_e = rw.getTs();
-		TimestampTracker smaller = TimestampTracker.returnSmaller(ts_e, downStream.getReconf_ts());
-		if(TimestampTracker.isSmallerOrEqual(downStream.getReconf_ts(), smaller)){
-//			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
-			puCtx.getBuffer(opId).replaceRawData(rw);
-		}
-		else{
-			NodeManager.nLogger.warning("-> Received data generated after the beginning of a reconfigure process");
-		}
-	}
 
 	public synchronized void processAck(Ack ct){
 		int opId = ct.getOpId();
 		long ack_ts = ct.getTs();
 		processAck(opId, ack_ts);
 	}
-	
-//	private synchronized void _processAck(int opId, long ack_ts){
-//		// Trim local buffer
-//		Buffer buffer = puCtx.getBuffer(opId);
-//		buffer.trim(ack_ts);
-//		
-//		// Check when to send ack upstream
-//		int counter = 0;
-//		long minWithCurrent = ack_ts;
-//		long minWithoutCurrent = Long.MAX_VALUE;
-//		for( Map.Entry<Integer, Long> entry: downstreamLastAck.entrySet()) {
-//			long ts = entry.getValue();
-//			// Search for the minimum ack
-//			if (entry.getKey() != opId) {
-//				if(ts < minWithCurrent){ 
-//					minWithCurrent = ts;
-//				}
-//			}
-//			if(ts < minWithoutCurrent){
-//				minWithoutCurrent = ts;
-//			}
-//			counter++;
-//		}
-//		downstreamLastAck.put(opId, ack_ts);
-//		// Forward only if stateless. Stateful operator forward the state instead
-//		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
-//			owner.ack(minWithCurrent);
-//		}
-//		// To indicate that this is the last ack processed by this operator
-//		owner.setTs_ack(ack_ts);
-//	}
 	
 	private synchronized void processAck(int opId, long ack_ts){
 		// Trim local buffer
@@ -330,20 +271,14 @@ System.out.println("KEY: "+operatorType);
 		int oldOpId = scaleOutInfo.getOldOpId();
 		int newOpId = scaleOutInfo.getNewOpId();
 		boolean isStatefulScaleOut = scaleOutInfo.isStatefulScaleOut();
-		
-		//if operator is stateful and (this) can split state
-//		if(opContext.isDownstreamOperatorStateful(oldOpId) && owner.subclassOperator instanceof StateSplitI){
 		//If scaling operator is stateful
 		if(isStatefulScaleOut){
 			NodeManager.nLogger.info("-> Scaling out STATEFUL op");
 			scaleOutStatefulOperator(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
-		
 		// If operator splitting is stateless...
-//		else if (!opContext.isDownstreamOperatorStateful(oldOpId)){
 		else{
 			NodeManager.nLogger.info("-> Scaling out STATELESS op");
-//			configureNewDownstreamStatelessOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 			pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 	}
@@ -358,7 +293,6 @@ System.out.println("KEY: "+operatorType);
 			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
 			//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 			NodeManager.nLogger.info("-> Generating and sending RI backup");
-//			backupRoutingInformation(oldOpId);
 		}
 		else{
 			NodeManager.nLogger.info("-> NOT in charge of split state");
@@ -367,7 +301,6 @@ System.out.println("KEY: "+operatorType);
 		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
 		//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
 		NodeManager.nLogger.info("-> Generating and sending RI backup");
-//		backupRoutingInformation(oldOpId);
 		
 		//I always backup the routing info. This leads to replicate messages, but I cant avoid it easily since I can have more than one type of upstream
 		///\fixme{FIX THIS INEFFICIENCY}
@@ -503,6 +436,11 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				timeread = timeread + (b-a);
 				timewrite = timewrite + (c-b);
 			}
+			// Empty state chunk to indicate end of stream
+			ControlTuple endOfStream = new ControlTuple().makeStateChunk(opId, 0, 0, null);
+			k.writeObject(output, endOfStream);
+			output.flush();
+			
 			System.out.println("READ: "+timeread);
 			System.out.println("WRITE: "+timewrite);
 		}
@@ -596,68 +534,20 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC);
 					k.writeObject(newO, newCT);
 					newO.flush();
+					oldPartition.clear();
+					newPartition.clear();
 				}
 			}
+			// Indicate end of stream to both operators 
+			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), 0, 0, null);
+			k.writeObject(oldO, endOfStream);
+			k.writeObject(newO, endOfStream);
+			oldO.flush();
+			newO.flush();
 			i.close();
 		}
-		catch(IOException io){
-			
+		catch(IOException io){	
 			io.printStackTrace();
-		}
-		
-	}
-	
-	private int totalExpectedChunks = -1;
-	private int totalNumberOfChunks = -1;
-	public void setTotalNumberOfChunks(int totalNumberOfChunks){
-		this.totalNumberOfChunks = totalNumberOfChunks;
-	}
-	private int totalReceivedChunks;
-	
-	public void handleNewChunk(StateChunk stateChunk){
-		if(totalExpectedChunks == -1){
-			totalExpectedChunks = stateChunk.getTotalChunks();
-			//((Partitionable)).resetState();
-			((StatefulProcessingUnit)pu).resetState();
-//			((StatefulProcessingUnit)pu).configureNewPartitioningRange(stateChunk.getPartitioningRange());
-		}
-//		totalReceivedChunks++;
-//		System.out.println("CHUNKS: "+totalReceivedChunks+"/"+totalExpectedChunks);
-//		if(totalReceivedChunks == totalExpectedChunks){
-//			// reset variables
-//			totalReceivedChunks = 0;
-//			totalExpectedChunks = -1; 
-//		}
-		((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);
-		totalReceivedChunks++;
-		System.out.println("CHUNKS: "+totalReceivedChunks+"/"+totalExpectedChunks);
-		if(totalReceivedChunks == totalExpectedChunks){
-			// reset variables
-			totalReceivedChunks = 0;
-			totalExpectedChunks = -1;
-			((StatefulProcessingUnit)pu).mergeChunkToState(null);
-			
-//			//Once state is recovered, then we do this
-			ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
-			owner.getControlDispatcher().sendAllUpstreams(rb);
-			
-			
-			
-			
-//			int opId = stateChunk.getOpId();
-//			owner.manageBackupUpstreamIndex(opId);
-//			//Clean the data processing channel from remaining tuples in old batch
-//			NodeManager.nLogger.info("Changing to INITIALISING STATE, stopping all incoming comm");
-//			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE);
-//			
-//			
-//			//Send a msg to ask for the rest of information. (tuple replaying)
-//			NodeManager.nLogger.info("-> Sending STATE_ACK");
-//			ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
-//			owner.getControlDispatcher().sendAllUpstreams(rb);
-////			pu.cleanInputQueue();
-//			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
-//			System.out.println("Changing to NORMAL mode, recovering data processing");
 		}
 	}
 	
@@ -665,102 +555,28 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		String[] splits = fileName.split("_");
 		return (splits[2].equals(sessionName) && splits[1].equals(new Integer(opId).toString()));
 	}
+	
+	// Structure and method to keep tracking of merging state
+	private Set<Integer> activeOpStreaming = new HashSet<Integer>();
+	public void handleNewChunk(StateChunk stateChunk){
+		// If null means this operator has finished streaming
+		if(stateChunk.getMemoryChunk() == null){
+			activeOpStreaming.remove(stateChunk.getOpId());
+			if(activeOpStreaming.size() == 0){
+				// finished merging state
+				((StatefulProcessingUnit)pu).mergeChunkToState(null);
+				ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
+				owner.getControlDispatcher().sendAllUpstreams(rb);
+			}
+		}
+		// an active operator sends us a chunk
+		else{
+			// New chunk to merge
+			int sourceOpId = stateChunk.getOpId();
+			// We state this op is actively streaming
+			activeOpStreaming.add(sourceOpId);
+			// And we call the correct function to merge the state
+			((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);
+		}
+	}
 }
-
-//public void directReplayState(ReplayStateInfo rsi, BackupHandler bh){
-//// Stream to one or multiple nodes?
-//File folder = new File("backup/");
-//// this basically means that is because of a failure
-//if(rsi.isStreamToSingleNode()){
-//	directReplayStateFailure(rsi, bh, folder);
-//}
-//else{
-//	directReplayStateScaleOut(rsi, bh, folder);
-//}
-//}
-
-
-///\fixme{REFACTOR this whole method. Now it is time to hash on key and then module the downstream. Also we have to access
-// the routing information to make sure we are not doing anything wrong}
-//private void _directReplayStateScaleOut(ReplayStateInfo rsi, final BackupHandler bh, File folder){
-//	NodeManager.nLogger.info("-> DISTRIBUTED-SCALE-OUT");
-//	int oldOpId = rsi.getOldOpId();
-//	int newOpId = rsi.getNewOpId();
-//	
-//	
-//	SynchronousCommunicationChannel old_cci = puCtx.getCCIfromOpId(oldOpId, "d");
-//	SynchronousCommunicationChannel new_cci = puCtx.getCCIfromOpId(newOpId, "d");
-//	Socket old_controlDownstreamSocket = old_cci.getDownstreamControlSocket();
-//	Socket new_controlDownstreamSocket = new_cci.getDownstreamControlSocket();
-//	
-//	//Only the old op could send a backup
-//	String lastSessionName = bh.getLastBackupSessionName(oldOpId);
-//	
-//	
-//	int old_totalNumberChunks = 0;
-//	int new_totalNumberChunks = 0;
-//	final ArrayList<File> old_filesToStream = new ArrayList<File>();
-//	ArrayList<File> new_filesToStream = new ArrayList<File>();
-//	// Read folder and filter out files to send through the network
-//	try {
-//		final Output old_output = new Output(old_controlDownstreamSocket.getOutputStream());
-//		Output new_output = new Output(new_controlDownstreamSocket.getOutputStream());
-//		for(File chunkFile : folder.listFiles()){
-//			String chunkName = chunkFile.getName();
-//			String[] splits = chunkName.split("_");
-//			// If chunk matches the current session
-//			if(splits[1].equals(lastSessionName)){
-//				if(splits[0].equals("P0")){
-//					old_totalNumberChunks++;
-//					old_filesToStream.add(chunkFile);
-//				}
-//				else if(splits[0].equals("P1")){
-//					new_totalNumberChunks++;
-//					new_filesToStream.add(chunkFile);
-//				}
-//			}
-//		}
-//		NodeManager.nLogger.info("-> Stream: "+old_filesToStream.size()+" to old operator");
-//		NodeManager.nLogger.info("-> Stream: "+new_filesToStream.size()+" to new operator");
-//		// Finally we stream the files back to the new operators (in parallel)
-//		for(File chunkFile : old_filesToStream){
-//			Input i;
-//			try {
-//				i = new Input(new FileInputStream(chunkFile));
-//				ControlTuple ct = k.readObject(i, ControlTuple.class);
-//				ct.getStateChunk().setTotalChunks(old_filesToStream.size());
-//				k.writeObject(old_output, ct);
-//				old_output.flush();
-//				i.close();
-//			} 
-//			catch (FileNotFoundException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
-//		
-//		for(File chunkFile : new_filesToStream){
-//			Input i;
-//			try {
-//				i = new Input(new FileInputStream(chunkFile));
-//				ControlTuple ct = k.readObject(i, ControlTuple.class);
-//				ct.getStateChunk().setTotalChunks(new_filesToStream.size());
-//				k.writeObject(new_output, ct);
-//				new_output.flush();
-//				i.close();
-//			} 
-//			catch (FileNotFoundException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
-//	}
-//	catch (FileNotFoundException e) {
-//		// TODO Auto-generated catch block
-//		e.printStackTrace();
-//	}
-//	catch (IOException e) {
-//		// TODO Auto-generated catch block
-//		e.printStackTrace();
-//	}
-//}

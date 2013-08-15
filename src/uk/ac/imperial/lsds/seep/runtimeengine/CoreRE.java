@@ -245,8 +245,8 @@ public class CoreRE {
 	}
 	
 	public enum ControlTupleType{
-		ACK, BACKUP_OP_STATE, BACKUP_NODE_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
-		BACKUP_RI, INIT_RI, RAW_DATA, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, REPLAY_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT
+		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
+		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT
 	}
 	
 	public synchronized void setTsData(int stream, long ts_data){
@@ -305,11 +305,7 @@ public class CoreRE {
 		}
 		return false;
 	}
-		
-//	/// \fixme{Fix this}
-//	boolean gotit = false;
-	
-	
+
 	///\todo{refactor: Represent this method as a finite state machine and provide methods to query and update the state}
 	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
 		/** 
@@ -372,15 +368,6 @@ public class CoreRE {
 			processingUnit.registerManagedState(backupOperatorState.getOpId());
 			coreProcessLogic.processBackupState(backupOperatorState);
 		}
-		/** RAW_DATA message **/
-		else if(ctt.equals(ControlTupleType.RAW_DATA)){
-			RawData rw = ct.getRawData();
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv RAW DATA from Op: "+rw.getOpId());
-			// is state anyway, we register it...
-			processingUnit.registerManagedState(rw.getOpId());
-//			coreProcessLogic.processBackupState(backupOperatorState);
-			coreProcessLogic.processRawData(rw);
-		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
 			int opId = ct.getStateAck().getMostUpstreamOpId();
@@ -397,7 +384,6 @@ public class CoreRE {
 		}
 		/** BACKUP_RI message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_RI)){
-
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.BACKUP_RI");
 			coreProcessLogic.storeBackupRI(ct.getBackupRI());
 		}
@@ -443,11 +429,12 @@ public class CoreRE {
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/
-		else if(ctt.equals(ControlTupleType.REPLAY_STATE)){
+		else if(ctt.equals(ControlTupleType.STREAM_STATE)){
 //			//Replay the state that this node keeps
-//			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.REPLAY_STATE");
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.STREAM_STATE");
 //			
-//			coreProcessLogic.directReplayState(ct.getReplayStateInfo(), bh);
+//			int opId;
+//			coreProcessLogic.directReplayStateFailure(opId, bh);
 		}
 		/** STATE_CHUNK **/
 		else if(ctt.equals(ControlTupleType.STATE_CHUNK)){
@@ -522,33 +509,14 @@ public class CoreRE {
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
 			if(command.equals("reconfigure_D")){
-				
-				/** 1st mode. Send state from Buffer class **/
-				if(P.valueFor("ftDiskMode").equals("false")){
-					// the new way would be something like the following. Anyway it is necessary to check if downstream is statefull or not
-					if(processingUnit.isManagingStateOf(opId)){
-						/** WHILE REFACTORING THE FOLLOWING IF WAS REMOVED, this was here for a reason **/
-//						if(subclassOperator instanceof StateSplitI){
-							//new Thread(new StateReplayer(opContext.getOIfromOpId(opId, "d"))).start();
-						NodeManager.nLogger.info("-> Replaying State");
-						coreProcessLogic.replayState(opId);
-//						}
-					}
-					else{
-						NodeManager.nLogger.info("-> NOT in charge of managing this state");
-					}
+				if(processingUnit.isManagingStateOf(opId)){
+					NodeManager.nLogger.info("-> Replaying State");
+					coreProcessLogic.replayState(opId);
 				}
-				/** Large scale mode. Stream state chunks from disk **/
 				else{
-					// We create a new replayState request. Coming from the op to recover
-					// opId (op to recover), 1 (fake), true (is failure recovery)
-					coreProcessLogic.directReplayStateFailure(opId, bh);
-//					coreProcessLogic.directReplayState(new ReplayStateInfo(opId, 1, true), bh);
-					
+					NodeManager.nLogger.info("-> NOT in charge of managing this state");
 				}
 			}
-//			operatorStatus = OperatorStatus.NORMAL;
-			//ackControlMessage(os);
 		}
 		/** ADD DOWN or ADD UP message **/
 		else if(command.equals("add_downstream") || command.equals("add_upstream")){
@@ -716,44 +684,3 @@ public class CoreRE {
 		}
 	}
 }
-
-//@Deprecated
-//public void _signalCloseBackupSession(){
-//	int opId = processingUnit.getOperator().getOperatorId();
-//	NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
-//	ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
-////	controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
-//	controlDispatcher.sendUpstream(closeSignal, 0);
-//	controlDispatcher.sendUpstream(closeSignal, 1);
-//}
-
-//public void sendBlindMetaData(int data){
-//controlDispatcher.sendUpstream_blind_metadata(data, backupUpstreamIndex);
-//}
-
-//public void sendRawData(ControlTuple ctB){
-//int dataOwnerId = ctB.getRawData().getOpId();
-//NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
-//controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
-//}
-
-//@Deprecated
-//public void _sendBlindData(ControlTuple ctB, int hint, int hack){
-//	int stateOwnerId = ctB.getStateChunk().getOpId();
-////	NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-//	controlDispatcher.sendUpstream_blind(ctB, hack, hint);
-//}
-
-
-//@Deprecated
-//public void _signalOpenBackupSession(){
-//	int opId = processingUnit.getOperator().getOperatorId();
-//	NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
-//	ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
-////	controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
-////	controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
-//	System.out.println("open session to 0");
-//	controlDispatcher.sendUpstreamWaitForReply(openSignal, 0);
-//	System.out.println("open session to 1");
-//	controlDispatcher.sendUpstreamWaitForReply(openSignal, 1);
-//}

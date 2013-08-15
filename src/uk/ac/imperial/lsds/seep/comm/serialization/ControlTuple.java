@@ -78,12 +78,7 @@ public class ControlTuple {
 	public void setAck(Ack ack) {
 		this.ack = ack;
 	}
-	
-//	@Deprecated
-//	public BackupNodeState getBackupState() {
-//		return backupState;
-//	}
-	
+
 	public BackupOperatorState getBackupState(){
 		return backupState;
 	}
@@ -91,11 +86,7 @@ public class ControlTuple {
 	public void setBackupState(BackupOperatorState backupState){
 		this.backupState = backupState;
 	}
-	
-//	public void setBackupState(BackupNodeState backupState) {
-//		this.backupState = backupState;
-//	}
-	
+
 	public ReconfigureConnection getReconfigureConnection() {
 		return reconfigureConnection;
 	}
@@ -217,19 +208,6 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeRawData(RawData rw){
-		this.type = CoreRE.ControlTupleType.RAW_DATA;
-		this.rawData = rw;
-		return this;
-	}
-	
-//	@Deprecated
-//	public ControlTuple makeBackupState(BackupNodeState bs){
-//		this.type = CoreRE.ControlTupleType.BACKUP_NODE_STATE;
-//		this.backupState = bs;
-//		return this;
-//	}
-	
 	public ControlTuple makeResume(ArrayList<Integer> opIds){
 		this.type = CoreRE.ControlTupleType.RESUME;
 		this.resume = new Resume(opIds);
@@ -281,13 +259,6 @@ public class ControlTuple {
 		return this;
 	}
 	
-//	@Deprecated
-//	public ControlTuple makeInitNodeState(int senderOperatorId, int nodeId, InitOperatorState initOperatorState){
-//		this.type = CoreRE.ControlTupleType.INIT_STATE;
-//		this.initNodeState = new InitNodeState(senderOperatorId, nodeId, initOperatorState);
-//		return this;
-//	}
-	
 	public ControlTuple makeInitOperatorState(int senderOperatorId, State initOperatorState){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
 		this.initState = new InitOperatorState(senderOperatorId, initOperatorState);
@@ -313,16 +284,10 @@ public class ControlTuple {
 	}
 	
 	public ControlTuple makeReplayStateInfo(int oldOpId, int newOpId, boolean singleNode){
-		this.type = CoreRE.ControlTupleType.REPLAY_STATE;
+		this.type = CoreRE.ControlTupleType.STREAM_STATE;
 		this.replayStateInfo = new ReplayStateInfo(oldOpId, newOpId, singleNode);
 		return this;
 	}
-	
-//	public ControlTuple makeStateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
-//		this.type = CoreRE.ControlTupleType.STATE_CHUNK;
-//		this.stateChunk = new StateChunk(opId, partitionNumber, sequenceNumber, totalChunks, state, partitioningRange);
-//		return this;
-//	}
 	
 	public ControlTuple makeStateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc){
 		this.type = CoreRE.ControlTupleType.STATE_CHUNK;

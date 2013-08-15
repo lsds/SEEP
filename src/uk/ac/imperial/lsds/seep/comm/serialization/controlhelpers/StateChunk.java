@@ -15,24 +15,11 @@ import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 public class StateChunk {
 
 	private int opId;
-//	private int partitionNumber;
 	private int sequenceNumber;
 	private int totalChunks;
 	private MemoryChunk mc;
-//	private State state;
-//	private ArrayList<Integer> partitioningRange;
-	
 
 	public StateChunk(){}
-	
-//	public StateChunk(int opId, int partitionNumber, int sequenceNumber, int totalChunks, State state, ArrayList<Integer> partitioningRange){
-//		this.opId = opId;
-//		this.partitionNumber = partitionNumber;
-//		this.sequenceNumber = sequenceNumber;
-//		this.totalChunks = totalChunks;
-//		this.state = state;
-//		this.partitioningRange = partitioningRange;
-//	}
 	
 	public StateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc){
 		this.opId = opId;
@@ -52,15 +39,7 @@ public class StateChunk {
 	public MemoryChunk getMemoryChunk(){
 		return mc;
 	}
-
-//	public int getPartitionNumber() {
-//		return partitionNumber;
-//	}
-//
-//	public void setPartitionNumber(int partitionNumber) {
-//		this.partitionNumber = partitionNumber;
-//	}
-
+	
 	public int getSequenceNumber() {
 		return sequenceNumber;
 	}
@@ -76,20 +55,4 @@ public class StateChunk {
 	public void setTotalChunks(int totalChunks){
 		this.totalChunks = totalChunks;
 	}
-	
-//	public void setState(State state){
-//		this.state = state;
-//	}
-//	
-//	public State getState(){
-//		return state;
-//	}
-//	
-//	public ArrayList<Integer> getPartitioningRange() {
-//		return partitioningRange;
-//	}
-//
-//	public void setPartitioningRange(ArrayList<Integer> partitioningRange) {
-//		this.partitioningRange = partitioningRange;
-//	}
 }

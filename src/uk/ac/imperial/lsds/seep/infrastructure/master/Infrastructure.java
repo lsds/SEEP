@@ -401,6 +401,13 @@ public class Infrastructure {
 		}
 	}
 	
+	public void failure(int opId){
+		// create a controltuple with a streamstate, target opid
+		
+		// Get access to starTopology and send the controltuple to all of them
+		
+	}
+	
 	public void sendCode(Node n, byte[] data){
 		bcu.sendFile(n, data);
 	}
