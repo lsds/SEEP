@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
@@ -109,12 +110,15 @@ public class ControlDispatcher {
 		}
 	}
 	
-	public void sendUpstreamWaitForReply(ControlTuple ct, int index){
-		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
+	public void sendOpenSessionWaitACK(ControlTuple ct, int index){
+		DisposableCommunicationChannel dcc = (DisposableCommunicationChannel) puCtx.getStarTopology().get(index);
+		int targetOpId = dcc.getOperatorId();
+		InetAddress ip_endpoint = dcc.getIp();
+		
 		Output output = null;
 		BufferedReader in = null;
 		try{
+			Socket socket = new Socket(ip_endpoint, (Main.CONTROL_SOCKET+targetOpId));
 			output = new Output(socket.getOutputStream());
 			synchronized(k){
 				synchronized(socket){
@@ -126,6 +130,31 @@ public class ControlDispatcher {
 						System.out.println("waiting to read answer/reply");
 						reply = in.readLine();
 						System.out.println("READ");
+						output.close();
+					}
+				}
+			}
+		}
+		catch(IOException io){
+			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			io.printStackTrace();
+		}
+	}
+	
+	public void sendCloseSession(ControlTuple ct, int index){
+		DisposableCommunicationChannel dcc = (DisposableCommunicationChannel) puCtx.getStarTopology().get(index);
+		int targetOpId = dcc.getOperatorId();
+		InetAddress ip_endpoint = dcc.getIp();
+		Output output = null;
+		try{
+			Socket socket = new Socket(ip_endpoint, (Main.CONTROL_SOCKET+targetOpId));
+			output = new Output(socket.getOutputStream());
+			synchronized(k){
+				synchronized(socket){
+					synchronized (output){
+						k.writeObject(output, ct);
+						output.flush();
+						output.close();
 					}
 				}
 			}

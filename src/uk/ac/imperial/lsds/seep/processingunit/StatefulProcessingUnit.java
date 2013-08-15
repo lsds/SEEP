@@ -140,6 +140,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		ctx = new PUContext(owner.getNodeDescr());
 		this.multiCoreEnabled = multiCoreEnabled;
 	}
+	
+	public PUContext getPuContext(){
+		return ctx;
+	}
 
 	public boolean isCheckpointEnabled(){
 		return isCheckpointEnabled;

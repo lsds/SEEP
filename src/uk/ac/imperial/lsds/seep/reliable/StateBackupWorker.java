@@ -11,9 +11,11 @@
 package uk.ac.imperial.lsds.seep.reliable;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 
@@ -120,10 +122,13 @@ public class StateBackupWorker implements Runnable, Serializable{
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						long startCheckpoint = System.currentTimeMillis();
 						
+						int starTopologySize = processingUnit.getPuContext().getStarTopology().size();
+						///\todo{may do some filtering out of the startopology to avoid shuffling. Not important now}
+						
 						// Blocking call
-						processingUnit.getOwner().signalOpenBackupSession();
+						processingUnit.getOwner().signalOpenBackupSession(starTopologySize);
 						processingUnit.lockFreeParallelCheckpointAndBackupState();
-						processingUnit.getOwner().signalCloseBackupSession();
+						processingUnit.getOwner().signalCloseBackupSession(starTopologySize);
 
 						long stopCheckpoint = System.currentTimeMillis();
 						System.out.println("%% Total Checkpoint: "+(stopCheckpoint-startCheckpoint));

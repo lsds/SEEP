@@ -147,6 +147,7 @@ public class BackupHandler implements Runnable{
 			while(goOn){
 				Socket incomingConn = backupServerSocket.accept();
 				InetAddress incomingAddr = incomingConn.getInetAddress();
+				// If session was previously opened
 				if(openSessions.containsKey(incomingAddr)){
 					BackupSessionInfo bsi = openSessions.get(incomingAddr);
 					bsi.incrementTransNumber();

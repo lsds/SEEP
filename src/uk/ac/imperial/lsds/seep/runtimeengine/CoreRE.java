@@ -31,7 +31,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReplayStateInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -132,10 +131,8 @@ public class CoreRE {
 		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
 		// We get the inputDataIngestion mode map, that consists of inputDataIngestion modes per upstream
-		//Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getInputDataIngestionModeMap();
 		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
 		// We configure the dataStructureAdapter with this mode (per upstream), and put additional info required for some modes
-//		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext().upstreams.size());
 		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext());
 
 		// Start communications and worker threads
@@ -596,44 +593,6 @@ public class CoreRE {
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
 		}
-		/** CONFIG SOURCE RATE message **/
-		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
-//		else if (command.equals("configureSourceRate")){
-//			controlDispatcher.ackControlMessage(genericAck, os);
-//			int numberEvents = rc.getOpId();
-//			int time = rc.getInC();
-//			if(numberEvents == 0 && time == 0){
-//				Main.maxRate = true;
-//			}
-//			else{
-//				Main.maxRate = false;
-//				Main.eventR = numberEvents;
-//				Main.period = time;
-//			}
-//		}
-		/** SAVE RESULTS RATE message **/
-		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
-		else if (command.equals("saveResults")){
-//			dispatcher.ackControlMessage(genericAck, os);
-//			try{
-//			((Snk)this.subclassOperator).save();
-//			}catch(Exception e){
-//				((SmartWordCounter)this.subclassOperator).save();
-//			}
-		}
-		/** DEACTIVATE elft mechanism message **/
-		/// \todo {this command should not be delivered to operator. Maybe to nodeManager...}
-//		else if (command.equals("deactivateMechanisms")){
-//			controlDispatcher.ackControlMessage(genericAck, os);
-//			if(Main.eftMechanismEnabled){
-//				NodeManager.nLogger.info("--> Desactivated ESFT mechanisms.");
-//				Main.eftMechanismEnabled = false;
-//			}
-//			else{
-//				NodeManager.nLogger.info("--> Activated ESFT mechanisms.");
-//				Main.eftMechanismEnabled = true;
-//			}
-//		}
 		/** NOT RECOGNIZED message **/
 		else{
 			NodeManager.nLogger.warning("-> Op.processCommand, command not recognized");
@@ -654,42 +613,24 @@ public class CoreRE {
 		}
 	}
 	
-	@Deprecated
-	public void _signalOpenBackupSession(){
+	public void signalOpenBackupSession(int totalSizeST){
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
 		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
-//		controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
-//		controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
-		System.out.println("open session to 0");
-		controlDispatcher.sendUpstreamWaitForReply(openSignal, 0);
-		System.out.println("open session to 1");
-		controlDispatcher.sendUpstreamWaitForReply(openSignal, 1);
-	}
-	
-	public void signalOpenBackupSession(){
-		int opId = processingUnit.getOperator().getOperatorId();
-		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
-		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
-		controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
+		for(int i = 0; i < totalSizeST; i++){
+			//controlDispatcher.sendOpenSessionWaitACK(openSignal, backupUpstreamIndex);
+			controlDispatcher.sendOpenSessionWaitACK(openSignal, i);
+		}
 		NodeManager.nLogger.info("% -> SESSION opened from "+opId);
 	}
 	
-	@Deprecated
-	public void _signalCloseBackupSession(){
+	public void signalCloseBackupSession(int starTopologySize){
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
 		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
-//		controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
-		controlDispatcher.sendUpstream(closeSignal, 0);
-		controlDispatcher.sendUpstream(closeSignal, 1);
-	}
-	
-	public void signalCloseBackupSession(){
-		int opId = processingUnit.getOperator().getOperatorId();
-		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
-		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
-		controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
+		for(int i = 0; i<starTopologySize; i++){
+			controlDispatcher.sendCloseSession(closeSignal, i);
+		}
 	}
 
 	public void manageBackupUpstreamIndex(int opId){
@@ -713,26 +654,9 @@ public class CoreRE {
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
 	
-//	@Deprecated
-//	public void _sendBlindData(ControlTuple ctB, int hint, int hack){
-//		int stateOwnerId = ctB.getStateChunk().getOpId();
-////		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
-//		controlDispatcher.sendUpstream_blind(ctB, hack, hint);
-//	}
-	
 	public void sendBlindData(ControlTuple ctB, int index){
 		controlDispatcher.sendUpstream_blind(ctB, index);
 	}
-	
-//	public void sendBlindMetaData(int data){
-//		controlDispatcher.sendUpstream_blind_metadata(data, backupUpstreamIndex);
-//	}
-	
-//	public void sendRawData(ControlTuple ctB){
-//		int dataOwnerId = ctB.getRawData().getOpId();
-//		NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
-//		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
-//	}
 	
 	public void setTotalNumberOfStateChunks(int number){
 		this.totalNumberOfChunks = number;
@@ -792,3 +716,44 @@ public class CoreRE {
 		}
 	}
 }
+
+//@Deprecated
+//public void _signalCloseBackupSession(){
+//	int opId = processingUnit.getOperator().getOperatorId();
+//	NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
+//	ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
+////	controlDispatcher.sendUpstream(closeSignal, backupUpstreamIndex);
+//	controlDispatcher.sendUpstream(closeSignal, 0);
+//	controlDispatcher.sendUpstream(closeSignal, 1);
+//}
+
+//public void sendBlindMetaData(int data){
+//controlDispatcher.sendUpstream_blind_metadata(data, backupUpstreamIndex);
+//}
+
+//public void sendRawData(ControlTuple ctB){
+//int dataOwnerId = ctB.getRawData().getOpId();
+//NodeManager.nLogger.info("% -> Backuping DATA with owner: "+dataOwnerId+" to NODE index: "+backupUpstreamIndex);
+//controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
+//}
+
+//@Deprecated
+//public void _sendBlindData(ControlTuple ctB, int hint, int hack){
+//	int stateOwnerId = ctB.getStateChunk().getOpId();
+////	NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+//	controlDispatcher.sendUpstream_blind(ctB, hack, hint);
+//}
+
+
+//@Deprecated
+//public void _signalOpenBackupSession(){
+//	int opId = processingUnit.getOperator().getOperatorId();
+//	NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
+//	ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
+////	controlDispatcher.sendUpstream(openSignal, backupUpstreamIndex);
+////	controlDispatcher.sendUpstreamWaitForReply(openSignal, backupUpstreamIndex);
+//	System.out.println("open session to 0");
+//	controlDispatcher.sendUpstreamWaitForReply(openSignal, 0);
+//	System.out.println("open session to 1");
+//	controlDispatcher.sendUpstreamWaitForReply(openSignal, 1);
+//}

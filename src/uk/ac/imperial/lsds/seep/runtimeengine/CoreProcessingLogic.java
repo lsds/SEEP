@@ -589,7 +589,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				if(currentNumberBatch == numberBatchChunks){
 					currentNumberBatch = 0;
 					MemoryChunk oldMC = new MemoryChunk(oldPartition);
-					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, currentNumberBatch, oldMC);
+					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, totalNumberChunks, oldMC);
 					k.writeObject(oldO, oldCT);
 					oldO.flush();
 					MemoryChunk newMC = new MemoryChunk(newPartition);

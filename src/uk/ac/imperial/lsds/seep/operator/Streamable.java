@@ -13,8 +13,6 @@ package uk.ac.imperial.lsds.seep.operator;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
-
 public interface Streamable {
 
 	public int getSize();
