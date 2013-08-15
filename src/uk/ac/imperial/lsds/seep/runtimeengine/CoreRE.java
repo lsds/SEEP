@@ -309,11 +309,24 @@ public class CoreRE {
 		return false;
 	}
 		
-	/// \fixme{Fix this}
-	boolean gotit = false;
+//	/// \fixme{Fix this}
+//	boolean gotit = false;
 	
 	
+	///\todo{refactor: Represent this method as a finite state machine and provide methods to query and update the state}
 	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
+		/** 
+		 * SCALE_OUT (light state):
+		 * M = Master, U = Upstream, D = Downstream
+		 * M -> (scale_out) -> U
+		 * M -> (resume) -> U
+		 * U -> (init_message) -> D
+		 * D -> (state_ack) -> U
+		 * U -> replay tuples and go on processing data
+		 * 
+		 * DISTRIBUTED_SCALE_OUT (large state):
+		 *
+		 **/
 		ControlTupleType ctt = ct.getType();
 		/** ACK message **/
 		if(ctt.equals(ControlTupleType.ACK)) {
@@ -333,7 +346,7 @@ public class CoreRE {
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from NODE: "+ct.getInvalidateState().getOperatorId());
 			processingUnit.invalidateState(ct.getInvalidateState().getOperatorId());
 		}
-		/** INIT_MESSAGE message **/
+		/** INIT_STATE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitOperatorState().getOpId());
 			coreProcessLogic.processInitState(ct.getInitOperatorState());
@@ -373,34 +386,16 @@ public class CoreRE {
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
-			if(!gotit){
-				gotit = true;
-			}
-			else{
-				return;
-			}
 			int opId = ct.getStateAck().getMostUpstreamOpId();
 			NodeManager.nLogger.info("-> Received STATE_ACK from Op: "+opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
-			
-//			opCommonProcessLogic.replayTuples(ct.getStateAck().getOpId());
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-//			outputQueue.start();
-			
-//			outputQueue = new OutputQueue();
-//			processingUnit.setOutputQueue(outputQueue);
-//			dataConsumer = new DataConsumer(this, dsa);
-//			dConsumerH = new Thread(dataConsumer);
-//			dConsumerH.start();
-			
 			outputQueue.replayTuples(cci);
-
 			// In case of failure, the thread may have died, in such case we make it runnable again.
 //			if(dConsumerH.getState() != Thread.State.TERMINATED){
 				dConsumerH = new Thread(dataConsumer);
 				dConsumerH.start();
 //			}
-
 //			operatorStatus = OperatorStatus.NORMAL;
 		}
 		/** BACKUP_RI message **/
@@ -444,16 +439,18 @@ public class CoreRE {
 			// Get index of the scaling operator
 			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
 			coreProcessLogic.backupRoutingInformation(oldOpId);
-			coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
+			int pKey = coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
 				
-			coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
+//			coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
+			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, pKey, bh);
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/
 		else if(ctt.equals(ControlTupleType.REPLAY_STATE)){
-			//Replay the state that this node keeps
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.REPLAY_STATE");
-			coreProcessLogic.directReplayState(ct.getReplayStateInfo(), bh);
+//			//Replay the state that this node keeps
+//			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.REPLAY_STATE");
+//			
+//			coreProcessLogic.directReplayState(ct.getReplayStateInfo(), bh);
 		}
 		/** STATE_CHUNK **/
 		else if(ctt.equals(ControlTupleType.STATE_CHUNK)){
@@ -474,14 +471,9 @@ public class CoreRE {
 				/// \todo {why has resumeM a list?? check this}
 				for (int opId: resumeM.getOpId()){
 					//Check if I am managing the state of any of the operators to which state must be replayed
-					/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
 					if(processingUnit.isManagingStateOf(opId)){
-						/** CHANGED ON 11/12/2012 on the road to version 0.2 **/
-//						/// \todo{if this is waiting for ack it must be managing the state, so this IF would be unnecessary}
-//						if(subclassOperator instanceof StateSplitI){
 						NodeManager.nLogger.info("-> Replaying State");
 						coreProcessLogic.replayState(opId);
-//						}
 					}
 					else{
 						NodeManager.nLogger.info("-> NOT in charge of managing this state");
@@ -553,7 +545,8 @@ public class CoreRE {
 				else{
 					// We create a new replayState request. Coming from the op to recover
 					// opId (op to recover), 1 (fake), true (is failure recovery)
-					coreProcessLogic.directReplayState(new ReplayStateInfo(opId, 1, true), bh);
+					coreProcessLogic.directReplayStateFailure(opId, bh);
+//					coreProcessLogic.directReplayState(new ReplayStateInfo(opId, 1, true), bh);
 					
 				}
 			}

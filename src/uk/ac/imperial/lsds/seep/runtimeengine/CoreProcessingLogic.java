@@ -26,6 +26,7 @@ import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
@@ -262,29 +263,12 @@ System.out.println("KEY: "+operatorType);
 	}
 	
 	public void splitState(int oldOpId, int newOpId, int key) {
-//		StateSplitI operatorToSplit = (StateSplitI)owner.getSubclassOperator();
-//		BackupOperatorState oldState = puCtx.getBuffer(oldOpId).getBackupState();
-		
-//		BackupNodeState backupNodeState = puCtx.getBuffer(oldOpId).getBackupState();
-//		for(BackupOperatorState bos : backupNodeState.getBackupOperatorState()){
-//			System.out.println("% Got Buffer from OP: "+oldOpId+" and BOS opId is: "+bos.getOpId());
-//		}
 		
 		BackupOperatorState backupOperatorState = puCtx.getBuffer(oldOpId).getBackupState();
-		
-		/** Small hack
-		BackupOperatorState backupOperatorState = backupNodeState.getBackupOperatorStateWithOpId(oldOpId);
-		**/
-		/** DUE to the last refactorization, we added a layer of indirection, making an explicit differentiation between node and operator state.
-		 * the problem of this approach is that it was breaking here. I have to access the state directly, something that without the node layer
-		 * was assumed. With the node layer, tough, the system looks for the particular ID, that might have been lost in previous calls to splitState**/
-//		BackupOperatorState backupOperatorState = backupNodeState.getBackupOperatorState()[0];
-		
 		
 		State stateToSplit = backupOperatorState.getState();
 		int stateCheckpointInterval = stateToSplit.getCheckpointInterval();
 		String stateTag = stateToSplit.getStateTag();
-//		long data_ts = stateToSplit.getData_ts();
 		TimestampTracker data_ts = stateToSplit.getData_ts();
 		State splitted[] = null;
 		if(stateToSplit instanceof Partitionable){
@@ -332,14 +316,14 @@ System.out.println("KEY: "+operatorType);
 		pu.registerManagedState(oldOpId);
 		pu.registerManagedState(newOpId);
 		
-		
 		System.out.println("% After SPLIT, oldOpId: "+puCtx.getBuffer(oldOpId).getBackupState().getOpId()+" newOpId: "+puCtx.getBuffer(newOpId).getBackupState().getOpId());
 	}
 	
-	public synchronized void manageStreamScaleOut(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+	public synchronized int manageStreamScaleOut(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
-		pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		// In case it's a stateful operator, it will return the new key that has partitioned the key space
+		return pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 	}
 	
 	public synchronized void scaleOut(ScaleOutInfo scaleOutInfo, int newOpIndex, int oldOpIndex){
@@ -475,30 +459,18 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		}
 	}
 	
-	public void directReplayState(ReplayStateInfo rsi, BackupHandler bh){
-		// Stream to one or multiple nodes?
+	//public void directReplayStateFailure(ReplayStateInfo rsi, BackupHandler bh, File folder){
+	public void directReplayStateFailure(int opId, BackupHandler bh){
 		File folder = new File("backup/");
-		// this basically means that is because of a failure
-		if(rsi.isStreamToSingleNode()){
-			directReplayStateFailure(rsi, bh, folder);
-		}
-		else{
-			directReplayStateScaleOut(rsi, bh, folder);
-		}
-	}
-	
-	private void directReplayStateFailure(ReplayStateInfo rsi, BackupHandler bh, File folder){
-		int opId = rsi.getOldOpId();
-		InetAddress ip = puCtx.getDCCfromOpId(opId).getIp();
 		String lastSessionName = bh.getLastBackupSessionName(opId);
 		ArrayList<File> filesToStream = new ArrayList<File>();
+		SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
+		Socket controlSocket = cci.getDownstreamControlSocket();
 		int totalNumberChunks = 0;
 		
 		// Read folder and filter out files to send through the network
 		try {
-			Socket controlSocket = new Socket(ip, (Main.CONTROL_SOCKET+opId));
 			NodeManager.nLogger.info("-> Request to stream to a single node");
-			
 			Output output = new Output(controlSocket.getOutputStream());
 			///\todo{Can't all this block of code just be avoided by accessing directly the channels}
 			// ok, cause there is no simple way to access to the filechannel names. We can use the file objects that are ready to
@@ -544,19 +516,18 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		}
 	}
 	
-	private void directReplayStateScaleOut(ReplayStateInfo rsi, BackupHandler bh, File folder){
-		int oldOpId = rsi.getOldOpId();
-		int newOpId = rsi.getNewOpId();
+	//public void directReplayStateScaleOut(ReplayStateInfo rsi, BackupHandler bh, File folder){
+	public void directReplayStateScaleOut(int oldOpId, int newOpId, int key, BackupHandler bh){
+		File folder = new File("backup/");
 		String lastSessionName = bh.getLastBackupSessionName(oldOpId);
 		int totalNumberChunks = 0;
 		
-		InetAddress oldIp = puCtx.getDCCfromOpId(oldOpId).getIp();
-		InetAddress newIp = puCtx.getDCCfromOpId(newOpId).getIp();
+		Socket oldS = puCtx.getCCIfromOpId(oldOpId, "d").getDownstreamControlSocket();
+		Socket newS = puCtx.getCCIfromOpId(newOpId, "d").getDownstreamControlSocket();
 		
 		ArrayList<File> filesToStream = new ArrayList<File>();
+		
 		try{
-			Socket oldS = new Socket(oldIp, (Main.CONTROL_SOCKET+oldOpId));
-			Socket newS = new Socket(oldIp, (Main.CONTROL_SOCKET+newOpId));
 			Output oldO = new Output(oldS.getOutputStream());
 			Output newO = new Output(newS.getOutputStream());
 			// Get files to replay
@@ -572,110 +543,68 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 			// There is a fixed size per chunk, so there is an upper bound size per partition. Let's then
 			// make dynamically-sized chunks.
 			// Every two file chunks, we send the batched state
+			Input i = null;
 			ArrayList<Object> oldPartition = new ArrayList<Object>();
 			ArrayList<Object> newPartition = new ArrayList<Object>();
+			int numberBatchChunks = 2;
+			int currentNumberBatch = 0;
 			for(File chunk : filesToStream){
-				Input i = new Input(new FileInputStream(chunk));
+				currentNumberBatch++;
+				i = new Input(new FileInputStream(chunk));
 				ControlTuple ct = k.readObject(i, ControlTuple.class);
 				MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
+				Object sample = mc.chunk.get(0);
+				// agh... java...
+				///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}
+				if(sample instanceof Integer){
+					for(int j = 0; j < mc.chunk.size(); j++){
+						Integer k = (Integer)mc.chunk.get(j);
+						if(Router.customHash(k) > key){
+							newPartition.add(k);
+							j++;
+							newPartition.add(mc.chunk.get(j));
+						}
+						else{
+							oldPartition.add(k);
+							j++;
+							oldPartition.add(mc.chunk.get(j));
+						}
+					}
+				}
+				else if(sample instanceof String){
+					for(int j = 0; j < mc.chunk.size(); j++){
+						String k = (String)mc.chunk.get(j);
+						if(Router.customHash(k) > key){
+							newPartition.add(k);
+							j++;
+							newPartition.add(mc.chunk.get(j));
+						}
+						else{
+							oldPartition.add(k);
+							j++;
+							oldPartition.add(mc.chunk.get(j));
+						}
+					}
+				}
+				if(currentNumberBatch == numberBatchChunks){
+					currentNumberBatch = 0;
+					MemoryChunk oldMC = new MemoryChunk(oldPartition);
+					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, currentNumberBatch, oldMC);
+					k.writeObject(oldO, oldCT);
+					oldO.flush();
+					MemoryChunk newMC = new MemoryChunk(newPartition);
+					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC);
+					k.writeObject(newO, newCT);
+					newO.flush();
+				}
 			}
-			
-			k.writeObject(output, ct);
-			output.flush();
 			i.close();
-			System.out.println("CT: "+ct.toString());
-			
 		}
 		catch(IOException io){
 			
 			io.printStackTrace();
 		}
 		
-	}
-	
-	///\fixme{REFACTOR this whole method. Now it is time to hash on key and then module the downstream. Also we have to access
-	// the routing information to make sure we are not doing anything wrong}
-	private void _directReplayStateScaleOut(ReplayStateInfo rsi, final BackupHandler bh, File folder){
-		NodeManager.nLogger.info("-> DISTRIBUTED-SCALE-OUT");
-		int oldOpId = rsi.getOldOpId();
-		int newOpId = rsi.getNewOpId();
-		
-		
-		SynchronousCommunicationChannel old_cci = puCtx.getCCIfromOpId(oldOpId, "d");
-		SynchronousCommunicationChannel new_cci = puCtx.getCCIfromOpId(newOpId, "d");
-		Socket old_controlDownstreamSocket = old_cci.getDownstreamControlSocket();
-		Socket new_controlDownstreamSocket = new_cci.getDownstreamControlSocket();
-		
-		//Only the old op could send a backup
-		String lastSessionName = bh.getLastBackupSessionName(oldOpId);
-		
-		
-		int old_totalNumberChunks = 0;
-		int new_totalNumberChunks = 0;
-		final ArrayList<File> old_filesToStream = new ArrayList<File>();
-		ArrayList<File> new_filesToStream = new ArrayList<File>();
-		// Read folder and filter out files to send through the network
-		try {
-			final Output old_output = new Output(old_controlDownstreamSocket.getOutputStream());
-			Output new_output = new Output(new_controlDownstreamSocket.getOutputStream());
-			for(File chunkFile : folder.listFiles()){
-				String chunkName = chunkFile.getName();
-				String[] splits = chunkName.split("_");
-				// If chunk matches the current session
-				if(splits[1].equals(lastSessionName)){
-					if(splits[0].equals("P0")){
-						old_totalNumberChunks++;
-						old_filesToStream.add(chunkFile);
-					}
-					else if(splits[0].equals("P1")){
-						new_totalNumberChunks++;
-						new_filesToStream.add(chunkFile);
-					}
-				}
-			}
-			NodeManager.nLogger.info("-> Stream: "+old_filesToStream.size()+" to old operator");
-			NodeManager.nLogger.info("-> Stream: "+new_filesToStream.size()+" to new operator");
-			// Finally we stream the files back to the new operators (in parallel)
-			for(File chunkFile : old_filesToStream){
-				Input i;
-				try {
-					i = new Input(new FileInputStream(chunkFile));
-					ControlTuple ct = k.readObject(i, ControlTuple.class);
-					ct.getStateChunk().setTotalChunks(old_filesToStream.size());
-					k.writeObject(old_output, ct);
-					old_output.flush();
-					i.close();
-				} 
-				catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			
-			for(File chunkFile : new_filesToStream){
-				Input i;
-				try {
-					i = new Input(new FileInputStream(chunkFile));
-					ControlTuple ct = k.readObject(i, ControlTuple.class);
-					ct.getStateChunk().setTotalChunks(new_filesToStream.size());
-					k.writeObject(new_output, ct);
-					new_output.flush();
-					i.close();
-				} 
-				catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 	
 	private int totalExpectedChunks = -1;
@@ -734,7 +663,104 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 	
 	private boolean matchSession(int opId, String fileName, String sessionName){
 		String[] splits = fileName.split("_");
-		
 		return (splits[2].equals(sessionName) && splits[1].equals(new Integer(opId).toString()));
 	}
 }
+
+//public void directReplayState(ReplayStateInfo rsi, BackupHandler bh){
+//// Stream to one or multiple nodes?
+//File folder = new File("backup/");
+//// this basically means that is because of a failure
+//if(rsi.isStreamToSingleNode()){
+//	directReplayStateFailure(rsi, bh, folder);
+//}
+//else{
+//	directReplayStateScaleOut(rsi, bh, folder);
+//}
+//}
+
+
+///\fixme{REFACTOR this whole method. Now it is time to hash on key and then module the downstream. Also we have to access
+// the routing information to make sure we are not doing anything wrong}
+//private void _directReplayStateScaleOut(ReplayStateInfo rsi, final BackupHandler bh, File folder){
+//	NodeManager.nLogger.info("-> DISTRIBUTED-SCALE-OUT");
+//	int oldOpId = rsi.getOldOpId();
+//	int newOpId = rsi.getNewOpId();
+//	
+//	
+//	SynchronousCommunicationChannel old_cci = puCtx.getCCIfromOpId(oldOpId, "d");
+//	SynchronousCommunicationChannel new_cci = puCtx.getCCIfromOpId(newOpId, "d");
+//	Socket old_controlDownstreamSocket = old_cci.getDownstreamControlSocket();
+//	Socket new_controlDownstreamSocket = new_cci.getDownstreamControlSocket();
+//	
+//	//Only the old op could send a backup
+//	String lastSessionName = bh.getLastBackupSessionName(oldOpId);
+//	
+//	
+//	int old_totalNumberChunks = 0;
+//	int new_totalNumberChunks = 0;
+//	final ArrayList<File> old_filesToStream = new ArrayList<File>();
+//	ArrayList<File> new_filesToStream = new ArrayList<File>();
+//	// Read folder and filter out files to send through the network
+//	try {
+//		final Output old_output = new Output(old_controlDownstreamSocket.getOutputStream());
+//		Output new_output = new Output(new_controlDownstreamSocket.getOutputStream());
+//		for(File chunkFile : folder.listFiles()){
+//			String chunkName = chunkFile.getName();
+//			String[] splits = chunkName.split("_");
+//			// If chunk matches the current session
+//			if(splits[1].equals(lastSessionName)){
+//				if(splits[0].equals("P0")){
+//					old_totalNumberChunks++;
+//					old_filesToStream.add(chunkFile);
+//				}
+//				else if(splits[0].equals("P1")){
+//					new_totalNumberChunks++;
+//					new_filesToStream.add(chunkFile);
+//				}
+//			}
+//		}
+//		NodeManager.nLogger.info("-> Stream: "+old_filesToStream.size()+" to old operator");
+//		NodeManager.nLogger.info("-> Stream: "+new_filesToStream.size()+" to new operator");
+//		// Finally we stream the files back to the new operators (in parallel)
+//		for(File chunkFile : old_filesToStream){
+//			Input i;
+//			try {
+//				i = new Input(new FileInputStream(chunkFile));
+//				ControlTuple ct = k.readObject(i, ControlTuple.class);
+//				ct.getStateChunk().setTotalChunks(old_filesToStream.size());
+//				k.writeObject(old_output, ct);
+//				old_output.flush();
+//				i.close();
+//			} 
+//			catch (FileNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		
+//		for(File chunkFile : new_filesToStream){
+//			Input i;
+//			try {
+//				i = new Input(new FileInputStream(chunkFile));
+//				ControlTuple ct = k.readObject(i, ControlTuple.class);
+//				ct.getStateChunk().setTotalChunks(new_filesToStream.size());
+//				k.writeObject(new_output, ct);
+//				new_output.flush();
+//				i.close();
+//			} 
+//			catch (FileNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//	}
+//	catch (FileNotFoundException e) {
+//		// TODO Auto-generated catch block
+//		e.printStackTrace();
+//	}
+//	catch (IOException e) {
+//		// TODO Auto-generated catch block
+//		e.printStackTrace();
+//	}
+//}

@@ -16,4 +16,12 @@ public class MemoryChunk {
 
 	public ArrayList<Object> chunk;
 	
+	public MemoryChunk(){
+		
+	}
+	
+	public MemoryChunk(ArrayList<Object> chunk){
+		this.chunk = chunk;
+	}
+	
 }
