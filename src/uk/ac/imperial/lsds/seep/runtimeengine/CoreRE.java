@@ -29,7 +29,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
@@ -596,7 +595,7 @@ public class CoreRE {
 		int opId = processingUnit.getOperator().getOperatorId();
 		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
 		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
-		for(int i = 0; i<starTopologySize; i++){
+		for(int i = 0; i < starTopologySize; i++){
 			controlDispatcher.sendCloseSession(closeSignal, i);
 		}
 	}

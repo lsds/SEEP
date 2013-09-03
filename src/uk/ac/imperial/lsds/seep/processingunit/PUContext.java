@@ -52,7 +52,7 @@ public class PUContext {
 	private Vector<EndPoint> upstreamTypeConnection = null;
 	
 	//The structure just stores the ip adresses of those nodes in the topology ready to receive state chunks
-	private ArrayList<EndPoint> starTopology = null; 
+	private ArrayList<EndPoint> starTopology = null;
 	
 	// Selector for asynchrony in downstream connections
 	private Selector selector;
@@ -80,7 +80,7 @@ public class PUContext {
 		return starTopology.add(oscc);
 	}
 	
-	public DisposableCommunicationChannel getDCCfromOpId(int opId){
+	public DisposableCommunicationChannel getDCCfromOpIdInStarTopology(int opId){
 		for(EndPoint dcc : starTopology){
 			if(dcc.getOperatorId() == opId){
 				return (DisposableCommunicationChannel)dcc;

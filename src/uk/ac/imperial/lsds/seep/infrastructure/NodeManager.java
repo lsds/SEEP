@@ -135,19 +135,12 @@ public class NodeManager{
 				out = new PrintWriter(clientSocket.getOutputStream(), true);
 				//Establish input stream, which receives serialized objects
 				ois = new ExtendedObjectInputStream(clientSocket.getInputStream(), rcl);
-//				hack = rcl.getEOIS(clientSocket.getInputStream());
 				//Read the serialized object sent.
 				ObjectStreamClass osc = ois.readClassDescriptor();
-//				System.out.println("Reading class descriptor: "+osc.toString());
 				//Lazy load of the required class in case is an operator
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
 					NodeManager.nLogger.info("-> Received Unknown Class ->"+osc.getName()+"<- Using custom class loader to resolve it");
-					Class<?> baseI = rcl.loadClass(osc.getName());
-					
-//					Constructor<?> constructor = baseI.getConstructor(new Class[]{Integer.TYPE});
-//					Object[] initargs = new Object[1];
-//					initargs[0] = -666;
-//					Object base = constructor.newInstance(initargs);
+					rcl.loadClass(osc.getName());
 					o = ois.readObject();
 					if(o instanceof Operator){
 						NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
@@ -159,14 +152,11 @@ public class NodeManager{
 				else{
 					o = ois.readObject();
 				}
-				// Can I read the object with the class supposedly loaded in the environment?
-//				o = ois.readObject();
 				//Check the class of the object received and initialized accordingly
 				if(o instanceof Operator){
 					core.pushOperator((Operator)o);
 				}
 				else if(o instanceof Integer){
-//					this.newOperatorInitialization(o);
 					core.setOpReady((Integer)o);
 				}
 				else if(o instanceof String){
@@ -251,26 +241,21 @@ public class NodeManager{
 		catch(IOException io){
 			System.out.println("IOException: "+io.getMessage());
 			io.printStackTrace();
-//			out.println("nack");
 		}
 		catch(IllegalThreadStateException itse){
 			System.out.println("IllegalThreadStateException, no problem, monitor thing");
 			itse.printStackTrace();
 		} 
 		catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (SecurityException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 	}
-	
 	
 	private void loadCodeToRuntime(File pathToCode){
 		URL urlToCode = null;
@@ -279,11 +264,9 @@ public class NodeManager{
 			System.out.println("Loading into class loader: "+urlToCode.toString());
 			URL[] urls = new URL[1];
 			urls[0] = urlToCode;
-			//rcl = new RuntimeClassLoader(urls, this.getClass().getClassLoader());
 			rcl.addURL(urlToCode);
 		}
 		catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
