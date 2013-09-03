@@ -52,7 +52,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	
 	public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
 		this.owner = owner;
-		ctx = new PUContext(owner.getNodeDescr());
+		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
 	}
 	

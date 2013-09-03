@@ -60,8 +60,9 @@ public class PUContext {
 	//map in charge of storing the buffers that this operator is using
 	private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
-	public PUContext(WorkerNodeDescription nodeDescr){
+	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
 		this.nodeDescr = nodeDescr;
+		this.starTopology = starTopology;
 		try {
 			this.selector = SelectorProvider.provider().openSelector();
 		} 

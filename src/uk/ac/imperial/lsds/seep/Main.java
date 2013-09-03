@@ -42,7 +42,6 @@ public class Main {
 		DATA_SOCKET = new Integer(P.valueFor("dataSocket"));
 		BLIND_SOCKET = new Integer(P.valueFor("blindSocket"));
 		
-		
 		if(args.length == 0){
 			System.out.println("ARGS:");
 			System.out.println("Master <querySourceFile.jar> <MainClass>");

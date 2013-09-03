@@ -35,6 +35,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
@@ -57,6 +58,7 @@ public class CoreRE {
 	private IProcessingUnit processingUnit = null;
 	private PUContext puCtx = null;
 	private RuntimeClassLoader rcl = null;
+	private ArrayList<EndPoint> starTopology = null;
 	
 	private int backupUpstreamIndex = -1;
 
@@ -111,6 +113,14 @@ public class CoreRE {
 			processingUnit = new StatelessProcessingUnit(this, multicoreSupport);
 		}
 		processingUnit.newOperatorInstantiation(o);
+	}
+	
+	public void pushStarTopology(ArrayList<EndPoint> starTopology){
+		this.starTopology = starTopology;
+	}
+	
+	public ArrayList<EndPoint> getInitialStarTopology(){
+		return starTopology;
 	}
 	
 	public void setOpReady(int opId) {

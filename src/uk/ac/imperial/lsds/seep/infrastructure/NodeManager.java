@@ -23,10 +23,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.Monitor;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
@@ -41,7 +43,6 @@ import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 public class NodeManager{
 	
 	private WorkerNodeDescription nodeDescr;
-		
 	private RuntimeClassLoader rcl = null;
 	
 	//Endpoint of the central node
@@ -51,14 +52,10 @@ public class NodeManager{
 	private int ownPort;
 	
 	public static Logger nLogger = Logger.getLogger("seep");
-	
 	private NodeManagerCommunication bcu = new NodeManagerCommunication();
 	
 	static public boolean monitorOfSink = false;
-	
 	static public long clock = 0;
-	
-	
 	static public Monitor nodeMonitor = new Monitor();
 	static public int second;
 	static public double throughput;
@@ -69,14 +66,12 @@ public class NodeManager{
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
 		this.ownPort = ownPort;
-		
 		try {
 			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
-		
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
 	
@@ -158,6 +153,9 @@ public class NodeManager{
 				}
 				else if(o instanceof Integer){
 					core.setOpReady((Integer)o);
+				}
+				else if(o instanceof ArrayList<?>){
+					core.pushStarTopology((ArrayList<EndPoint>)o);
 				}
 				else if(o instanceof String){
 					String tokens[] = ((String)o).split(" ");

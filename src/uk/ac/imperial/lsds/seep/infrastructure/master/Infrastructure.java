@@ -43,6 +43,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MonitorManager;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
@@ -51,6 +52,7 @@ import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
+import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -63,13 +65,11 @@ import com.esotericsoftware.kryo.io.Output;
 public class Infrastructure {
 
 	public static Logger nLogger = Logger.getLogger("seep");
-	
 	int value = Integer.parseInt(P.valueFor("maxLatencyAllowed"));
-	
 	static public MasterStatisticsHandler msh = new MasterStatisticsHandler();
 	
 	private int baseId = Integer.parseInt(P.valueFor("baseId"));
-
+	
 	private Deque<Node> nodeStack = new ArrayDeque<Node>();
 	private int numberRunningMachines = 0;
 
@@ -77,7 +77,6 @@ public class Infrastructure {
 	private String pathToQueryDefinition = null;
 	
 	///\todo{Put this in a map{query->structure} and refer back to it properly}
-	/** The following wrapped attributes are specific to a query **/
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	// States of the query
 	private ArrayList<State> states = new ArrayList<State>();
@@ -87,7 +86,8 @@ public class Infrastructure {
 	private Operator snk;
 	//Mapping of operators to node
 	private Map<Integer, ArrayList<Operator>> queryToNodesMapping = new HashMap<Integer, ArrayList<Operator>>();
-	/** Until here **/
+	//map with star topology information
+	private ArrayList<EndPoint> starTopology = new ArrayList<EndPoint>();
 	
 	private RuntimeCommunicationTools rct = new RuntimeCommunicationTools();
 	private NodeManagerCommunication bcu = new NodeManagerCommunication();
@@ -132,14 +132,24 @@ public class Infrastructure {
 		configureRouterStatically();
 		eiu.executeStaticScaleOutFromIntent(soib);
 		
-		// Finally we set up the InputDataIngestionMode per operator
+		// Then we set up the InputDataIngestionMode per operator
 		///fixme{Wasteful method, but no performance critical anyway}
 		for(Operator op : ops){
 			// Never will be empty, as there are no sources here (so all operators will have at least one upstream
 			makeDataIngestionModeLocalToOp(op);
 		}
-		// Finally do the inversion with sink, since this also has upstream operators.
+		// Then we do the inversion with sink, since this also has upstream operators.
 		makeDataIngestionModeLocalToOp(snk);
+		// We build the initialStarTopology
+		for(Operator op : ops){
+			// sources and sinks are not part of the starTopology
+			if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
+				int opId = op.getOperatorId();
+				InetAddress ip = op.getOpContext().getOperatorStaticInformation().getMyNode().getIp();
+				DisposableCommunicationChannel oscc = new DisposableCommunicationChannel(opId, ip);
+				starTopology.add(oscc);
+			}
+		}
 	}
 	
 	private void makeDataIngestionModeLocalToOp(Operator op){
@@ -352,13 +362,14 @@ public class Infrastructure {
   		//Deploy operators (push operators to nodes)
 		for(Operator op: ops){
 	     	//Establish the connection with the specified address
+			Infrastructure.nLogger.info("-> Deploying OP-"+op.getOperatorId());
 			deploy(op);
 		}
 
 		//Once all operators have been pushed to the nodes, we say that those are ready to run
 		for(Operator op : ops){
 			//Establish the connection with the specified address
-			Infrastructure.nLogger.info("-> Infrastructure. Configuring OP-"+op.getOperatorId());
+			Infrastructure.nLogger.info("-> Configuring OP-"+op.getOperatorId());
 			init(op);
 		}
 		
@@ -366,6 +377,12 @@ public class Infrastructure {
 		for(State s : states){
 			//Send every state to all the worker nodes
 			broadcastState(s);
+		}
+		
+		//Broadcast the information regarding the initialStarTopology
+		for(Operator op : ops){
+			//Send star topology
+			broadcastStarTopology(op, this.starTopology);
 		}
 		
 		//Finally, we tell the nodes to initialize all communications, all is ready to run
@@ -415,25 +432,31 @@ public class Infrastructure {
 	public void sendCode(Operator op, byte[] data){
 		///\fixme{once there are more than one op per node this code will need to be fixed}
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Infrastructure. Sending CODE to node: "+node.toString());
+		Infrastructure.nLogger.info("-> Sending CODE to node: "+node.toString());
 		bcu.sendFile(node, data);
 	}
 
 	public void deploy(Operator op) {
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Infrastructure. Deploying OP-"+op.getOperatorId());
+		Infrastructure.nLogger.info("-> Deploying OP-"+op.getOperatorId());
 		bcu.sendObject(node, op);
+	}
+	
+	public void broadcastStarTopology(Operator op, ArrayList<EndPoint> initialStarTopology){
+		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+		Infrastructure.nLogger.info("-> Sending starTopology to OP-"+op.getOperatorId());
+		bcu.sendObject(node, initialStarTopology);
 	}
 
 	public void init(Operator op) {
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Infrastructure. Initializing OP-"+op.getOperatorId());
+		Infrastructure.nLogger.info("-> Initializing OP-"+op.getOperatorId());
 		bcu.sendObject(node, op.getOperatorId());
 	}
 	
 	public void initRuntime(Operator op){
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Infrastructure. Starting RUNTIME-"+op.getOperatorId());
+		Infrastructure.nLogger.info("-> Starting RUNTIME-"+op.getOperatorId());
 		bcu.sendObject(node, "SET-RUNTIME");
 	}
 
