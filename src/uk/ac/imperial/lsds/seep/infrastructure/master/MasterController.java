@@ -193,6 +193,8 @@ public class MasterController {
 		NodeManager.nLogger.info("-> Deploying operators to Nodes");
 		//First configure statically (local) the connections between operators
 		inf.deployQueryToNodes();
+		// Create initial starTopology
+		inf.createInitialStarTopology();
 		//Finally deploy the new submitted query (instantiation, etc)
 		try {
 			// The code is previously sent to the nodes (when these attached to the master)
@@ -210,10 +212,6 @@ public class MasterController {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-//		catch (CodeDeploymentException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 		NodeManager.nLogger.info("-> DONE");
 	}
 	

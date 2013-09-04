@@ -184,14 +184,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
 	}
 	
-//	@Deprecated
-//	public void route(String attributeToQuery, Router.RelationalOperator operand, int valueToMatch, Operator toConnect){
-//		int opId = toConnect.getOperatorId();
-//		opContext.setQueryAttribute(attributeToQuery);
-//		opContext.routeValueToDownstream(operand, valueToMatch, opId);
-//		NodeManager.nLogger.info("Operator: "+this.toString()+" sends data with value: "+valueToMatch+" to Operator: "+toConnect.toString());
-//	}
-	
 	public void _declareWorkingAttributes(List<String> attributes){
 		opContext.setDeclaredWorkingAttributes(attributes);
 	}

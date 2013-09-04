@@ -140,16 +140,6 @@ public class Infrastructure {
 		}
 		// Then we do the inversion with sink, since this also has upstream operators.
 		makeDataIngestionModeLocalToOp(snk);
-		// We build the initialStarTopology
-		for(Operator op : ops){
-			// sources and sinks are not part of the starTopology
-			if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
-				int opId = op.getOperatorId();
-				InetAddress ip = op.getOpContext().getOperatorStaticInformation().getMyNode().getIp();
-				DisposableCommunicationChannel oscc = new DisposableCommunicationChannel(opId, ip);
-				starTopology.add(oscc);
-			}
-		}
 	}
 	
 	private void makeDataIngestionModeLocalToOp(Operator op){
@@ -280,11 +270,24 @@ public class Infrastructure {
 	}
 	
 	public void deployQueryToNodes(){
-		//	Finally get the mapping for this query and assing real nodes
+		//	Finally get the mapping for this query and assign real nodes
 		for(Entry<Integer, ArrayList<Operator>> e : queryToNodesMapping.entrySet()){
 			Node a = getNodeFromPool();
 			for(Operator o : e.getValue()){
 				placeNew(o, a);
+			}
+		}
+	}
+	
+	public void createInitialStarTopology(){
+		// We build the initialStarTopology
+		for(Operator op : ops){
+			// sources and sinks are not part of the starTopology
+			if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
+				int opId = op.getOperatorId();
+				InetAddress ip = op.getOpContext().getOperatorStaticInformation().getMyNode().getIp();
+				DisposableCommunicationChannel oscc = new DisposableCommunicationChannel(opId, ip);
+				starTopology.add(oscc);
 			}
 		}
 	}

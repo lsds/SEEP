@@ -33,8 +33,6 @@ public class Router implements Serializable{
 	private static final int INDEX_FOR_ROUTING_IMPL = 0;
 
 	private static CRC32 crc32 = new CRC32();
-
-//	private String queryAttribute = null;
 	
 	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
 	private boolean requiresLogicalRouting = false;
@@ -45,17 +43,8 @@ public class Router implements Serializable{
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
-		//For now just supported equals operator
 		EQ
 	}
-	
-//	public Router(String query, HashMap<Integer, ArrayList<Integer>> routeInfo){
-//		if(query != null){
-//			this.requiresLogicalRouting = true;
-//		}
-////		this.queryAttribute = query;
-//		this.routeInfo = routeInfo;
-//	}
 	
 	public Router(boolean requiresLogicalRouting, HashMap<Integer, ArrayList<Integer>> routeInfo){
 		this.requiresLogicalRouting = requiresLogicalRouting;
@@ -97,50 +86,7 @@ System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
 //remove with the try-catch
 return null;
 }
-	
-	//if less or greater is than a given value. if equal could be with many values, with range is a special case as well
-//	public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
-//		//if it is operator EQUALS, use specific routeInfo
-//		if(operator.equals(RelationalOperator.EQ)){
-//			//If there was a downstream assigned for this value
-//			if(routeInfo.containsKey(value)){
-//				// add the new downstream
-//				routeInfo.get(value).add(downstream);
-//			}
-//			else{
-//				ArrayList<Integer> aux = new ArrayList<Integer>();
-//				aux.add(downstream);
-//				routeInfo.put(value,aux);
-//			}
-//		}
-//	}
-	
-	/**
-	 * this function must be executed when the operator is not initialized yet. at this point all it has is the main topology of the query
-	 * and so it needs just to put a routingImpl per oprator. Now, the problem is that when this is being called because of a scale out/scale in
-	 * the downstream is not the original one. NEED to differentiate between main/execution graph. Or, make explicit whith type is and call as it is required
-	 * CHANGE-> actually the DIFFERENTIATION IS required
-	**/
-	/*public void _configureRoutingImpl(OperatorContext opContext){
-		RoutingStrategyI rs = null;
-		int opId = 0;
-		//For every downstream
-		for(PlacedOperator down : opContext.downstreams){
-			opId = down.opID();
-			int index = opContext.findDownstream(opId).index();
-			if(!down.isStateful()){
-				int numDownstreams = opContext.getDownstreamSize();
-				rs = new StatelessRoutingImpl(1, index, numDownstreams);
-			}
-			else if(down.isStateful()){
-				rs = new StatefulRoutingImpl(index);
-			}
-			System.out.println("ADDED");
-			downstreamRoutingImpl.put(opId, rs);
-		}
-		NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
-	}*/
-	
+
 	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
 		RoutingStrategyI rs = null;
 		System.out.println("ORIGINAL DOWN SIZE: "+downstream.size());
@@ -201,27 +147,20 @@ return null;
 		return targets;
 	}
 	
-//	@Deprecated
-//	public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
-//		ArrayList<Integer> targets = new ArrayList<Integer>();
-//		
-//		// Check if i have data to query data. branches
-//		
-//		//If it is necessary to query data to guess (logic)downstream
-//		if(requiresQueryData){
-//			ArrayList<Integer> logicalTargets = logicalRouting(dt, value);
-//			targets = physicalRouting(logicalTargets, value);
-//		}
-//		else{
-//			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
-//		}
-//		return targets;
-//	}
-	
 	public ArrayList<Integer> forward(DataTuple dt){
-		///\fixme{ In this case, value is not necessary. Calling this method means that downstream is stateless, in which case 
-		/// value has no effect in the route method. Refactor here}
 		int value = 0;
+		if(downstreamRoutingImpl == null){
+			System.out.println("downstreamrouting impl null");
+			System.exit(0);
+		}
+		if(downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL) == null){
+			for(Integer i : downstreamRoutingImpl.keySet()){
+				System.out.println(downstreamRoutingImpl.get(i));
+			}
+			System.out.println("idx for routing impl");
+			System.exit(0);
+		}
+	
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
 	}
 	
@@ -329,3 +268,64 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 		return customHash(v);
 	}
 }
+
+//@Deprecated
+//public ArrayList<Integer> forward(DataTuple dt, int value, boolean now){
+//	ArrayList<Integer> targets = new ArrayList<Integer>();
+//	
+//	// Check if i have data to query data. branches
+//	
+//	//If it is necessary to query data to guess (logic)downstream
+//	if(requiresQueryData){
+//		ArrayList<Integer> logicalTargets = logicalRouting(dt, value);
+//		targets = physicalRouting(logicalTargets, value);
+//	}
+//	else{
+//		targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+//	}
+//	return targets;
+//}
+
+
+//if less or greater is than a given value. if equal could be with many values, with range is a special case as well
+//public void routeValueToDownstream(RelationalOperator operator, int value, int downstream){
+//	//if it is operator EQUALS, use specific routeInfo
+//	if(operator.equals(RelationalOperator.EQ)){
+//		//If there was a downstream assigned for this value
+//		if(routeInfo.containsKey(value)){
+//			// add the new downstream
+//			routeInfo.get(value).add(downstream);
+//		}
+//		else{
+//			ArrayList<Integer> aux = new ArrayList<Integer>();
+//			aux.add(downstream);
+//			routeInfo.put(value,aux);
+//		}
+//	}
+//}
+
+/**
+ * this function must be executed when the operator is not initialized yet. at this point all it has is the main topology of the query
+ * and so it needs just to put a routingImpl per oprator. Now, the problem is that when this is being called because of a scale out/scale in
+ * the downstream is not the original one. NEED to differentiate between main/execution graph. Or, make explicit whith type is and call as it is required
+ * CHANGE-> actually the DIFFERENTIATION IS required
+**/
+/*public void _configureRoutingImpl(OperatorContext opContext){
+	RoutingStrategyI rs = null;
+	int opId = 0;
+	//For every downstream
+	for(PlacedOperator down : opContext.downstreams){
+		opId = down.opID();
+		int index = opContext.findDownstream(opId).index();
+		if(!down.isStateful()){
+			int numDownstreams = opContext.getDownstreamSize();
+			rs = new StatelessRoutingImpl(1, index, numDownstreams);
+		}
+		else if(down.isStateful()){
+			rs = new StatefulRoutingImpl(index);
+		}
+		System.out.println("ADDED");
+		downstreamRoutingImpl.put(opId, rs);
+	}
+	NodeManager.nLogger.info("ROUTING ENGINE CONFIGURED");
+}*/

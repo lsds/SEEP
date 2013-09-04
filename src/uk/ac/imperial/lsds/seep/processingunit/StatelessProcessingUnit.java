@@ -171,7 +171,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
 		runningOp.processData(data);
-
 	}
 
 	@Override

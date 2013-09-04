@@ -35,7 +35,7 @@ public class DataConsumer implements Runnable {
 		this.owner = owner;
 		this.dataAdapter = dataAdapter;
 	}
-
+	
 	@Override
 	public void run() {
 		Map<Integer, DataStructureI> inputDataModeMap = dataAdapter.getInputDataIngestionModeMap();

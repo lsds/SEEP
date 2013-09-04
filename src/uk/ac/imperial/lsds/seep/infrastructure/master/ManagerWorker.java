@@ -160,12 +160,12 @@ public class ManagerWorker implements Runnable {
 			System.out.println(op);
 		}
 
-		private void connectCommand(String[] id)
-		throws NumberFormatException {
-			QuerySpecificationI src = inf.elements.get(Integer.parseInt(id[1]));
-			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(id[2]));
-			src.connectTo(dst, false);
-		}
+//		private void connectCommand(String[] id)
+//		throws NumberFormatException {
+//			QuerySpecificationI src = inf.elements.get(Integer.parseInt(id[1]));
+//			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(id[2]));
+//			src.connectTo(dst, false);
+//		}
 		
 		/// \todo {java 7 supports switch(string)}
 		public void run(){
@@ -210,9 +210,9 @@ public class ManagerWorker implements Runnable {
 							addOperatorCommand(token[1], token[2], token[3]);
 						}
 						//should I place connect in infrastructure?
-						else if(token[0].equals("connect")) {
-							connectCommand(token);
-						}
+//						else if(token[0].equals("connect")) {
+//							connectCommand(token);
+//						}
 						else if(token[0].equals("place")) {
 							placeCommand(token);
 						}

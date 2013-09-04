@@ -1,11 +1,13 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
-public class DisposableCommunicationChannel implements EndPoint {
+public class DisposableCommunicationChannel implements EndPoint, Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private int opId;
 	private InetAddress ip;
 	
@@ -22,5 +24,4 @@ public class DisposableCommunicationChannel implements EndPoint {
 	public InetAddress getIp(){
 		return ip;
 	}
-
 }

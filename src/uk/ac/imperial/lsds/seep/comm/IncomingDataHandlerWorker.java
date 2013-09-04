@@ -115,7 +115,10 @@ public class IncomingDataHandlerWorker implements Runnable{
 				for(TuplePayload t_payload : batch){
 					long incomingTs = t_payload.timestamp;
 					// Check for already processed data
+					/// \todo{should be <= but the problem is that logical clock in java has ms granularity. This means that once you
+					/// send more than 1000 events per second, some events are discarded here, since their ts is the same...}
 					if(incomingTs <= lastIncomingTs){
+						System.out.println("Duplicate");
 						continue;
 					}
 					owner.setTsData(opId, incomingTs);
