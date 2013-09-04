@@ -72,7 +72,6 @@ public class QueryPlan {
 		return mapOperatorToNode;
 	}
 	
-	
 	/** User facing methods **/
 	
 	public Operator newStatefulSource(Operator op, int opId, State s, List<String> attributes){
@@ -141,14 +140,9 @@ public class QueryPlan {
 		op.setState(s);
 		op.setSubclassOperator();
 		op._declareWorkingAttributes(attributes);
-//		if(s instanceof Partitionable){
-//			String key = ((Partitionable)s).getKeyAttribute();
-//			op.getOpContext().setKeyAttribute(key);
-//		}
 		// Register state
 		this.registerState(s);
 		this.addOperator(op);
-		
 		return op;
 	}
 	
@@ -190,7 +184,6 @@ public class QueryPlan {
 	}
 	
 	/** Private methods **/
-	//This method is still valid to define which is the first operator in the query
 	private void setSource(Operator source) {
 		NodeManager.nLogger.info("Configured NEW SOURCE, Operator: "+src.toString());
 		src.add(source);
