@@ -470,7 +470,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			return null;
 		}
 		
-		State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
+		//State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
+		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
 		
 		if(!(vns instanceof Versionable) || !(vns instanceof Streamable)){
 			NodeManager.nLogger.severe("-> Trying to stream a non-streamable state");

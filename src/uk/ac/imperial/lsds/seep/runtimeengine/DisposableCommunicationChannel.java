@@ -24,4 +24,9 @@ public class DisposableCommunicationChannel implements EndPoint, Serializable {
 	public InetAddress getIp(){
 		return ip;
 	}
+	
+	@Override
+	public String toString(){
+		return "OP-ID: "+opId+" -> "+ip.toString();
+	}
 }

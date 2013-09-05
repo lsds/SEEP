@@ -290,6 +290,7 @@ public class Infrastructure {
 				starTopology.add(oscc);
 			}
 		}
+		NodeManager.nLogger.info("Initial StarTopology Size: "+starTopology.size());
 	}
 	
 	public byte[] getDataFromFile(String pathToQueryDefinition){
@@ -361,7 +362,12 @@ public class Infrastructure {
 	}
 	
 	public void deploy() throws OperatorDeploymentException {
-
+		//First broadcast the information regarding the initialStarTopology
+		for(Operator op : ops){
+			//Send star topology
+			broadcastStarTopology(op, this.starTopology);
+		}
+		
   		//Deploy operators (push operators to nodes)
 		for(Operator op: ops){
 	     	//Establish the connection with the specified address
@@ -380,12 +386,6 @@ public class Infrastructure {
 		for(State s : states){
 			//Send every state to all the worker nodes
 			broadcastState(s);
-		}
-		
-		//Broadcast the information regarding the initialStarTopology
-		for(Operator op : ops){
-			//Send star topology
-			broadcastStarTopology(op, this.starTopology);
 		}
 		
 		//Finally, we tell the nodes to initialize all communications, all is ready to run

@@ -115,10 +115,12 @@ public class CoreRE {
 		processingUnit.newOperatorInstantiation(o);
 	}
 	
+	/** Stores all the information concerning starTopology. In particular, this own operator is also included **/
 	public void pushStarTopology(ArrayList<EndPoint> starTopology){
 		this.starTopology = starTopology;
 	}
 	
+	/** Retrieves all the information concerning the star topology **/
 	public ArrayList<EndPoint> getInitialStarTopology(){
 		return starTopology;
 	}

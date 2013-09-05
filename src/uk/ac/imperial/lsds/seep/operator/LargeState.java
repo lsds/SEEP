@@ -12,6 +12,6 @@ package uk.ac.imperial.lsds.seep.operator;
 
 public interface LargeState {
 
-	public State getVersionableAndStreamableState();
+	public Object getVersionableAndStreamableState();
 	
 }

@@ -39,7 +39,6 @@ import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 import com.esotericsoftware.kryo.io.ByteBufferOutputStream;
 import com.esotericsoftware.kryo.io.Output;
 
-
 public class PUContext {
 
 	private WorkerNodeDescription nodeDescr = null;
@@ -74,6 +73,15 @@ public class PUContext {
 	
 	public int getStarTopologySize(){
 		return starTopology.size();
+	}
+	
+	public void filterStarTopology(int opId){
+		for(int i = 0; i<starTopology.size(); i++){
+			EndPoint ep = starTopology.get(i);
+			if(ep.getOperatorId() == opId){
+				starTopology.remove(i);
+			}
+		}
 	}
 	
 	public boolean addNodeToStarTopolocy(int opId, InetAddress ip){
