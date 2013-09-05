@@ -14,9 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -36,7 +34,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.processingunit.StreamStateChunk;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -64,10 +62,9 @@ public class ControlHandlerWorker implements Runnable{
 	
 	private Kryo initializeKryo(){
 		//optimize here kryo
-		Kryo k = new Kryo();
-		k.setClassLoader(owner.getRuntimeClassLoader());
+		k = new Kryo();
 		k.register(ControlTuple.class);
-		k.register(StreamStateChunk.class);
+		k.register(MemoryChunk.class);
 		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
@@ -92,24 +89,15 @@ public class ControlHandlerWorker implements Runnable{
 		InputStream is = null;
 		OutputStream os = null;
 		ControlTuple tuple = null;
-//		Seep.ControlTuple.Builder ct = null;
 		try{
-			//Establish input stream, which receives serialized objects
+			//Establish input stream, which receives serialised objects
 			is = incomingSocket.getInputStream();
 			os = incomingSocket.getOutputStream();
 			Input i = new Input(is, 100000);
 			//Read the connection to get the data
 			while(goOn){
-//				tuple = Seep.ControlTuple.parseDelimitedFrom(is);
 				tuple = k.readObject(i, ControlTuple.class);
-//				System.out.println("RECEIVED");
-/// \todo {what is the underlying problem that makes tuple potentially be null?}
 				if(tuple != null){
-//					if(tuple.getType() == null){
-//						System.out.println("MIERDA");
-//						System.out.println("RCVD FROM: "+incomingSocket.toString());
-//						System.exit(0);
-//					}
 					InetAddress ip = incomingSocket.getInetAddress();
 					owner.processControlTuple(tuple, os, ip);
 				}

@@ -508,7 +508,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			index++;
 		}
 		long startR = System.currentTimeMillis();
-		((Versionable)runningOpState).reconcile();
+		//((Versionable)runningOpState).reconcile();
+		((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).reconcile();
 		long stopR = System.currentTimeMillis();
 		System.out.println("MSG SENT: "+sequenceNumber);
 		System.out.println("TOTAL SEQ NUMER: "+ssm.getTotalNumberChunks());

@@ -14,4 +14,6 @@ public interface LargeState {
 
 	public Object getVersionableAndStreamableState();
 	
+//	public void reconcile();
+	
 }

@@ -357,11 +357,13 @@ public class CoreRE {
 		}
 		/** OPEN_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
+			System.out.println("%%%%%%%%%%%%%%%%%%");
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from OP: "+ct.getOpenSignal().getOpId());
 			bh.openSession(ct.getOpenSignal().getOpId(), remoteAddress);
 			PrintWriter out = new PrintWriter(os, true);
 			out.println("ack");
 			NodeManager.nLogger.info("-> ACK Open Signal");
+			System.out.println("%%%%%%%%%%%%%%%%%%");
 		}
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){

@@ -41,6 +41,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.processingunit.StreamStateChunk;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -62,7 +63,7 @@ public class ControlDispatcher {
 	private Kryo initializeKryo(){
 		k = new Kryo();
 		k.register(ControlTuple.class);
-		k.register(StreamStateChunk.class);
+		k.register(MemoryChunk.class);
 		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
@@ -130,6 +131,7 @@ public class ControlDispatcher {
 						System.out.println("waiting to read answer/reply");
 						reply = in.readLine();
 						System.out.println("READ");
+						in.close();
 						output.close();
 					}
 				}
@@ -183,6 +185,7 @@ public class ControlDispatcher {
 				synchronized(socket){
 					synchronized (largeOutput){
 						long startWrite = System.currentTimeMillis();
+						System.out.println("Send chunk to: "+socket.toString());
 						k.writeObject(largeOutput, ct);
 //						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
 						largeOutput.flush();

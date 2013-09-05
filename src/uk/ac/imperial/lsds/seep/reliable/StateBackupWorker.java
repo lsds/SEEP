@@ -115,18 +115,19 @@ public class StateBackupWorker implements Runnable, Serializable{
 	public void executeLargeStateMechanism(){
 		// First filter starTopology by removing this own operator
 		processingUnit.getPuContext().filterStarTopology(processingUnit.getOperator().getOperatorId());
-		System.out.println("STAR TOPOLOGY");
-		System.out.println("##############");
-		for(EndPoint dcc : processingUnit.getPuContext().getStarTopology()){
-			System.out.println((DisposableCommunicationChannel)dcc);
-		}
-		System.out.println("##############");
-		// Blocking call
-		int starTopologySize = processingUnit.getPuContext().getStarTopology().size();
-		processingUnit.getOwner().signalOpenBackupSession(starTopologySize);
-		processingUnit.lockFreeParallelCheckpointAndBackupState();
-		processingUnit.getOwner().signalCloseBackupSession(starTopologySize);
+//		System.out.println("STAR TOPOLOGY");
+//		System.out.println("##############");
+//		for(EndPoint dcc : processingUnit.getPuContext().getStarTopology()){
+//			System.out.println((DisposableCommunicationChannel)dcc);
+//		}
+//		System.out.println("##############");
+//		// Blocking call
+//		int starTopologySize = processingUnit.getPuContext().getStarTopology().size();
+//		processingUnit.getOwner().signalOpenBackupSession(starTopologySize);
+//		processingUnit.lockFreeParallelCheckpointAndBackupState();
+//		processingUnit.getOwner().signalCloseBackupSession(starTopologySize);
 		checkpointInterval = state.getCheckpointInterval();
+		int starTopologySize = 0;
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
 			if(elapsedTime > checkpointInterval){
