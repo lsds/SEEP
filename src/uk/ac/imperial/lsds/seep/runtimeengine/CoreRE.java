@@ -424,16 +424,16 @@ public class CoreRE {
 		/** DISTRIBUTED_SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.DISTRIBUTED_SCALE_OUT)){
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.DISTRIBUTED_SCALE_OUT");
-			int oldOpId = ct.getScaleOutInfo().getOldOpId();
-			int newOpId = ct.getScaleOutInfo().getNewOpId();
+			int oldOpId = ct.getDistributedScaleOutInfo().getOldOpId();
+			int newOpId = ct.getDistributedScaleOutInfo().getNewOpId();
 				
 			int newOpIndex = -1;
 			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
-				if (op.opID() == ct.getScaleOutInfo().getNewOpId())
+				if (op.opID() == newOpId)
 					newOpIndex = op.index();
 			}
 			// Get index of the scaling operator
-			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
+			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(oldOpId).index();
 			coreProcessLogic.backupRoutingInformation(oldOpId);
 			int pKey = coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
 				

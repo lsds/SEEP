@@ -16,6 +16,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.CloseSignal;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DistributedScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
@@ -39,6 +40,7 @@ public class ControlTuple {
 	private BackupOperatorState backupState;
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
+	private DistributedScaleOutInfo distributedScaleOutInfo;
 	private Resume resume;
 	private InitOperatorState initState;
 	private StateAck stateAck;
@@ -98,8 +100,16 @@ public class ControlTuple {
 		return scaleOutInfo;
 	}
 	
+	public DistributedScaleOutInfo getDistributedScaleOutInfo(){
+		return distributedScaleOutInfo;
+	}
+	
 	public void setScaleOutInfo(ScaleOutInfo scaleOutInfo) {
 		this.scaleOutInfo = scaleOutInfo;
+	}
+	
+	public void setDistributedScaleOutInfo(DistributedScaleOutInfo distributedScaleOutInfo) {
+		this.distributedScaleOutInfo = distributedScaleOutInfo;
 	}
 	
 	public Resume getResume() {
@@ -217,6 +227,12 @@ public class ControlTuple {
 	public ControlTuple makeScaleOut(int opIdToParallelize, int newOpId, boolean isStateful){
 		this.type = CoreRE.ControlTupleType.SCALE_OUT;
 		this.scaleOutInfo = new ScaleOutInfo(opIdToParallelize, newOpId, isStateful);
+		return this;
+	}
+	
+	public ControlTuple makeDistributedScaleOut(int opIdToParallelize, int newOpId){
+		this.type = CoreRE.ControlTupleType.DISTRIBUTED_SCALE_OUT;
+		this.distributedScaleOutInfo = new DistributedScaleOutInfo(opIdToParallelize, newOpId);
 		return this;
 	}
 	

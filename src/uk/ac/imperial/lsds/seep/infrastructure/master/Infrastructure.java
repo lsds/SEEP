@@ -105,6 +105,10 @@ public class Infrastructure {
 		return systemIsRunning;
 	}
 	
+	public ArrayList<EndPoint> getStarTopology(){
+		return starTopology;
+	}
+	
 	/** 
 	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
 	 * and then, for the below methods, indicate the query id that needs to be accessed.
@@ -365,7 +369,7 @@ public class Infrastructure {
 		//First broadcast the information regarding the initialStarTopology
 		for(Operator op : ops){
 			//Send star topology
-			broadcastStarTopology(op, this.starTopology);
+			broadcastStarTopology(op);
 		}
 		
   		//Deploy operators (push operators to nodes)
@@ -445,10 +449,10 @@ public class Infrastructure {
 		bcu.sendObject(node, op);
 	}
 	
-	public void broadcastStarTopology(Operator op, ArrayList<EndPoint> initialStarTopology){
+	public void broadcastStarTopology(Operator op){
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
 		Infrastructure.nLogger.info("-> Sending starTopology to OP-"+op.getOperatorId());
-		bcu.sendObject(node, initialStarTopology);
+		bcu.sendObject(node, starTopology);
 	}
 
 	public void init(Operator op) {

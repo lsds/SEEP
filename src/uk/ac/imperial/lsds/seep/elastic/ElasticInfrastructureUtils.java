@@ -21,6 +21,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Map;
 
+import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -29,6 +30,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
 import uk.ac.imperial.lsds.seep.operator.State;
@@ -95,6 +97,64 @@ public class ElasticInfrastructureUtils {
 	}
 	
 	public synchronized void scaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
+		if(P.valueFor("checkpointMode").equals("light-state")){
+			lightScaleOutOperator(opIdToParallelize, newOpId, newNode);
+		}
+		else if(P.valueFor("checkpointMode").equals("large-state")){
+			largeScaleOutOperator(opIdToParallelize, newOpId, newNode);
+		}
+//		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
+//		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
+//		//set initial time and number of downstreams
+//		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
+//		Operator newOp = addOperator(opIdToParallelize, newOpId);
+//		if(newOp == null){
+//			NodeManager.nLogger.severe("-> Impossible to scale out, operator instantiation failed");
+//			return;
+//		}
+//		//connect new operator to downstreams and upstreams
+//		configureOperatorContext(opIdToParallelize, newOp);
+//		//Get operator to parallelize
+//		
+//		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
+//		//Get pre-configured router and assign to new operator
+//		Router copyOfRouter = opToParallelize.getRouter();
+//		newOp.setRouter(copyOfRouter);
+////		inf.placeNew(newOp, newNode);
+//		inf.placeNewParallelReplica(opToParallelize, newOp, newNode);
+//		inf.updateContextLocations(newOp);
+//		//NodeManager.nLogger.info("Created new Op: "+newOp.toString());
+//		// Send query to the new node
+//		inf.setUp(newOp);
+//		//deploy new Operator
+//		//conn to new node
+//		inf.deploy(newOp);
+//		//ConfigureCommunications
+//		//conn to new node
+//		inf.init(newOp);
+//		// Make the new operator aware of the states in the system
+//		inf.broadcastState(newOp);
+//		// and also aware of the payloads
+//		// Send the SET-RUNTIME to the new op
+//		inf.initRuntime(newOp);
+//		//add upstream conn
+//		//conn to down nodes
+///**WAIT FOR ANSWER**/
+//		addUpstreamConnections(newOp);
+//		//conn to previous nodes
+//		addDownstreamConnections(newOp);
+///**UNTIL HERE**/
+//		//conn to previous node
+//		sendScaleOutMessageToUpstreams(opIdToParallelize, newOpId);
+//		//conn to previous node
+///**HERE AGAIN WAIT FOR ANSWER**/
+//		sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
+///**FINALIZE SCALE OUT PROTOCOL**/
+//		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
+//		sendSystemConfiguredToReplica(newOp);
+	}
+	
+	public void lightScaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
 		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
 		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
 		//set initial time and number of downstreams
@@ -144,6 +204,71 @@ public class ElasticInfrastructureUtils {
 /**FINALIZE SCALE OUT PROTOCOL**/
 		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
 		sendSystemConfiguredToReplica(newOp);
+	}
+	
+	public void largeScaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
+		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
+		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
+		//set initial time and number of downstreams
+		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
+		Operator newOp = addOperator(opIdToParallelize, newOpId);
+		if(newOp == null){
+			NodeManager.nLogger.severe("-> Impossible to scale out, operator instantiation failed");
+			return;
+		}
+		//connect new operator to downstreams and upstreams
+		configureOperatorContext(opIdToParallelize, newOp);
+		//Get operator to parallelize
+		
+		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
+		//Get pre-configured router and assign to new operator
+		Router copyOfRouter = opToParallelize.getRouter();
+		newOp.setRouter(copyOfRouter);
+//		inf.placeNew(newOp, newNode);
+		inf.placeNewParallelReplica(opToParallelize, newOp, newNode);
+		inf.updateContextLocations(newOp);
+		//Send star topology to new operator
+		inf.broadcastStarTopology(newOp);
+		// Send query to the new node
+		inf.setUp(newOp);
+		//deploy new Operator
+		//conn to new node
+		inf.deploy(newOp);
+		//ConfigureCommunications
+		//conn to new node
+		inf.init(newOp);
+		// Make the new operator aware of the states in the system
+		inf.broadcastState(newOp);
+		// and also aware of the payloads
+		// Send the SET-RUNTIME to the new op
+		inf.initRuntime(newOp);
+		//add upstream conn
+		//conn to down nodes
+/**WAIT FOR ANSWER**/
+		addUpstreamConnections(newOp);
+		//conn to previous nodes
+		addDownstreamConnections(newOp);
+/**UNTIL HERE**/
+		//conn to previous node
+//		sendScaleOutMessageToUpstreams(opIdToParallelize, newOpId);
+		sendDistributedScaleOutMessageToStarTopology(opIdToParallelize, newOpId);
+		//conn to previous node
+/**HERE AGAIN WAIT FOR ANSWER**/
+		sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
+/**FINALIZE SCALE OUT PROTOCOL**/
+		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
+		sendSystemConfiguredToReplica(newOp);
+	}
+	
+	public void sendDistributedScaleOutMessageToStarTopology(int opIdToParallelize, int newOpId){
+		ArrayList<Operator> ops = inf.getOps();
+		for (Operator o: ops) {
+			if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
+				NodeManager.nLogger.info("COMMAND: distributed_scale_out to: "+o.getOperatorId());
+				ControlTuple ct = new ControlTuple().makeDistributedScaleOut(opIdToParallelize, newOpId);
+				rct.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
+			}
+		}
 	}
 	
 	// One option to scale out automatically operators, statically

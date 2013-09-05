@@ -64,7 +64,7 @@ public class BackupHandlerWorker implements Runnable{
 				owner.addBackupHandler(opId, fc, f);
 			}
 			catch(Exception e){
-				NodeManager.nLogger.severe("-> While writing bk: "+fileName+" to disk = "+e.getMessage());
+				NodeManager.nLogger.severe("-> While writing bk: "+fileName+" to disk: "+e.getMessage());
 				e.printStackTrace();
 			}
 			// Read the raw data and map to file
