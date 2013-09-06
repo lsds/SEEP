@@ -71,6 +71,15 @@ public class PUContext {
 		}
 	}
 	
+	public boolean isScalingOpDirectDownstream(int opId){
+		for(EndPoint ep : downstreamTypeConnection){
+			if(ep.getOperatorId() == opId){
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public int getStarTopologySize(){
 		return starTopology.size();
 	}

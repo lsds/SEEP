@@ -18,14 +18,16 @@ public class StateChunk {
 	private int sequenceNumber;
 	private int totalChunks;
 	private MemoryChunk mc;
+	private int splittingKey;
 
 	public StateChunk(){}
 	
-	public StateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc){
+	public StateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
 		this.opId = opId;
 		this.sequenceNumber = seqNumber;
 		this.totalChunks = totalChunks;
 		this.mc = mc;
+		this.splittingKey = splittingKey;
 	}
 	
 	public int getOpId() {
@@ -54,5 +56,13 @@ public class StateChunk {
 	
 	public void setTotalChunks(int totalChunks){
 		this.totalChunks = totalChunks;
+	}
+
+	public void setSplittingKey(int key){
+		splittingKey = key;
+	}
+	
+	public int getSplittingKey() {
+		return splittingKey;
 	}
 }

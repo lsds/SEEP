@@ -122,6 +122,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	//Operator and state managed by this processingUnit
 	private Operator runningOp = null;
 	private State runningOpState = null;
+	private int minBoundKeySpace = Integer.MIN_VALUE;
+	private int maxBoundKeySpace = Integer.MAX_VALUE;
 
 	private OutputQueue outputQueue = null;
 	
@@ -139,6 +141,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
+	}
+	
+	public void setKeySpaceBounds(int minBound, int maxBound){
+		minBoundKeySpace = minBound;
+		maxBoundKeySpace = maxBound;
 	}
 	
 	public PUContext getPuContext(){
@@ -500,8 +507,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// Size of start topology
 		int sizeST = ctx.getStarTopologySize();
 		int index = 0;
+		int splittingKey = (int)(maxBoundKeySpace - minBoundKeySpace)/2;
 		while((mc = ssm.getChunk()) != null){
-			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, sequenceNumber, ssm.getTotalNumberChunks(), mc);
+			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
 			sequenceNumber++;
 			int idx = index % sizeST;
 			owner.sendBlindData(chunkMessage, idx);

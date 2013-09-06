@@ -260,12 +260,13 @@ public class CoreProcessingLogic implements Serializable{
 		System.out.println("% After SPLIT, oldOpId: "+puCtx.getBuffer(oldOpId).getBackupState().getOpId()+" newOpId: "+puCtx.getBuffer(newOpId).getBackupState().getOpId());
 	}
 	
-	public synchronized int manageStreamScaleOut(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+	public synchronized int[] manageDownstreamDistributedScaleOut(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
 		// In case it's a stateful operator, it will return the new key that has partitioned the key space
 		return pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 	}
+
 	
 	public synchronized void scaleOut(ScaleOutInfo scaleOutInfo, int newOpIndex, int oldOpIndex){
 		int oldOpId = scaleOutInfo.getOldOpId();
@@ -324,7 +325,8 @@ public class CoreProcessingLogic implements Serializable{
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
 
-		newKey = pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		int bounds[] = pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+		newKey = (bounds[1]-bounds[0])/2;
 		return newKey;
 	}
 	
@@ -437,7 +439,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				timewrite = timewrite + (c-b);
 			}
 			// Empty state chunk to indicate end of stream
-			ControlTuple endOfStream = new ControlTuple().makeStateChunk(opId, 0, 0, null);
+			ControlTuple endOfStream = new ControlTuple().makeStateChunk(opId, 0, 0, null, 0);
 			k.writeObject(output, endOfStream);
 			output.flush();
 			
@@ -455,7 +457,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 	}
 	
 	//public void directReplayStateScaleOut(ReplayStateInfo rsi, BackupHandler bh, File folder){
-	public void directReplayStateScaleOut(int oldOpId, int newOpId, int key, BackupHandler bh){
+	public void directReplayStateScaleOut(int oldOpId, int newOpId,BackupHandler bh){
 		File folder = new File("backup/");
 		String lastSessionName = bh.getLastBackupSessionName(oldOpId);
 		int totalNumberChunks = 0;
@@ -491,6 +493,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				i = new Input(new FileInputStream(chunk));
 				ControlTuple ct = k.readObject(i, ControlTuple.class);
 				MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
+				int key = ct.getStateChunk().getSplittingKey(); // read it every time? ...
 				Object sample = mc.chunk.get(0);
 				// agh... java...
 				///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}
@@ -527,11 +530,11 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				if(currentNumberBatch == numberBatchChunks){
 					currentNumberBatch = 0;
 					MemoryChunk oldMC = new MemoryChunk(oldPartition);
-					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, totalNumberChunks, oldMC);
+					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
 					k.writeObject(oldO, oldCT);
 					oldO.flush();
 					MemoryChunk newMC = new MemoryChunk(newPartition);
-					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC);
+					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
 					k.writeObject(newO, newCT);
 					newO.flush();
 					oldPartition.clear();
@@ -539,7 +542,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				}
 			}
 			// Indicate end of stream to both operators 
-			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), 0, 0, null);
+			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), 0, 0, null, 0);
 			k.writeObject(oldO, endOfStream);
 			k.writeObject(newO, endOfStream);
 			oldO.flush();
@@ -578,5 +581,13 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 			// And we call the correct function to merge the state
 			((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);
 		}
+	}
+
+	public void propagateNewKeys(int[] bounds, int oldOpIndex, int newOpIndex) {
+		int splittingKey = (int)(bounds[1]-bounds[0])/2;
+		ControlTuple boundsForOldOp = new ControlTuple().makeKeyBounds(bounds[0], splittingKey);
+		ControlTuple boundsForNewOp = new ControlTuple().makeKeyBounds(splittingKey+1, bounds[1]);
+		owner.getControlDispatcher().sendDownstream(boundsForOldOp, oldOpIndex);
+		owner.getControlDispatcher().sendDownstream(boundsForNewOp, newOpIndex);
 	}
 }

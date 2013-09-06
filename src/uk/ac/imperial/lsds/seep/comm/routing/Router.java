@@ -196,8 +196,8 @@ return null;
 		return targets;
 	}
 	
-	public int newStaticOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
-		int key = -1;
+	public int[] newStaticOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+		int key[];
 		if(requiresLogicalRouting){
 			return configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
@@ -209,8 +209,8 @@ return null;
 	}
 	
 	
-	public int newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
-		int key = -1;
+	public int[] newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+		int key[];
 		if(requiresLogicalRouting){
 			return configureRoutingStrategyForNewPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
@@ -222,7 +222,7 @@ return null;
 	}
 	
 	/** this can be moved along with downTypeToLoadBalancer */
-	private int configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
+	private int[] configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
 		//We gather the load balancer for the operator splitting (the old one)
 		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
 if(rs == null){
@@ -230,7 +230,7 @@ System.out.println("LB for OP: "+oldOpId+" is null !!!!!!!!!!");
 System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 }
 		//Then we update this load balancer (the old one) with the new information
-		int key = rs.newReplica(oldOpIndex, newOpIndex);
+		int key[] = rs.newReplica(oldOpIndex, newOpIndex);
 		//Now since we have a new replica, we want to assign the same load balancer to this replica so that it has the same route information
 		NodeManager.nLogger.info("-> Registering NEW LB for OP: "+newOpId);
 		downstreamRoutingImpl.put(newOpId, rs);

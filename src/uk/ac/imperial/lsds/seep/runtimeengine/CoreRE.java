@@ -257,7 +257,8 @@ public class CoreRE {
 	
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
-		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT
+		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT,
+		KEY_SPACE_BOUNDS
 	}
 	
 	public synchronized void setTsData(int stream, long ts_data){
@@ -347,13 +348,20 @@ public class CoreRE {
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from NODE: "+ct.getInvalidateState().getOperatorId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from OP: "+ct.getInvalidateState().getOperatorId());
 			processingUnit.invalidateState(ct.getInvalidateState().getOperatorId());
 		}
 		/** INIT_STATE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from NODE: "+ct.getInitOperatorState().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitOperatorState().getOpId());
 			coreProcessLogic.processInitState(ct.getInitOperatorState());
+		}
+		/** KEY_SPACE_BOUNDS message **/
+		else if(ctt.equals(ControlTupleType.KEY_SPACE_BOUNDS)){
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.KEY_SPACE_BOUNDS from OP: "+ct.getInitOperatorState().getOpId());
+			int minBound = ct.getKeyBounds().getMinBound();
+			int maxBound = ct.getKeyBounds().getMaxBound();
+			((StatefulProcessingUnit)processingUnit).setKeySpaceBounds(minBound, maxBound);
 		}
 		/** OPEN_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
@@ -367,7 +375,7 @@ public class CoreRE {
 		}
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from NODE: "+ct.getCloseSignal().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from OP: "+ct.getCloseSignal().getOpId());
 			bh.closeSession(ct.getCloseSignal().getOpId(), remoteAddress);
 			
 //			coreProcessLogic.directReplayState(new ReplayStateInfo(1, 1, true), bh);
@@ -427,18 +435,23 @@ public class CoreRE {
 			int oldOpId = ct.getDistributedScaleOutInfo().getOldOpId();
 			int newOpId = ct.getDistributedScaleOutInfo().getNewOpId();
 				
-			int newOpIndex = -1;
-			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
-				if (op.opID() == newOpId)
-					newOpIndex = op.index();
+			if(puCtx.isScalingOpDirectDownstream(oldOpId)){
+				int newOpIndex = -1;
+				for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
+					if (op.opID() == newOpId)
+						newOpIndex = op.index();
+				}
+				// Get index of the scaling operator
+				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(oldOpId).index();
+				// And manage distributed scale out
+				int bounds[] = coreProcessLogic.manageDownstreamDistributedScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
+				coreProcessLogic.propagateNewKeys(bounds, oldOpIndex, newOpIndex);
 			}
-			// Get index of the scaling operator
-			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(oldOpId).index();
+			
 			coreProcessLogic.backupRoutingInformation(oldOpId);
-			int pKey = coreProcessLogic.manageStreamScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
 				
 //			coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
-			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, pKey, bh);
+			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh);
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/

@@ -20,6 +20,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DistributedSca
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.KeyBounds;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpenSignal;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
@@ -52,6 +53,7 @@ public class ControlTuple {
 	private CloseSignal closeSignal;
 	private ReplayStateInfo replayStateInfo;
 	private StateChunk stateChunk;
+	private KeyBounds keyBounds;
 
 	public ControlTuple(){}
 	
@@ -200,6 +202,14 @@ public class ControlTuple {
 		this.stateChunk = stateChunk;
 	}
 	
+	public void setKeyBounds(KeyBounds keyBounds){
+		this.keyBounds = keyBounds;
+	}
+	
+	public KeyBounds getKeyBounds(){
+		return keyBounds;
+	}
+	
 	public ControlTuple makeGenericAck(int nodeId){
 		this.type = CoreRE.ControlTupleType.ACK;
 		this.ack = new Ack(nodeId, 0);
@@ -305,9 +315,15 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeStateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc){
+	public ControlTuple makeStateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
 		this.type = CoreRE.ControlTupleType.STATE_CHUNK;
-		this.stateChunk = new StateChunk(opId, seqNumber, totalChunks, mc);
+		this.stateChunk = new StateChunk(opId, seqNumber, totalChunks, mc, splittingKey);
+		return this;
+	}
+	
+	public ControlTuple makeKeyBounds(int minBound, int maxBound){
+		this.type = CoreRE.ControlTupleType.KEY_SPACE_BOUNDS;
+		this.keyBounds = new KeyBounds(minBound, maxBound);
 		return this;
 	}
 	

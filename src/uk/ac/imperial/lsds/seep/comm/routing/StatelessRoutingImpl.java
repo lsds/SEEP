@@ -101,7 +101,7 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		return targets;
 	}
 	
-	public int newReplica(int oldOpIndex, int newOpIndex) {
+	public int[] newReplica(int oldOpIndex, int newOpIndex) {
 		//In this case oldOpIndex does not do anything
 //System.out.println("#### There is a NEW SPLIT here, newOpIndex: "+newOpIndex);
 		//First of all, we map the real index to virtual index
@@ -114,16 +114,19 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		numberOfDownstreams++;
 //System.out.println("POST: "+numberOfDownstreams);
 		//return something cause interface implementation...
-		return -1;
+		//return -1;
+		int[] fakeKeys = {-1, -1};
+		return fakeKeys;
 	}
 	
-	public int newStaticReplica(int oldOpIndex, int newOpIndex){
+	public int[] newStaticReplica(int oldOpIndex, int newOpIndex){
 		//In this case oldOpIndex does not do anything
 		//First of all, we map the real index to virtual index
 		virtualIndexToRealIndex.put(virtualIndex, newOpIndex);
 		virtualIndex++;
 		///\fixme{return something meaningful}
-		return -1;
+		int[] fakeKeys = {-1, -1};
+		return fakeKeys;
 	}
 		
 	@Override
