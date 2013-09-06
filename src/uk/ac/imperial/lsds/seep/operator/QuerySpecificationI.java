@@ -23,9 +23,8 @@ public interface QuerySpecificationI {
 	
 	public void setOpContext(OperatorContext opContext);
 
-	@Deprecated
 	public void connectTo(QuerySpecificationI down, boolean originalQuery);
 	
-	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery);
+//	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery);
 
 }

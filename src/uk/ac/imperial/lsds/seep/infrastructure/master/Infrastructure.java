@@ -168,9 +168,16 @@ public class Infrastructure {
 			Router r = new Router(requiresLogicalRouting, routeInfo);
 			// Configure routing implementations of the operator
 			ArrayList<Operator> downstream = new ArrayList<Operator>();
-			for(PlacedOperator po : op.getOpContext().downstreams){
-				downstream.add(this.getOperatorById(po.opID()));
+			
+			
+			for(Integer i : op.getOpContext().getOriginalDownstream()){
+				downstream.add(this.getOperatorById(i));
 			}
+			
+//			for(PlacedOperator po : op.getOpContext().downstreams){
+//				downstream.add(this.getOperatorById(po.opID()));
+//			}
+			
 			r.configureRoutingImpl(op.getOpContext(), downstream);
 			op.setRouter(r);
 		}

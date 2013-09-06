@@ -72,15 +72,18 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 //		long difference = (key == Integer.MAX_VALUE && previousKey == Integer.MIN_VALUE) ? (maxInteger-Integer.MIN_VALUE) : (key-previousKey);
 		int minBound;
 		int maxBound;
+		long difference;
 		if(key == Integer.MAX_VALUE && previousKey == Integer.MIN_VALUE){
 			minBound = Integer.MIN_VALUE;
 			maxBound = (int)maxInteger;
+			difference = (maxInteger-Integer.MIN_VALUE);
 		}
 		else{
 			minBound = previousKey;
 			maxBound = key;
+			difference = (key-previousKey);
 		}
-		long difference = maxBound-minBound;
+//		long difference = maxBound-minBound;
 		difference = (difference < 0) ? (difference * -1) : difference;
 
 		long aux = key - (difference/2);
@@ -111,17 +114,20 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		//the new key is the medium point between key and previous key
 		long maxInteger = Integer.MAX_VALUE;
 		//long difference = (key == Integer.MAX_VALUE && previousKey == Integer.MIN_VALUE) ? (maxInteger-Integer.MIN_VALUE) : (key-previousKey);
+		long difference = 0;
 		int minBound;
 		int maxBound;
 		if(key == Integer.MAX_VALUE && previousKey == Integer.MIN_VALUE){
 			minBound = Integer.MIN_VALUE;
 			maxBound = (int)maxInteger;
+			difference = (maxInteger-Integer.MIN_VALUE);
 		}
 		else{
 			minBound = previousKey;
 			maxBound = key;
+			difference = (key-previousKey);
 		}
-		long difference = maxBound-minBound;
+//		long difference = maxBound-minBound;
 		difference = (difference < 0) ? (difference * -1) : difference;
 
 		long aux = key - (difference/2);
@@ -138,16 +144,22 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		
 	/// \todo{OPTIMIZE THIS METHOD}
 	public ArrayList<Integer> route(ArrayList<Integer> targets, int value) {
-		int hash = Router.customHash(value);
+//		int hash = Router.customHash(value);
+		int hash = value;
 		int realIndex = -1;
 		/** for(Integer nodeKey : downstreamNodeKeys){ */
+//System.out.println("Downstream Node Keys size: "+downstreamNodeKeys.size());
+//for(Integer key: downstreamNodeKeys){
+//	System.out.println("KEY: "+key);
+//}
 		for(int i = 0; i<downstreamNodeKeys.size(); i++){
 			int nodeKey = downstreamNodeKeys.get(i);
 			//If yes then we have the node to route the info
 			if(hash < nodeKey){
 				realIndex = keyToDownstreamRealIndex.get(i);
-
+//System.out.println("Getting realIndex: "+realIndex);
 				if(!targets.contains(realIndex)){
+//System.out.println("And inside");
 					targets.add(realIndex);
 				}
 				return targets;

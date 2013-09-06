@@ -222,6 +222,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 				else if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
 					outputQueue.sendToDownstream(dt, dest);
+//System.out.println("Send to: "+dest.toString());
 				}
 				// LOCAL
 				else if(dest instanceof Operator){
@@ -271,6 +272,9 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void stopConnection(int opId) {
 		//Stop incoming data, a new thread is replaying
 		outputQueue.stop();
+		for(EndPoint ep : ctx.getDownstreamTypeConnection()){
+			System.out.println("Downstream: "+ep.getOperatorId());
+		}
 		ctx.getCCIfromOpId(opId, "d").getStop().set(true);
 	}
 

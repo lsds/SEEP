@@ -479,7 +479,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 					System.out.println("Filename: "+chunkName);
 				}
 			}
-			
+System.out.println("there are: "+filesToStream.size()+" to stream");
 			// There is a fixed size per chunk, so there is an upper bound size per partition. Let's then
 			// make dynamically-sized chunks.
 			// Every two file chunks, we send the batched state
@@ -532,10 +532,12 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 					MemoryChunk oldMC = new MemoryChunk(oldPartition);
 					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
 					k.writeObject(oldO, oldCT);
+System.out.println("send chunk to: "+oldS.toString());
 					oldO.flush();
 					MemoryChunk newMC = new MemoryChunk(newPartition);
 					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
 					k.writeObject(newO, newCT);
+System.out.println("send chunk to: "+newS.toString());
 					newO.flush();
 					oldPartition.clear();
 					newPartition.clear();

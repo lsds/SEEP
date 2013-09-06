@@ -21,6 +21,7 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 
 
 public class Router implements Serializable{
@@ -114,13 +115,19 @@ return null;
 			System.out.println("ADDED");
 			
 			//If more than one downstream type, then put the new rs with the opId
-			if(opContext.downstreams.size() > 1){
+			//if(opContext.downstreams.size() > 1){
+			if(opContext.getOriginalDownstream().size() > 1){
 				NodeManager.nLogger.info("-> More than one downstream type. Assign RS for op: "+id);
+//				for(PlacedOperator op : opContext.downstreams){
+//					System.out.println("Downstream type: "+op.opID());
+//				}
 				downstreamRoutingImpl.put(id, rs);
+//				System.exit(0);
 			}
 			
 			//Otherwise, store the rs in the reserved place of downstreamRoutingImpl
-			else if (opContext.downstreams.size() == 1){
+			//else if (opContext.downstreams.size() == 1){
+			else if(opContext.getOriginalDownstream().size() == 1){
 				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
 			}
 		}
@@ -203,6 +210,11 @@ return null;
 		}
 		else{
 			//Otherwise, we use the default RoutingImpl
+			System.out.println("KEY SET OF DOWNSTREAM ROUTING IMPL");
+			for(Integer i : downstreamRoutingImpl.keySet()){
+				System.out.println(i+" : "+downstreamRoutingImpl.get(i));
+			}
+			System.out.println("access downstream routing impl in: "+INDEX_FOR_ROUTING_IMPL);
 			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newStaticReplica(oldOpIndex, newOpIndex);
 		}
 		return key;

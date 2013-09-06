@@ -436,6 +436,7 @@ public class CoreRE {
 			int newOpId = ct.getDistributedScaleOutInfo().getNewOpId();
 				
 			if(puCtx.isScalingOpDirectDownstream(oldOpId)){
+				System.out.println("Direct downstream");
 				int newOpIndex = -1;
 				for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
 					if (op.opID() == newOpId)

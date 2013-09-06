@@ -18,6 +18,7 @@ import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 
@@ -170,11 +171,18 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		this.opContext.setOriginalDownstream(originalDownstream);
 	}
 	
+	public void connectTo(QuerySpecificationI down, boolean originalQuery){
+		// default inputdataingestion and default stream
+		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, 0);
+	}
+	
 	public void connectTo(QuerySpecificationI down, boolean originalQuery, int streamId) {
+		// default inputdataingestion 
 		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, streamId);
 	}
 	
 	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery, int streamId){
+		NodeManager.nLogger.info("Connecting OP: "+this.getOperatorId()+" with downstream Op: "+down.getOperatorId());
 		opContext.addDownstream(down.getOperatorId());
 		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());
