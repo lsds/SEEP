@@ -156,7 +156,7 @@ public class ControlDispatcher {
 					synchronized (output){
 						k.writeObject(output, ct);
 						output.flush();
-						output.close();
+//						output.close();
 					}
 				}
 			}

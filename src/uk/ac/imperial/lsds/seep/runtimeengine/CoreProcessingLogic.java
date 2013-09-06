@@ -76,9 +76,8 @@ public class CoreProcessingLogic implements Serializable{
 	
 	public void initializeSerialization(){
 		k = new Kryo();
-		k.setClassLoader(owner.getRuntimeClassLoader());
 		k.register(ControlTuple.class);
-		k.register(StreamStateChunk.class);
+		k.register(MemoryChunk.class);
 		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
 		k.register(BackupOperatorState.class);
@@ -494,6 +493,18 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 				ControlTuple ct = k.readObject(i, ControlTuple.class);
 				MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
 				int key = ct.getStateChunk().getSplittingKey(); // read it every time? ...
+				if(mc == null){
+					System.out.println("mc is null");
+					System.exit(0);
+				}
+				else if(mc.chunk == null){
+					System.out.println("mc.chunk is null");
+					System.exit(0);
+				}
+				else if(mc.chunk.get(0) == null){
+					System.out.println("mc.chunk.get(0) is null");
+					System.exit(0);
+				}
 				Object sample = mc.chunk.get(0);
 				// agh... java...
 				///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}
@@ -531,13 +542,13 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 					currentNumberBatch = 0;
 					MemoryChunk oldMC = new MemoryChunk(oldPartition);
 					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
-					k.writeObject(oldO, oldCT);
 System.out.println("send chunk to: "+oldS.toString());
+					k.writeObject(oldO, oldCT);
 					oldO.flush();
 					MemoryChunk newMC = new MemoryChunk(newPartition);
 					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
-					k.writeObject(newO, newCT);
 System.out.println("send chunk to: "+newS.toString());
+					k.writeObject(newO, newCT);
 					newO.flush();
 					oldPartition.clear();
 					newPartition.clear();
@@ -545,11 +556,18 @@ System.out.println("send chunk to: "+newS.toString());
 			}
 			// Indicate end of stream to both operators 
 			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), 0, 0, null, 0);
+System.out.println("send chunk to: "+oldS.toString());
+System.out.println("FINAL old");
+
 			k.writeObject(oldO, endOfStream);
+System.out.println("send chunk to: "+newS.toString());
+System.out.println("FINAL new");
+
 			k.writeObject(newO, endOfStream);
 			oldO.flush();
 			newO.flush();
 			i.close();
+System.out.println("FINAL FINAL");
 		}
 		catch(IOException io){	
 			io.printStackTrace();
@@ -557,7 +575,9 @@ System.out.println("send chunk to: "+newS.toString());
 	}
 	
 	private boolean matchSession(int opId, String fileName, String sessionName){
+		System.out.println("filename to match: "+fileName);
 		String[] splits = fileName.split("_");
+		System.out.println("splits: "+splits);
 		return (splits[2].equals(sessionName) && splits[1].equals(new Integer(opId).toString()));
 	}
 	

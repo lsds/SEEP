@@ -358,7 +358,7 @@ public class CoreRE {
 		}
 		/** KEY_SPACE_BOUNDS message **/
 		else if(ctt.equals(ControlTupleType.KEY_SPACE_BOUNDS)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.KEY_SPACE_BOUNDS from OP: "+ct.getInitOperatorState().getOpId());
+			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.KEY_SPACE_BOUNDS");
 			int minBound = ct.getKeyBounds().getMinBound();
 			int maxBound = ct.getKeyBounds().getMaxBound();
 			((StatefulProcessingUnit)processingUnit).setKeySpaceBounds(minBound, maxBound);
@@ -615,6 +615,7 @@ public class CoreRE {
 		for(int i = 0; i < totalSizeST; i++){
 			//controlDispatcher.sendOpenSessionWaitACK(openSignal, backupUpstreamIndex);
 			controlDispatcher.sendOpenSessionWaitACK(openSignal, i);
+//			controlDispatcher.sendUpstream(openSignal, i);
 		}
 		NodeManager.nLogger.info("% -> SESSION opened from "+opId);
 	}

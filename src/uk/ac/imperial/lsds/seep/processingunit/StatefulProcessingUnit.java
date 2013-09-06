@@ -146,6 +146,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public void setKeySpaceBounds(int minBound, int maxBound){
 		minBoundKeySpace = minBound;
 		maxBoundKeySpace = maxBound;
+		NodeManager.nLogger.info("New keySpace bounds: ["+minBoundKeySpace+" "+maxBoundKeySpace+"]");
 	}
 	
 	public PUContext getPuContext(){
@@ -609,11 +610,13 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	public void mergeChunkToState(StateChunk chunk){
 		if(chunk == null){
-			((Streamable)runningOpState).appendChunk(null);
+			//((Streamable)runningOpState).appendChunk(null);
+			((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(null);
 			return;
 		}
 		MemoryChunk mc = chunk.getMemoryChunk();
-		((Streamable)runningOpState).appendChunk(mc.chunk);
+		//((Streamable)runningOpState).appendChunk(mc.chunk);
+		((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(mc.chunk);
 	}
 	
 		/** Who manages which state? **/
