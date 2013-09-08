@@ -464,6 +464,10 @@ public class CoreProcessingLogic implements Serializable{
 	
 	//public void directReplayStateScaleOut(ReplayStateInfo rsi, BackupHandler bh, File folder){
 	public void directReplayStateScaleOut(int oldOpId, int newOpId,BackupHandler bh){
+		// DEBUG VAR
+		int _np = 0;
+		int _op = 0;
+		// END DEBUG VAR
 		File folder = new File("backup/");
 		String lastSessionName = bh.getLastBackupSessionName(oldOpId);
 		int totalNumberChunks = 0;
@@ -501,18 +505,6 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 				ControlTuple ct = k.readObject(i, ControlTuple.class);
 				MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
 				int key = ct.getStateChunk().getSplittingKey(); // read it every time? ...
-				if(mc == null){
-					System.out.println("mc is null");
-					System.exit(0);
-				}
-				else if(mc.chunk == null){
-					System.out.println("mc.chunk is null");
-					System.exit(0);
-				}
-				else if(mc.chunk.get(0) == null){
-					System.out.println("mc.chunk.get(0) is null");
-					System.exit(0);
-				}
 				Object sample = mc.chunk.get(0);
 				// agh... java...
 				///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}
@@ -535,11 +527,13 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 					for(int j = 0; j < mc.chunk.size(); j++){
 						String k = (String)mc.chunk.get(j);
 						if(Router.customHash(k) > key){
+							_np++;
 							newPartition.add(k);
 							j++;
 							newPartition.add(mc.chunk.get(j));
 						}
 						else{
+							_op++;
 							oldPartition.add(k);
 							j++;
 							oldPartition.add(mc.chunk.get(j));
@@ -564,18 +558,16 @@ System.out.println("send chunk to: "+newS.toString());
 			}
 			// Indicate end of stream to both operators 
 			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), keeperOpId, 0, 0, null, 0);
-System.out.println("send chunk to: "+oldS.toString());
-System.out.println("FINAL old");
 
 			k.writeObject(oldO, endOfStream);
-System.out.println("send chunk to: "+newS.toString());
-System.out.println("FINAL new");
 
 			k.writeObject(newO, endOfStream);
 			oldO.flush();
 			newO.flush();
 			i.close();
-System.out.println("FINAL FINAL");
+System.out.println("new p: "+_np);
+System.out.println("old p: "+_op);
+			NodeManager.nLogger.info("Finished streaming state");
 		}
 		catch(IOException io){	
 			io.printStackTrace();
@@ -592,13 +584,17 @@ System.out.println("FINAL FINAL");
 	// Structure and method to keep tracking of merging state
 	private Set<Integer> activeOpStreaming = new HashSet<Integer>();
 	public void handleNewChunk(StateChunk stateChunk){
+		// If not in state merging state
+		if(! pu.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.MERGING_STATE)){
+			// change to merging state
+			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.MERGING_STATE);
+			// and reset the state
+			((StatefulProcessingUnit)pu).resetState();
+		}
 		// If null means this operator has finished streaming
 		int opId = stateChunk.getKeeperOpId();
 		if(stateChunk.getMemoryChunk() == null){
 			activeOpStreaming.remove(opId);
-			for(Integer i : activeOpStreaming){
-				System.out.println("Set element: "+i);
-			}
 			NodeManager.nLogger.info("OP: "+opId+" has finished streaming");
 			if(activeOpStreaming.size() == 0){
 				// finished merging state
@@ -606,6 +602,8 @@ System.out.println("FINAL FINAL");
 				((StatefulProcessingUnit)pu).mergeChunkToState(null);
 				ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
 				owner.getControlDispatcher().sendAllUpstreams(rb);
+				// No longer merging state
+				pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
 			}
 		}
 		// an active operator sends us a chunk

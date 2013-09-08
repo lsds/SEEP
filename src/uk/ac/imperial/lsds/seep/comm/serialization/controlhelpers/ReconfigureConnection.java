@@ -10,6 +10,8 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
+import java.net.InetAddress;
+
 public class ReconfigureConnection {
 
 	private int opId;
@@ -21,10 +23,10 @@ public class ReconfigureConnection {
 	private int inD;
 	private boolean operatorNature;
 	private String operatorType;
+//	private InetAddress ipStarTopology;
+//	private int opIdStarTopology; 
 	
-	public ReconfigureConnection(){
-		
-	}
+	public ReconfigureConnection(){}
 	
 	public ReconfigureConnection(String command){
 		this.command = command;
@@ -53,6 +55,22 @@ public class ReconfigureConnection {
 		this.command = command;
 		this.inC = inC;
 	}
+	
+//	public InetAddress getIpStarTopology() {
+//		return ipStarTopology;
+//	}
+//
+//	public void setIpStarTopology(InetAddress ipStarTopology) {
+//		this.ipStarTopology = ipStarTopology;
+//	}
+//
+//	public int getOpIdStarTopology() {
+//		return opIdStarTopology;
+//	}
+//
+//	public void setOpIdStarTopology(int opIdStarTopology) {
+//		this.opIdStarTopology = opIdStarTopology;
+//	}
 
 	public int getOpId() {
 		return opId;

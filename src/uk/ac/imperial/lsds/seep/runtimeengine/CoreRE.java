@@ -118,7 +118,13 @@ public class CoreRE {
 	
 	/** Stores all the information concerning starTopology. In particular, this own operator is also included **/
 	public void pushStarTopology(ArrayList<EndPoint> starTopology){
+		// Store it here to enable async initialisation
 		this.starTopology = starTopology;
+		if(puCtx != null){
+			// Also push it directly if the system is already initialised and this is a dynamic change
+			puCtx.updateStarTopology(starTopology);
+			puCtx.filterStarTopology(processingUnit.getOperator().getOperatorId());
+		}
 	}
 	
 	/** Retrieves all the information concerning the star topology **/
@@ -588,6 +594,19 @@ public class CoreRE {
 			//Now that all the system is ready (both down and up) I manage my own information and send the required msgs
 			coreProcessLogic.sendInitialStateBackup();
 		}
+//		/** ADD STAR TOPOLOGY message **/
+//		else if(command.equals("add_star_topology")){
+//			controlDispatcher.ackControlMessage(genericAck, os);
+//			InetAddress newIp = rc.getIpStarTopology();
+//			int starOpId = rc.getOpIdStarTopology();
+//			puCtx.addNodeToStarTopolocy(opId, newIp);
+//		}
+//		/** REMOVE STAR TOPOLOGY message **/
+//		else if(command.equals("remove_star_topology")){
+//			controlDispatcher.ackControlMessage(genericAck, os);
+//			int starOpId = rc.getOpIdStarTopology();
+//			puCtx.removeNodeFromStarTopology(opId);
+//		}
 		/** REPLAY message **/
 		/// \todo {this command is only used for twitter storm model...}
 		else if (command.equals("replay")){

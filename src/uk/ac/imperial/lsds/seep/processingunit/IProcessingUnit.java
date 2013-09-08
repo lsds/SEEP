@@ -27,6 +27,7 @@ public interface IProcessingUnit {
 	//This enum is for aiding in the implementation of the protocols
 	public enum SystemStatus {
 		NORMAL, WAITING_FOR_STATE_ACK, INITIALISING_STATE//, REPLAYING_BUFFER//, RECONFIGURING_COMM
+		, MERGING_STATE
 	}
 	
 	public CoreRE getOwner();

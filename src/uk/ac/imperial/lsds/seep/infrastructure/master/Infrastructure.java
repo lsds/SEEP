@@ -304,6 +304,20 @@ public class Infrastructure {
 		NodeManager.nLogger.info("Initial StarTopology Size: "+starTopology.size());
 	}
 	
+	public void addNodeToStarTopology(int opId, InetAddress ip){
+		DisposableCommunicationChannel dcc = new DisposableCommunicationChannel(opId, ip);
+		starTopology.add(dcc);
+	}
+	
+	public void removeNodeFromStarTopology(int opId){
+		for(int i = 0; i<starTopology.size(); i++){
+			EndPoint ep = starTopology.get(i);
+			if(ep.getOperatorId() == opId){
+				starTopology.remove(i);
+			}
+		}
+	}
+	
 	public byte[] getDataFromFile(String pathToQueryDefinition){
 		FileInputStream fis = null;
 		long fileSize = 0;
@@ -374,10 +388,11 @@ public class Infrastructure {
 	
 	public void deploy() throws OperatorDeploymentException {
 		//First broadcast the information regarding the initialStarTopology
-		for(Operator op : ops){
-			//Send star topology
-			broadcastStarTopology(op);
-		}
+//		for(Operator op : ops){
+//			//Send star topology
+//			broadcastStarTopology(op);
+//		}
+		broadcastStarTopology();
 		
   		//Deploy operators (push operators to nodes)
 		for(Operator op: ops){
@@ -456,10 +471,14 @@ public class Infrastructure {
 		bcu.sendObject(node, op);
 	}
 	
-	public void broadcastStarTopology(Operator op){
-		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Sending starTopology to OP-"+op.getOperatorId());
-		bcu.sendObject(node, starTopology);
+	public void broadcastStarTopology(){
+		for(Operator op : ops){
+			if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
+				Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
+				Infrastructure.nLogger.info("-> Sending updated starTopology to OP-"+op.getOperatorId());
+				bcu.sendObject(node, starTopology);
+			}
+		}
 	}
 
 	public void init(Operator op) {

@@ -93,11 +93,10 @@ public class PUContext {
 		}
 	}
 	
-	public boolean addNodeToStarTopolocy(int opId, InetAddress ip){
-		DisposableCommunicationChannel oscc = new DisposableCommunicationChannel(opId, ip);
-		return starTopology.add(oscc);
+	public void updateStarTopology(ArrayList<EndPoint> starTopology){
+		this.starTopology = starTopology;
 	}
-	
+
 	public DisposableCommunicationChannel getDCCfromOpIdInStarTopology(int opId){
 		for(EndPoint dcc : starTopology){
 			if(dcc.getOperatorId() == opId){

@@ -227,8 +227,10 @@ public class ElasticInfrastructureUtils {
 //		inf.placeNew(newOp, newNode);
 		inf.placeNewParallelReplica(opToParallelize, newOp, newNode);
 		inf.updateContextLocations(newOp);
-		//Send star topology to new operator
-		inf.broadcastStarTopology(newOp);
+		// Update starTopology
+		inf.addNodeToStarTopology(newOp.getOperatorId(), newOp.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+		//Send updated star topology to nodes in the system
+		inf.broadcastStarTopology();
 		// Send query to the new node
 		inf.setUp(newOp);
 		//deploy new Operator
