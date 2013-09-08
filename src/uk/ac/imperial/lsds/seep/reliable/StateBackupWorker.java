@@ -122,12 +122,6 @@ public class StateBackupWorker implements Runnable, Serializable{
 	public void executeLargeStateMechanism(){
 		// First filter starTopology by removing this own operator
 		processingUnit.getPuContext().filterStarTopology(processingUnit.getOperator().getOperatorId());
-//		System.out.println("STAR TOPOLOGY");
-//		System.out.println("##############");
-//		for(EndPoint dcc : processingUnit.getPuContext().getStarTopology()){
-//			System.out.println((DisposableCommunicationChannel)dcc);
-//		}
-//		System.out.println("##############");
 //		// Blocking call
 //		int starTopologySize = processingUnit.getPuContext().getStarTopology().size();
 //		processingUnit.getOwner().signalOpenBackupSession(starTopologySize);

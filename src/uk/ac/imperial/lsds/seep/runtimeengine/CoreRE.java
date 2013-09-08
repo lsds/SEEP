@@ -543,12 +543,11 @@ public class CoreRE {
 		if(command.equals("reconfigure_D") || command.equals("reconfigure_U") || command.equals("just_reconfigure_D")){
 //			operatorStatus = OperatorStatus.RECONFIGURING_COMM;
 			processingUnit.reconfigureOperatorLocation(opId, ip);
-			
 				//If no twitter storm, then I have to stop sending data and replay, otherwise I just update the conn
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
 			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
 				processingUnit.stopConnection(opId);
-			}
+			} 
 			processingUnit.reconfigureOperatorConnection(opId, ip);
 			
 			if(command.equals("reconfigure_U")){

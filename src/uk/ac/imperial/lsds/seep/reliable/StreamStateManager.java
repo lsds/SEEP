@@ -13,11 +13,12 @@ package uk.ac.imperial.lsds.seep.reliable;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.operator.Streamable;
 
 public class StreamStateManager {
 
-	private static final int chunkSize = 10000;
+	private final int chunkSize;
 	
 	private Streamable state;
 	private int totalNumberChunks;
@@ -25,6 +26,7 @@ public class StreamStateManager {
 	
 	public StreamStateManager(Streamable state){
 		this.state = state;
+		this.chunkSize = new Integer(P.valueFor("stateChunkSize"));
 		this.totalNumberChunks = state.getTotalNumberOfChunks(chunkSize);
 		this.stateIterator = state.getIterator();
 	}

@@ -515,11 +515,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		int index = 0;
 		int splittingKey = (int)(maxBoundKeySpace - minBoundKeySpace)/2;
 		int keeperOpId = -666; // fake id since this value is up to this point empty
+		
+		long total = 0;
+		
 		while((mc = ssm.getChunk()) != null){
 			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, keeperOpId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
 			sequenceNumber++;
 			int idx = index % sizeST;
+			long start = System.currentTimeMillis();
 			owner.sendBlindData(chunkMessage, idx);
+			long stop = System.currentTimeMillis();
+			total += (stop-start);
 			index++;
 		}
 		long startR = System.currentTimeMillis();
@@ -527,7 +533,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).reconcile();
 		long stopR = System.currentTimeMillis();
 		System.out.println("MSG SENT: "+sequenceNumber);
-		System.out.println("TOTAL SEQ NUMER: "+ssm.getTotalNumberChunks());
+		System.out.println("Total TIME SEND: "+total);
+//		System.out.println("TOTAL SEQ NUMER: "+ssm.getTotalNumberChunks());
 		System.out.println("TOTAL RECONCILIATION TIME: "+(stopR-startR));
 		
 		return incomingTT;
