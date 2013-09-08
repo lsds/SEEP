@@ -75,6 +75,13 @@ public class ManagerWorker implements Runnable {
 			System.out.println("MANAGER: Calling reDeploy... the IP: "+oldIP.toString());
 			Node newNode = new Node(newIP,newPort);
 			long init = System.currentTimeMillis();
+System.out.println("updating star topology");
+			// Update star topology. remove failed node and add new instantiated one.
+			inf.removeNodeFromStarTopology(opId);
+			inf.addNodeToStarTopology(opId, newIP);
+			// Then broadcast the new star topology
+System.out.println("broadcast star topology");
+			inf.broadcastStarTopology();
 			inf.reDeploy(newNode);
 			long end = System.currentTimeMillis();
 			System.out.println("INIT OP: "+(end-init));
@@ -84,17 +91,17 @@ public class ManagerWorker implements Runnable {
 			//updateU_D could get nodes instead of IPs to build correct nodes, but
 			//it also work just with IPs
 			
-			// Tell star topology to stream state
-			inf.failure(opId);
-			
+System.out.println("calling updateUD");
 			inf.updateU_D(oldIP,newIP, false);
 			
 			Operator toInit = inf.getOperatorById(opId);
-			
+System.out.println("broadcast state and runtime init");
 			inf.broadcastState(toInit);
-			
 			inf.initRuntime(toInit);
-			//inf.updateUpDownOperators(InetAddress.getByName(token[1]), InetAddress.getByName(token[2]));
+			
+			// Tell star topology to stream state
+			System.out.println("calling failure");
+			inf.failure(opId);
 		}
 		
 		private void bootstrapCommand(String ip, int port) throws UnknownHostException{
@@ -159,13 +166,6 @@ public class ManagerWorker implements Runnable {
 			inf.updateContextLocations(op);
 			System.out.println(op);
 		}
-
-//		private void connectCommand(String[] id)
-//		throws NumberFormatException {
-//			QuerySpecificationI src = inf.elements.get(Integer.parseInt(id[1]));
-//			QuerySpecificationI dst = inf.elements.get(Integer.parseInt(id[2]));
-//			src.connectTo(dst, false);
-//		}
 		
 		/// \todo {java 7 supports switch(string)}
 		public void run(){
@@ -191,6 +191,8 @@ public class ManagerWorker implements Runnable {
 						System.out.println("Manager: Command received -> "+com);
 						
 						if(token[0].equals("crash")){
+//							System.out.println("CRASH");
+//							System.exit(2);
 							if(P.valueFor("parallelRecovery").equals("true")){
 								//params oldIp
 								inf.parallelRecovery(token[1]);

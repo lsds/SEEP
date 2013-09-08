@@ -29,6 +29,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StreamState;
 import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
@@ -53,6 +54,7 @@ public class ControlTuple {
 	private CloseSignal closeSignal;
 	private ReplayStateInfo replayStateInfo;
 	private StateChunk stateChunk;
+	private StreamState streamState;
 	private KeyBounds keyBounds;
 
 	public ControlTuple(){}
@@ -210,6 +212,14 @@ public class ControlTuple {
 		return keyBounds;
 	}
 	
+	public void setStreamState(StreamState streamState){
+		this.streamState = streamState;
+	}
+	
+	public StreamState getStreamState(){
+		return streamState;
+	}
+	
 	public ControlTuple makeGenericAck(int nodeId){
 		this.type = CoreRE.ControlTupleType.ACK;
 		this.ack = new Ack(nodeId, 0);
@@ -324,6 +334,12 @@ public class ControlTuple {
 	public ControlTuple makeKeyBounds(int minBound, int maxBound){
 		this.type = CoreRE.ControlTupleType.KEY_SPACE_BOUNDS;
 		this.keyBounds = new KeyBounds(minBound, maxBound);
+		return this;
+	}
+	
+	public ControlTuple makeStreamState(int targetOpId){
+		this.type = CoreRE.ControlTupleType.STREAM_STATE;
+		this.streamState = new StreamState(targetOpId);
 		return this;
 	}
 	

@@ -472,8 +472,10 @@ public class CoreRE {
 //			//Replay the state that this node keeps
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.STREAM_STATE");
 //			
-//			int opId;
-//			coreProcessLogic.directReplayStateFailure(opId, bh);
+			int opId = ct.getStreamState().getTargetOpId();
+			coreProcessLogic.directReplayStateFailure(opId, bh);
+			//Finally ack the processing of this message
+//			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** STATE_CHUNK **/
 		else if(ctt.equals(ControlTupleType.STATE_CHUNK)){

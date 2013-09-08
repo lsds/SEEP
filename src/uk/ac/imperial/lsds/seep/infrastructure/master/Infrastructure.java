@@ -449,9 +449,17 @@ public class Infrastructure {
 	
 	public void failure(int opId){
 		// create a controltuple with a streamstate, target opid
-		
+		ControlTuple streamState = new ControlTuple().makeStreamState(opId);
 		// Get access to starTopology and send the controltuple to all of them
-		
+		for(Operator op : ops){
+			if(op.getOperatorId() != opId){
+				if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
+					OperatorStaticInformation osi = op.getOpContext().getOperatorStaticInformation();
+System.out.println("sending stream state to : "+op.getOperatorId());
+					rct.sendControlMsg(osi, streamState, op.getOperatorId());
+				}
+			}
+		}
 	}
 	
 	public void sendCode(Node n, byte[] data){

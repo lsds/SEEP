@@ -575,9 +575,7 @@ System.out.println("old p: "+_op);
 	}
 	
 	private boolean matchSession(int opId, String fileName, String sessionName){
-		System.out.println("filename to match: "+fileName);
 		String[] splits = fileName.split("_");
-		System.out.println("splits: "+splits);
 		return (splits[2].equals(sessionName) && splits[1].equals(new Integer(opId).toString()));
 	}
 	
@@ -585,7 +583,7 @@ System.out.println("old p: "+_op);
 	private Set<Integer> activeOpStreaming = new HashSet<Integer>();
 	public void handleNewChunk(StateChunk stateChunk){
 		// If not in state merging state
-		if(! pu.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.MERGING_STATE)){
+		if(!pu.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.MERGING_STATE)){
 			// change to merging state
 			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.MERGING_STATE);
 			// and reset the state
