@@ -14,7 +14,8 @@ import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
 public class StateChunk {
 
-	private int opId;
+	private int ownerOpId;
+	private int keeperOpId;
 	private int sequenceNumber;
 	private int totalChunks;
 	private MemoryChunk mc;
@@ -22,20 +23,28 @@ public class StateChunk {
 
 	public StateChunk(){}
 	
-	public StateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
-		this.opId = opId;
+	public StateChunk(int opId, int keeperOpId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
+		this.ownerOpId = opId;
 		this.sequenceNumber = seqNumber;
 		this.totalChunks = totalChunks;
 		this.mc = mc;
 		this.splittingKey = splittingKey;
 	}
 	
-	public int getOpId() {
-		return opId;
+	public int getOwnerOpId() {
+		return ownerOpId;
 	}
 
-	public void setOpId(int opId) {
-		this.opId = opId;
+	public void setOwnerOpId(int opId) {
+		this.ownerOpId = opId;
+	}
+	
+	public int getKeeperOpId(){
+		return keeperOpId;
+	}
+	
+	public void setKeeperOpId(int keeperOpId){
+		this.keeperOpId = keeperOpId;
 	}
 	
 	public MemoryChunk getMemoryChunk(){

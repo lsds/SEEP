@@ -45,6 +45,7 @@ import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatelessProcessingUnit;
 import uk.ac.imperial.lsds.seep.reliable.BackupHandler;
+import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
 import uk.ac.imperial.lsds.seep.runtimeengine.workers.DataConsumer;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 
@@ -143,6 +144,11 @@ public class CoreRE {
 		dsa = new DataStructureAdapter();
 		// We get the inputDataIngestion mode map, that consists of inputDataIngestion modes per upstream
 		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
+		System.out.println("$$$$$ idimMap START");
+		for(Integer i : idimMap.keySet()){
+			System.out.println("Upstream: "+i+" with this mode: "+idimMap.get(i));
+		}
+		System.out.println("$$$$$ idimMap END");
 		// We configure the dataStructureAdapter with this mode (per upstream), and put additional info required for some modes
 		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext());
 
@@ -476,25 +482,30 @@ public class CoreRE {
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.RESUME");
 			Resume resumeM = ct.getResume();
 			
-			// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
-			// I may be managing a state but I dont have to replay it if I have not splitted it previously
-			if(processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK)){
-				/// \todo {why has resumeM a list?? check this}
-				for (int opId: resumeM.getOpId()){
-					//Check if I am managing the state of any of the operators to which state must be replayed
-					if(processingUnit.isManagingStateOf(opId)){
-						NodeManager.nLogger.info("-> Replaying State");
-						coreProcessLogic.replayState(opId);
+			if(((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LIGHT_STATE)){
+				// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
+				// I may be managing a state but I dont have to replay it if I have not splitted it previously
+				if(processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK)){
+					/// \todo {why has resumeM a list?? check this}
+					for (int opId: resumeM.getOpId()){
+						//Check if I am managing the state of any of the operators to which state must be replayed
+						if(processingUnit.isManagingStateOf(opId)){
+							NodeManager.nLogger.info("-> Replaying State");
+							coreProcessLogic.replayState(opId);
+						}
+						else{
+							NodeManager.nLogger.info("-> NOT in charge of managing this state");
+						}
 					}
-					else{
-						NodeManager.nLogger.info("-> NOT in charge of managing this state");
-					}
+					//Once I have replayed the required states I put my status to NORMAL
+					processingUnit.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
 				}
-				//Once I have replayed the required states I put my status to NORMAL
-				processingUnit.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
+				else{
+					NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
+				}
 			}
-			else{
-				NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
+			else if(((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LARGE_STATE)){
+				NodeManager.nLogger.info("Ignoring RESUME message because checkpoint mode is LARGE-STATE");
 			}
 			//Finally ack the processing of this message
 			controlDispatcher.ackControlMessage(genericAck, os);

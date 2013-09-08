@@ -42,6 +42,7 @@ import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker;
 import uk.ac.imperial.lsds.seep.reliable.StreamStateManager;
+import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
@@ -147,6 +148,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		minBoundKeySpace = minBound;
 		maxBoundKeySpace = maxBound;
 		NodeManager.nLogger.info("New keySpace bounds: ["+minBoundKeySpace+" "+maxBoundKeySpace+"]");
+	}
+	
+	public CheckpointMode getCheckpointMode(){
+		return sbw.getCheckpointMode();
 	}
 	
 	public PUContext getPuContext(){
@@ -509,8 +514,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		int sizeST = ctx.getStarTopologySize();
 		int index = 0;
 		int splittingKey = (int)(maxBoundKeySpace - minBoundKeySpace)/2;
+		int keeperOpId = -666; // fake id since this value is up to this point empty
 		while((mc = ssm.getChunk()) != null){
-			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
+			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, keeperOpId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
 			sequenceNumber++;
 			int idx = index % sizeST;
 			owner.sendBlindData(chunkMessage, idx);

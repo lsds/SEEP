@@ -315,9 +315,9 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeStateChunk(int opId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
+	public ControlTuple makeStateChunk(int ownerOpId, int keeperOpId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
 		this.type = CoreRE.ControlTupleType.STATE_CHUNK;
-		this.stateChunk = new StateChunk(opId, seqNumber, totalChunks, mc, splittingKey);
+		this.stateChunk = new StateChunk(ownerOpId, keeperOpId, seqNumber, totalChunks, mc, splittingKey);
 		return this;
 	}
 	

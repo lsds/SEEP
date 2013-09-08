@@ -254,7 +254,7 @@ public class ElasticInfrastructureUtils {
 		sendDistributedScaleOutMessageToStarTopology(opIdToParallelize, newOpId);
 		//conn to previous node
 /**HERE AGAIN WAIT FOR ANSWER**/
-		sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
+		//sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
 /**FINALIZE SCALE OUT PROTOCOL**/
 		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
 		sendSystemConfiguredToReplica(newOp);
@@ -263,10 +263,12 @@ public class ElasticInfrastructureUtils {
 	public void sendDistributedScaleOutMessageToStarTopology(int opIdToParallelize, int newOpId){
 		ArrayList<Operator> ops = inf.getOps();
 		for (Operator o: ops) {
-			if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
-				NodeManager.nLogger.info("COMMAND: distributed_scale_out to: "+o.getOperatorId());
-				ControlTuple ct = new ControlTuple().makeDistributedScaleOut(opIdToParallelize, newOpId);
-				rct.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
+			if(o.getOperatorId() != opIdToParallelize && o.getOperatorId() != newOpId){ // Do not send to involved ops
+				if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
+					NodeManager.nLogger.info("COMMAND: distributed_scale_out to: "+o.getOperatorId());
+					ControlTuple ct = new ControlTuple().makeDistributedScaleOut(opIdToParallelize, newOpId);
+					rct.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
+				}
 			}
 		}
 	}
@@ -604,6 +606,8 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 				newOp.setOriginalDownstream(op.getOpContext().getOriginalDownstream());
 				//Copy the tuple declaration fields
 				newOp._declareWorkingAttributes(op.getOpContext().getDeclaredWorkingAttributes());
+				//Copy inputDataIngestionMode information
+				newOp.initializeInputDataIngestionModePerUpstream(op.getOpContext().getInputDataIngestionModePerUpstream());
 			}
 		}
 	}

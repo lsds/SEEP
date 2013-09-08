@@ -34,7 +34,10 @@ public class StateBackupWorker implements Runnable, Serializable{
 	private int checkpointInterval = 0;
 	private State state;
 	
-	private final int CHECKPOINTMODE;
+	public enum CheckpointMode{
+		LARGE_STATE, LIGHT_STATE
+	}
+	private final CheckpointMode CHECKPOINTMODE;
 	
 	public void stop(){
 		this.goOn = false;
@@ -45,16 +48,20 @@ public class StateBackupWorker implements Runnable, Serializable{
 		this.state = s;
 		if(P.valueFor("checkpointMode").equals("large-state")){
 			NodeManager.nLogger.info("Checkpoint mode of this operator is LARGE-STATE");
-			this.CHECKPOINTMODE = 0;
+			this.CHECKPOINTMODE = CheckpointMode.LARGE_STATE;
 		}
 		else if(P.valueFor("checkpointMode").equals("light-state")){
 			NodeManager.nLogger.info("Checkpoint mode of this operator is LIGHT-STATE");
-			this.CHECKPOINTMODE = 1;
+			this.CHECKPOINTMODE = CheckpointMode.LIGHT_STATE;
 		}
 		else{
 			// safe default
-			this.CHECKPOINTMODE = 0;
+			this.CHECKPOINTMODE = CheckpointMode.LARGE_STATE;
 		}
+	}
+	
+	public CheckpointMode getCheckpointMode(){
+		return CHECKPOINTMODE;
 	}
 
 	public void run(){
@@ -66,10 +73,10 @@ public class StateBackupWorker implements Runnable, Serializable{
 			e1.printStackTrace();
 		}
 		
-		if(CHECKPOINTMODE == 0){
+		if(CHECKPOINTMODE.equals(CheckpointMode.LARGE_STATE)){
 			executeLargeStateMechanism();
 		}
-		else if(CHECKPOINTMODE == 1){
+		else if(CHECKPOINTMODE.equals(CheckpointMode.LIGHT_STATE)){
 			executeLightStateMechanism();
 		}
 		else{

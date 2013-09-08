@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -386,10 +387,16 @@ public class CoreProcessingLogic implements Serializable{
 	public void sendInitialStateBackup(){
 		//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 		if(pu.isNodeStateful()){
-		//if(owner.subclassOperator instanceof StatefulOperator){
-System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!!!!#############");
-//			((StatefulOperator)owner.subclassOperator).generateBackupState();
-			((StatefulProcessingUnit)pu).checkpointAndBackupState();
+			NodeManager.nLogger.info("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP");
+			if(P.valueFor("checkpointMode").equals("large-state")){
+				System.out.println("skip initial state backup");
+			}
+			else if(P.valueFor("checkpointMode").equals("light-state")){
+				((StatefulProcessingUnit)pu).checkpointAndBackupState();
+			}
+			else{
+				System.out.println("skip initial state backup");
+			}
 		}
 	}
 	
@@ -401,7 +408,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 		Socket controlSocket = cci.getDownstreamControlSocket();
 		int totalNumberChunks = 0;
-		
+		int keeperOpId = pu.getOperator().getOperatorId(); // myself
 		// Read folder and filter out files to send through the network
 		try {
 			NodeManager.nLogger.info("-> Request to stream to a single node");
@@ -438,7 +445,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 				timewrite = timewrite + (c-b);
 			}
 			// Empty state chunk to indicate end of stream
-			ControlTuple endOfStream = new ControlTuple().makeStateChunk(opId, 0, 0, null, 0);
+			ControlTuple endOfStream = new ControlTuple().makeStateChunk(opId, keeperOpId, 0, 0, null, 0);
 			k.writeObject(output, endOfStream);
 			output.flush();
 			
@@ -460,6 +467,7 @@ System.out.println("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP!!!
 		File folder = new File("backup/");
 		String lastSessionName = bh.getLastBackupSessionName(oldOpId);
 		int totalNumberChunks = 0;
+		int keeperOpId = pu.getOperator().getOperatorId();
 		
 		Socket oldS = puCtx.getCCIfromOpId(oldOpId, "d").getDownstreamControlSocket();
 		Socket newS = puCtx.getCCIfromOpId(newOpId, "d").getDownstreamControlSocket();
@@ -541,12 +549,12 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 				if(currentNumberBatch == numberBatchChunks){
 					currentNumberBatch = 0;
 					MemoryChunk oldMC = new MemoryChunk(oldPartition);
-					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
+					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, keeperOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
 System.out.println("send chunk to: "+oldS.toString());
 					k.writeObject(oldO, oldCT);
 					oldO.flush();
 					MemoryChunk newMC = new MemoryChunk(newPartition);
-					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
+					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, keeperOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
 System.out.println("send chunk to: "+newS.toString());
 					k.writeObject(newO, newCT);
 					newO.flush();
@@ -555,7 +563,7 @@ System.out.println("send chunk to: "+newS.toString());
 				}
 			}
 			// Indicate end of stream to both operators 
-			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), 0, 0, null, 0);
+			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), keeperOpId, 0, 0, null, 0);
 System.out.println("send chunk to: "+oldS.toString());
 System.out.println("FINAL old");
 
@@ -585,10 +593,16 @@ System.out.println("FINAL FINAL");
 	private Set<Integer> activeOpStreaming = new HashSet<Integer>();
 	public void handleNewChunk(StateChunk stateChunk){
 		// If null means this operator has finished streaming
+		int opId = stateChunk.getKeeperOpId();
 		if(stateChunk.getMemoryChunk() == null){
-			activeOpStreaming.remove(stateChunk.getOpId());
+			activeOpStreaming.remove(opId);
+			for(Integer i : activeOpStreaming){
+				System.out.println("Set element: "+i);
+			}
+			NodeManager.nLogger.info("OP: "+opId+" has finished streaming");
 			if(activeOpStreaming.size() == 0){
 				// finished merging state
+				NodeManager.nLogger.info("Finished merging streaming state");
 				((StatefulProcessingUnit)pu).mergeChunkToState(null);
 				ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
 				owner.getControlDispatcher().sendAllUpstreams(rb);
@@ -596,10 +610,9 @@ System.out.println("FINAL FINAL");
 		}
 		// an active operator sends us a chunk
 		else{
-			// New chunk to merge
-			int sourceOpId = stateChunk.getOpId();
-			// We state this op is actively streaming
-			activeOpStreaming.add(sourceOpId);
+			// New chunk to merge. We state this op is actively streaming
+			activeOpStreaming.add(opId);
+			NodeManager.nLogger.info("New OP streaming: "+opId);
 			// And we call the correct function to merge the state
 			((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);
 		}

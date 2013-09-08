@@ -19,6 +19,7 @@ import java.util.Map;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 
@@ -199,6 +200,12 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	public void _declareWorkingAttributes(List<String> attributes, String key){
 		opContext.setKeyAttribute(key);
 		opContext.setDeclaredWorkingAttributes(attributes);
+	}
+	
+	public void initializeInputDataIngestionModePerUpstream(Map<Integer, InputDataIngestionMode> idim){
+		for(Integer opId : idim.keySet()){
+			this.getOpContext().setInputDataIngestionModePerUpstream(opId, idim.get(opId));
+		}
 	}
 
 	/** HELPER METHODS **/
