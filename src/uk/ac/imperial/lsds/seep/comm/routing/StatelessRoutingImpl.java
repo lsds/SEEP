@@ -84,8 +84,8 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 	
 	//overriden to make ANY faster...
 	public ArrayList<Integer> route(int value){
-System.out.println("Rem window: "+remainingWindow);
-System.out.println("splitWindow: "+splitWindow);
+//System.out.println("Rem window: "+remainingWindow);
+//System.out.println("splitWindow: "+splitWindow);
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		if(remainingWindow == 0){
 			//Reinitialize the window size
@@ -94,15 +94,15 @@ System.out.println("splitWindow: "+splitWindow);
 			target = downstreamIndex++%numberOfDownstreams;
 			// get the real index from the virtual one.
 			//target = virtualIndexToRealIndex.get(target);
-System.out.println("target: "+target);
-System.out.println("numberOfDownstreams: "+numberOfDownstreams);
+//System.out.println("target: "+target);
+//System.out.println("numberOfDownstreams: "+numberOfDownstreams);
 			targets.add(target);
 			return targets;
 		}
 		remainingWindow--;
 		/// \todo Return the real Index, got from the virtual one. Optimize this
 		//target = virtualIndexToRealIndex.get(target);
-System.out.println("Target: "+target);
+//System.out.println("Target: "+target);
 		targets.add(target);
 		return targets;
 	}

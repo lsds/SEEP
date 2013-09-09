@@ -121,6 +121,33 @@ public class Infrastructure {
 		snk = qp.getSnk();
 		// At this point we check the partitioning options
 		// This first option is the recommended only when one knows what she's doing.
+//		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
+//		if(!qp.getScaleOutIntents().isEmpty()){
+//			NodeManager.nLogger.info("-> Manual static scale out");
+//			soib = eiu.staticInstantiateNewReplicaOperator(qp.getScaleOutIntents(), qp);
+//		}
+//		// The default and preferred option, used
+//		else if (!qp.getPartitionRequirements().isEmpty()){
+//			NodeManager.nLogger.info("-> Automatic static scale out");
+//			soib = eiu.staticInstantiationNewReplicaOperators(qp);
+//		}
+		///\todo{log what is going on here}
+		queryToNodesMapping = qp.getMapOperatorToNode();
+		configureRouterStatically();
+//		eiu.executeStaticScaleOutFromIntent(soib);
+		
+		// Then we set up the InputDataIngestionMode per operator
+		///fixme{Wasteful method, but no performance critical anyway}
+
+		
+		for(Operator op : ops){
+			// Never will be empty, as there are no sources here (so all operators will have at least one upstream
+			makeDataIngestionModeLocalToOp(op);
+		}
+		// Then we do the inversion with sink, since this also has upstream operators.
+		makeDataIngestionModeLocalToOp(snk);
+//		System.exit(0);
+		
 		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
 		if(!qp.getScaleOutIntents().isEmpty()){
 			NodeManager.nLogger.info("-> Manual static scale out");
@@ -131,19 +158,8 @@ public class Infrastructure {
 			NodeManager.nLogger.info("-> Automatic static scale out");
 			soib = eiu.staticInstantiationNewReplicaOperators(qp);
 		}
-		///\todo{log what is going on here}
-		queryToNodesMapping = qp.getMapOperatorToNode();
-		configureRouterStatically();
+		// After everything is set up, then we scale out ops
 		eiu.executeStaticScaleOutFromIntent(soib);
-		
-		// Then we set up the InputDataIngestionMode per operator
-		///fixme{Wasteful method, but no performance critical anyway}
-		for(Operator op : ops){
-			// Never will be empty, as there are no sources here (so all operators will have at least one upstream
-			makeDataIngestionModeLocalToOp(op);
-		}
-		// Then we do the inversion with sink, since this also has upstream operators.
-		makeDataIngestionModeLocalToOp(snk);
 	}
 	
 	private void makeDataIngestionModeLocalToOp(Operator op){
@@ -157,6 +173,13 @@ public class Infrastructure {
 				}
 			}
 		}
+	}
+	
+	private boolean checkReplicaOperator(Operator op, int opId){
+		if(op.getOpContext().getOriginalUpstreamFromOpId(opId) != opId){
+			return false;
+		}
+		return true;
 	}
 	
 	public void configureRouterStatically(){

@@ -101,7 +101,7 @@ public class OutputQueue {
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
 					k.writeObject(channelRecord.getOutput(), msg);
-					System.out.println("Sent");
+//					System.out.println("Sent");
 					//Flush the buffer to the stream
 					channelRecord.getOutput().flush();
 					// We save the data
