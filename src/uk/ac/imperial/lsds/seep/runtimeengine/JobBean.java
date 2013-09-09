@@ -8,34 +8,20 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
+package uk.ac.imperial.lsds.seep.runtimeengine;
 
-public class KeyBounds {
+import java.net.InetAddress;
 
-	private int minBound;
-	private int maxBound;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
+
+public class JobBean {
+
+	public InetAddress ip;
+	public ControlTuple msg;
 	
-	public KeyBounds(){}
-	
-	public KeyBounds(int minBound, int maxBound) {
-		this.minBound = minBound;
-		this.maxBound = maxBound;
-	}
-
-	public int getMinBound() {
-		return minBound;
-	}
-
-	public void setMinBound(int minBound) {
-		this.minBound = minBound;
-	}
-
-	public int getMaxBound() {
-		return maxBound;
-	}
-
-	public void setMaxBound(int maxBound) {
-		this.maxBound = maxBound;
+	public JobBean(InetAddress ip, ControlTuple msg){
+		this.ip = ip;
+		this.msg = msg;
 	}
 	
 }

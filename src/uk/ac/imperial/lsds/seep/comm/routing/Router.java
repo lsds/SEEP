@@ -158,14 +158,14 @@ return null;
 		int value = 0;
 		if(downstreamRoutingImpl == null){
 			System.out.println("downstreamrouting impl null");
-			System.exit(0);
+			System.exit(0); /// xtreme
 		}
 		if(downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL) == null){
 			for(Integer i : downstreamRoutingImpl.keySet()){
 				System.out.println(downstreamRoutingImpl.get(i));
 			}
 			System.out.println("idx for routing impl");
-			System.exit(0);
+			System.exit(0); // xtreme
 		}
 	
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
@@ -210,11 +210,6 @@ return null;
 		}
 		else{
 			//Otherwise, we use the default RoutingImpl
-			System.out.println("KEY SET OF DOWNSTREAM ROUTING IMPL");
-			for(Integer i : downstreamRoutingImpl.keySet()){
-				System.out.println(i+" : "+downstreamRoutingImpl.get(i));
-			}
-			System.out.println("access downstream routing impl in: "+INDEX_FOR_ROUTING_IMPL);
 			key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).newStaticReplica(oldOpIndex, newOpIndex);
 		}
 		return key;

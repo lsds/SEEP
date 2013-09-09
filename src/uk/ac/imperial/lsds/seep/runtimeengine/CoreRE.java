@@ -446,7 +446,7 @@ public class CoreRE {
 			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.DISTRIBUTED_SCALE_OUT");
 			int oldOpId = ct.getDistributedScaleOutInfo().getOldOpId();
 			int newOpId = ct.getDistributedScaleOutInfo().getNewOpId();
-				
+			// Stateful operator
 			if(puCtx.isScalingOpDirectDownstream(oldOpId)){
 				System.out.println("Direct downstream");
 				int newOpIndex = -1;
@@ -457,15 +457,19 @@ public class CoreRE {
 				// Get index of the scaling operator
 				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(oldOpId).index();
 				// And manage distributed scale out
-				int bounds[] = coreProcessLogic.manageDownstreamDistributedScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
-				coreProcessLogic.propagateNewKeys(bounds, oldOpIndex, newOpIndex);
+				if(processingUnit.isNodeStateful()){
+					int bounds[] = coreProcessLogic.manageDownstreamDistributedScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
+					coreProcessLogic.propagateNewKeys(bounds, oldOpIndex, newOpIndex);
+				}
+				else{
+					processingUnit.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
+				}
 			}
-			
-			coreProcessLogic.backupRoutingInformation(oldOpId);
-				
-//			coreProcessLogic.directReplayState(new ReplayStateInfo(oldOpId, newOpId, false), bh);
-			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh);
-			controlDispatcher.ackControlMessage(genericAck, os);
+			if(processingUnit.isNodeStateful()){
+				coreProcessLogic.backupRoutingInformation(oldOpId);
+				coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh);
+				controlDispatcher.ackControlMessage(genericAck, os);
+			}
 		}
 		/** REPLAY_STATE **/
 		else if(ctt.equals(ControlTupleType.STREAM_STATE)){

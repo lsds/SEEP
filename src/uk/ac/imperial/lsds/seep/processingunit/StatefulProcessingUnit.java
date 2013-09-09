@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -40,12 +41,15 @@ import uk.ac.imperial.lsds.seep.operator.Streamable;
 import uk.ac.imperial.lsds.seep.operator.Versionable;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+import uk.ac.imperial.lsds.seep.reliable.SerialiserWorker;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker;
 import uk.ac.imperial.lsds.seep.reliable.StreamStateManager;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
+import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
+import uk.ac.imperial.lsds.seep.runtimeengine.JobBean;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
@@ -517,17 +521,39 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		int keeperOpId = -666; // fake id since this value is up to this point empty
 		
 		long total = 0;
+		/** Single thread **/
+//		while((mc = ssm.getChunk()) != null){
+//			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, keeperOpId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
+//			sequenceNumber++;
+//			int idx = index % sizeST;
+//			long start = System.currentTimeMillis();
+//			owner.sendBlindData(chunkMessage, idx);
+//			long stop = System.currentTimeMillis();
+//			total += (stop-start);
+//			index++;
+//		}
 		
+		/** Worker pool **/
+		ArrayBlockingQueue<JobBean> jobQueue = new ArrayBlockingQueue<JobBean>(4);
+		SerialiserWorker s1 = new SerialiserWorker(jobQueue);
+		SerialiserWorker s2 = new SerialiserWorker(jobQueue);
+		Thread t1 = new Thread(s1);
+		Thread t2 = new Thread(s2);
+		t1.start();
+		t2.start();
 		while((mc = ssm.getChunk()) != null){
 			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, keeperOpId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
 			sequenceNumber++;
 			int idx = index % sizeST;
-			long start = System.currentTimeMillis();
-			owner.sendBlindData(chunkMessage, idx);
-			long stop = System.currentTimeMillis();
-			total += (stop-start);
+			InetAddress ip_endpoint = ((DisposableCommunicationChannel)ctx.getStarTopology().get(idx)).getIp();
+			JobBean jb = new JobBean(ip_endpoint, chunkMessage);
+			jobQueue.offer(jb);
 			index++;
 		}
+		while(jobQueue.size() > 0);
+		s1.killThread();
+		s2.killThread();
+		
 		long startR = System.currentTimeMillis();
 		//((Versionable)runningOpState).reconcile();
 		((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).reconcile();
