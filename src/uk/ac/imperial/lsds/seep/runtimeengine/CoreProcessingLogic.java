@@ -180,7 +180,7 @@ public class CoreProcessingLogic implements Serializable{
 		TimestampTracker oldest = buffer.trim(ack_ts);
 		
 		// Check whether this operator is responsible to control when to backpropagate acks
-		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
+//		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
 			// First assign this ackV to the opId, in case it is updating a previous value
 			if(oldest != null){
 				downstreamLastAck.put(opId, oldest);
@@ -200,7 +200,7 @@ public class CoreProcessingLogic implements Serializable{
 			else{
 				System.out.println("is NULL");
 			}
-		}
+//		}
 	}
 	
 	public void splitState(int oldOpId, int newOpId, int key) {

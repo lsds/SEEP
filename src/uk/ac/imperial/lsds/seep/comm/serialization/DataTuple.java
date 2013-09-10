@@ -67,6 +67,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		TuplePayload tp = new TuplePayload();
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = this.payload.timestamp;
+		tp.instrumentation_ts = this.payload.instrumentation_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}
@@ -75,6 +76,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		TuplePayload tp = new TuplePayload();
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = System.currentTimeMillis();
+		tp.instrumentation_ts =  tp.timestamp;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}
