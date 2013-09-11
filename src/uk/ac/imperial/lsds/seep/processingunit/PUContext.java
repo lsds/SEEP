@@ -61,6 +61,10 @@ public class PUContext {
 	
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
 		this.nodeDescr = nodeDescr;
+		if(starTopology == null){
+			System.out.println("on creation of pucontest, startopology null");
+			System.exit(0);
+		}
 		this.starTopology = starTopology;
 		try {
 			this.selector = SelectorProvider.provider().openSelector();

@@ -2,6 +2,7 @@ build/*
 dist/*
 old/*
 scripts/*
+log.out
 .project
 .classpath
 .codepro

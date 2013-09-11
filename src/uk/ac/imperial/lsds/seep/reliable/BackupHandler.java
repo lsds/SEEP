@@ -115,17 +115,17 @@ public class BackupHandler implements Runnable{
 		if(backupSessionHandlers.containsKey(opId)){
 			ArrayList<FileChannel> oldFiles = backupSessionHandlers.get(opId);
 			for(FileChannel f : oldFiles){
-//				try {
-//					f.close();
-//				} 
-//				catch (IOException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
+				try {
+					f.close();
+				} 
+				catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			ArrayList<File> toRemove = backupSessionHandlersGCFiles.get(opId);
 			for(File f : toRemove){
-//				f.delete();
+				f.delete();
 			}
 		}
 	}

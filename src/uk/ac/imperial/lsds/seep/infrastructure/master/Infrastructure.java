@@ -828,13 +828,17 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 				mapper.put(artList.get(i), i);
 			}
 			
+			DataTuple dts = new DataTuple(mapper, new TuplePayload());
 			while((currentLine = br.readLine()) != null){
-				DataTuple dt = new DataTuple(mapper, new TuplePayload());
+				
 				String[] tokens = currentLine.split(",");
 //				dt.setUserId(Integer.parseInt(tokens[1]));
 //				dt.setItemId(Integer.parseInt(tokens[0]));
 //				dt.setRating(Integer.parseInt(tokens[2]));
-				dt.setValues(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[0]), Integer.parseInt(tokens[2]));
+				TuplePayload tp = new TuplePayload();
+//				tp.attrValues = new Payload(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[0]), Integer.parseInt(tokens[2]));
+				DataTuple dt = dts.newTuple(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[0]), Integer.parseInt(tokens[2]));
+//				dt.setValues(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[0]), Integer.parseInt(tokens[2]));
 				
 				k.writeObject(output, dt);
 				//Flush the buffer to the stream
