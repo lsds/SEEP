@@ -29,8 +29,8 @@ import com.esotericsoftware.kryo.io.Output;
 public class Monitor implements Runnable{
 
 	private int nodeId;
-	private Kryo k = null;
-	private Output output = null;
+	private static Kryo k = null;
+	private static Output output = null;
 	
 	private boolean listen = true;
 	
@@ -46,6 +46,13 @@ public class Monitor implements Runnable{
 	
 	public void stopMonitor(){
 		listen = false;
+	}
+	
+	public static void send666(){
+		MetricsTuple mt = new MetricsTuple();
+		mt.setOpId(-666);
+		k.writeObject(output, mt);
+		output.flush();
 	}
 
 	private void sendMonitorInfo() throws IOException{

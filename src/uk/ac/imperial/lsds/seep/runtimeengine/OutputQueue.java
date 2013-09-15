@@ -70,9 +70,9 @@ public class OutputQueue {
 	
 	public synchronized void stop() {
 		//Stop incoming data, a new thread is replaying
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore changes from: "+replaySemaphore.toString());
+		NodeManager.nLogger.info("-> replaySemaphore from: "+replaySemaphore.toString());
 		replaySemaphore.incrementAndGet();
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore to: "+replaySemaphore.toString());
+		NodeManager.nLogger.info("-> replaySemaphore to: "+replaySemaphore.toString());
 	}
 	
 	
@@ -151,20 +151,20 @@ public class OutputQueue {
 		int bufferSize = cci.getBuffer().size();
 		int controlThreshold = (int)(bufferSize)/10;
 		int replayed = 0;
-		while(sharedIterator.hasNext()) {
-			BatchTuplePayload dt = sharedIterator.next().batch;
-			synchronized(output){
-				synchronized(k){
-					k.writeObject(output, dt);
-				}
-				output.flush();
-			}
-			replayed++;
-			/// \test {test this functionality. is this necessary?}
-			if((bufferSize-replayed) <= (controlThreshold+1)){
-				break;
-			}
-		}
+//		while(sharedIterator.hasNext()) {
+//			BatchTuplePayload dt = sharedIterator.next().batch;
+//			synchronized(output){
+//				synchronized(k){
+//					k.writeObject(output, dt);
+//				}
+//				output.flush();
+//			}
+//			replayed++;
+//			/// \test {test this functionality. is this necessary?}
+//			if((bufferSize-replayed) <= (controlThreshold+1)){
+//				break;
+//			}
+//		}
 		//Restablish communication. Set variables and sharedIterator with the current iteration state.
 		NodeManager.nLogger.info("-> Recovering connections");
 		cci.getReplay().set(true);

@@ -325,6 +325,9 @@ public class Infrastructure {
 			}
 		}
 		NodeManager.nLogger.info("Initial StarTopology Size: "+starTopology.size());
+		for(EndPoint ep : starTopology){
+			System.out.println("Op: "+ep.getOperatorId()+" IP: "+((DisposableCommunicationChannel)ep).getIp().toString());
+		}
 	}
 	
 	public void addNodeToStarTopology(int opId, InetAddress ip){
@@ -475,11 +478,12 @@ public class Infrastructure {
 		ControlTuple streamState = new ControlTuple().makeStreamState(opId);
 		// Get access to starTopology and send the controltuple to all of them
 		for(Operator op : ops){
+System.out.println("OP: "+op.getOperatorId());
 			if(op.getOperatorId() != opId){
 				if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
 					OperatorStaticInformation osi = op.getOpContext().getOperatorStaticInformation();
 System.out.println("sending stream state to : "+op.getOperatorId());
-					rct.sendControlMsg(osi, streamState, op.getOperatorId());
+					rct.sendControlMsgWithoutACK(osi, streamState, op.getOperatorId());
 				}
 			}
 		}
@@ -614,6 +618,11 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			NodeManager.nLogger.warning("-> Node Pool empty, Impossible to scale-out");
 			return null;
 		}
+		
+		for(Node n : nodeStack){
+			System.out.println("NODE: "+n);
+		}
+		
 		return nodeStack.pop();
 	}
 	
@@ -797,9 +806,9 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	}
 	
 	public void parseFileForNetflix() {
-		System.out.println("SEVERE: PROBLEM HERE, tuples have changed");
-		File f = new File("data.txt");
-		File o = new File("data.bin");
+		System.out.println("Parse file for Netflix...");
+		File f = new File("/home/ec2-user/data/data.txt");
+		File o = new File("/home/ec2-user/data/data.bin");
 		
 		Kryo k = new Kryo();
 		k.register(ArrayList.class, new ArrayListSerializer());
@@ -829,7 +838,16 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			}
 			
 			DataTuple dts = new DataTuple(mapper, new TuplePayload());
+			int counter = 0;
+			int total = 0;
 			while((currentLine = br.readLine()) != null){
+				
+				counter++;
+				if(counter == 10000){
+					total += 10000;
+					System.out.println("total: "+total);
+					counter = 0;
+				}
 				
 				String[] tokens = currentLine.split(",");
 //				dt.setUserId(Integer.parseInt(tokens[1]));
@@ -848,11 +866,9 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			br.close();
 		}
 		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

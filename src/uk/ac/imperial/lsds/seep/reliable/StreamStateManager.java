@@ -40,7 +40,9 @@ public class StreamStateManager {
 		if(stateIterator.hasNext()){
 			ArrayList<Object> chunk = state.streamSplitState(chunkSize);
 			if(chunk == null){
-				return null;
+				mc = new MemoryChunk();
+				mc.chunk = chunk;
+				return mc;
 			}
 			mc = new MemoryChunk();
 			mc.chunk = chunk;

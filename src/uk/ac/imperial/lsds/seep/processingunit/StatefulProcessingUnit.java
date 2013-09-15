@@ -538,21 +538,50 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		SerialiserWorker s1 = new SerialiserWorker(jobQueue);
 		SerialiserWorker s2 = new SerialiserWorker(jobQueue);
 		Thread t1 = new Thread(s1);
+		t1.setName("S1");
 		Thread t2 = new Thread(s2);
+		t2.setName("S2");
 		t1.start();
 		t2.start();
+		int counter = 0;
 		while((mc = ssm.getChunk()) != null){
 			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, keeperOpId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
 			sequenceNumber++;
 			int idx = index % sizeST;
 			InetAddress ip_endpoint = ((DisposableCommunicationChannel)ctx.getStarTopology().get(idx)).getIp();
 			JobBean jb = new JobBean(ip_endpoint, chunkMessage);
-			jobQueue.offer(jb);
+			System.out.println("chunk: "+counter);
+			counter++;
+//			jobQueue.offer(jb);
+			try {
+				jobQueue.put(jb);
+			} 
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			index++;
 		}
-		while(jobQueue.size() > 0);
-		s1.killThread();
-		s2.killThread();
+		JobBean jb = new JobBean(null, null);
+		try {
+			jobQueue.put(jb);
+		} 
+		catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+//		while(jobQueue.size() > 0);
+//		s1.killThread();
+//		s2.killThread();
+		try {
+			t1.join();
+			t2.join();
+		}
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		
 		long startR = System.currentTimeMillis();
 		//((Versionable)runningOpState).reconcile();
@@ -647,7 +676,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	
-	public void mergeChunkToState(StateChunk chunk){
+	public synchronized void mergeChunkToState(StateChunk chunk){
 		if(chunk == null){
 			//((Streamable)runningOpState).appendChunk(null);
 			((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(null);

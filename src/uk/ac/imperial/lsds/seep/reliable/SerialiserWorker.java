@@ -87,12 +87,19 @@ public class SerialiserWorker implements Runnable{
 			JobBean jb = null;
 			try {
 				jb = jobQueue.take();
+			
+				if(jb.msg != null){
+					serialiseAndSend(jb.msg, jb.ip);
+				}
+				else{
+					jobQueue.put(jb);
+					goOn = false;
+				}
 			} 
 			catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			serialiseAndSend(jb.msg, jb.ip);
 		}
 	}
 	
@@ -106,7 +113,7 @@ public class SerialiserWorker implements Runnable{
 				synchronized(socket){
 					synchronized (largeOutput){
 						long startWrite = System.currentTimeMillis();
-						System.out.println("Send chunk to: "+socket.toString());
+						System.out.println(Thread.currentThread().getName()+": Send chunk to: "+socket.toString());
 						k.writeObject(largeOutput, ct);
 //						System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
 						largeOutput.flush();

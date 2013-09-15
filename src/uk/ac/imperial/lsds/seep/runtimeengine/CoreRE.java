@@ -329,7 +329,7 @@ public class CoreRE {
 		}
 		return false;
 	}
-
+	
 	///\todo{refactor: Represent this method as a finite state machine and provide methods to query and update the state}
 	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
 		/** 
@@ -467,9 +467,9 @@ public class CoreRE {
 			}
 			if(processingUnit.isNodeStateful()){
 				coreProcessLogic.backupRoutingInformation(oldOpId);
-				coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh);
-				controlDispatcher.ackControlMessage(genericAck, os);
 			}
+			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh);
+//			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/
 		else if(ctt.equals(ControlTupleType.STREAM_STATE)){
@@ -478,6 +478,8 @@ public class CoreRE {
 //			
 			int opId = ct.getStreamState().getTargetOpId();
 			coreProcessLogic.directReplayStateFailure(opId, bh);
+			
+			// no ack, just be fast
 			//Finally ack the processing of this message
 //			controlDispatcher.ackControlMessage(genericAck, os);
 		}

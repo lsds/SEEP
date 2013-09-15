@@ -10,17 +10,22 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
@@ -51,6 +56,8 @@ import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StreamStateChunk;
 import uk.ac.imperial.lsds.seep.reliable.BackupHandler;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+import uk.ac.imperial.lsds.seep.reliable.MergerWorker;
+import uk.ac.imperial.lsds.seep.reliable.StreamerWorker;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -404,7 +411,7 @@ public class CoreProcessingLogic implements Serializable{
 	public void directReplayStateFailure(int opId, BackupHandler bh){
 		File folder = new File("backup/");
 		String lastSessionName = bh.getLastBackupSessionName(opId);
-		ArrayList<File> filesToStream = new ArrayList<File>();
+		List<File> filesToStream = new ArrayList<File>();
 		SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 		Socket controlSocket = cci.getDownstreamControlSocket();
 		int totalNumberChunks = 0;
@@ -417,6 +424,9 @@ public class CoreProcessingLogic implements Serializable{
 			// ok, cause there is no simple way to access to the filechannel names. We can use the file objects that are ready to
 			// garbage collect to access to this information, saving some valuable IO interactions with the disk, not only in this block
 			// but most improtnatly below, at deserialization time
+			
+			/** test1 **/
+			
 			for(File chunkFile : folder.listFiles()){
 				String chunkName = chunkFile.getName();
 				if(matchSession(opId, chunkName, lastSessionName)){
@@ -425,10 +435,61 @@ public class CoreProcessingLogic implements Serializable{
 					System.out.println("Filename: "+chunkName);
 				}
 			}
+			
+			/** end test1 **/
+			
+			/** test2 **/
+			
+//			ArrayList<File> filesToStream2 = bh.getSessionFileHandlers(opId);
+//			System.out.println("same files");
+//			for(File f :filesToStream){
+//				System.out.println("F1: "+f.getName());
+//			}
+//			for(File f2 : filesToStream2){
+//				System.out.println("F2: "+f2.getName());
+//			}
+//			if(filesToStream.size() == filesToStream2.size()){
+//				System.out.println("same files");
+//				for(File f :filesToStream){
+//					System.out.println("F1: "+f.getName());
+//				}
+//				for(File f2 : filesToStream2){
+//					System.out.println("F2: "+f2.getName());
+//				}
+//			}
+//			else{
+//				System.out.println("Different number of files, f1: "+filesToStream.size()+" f2: "+filesToStream2.size());
+//			}
+//			
+//			System.exit(0);
 
+			/** end test2 **/
+			
 			long timeread = 0;
 			long timewrite = 0;
+			
+//			int filesToStreamSize = filesToStream.size();
+//			int midIndex = (int)filesToStream.size()/2;
+//			List<File> filesToStreamSplit1 = filesToStream.subList(0, midIndex);
+//			List<File> filesToStreamSplit2 = filesToStream.subList(midIndex+1, filesToStreamSize-1);
+//			
+//			System.out.println("S1 has: "+filesToStreamSplit1.size());
+//			System.out.println("S2 has: "+filesToStreamSplit2.size());
+//			
+//			StreamerWorker sw1 = new StreamerWorker(filesToStreamSplit1, filesToStreamSize, controlSocket);
+//			StreamerWorker sw2 = new StreamerWorker(filesToStreamSplit2, filesToStreamSize, controlSocket);
+//			Thread t1 = new Thread(sw1);
+//			t1.setName("T1");
+//			Thread t2 = new Thread(sw2);
+//			t2.setName("T2");
+//			t1.start();
+//			t2.start();
+//			
+//			t1.join();
+//			t2.join();
+			
 			for(File chunk : filesToStream){
+				System.out.println("STREAM CHUNK: "+chunk.getName());
 				Input i = new Input(new FileInputStream(chunk));
 //				Input i = new Input(new FileInputStream(filesToStream.get(ig)));
 				long a = System.currentTimeMillis();
@@ -440,7 +501,7 @@ public class CoreProcessingLogic implements Serializable{
 				output.flush();
 				long c = System.currentTimeMillis();
 				i.close();
-				System.out.println("CT: "+ct.toString());
+				//System.out.println("CT: "+ct.toString());
 				timeread = timeread + (b-a);
 				timewrite = timewrite + (c-b);
 			}
@@ -459,11 +520,15 @@ public class CoreProcessingLogic implements Serializable{
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		} 
+//		catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 	
 	//public void directReplayStateScaleOut(ReplayStateInfo rsi, BackupHandler bh, File folder){
-	public void directReplayStateScaleOut(int oldOpId, int newOpId,BackupHandler bh){
+	public void directReplayStateScaleOut(int oldOpId, int newOpId, BackupHandler bh){
 		// DEBUG VAR
 		int _np = 0;
 		int _op = 0;
@@ -476,7 +541,7 @@ public class CoreProcessingLogic implements Serializable{
 		Socket oldS = puCtx.getCCIfromOpId(oldOpId, "d").getDownstreamControlSocket();
 		Socket newS = puCtx.getCCIfromOpId(newOpId, "d").getDownstreamControlSocket();
 		
-		ArrayList<File> filesToStream = new ArrayList<File>();
+		List<File> filesToStream = new ArrayList<File>();
 		
 		try{
 			Output oldO = new Output(oldS.getOutputStream());
@@ -491,24 +556,69 @@ public class CoreProcessingLogic implements Serializable{
 				}
 			}
 System.out.println("there are: "+filesToStream.size()+" to stream");
-			// There is a fixed size per chunk, so there is an upper bound size per partition. Let's then
-			// make dynamically-sized chunks.
-			// Every two file chunks, we send the batched state
+
+//
+//			int filesToStreamSize = filesToStream.size();
+//			int midIndex = (int)filesToStream.size()/2;
+//			List<File> filesToStreamSplit1 = filesToStream.subList(0, midIndex+1);
+//			List<File> filesToStreamSplit2 = filesToStream.subList(midIndex+1, filesToStreamSize-1);
+//
+//			System.out.println("S1 has: "+filesToStreamSplit1.size());
+//			System.out.println("S2 has: "+filesToStreamSplit2.size());
+//
+//			StreamerWorker sw1 = new StreamerWorker(filesToStreamSplit1, filesToStreamSize, oldS, newS, oldOpId, newOpId, keeperOpId, totalNumberChunks);
+//			StreamerWorker sw2 = new StreamerWorker(filesToStreamSplit2, filesToStreamSize, oldS, newS, oldOpId, newOpId, keeperOpId, totalNumberChunks);
+//			Thread t1 = new Thread(sw1);
+//			t1.setName("T1");
+//			Thread t2 = new Thread(sw2);
+//			t2.setName("T2");
+//			t1.start();
+//			t2.start();
+//
+//			t1.join();
+//			t2.join();
+
+
+
+//			// There is a fixed size per chunk, so there is an upper bound size per partition. Let's then
+//			// make dynamically-sized chunks.
+//			// Every two file chunks, we send the batched state
 			Input i = null;
 			ArrayList<Object> oldPartition = new ArrayList<Object>();
 			ArrayList<Object> newPartition = new ArrayList<Object>();
 			int numberBatchChunks = 2;
 			int currentNumberBatch = 0;
+			
+			long readFromDiskTime = 0;
+			long splittingTime = 0;
+			long writeOld = 0;
+			long writeNew = 0;
+			long c = 0;
+			long d = 0;
+			ArrayBlockingQueue<Object> oldToStream = new ArrayBlockingQueue<Object>(4);
+			ArrayBlockingQueue<Object> newToStream = new ArrayBlockingQueue<Object>(4);
+			StreamerWorker s1 = new StreamerWorker(oldO, oldToStream, oldOpId, keeperOpId, 0, 0);
+			StreamerWorker s2 = new StreamerWorker(newO, newToStream, newOpId, keeperOpId, 0, 0);
+			Thread t1 = new Thread(s1);
+			Thread t2 = new Thread(s2);
+			t1.start();
+			t2.start();
+			
 			for(File chunk : filesToStream){
+				System.out.println("Splitting file: "+chunk.getName());
 				currentNumberBatch++;
 				i = new Input(new FileInputStream(chunk));
+				long a = System.currentTimeMillis();
 				ControlTuple ct = k.readObject(i, ControlTuple.class);
+				long b = System.currentTimeMillis();
+				readFromDiskTime += (b-a);
 				MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
 				int key = ct.getStateChunk().getSplittingKey(); // read it every time? ...
 				Object sample = mc.chunk.get(0);
 				// agh... java...
 				///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}
 				if(sample instanceof Integer){
+					c = System.currentTimeMillis();
 					for(int j = 0; j < mc.chunk.size(); j++){
 						Integer k = (Integer)mc.chunk.get(j);
 						if(Router.customHash(k) > key){
@@ -522,8 +632,10 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 							oldPartition.add(mc.chunk.get(j));
 						}
 					}
+					d = System.currentTimeMillis();
 				}
 				else if(sample instanceof String){
+					c = System.currentTimeMillis();
 					for(int j = 0; j < mc.chunk.size(); j++){
 						String k = (String)mc.chunk.get(j);
 						if(Router.customHash(k) > key){
@@ -539,24 +651,43 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 							oldPartition.add(mc.chunk.get(j));
 						}
 					}
+					d = System.currentTimeMillis();
 				}
+				splittingTime += (d-c);
 				if(currentNumberBatch == numberBatchChunks){
 					currentNumberBatch = 0;
-					MemoryChunk oldMC = new MemoryChunk(oldPartition);
-					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, keeperOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
-System.out.println("send chunk to: "+oldS.toString());
-					k.writeObject(oldO, oldCT);
-					oldO.flush();
-					MemoryChunk newMC = new MemoryChunk(newPartition);
-					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, keeperOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
-System.out.println("send chunk to: "+newS.toString());
-					k.writeObject(newO, newCT);
-					newO.flush();
+					oldToStream.put(new ArrayList<Object>(oldPartition));
+					newToStream.put(new ArrayList<Object>(newPartition));
+					
+//					currentNumberBatch = 0;
+//					MemoryChunk oldMC = new MemoryChunk(oldPartition);
+//					ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, keeperOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
+//System.out.println("send chunk to: "+oldS.toString());
+//					long e = System.currentTimeMillis();
+//					k.writeObject(oldO, oldCT);
+//					oldO.flush();
+//					long f = System.currentTimeMillis();
+//					writeOld += (f-e);
+//					MemoryChunk newMC = new MemoryChunk(newPartition);
+//					ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, keeperOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
+//System.out.println("send chunk to: "+newS.toString());
+//					long g = System.currentTimeMillis();
+//					k.writeObject(newO, newCT);
+//					newO.flush();
+//					long h = System.currentTimeMillis();
+//					writeNew += (h-g);
 					oldPartition.clear();
 					newPartition.clear();
 				}
+				i.close();
 			}
-			// Indicate end of stream to both operators 
+			//make sure they die
+			oldToStream.put(new ArrayList<Object>());
+			newToStream.put(new ArrayList<Object>());
+			t1.join();
+			t2.join();
+			
+			// Indicate end of stream to both operators
 			ControlTuple endOfStream = new ControlTuple().makeStateChunk(pu.getOperator().getOperatorId(), keeperOpId, 0, 0, null, 0);
 
 			k.writeObject(oldO, endOfStream);
@@ -564,13 +695,19 @@ System.out.println("send chunk to: "+newS.toString());
 			k.writeObject(newO, endOfStream);
 			oldO.flush();
 			newO.flush();
-			i.close();
-System.out.println("new p: "+_np);
-System.out.println("old p: "+_op);
+			System.out.println("Time read from disk: "+readFromDiskTime);
+			System.out.println("Splitting time: "+splittingTime);
+			System.out.println("time to write to old: "+writeOld);
+			System.out.println("time to write to new: "+writeNew);
 			NodeManager.nLogger.info("Finished streaming state");
 		}
 		catch(IOException io){	
 			io.printStackTrace();
+		} 
+
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	
@@ -581,13 +718,18 @@ System.out.println("old p: "+_op);
 	
 	// Structure and method to keep tracking of merging state
 	private Set<Integer> activeOpStreaming = new HashSet<Integer>();
+	long mergeTotal = 0;
+	private ArrayBlockingQueue<StateChunk> jobQueue = new ArrayBlockingQueue<StateChunk>(2);
 	public void handleNewChunk(StateChunk stateChunk){
 		// If not in state merging state
 		if(!pu.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.MERGING_STATE)){
 			// change to merging state
 			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.MERGING_STATE);
-			// and reset the state
 			((StatefulProcessingUnit)pu).resetState();
+//			MergerWorker mw = new MergerWorker(pu, jobQueue);
+//			Thread t = new Thread(mw);
+			// and reset the state
+//			t.start();
 		}
 		// If null means this operator has finished streaming
 		int opId = stateChunk.getKeeperOpId();
@@ -597,11 +739,22 @@ System.out.println("old p: "+_op);
 			if(activeOpStreaming.size() == 0){
 				// finished merging state
 				NodeManager.nLogger.info("Finished merging streaming state");
+				System.out.println("TOTAL MERGING TIME: "+mergeTotal);
 				((StatefulProcessingUnit)pu).mergeChunkToState(null);
 				ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
 				owner.getControlDispatcher().sendAllUpstreams(rb);
 				// No longer merging state
 				pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
+//				StateChunk sc = new StateChunk();
+//				sc.setTotalChunks(-1);
+//				try {
+//					jobQueue.put(sc);
+//				} 
+//				catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				NodeManager.setSystemStable();
 			}
 		}
 		// an active operator sends us a chunk
@@ -609,8 +762,20 @@ System.out.println("old p: "+_op);
 			// New chunk to merge. We state this op is actively streaming
 			activeOpStreaming.add(opId);
 			NodeManager.nLogger.info("New OP streaming: "+opId);
-			// And we call the correct function to merge the state
+			
+//			try {
+//				jobQueue.put(stateChunk);
+//			} 
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+			
+//			// And we call the correct function to merge the state
+			long a = System.currentTimeMillis();
 			((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);
+			long b = System.currentTimeMillis();
+			mergeTotal += (b-a);
 		}
 	}
 

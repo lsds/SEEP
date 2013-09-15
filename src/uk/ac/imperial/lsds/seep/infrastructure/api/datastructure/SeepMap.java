@@ -146,7 +146,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 	}
 	
 	@Override
-	public void appendChunk(ArrayList<Object> chunk) {
+	public synchronized void appendChunk(ArrayList<Object> chunk) {
 		if(chunk == null){
 			System.out.println("RECREATED STATE SIZE: "+this.size());
 			return;
@@ -156,7 +156,9 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 			String key = (String)chunk.get(i);
 			i++;
 			Integer value = (Integer)chunk.get(i);
-			this.put(key, value);
+			synchronized(this){
+				this.put(key, value);
+			}
 		}
 	}
 	

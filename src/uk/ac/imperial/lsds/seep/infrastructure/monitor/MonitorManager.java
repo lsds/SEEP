@@ -307,6 +307,9 @@ public class MonitorManager implements Runnable{
 				while(listen){
 //					Seep.Statistics stat = Seep.Statistics.parseDelimitedFrom(is);
 					MetricsTuple m = k.readObject(input, MetricsTuple.class);
+					if(m.getOpId() == -666){
+						Infrastructure.msh.setSystemStableTime(System.currentTimeMillis());
+					}
 					//Put in a one-size queue
 					mem.offer(m);
 				}

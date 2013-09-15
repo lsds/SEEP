@@ -23,8 +23,10 @@ import java.net.UnknownHostException;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
+import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
 
 /**
 * ManagerWorker. This class implements runnable, it is in charge of listening to events from the running system.
@@ -82,6 +84,9 @@ System.out.println("updating star topology");
 			// Then broadcast the new star topology
 System.out.println("broadcast star topology");
 			inf.broadcastStarTopology();
+			for(EndPoint ep: inf.getStarTopology()){
+				System.out.println("Op: "+ep.getOperatorId()+" IP: "+((DisposableCommunicationChannel)ep).getIp().toString());
+			}
 			inf.reDeploy(newNode);
 			long end = System.currentTimeMillis();
 			System.out.println("INIT OP: "+(end-init));
@@ -102,6 +107,77 @@ System.out.println("broadcast state and runtime init");
 			// Tell star topology to stream state
 			System.out.println("calling failure");
 			inf.failure(opId);
+		}
+		
+		private void crashCommandParallelRecovery(String oldIP_txt, String oldPort_txt, String newIP_txt, String newPort_txt) throws UnknownHostException{
+			System.out.println("PARALLEL CRASH RECOVERY");
+			//get opId from ip
+			int opId = inf.getOpIdFromIp(InetAddress.getByName(oldIP_txt));
+			System.out.println("OLD OP ID IS FROM: "+opId);
+			if(opId == -1){
+				NodeManager.nLogger.severe("-> IP not bounded to an operator: "+oldIP_txt);
+				return;
+			}
+			//get numDownstreams from opId
+			int numOfUpstreams = inf.getNumUpstreams(opId);
+			//set initial time of crash and number of downstreams
+			Infrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
+			InetAddress oldIP = InetAddress.getByName(oldIP_txt);
+			int oldPort = Integer.parseInt(oldPort_txt);
+			InetAddress newIP = InetAddress.getByName(newIP_txt);
+			int newPort = Integer.parseInt(newPort_txt);
+			
+			/// \todo{this case has never been tested}
+			if(!(newIP.equals(oldIP) && newPort == oldPort)){
+				System.out.println("MANAGER: Remapping communications, new IP");
+				//remap could get nodes instead of IPs to build correct nodes, but
+				//it also work just with IPs
+				inf.reMap(oldIP,newIP);
+			}
+
+			System.out.println("MANAGER: Calling reDeploy... the IP: "+oldIP.toString());
+			//Node newNode = new Node(newIP,newPort);
+			Node newNode = inf.getNodeFromPool();
+			long init = System.currentTimeMillis();
+System.out.println("updating star topology");
+			// Update star topology. remove failed node and add new instantiated one.
+			inf.removeNodeFromStarTopology(opId);
+			inf.addNodeToStarTopology(opId, newIP);
+			// Then broadcast the new star topology
+System.out.println("broadcast star topology");
+			inf.broadcastStarTopology();
+			for(EndPoint ep: inf.getStarTopology()){
+				System.out.println("Op: "+ep.getOperatorId()+" IP: "+((DisposableCommunicationChannel)ep).getIp().toString());
+			}
+			inf.reDeploy(newNode);
+			long end = System.currentTimeMillis();
+			System.out.println("INIT OP: "+(end-init));
+			
+			System.out.println("MANAGER: reDeploy ops in node IP: "+InetAddress.getByName(newIP_txt).toString());
+			System.out.println("MANAGER: Updating upstream and downstream connections...");
+			//updateU_D could get nodes instead of IPs to build correct nodes, but
+			//it also work just with IPs
+			
+System.out.println("calling updateUD");
+			inf.updateU_D(oldIP, newNode.getIp(), true);
+			
+			Operator toInit = inf.getOperatorById(opId);
+System.out.println("broadcast state and runtime init");
+			inf.broadcastState(toInit);
+			inf.initRuntime(toInit);
+				
+//			try {
+//				Thread.sleep(2000);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+				
+			System.out.println("FAILED OP REINSTANTIATED");
+			System.out.println("SCALING OUT OP: "+opId);
+			Node newNodeSO = inf.getNodeFromPool();
+			System.out.println("NODE NEW FOR SO: "+newNodeSO);
+			inf.getEiu().scaleOutOperator(opId, 555, newNodeSO);
 		}
 		
 		private void bootstrapCommand(String ip, int port) throws UnknownHostException{
@@ -195,7 +271,8 @@ System.out.println("broadcast state and runtime init");
 //							System.exit(2);
 							if(P.valueFor("parallelRecovery").equals("true")){
 								//params oldIp
-								inf.parallelRecovery(token[1]);
+//								inf.parallelRecovery(token[1]);
+								crashCommandParallelRecovery(token[1],token[2],token[3],token[4]);
 							}
 							else{
 								//params oldIp, oldPort, newIp, newPort

@@ -266,11 +266,12 @@ public class ElasticInfrastructureUtils {
 		ArrayList<Operator> ops = inf.getOps();
 		for (Operator o: ops) {
 			if(o.getOperatorId() != opIdToParallelize && o.getOperatorId() != newOpId){ // Do not send to involved ops
+				if(!(o.getOpContext().isSink())){
 //				if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
 					NodeManager.nLogger.info("COMMAND: distributed_scale_out to: "+o.getOperatorId());
 					ControlTuple ct = new ControlTuple().makeDistributedScaleOut(opIdToParallelize, newOpId);
-					rct.sendControlMsg(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
-//				}
+					rct.sendControlMsgWithoutACK(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
+				}
 			}
 		}
 	}

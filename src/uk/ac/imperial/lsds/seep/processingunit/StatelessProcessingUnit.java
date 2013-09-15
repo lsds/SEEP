@@ -180,17 +180,9 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		runningOp.processData(data);
 	}
 
-	/// \check{ one operator per node, so the below compairson is stupid. CHECK}
 	@Override
 	public void reconfigureOperatorConnection(int opId, InetAddress ip) {
-//		System.out.println("COMPARING: "+runningOp.getOperatorId()+"with "+opId);
-//		if(runningOp.getOperatorId() == opId){
-//		System.out.println("UPDATE OP WITH NEW IP: "+ip.toString());
 		ctx.updateConnection(opId, runningOp, ip);
-//		}
-//		else{
-//			NodeManager.nLogger.warning("-> This node does not contain the requested operator: "+opId);
-//		}
 	}
 
 	@Override
@@ -271,10 +263,8 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public void stopConnection(int opId) {
 		//Stop incoming data, a new thread is replaying
+		NodeManager.nLogger.info("Stopping connection to OP: "+opId);
 		outputQueue.stop();
-		for(EndPoint ep : ctx.getDownstreamTypeConnection()){
-			System.out.println("Downstream: "+ep.getOperatorId());
-		}
 		ctx.getCCIfromOpId(opId, "d").getStop().set(true);
 	}
 

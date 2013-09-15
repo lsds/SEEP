@@ -33,9 +33,9 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		return keyToDownstreamRealIndex;
 	}
 
-	public void setKeyToDownstreamRealIndex(ArrayList<Integer> keyToDownstreamRealIndex) {
-		this.keyToDownstreamRealIndex = keyToDownstreamRealIndex;
-	}
+//	public void setKeyToDownstreamRealIndex(ArrayList<Integer> keyToDownstreamRealIndex) {
+//		this.keyToDownstreamRealIndex = keyToDownstreamRealIndex;
+//	}
 		
 	public StatefulRoutingImpl(ArrayList<Integer> keyToDownstreamRealIndex, ArrayList<Integer> downstreamNodeKeys){
 		this.keyToDownstreamRealIndex = keyToDownstreamRealIndex;
@@ -48,7 +48,15 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		keyToDownstreamRealIndex = new ArrayList<Integer>();
 			
 		//For every downstream of the same type, save in a virtual index, the real index of that downstream
-		keyToDownstreamRealIndex.add(realIndex);
+		boolean notExists = true;
+		for(int i = 0; i<keyToDownstreamRealIndex.size(); i++){
+			if(keyToDownstreamRealIndex.get(i) == realIndex){
+				notExists = false;
+			}
+		}
+		if(notExists){
+			keyToDownstreamRealIndex.add(realIndex);
+		}
 			
 		//Compute the key and add it in the structure
 		int key = Integer.MAX_VALUE;
@@ -135,8 +143,20 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		// install the new key and operator for dispatching, from this moment new tuples are buffered on
 		// store in oldOpIndex, the value of newOpIndex, (so insert by the left)
 	//explain +1
-		keyToDownstreamRealIndex.add(oldVirtualIndex+1, newOpIndex);
-		downstreamNodeKeys.add(oldVirtualIndex, newKey);
+		boolean notExists = true;
+		for(int i = 0; i<keyToDownstreamRealIndex.size(); i++){
+			if(keyToDownstreamRealIndex.get(i) == newOpIndex){
+				notExists = false;
+			}
+		}
+		if(notExists){
+			keyToDownstreamRealIndex.add(oldVirtualIndex+1, newOpIndex);
+			downstreamNodeKeys.add(oldVirtualIndex, newKey);
+		}
+		
+		
+//		keyToDownstreamRealIndex.add(oldVirtualIndex+1, newOpIndex);
+//		downstreamNodeKeys.add(oldVirtualIndex, newKey);
 		
 		int bounds[] = {minBound, maxBound};
 		return bounds;
@@ -183,6 +203,10 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 	@Override
 	public ArrayList<Integer> routeToAll(ArrayList<Integer> targets) {
 		// Just returning the whole set of real indexes ??
+//		for(int i = 0; i<keyToDownstreamRealIndex.size(); i++){
+//			System.out.println("index: "+i+" val: "+keyToDownstreamRealIndex.get(i));
+//		}
+//		System.exit(0);
 		return keyToDownstreamRealIndex;
 	}
 }

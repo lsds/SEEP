@@ -12,66 +12,33 @@ package uk.ac.imperial.lsds.seep.infrastructure.api.datastructure;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import uk.ac.imperial.lsds.seep.operator.Streamable;
 import uk.ac.imperial.lsds.seep.operator.Versionable;
 
-public class SeepMatrix extends Matrix{
+public class SeepMatrix extends Matrix implements Versionable, Streamable{
 
 	private static final long serialVersionUID = 1L;
 	
 	private AtomicBoolean dirtyMode = new AtomicBoolean();
 	private Semaphore mutex = new Semaphore(1);
+	private Iterator<Integer> iterator = null;
 	
 	// We keep here the original index and the row. Original index to reduce the reconciliation time
 	private HashMap<Integer, ArrayList<Component>> dirtyState = new HashMap<Integer, ArrayList<Component>>();
-	private ArrayList<ArrayList<Component>> dirtyState_newRows = new ArrayList<ArrayList<Component>>();
+	//private ArrayList<ArrayList<Component>> dirtyState_newRows = new ArrayList<ArrayList<Component>>();
+	private HashMap<Integer, ArrayList<Component>> dirtyState_newRows = new HashMap<Integer, ArrayList<Component>>();
 	// here we store idx - tag, instead of tag-idx, so that we can do the reverse mapping when reconciliating
 	private HashMap<Integer, Integer> dirtyState_IDX_TAG = new HashMap<Integer, Integer>();
 	// and also keep this, so that rows are correctly read while in dirty state
 	private HashMap<Integer, Integer> dirtyState_TAG_IDX = new HashMap<Integer, Integer>();
-
 	
 	public SeepMatrix(){
 		super();
-	}
-	
-	public void setDirtyMode(boolean newValue){
-		this.dirtyMode.set(newValue);
-	}
-	
-	public synchronized void reconcile(){
-		try {
-			this.mutex.acquire();
-		} 
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		//First we update the previously already existent
-		for(Map.Entry<Integer, ArrayList<Component>> entry : dirtyState.entrySet()){
-			int idx = entry.getKey();
-			rows.set(idx, dirtyState.get(entry.getValue()));
-		}
-		
-		// and now we add the new stuff
-		for(int i = 0; i<dirtyState_newRows.size(); i++){
-			ArrayList<Component> newRow = dirtyState_newRows.get(i);
-			rows.add(newRow);
-			rowSize++;
-			int rowTag = dirtyState_IDX_TAG.get(i);
-			rowIds.put(rowTag, rows.size()-1);
-		}
-		
-		dirtyState.clear();
-		dirtyState_newRows.clear();
-		dirtyState_IDX_TAG.clear();
-		dirtyState_TAG_IDX.clear();
-		dirtyMode.set(false);
-		this.mutex.release();
 	}
 	
 	// WRITE
@@ -92,6 +59,9 @@ public class SeepMatrix extends Matrix{
 				ArrayList<Component> row = super.getRowVectorWithTag(rowTag);
 //System.out.println("a2");
 				//int rowIdx = rows.indexOf(row); // Looping through size
+if(row == null){
+	return;
+}
 				int rowIdx = rowIds.get(rowTag);
 				// We go to the specific col to update
 				for(int i = 0; i< row.size(); i++){
@@ -125,11 +95,15 @@ public class SeepMatrix extends Matrix{
 				c.add(new Component(col, value));
 				// Add to rows and update rowIds
 				
+				dirtyState_newRows.put(rowTag, c);
+				
 				// We add the new row to our artificial matrix
-				dirtyState_newRows.add(c);
-				// fuck the gods...
-				dirtyState_TAG_IDX.put(rowTag, dirtyState_newRows.size());
-				dirtyState_IDX_TAG.put(dirtyState_newRows.size(), rowTag);
+//				dirtyState_newRows.add(c);
+//				// fuck the gods...
+//				dirtyState_TAG_IDX.put(rowTag, dirtyState_newRows.size());
+//				dirtyState_IDX_TAG.put(dirtyState_newRows.size(), rowTag);
+				
+//				dirtyState_newRows(rowTag, c);
 			}
 		}
 		else{
@@ -167,5 +141,130 @@ public class SeepMatrix extends Matrix{
 			mutex.release();
 			return toReturn;
 		}
+	}
+	
+	/** IFACE methods **/
+	
+	public void setDirtyMode(boolean newValue){
+		this.dirtyMode.set(newValue);
+	}
+	
+	public synchronized void reconcile(){
+		try {
+			this.mutex.acquire();
+		} 
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		//First we update the previously already existent
+		for(Map.Entry<Integer, ArrayList<Component>> entry : dirtyState.entrySet()){
+			int idx = entry.getKey();
+			rows.set(idx, dirtyState.get(entry.getValue()));
+		}
+		
+		// and now we add the new stuff
+		for(int i = 0; i<dirtyState_newRows.size(); i++){
+			
+			for(Integer rowId : dirtyState_newRows.keySet()){
+				ArrayList<Component> newRow = dirtyState_newRows.get(rowId);
+				rows.add(newRow);
+				rowSize++;
+				int rowIdx = rows.size()-1;
+				rowIds.put(rowId, rowIdx);
+			}
+			
+//			ArrayList<Component> newRow = dirtyState_newRows.get(i);
+//			rows.add(newRow);
+//			rowSize++;
+//			if(dirtyState_IDX_TAG == null){
+//				System.out.println("dirtyState tag null");
+//			}
+//			else{
+//				System.out.println("dirtyState_IDX_TAG.get(i) is null");
+//			}
+//			int rowTag = rows.size();
+//			//int rowTag = dirtyState_IDX_TAG.get(i);
+//			rowIds.put(rowTag, rows.size()-1);
+		}
+		
+		dirtyState.clear();
+		dirtyState_newRows.clear();
+		dirtyState_IDX_TAG.clear();
+		dirtyState_TAG_IDX.clear();
+		dirtyMode.set(false);
+		this.mutex.release();
+	}
+	
+	@Override
+	public void appendChunk(ArrayList<Object> chunk) {
+		if(chunk == null){
+			System.out.println("RECREATED STATE SIZE: "+this.rows.size());
+			this.rowSize = rows.size();
+			return;
+		}
+		System.out.println("Appending: "+chunk.size());
+		for(int i = 0; i<chunk.size(); i++){
+			int rowId = (Integer)chunk.get(i);
+			i++;
+			ArrayList<Component> row = (ArrayList<Component>)chunk.get(i);
+			this.rowIds.put(rowId, rowId);
+			this.rows.add(row);
+		}
+	}
+
+	@Override
+	public Object getFromBackup(Object key) {
+		int idx = this.rowIds.get(key);
+		return this.rows.get(idx);
+	}
+
+	@Override
+	public Iterator getIterator() {
+		iterator = this.rowIds.keySet().iterator();
+		return iterator;
+	}
+
+	@Override
+	public int getSize() {
+		return rowSize;
+	}
+
+	@Override
+	public int getTotalNumberOfChunks(int chunkSize) {
+		double chunks = (double)this.rows.size()/chunkSize;
+		System.out.println("$$$$ CHUNKS: "+chunks);
+		int totalChunks = (int) Math.ceil((double)this.size()/chunkSize);
+		System.out.println("MAP SIZE: "+this.size()+" so total chunks: "+totalChunks);
+		return totalChunks;
+	}
+
+	@Override
+	public void reset() {
+		this.dirtyState.clear();
+		this.dirtyState_IDX_TAG.clear();
+		this.dirtyState_newRows.clear();
+		this.dirtyState_TAG_IDX.clear();
+		this.rowIds.clear();
+		this.rows.clear();
+		this.rowSize = 0;
+	}
+
+	@Override
+	public ArrayList<Object> streamSplitState(int chunkSize) {
+		ArrayList<Object> chunk = new ArrayList<Object>();
+		int sizeCounter = 0;
+		while(iterator.hasNext()){
+			int rowId = iterator.next();
+			chunk.add(rowId);
+			Object row = this.getFromBackup(rowId);
+			chunk.add(row);
+			sizeCounter++;
+			if(sizeCounter >= chunkSize){
+				return chunk;
+			}
+		}
+		return null;
 	}
 }

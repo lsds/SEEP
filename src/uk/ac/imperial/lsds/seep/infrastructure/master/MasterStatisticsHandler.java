@@ -50,7 +50,7 @@ public class MasterStatisticsHandler {
 	//The system has finished scaling out or recovering
 	public synchronized void setSystemStableTime(long systemStable){
 		
-		System.out.println("%%% "+(System.currentTimeMillis()-crashStartTime));
+		System.out.println("%%%%% "+(System.currentTimeMillis()-crashStartTime));
 		
 //		//new message received
 //		msgReceived++;

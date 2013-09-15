@@ -88,6 +88,9 @@ public class DataStructureAdapter {
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
 					int originalOperatorOnBarrier = entry.getKey();
 					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+//					System.out.println("Num registers on barrier: "+numberUpstreamsOnBarrier);
+					///\fixme{manage this}
+					numberUpstreamsOnBarrier = opContext.upstreams.size();
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					uniqueDso = b;
 					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());

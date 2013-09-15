@@ -10,12 +10,14 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.infrastructure;
 
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -26,7 +28,9 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
+import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.Monitor;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -77,26 +81,36 @@ public class NodeManager{
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
-		String command = "systemStable \n";
-		try{
-			Socket connMaster = new Socket(InetAddress.getByName("146.169.5.130"), Integer.parseInt("3500"));
-			OutputStream os = connMaster.getOutputStream();
-			os.write(command.getBytes());
-			System.out.println("finished method!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-			Thread.sleep(100);
-			os.close();
-		}
-		catch(UnknownHostException uhe){
-			System.out.println("NodeManager.setSystemStable: "+uhe.getMessage());
-			uhe.printStackTrace();
-		}
-		catch(IOException io){
-			System.out.println("NodeManager.setSystemStable: "+io.getMessage());
-			io.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
+		Monitor.send666();
+		
+//		String command = "systemStable";
+//		try{
+//			Socket connMaster = new Socket(InetAddress.getByName(P.valueFor("mainAddr")), Integer.parseInt(P.valueFor("mainPort")));
+//			OutputStream os = connMaster.getOutputStream();
+//			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os));
+////			os.write(command.getBytes());
+//			bw.write(command);
+//			bw.newLine();
+//			bw.flush();
+//			System.out.println("SET SYSTEM STABLE ()()()()()()()()");
+//			Thread.sleep(100);
+//			
+////			bw.close();
+////			os.close();
+////			connMaster.close();
+//		}
+//		catch(UnknownHostException uhe){
+//			System.out.println("NodeManager.setSystemStable: "+uhe.getMessage());
+//			uhe.printStackTrace();
+//		}
+//		catch(IOException io){
+//			System.out.println("NodeManager.setSystemStable: "+io.getMessage());
+//			io.printStackTrace();
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 	
 	public void init(){

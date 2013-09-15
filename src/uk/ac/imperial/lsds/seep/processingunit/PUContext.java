@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
 
+import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
@@ -61,10 +62,6 @@ public class PUContext {
 	
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
 		this.nodeDescr = nodeDescr;
-		if(starTopology == null){
-			System.out.println("on creation of pucontest, startopology null");
-			System.exit(0);
-		}
 		this.starTopology = starTopology;
 		try {
 			this.selector = SelectorProvider.provider().openSelector();
@@ -89,7 +86,7 @@ public class PUContext {
 	}
 	
 	public void filterStarTopology(int opId){
-		for(int i = 0; i<starTopology.size(); i++){
+		for(int i = 0; i < starTopology.size(); i++){
 			EndPoint ep = starTopology.get(i);
 			if(ep.getOperatorId() == opId){
 				starTopology.remove(i);
@@ -311,10 +308,14 @@ public class PUContext {
 	
 	public void updateConnection(int opRecId, Operator opToReconfigure, InetAddress newIp){
 		int opId = opRecId;
-		int dataPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInD();
-		int controlPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInC();
-
+		int dataPort = 0;
+		int controlPort = 0;
 		int blindPort = new Integer(P.valueFor("blindSocket"));
+		
+		if(opToReconfigure.getOpContext().downstreams.size() > 0){
+			dataPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInD();
+			controlPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInC();
+		}
 	
 		for(EndPoint ep : downstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
@@ -334,8 +335,9 @@ public class PUContext {
 		}
 		for(EndPoint ep : upstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
+				int upControlPort = Main.CONTROL_SOCKET + ep.getOperatorId();
 				try{
-					Socket controlS = new Socket(newIp, controlPort);
+					Socket controlS = new Socket(newIp, upControlPort);
 					Socket blindS = new Socket(newIp, blindPort);
 					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
 					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, blindS, null);

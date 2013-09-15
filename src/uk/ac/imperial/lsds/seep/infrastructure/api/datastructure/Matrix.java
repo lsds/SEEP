@@ -92,6 +92,9 @@ public class Matrix implements MatrixI, Serializable{
 			ArrayList<Component> row = getRowVectorWithTag(rowTag);
 			//int rowIdx = rows.indexOf(row);
 			int rowIdx = rowIds.get(rowTag);
+if(row == null){
+	return;
+}
 			// We go to the specific col to update
 			for(int i = 0; i < row.size(); i++){
 				// If the current col is equal or greater than col to update, insert col before this one
@@ -255,6 +258,9 @@ public long reptime = 0;
 			//int rowIdx = rows.indexOf(row); // Looping through size
 			int rowIdx = rowIds.get(rowTag);
 			// We go to the specific col to update
+if(row == null){
+	return;
+}
 			for(int i = 0; i< row.size(); i++){
 				// If the current col is equal or greater than col to update, insert col before this one
 				int currentElCol = row.get(i).col;

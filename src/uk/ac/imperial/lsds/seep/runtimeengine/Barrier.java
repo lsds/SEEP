@@ -71,6 +71,7 @@ public class Barrier implements DataStructureI {
 		// partition the parties into two phasers
 		// register those in the master one
 		staticBarrier.register();
+//		staticBarrier.bulkRegister(numThreads);
 	}
 	
 	@Override
