@@ -10,17 +10,12 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.reliable;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
@@ -38,7 +33,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
@@ -46,16 +40,17 @@ public class StreamerWorker implements Runnable{
 	
 	private ArrayBlockingQueue<Object> jobQueue;
 	
-	private List<File> toStream;
-	private int filesToStreamSize = 0;
+//	private List<File> toStream;
+//	private int filesToStreamSize = 0;
 	private Kryo k;
-	private Output oldO;
-	private Output newO;
+//	private Output newO;
 	private int oldOpId;
-	private int newOpId;
+//	private int newOpId;
 	private int keeperOpId;
 	private int totalNumberChunks;
 	private int currentNumberBatch;
+	
+	private Output largeOutput;
 	
 	public void initializeSerialization(){
 		k = new Kryo();
@@ -80,37 +75,24 @@ public class StreamerWorker implements Runnable{
 		k.register(ReconfigureConnection.class);
 	}
 	
-	public StreamerWorker(Output oldO, ArrayBlockingQueue<Object> jobQueue, int opId, int keeperOpId, int currentNumberBatch, 
-			int totalNumberChunks){
-		this.oldO = oldO;
+	public StreamerWorker(Socket s, ArrayBlockingQueue<Object> jobQueue, int opId, int keeperOpId, int currentNumberBatch, int totalNumberChunks){
+		try {
+			largeOutput  = new Output(10000);
+			largeOutput.setOutputStream(s.getOutputStream());
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		this.jobQueue = jobQueue;
 		this.initializeSerialization();
 		this.oldOpId = opId;
 		this.keeperOpId = keeperOpId;
+		System.out.println("CREATED KEEPER: "+keeperOpId);
 		this.currentNumberBatch = currentNumberBatch;
 		this.totalNumberChunks = totalNumberChunks;
 	}	
-	
-	
-//	public StreamerWorker(List<File> filesToStreamSplit1, int filesToStreamSize, Socket oldS, Socket newS,
-//			int oldOpId, int newOpId, int keeperOpId, int totalNumberChunks){
-//		this.toStream = filesToStreamSplit1;
-//		this.filesToStreamSize = filesToStreamSize;
-//		initializeSerialization();
-//		this.oldOpId = oldOpId;
-//		this.newOpId = newOpId;
-//		this.keeperOpId = keeperOpId;
-//		this.totalNumberChunks = totalNumberChunks;
-//		try {
-//			oldO = new Output(oldS.getOutputStream());
-//			newO = new Output(newS.getOutputStream());
-//		} 
-//		catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	}
-	
+
 	@Override
 	public void run() {
 		int streamedFiles = 0;
@@ -132,9 +114,9 @@ public class StreamerWorker implements Runnable{
 			
 			MemoryChunk oldMC = new MemoryChunk(p);
 			ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, keeperOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
-			System.out.println(Thread.currentThread().getName()+" STREAM CHUNK to "+oldO.toString());
-			k.writeObject(oldO, oldCT);
-			oldO.flush();
+			System.out.println(Thread.currentThread().getName()+" STREAM CHUNK (keeper="+keeperOpId+") to "+largeOutput.toString());
+			k.writeObject(largeOutput, oldCT);
+			largeOutput.flush();
 			streamedFiles++;
 		}
 		System.out.println("##################");
@@ -142,75 +124,6 @@ public class StreamerWorker implements Runnable{
 		System.out.println("I streamed this files: "+streamedFiles);
 		System.out.println("##################");
 		System.out.println("##################");
-		
-//		// There is a fixed size per chunk, so there is an upper bound size per partition. Let's then
-//		// make dynamically-sized chunks.
-//		// Every two file chunks, we send the batched state
-//		Input i = null;
-//		ArrayList<Object> oldPartition = new ArrayList<Object>();
-//		ArrayList<Object> newPartition = new ArrayList<Object>();
-//		int numberBatchChunks = 2;
-//		int currentNumberBatch = 0;
-//		for(File chunk : toStream){
-//			currentNumberBatch++;
-//			try {
-//				i = new Input(new FileInputStream(chunk));
-//			} 
-//			catch (FileNotFoundException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//			ControlTuple ct = k.readObject(i, ControlTuple.class);
-//			MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
-//			int key = ct.getStateChunk().getSplittingKey(); // read it every time? ...
-//			Object sample = mc.chunk.get(0);
-//			// agh... java...
-//			///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}
-//			if(sample instanceof Integer){
-//				for(int j = 0; j < mc.chunk.size(); j++){
-//					Integer k = (Integer)mc.chunk.get(j);
-//					if(Router.customHash(k) > key){
-//						newPartition.add(k);
-//						j++;
-//						newPartition.add(mc.chunk.get(j));
-//					}
-//					else{
-//						oldPartition.add(k);
-//						j++;
-//						oldPartition.add(mc.chunk.get(j));
-//					}
-//				}
-//			}
-//			else if(sample instanceof String){
-//				for(int j = 0; j < mc.chunk.size(); j++){
-//					String k = (String)mc.chunk.get(j);
-//					if(Router.customHash(k) > key){
-//						newPartition.add(k);
-//						j++;
-//						newPartition.add(mc.chunk.get(j));
-//					}
-//					else{
-//						oldPartition.add(k);
-//						j++;
-//						oldPartition.add(mc.chunk.get(j));
-//					}
-//				}
-//			}
-//			if(currentNumberBatch == numberBatchChunks){
-//				currentNumberBatch = 0;
-//				MemoryChunk oldMC = new MemoryChunk(oldPartition);
-//				ControlTuple oldCT = new ControlTuple().makeStateChunk(oldOpId, keeperOpId, currentNumberBatch, totalNumberChunks, oldMC, 0);
-//				k.writeObject(oldO, oldCT);
-//				oldO.flush();
-//				MemoryChunk newMC = new MemoryChunk(newPartition);
-//				ControlTuple newCT = new ControlTuple().makeStateChunk(newOpId, keeperOpId, currentNumberBatch, currentNumberBatch, newMC, 0);
-//				k.writeObject(newO, newCT);
-//				newO.flush();
-//				oldPartition.clear();
-//				newPartition.clear();
-//			}
-//			// close stream to file chunk
-//			i.close();
-		}
+	}
 
 }

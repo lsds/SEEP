@@ -25,6 +25,7 @@ public class StateChunk {
 	
 	public StateChunk(int opId, int keeperOpId, int seqNumber, int totalChunks, MemoryChunk mc, int splittingKey){
 		this.ownerOpId = opId;
+		this.keeperOpId = keeperOpId;
 		this.sequenceNumber = seqNumber;
 		this.totalChunks = totalChunks;
 		this.mc = mc;
