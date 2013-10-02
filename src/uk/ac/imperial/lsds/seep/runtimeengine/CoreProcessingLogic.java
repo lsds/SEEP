@@ -18,6 +18,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
@@ -485,12 +487,25 @@ public class CoreProcessingLogic implements Serializable{
 		int totalNumberChunks = 0;
 		int keeperOpId = pu.getOperator().getOperatorId();
 		
+		System.out.println("Scaling out: "+oldOpId+" to new OP: "+newOpId);
+		if(puCtx.getCCIfromOpId(oldOpId, "d") == null){
+			System.out.println("No CCI for opid: "+oldOpId);
+		}
+		
+//		// not valid as these sockets might not be in the info of this node
 		Socket oldS = puCtx.getCCIfromOpId(oldOpId, "d").getDownstreamControlSocket();
 		Socket newS = puCtx.getCCIfromOpId(newOpId, "d").getDownstreamControlSocket();
 		
+		// rather build new sockets with the IP (from star topology), the control socket and the op id
+//		InetAddress oldIp = puCtx.getDCCfromOpIdInStarTopology(oldOpId).getIp();
+//		InetAddress newIp = puCtx.getDCCfromOpIdInStarTopology(newOpId).getIp();
+//		
 		List<File> filesToStream = new ArrayList<File>();
 		
 		try{
+//			Socket oldS = new Socket(oldIp, Main.CONTROL_SOCKET+oldOpId);
+//			Socket newS = new Socket(newIp, Main.CONTROL_SOCKET+newOpId);
+			
 			Output oldO = new Output(oldS.getOutputStream());
 			Output newO = new Output(newS.getOutputStream());
 			// Get files to replay
@@ -538,6 +553,19 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 				readFromDiskTime += (b-a);
 				MemoryChunk mc = ct.getStateChunk().getMemoryChunk();
 				int key = ct.getStateChunk().getSplittingKey(); // read it every time? ...
+				if(mc == null){
+					System.out.println("mc is null");
+					System.exit(0);
+				}
+				if(mc.chunk == null){
+					System.out.println("mc.chunk is null");
+					System.exit(0);
+				}
+				if(mc.chunk.get(0) == null){
+					System.out.println("mc.chunk.get(0) is null");
+					System.out.println("total size: "+mc.chunk.size());
+					System.exit(0);
+				}
 				Object sample = mc.chunk.get(0);
 				// agh... java...
 				///\todo{i may bring this info in memoryChunk so that it is not necessary to do that erro-prone sample above...}

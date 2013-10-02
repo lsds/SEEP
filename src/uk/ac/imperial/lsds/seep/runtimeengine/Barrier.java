@@ -96,7 +96,14 @@ public class Barrier implements DataStructureI {
 		synchronized(data){
 			data.add(dt);
 		}
-		// And wait on the barrier
-		staticBarrier.arriveAndAwaitAdvance();
+		try{
+			// And wait on the barrier
+			staticBarrier.arriveAndAwaitAdvance();
+		}
+		catch(IllegalStateException ise){
+			///\fixme{Register in advance, dont force the exception}
+			staticBarrier.register();
+			staticBarrier.arriveAndAwaitAdvance();
+		}
 	}
 }

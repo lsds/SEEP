@@ -82,7 +82,7 @@ public class Main {
 		//In any case we start the MasterController to get access to the interface
 		try {
 			mc.start();
-		} 
+		}
 		catch (OperatorDeploymentException e) {
 			e.printStackTrace();
 		}

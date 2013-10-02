@@ -29,6 +29,7 @@ import java.util.logging.Logger;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
+import uk.ac.imperial.lsds.seep.comm.ConnHandler;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -109,6 +110,10 @@ public class Infrastructure {
 		return starTopology;
 	}
 	
+	public void addSource(Operator op){
+		this.src.add(op);
+	}
+	
 	/** 
 	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
 	 * and then, for the below methods, indicate the query id that needs to be accessed.
@@ -119,26 +124,10 @@ public class Infrastructure {
 		elements = qp.getElements();
 		src = qp.getSrc();
 		snk = qp.getSnk();
-		// At this point we check the partitioning options
-		// This first option is the recommended only when one knows what she's doing.
-//		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
-//		if(!qp.getScaleOutIntents().isEmpty()){
-//			NodeManager.nLogger.info("-> Manual static scale out");
-//			soib = eiu.staticInstantiateNewReplicaOperator(qp.getScaleOutIntents(), qp);
-//		}
-//		// The default and preferred option, used
-//		else if (!qp.getPartitionRequirements().isEmpty()){
-//			NodeManager.nLogger.info("-> Automatic static scale out");
-//			soib = eiu.staticInstantiationNewReplicaOperators(qp);
-//		}
+
 		///\todo{log what is going on here}
 		queryToNodesMapping = qp.getMapOperatorToNode();
 		configureRouterStatically();
-//		eiu.executeStaticScaleOutFromIntent(soib);
-		
-		// Then we set up the InputDataIngestionMode per operator
-		///fixme{Wasteful method, but no performance critical anyway}
-
 		
 		for(Operator op : ops){
 			// Never will be empty, as there are no sources here (so all operators will have at least one upstream
@@ -146,7 +135,6 @@ public class Infrastructure {
 		}
 		// Then we do the inversion with sink, since this also has upstream operators.
 		makeDataIngestionModeLocalToOp(snk);
-//		System.exit(0);
 		
 		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
 		if(!qp.getScaleOutIntents().isEmpty()){
@@ -428,10 +416,25 @@ public class Infrastructure {
 		}
 
 		//Once all operators have been pushed to the nodes, we say that those are ready to run
+		ArrayList<Thread> activeThreads = new ArrayList<Thread>();
 		for(Operator op : ops){
-			//Establish the connection with the specified address
+			
+			Thread t = new Thread(new ConnHandler(op, this));
+//			//Establish the connection with the specified address
 			Infrastructure.nLogger.info("-> Configuring OP-"+op.getOperatorId());
-			init(op);
+//			init(op);
+			t.start();
+			activeThreads.add(t);
+		}
+		// Then wait for active connections to die
+		for(Thread t : activeThreads){
+			try {
+				t.join();
+			} 
+			catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		//Broadcast the registered states to all the worker nodes, so that these can register the classes in the custom class loader
@@ -521,6 +524,10 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		Infrastructure.nLogger.info("-> Initializing OP-"+op.getOperatorId());
 		bcu.sendObject(node, op.getOperatorId());
 	}
+	
+//	public void _init(ArrayList<Operator> ops){
+//		bcu.sendObjectNonBlocking(ops);
+//	}
 	
 	public void initRuntime(Operator op){
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
@@ -872,9 +879,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			e.printStackTrace();
 		}
 	}
-	
-	/** THIS FUNCTIONS WILL BE REPLACED WITH THE ACTUAL IDENTIFIER OF THE QUERY THE OP IS PART OF  **/
-	
+		
 	public void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);

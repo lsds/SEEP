@@ -126,6 +126,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
+						
 						dso.push(reg);
 					}
 					else{

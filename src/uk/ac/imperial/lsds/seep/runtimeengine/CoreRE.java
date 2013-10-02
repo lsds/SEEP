@@ -410,8 +410,8 @@ public class CoreRE {
 			outputQueue.replayTuples(cci);
 			// In case of failure, the thread may have died, in such case we make it runnable again.
 //			if(dConsumerH.getState() != Thread.State.TERMINATED){
-				dConsumerH = new Thread(dataConsumer);
-				dConsumerH.start();
+//				dConsumerH = new Thread(dataConsumer);
+//				dConsumerH.start();
 //			}
 //			operatorStatus = OperatorStatus.NORMAL;
 		}
@@ -457,18 +457,18 @@ public class CoreRE {
 				// Get index of the scaling operator
 				int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(oldOpId).index();
 				// And manage distributed scale out
-				if(processingUnit.isNodeStateful()){
+				if(processingUnit.isNodeStateful()){ // stateful case
 					int bounds[] = coreProcessLogic.manageDownstreamDistributedScaleOut(oldOpId, newOpId, oldOpIndex, newOpIndex);
 					coreProcessLogic.propagateNewKeys(bounds, oldOpIndex, newOpIndex);
 				}
-				else{
+				else{ // stateless case
 					processingUnit.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 				}
 			}
-			if(processingUnit.isNodeStateful()){
+			if(processingUnit.isNodeStateful()){ // if stateful, backup routing information after updating it
 				coreProcessLogic.backupRoutingInformation(oldOpId);
 			}
-			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh);
+			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh); // finally replay
 //			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/
@@ -588,9 +588,11 @@ public class CoreRE {
 				// Check how many replicas of this operator are at the moment and reconfigure barrier with this number.
 				// This is necessary for cases where there is more than one InputDataIngestionMode
 				int originalOpId = processingUnit.getOriginalUpstreamFromOpId(opId);
+				/// \fixme{Reconfigure this taking into account the inputdataingestion mode}
 				int upstreamSizeForBarrier = processingUnit.getOperator().getOpContext().getUpstreamNumberOfType(originalOpId);
 				int upstreamSize = processingUnit.getOperator().getOpContext().upstreams.size();
 				reconfigureUpstreamBackupIndex(upstreamSize);
+//				dsa.reconfigureNumUpstream(originalOpId, upstreamSize);
 				dsa.reconfigureNumUpstream(originalOpId, upstreamSizeForBarrier);
 			}
 			controlDispatcher.ackControlMessage(genericAck, os);

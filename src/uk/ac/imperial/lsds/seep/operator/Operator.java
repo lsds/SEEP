@@ -19,7 +19,6 @@ import java.util.Map;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 

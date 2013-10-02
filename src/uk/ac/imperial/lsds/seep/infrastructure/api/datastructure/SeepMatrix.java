@@ -41,6 +41,22 @@ public class SeepMatrix extends Matrix implements Versionable, Streamable{
 		super();
 	}
 	
+	@Override
+	public void lockStateAccess(){
+		try {
+			this.mutex.acquire();
+		} 
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public void releaseStateAccess(){
+		this.mutex.release();
+	}
+	
 	// WRITE
 	public synchronized void updateMatrixByReplacingValue(int rowTag, int col, int value){
 		try {
@@ -197,11 +213,14 @@ if(row == null){
 		this.mutex.release();
 	}
 	
+	int realIndexWhileAppendingChunks = 0;
+	
 	@Override
 	public void appendChunk(ArrayList<Object> chunk) {
 		if(chunk == null){
 			System.out.println("RECREATED STATE SIZE: "+this.rows.size());
 			this.rowSize = rows.size();
+			realIndexWhileAppendingChunks = 0; // For next merging
 			return;
 		}
 		System.out.println("Appending: "+chunk.size());
@@ -209,7 +228,9 @@ if(row == null){
 			int rowId = (Integer)chunk.get(i);
 			i++;
 			ArrayList<Component> row = (ArrayList<Component>)chunk.get(i);
-			this.rowIds.put(rowId, rowId);
+			//this.rowIds.put(rowId, rowId);
+			this.rowIds.put(rowId, realIndexWhileAppendingChunks);
+			realIndexWhileAppendingChunks++;
 			this.rows.add(row);
 		}
 	}
@@ -257,7 +278,7 @@ if(row == null){
 		int sizeCounter = 0;
 		while(iterator.hasNext()){
 			int rowId = iterator.next();
-			chunk.add(rowId);
+			chunk.add(rowId); // add tag
 			Object row = this.getFromBackup(rowId);
 			chunk.add(row);
 			sizeCounter++;

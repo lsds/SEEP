@@ -18,10 +18,12 @@ import java.io.ObjectStreamClass;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
@@ -71,6 +73,25 @@ public class NodeManagerCommunication {
 		}
 		return success;
 	}
+	
+//	public void sendObjectNonBlocking(ArrayList<Operator> ops){
+//		ArrayList<Thread> activeT = new ArrayList<Thread>();
+//		for(Operator o : ops){
+//			Node n = o.getOpContext().getOperatorStaticInformation().getMyNode();
+//			int opId = o.getOperatorId();
+//			Thread t = new Thread(new ConnHandler(n, opId));
+//			t.start();
+//		}
+//		for(Thread t : activeT){
+//			try {
+//				t.join();
+//			} 
+//			catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//	}
 	
 	public void sendFile(Node n, byte[] data){
 		sendObject(n, "CODE");

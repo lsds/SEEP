@@ -30,7 +30,6 @@ import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
 import uk.ac.imperial.lsds.seep.operator.State;
@@ -266,8 +265,8 @@ public class ElasticInfrastructureUtils {
 		ArrayList<Operator> ops = inf.getOps();
 		for (Operator o: ops) {
 			if(o.getOperatorId() != opIdToParallelize && o.getOperatorId() != newOpId){ // Do not send to involved ops
-				if(!(o.getOpContext().isSink())){
-//				if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
+//				if(!(o.getOpContext().isSink())){
+				if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
 					NodeManager.nLogger.info("COMMAND: distributed_scale_out to: "+o.getOperatorId());
 					ControlTuple ct = new ControlTuple().makeDistributedScaleOut(opIdToParallelize, newOpId);
 					rct.sendControlMsgWithoutACK(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
@@ -299,6 +298,10 @@ public class ElasticInfrastructureUtils {
 				//oldOpId, newOpId, newNode, qp
 				int oldOpId = listOfReplicas.get(accessIdx).getOperatorId();
 				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp);
+				if(op.getOpContext().isSource()){ // probably not the best place to do this
+					NodeManager.nLogger.info("-> Statically scaling out SOURCE operator");
+					inf.addSource(newReplica);
+				}
 				// First modify accessIdx for next iteration
 				if(listOfReplicas.size()-1 == accessIdx){
 					// So it will be reset
@@ -351,7 +354,13 @@ public class ElasticInfrastructureUtils {
 //			NodeManager.nLogger.info("STATIC Created new Op: "+newOp.toString());
 			
 			Operator newOp = staticScaleOut(oldOpId, newOpId, newNode, qp);
-			
+			Operator a = inf.getOperatorById(oldOpId);
+			System.out.println("SOURCE");
+			System.out.println(a);
+			if(inf.getOperatorById(oldOpId).getOpContext().isSource()){ // probably not the best place to do this
+				NodeManager.nLogger.info("-> Statically scaling out SOURCE operator");
+				inf.addSource(newOp);
+			}
 			// upstream and downstream conns are statically established at this point
 			// scale out to upstream. this is just about configuring the router properly, anything else, no message interchange (obviously)
 			so.setNewReplicaInstantiation(newOp);
@@ -611,6 +620,10 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 				newOp._declareWorkingAttributes(op.getOpContext().getDeclaredWorkingAttributes());
 				//Copy inputDataIngestionMode information
 				newOp.initializeInputDataIngestionModePerUpstream(op.getOpContext().getInputDataIngestionModePerUpstream());
+				
+				if(op.getOpContext().isSource()){
+					newOp.getOpContext().setIsSource(true);
+				}
 			}
 		}
 	}

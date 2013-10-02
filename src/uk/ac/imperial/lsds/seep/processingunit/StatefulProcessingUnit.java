@@ -487,6 +487,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			return null;
 		}
 		
+//((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).lockStateAccess(); // debug
+		
 		//State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
 		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
 		
@@ -545,6 +547,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		t2.start();
 		int counter = 0;
 		while((mc = ssm.getChunk()) != null){
+			if(mc.chunk == null){ // -> rather make sure state chunks are small enough
+				System.out.println("mc.chunk is null. Continuing... %%");
+				continue;
+			}
 			ControlTuple chunkMessage = new ControlTuple().makeStateChunk(opId, keeperOpId, sequenceNumber, ssm.getTotalNumberChunks(), mc, splittingKey);
 			sequenceNumber++;
 			int idx = index % sizeST;
@@ -585,6 +591,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		
 		long startR = System.currentTimeMillis();
 		//((Versionable)runningOpState).reconcile();
+//((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).releaseStateAccess(); //debug
 		((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).reconcile();
 		long stopR = System.currentTimeMillis();
 		System.out.println("MSG SENT: "+sequenceNumber);

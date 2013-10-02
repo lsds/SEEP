@@ -38,6 +38,22 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		super(initialSize);
 	}
 	
+	@Override
+	public void lockStateAccess(){
+		try {
+			this.mutex.acquire();
+		} 
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public void releaseStateAccess(){
+		this.mutex.release();
+	}
+	
 	public Object put(Object key, Object value){
 		try {
 			this.mutex.acquire();

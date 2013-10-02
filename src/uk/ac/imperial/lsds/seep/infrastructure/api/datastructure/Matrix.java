@@ -20,8 +20,9 @@ public class Matrix implements MatrixI, Serializable{
 	
 	private static final long serialVersionUID = 1L;
 	private int colSize = 0;
-	// map the row index with a tag value
+	// map the row tag with a row index
 	protected HashMap<Integer, Integer> rowIds = new HashMap<Integer, Integer>();
+	// the real rows
 	protected ArrayList<ArrayList<Component>> rows = new ArrayList<ArrayList<Component>>();
 	protected int rowSize = 0;
 	
@@ -62,6 +63,12 @@ public class Matrix implements MatrixI, Serializable{
 			return null;
 		}
 		int rowIndex = rowIds.get(rowTag);
+		
+//		///\fixme{this should be safe higher in the stack}
+//		if(rows.get(rowIndex) == null){
+//			return null;
+//		}
+		
 		return rows.get(rowIndex);
 	}
 	

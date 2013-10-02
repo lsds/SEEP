@@ -8,14 +8,23 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seep.comm;
 
-public interface Versionable {
+import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
+import uk.ac.imperial.lsds.seep.operator.Operator;
 
-	public void setDirtyMode(boolean newValue);
-	public void reconcile();
+public class ConnHandler implements Runnable {
+
+	Operator o;
+	Infrastructure inf;
 	
-	public void lockStateAccess();
-	public void releaseStateAccess();
+	public ConnHandler(Operator o, Infrastructure inf){
+		this.o = o;
+		this.inf = inf;
+	}
 	
+	@Override
+	public void run() {
+		inf.init(o);
+	}
 }

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Streamable;
 
 public class StreamStateManager {
@@ -28,6 +29,15 @@ public class StreamStateManager {
 		this.state = state;
 		this.chunkSize = new Integer(P.valueFor("stateChunkSize"));
 		this.totalNumberChunks = state.getTotalNumberOfChunks(chunkSize);
+		if(totalNumberChunks == 1){
+			NodeManager.nLogger.severe("-> State fits in less than one chunk. Fix");
+			try {
+				throw new Exception("State fits in less than one chunk");
+			} 
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 		this.stateIterator = state.getIterator();
 	}
 	

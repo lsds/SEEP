@@ -85,7 +85,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 	}
 	
 	public void executeLightStateMechanism(){
-		processingUnit.checkpointAndBackupState();
+		//processingUnit.checkpointAndBackupState();
 		checkpointInterval = state.getCheckpointInterval();
 		while(goOn){
 			long elapsedTime = System.currentTimeMillis() - initTime;
