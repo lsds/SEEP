@@ -12,6 +12,8 @@ package uk.ac.imperial.lsds.seep.infrastructure.monitor;
 
 public class LocalReporterMonitor implements Runnable{
 
+	private final int PERIOD = 1000;
+	
 	@Override
 	public void run() {
 		// Time control variables (for local output)
@@ -21,7 +23,7 @@ public class LocalReporterMonitor implements Runnable{
 		while(true){
 			//Local output info
 			long elapsed = (System.currentTimeMillis() - init);
-			if(elapsed > 1000){
+			if(elapsed > PERIOD){
 				System.out.println("& "+sec+" "+MetricsReader.eventsProcessed.getCount());
 				System.out.println("BUF: "+MetricsReader.loggedEvents.getCount());
 				sec++;

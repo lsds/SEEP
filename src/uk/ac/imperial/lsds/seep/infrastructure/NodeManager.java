@@ -10,14 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.infrastructure;
 
-import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamClass;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -28,9 +25,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
-import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
-import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.Monitor;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
