@@ -33,7 +33,7 @@ public class MetricsReader {
 	// Events processed, manual counter
 	final public static Counter eventsProcessed = Metrics.newCounter(StatefulProcessingUnit.class, "total-events");
 	// To indicate the current number of logged tuples
-	final public static Counter loggedEvents = Metrics.newCounter(InputQueue.class, "logged-events"); 
+	final public static Counter loggedEvents = Metrics.newCounter(InputQueue.class, "logged-events");
 	
 	public MetricsReader(){
 		

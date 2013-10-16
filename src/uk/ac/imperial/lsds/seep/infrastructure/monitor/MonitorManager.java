@@ -103,6 +103,7 @@ public class MonitorManager implements Runnable{
 				
 				while(listen){
 					MetricsTuple m = k.readObject(input, MetricsTuple.class);
+					///\fixme{Fix }
 					if(m.getOpId() == -666){
 						Infrastructure.msh.setSystemStableTime(System.currentTimeMillis());
 					}
@@ -265,7 +266,7 @@ public class MonitorManager implements Runnable{
 ////							int elapsedTime = (int)((int)(System.currentTimeMillis() - t_lastSplit))/1000;
 ////							if(elapsedTime > ExecutionConfiguration.minimumTimeBetweenSplit){
 //							//...ALERT cpu overloaded...
-////							inf.getEiu().alertCPU(opId);
+//							inf.getEiu().alertCPU(opId);
 //							inf.getEiu().alert(opId);
 //							alertsMemory.put(opId, 0);
 //							//update the time of last split
