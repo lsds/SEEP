@@ -1,6 +1,7 @@
 build/*
 dist/*
 old/*
+target/*
 scripts/*
 log.out
 .settings/*
