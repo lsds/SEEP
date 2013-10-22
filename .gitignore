@@ -3,6 +3,7 @@ dist/*
 old/*
 scripts/*
 log.out
+.settings/*
 .project
 .classpath
 .codepro
