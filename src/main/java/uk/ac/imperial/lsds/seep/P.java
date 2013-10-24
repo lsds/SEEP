@@ -10,9 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 public class P {
@@ -28,12 +30,14 @@ public class P {
 	public boolean loadProperties(){
 		
 		boolean success = false;
+		File f = null;
 		try {
-			globals.load(new FileInputStream("config.properties"));
+			InputStream fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
+			globals.load(fis);
 			success = true;
 		}
 		catch (FileNotFoundException e1) {
-			System.out.println("Properties file not found "+e1.getMessage());
+			System.out.println("Properties file not found "+e1.getMessage()+" SEARCH PATH: "+f.getAbsolutePath());
 			e1.printStackTrace();
 		}
 		catch (IOException e1) {

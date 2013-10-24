@@ -2,20 +2,18 @@ Seep is an experimental stream processing platform that is being developed by th
 
 The system is currently under heavy development and should be considered an alpha release. In particular, this is a "feature" branch. A "stable" branch will be created once the first release comes.
 
-build -> binary build files
+The project follows the standard maven directory structure.
 
-build.xml -> Ant configuration file 
+There are two options to run the system:
 
-changelog -> list of system changes
+Option 1, without dependencies:
+To compile it:
+mvn -DskipTests package
 
-dist -> jar distribution file (onejar) 
+then, make sure to include in your classpath the dependencies.
 
-doc -> Doxygen generated documentation 
+Option 2, single jar:
+Run:
+mvn clean compile assembly:single
 
-DoxyFile -> Doxygen configuration file 
-
-lib -> external libs 
-
-src -> source files
-
-todo -> list of open items
+To produce a one jar with all dependencies included
