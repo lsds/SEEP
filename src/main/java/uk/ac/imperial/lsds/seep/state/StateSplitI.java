@@ -10,7 +10,6 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.state;
 
-
 public interface StateSplitI {
 	
 	public State[] parallelizeState(State toSplit, int key, String stateClass);

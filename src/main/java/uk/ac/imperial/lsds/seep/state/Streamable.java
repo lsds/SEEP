@@ -17,9 +17,8 @@ public interface Streamable {
 
 	public int getSize();
 	public int getTotalNumberOfChunks(int chunkSize);
-	public Iterator getIterator();
+	public Iterator<?> getIterator();
 	public ArrayList<Object> streamSplitState(int chunkSize);
-//	public StreamData[] getRemainingData();
 	public void reset();
 	public void appendChunk(ArrayList<Object> s);
 	public Object getFromBackup(Object key);

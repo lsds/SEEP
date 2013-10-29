@@ -14,7 +14,6 @@ public interface Versionable {
 
 	public void setDirtyMode(boolean newValue);
 	public void reconcile();
-	
 	public void lockStateAccess();
 	public void releaseStateAccess();
 	

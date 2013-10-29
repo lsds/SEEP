@@ -486,9 +486,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			System.exit(-666);
 			return null;
 		}
-		
-//((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).lockStateAccess(); // debug
-		
+				
 		//State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
 		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
 		
@@ -591,7 +589,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		
 		long startR = System.currentTimeMillis();
 		//((Versionable)runningOpState).reconcile();
-//((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).releaseStateAccess(); //debug
 		((Versionable)((LargeState)runningOpState).getVersionableAndStreamableState()).reconcile();
 		long stopR = System.currentTimeMillis();
 		System.out.println("MSG SENT: "+sequenceNumber);

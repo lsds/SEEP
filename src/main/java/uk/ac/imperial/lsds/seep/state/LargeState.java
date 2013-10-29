@@ -10,10 +10,8 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.state;
 
-public interface LargeState {
+public interface LargeState extends Versionable, Streamable{
 
 	public Object getVersionableAndStreamableState();
-	
-//	public void reconcile();
 	
 }
