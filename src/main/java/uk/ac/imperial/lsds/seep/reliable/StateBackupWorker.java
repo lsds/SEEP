@@ -15,9 +15,9 @@ import java.io.Serializable;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
+import uk.ac.imperial.lsds.seep.state.State;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.

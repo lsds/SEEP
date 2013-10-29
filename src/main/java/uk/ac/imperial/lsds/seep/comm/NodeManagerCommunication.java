@@ -21,10 +21,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectOutputStream;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectOutputStream;
 
 /**
  * BasicCommunicationUtils. This class provides simple methods to communicate between master and secondary nodes

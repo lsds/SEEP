@@ -6,9 +6,9 @@ import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import java.net.URLClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 import java.util.concurrent.ArrayBlockingQueue;
 import junit.framework.*;
 

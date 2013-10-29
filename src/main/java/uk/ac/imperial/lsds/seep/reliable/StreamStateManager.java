@@ -15,7 +15,7 @@ import java.util.Iterator;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.operator.Streamable;
+import uk.ac.imperial.lsds.seep.state.Streamable;
 
 public class StreamStateManager {
 

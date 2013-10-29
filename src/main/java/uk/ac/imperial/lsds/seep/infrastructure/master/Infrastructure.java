@@ -28,6 +28,8 @@ import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
+import uk.ac.imperial.lsds.seep.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.comm.ConnHandler;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
@@ -41,19 +43,17 @@ import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializ
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
-import uk.ac.imperial.lsds.seep.infrastructure.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MonitorManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
+import uk.ac.imperial.lsds.seep.state.State;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;

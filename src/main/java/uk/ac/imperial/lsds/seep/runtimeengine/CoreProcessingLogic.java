@@ -48,8 +48,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.operator.Partitionable;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
@@ -60,6 +58,8 @@ import uk.ac.imperial.lsds.seep.reliable.BackupHandler;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.MergerWorker;
 import uk.ac.imperial.lsds.seep.reliable.StreamerWorker;
+import uk.ac.imperial.lsds.seep.state.Partitionable;
+import uk.ac.imperial.lsds.seep.state.State;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;

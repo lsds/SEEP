@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.seep;
 
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
 
 /**
  * The class <code>BaseITest</code> contains tests for the class <code>{@link BaseI}</code>.

@@ -3,9 +3,10 @@ package uk.ac.imperial.lsds.seep.reliable;
 import java.net.InetAddress;
 import java.net.Socket;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 import java.net.URL;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
+
 import java.net.URLClassLoader;
 import junit.framework.*;
 

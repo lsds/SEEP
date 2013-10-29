@@ -6,21 +6,21 @@ import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import java.net.URLClassLoader;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.elastic.MockState;
 import uk.ac.imperial.lsds.seep.reliable.BackupHandler;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
 import java.util.ArrayList;
 import junit.framework.*;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 
 /**

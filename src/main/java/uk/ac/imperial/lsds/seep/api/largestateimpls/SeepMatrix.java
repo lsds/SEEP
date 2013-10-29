@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.infrastructure.api.datastructure;
+package uk.ac.imperial.lsds.seep.api.largestateimpls;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import uk.ac.imperial.lsds.seep.operator.Streamable;
-import uk.ac.imperial.lsds.seep.operator.Versionable;
+import uk.ac.imperial.lsds.seep.state.Streamable;
+import uk.ac.imperial.lsds.seep.state.Versionable;
 
 public class SeepMatrix extends Matrix implements Versionable, Streamable{
 

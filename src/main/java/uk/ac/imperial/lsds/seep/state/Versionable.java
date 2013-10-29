@@ -8,30 +8,14 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.infrastructure.api.datastructure;
+package uk.ac.imperial.lsds.seep.state;
 
-import java.io.Serializable;
+public interface Versionable {
 
-public class Component implements Serializable{
-
-	private static final long serialVersionUID = 1L;
+	public void setDirtyMode(boolean newValue);
+	public void reconcile();
 	
+	public void lockStateAccess();
+	public void releaseStateAccess();
 	
-	public int col;
-	public int value;
-
-	public Component(){
-		
-	}
-	
-	public Component( int col, int value) {
-		
-		this.col = col;
-		this.value = value;
-	}
-	
-	@Override
-	public String toString(){
-		return " column-> "+col+" value-> "+value;
-	}
 }

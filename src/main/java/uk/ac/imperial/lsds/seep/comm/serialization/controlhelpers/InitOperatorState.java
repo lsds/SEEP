@@ -10,7 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.State;
 
 public class InitOperatorState {
 

@@ -26,13 +26,13 @@ import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.Monitor;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.ExtendedObjectInputStream;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
+import uk.ac.imperial.lsds.seep.state.State;
 
 /**
  * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the 

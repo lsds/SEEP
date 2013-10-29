@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer;
+package uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer;
 
 import java.net.URL;
 import java.net.URLClassLoader;

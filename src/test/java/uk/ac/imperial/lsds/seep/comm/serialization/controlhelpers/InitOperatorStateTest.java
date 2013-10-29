@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.elastic.MockState;
 
 /**

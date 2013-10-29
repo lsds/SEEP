@@ -8,14 +8,11 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seep.state;
 
-public interface Versionable {
 
-	public void setDirtyMode(boolean newValue);
-	public void reconcile();
+public interface StateSplitI {
 	
-	public void lockStateAccess();
-	public void releaseStateAccess();
+	public State[] parallelizeState(State toSplit, int key, String stateClass);
 	
 }

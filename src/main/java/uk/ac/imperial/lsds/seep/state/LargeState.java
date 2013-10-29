@@ -8,20 +8,12 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seep.state;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+public interface LargeState {
 
-public interface Streamable {
-
-	public int getSize();
-	public int getTotalNumberOfChunks(int chunkSize);
-	public Iterator getIterator();
-	public ArrayList<Object> streamSplitState(int chunkSize);
-//	public StreamData[] getRemainingData();
-	public void reset();
-	public void appendChunk(ArrayList<Object> s);
-	public Object getFromBackup(Object key);
+	public Object getVersionableAndStreamableState();
+	
+//	public void reconcile();
 	
 }

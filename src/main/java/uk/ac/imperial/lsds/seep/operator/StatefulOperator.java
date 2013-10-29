@@ -10,6 +10,8 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
+import uk.ac.imperial.lsds.seep.state.State;
+
 
 public interface StatefulOperator{
 

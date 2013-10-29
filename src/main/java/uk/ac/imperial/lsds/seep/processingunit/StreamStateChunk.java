@@ -12,7 +12,7 @@ package uk.ac.imperial.lsds.seep.processingunit;
 
 import java.util.ArrayList;
 
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.State;
 
 public class StreamStateChunk extends State{
 

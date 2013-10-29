@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.seep.infrastructure.master;
 
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.P;
 

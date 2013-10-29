@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.infrastructure.api;
+package uk.ac.imperial.lsds.seep.api;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,9 +20,9 @@ import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.Partitionable;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.Partitionable;
+import uk.ac.imperial.lsds.seep.state.State;
 
 public class QueryPlan {
 	

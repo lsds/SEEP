@@ -9,6 +9,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateStat
 import java.net.URLClassLoader;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.KeyBounds;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
@@ -21,7 +22,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DistributedSca
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import java.util.HashMap;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.CloseSignal;
 import java.util.Map;

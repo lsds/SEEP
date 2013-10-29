@@ -1,8 +1,8 @@
 package uk.ac.imperial.lsds.seep.reliable;
 
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.infrastructure.api.datastructure.SeepMap;
-import uk.ac.imperial.lsds.seep.operator.Streamable;
+import uk.ac.imperial.lsds.seep.api.largestateimpls.SeepMap;
+import uk.ac.imperial.lsds.seep.state.Streamable;
 
 /**
  * The class <code>StreamStateManagerTest</code> contains tests for the class <code>{@link StreamStateManager}</code>.

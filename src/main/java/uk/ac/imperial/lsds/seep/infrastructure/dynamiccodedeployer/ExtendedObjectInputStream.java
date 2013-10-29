@@ -8,12 +8,13 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer;
+package uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
+
 
 public class ExtendedObjectInputStream extends ObjectInputStream {
 

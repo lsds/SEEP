@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.infrastructure.api.datastructure;
+package uk.ac.imperial.lsds.seep.api.largestateimpls;
 
 import java.io.Serializable;
 import java.util.ArrayList;

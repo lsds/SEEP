@@ -2,13 +2,14 @@ package uk.ac.imperial.lsds.seep.elastic;
 
 import java.net.URL;
 import java.net.URLClassLoader;
+
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
+import uk.ac.imperial.lsds.seep.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
-import uk.ac.imperial.lsds.seep.infrastructure.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import java.util.ArrayList;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 
 /**
  * The class <code>ElasticInfrastructureUtilsTest</code> contains tests for the class <code>{@link ElasticInfrastructureUtils}</code>.

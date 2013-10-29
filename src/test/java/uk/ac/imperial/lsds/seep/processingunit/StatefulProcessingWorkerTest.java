@@ -4,8 +4,8 @@ import java.util.concurrent.Semaphore;
 import uk.ac.imperial.lsds.seep.elastic.MockState;
 import junit.framework.*;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
+import uk.ac.imperial.lsds.seep.state.State;
 
 /**
  * The class <code>StatefulProcessingWorkerTest</code> contains tests for the class <code>{@link StatefulProcessingWorker}</code>.

@@ -13,9 +13,9 @@ package uk.ac.imperial.lsds.seep;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.master.MasterController;
 
 /**

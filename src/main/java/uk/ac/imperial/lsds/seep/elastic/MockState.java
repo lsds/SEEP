@@ -10,8 +10,8 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.elastic;
 
-import uk.ac.imperial.lsds.seep.operator.Partitionable;
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.Partitionable;
+import uk.ac.imperial.lsds.seep.state.State;
 
 public class MockState extends State implements Partitionable{
 

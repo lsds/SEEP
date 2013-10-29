@@ -1,7 +1,8 @@
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
 import java.util.ArrayList;
-import uk.ac.imperial.lsds.seep.operator.State;
+
+import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.elastic.MockState;
 import junit.framework.*;

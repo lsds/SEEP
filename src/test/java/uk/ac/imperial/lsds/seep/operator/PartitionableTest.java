@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.operator;
 
+import uk.ac.imperial.lsds.seep.state.Partitionable;
 import junit.framework.*;
 
 /**

@@ -1,20 +1,21 @@
 package uk.ac.imperial.lsds.seep.infrastructure.master;
 
 import java.net.InetAddress;
+
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.elastic.MockState;
 import java.util.ArrayList;
 import java.util.HashMap;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MonitorManager;
 import java.util.Map;
 import uk.ac.imperial.lsds.seep.operator.Operator;
+import uk.ac.imperial.lsds.seep.state.State;
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 
 /**
  * The class <code>InfrastructureTest</code> contains tests for the class <code>{@link Infrastructure}</code>.

@@ -15,9 +15,9 @@ import java.util.concurrent.Semaphore;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.InputQueue;
+import uk.ac.imperial.lsds.seep.state.State;
 
 public class StatefulProcessingWorker implements Runnable{
 

@@ -19,7 +19,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StreamState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpenSignal;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReplayStateInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;

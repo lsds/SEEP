@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer;
 
 import java.net.URL;
 import java.net.URLClassLoader;
+
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import junit.framework.*;
 
 /**

@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.seep.elastic;
 
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.operator.State;
+import uk.ac.imperial.lsds.seep.state.State;
 
 /**
  * The class <code>MockStateTest</code> contains tests for the class <code>{@link MockState}</code>.

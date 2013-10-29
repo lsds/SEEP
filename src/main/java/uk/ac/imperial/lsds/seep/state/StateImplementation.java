@@ -8,13 +8,8 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seep.state;
 
-public interface Partitionable {
+public interface StateImplementation {
 
-	public void setKeyAttribute(String keyAttribute);
-	public String getKeyAttribute();
-	public State[] splitState(State toSplit, int key);
-	public void resetState();
-	
 }

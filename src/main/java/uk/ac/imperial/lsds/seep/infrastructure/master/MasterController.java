@@ -21,10 +21,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
-import uk.ac.imperial.lsds.seep.infrastructure.api.QueryPlan;
 
 
 public class MasterController {

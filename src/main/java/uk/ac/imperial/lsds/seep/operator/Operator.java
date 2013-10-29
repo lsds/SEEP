@@ -21,6 +21,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
+import uk.ac.imperial.lsds.seep.state.State;
 
 public abstract class Operator implements Serializable, QuerySpecificationI, EndPoint{
 

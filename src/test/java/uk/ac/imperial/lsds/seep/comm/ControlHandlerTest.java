@@ -3,8 +3,8 @@ package uk.ac.imperial.lsds.seep.comm;
 import java.net.InetAddress;
 import java.net.URL;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
 import java.net.URLClassLoader;
 import junit.framework.*;
 

@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.seep.operator;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+
+import uk.ac.imperial.lsds.seep.state.Streamable;
 import junit.framework.*;
 
 /**

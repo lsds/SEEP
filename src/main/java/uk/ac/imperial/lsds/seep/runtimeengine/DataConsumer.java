@@ -8,18 +8,13 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.runtimeengine.workers;
+package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.runtimeengine.Barrier;
-import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
-import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
-import uk.ac.imperial.lsds.seep.runtimeengine.InputQueue;
 
 public class DataConsumer implements Runnable {
 

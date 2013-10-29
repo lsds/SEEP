@@ -30,15 +30,10 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
-import uk.ac.imperial.lsds.seep.operator.LargeState;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
-import uk.ac.imperial.lsds.seep.operator.Partitionable;
-import uk.ac.imperial.lsds.seep.operator.State;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
-import uk.ac.imperial.lsds.seep.operator.Streamable;
-import uk.ac.imperial.lsds.seep.operator.Versionable;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.SerialiserWorker;
@@ -53,6 +48,11 @@ import uk.ac.imperial.lsds.seep.runtimeengine.JobBean;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
+import uk.ac.imperial.lsds.seep.state.LargeState;
+import uk.ac.imperial.lsds.seep.state.Partitionable;
+import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.Streamable;
+import uk.ac.imperial.lsds.seep.state.Versionable;
 
 /**
  * mutex or lockstate in this class are the by default java mechanism, and my custom made locking mech. Mine performs slightly better but it is far less

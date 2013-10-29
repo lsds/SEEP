@@ -8,10 +8,30 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seep.api.largestateimpls;
 
-public interface StateSplitI {
+import java.io.Serializable;
+
+public class Component implements Serializable{
+
+	private static final long serialVersionUID = 1L;
 	
-	public State[] parallelizeState(State toSplit, int key, String stateClass);
 	
+	public int col;
+	public int value;
+
+	public Component(){
+		
+	}
+	
+	public Component( int col, int value) {
+		
+		this.col = col;
+		this.value = value;
+	}
+	
+	@Override
+	public String toString(){
+		return " column-> "+col+" value-> "+value;
+	}
 }

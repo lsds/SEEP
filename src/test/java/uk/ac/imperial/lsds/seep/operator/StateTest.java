@@ -2,10 +2,12 @@ package uk.ac.imperial.lsds.seep.operator;
 
 import java.net.URL;
 import uk.ac.imperial.lsds.seep.elastic.MockState;
-import uk.ac.imperial.lsds.seep.utils.dynamiccodedeployer.RuntimeClassLoader;
+import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
+
 import java.net.URLClassLoader;
 import junit.framework.*;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
+import uk.ac.imperial.lsds.seep.state.State;
 
 /**
  * The class <code>StateTest</code> contains tests for the class <code>{@link State}</code>.
