@@ -10,12 +10,17 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.state;
 
-
+/**
+ * Partitionable defines methods required to split CustomState. Note that LargeState implementations do not need to implement Partitionable,
+ * only CustomState implementations need to do it in case they are indeed partitionable.
+ * @author raulcf
+ *
+ */
 public interface Partitionable {
 
 	public void setKeyAttribute(String keyAttribute);
 	public String getKeyAttribute();
-	public State[] splitState(State toSplit, int key);
+	public StateWrapper[] splitState(StateWrapper toSplit, int key);
 	public void resetState();
 	
 }

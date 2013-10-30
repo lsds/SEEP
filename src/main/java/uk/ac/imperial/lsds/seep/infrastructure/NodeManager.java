@@ -23,7 +23,9 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
@@ -32,7 +34,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.Monitor;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 /**
  * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the 
@@ -40,6 +42,8 @@ import uk.ac.imperial.lsds.seep.state.State;
  */
 
 public class NodeManager{
+	
+	final private Logger LOG = LoggerFactory.getLogger(NodeManager.class);
 	
 	private WorkerNodeDescription nodeDescr;
 	private RuntimeClassLoader rcl = null;
@@ -49,8 +53,6 @@ public class NodeManager{
 	private InetAddress bindAddr;
 	//Bind port of this NodeManager
 	private int ownPort;
-	
-	public static Logger nLogger = Logger.getLogger("seep");
 	private NodeManagerCommunication bcu = new NodeManagerCommunication();
 	
 	static public boolean monitorOfSink = false;
@@ -117,7 +119,7 @@ public class NodeManager{
 		nodeMonitor.setNodeId(nodeId);
 		monitorT = new Thread(nodeMonitor);
 		monitorT.start();
-		nLogger.info("-> Node Monitor running");
+		LOG.info("-> Node Monitor running");
 		//Local variables
 		ServerSocket serverSocket = null;
 		PrintWriter out = null;
@@ -128,7 +130,7 @@ public class NodeManager{
 		
 		try{
 			serverSocket = new ServerSocket(ownPort);
-			NodeManager.nLogger.info("NODEMANAGER: Waiting for incoming requests on port: "+ownPort);
+			LOG.info("Waiting for incoming requests on port: {}", ownPort);
 			Socket clientSocket = null;
 			//Send bootstrap information
 			bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
@@ -143,14 +145,14 @@ public class NodeManager{
 				ObjectStreamClass osc = ois.readClassDescriptor();
 				//Lazy load of the required class in case is an operator
 				if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer"))){
-					NodeManager.nLogger.info("-> Received Unknown Class ->"+osc.getName()+"<- Using custom class loader to resolve it");
+					LOG.debug("-> Received Unknown Class -> {} <- Using custom class loader to resolve it", osc.getName());
 					rcl.loadClass(osc.getName());
 					o = ois.readObject();
 					if(o instanceof Operator){
-						NodeManager.nLogger.info("-> OPERATOR resolved, OP-ID: "+((Operator)o).getOperatorId());
+						LOG.debug("-> OPERATOR resolved, OP-ID: {}", ((Operator)o).getOperatorId());
 					}
-					else if (o instanceof State){
-						NodeManager.nLogger.info("-> STATE resolved, Class: "+o.getClass().getName());
+					else if (o instanceof StateWrapper){
+						LOG.info("-> STATE resolved, Class: {}", o.getClass().getName());
 					}
 				}
 				else{
@@ -170,11 +172,11 @@ public class NodeManager{
 					String tokens[] = ((String)o).split(" ");
 					System.out.println("Tokens received: "+tokens[0]);
 					if(tokens[0].equals("CODE")){
-						NodeManager.nLogger.info("-> CODE Command");
+						LOG.info("-> CODE Command");
 						//Send ACK back
 						out.println("ack");
 						// Establish subconnection to receive the code
-						NodeManager.nLogger.info("-> Waiting for receiving the file");
+						LOG.info("-> Waiting for receiving the CODE...");
 						Socket subConnection = serverSocket.accept();
 						DataInputStream dis = new DataInputStream(subConnection.getInputStream());
 						int codeSize = dis.readInt();
@@ -182,10 +184,10 @@ public class NodeManager{
 						dis.readFully(serializedFile);
 						int bytesRead = serializedFile.length;
 						if(bytesRead != codeSize){
-							NodeManager.nLogger.warning("Mismatch between read and file size");
+							LOG.warn("Mismatch between read and file size");
 						}
 						else{
-							NodeManager.nLogger.info("-> CODE received completely");
+							LOG.info("-> CODE received completely");
 						}
 						//Here I have the serialized bytes of the file, we materialize the real file
 						//For now the name of the file is always query.jar
@@ -198,15 +200,15 @@ public class NodeManager{
 						//At this point we should have the file on disk
 						File pathToCode = new File("query.jar");
 						if(pathToCode.exists()){
-							NodeManager.nLogger.info("-> Loading CODE from: "+pathToCode.getAbsolutePath());
+							LOG.info("-> Loading CODE from: {}", pathToCode.getAbsolutePath());
 							loadCodeToRuntime(pathToCode);
 						}
 						else{
-							NodeManager.nLogger.severe("-> No access to the CODE");
+							LOG.error("-> No access to the CODE");
 						}
 					}
 					if(tokens[0].equals("STOP")){
-						NodeManager.nLogger.info("-> STOP Command");
+						LOG.info("-> STOP Command");
 						core.stopDataProcessing();
 						listen = false;
 						out.println("ack");
@@ -218,19 +220,19 @@ public class NodeManager{
 						continue;
 					}
 					if(tokens[0].equals("SET-RUNTIME")){
-						NodeManager.nLogger.info("-> SET-RUNTIME Command");
+						LOG.info("-> SET-RUNTIME Command");
 						core.setRuntime();
 						out.println("ack");
 					}
 					if(tokens[0].equals("START")){
-						NodeManager.nLogger.info("-> START Command");
+						LOG.info("-> START Command");
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
                         core.startDataProcessing();
 					}
 					if(tokens[0].equals("CLOCK")){
-						NodeManager.nLogger.info("-> CLOCK Command");
+						LOG.info("-> CLOCK Command");
 						NodeManager.clock = System.currentTimeMillis();
 						out.println("ack");
 					}

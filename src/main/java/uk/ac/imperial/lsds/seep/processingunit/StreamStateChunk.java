@@ -12,9 +12,9 @@ package uk.ac.imperial.lsds.seep.processingunit;
 
 import java.util.ArrayList;
 
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
-public class StreamStateChunk extends State{
+public class StreamStateChunk extends StateWrapper{
 
 	private static final long serialVersionUID = 1L;
 	private ArrayList<Object> microBatch;

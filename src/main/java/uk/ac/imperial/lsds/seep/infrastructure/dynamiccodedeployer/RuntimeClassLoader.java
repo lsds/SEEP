@@ -13,9 +13,14 @@ package uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer;
 import java.net.URL;
 import java.net.URLClassLoader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 
 public class RuntimeClassLoader extends URLClassLoader{
+	
+	final private Logger LOG = LoggerFactory.getLogger(RuntimeClassLoader.class);
 	
 	public RuntimeClassLoader(URL[] urls, ClassLoader cl) {
 		super(urls, cl);
@@ -33,9 +38,9 @@ public class RuntimeClassLoader extends URLClassLoader{
 		catch (ClassNotFoundException e) {
 			URL[] loadURLs = super.getURLs();
 			for(URL u : loadURLs){
-				NodeManager.nLogger.severe("URL: "+u);
+				LOG.error("URL: "+u);
 			}
-			NodeManager.nLogger.severe("When trying to load: "+name);
+			LOG.error("When trying to load: "+name);
 			e.printStackTrace();
 		}
 		return null;

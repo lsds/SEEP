@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
@@ -41,6 +44,8 @@ import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 public class SerialiserWorker implements Runnable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(SerialiserWorker.class);
 
 	private Kryo k;
 	private final int BLIND_SOCKET;
@@ -124,7 +129,7 @@ public class SerialiserWorker implements Runnable{
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 			io.printStackTrace();
 		}
 		long stopSend = System.currentTimeMillis();

@@ -10,6 +10,9 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.processingunit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -17,6 +20,8 @@ import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.InputQueue;
 
 public class StatelessProcessingWorker implements Runnable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(StatelessProcessingWorker.class);
 
 	private InputQueue iq;
 	private Operator runningOp;
@@ -27,7 +32,7 @@ public class StatelessProcessingWorker implements Runnable{
 			this.iq = (InputQueue) dsa.getUniqueDso();
 		}
 		else{
-			NodeManager.nLogger.severe("-> Operation not permitted at this moment.. stateful multi-core on dist barrier");
+			LOG.error("-> Operation not permitted at this moment.. stateful multi-core on dist barrier");
 		}
 		this.runningOp = runningOp;
 	}

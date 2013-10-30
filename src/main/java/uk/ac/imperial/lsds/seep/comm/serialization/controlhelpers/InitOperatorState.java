@@ -10,18 +10,18 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers;
 
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class InitOperatorState {
 
 	private int opId;
-	private State state;
+	private StateWrapper state;
 	
 	public InitOperatorState(){
 		
 	}
 	
-	public InitOperatorState(int opId, State state){
+	public InitOperatorState(int opId, StateWrapper state){
 		this.opId = opId;
 		this.state = state;
 	}
@@ -34,11 +34,11 @@ public class InitOperatorState {
 		this.opId = opId;
 	}
 	
-	public State getState() {
+	public StateWrapper getState() {
 		return state;
 	}
 	
-	public void setState(State state) {
+	public void setState(StateWrapper state) {
 		this.state = state;
 	}
 }

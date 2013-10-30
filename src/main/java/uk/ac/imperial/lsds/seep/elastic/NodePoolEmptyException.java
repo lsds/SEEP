@@ -10,37 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.elastic;
 
-import uk.ac.imperial.lsds.seep.state.Partitionable;
-import uk.ac.imperial.lsds.seep.state.State;
-
-public class MockState extends State implements Partitionable{
+public class NodePoolEmptyException extends Exception {
 
 	private static final long serialVersionUID = 1L;
 
-	public MockState(){}
-	
-	@Override
-	public State[] splitState(State toSplit, int key) {
-		
-		return null;
+	public NodePoolEmptyException(String msg){
+		super(msg);
 	}
-
-	@Override
-	public String getKeyAttribute() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void setKeyAttribute(String s) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void resetState() {
-		// TODO Auto-generated method stub
-		
-	}
-
 }

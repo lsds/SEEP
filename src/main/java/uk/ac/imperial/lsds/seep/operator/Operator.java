@@ -16,20 +16,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public abstract class Operator implements Serializable, QuerySpecificationI, EndPoint{
 
 	private static final long serialVersionUID = 1L;
+	final private Logger LOG = LoggerFactory.getLogger(Operator.class);
 
 	private int operatorId;
 	private OperatorContext opContext = new OperatorContext();
-	private State state = null;
+	private StateWrapper stateWrapper = null;
 	private boolean ready = false;
 	public Operator subclassOperator = null;
 	public IProcessingUnit processingUnit = null;
@@ -44,8 +48,8 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		this.operatorId = opId;
 	}
 	
-	public void setState(State state){
-		this.state = state;
+	public void setStateWrapper(StateWrapper state){
+		this.stateWrapper = state;
 	}
 	
 	public void setSubclassOperator(){
@@ -54,8 +58,8 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	
 	/** Other methods **/
 	
-	public State getState(){
-		return state;
+	public StateWrapper getStateWrapper(){
+		return stateWrapper;
 	}
 	
 	public void setReady(boolean ready){
@@ -183,7 +187,7 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 	}
 	
 	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery, int streamId){
-		NodeManager.nLogger.info("Connecting OP: "+this.getOperatorId()+" with downstream Op: "+down.getOperatorId());
+		LOG.debug("Connecting OP: "+this.getOperatorId()+" with downstream Op: "+down.getOperatorId());
 		opContext.addDownstream(down.getOperatorId());
 		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
 		down.getOpContext().addUpstream(getOperatorId());

@@ -32,7 +32,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StreamState;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class ControlTuple {
 
@@ -295,7 +295,7 @@ public class ControlTuple {
 		return this;
 	}
 	
-	public ControlTuple makeInitOperatorState(int senderOperatorId, State initOperatorState){
+	public ControlTuple makeInitOperatorState(int senderOperatorId, StateWrapper initOperatorState){
 		this.type = CoreRE.ControlTupleType.INIT_STATE;
 		this.initState = new InitOperatorState(senderOperatorId, initOperatorState);
 		return this;

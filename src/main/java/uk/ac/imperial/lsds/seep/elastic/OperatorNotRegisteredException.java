@@ -8,15 +8,14 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.state;
-/**
- * LargeState is State that also implements the superinterfaces Versionable and Streamable.
- * @author raulcf
- *
- */
-public interface LargeState extends State, Versionable, Streamable{
+package uk.ac.imperial.lsds.seep.elastic;
 
-	@Deprecated
-	public Object getVersionableAndStreamableState();
+public class OperatorNotRegisteredException extends Exception{
+
+	private static final long serialVersionUID = 1L;
 	
+	public OperatorNotRegisteredException(String msg){
+		super(msg);
+	}
+
 }

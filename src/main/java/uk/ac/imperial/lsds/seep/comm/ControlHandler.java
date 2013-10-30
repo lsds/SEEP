@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
@@ -23,6 +26,8 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 public class ControlHandler implements Runnable{
 
+	final private Logger LOG = LoggerFactory.getLogger(ControlHandler.class);
+	
 	//The core that owns this control handler
 	private CoreRE owner;
 	//The connection port that this controlhandler must use
@@ -66,7 +71,7 @@ public class ControlHandler implements Runnable{
 			//Establish listening port
     		controlServerSocket = new ServerSocket(connPort);
 			controlServerSocket.setReuseAddress(true);
-			NodeManager.nLogger.info("-> ControlHandler listening in port: "+connPort);
+			LOG.info("-> ControlHandler listening in port: {}", connPort);
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
@@ -76,12 +81,12 @@ public class ControlHandler implements Runnable{
 			controlServerSocket.close();
 		}
 		catch(BindException be){
-			NodeManager.nLogger.severe("-> BIND EXC IO Error "+be.getMessage());
-			NodeManager.nLogger.severe("-> controlServerSocket.toString: "+controlServerSocket.toString());
+			LOG.error("-> BIND EXC IO Error "+be.getMessage());
+			LOG.error("-> controlServerSocket.toString: "+controlServerSocket.toString());
 			be.printStackTrace();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> ControlHandler. While listening incoming conns "+io.getMessage());
+			LOG.error("-> ControlHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
 		}
 	}

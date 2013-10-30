@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -35,6 +38,8 @@ import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public class StatelessProcessingUnit implements IProcessingUnit {
+	
+	final private Logger LOG = LoggerFactory.getLogger(StatelessProcessingUnit.class);
 
 	private CoreRE owner;
 	private PUContext ctx;
@@ -84,7 +89,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			}
 		}
 		else{
-			NodeManager.nLogger.warning("-> No tuple MAPPER. This is fine as far as I am a SRC");
+			LOG.warn("-> No tuple MAPPER. This is fine as far as I am a SRC");
 		}
 		return idxMapper;
 	}
@@ -153,13 +158,13 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public void newOperatorInstantiation(Operator o) {
-		NodeManager.nLogger.info("-> Instantiating Operator");
+		LOG.info("-> Instantiating Operator");
 		//Detect the first submitted operator
 		if(runningOp == null){
 			runningOp = o;
 		}
 		else{
-			NodeManager.nLogger.warning("-> The operator in this node is being overwritten");
+			LOG.warn("-> The operator in this node is being overwritten");
 		}
 		o.setProcessingUnit(this);
 		// To identify the monitor with the op id instead of the node id
@@ -194,7 +199,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void registerManagedState(int opId) {
 		//If the state does not figure as being managed, we include it
 		if(!listOfManagedStates.contains(opId)){
-			NodeManager.nLogger.info("% -> New STATE registered for Operator: "+opId);
+			LOG.info("-> New STATE registered for Operator: {}", opId);
 			listOfManagedStates.add(opId);
 		}
 	}
@@ -231,7 +236,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public void setOpReady(int opId) {
-		NodeManager.nLogger.info("-> Setting operator ready");
+		LOG.info("-> Setting operator ready");
 		runningOp.setReady(true);
 	}
 
@@ -263,7 +268,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public void stopConnection(int opId) {
 		//Stop incoming data, a new thread is replaying
-		NodeManager.nLogger.info("Stopping connection to OP: "+opId);
+		LOG.info("Stopping connection to OP: {}", opId);
 		outputQueue.stop();
 		ctx.getCCIfromOpId(opId, "d").getStop().set(true);
 	}

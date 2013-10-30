@@ -20,6 +20,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -50,7 +53,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 import uk.ac.imperial.lsds.seep.state.Streamable;
 import uk.ac.imperial.lsds.seep.state.Versionable;
 
@@ -113,6 +116,8 @@ import uk.ac.imperial.lsds.seep.state.Versionable;
 
 
 public class StatefulProcessingUnit implements IProcessingUnit{
+	
+	final private Logger LOG = LoggerFactory.getLogger(StatefulProcessingUnit.class);
 
 	private CoreRE owner = null;
 	
@@ -126,7 +131,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 
 	//Operator and state managed by this processingUnit
 	private Operator runningOp = null;
-	private State runningOpState = null;
+	private StateWrapper runningOpState = null;
 	private int minBoundKeySpace = Integer.MIN_VALUE;
 	private int maxBoundKeySpace = Integer.MAX_VALUE;
 
@@ -151,7 +156,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public void setKeySpaceBounds(int minBound, int maxBound){
 		minBoundKeySpace = minBound;
 		maxBoundKeySpace = maxBound;
-		NodeManager.nLogger.info("New keySpace bounds: ["+minBoundKeySpace+" "+maxBoundKeySpace+"]");
+		LOG.debug("New keySpace bounds: ["+minBoundKeySpace+" "+maxBoundKeySpace+"]");
 	}
 	
 	public CheckpointMode getCheckpointMode(){
@@ -209,22 +214,22 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	@Override
 	public void newOperatorInstantiation(Operator o) {
-		NodeManager.nLogger.info("-> Instantiating Operator");
+		LOG.info("-> Instantiating Operator...");
 		//Detect the first submitted operator
 		if(runningOp == null){
 			runningOp = o;
 		}
 		else{
-			NodeManager.nLogger.warning("-> The operator in this node is being overwritten");
+			LOG.warn("-> The operator in this node is being overwritten");
 		}
 		o.setProcessingUnit(this);
 		// To identify the monitor with the op id instead of the node id
 		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
-		if(o.getState() != null){
-			runningOpState = o.getState();
+		if(o.getStateWrapper() != null){
+			runningOpState = o.getStateWrapper();
 		}
 		else{
-			NodeManager.nLogger.warning("-> Initial state is null...");
+			LOG.warn("-> Initial state is null...");
 		}
 	}
 
@@ -235,7 +240,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	@Override
 	public void setOpReady(int opId) {
-		NodeManager.nLogger.info("-> Setting operator ready");
+		LOG.info("-> Setting operator ready");
 		runningOp.setReady(true);
 	}
 	
@@ -247,7 +252,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	public void createAndRunStateBackupWorker(){
 		// Create and run state backup worker
-		NodeManager.nLogger.info("-> Stateful Node, setting the backup worker thread...");
+		LOG.debug("-> Stateful Node, setting the backup worker thread...");
 		///\fixme{fix this mess}
 		if(this == null || runningOpState == null){
 			System.out.println("NULL runningopstate");
@@ -284,7 +289,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			}
 		}
 		else{
-			NodeManager.nLogger.warning("-> No tuple MAPPER. This is fine as far as I am a SRC");
+			LOG.warn("-> No tuple MAPPER. This is fine as far as I am a SRC");
 		}
 		return idxMapper;
 	}
@@ -477,12 +482,12 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	private TimestampTracker lockFreeParallelBackupState(){
 		// Initial checks
 		if(runningOpState == null){
-			NodeManager.nLogger.severe("-> NULL state");
+			LOG.error("-> NULL state");
 			System.exit(-666);
 			return null;
 		}
 		if(!(runningOpState instanceof LargeState)){
-			NodeManager.nLogger.severe("-> Not Large STATE. wrong method");
+			LOG.error("-> Not Large STATE. wrong method");
 			System.exit(-666);
 			return null;
 		}
@@ -491,7 +496,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
 		
 		if(!(vns instanceof Versionable) || !(vns instanceof Streamable)){
-			NodeManager.nLogger.severe("-> Trying to stream a non-streamable state");
+			LOG.error("-> Trying to stream a non-streamable state");
 			// Make noise during debugging
 			System.exit(-666);
 			return null;
@@ -603,7 +608,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		TimestampTracker incomingTT = null;
 		if(runningOpState != null){
 			BackupOperatorState bs = new BackupOperatorState();
-			State toBackup = null;
+			StateWrapper toBackup = null;
 			int ownerId = runningOpState.getOwnerId();
 			int checkpointInterval = runningOpState.getCheckpointInterval();
 			TimestampTracker data_ts = runningOpState.getData_ts();
@@ -635,7 +640,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			
 			long startcopy = System.currentTimeMillis();
 			
-			toBackup = State.deepCopy(runningOpState, owner.getRuntimeClassLoader());
+			toBackup = StateWrapper.deepCopy(runningOpState, owner.getRuntimeClassLoader());
 			ArrayList<OutputBuffer> outputBuffers = ctx.getOutputBuffers();
 			
 			long stopcopy = System.currentTimeMillis();
@@ -667,28 +672,27 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 	
 	public void installState(InitOperatorState initOperatorState){
-		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
-		NodeManager.nLogger.info("Installing state in the operator");
+//		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 		// Simply replace the state and update operator references
 		int stateOwnerId = initOperatorState.getState().getOwnerId();
-		System.out.println("This state ownerID is:  "+stateOwnerId);
-		State state = initOperatorState.getState();
+		LOG.info("Installing state (whom owner is {}) in the operator");
+		StateWrapper state = initOperatorState.getState();
 		// Replace state
 		this.runningOpState = state;
 		// And reference in operator
 		((StatefulOperator)runningOp).replaceState(state);
-		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
+//		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	
 	public synchronized void mergeChunkToState(StateChunk chunk){
 		if(chunk == null){
-			//((Streamable)runningOpState).appendChunk(null);
-			((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(null);
+			//((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(null);
+			((LargeState)runningOpState).appendChunk(null);
 			return;
 		}
 		MemoryChunk mc = chunk.getMemoryChunk();
-		//((Streamable)runningOpState).appendChunk(mc.chunk);
-		((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(mc.chunk);
+		//((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(mc.chunk);
+		((LargeState)runningOpState).appendChunk(mc.chunk);
 	}
 	
 		/** Who manages which state? **/
@@ -713,7 +717,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public synchronized void registerManagedState(int opId) {
 		//If the state does not figure as being managed, we include it
 		if(!listOfManagedStates.contains(opId)){
-			NodeManager.nLogger.info("% -> New STATE registered for Operator: "+opId);
+			LOG.info("-> New STATE registered for Operator: {}", opId);
 			listOfManagedStates.add(opId);
 		}
 	}

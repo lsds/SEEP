@@ -13,6 +13,12 @@ package uk.ac.imperial.lsds.seep.state;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+/**
+ * Streamable interface has methods to split and merge LargeState, and to retrieve size, numbers of chunks and other information
+ * required by the system
+ * @author raulcf
+ *
+ */
 public interface Streamable {
 
 	public int getSize();

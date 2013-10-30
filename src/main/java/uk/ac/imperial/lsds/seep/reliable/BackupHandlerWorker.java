@@ -18,9 +18,14 @@ import java.net.Socket;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 
 public class BackupHandlerWorker implements Runnable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(BackupHandlerWorker.class);
 
 	private int opId = -1;
 	private Socket incomingSocket = null;
@@ -64,7 +69,7 @@ public class BackupHandlerWorker implements Runnable{
 				owner.addBackupHandler(opId, fc, f);
 			}
 			catch(Exception e){
-				NodeManager.nLogger.severe("-> While writing bk: "+fileName+" to disk: "+e.getMessage());
+				LOG.error("-> While writing bk: "+fileName+" to disk: "+e.getMessage());
 				e.printStackTrace();
 			}
 			// Read the raw data and map to file
@@ -76,7 +81,7 @@ public class BackupHandlerWorker implements Runnable{
        	 	}
 		}
 		catch (IOException e) {
-			NodeManager.nLogger.severe("-> While managing backup chunk = "+e.getMessage());
+			LOG.error("-> While managing backup chunk = "+e.getMessage());
 			e.printStackTrace();
 		}
 	}

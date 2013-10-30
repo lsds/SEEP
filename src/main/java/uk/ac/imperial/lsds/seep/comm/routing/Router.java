@@ -15,17 +15,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.CRC32;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 
 
 public class Router implements Serializable{
 
+	final private Logger LOG = LoggerFactory.getLogger(Router.class);
+	
 	private static final long serialVersionUID = 1L;
 
 	private static final int DEFAULT_SPLIT_WINDOW = 1;
@@ -90,7 +93,7 @@ return null;
 
 	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
 		RoutingStrategyI rs = null;
-		System.out.println("ORIGINAL DOWN SIZE: "+downstream.size());
+		LOG.debug("-> Original downstream size: {}", downstream.size());
 		// For each original downstream
 		for(Integer id : opContext.getOriginalDownstream()){
 			Operator down = null;
@@ -103,7 +106,7 @@ return null;
 			int index = opContext.getDownOpIndexFromOpId(id);
 			if(down instanceof StatelessOperator){
 				int numDownstreams = downstream.size();
-				NodeManager.nLogger.info("Configuring Static Stateless Routing Impl with "+numDownstreams+" downstreams");
+				LOG.debug("Configuring Static Stateless Routing Impl with {} downstreams", numDownstreams);
 				// At this point there can only be 1 downstream (an operator can have N downstream types,
 				//but only 1 instance of a given type Ni)
 				rs = new StatelessRoutingImpl(DEFAULT_SPLIT_WINDOW, index, 1);
@@ -112,17 +115,11 @@ return null;
 				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
 				rs = new StatefulRoutingImpl(index);
 			}
-			System.out.println("ADDED");
 			
 			//If more than one downstream type, then put the new rs with the opId
-			//if(opContext.downstreams.size() > 1){
 			if(opContext.getOriginalDownstream().size() > 1){
-				NodeManager.nLogger.info("-> More than one downstream type. Assign RS for op: "+id);
-//				for(PlacedOperator op : opContext.downstreams){
-//					System.out.println("Downstream type: "+op.opID());
-//				}
+				LOG.debug("-> More than one downstream type. Assign RS for op: {}",id);
 				downstreamRoutingImpl.put(id, rs);
-//				System.exit(0);
 			}
 			
 			//Otherwise, store the rs in the reserved place of downstreamRoutingImpl
@@ -131,7 +128,6 @@ return null;
 				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
 			}
 		}
-		NodeManager.nLogger.info("Routing Engine Configured");
 	}
 	
 	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
@@ -232,14 +228,16 @@ return null;
 	private int[] configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
 		//We gather the load balancer for the operator splitting (the old one)
 		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
+		
 if(rs == null){
 System.out.println("LB for OP: "+oldOpId+" is null !!!!!!!!!!");
 System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 }
+
 		//Then we update this load balancer (the old one) with the new information
 		int key[] = rs.newReplica(oldOpIndex, newOpIndex);
 		//Now since we have a new replica, we want to assign the same load balancer to this replica so that it has the same route information
-		NodeManager.nLogger.info("-> Registering NEW LB for OP: "+newOpId);
+		LOG.debug("-> Registering NEW LB for OP: {}",newOpId);
 		downstreamRoutingImpl.put(newOpId, rs);
 		//And finally we return the new key computed
 		return key;

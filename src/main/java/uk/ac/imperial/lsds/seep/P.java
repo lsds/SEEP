@@ -11,7 +11,6 @@
 package uk.ac.imperial.lsds.seep;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,8 +43,6 @@ public class P {
 			System.out.println("While loading properties file "+e1.getMessage());
 			e1.printStackTrace();
 		}
-		//LOAD RUNTIME VAR GLOBALS FROM FILE HERE
-		//#######################################
 		return success;
 	}
 }

@@ -14,12 +14,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 public class DataStructureAdapter {
+	
+	final private Logger LOG = LoggerFactory.getLogger(DataStructureAdapter.class);
 	
 	private Map<Integer, DataStructureI> dsoMap = new HashMap<Integer, DataStructureI>();
 	private DataStructureI uniqueDso = null;
@@ -37,7 +42,7 @@ public class DataStructureAdapter {
 			return dsoMap.get(opId);
 		}
 		else{
-			NodeManager.nLogger.severe("-> ERROR. No adapter for given opId, not possible to forward data to operator.");
+			LOG.error("-> ERROR. No adapter for given opId, not possible to forward data to operator.");
 			return null;
 		}
 	}
@@ -58,13 +63,13 @@ public class DataStructureAdapter {
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext){
 		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
 		if(iimMap.size() > 1){
-			NodeManager.nLogger.info("-> Setting up multiple inputDataIngestionModes");
+			LOG.debug("-> Setting up multiple inputDataIngestionModes");
 			// For processing one event per iteration, the queue is the best abstraction
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
 				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();
 					dsoMap.put(entry.getKey(), iq);
-					NodeManager.nLogger.info("-> Ingest with InputQueue from "+entry.getKey());
+					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}
 				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
@@ -72,17 +77,17 @@ public class DataStructureAdapter {
 					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					dsoMap.put(entry.getKey(), b);
-					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());
+					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
 				}
 			}
 		}
 		else if(iimMap.size() == 1){
-			NodeManager.nLogger.info("-> Setting up a unique InputDataIngestionMode");
+			LOG.debug("-> Setting up a unique InputDataIngestionMode");
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
 				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();
 					uniqueDso = iq;
-					NodeManager.nLogger.info("-> Ingest with InputQueue from "+entry.getKey());
+					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}
 				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
@@ -93,7 +98,7 @@ public class DataStructureAdapter {
 					numberUpstreamsOnBarrier = opContext.upstreams.size();
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					uniqueDso = b;
-					NodeManager.nLogger.info("-> Ingest with Sync-Barrier from "+entry.getKey());
+					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
 				}
 			}
 		}

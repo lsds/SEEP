@@ -20,6 +20,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.ControlHandler;
 import uk.ac.imperial.lsds.seep.comm.IncomingDataHandler;
@@ -53,6 +56,8 @@ import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
 */
 
 public class CoreRE {
+	
+	final private Logger LOG = LoggerFactory.getLogger(CoreRE.class);
 
 	private WorkerNodeDescription nodeDescr = null;
 	private IProcessingUnit processingUnit = null;
@@ -134,7 +139,7 @@ public class CoreRE {
 	public void setOpReady(int opId) {
 		processingUnit.setOpReady(opId);
 		if(processingUnit.isOperatorReady()){
-			NodeManager.nLogger.info("-> All operators in this unit are ready. Initializing communications...");
+			LOG.info("-> All operators in this unit are ready. Initializing communications...");
 			// Once the operators are in the node, we extract and declare how they will handle data tuples
 			Map<String, Integer> idxMapper = processingUnit.createTupleAttributeMapper();
 			processingUnit.initOperator();
@@ -188,32 +193,32 @@ public class CoreRE {
 		// Set up output communication module
 		if (P.valueFor("synchronousOutput").equals("true")){
 			processingUnit.setOutputQueue(outputQueue);
-			NodeManager.nLogger.info("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
+			LOG.debug("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
 		}
 		else{
 			Selector s = puCtx.getConfiguredSelector();
 			odhw = new OutgoingDataHandlerWorker(s);
 			Thread odhw_t = new Thread(odhw);
 			odhw_t.start();
-			NodeManager.nLogger.info("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
+			LOG.debug("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
 		}
 		
 		// Set up multi-core support structures
 		if(P.valueFor("multicoreSupport").equals("true")){
 			if(processingUnit.isMultiCoreEnabled()){
 				processingUnit.launchMultiCoreMechanism(this, dsa);
-				NodeManager.nLogger.info("-> Multi core support enabled");
+				LOG.debug("-> Multi core support enabled");
 			}
 			else{
 				// Start the consumer thread.
 				dConsumerH.start();
-				NodeManager.nLogger.info("-> Multi core support not enabled in this node");
+				LOG.debug("-> Multi core support not enabled in this node");
 			}
 		}
 		else{
 			// Start the consumer thread.
 			dConsumerH.start();
-			NodeManager.nLogger.info("-> SYSTEM CONFIGURED FOR NO MULTICORE");
+			LOG.debug("-> SYSTEM CONFIGURED FOR NO MULTICORE");
 		}
 
 		/// INSTANTIATION
@@ -230,7 +235,7 @@ public class CoreRE {
 		b.setType(ControlTupleType.ACK);
 		genericAck = b;
 		
-		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" instantiated");
+		LOG.debug("-> Node {} instantiated", nodeDescr.getNodeId());
 		
 		/// INITIALIZATION
 
@@ -241,10 +246,10 @@ public class CoreRE {
 		if(processingUnit.isNodeStateful()){
 			if(((StatefulProcessingUnit)processingUnit).isCheckpointEnabled()){
 				((StatefulProcessingUnit)processingUnit).createAndRunStateBackupWorker();
-				NodeManager.nLogger.info("-> State Worker working on "+nodeDescr.getNodeId());
+				LOG.debug("-> State Worker working on {}", nodeDescr.getNodeId());
 			}
 		}
-		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
+		LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 		
 		// If ackworker is active
 		if(P.valueFor("ackWorkerActive").equals("true")){
@@ -252,18 +257,18 @@ public class CoreRE {
 			//if(processingUnit.getOperator().getOpContext().downstreams.size() == 0){
 			if(processingUnit.getOperator().getOpContext().isSink()){
 				processingUnit.createAndRunAckWorker();
-				NodeManager.nLogger.info("-> ACK Worker working on "+nodeDescr.getNodeId());
+				LOG.info("-> ACK Worker working on {}", nodeDescr.getNodeId());
 			}
 		}
 	}
 	
 	public void startDataProcessing(){
-		NodeManager.nLogger.info("-> Starting to process data...");
+		LOG.info("-> Starting to process data...");
 		processingUnit.startDataProcessing();
 	}
 	
 	public void stopDataProcessing(){
-		NodeManager.nLogger.info("-> The system has been remotely stopped. No processing data");
+		LOG.info("-> The system has been remotely stopped. No processing data");
 	}
 	
 	public enum ControlTupleType{
@@ -359,17 +364,17 @@ public class CoreRE {
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INVALIDATE_STATE from OP: "+ct.getInvalidateState().getOperatorId());
+			LOG.info("-> Node {} recv ControlTuple.INVALIDATE_STATE from OP: {}", nodeDescr.getNodeId(), ct.getInvalidateState().getOperatorId());
 			processingUnit.invalidateState(ct.getInvalidateState().getOperatorId());
 		}
 		/** INIT_STATE message **/
 		else if(ctt.equals(ControlTupleType.INIT_STATE)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_STATE from OP: "+ct.getInitOperatorState().getOpId());
+			LOG.info("-> Node {} recv ControlTuple.INIT_STATE from OP: {}", nodeDescr.getNodeId(), ct.getInitOperatorState().getOpId());
 			coreProcessLogic.processInitState(ct.getInitOperatorState());
 		}
 		/** KEY_SPACE_BOUNDS message **/
 		else if(ctt.equals(ControlTupleType.KEY_SPACE_BOUNDS)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.KEY_SPACE_BOUNDS");
+			LOG.info("-> Node {} recv ControlTuple.KEY_SPACE_BOUNDS", nodeDescr.getNodeId());
 			int minBound = ct.getKeyBounds().getMinBound();
 			int maxBound = ct.getKeyBounds().getMaxBound();
 			((StatefulProcessingUnit)processingUnit).setKeySpaceBounds(minBound, maxBound);
@@ -377,16 +382,16 @@ public class CoreRE {
 		/** OPEN_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
 			System.out.println("%%%%%%%%%%%%%%%%%%");
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.OPEN_SIGNAL from OP: "+ct.getOpenSignal().getOpId());
+			LOG.info("-> Node {} recv ControlTuple.OPEN_SIGNAL from OP: {}", nodeDescr.getNodeId(), ct.getOpenSignal().getOpId());
 			bh.openSession(ct.getOpenSignal().getOpId(), remoteAddress);
 			PrintWriter out = new PrintWriter(os, true);
 			out.println("ack");
-			NodeManager.nLogger.info("-> ACK Open Signal");
+			LOG.debug("-> ACK Open Signal");
 			System.out.println("%%%%%%%%%%%%%%%%%%");
 		}
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.CLOSE_SIGNAL from OP: "+ct.getCloseSignal().getOpId());
+			LOG.info("-> Node {} recv ControlTuple.CLOSE_SIGNAL from OP: ", nodeDescr.getNodeId(), ct.getCloseSignal().getOpId());
 			bh.closeSession(ct.getCloseSignal().getOpId(), remoteAddress);
 			
 //			coreProcessLogic.directReplayState(new ReplayStateInfo(1, 1, true), bh);
@@ -396,14 +401,14 @@ public class CoreRE {
 			//If communications are not being reconfigured
 			//Register this state as being managed by this operator
 			BackupOperatorState backupOperatorState = ct.getBackupState();
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv BACKUP_OP_STATE from Op: "+backupOperatorState.getOpId());
+			LOG.info("-> Node {} recv BACKUP_OP_STATE from Op: ", nodeDescr.getNodeId(), backupOperatorState.getOpId());
 			processingUnit.registerManagedState(backupOperatorState.getOpId());
 			coreProcessLogic.processBackupState(backupOperatorState);
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
 			int opId = ct.getStateAck().getMostUpstreamOpId();
-			NodeManager.nLogger.info("-> Received STATE_ACK from Op: "+opId);
+			LOG.info("-> Received STATE_ACK from Op: {}", opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
 			outputQueue.replayTuples(cci);
@@ -416,18 +421,18 @@ public class CoreRE {
 		}
 		/** BACKUP_RI message **/
 		else if(ctt.equals(ControlTupleType.BACKUP_RI)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.BACKUP_RI");
+			LOG.info("-> Node {} recv ControlTuple.BACKUP_RI", nodeDescr.getNodeId());
 			coreProcessLogic.storeBackupRI(ct.getBackupRI());
 		}
 		/** INIT_RI message **/
 		else if(ctt.equals(ControlTupleType.INIT_RI)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.INIT_RI from : "+ct.getInitRI().getNodeId());
+			LOG.info("-> Node {} recv ControlTuple.INIT_RI from {}: ",nodeDescr.getNodeId(), ct.getInitRI().getNodeId());
 			coreProcessLogic.installRI(ct.getInitRI());
 		}
 		/** SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
 			
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.SCALE_OUT");
+			LOG.info("-> Node {} recv ControlTuple.SCALE_OUT ", nodeDescr.getNodeId());
 			// Get index of new replica operator
 			int newOpIndex = -1;
 			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
@@ -442,7 +447,7 @@ public class CoreRE {
 		}
 		/** DISTRIBUTED_SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.DISTRIBUTED_SCALE_OUT)){
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.DISTRIBUTED_SCALE_OUT");
+			LOG.info("-> Node {} recv ControlTuple.DISTRIBUTED_SCALE_OUT",nodeDescr.getNodeId());
 			int oldOpId = ct.getDistributedScaleOutInfo().getOldOpId();
 			int newOpId = ct.getDistributedScaleOutInfo().getNewOpId();
 			// Stateful operator
@@ -473,7 +478,7 @@ public class CoreRE {
 		/** REPLAY_STATE **/
 		else if(ctt.equals(ControlTupleType.STREAM_STATE)){
 //			//Replay the state that this node keeps
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.STREAM_STATE");
+			LOG.info("-> Node {} recv ControlTuple.STREAM_STATE", nodeDescr.getNodeId());
 //			
 			int opId = ct.getStreamState().getTargetOpId();
 			coreProcessLogic.directReplayStateFailure(opId, bh);
@@ -485,14 +490,14 @@ public class CoreRE {
 		/** STATE_CHUNK **/
 		else if(ctt.equals(ControlTupleType.STATE_CHUNK)){
 			// One out of n chunks of state received
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.STATE_CHUNK");
+			LOG.info("-> Node {} recv ControlTuple.STATE_CHUNK", nodeDescr.getNodeId());
 			StateChunk chunk = ct.getStateChunk();
 //			System.out.println("CHUNK rcvd: "+chunk.getSequenceNumber());
 			coreProcessLogic.handleNewChunk(chunk);
 		}
 		/** RESUME message **/
 		else if (ctt.equals(ControlTupleType.RESUME)) {
-			NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv ControlTuple.RESUME");
+			LOG.info("-> Node {} recv ControlTuple.RESUME", nodeDescr.getNodeId());
 			Resume resumeM = ct.getResume();
 			
 			if(((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LIGHT_STATE)){
@@ -503,22 +508,22 @@ public class CoreRE {
 					for (int opId: resumeM.getOpId()){
 						//Check if I am managing the state of any of the operators to which state must be replayed
 						if(processingUnit.isManagingStateOf(opId)){
-							NodeManager.nLogger.info("-> Replaying State");
+							LOG.debug("-> Replaying State");
 							coreProcessLogic.replayState(opId);
 						}
 						else{
-							NodeManager.nLogger.info("-> NOT in charge of managing this state");
+							LOG.info("-> NOT in charge of managing this state");
 						}
 					}
 					//Once I have replayed the required states I put my status to NORMAL
 					processingUnit.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
 				}
 				else{
-					NodeManager.nLogger.info("-> Ignoring RESUME state, I did not split this one");
+					LOG.info("-> Ignoring RESUME state, I did not split this one");
 				}
 			}
 			else if(((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LARGE_STATE)){
-				NodeManager.nLogger.info("Ignoring RESUME message because checkpoint mode is LARGE-STATE");
+				LOG.info("Ignoring RESUME message because checkpoint mode is LARGE-STATE");
 			}
 			//Finally ack the processing of this message
 			controlDispatcher.ackControlMessage(genericAck, os);
@@ -533,7 +538,7 @@ public class CoreRE {
 	/// \todo {stopping and starting the conn should be done from updateConnection in some way to hide the complexity this introduces here}
 	public void processCommand(ReconfigureConnection rc, OutputStream os){
 		String command = rc.getCommand();
-		NodeManager.nLogger.info("-> Node "+nodeDescr.getNodeId()+" recv "+command+" command ");
+		LOG.info("-> Node {} recv {} command ", nodeDescr.getNodeId(), command);
 		InetAddress ip = null;
 		int opId = rc.getOpId();
 		
@@ -541,7 +546,7 @@ public class CoreRE {
 			ip = InetAddress.getByName(rc.getIp());
 		}
 		catch (UnknownHostException uhe) {
-			NodeManager.nLogger.severe("-> Node "+nodeDescr.getNodeId()+" EXCEPTION while getting IP from msg "+uhe.getMessage());
+			LOG.error("-> Node "+nodeDescr.getNodeId()+" EXCEPTION while getting IP from msg "+uhe.getMessage());
 			uhe.printStackTrace();
 		}
 		/** RECONFIGURE DOWN or RECONFIGURE UP message **/
@@ -560,11 +565,11 @@ public class CoreRE {
 			}
 			if(command.equals("reconfigure_D")){
 				if(processingUnit.isManagingStateOf(opId)){
-					NodeManager.nLogger.info("-> Replaying State");
+					LOG.debug("-> Replaying State");
 					coreProcessLogic.replayState(opId);
 				}
 				else{
-					NodeManager.nLogger.info("-> NOT in charge of managing this state");
+					LOG.info("-> NOT in charge of managing this state");
 				}
 			}
 		}
@@ -628,7 +633,7 @@ public class CoreRE {
 		}
 		/** NOT RECOGNIZED message **/
 		else{
-			NodeManager.nLogger.warning("-> Op.processCommand, command not recognized");
+			LOG.warn("-> Op.processCommand, command not recognized");
 			throw new RuntimeException("Operator: ERROR in processCommand");
 		}
 	}
@@ -648,19 +653,19 @@ public class CoreRE {
 	
 	public void signalOpenBackupSession(int totalSizeST){
 		int opId = processingUnit.getOperator().getOperatorId();
-		NodeManager.nLogger.info("% -> Opening backup session from: "+opId);
+		LOG.debug("-> Opening backup session from: {}", opId);
 		ControlTuple openSignal = new ControlTuple().makeOpenSignalBackup(opId);
 		for(int i = 0; i < totalSizeST; i++){
 			//controlDispatcher.sendOpenSessionWaitACK(openSignal, backupUpstreamIndex);
 			controlDispatcher.sendOpenSessionWaitACK(openSignal, i);
 //			controlDispatcher.sendUpstream(openSignal, i);
 		}
-		NodeManager.nLogger.info("% -> SESSION opened from "+opId);
+		LOG.debug("-> SESSION opened from {}", opId);
 	}
 	
 	public void signalCloseBackupSession(int starTopologySize){
 		int opId = processingUnit.getOperator().getOperatorId();
-		NodeManager.nLogger.info("% -> Closing backup session from: "+opId);
+		LOG.debug("-> Closing backup session from: {}", opId);
 		ControlTuple closeSignal = new ControlTuple().makeCloseSignalBackup(opId, totalNumberOfChunks);
 		for(int i = 0; i < starTopologySize; i++){
 			controlDispatcher.sendCloseSession(closeSignal, i);
@@ -683,7 +688,7 @@ public class CoreRE {
 	
 	public void sendBackupState(ControlTuple ctB){
 		int stateOwnerId = ctB.getBackupState().getOpId();
-		NodeManager.nLogger.info("% -> Backuping state with owner: "+stateOwnerId+" to NODE index: "+backupUpstreamIndex);
+		LOG.debug(" -> Backuping state with owner: {} to NODE index: {}", stateOwnerId, backupUpstreamIndex);
 //		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
@@ -705,7 +710,7 @@ public class CoreRE {
 		
 		//source obviously cant compute this value
 		if(upstreamSize == 0){
-			NodeManager.nLogger.warning("-> If this node is not the most upstream, there is a problem");
+			LOG.warn("-> If this node is not the most upstream, there is a problem");
 			return;
 		}
 		int upIndex = ownInfo%upstreamSize;
@@ -714,11 +719,11 @@ public class CoreRE {
 		//Update my information
 		System.out.println("% ConfigureUpstreamIndex");
 		this.setBackupUpstreamIndex(upIndex);
-		NodeManager.nLogger.info("-> The new Upstream backup INDEX is: "+backupUpstreamIndex);
+		LOG.debug("-> The new Upstream backup INDEX is: "+backupUpstreamIndex);
 	}
 	
 	public void reconfigureUpstreamBackupIndex(int upstreamSize){
-		NodeManager.nLogger.info("-> Reconfiguring upstream backup index");
+		LOG.debug("-> Reconfiguring upstream backup index");
 		//First I compute my own info, which is the hash of my id.
 		/** There is a reason to hash the opId. Imagine upSize=2 and opId of downstream 2, 4, 6, 8... So better to mix the space*/
 		int ownInfo = Router.customHash(nodeDescr.getNodeId());
@@ -731,7 +736,7 @@ public class CoreRE {
 		//... and notify the new operator in charge of my OPID
 		//UPDATE!! AND send STATE in case this operator is backuping state
 		if(upIndex != backupUpstreamIndex){
-			NodeManager.nLogger.info("-> Upstream backup has changed...");
+			LOG.debug("-> Upstream backup has changed...");
 			//Invalidate old Upstream state
 			//ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
 			ControlTuple ct = new ControlTuple().makeInvalidateMessage(processingUnit.getOperator().getOperatorId());
@@ -743,7 +748,7 @@ public class CoreRE {
 			
 			//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 			if(processingUnit.isNodeStateful()){
-				NodeManager.nLogger.info("-> sending BACKUP_STATE to the new manager of my state");
+				LOG.debug("-> sending BACKUP_STATE to the new manager of my state");
 				
 				((StatefulProcessingUnit)processingUnit).lockFreeParallelCheckpointAndBackupState();
 			}

@@ -8,8 +8,14 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.state;
+package uk.ac.imperial.lsds.seep.elastic;
 
-public interface StateImplementation {
+public class IPNotBoundToOperatorException extends Exception {
+
+	private static final long serialVersionUID = 1L;
+	
+	public IPNotBoundToOperatorException(String msg){
+		super(msg);
+	}
 
 }

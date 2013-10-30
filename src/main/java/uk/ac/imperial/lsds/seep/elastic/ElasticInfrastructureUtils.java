@@ -21,6 +21,9 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.api.ScaleOutIntentBean;
@@ -34,11 +37,13 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 
 public class ElasticInfrastructureUtils {
 
+	final private Logger LOG = LoggerFactory.getLogger(ElasticInfrastructureUtils.class);
+	
 	private Infrastructure inf = null;
 	private RuntimeCommunicationTools rct = null;
 	private URLClassLoader ucl = null;
@@ -81,7 +86,14 @@ public class ElasticInfrastructureUtils {
 	public synchronized void alertCPU(int opIdToParallelize){
 		System.out.println("INF: MONITOR reports system alert");
 		System.out.println("###################");
-		Node newNode = inf.getNodeFromPool();
+		Node newNode = null;
+		try {
+			newNode = inf.getNodeFromPool();
+		} 
+		catch (NodePoolEmptyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		if(newNode != null){
 			int newId = inf.getBaseId();
 			System.out.println("INF: Parallelization PARAMS: OpToParal "+opIdToParallelize+" newOp: "+newId+" newNode: "+newNode.toString());
@@ -96,72 +108,35 @@ public class ElasticInfrastructureUtils {
 	}
 	
 	public synchronized void scaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
-		if(P.valueFor("checkpointMode").equals("light-state")){
-			lightScaleOutOperator(opIdToParallelize, newOpId, newNode);
+		try {
+			if(P.valueFor("checkpointMode").equals("light-state")){
+				lightScaleOutOperator(opIdToParallelize, newOpId, newNode);
+			}
+			else if(P.valueFor("checkpointMode").equals("large-state")){
+				largeScaleOutOperator(opIdToParallelize, newOpId, newNode);
+			}
+		} 
+		catch (ScaleOutException e) {
+			LOG.error("While scaling out light op: {}", e.getMessage());
+			e.printStackTrace();
 		}
-		else if(P.valueFor("checkpointMode").equals("large-state")){
-			largeScaleOutOperator(opIdToParallelize, newOpId, newNode);
-		}
-//		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
-//		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
-//		//set initial time and number of downstreams
-//		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
-//		Operator newOp = addOperator(opIdToParallelize, newOpId);
-//		if(newOp == null){
-//			NodeManager.nLogger.severe("-> Impossible to scale out, operator instantiation failed");
-//			return;
-//		}
-//		//connect new operator to downstreams and upstreams
-//		configureOperatorContext(opIdToParallelize, newOp);
-//		//Get operator to parallelize
-//		
-//		Operator opToParallelize = inf.getOperatorById(opIdToParallelize);
-//		//Get pre-configured router and assign to new operator
-//		Router copyOfRouter = opToParallelize.getRouter();
-//		newOp.setRouter(copyOfRouter);
-////		inf.placeNew(newOp, newNode);
-//		inf.placeNewParallelReplica(opToParallelize, newOp, newNode);
-//		inf.updateContextLocations(newOp);
-//		//NodeManager.nLogger.info("Created new Op: "+newOp.toString());
-//		// Send query to the new node
-//		inf.setUp(newOp);
-//		//deploy new Operator
-//		//conn to new node
-//		inf.deploy(newOp);
-//		//ConfigureCommunications
-//		//conn to new node
-//		inf.init(newOp);
-//		// Make the new operator aware of the states in the system
-//		inf.broadcastState(newOp);
-//		// and also aware of the payloads
-//		// Send the SET-RUNTIME to the new op
-//		inf.initRuntime(newOp);
-//		//add upstream conn
-//		//conn to down nodes
-///**WAIT FOR ANSWER**/
-//		addUpstreamConnections(newOp);
-//		//conn to previous nodes
-//		addDownstreamConnections(newOp);
-///**UNTIL HERE**/
-//		//conn to previous node
-//		sendScaleOutMessageToUpstreams(opIdToParallelize, newOpId);
-//		//conn to previous node
-///**HERE AGAIN WAIT FOR ANSWER**/
-//		sendResumeMessageToUpstreams(opIdToParallelize, newOpId);
-///**FINALIZE SCALE OUT PROTOCOL**/
-//		//once the system is ready, send the command ready to new replica to enable it to initialize the necessary steps
-//		sendSystemConfiguredToReplica(newOp);
 	}
 	
-	public void lightScaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
+	public void lightScaleOutOperator(int opIdToParallelize, int newOpId, Node newNode) throws ScaleOutException{
 		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
 		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
 		//set initial time and number of downstreams
 		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
-		Operator newOp = addOperator(opIdToParallelize, newOpId);
+		Operator newOp = null;
+		try {
+			newOp = addOperator(opIdToParallelize, newOpId);
+		} 
+		catch (OperatorNotRegisteredException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		if(newOp == null){
-			NodeManager.nLogger.severe("-> Impossible to scale out, operator instantiation failed");
-			return;
+			throw new ScaleOutException("Impossible to scale out, operator instantiation failed");
 		}
 		//connect new operator to downstreams and upstreams
 		configureOperatorContext(opIdToParallelize, newOp);
@@ -205,15 +180,21 @@ public class ElasticInfrastructureUtils {
 		sendSystemConfiguredToReplica(newOp);
 	}
 	
-	public void largeScaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
+	public void largeScaleOutOperator(int opIdToParallelize, int newOpId, Node newNode) throws ScaleOutException{
 		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
 		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
 		//set initial time and number of downstreams
 		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
-		Operator newOp = addOperator(opIdToParallelize, newOpId);
+		Operator newOp = null;
+		try {
+			newOp = addOperator(opIdToParallelize, newOpId);
+		} 
+		catch (OperatorNotRegisteredException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		if(newOp == null){
-			NodeManager.nLogger.severe("-> Impossible to scale out, operator instantiation failed");
-			return;
+			throw new ScaleOutException("Impossible to scale out, operator instantiation failed");
 		}
 		//connect new operator to downstreams and upstreams
 		configureOperatorContext(opIdToParallelize, newOp);
@@ -267,7 +248,7 @@ public class ElasticInfrastructureUtils {
 			if(o.getOperatorId() != opIdToParallelize && o.getOperatorId() != newOpId){ // Do not send to involved ops
 //				if(!(o.getOpContext().isSink())){
 				if(!(o.getOpContext().isSink()) && !(o.getOpContext().isSource())){
-					NodeManager.nLogger.info("COMMAND: distributed_scale_out to: "+o.getOperatorId());
+					LOG.debug("COMMAND: distributed_scale_out to: {}", o.getOperatorId());
 					ControlTuple ct = new ControlTuple().makeDistributedScaleOut(opIdToParallelize, newOpId);
 					rct.sendControlMsgWithoutACK(o.getOpContext().getOperatorStaticInformation(), ct, o.getOperatorId());
 				}
@@ -299,7 +280,7 @@ public class ElasticInfrastructureUtils {
 				int oldOpId = listOfReplicas.get(accessIdx).getOperatorId();
 				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp);
 				if(op.getOpContext().isSource()){ // probably not the best place to do this
-					NodeManager.nLogger.info("-> Statically scaling out SOURCE operator");
+					LOG.debug("-> Statically scaling out SOURCE operator");
 					inf.addSource(newReplica);
 				}
 				// First modify accessIdx for next iteration
@@ -315,8 +296,6 @@ public class ElasticInfrastructureUtils {
 					// We jump the new addition and go to the next op
 					accessIdx += 2;
 				}
-				// Then add the new replica to the array
-				//listOfReplicas.add((accessIdx+1), newReplica);
 				// Add scaleout intent to the list (ordered)
 				ScaleOutIntentBean so = new ScaleOutIntentBean(inf.getOperatorById(oldOpId), newOpId, newNode);
 				so.setNewReplicaInstantiation(newReplica);
@@ -338,27 +317,10 @@ public class ElasticInfrastructureUtils {
 			//Operator opToScaleOut = so.getOpToScaleOut();
 			Node newNode = so.getNewProvisionedNode();
 			
-			
-//			Operator newOp = addOperator(oldOpId, newOpId);
-//			// Register new op associated to new node in the infrastructure
-//			qp.place(newOp, newNode);
-//			// conf operator context
-//			configureOperatorContext(oldOpId, newOp);
-//			// router for the new op
-//			Router copyOfRouter = opToScaleOut.getRouter();
-//			newOp.setRouter(copyOfRouter);
-//			// inf place new and update context
-//			System.out.println("checking new node: "+newNode.toString());
-//			inf.placeNew(newOp, newNode);
-//			inf.updateContextLocations(newOp);
-//			NodeManager.nLogger.info("STATIC Created new Op: "+newOp.toString());
-			
 			Operator newOp = staticScaleOut(oldOpId, newOpId, newNode, qp);
-			Operator a = inf.getOperatorById(oldOpId);
-			System.out.println("SOURCE");
-			System.out.println(a);
-			if(inf.getOperatorById(oldOpId).getOpContext().isSource()){ // probably not the best place to do this
-				NodeManager.nLogger.info("-> Statically scaling out SOURCE operator");
+			///\todo{ probably not the best place to do this}
+			if(inf.getOperatorById(oldOpId).getOpContext().isSource()){
+				LOG.debug("-> Statically scaling out SOURCE operator");
 				inf.addSource(newOp);
 			}
 			// upstream and downstream conns are statically established at this point
@@ -370,7 +332,14 @@ public class ElasticInfrastructureUtils {
 	
 	private Operator staticScaleOut(int oldOpId, int newOpId, Node newNode, QueryPlan qp){
 		Operator opToScaleOut = inf.getOperatorById(oldOpId);
-		Operator newOp = addOperator(oldOpId, newOpId);
+		Operator newOp = null;
+		try {
+			newOp = addOperator(oldOpId, newOpId);
+		} 
+		catch (OperatorNotRegisteredException e) {
+			
+			e.printStackTrace();
+		}
 		// Register new op associated to new node in the infrastructure
 		qp.place(newOp, newNode);
 		// conf operator context
@@ -382,7 +351,7 @@ public class ElasticInfrastructureUtils {
 		System.out.println("checking new node: "+newNode.toString());
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
-		NodeManager.nLogger.info("STATIC Created new Op: "+newOp.toString());
+		LOG.debug("STATIC Created new Op: {}", newOp.toString());
 		return newOp;
 	}
 	
@@ -404,14 +373,13 @@ public class ElasticInfrastructureUtils {
 						newOpIndex = op_aux.index();
 					}
 				}
-				//r.newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 				r.newStaticOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 			}
 		}
 	}
 	
 	private void sendSystemConfiguredToReplica(Operator replica){
-		NodeManager.nLogger.info("COMMAND: system_ready to: "+replica.getOperatorId());
+		LOG.debug("COMMAND: system_ready to: {}", replica.getOperatorId());
 		inf.deployConnection("system_ready", replica, null, "");
 	}
 	
@@ -439,29 +407,12 @@ public class ElasticInfrastructureUtils {
 					opIds.add(opIdToParallelize);
 					opIds.add(newOpId);
 					ControlTuple ct = new ControlTuple().makeResume(opIds);
-					NodeManager.nLogger.info("COMMAND: resume to: "+upstream.opID());
+					LOG.debug("COMMAND: resume to: {}", upstream.opID());
 					rct.sendControlMsg(upstream.location(), ct, upstream.opID());
 				}
 			}
 		}
 	}
-	
-//	@Deprecated
-//	private void sendSendInitToMinUpstream(int opIdToParallelize, int newOpId) {
-//		ArrayList<Operator> ops = inf.getOps();
-//		for (Operator o: ops) {
-//			if (o.getOperatorId() == opIdToParallelize) {
-//				PlacedOperator minUpstream = o.getOpContext().minimumUpstream();
-//				
-//				ArrayList<Integer> opIds = new ArrayList<Integer>();
-//				opIds.add(opIdToParallelize);
-//				opIds.add(newOpId);
-//				ControlTuple ct = new ControlTuple().makeResume(opIds);
-//				
-//				rct.sendControlMsg(minUpstream.location(), ct, minUpstream.opID());
-//			}
-//		}
-//	}
 
 	private void sendScaleOutMessageToUpstreams(int opIdToParallelize, int newOpId) {
 		ArrayList<Operator> ops = inf.getOps();
@@ -472,7 +423,7 @@ public class ElasticInfrastructureUtils {
 					isStateful = true;
 				}
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
-					NodeManager.nLogger.info("COMMAND: scale_out to: "+upstream.opID());
+					LOG.debug("COMMAND: scale_out to: {}", upstream.opID());
 					
 					ControlTuple ct = new ControlTuple().makeScaleOut(opIdToParallelize, newOpId, isStateful);
 					
@@ -482,14 +433,13 @@ public class ElasticInfrastructureUtils {
 		}
 	}
 	
-	public void executeParallelRecovery(String oldIp_txt) throws UnknownHostException{
+	public void executeParallelRecovery(String oldIp_txt) throws UnknownHostException, NodePoolEmptyException, ParallelRecoveryException{
 		//First we remap the old failed one
 		//get opId from ip
 		InetAddress oldIp = InetAddress.getByName(oldIp_txt);
 		int opId = inf.getOpIdFromIp(oldIp);
 		if(opId == -1){
-			NodeManager.nLogger.severe("IP not bounded to an operator: "+oldIp_txt);
-			return;
+			throw new ParallelRecoveryException("IP not bounded to an operator: "+oldIp_txt);
 		}
 		//get numDownstreams from opId
 		int numOfUpstreams = inf.getNumUpstreams(opId);
@@ -505,11 +455,9 @@ public class ElasticInfrastructureUtils {
 		//Then we scale out that operator with the new replica as well
 		Node newReplica = inf.getNodeFromPool();
 		if(newReplica == null){
-			NodeManager.nLogger.severe("-> No Nodes available, impossible to retrieve a new node");
-			return;
+			throw new NodePoolEmptyException("No Nodes available, impossible to retrieve a new node");
 		}
 		int newReplicaId = inf.getBaseId();
-System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaId);
 		scaleOutOperator(opId, newReplicaId, newReplica);
 		/// \todo{Embed this function in another one to avoid errors}
 		inf.incrementBaseId();
@@ -522,7 +470,7 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		for(PlacedOperator op : newOp.getOpContext().upstreams){
 			//deploy new connection with all of them?
 			opToContact = inf.getElements().get(op.opID());
-			NodeManager.nLogger.info("COMMAND: add_downstream to: "+op.opID());
+			LOG.debug("COMMAND: add_downstream to: "+op.opID());
 			inf.deployConnection("add_downstream", opToContact, opToAdd, newOp.getClass().getName());
 		}
 	}
@@ -533,20 +481,19 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 		for(PlacedOperator op : newOp.getOpContext().downstreams){
 			opToContact = inf.getElements().get(op.opID());
 			//the operator that must change, the id of the new replica, the type of operator splitting
-			NodeManager.nLogger.info("COMMAND: add_upstream to: "+op.opID());
+			LOG.debug("COMMAND: add_upstream to: "+op.opID());
 			inf.deployConnection("add_upstream", opToContact, opToAdd, newOp.getClass().getName());
 		}
 	}
 
-	public Operator addOperator(int opId, int newOpId){
+	public Operator addOperator(int opId, int newOpId) throws OperatorNotRegisteredException{
 		Operator op = null;
 		String className = getOperatorClassName(opId);
 		if(className == null){
-			NodeManager.nLogger.severe("-> Not found className for opId: "+opId);
-			return null;
+			throw new OperatorNotRegisteredException("Operator class name not found");
 		}
 		try{
-			NodeManager.nLogger.info("-> Registering new OP: "+newOpId+" as OPType: "+className);
+			LOG.debug("-> Registering new OP: "+newOpId+" as OPType: "+className);
 			// I use the custom class loader to load the operator, since its code coming from the user side
 			Object instance = null;
 			Constructor<?> constructor = null;
@@ -563,9 +510,9 @@ System.out.println("SCALING OUT WITH, opId: "+opId+" newReplicaId: "+newReplicaI
 			Operator toScaleOut = inf.getOperatorById(opId);
 			if(toScaleOut instanceof StatefulOperator){
 				// State injection. Pick the already existing operator, getState, clone it and then change the operatorId
-				State copyOfState = (State) inf.getOperatorById(opId).getState().clone();
+				StateWrapper copyOfState = (StateWrapper) inf.getOperatorById(opId).getStateWrapper().clone();
 				copyOfState.setOwnerId(newOpId);
-				op.setState(copyOfState);
+				op.setStateWrapper(copyOfState);
 			}
 			op.setOperatorId(newOpId);
 			op.setSubclassOperator();

@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
@@ -42,6 +45,8 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class PUContext {
 
+	final private Logger LOG = LoggerFactory.getLogger(PUContext.class);
+	
 	private WorkerNodeDescription nodeDescr = null;
 	
 	private ArrayList<EndPoint> remoteUpstream = new ArrayList<EndPoint>();
@@ -159,7 +164,7 @@ public class PUContext {
 		InetAddress localIp = nodeDescr.getIp();
 		if (!(loc.getMyNode().getIp().equals(localIp))){
 			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
-			NodeManager.nLogger.info("-> PUContext. New remote upstream (sync) conn to OP-"+opID);
+			LOG.debug("-> PUContext. New remote upstream (sync) conn to OP: {}", opID);
 		}
 	}
 
@@ -175,18 +180,18 @@ public class PUContext {
 			if (P.valueFor("synchronousOutput").equals("true")){
 				
 				createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
-				NodeManager.nLogger.info("-> PUContext. New remote downstream (SYNC) conn to OP-"+opID);
+				LOG.debug("-> PUContext. New remote downstream (SYNC) conn to OP: ", opID);
 			}
 			else{
 				createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
-				NodeManager.nLogger.info("-> PUContext. New remote downstream (ASYNC) conn to OP-"+opID);
+				LOG.debug("-> PUContext. New remote downstream (ASYNC) conn to OP: ", opID);
 			}
 			
 		}
 	}
 	
 	private void createRemoteAsynchronousCommunication(int opId, InetAddress ip, int port){
-		NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+port);
+		LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), port);
 		try {
 			// Create a non-blocking socket channel
 			SocketChannel socketChannel = SocketChannel.open();
@@ -218,7 +223,8 @@ public class PUContext {
 			}
 			boolean connSuccess = socketChannel.finishConnect();
 			if(!connSuccess){
-				NodeManager.nLogger.severe("Failed connection to: "+key.toString());
+				///\fixme{fix this}
+				LOG.error("Failed connection to: "+key.toString());
 				System.exit(0);
 			}
 			
@@ -242,7 +248,7 @@ public class PUContext {
 		
 		try{
 			if(type.equals("down")){
-				NodeManager.nLogger.info("-> Trying remote downstream conn to: "+ip.toString()+"/"+portD);
+				LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
 				socketD = new Socket(ip, portD);
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
@@ -257,7 +263,7 @@ public class PUContext {
 				downstreamBuffers.put((portD-40000), buffer);
 			}
 			else if(type.equals("up")){
-				NodeManager.nLogger.info("-> Trying remote upstream conn to: "+ip.toString()+"/"+portC);
+				LOG.debug("-> Trying remote upstream conn to: {}/{}", ip.toString(), portC);
 				socketC = new Socket(ip, portC);
 				socketBlind = new Socket(ip, blindPort);
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
@@ -266,15 +272,15 @@ public class PUContext {
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> PUContext. While establishing remote connection "+io.getMessage());
+			LOG.error("-> PUContext. While establishing remote connection "+io.getMessage());
 			if(socketD != null){
-				NodeManager.nLogger.severe("-> Data Conn to: "+socketD.toString());
+				LOG.error("-> Data Conn to: "+socketD.toString());
 			}
 			else if(socketC != null){
-				NodeManager.nLogger.severe("-> Control Conn to: "+socketC.toString());
+				LOG.error("-> Control Conn to: "+socketC.toString());
 			}
 			else{
-				NodeManager.nLogger.severe("-> Socket objects are BOTH NULL");
+				LOG.error("-> Socket objects are BOTH NULL");
 
 			}
 			io.printStackTrace();
@@ -348,6 +354,6 @@ public class PUContext {
 				}
 			}
 		}
-		NodeManager.nLogger.info("-> PUContext. Conns of OP-"+opId+" updated");
+		LOG.debug("-> PUContext. Conns of OP: {} updated", opId);
 	}
 }

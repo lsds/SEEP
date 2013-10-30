@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep;
 
 import junit.framework.*;
+import uk.ac.imperial.lsds.seep.api.BaseI;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 
 /**

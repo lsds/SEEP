@@ -13,6 +13,9 @@ package uk.ac.imperial.lsds.seep;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
@@ -24,6 +27,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.master.MasterController;
 
 public class Main {
 	
+	final Logger LOG = LoggerFactory.getLogger(Main.class);
 	//Properties variable
 	static P p = new P();
 	
@@ -46,7 +50,7 @@ public class Main {
 			System.out.println("ARGS:");
 			System.out.println("Master <querySourceFile.jar> <MainClass>");
 			System.out.println("Worker <localPort>");
-			System.exit(-1);
+			System.exit(0);
 		}
 
 		if(args[0].equals("Master")){
@@ -57,8 +61,8 @@ public class Main {
 			instance.executeSec(args);
 		}
 		else{
-			System.out.println("Error. See Usage");
-			System.exit(-1);
+			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
+			System.exit(0);
 		}
 	}
 	
@@ -71,8 +75,8 @@ public class Main {
 		//If the user provided a query when launching the master node...
 		if(args[1] != null){
 			if(!(args.length > 2)){
-				System.out.println("Error. See Usage");
-				System.exit(-1);
+				System.out.println("Error. Main Master <path_to_query.jar> <Base_class_name>");
+				System.exit(0);
 			}
 			//Then we execute the compose method and get the QueryPlan back
 			qp = mc.executeComposeFromQuery(args[1], args[2]);
@@ -99,6 +103,10 @@ public class Main {
 			e.printStackTrace();
 		}
 		int ownPort = 0;
+		if(args.length > 2){
+			System.out.println("Error. Main Worker <listen_port(optional)>");
+			System.exit(0);
+		}
 		if(args.length > 1){
 			ownPort = new Integer(args[1]);
 		}
@@ -109,8 +117,8 @@ public class Main {
 		
 		// NodeManager instantiation
 		NodeManager nm = new NodeManager(port, bindAddr, ownPort);
-		NodeManager.nLogger.info("Initializing Node Manager...");
+		LOG.info("Initializing Node Manager...");
 		nm.init();
-		NodeManager.nLogger.info("NodeManager was remotely stopped");
+		LOG.warn("NodeManager was remotely stopped");
 	}
 }

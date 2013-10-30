@@ -13,11 +13,16 @@ package uk.ac.imperial.lsds.seep.reliable;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.state.Streamable;
 
 public class StreamStateManager {
+	
+	final private Logger LOG = LoggerFactory.getLogger(StreamStateManager.class);
 
 	private final int chunkSize;
 	
@@ -30,7 +35,7 @@ public class StreamStateManager {
 		this.chunkSize = new Integer(P.valueFor("stateChunkSize"));
 		this.totalNumberChunks = state.getTotalNumberOfChunks(chunkSize);
 		if(totalNumberChunks == 1){
-			NodeManager.nLogger.severe("-> State fits in less than one chunk. Fix");
+			LOG.error("-> State fits in less than one chunk. Fix");
 			try {
 				throw new Exception("State fits in less than one chunk");
 			} 

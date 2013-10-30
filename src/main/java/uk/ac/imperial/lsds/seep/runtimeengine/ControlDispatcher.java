@@ -20,6 +20,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -48,6 +51,8 @@ import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 public class ControlDispatcher {
+	
+	final private Logger LOG = LoggerFactory.getLogger(ControlDispatcher.class);
 
 	private final int BLIND_SOCKET;
 	
@@ -106,7 +111,7 @@ public class ControlDispatcher {
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 			io.printStackTrace();
 		}
 	}
@@ -138,7 +143,7 @@ public class ControlDispatcher {
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 			io.printStackTrace();
 		}
 	}
@@ -162,7 +167,7 @@ public class ControlDispatcher {
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 			io.printStackTrace();
 		}
 	}
@@ -197,7 +202,7 @@ public class ControlDispatcher {
 			}
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 			io.printStackTrace();
 		}
 		long stopSend = System.currentTimeMillis();
@@ -214,7 +219,7 @@ public class ControlDispatcher {
 			dos.close();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 			io.printStackTrace();
 		}
 	}
@@ -234,7 +239,7 @@ public class ControlDispatcher {
 				}
 			}
 			catch(IOException io){
-				NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
+				LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
 				io.printStackTrace();
 			}
 		}

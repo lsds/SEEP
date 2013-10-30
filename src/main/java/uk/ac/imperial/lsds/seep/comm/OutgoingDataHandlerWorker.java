@@ -17,6 +17,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -29,6 +32,8 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class OutgoingDataHandlerWorker implements Runnable{
 
+	final private Logger LOG = LoggerFactory.getLogger(OutgoingDataHandlerWorker.class);
+	
 	// TX data
 	private Selector selector;
 	
@@ -61,7 +66,7 @@ public class OutgoingDataHandlerWorker implements Runnable{
 				}
 			}
 			catch (IOException e) {
-				NodeManager.nLogger.severe("-> While checking the selector events: "+e.getMessage());
+				LOG.error("-> While checking the selector events: "+e.getMessage());
 				e.printStackTrace();
 			}
 		}
@@ -93,7 +98,7 @@ public class OutgoingDataHandlerWorker implements Runnable{
 				}
 			}
 			catch (IOException e) {
-				NodeManager.nLogger.severe("-> While trying to write in the aync sc: "+e.getMessage());
+				LOG.error("-> While trying to write in the aync sc: "+e.getMessage());
 				e.printStackTrace();
 			}
 		}

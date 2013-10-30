@@ -10,6 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.state;
 
+/** 
+ * Versionable has methods to support multi-version data structures, required by the system to perform lock-free checkpointing.
+ * @author raulcf
+ *
+ */
 public interface Versionable {
 
 	public void setDirtyMode(boolean newValue);

@@ -10,8 +10,13 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.state;
 
-public interface StateSplitI {
-	
-	public State[] parallelizeState(State toSplit, int key, String stateClass);
-	
+/**
+ * CustomState is a tagging interface that indicates that a given State implementation is customized
+ * and does not implement LargeState. Overall, this means that the system will deep copy this object for fault-tolerance and
+ * data parallelism reasons. If deep copy is not acceptable custom state must instead implement LargeState.
+ * @author raulcf
+ *
+ */
+public interface CustomState extends State{
+
 }

@@ -18,6 +18,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
@@ -33,6 +36,8 @@ import com.esotericsoftware.kryo.io.Input;
 
 public class IncomingDataHandlerWorker implements Runnable{
 
+	final private Logger LOG = LoggerFactory.getLogger(IncomingDataHandlerWorker.class);
+	
 	private Socket upstreamSocket = null;
 	private CoreRE owner = null;
 	private boolean goOn;
@@ -95,11 +100,11 @@ public class IncomingDataHandlerWorker implements Runnable{
 			DataStructureI dso = null;
 			if(dsa.getUniqueDso() != null){
 				dso = dsa.getUniqueDso();
-				NodeManager.nLogger.info("-> Unique data adapter in this node: "+dso);
+				LOG.info("-> Unique data adapter in this node: "+dso);
 			}
 			else{
 				dso = dsa.getDataStructureIForOp(originalOpId);
-				NodeManager.nLogger.info("-> Multiple data adapters in this node");
+				LOG.info("-> Multiple data adapters in this node");
 			}
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
@@ -134,11 +139,11 @@ public class IncomingDataHandlerWorker implements Runnable{
 					}
 				}
 			}
-			NodeManager.nLogger.severe("-> Data connection closing...");
+			LOG.error("-> Data connection closing...");
 			upstreamSocket.close();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> IncDataHandlerWorker. IO Error "+io.getMessage());
+			LOG.error("-> IncDataHandlerWorker. IO Error "+io.getMessage());
 			io.printStackTrace();
 		}
 	}

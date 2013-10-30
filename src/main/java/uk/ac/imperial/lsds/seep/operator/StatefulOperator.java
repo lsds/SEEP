@@ -10,12 +10,12 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 
 public interface StatefulOperator{
 
-	public State getState();
-	public void replaceState(State state);
+	public StateWrapper getState();
+	public void replaceState(StateWrapper state);
 
 }

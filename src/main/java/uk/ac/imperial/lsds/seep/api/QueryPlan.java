@@ -16,21 +16,29 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
+import uk.ac.imperial.lsds.seep.state.CustomState;
+import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
 import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class QueryPlan {
+	
+	final private Logger LOG = LoggerFactory.getLogger(QueryPlan.class);
 	
 	public static final int CONTROL_SOCKET = Integer.parseInt(P.valueFor("controlSocket"));
 	public static final int DATA_SOCKET = Integer.parseInt(P.valueFor("dataSocket"));
 	
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
-	private ArrayList<State> states = new ArrayList<State>();
+	private ArrayList<StateWrapper> states = new ArrayList<StateWrapper>();
 	private ArrayList<ScaleOutIntentBean> scIntents = new ArrayList<ScaleOutIntentBean>();
 	private Map<Operator, Integer> partitionRequirements = new LinkedHashMap<Operator, Integer>(0);
 	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
@@ -44,7 +52,7 @@ public class QueryPlan {
 		return ops;
 	}
 	
-	public ArrayList<State> getStates(){
+	public ArrayList<StateWrapper> getStates(){
 		return states;
 	}
 	
@@ -74,10 +82,10 @@ public class QueryPlan {
 	
 	/** User facing methods **/
 	
-	public Operator newStatefulSource(Operator op, int opId, State s, List<String> attributes){
+	public Operator newStatefulSource(Operator op, int opId, StateWrapper s, List<String> attributes){
 		// Configure operator
 		if(s.getOwnerId() != opId){
-			NodeManager.nLogger.severe("Operator id: "+opId+" does not own state: "+s.getOwnerId());
+			LOG.error("Operator id: "+opId+" does not own state: "+s.getOwnerId());
 			System.exit(0);
 		}
 		this.newStatefulOperator(op, opId, s, attributes);
@@ -96,10 +104,10 @@ public class QueryPlan {
 		return op;
 	}
 	
-	public Operator newStatefulSink(Operator op, int opId, State s, List<String> attributes){
+	public Operator newStatefulSink(Operator op, int opId, StateWrapper s, List<String> attributes){
 		// Configure operator
 		if(s.getOwnerId() != opId){
-			NodeManager.nLogger.severe("Operator id: "+opId+" does not own state: "+s.getOwnerId());
+			LOG.error("Operator id: "+opId+" does not own state: "+s.getOwnerId());
 			System.exit(0);
 		}
 		this.newStatefulOperator(op, opId, s, attributes);
@@ -130,14 +138,14 @@ public class QueryPlan {
 		return op;
 	}
 	
-	public Operator newStatefulOperator(Operator op, int opId, State s, List<String> attributes){
+	public Operator newStatefulOperator(Operator op, int opId, StateWrapper s, List<String> attributes){
 		// Configure operator
 		if(s.getOwnerId() != opId){
-			NodeManager.nLogger.severe("Operator id: "+opId+" does not own state: "+s.getOwnerId());
+			LOG.error("Operator id: "+opId+" does not own state: "+s.getOwnerId());
 			System.exit(0);
 		}
 		op.setOperatorId(opId);
-		op.setState(s);
+		op.setStateWrapper(s);
 		op.setSubclassOperator();
 		op._declareWorkingAttributes(attributes);
 		// Register state
@@ -146,13 +154,20 @@ public class QueryPlan {
 		return op;
 	}
 	
-	public State newState(State s, int ownerId, int checkpointInterval, String keyAttribute){
-		s.setOwnerId(ownerId);
-		s.setCheckpointInterval(checkpointInterval);
-		if(s instanceof Partitionable){
-			((Partitionable)s).setKeyAttribute(keyAttribute);
+	public StateWrapper newState(State s, int ownerId, int checkpointInterval, String keyAttribute){
+		StateWrapper sw = new StateWrapper(ownerId, checkpointInterval, s);
+		if(s instanceof CustomState){
+			if((CustomState)s instanceof Partitionable){
+				((Partitionable)s).setKeyAttribute(keyAttribute);
+			}
+			else{
+				// say that keyattribute is ignored as state does not implement Partitionable
+			}
 		}
-		return s;
+		else if(s instanceof LargeState){
+			// say that keyAttribute is ignored
+		}
+		return sw;
 	}
 	
 	/** Static scaling methods **/
@@ -185,23 +200,23 @@ public class QueryPlan {
 	
 	/** Private methods **/
 	private void setSource(Operator source) {
-		NodeManager.nLogger.info("Configured NEW SOURCE, Operator: "+src.toString());
+		LOG.info("Configured NEW SOURCE, Operator: {}", src.toString());
 		src.add(source);
 	}
 
 	private void setSink(Operator snk){
-		NodeManager.nLogger.info("Configured SINK as Operator: "+snk.toString());
+		LOG.info("Configured SINK as Operator: {}", snk.toString());
 		this.snk = snk;
 	}
 	
-	private void registerState(State s){
+	private void registerState(StateWrapper s){
 		states.add(s);
-		NodeManager.nLogger.info("Added new State to Query");
+		LOG.debug("Added new State to Query");
 	}
 	
 	private void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);
-		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
+		LOG.info("Added new Operator to Infrastructure: {}", o.toString());
 	}
 }

@@ -12,12 +12,15 @@ package uk.ac.imperial.lsds.seep.reliable;
 
 import java.io.Serializable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 /**
 * StateBackupWorker. This class is in charge of checking when the associated operator has a state to do backup and doing the backup of such state. This is operator dependant.
@@ -25,6 +28,7 @@ import uk.ac.imperial.lsds.seep.state.State;
 
 public class StateBackupWorker implements Runnable, Serializable{
 
+	final private Logger LOG = LoggerFactory.getLogger(StateBackupWorker.class);
 	private static final long serialVersionUID = 1L;
 	
 	private long initTime = 0;
@@ -32,7 +36,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 	private StatefulProcessingUnit processingUnit;
 	private boolean goOn = true;
 	private int checkpointInterval = 0;
-	private State state;
+	private StateWrapper state;
 	
 	public enum CheckpointMode{
 		LARGE_STATE, LIGHT_STATE
@@ -43,15 +47,15 @@ public class StateBackupWorker implements Runnable, Serializable{
 		this.goOn = false;
 	}
 
-	public StateBackupWorker(StatefulProcessingUnit processingUnit, State s){
+	public StateBackupWorker(StatefulProcessingUnit processingUnit, StateWrapper s){
 		this.processingUnit = processingUnit;
 		this.state = s;
 		if(P.valueFor("checkpointMode").equals("large-state")){
-			NodeManager.nLogger.info("Checkpoint mode of this operator is LARGE-STATE");
+			LOG.info("Checkpoint mode of this operator is LARGE-STATE");
 			this.CHECKPOINTMODE = CheckpointMode.LARGE_STATE;
 		}
 		else if(P.valueFor("checkpointMode").equals("light-state")){
-			NodeManager.nLogger.info("Checkpoint mode of this operator is LIGHT-STATE");
+			LOG.info("Checkpoint mode of this operator is LIGHT-STATE");
 			this.CHECKPOINTMODE = CheckpointMode.LIGHT_STATE;
 		}
 		else{
@@ -80,7 +84,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 			executeLightStateMechanism();
 		}
 		else{
-			NodeManager.nLogger.severe("-> Not defined checkpoint mode");
+			LOG.error("-> Not defined checkpoint mode");
 		}
 	}
 	

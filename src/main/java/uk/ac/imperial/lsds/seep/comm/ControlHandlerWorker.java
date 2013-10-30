@@ -18,6 +18,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
@@ -47,6 +50,8 @@ import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 public class ControlHandlerWorker implements Runnable{
 
+	final private Logger LOG = LoggerFactory.getLogger(ControlHandlerWorker.class);
+	
 	private Socket incomingSocket = null;
 	private CoreRE owner = null;
 	//In charge of control thread execution
@@ -102,17 +107,17 @@ public class ControlHandlerWorker implements Runnable{
 					owner.processControlTuple(tuple, os, ip);
 				}
 				else{
-					NodeManager.nLogger.severe("-> ControlHandlerWorker. TUPLE IS NULL !");
+					LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
 					break;
 				}
 			}
 			//Close streams and socket
-			NodeManager.nLogger.severe("-> Closing connection");
+			LOG.error("-> Closing connection");
 			is.close();
 			incomingSocket.close();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> ControlHandlerWorker. IO Error "+io.getMessage());
+			LOG.error("-> ControlHandlerWorker. IO Error "+io.getMessage());
 			io.printStackTrace();
 		}
 	}

@@ -15,6 +15,9 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
@@ -30,6 +33,8 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 
 public class OutputQueue {
+	
+	final private Logger LOG = LoggerFactory.getLogger(OutputQueue.class);
 
 	// replaySemaphore controls whether it is possible to send or not
 	private CoreRE owner = null;
@@ -55,14 +60,14 @@ public class OutputQueue {
 	public synchronized void start(){
 		/// \todo {this is a safe check that should not be done because we eventually will be sure that it works well}
 		if(replaySemaphore.get() == 0){
-			NodeManager.nLogger.warning("-> Dispatcher. replaySemaphore was 0, stays equals ");
+			LOG.warn("-> Dispatcher. replaySemaphore was 0, stays equals ");
 			replaySemaphore.set(0);
 			return;
 		}
 
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore changes from: "+replaySemaphore.toString());
+		LOG.debug("-> replaySemaphore changes from: {}", replaySemaphore.toString());
 		replaySemaphore.decrementAndGet();
-		NodeManager.nLogger.info("-> Dispatcher. replaySemaphore to: "+replaySemaphore.toString());
+		LOG.debug("-> replaySemaphore to: {}", replaySemaphore.toString());
 		synchronized(this){
 			this.notify();
 		}
@@ -70,9 +75,9 @@ public class OutputQueue {
 	
 	public synchronized void stop() {
 		//Stop incoming data, a new thread is replaying
-		NodeManager.nLogger.info("-> replaySemaphore from: "+replaySemaphore.toString());
+		LOG.debug("-> replaySemaphore from: {}", replaySemaphore.toString());
 		replaySemaphore.incrementAndGet();
-		NodeManager.nLogger.info("-> replaySemaphore to: "+replaySemaphore.toString());
+		LOG.debug("-> replaySemaphore to: {}", replaySemaphore.toString());
 	}
 	
 	
@@ -127,7 +132,7 @@ public class OutputQueue {
 			}
 		}
 		catch(InterruptedException ie){
-			NodeManager.nLogger.severe("-> Dispatcher. While trying to do wait() "+ie.getMessage());
+			LOG.error("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 			ie.printStackTrace();
 		}
 	}
@@ -165,7 +170,7 @@ public class OutputQueue {
 //			}
 //		}
 		//Restablish communication. Set variables and sharedIterator with the current iteration state.
-		NodeManager.nLogger.info("-> Recovering connections");
+		LOG.debug("-> Recovering connections");
 		cci.getReplay().set(true);
 		cci.getStop().set(false);
 		cci.setSharedIterator(sharedIterator);

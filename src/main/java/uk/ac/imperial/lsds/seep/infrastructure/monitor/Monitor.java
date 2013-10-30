@@ -15,6 +15,9 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -27,6 +30,8 @@ import com.esotericsoftware.kryo.io.Output;
 */
 
 public class Monitor implements Runnable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(Monitor.class); 
 
 	private int nodeId;
 	private static Kryo k = null;
@@ -78,7 +83,7 @@ public class Monitor implements Runnable{
 			//Establish connection with the monitor manager.
 			InetAddress addrMon = InetAddress.getByName(P.valueFor("mainAddr"));
 			int portMon = Integer.parseInt(P.valueFor("monitorManagerPort"));
-			NodeManager.nLogger.info("MONITOR-> conn ip: "+addrMon.toString()+" port: "+portMon);
+			LOG.info("MONITOR-> conn ip: {} port: {}", addrMon.toString(), portMon);
 			Socket conn = new Socket(addrMon, portMon);
 			OutputStream out = conn.getOutputStream();
 			output = new Output(out);
@@ -95,11 +100,11 @@ public class Monitor implements Runnable{
 			conn.close();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.warning("When trying to connect to the MonitorManager: "+io.getMessage());
+			LOG.error("When trying to connect to the MonitorManager: "+io.getMessage());
 			io.printStackTrace();
 		}
 		catch(InterruptedException ie){
-			NodeManager.nLogger.warning("When trying to sleep: "+ie.getMessage());
+			LOG.error("When trying to sleep: "+ie.getMessage());
 			ie.printStackTrace();
 		}
 	}

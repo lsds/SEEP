@@ -25,7 +25,9 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
@@ -41,6 +43,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
+import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
+import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MonitorManager;
@@ -53,7 +57,7 @@ import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -65,7 +69,8 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class Infrastructure {
 
-	public static Logger nLogger = Logger.getLogger("seep");
+	final private Logger LOG = LoggerFactory.getLogger(Infrastructure.class);
+	
 	int value = Integer.parseInt(P.valueFor("maxLatencyAllowed"));
 	static public MasterStatisticsHandler msh = new MasterStatisticsHandler();
 	
@@ -80,7 +85,7 @@ public class Infrastructure {
 	///\todo{Put this in a map{query->structure} and refer back to it properly}
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	// States of the query
-	private ArrayList<State> states = new ArrayList<State>();
+	private ArrayList<StateWrapper> states = new ArrayList<StateWrapper>();
 	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
@@ -138,12 +143,12 @@ public class Infrastructure {
 		
 		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
 		if(!qp.getScaleOutIntents().isEmpty()){
-			NodeManager.nLogger.info("-> Manual static scale out");
+			LOG.debug("-> Manual static scale out");
 			soib = eiu.staticInstantiateNewReplicaOperator(qp.getScaleOutIntents(), qp);
 		}
 		// The default and preferred option, used
 		else if (!qp.getPartitionRequirements().isEmpty()){
-			NodeManager.nLogger.info("-> Automatic static scale out");
+			LOG.debug("-> Automatic static scale out");
 			soib = eiu.staticInstantiationNewReplicaOperators(qp);
 		}
 		// After everything is set up, then we scale out ops
@@ -155,7 +160,7 @@ public class Infrastructure {
 		for(Entry<Integer, InputDataIngestionMode> entry : op.getInputDataIngestionModeMap().entrySet()){
 			for(Operator upstream : ops){
 				if(upstream.getOperatorId() == entry.getKey()){
-					NodeManager.nLogger.info("-> Op: "+upstream.getOperatorId()+" consume from Op: "+op.getOperatorId()+" with "+entry.getValue());
+					LOG.debug("-> Op: {} consume from Op: {} with {}",upstream.getOperatorId(), op.getOperatorId(), entry.getValue());
 					// Use opContext to make an operator understand how it consumes data from its upstream
 					upstream.getOpContext().setInputDataIngestionModePerUpstream(op.getOperatorId(), entry.getValue());
 				}
@@ -172,25 +177,18 @@ public class Infrastructure {
 	
 	public void configureRouterStatically(){
 		for(Operator op: ops){
-			//String queryAttribute = op.getOpContext().getQueryAttribute();
+			LOG.info("-> Configuring Routing for OP {} ...", op.getOperatorId());
 			boolean requiresLogicalRouting = op.getOpContext().doesRequireLogicalRouting();
 			HashMap<Integer, ArrayList<Integer>> routeInfo = op.getOpContext().getRouteInfo();
-//			Router r = new Router(queryAttribute, routeInfo);
 			Router r = new Router(requiresLogicalRouting, routeInfo);
 			// Configure routing implementations of the operator
 			ArrayList<Operator> downstream = new ArrayList<Operator>();
-			
-			
 			for(Integer i : op.getOpContext().getOriginalDownstream()){
 				downstream.add(this.getOperatorById(i));
 			}
-			
-//			for(PlacedOperator po : op.getOpContext().downstreams){
-//				downstream.add(this.getOperatorById(po.opID()));
-//			}
-			
 			r.configureRoutingImpl(op.getOpContext(), downstream);
 			op.setRouter(r);
+			LOG.info("Configuring Routing for OP {} ...DONE");
 		}
 	}
 	
@@ -244,8 +242,8 @@ public class Infrastructure {
 	
 	public void addNode(Node n) {
 		nodeStack.push(n);
-		Infrastructure.nLogger.info("-> Infrastructure. New Node: "+n);
-		Infrastructure.nLogger.info("-> Infrastructure. Num nodes: "+getNodePoolSize());
+		LOG.debug("-> New Node: {}", n);
+		LOG.debug("-> Num nodes: {}", getNodePoolSize());
 	}
 	
 	public void updateContextLocations(Operator o) {
@@ -273,14 +271,14 @@ public class Infrastructure {
 		}
 	}
 	
-	/// \todo {Any thread that it is started should be stopped someway}
+	/// \todo {Any thread that it is started should be stopped somehow}
 	public void startInfrastructure(){
-		Infrastructure.nLogger.info("-> Infrastructure. ManagerWorker running");
+		LOG.debug("-> ManagerWorker running");
 		manager = new ManagerWorker(this, port);
 		Thread centralManagerT = new Thread(manager);
 		centralManagerT.start();
 
-		Infrastructure.nLogger.info("-> Infrastructure. MonitorManager running");
+		LOG.debug("-> MonitorManager running");
 		monitorManager = new MonitorManager(this);
 		Thread monitorManagerT = new Thread(monitorManager);
 		monitorManagerT.start();
@@ -294,7 +292,14 @@ public class Infrastructure {
 	public void deployQueryToNodes(){
 		//	Finally get the mapping for this query and assign real nodes
 		for(Entry<Integer, ArrayList<Operator>> e : queryToNodesMapping.entrySet()){
-			Node a = getNodeFromPool();
+			Node a = null;
+			try {
+				a = getNodeFromPool();
+			} 
+			catch (NodePoolEmptyException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 			for(Operator o : e.getValue()){
 				placeNew(o, a);
 			}
@@ -312,9 +317,9 @@ public class Infrastructure {
 				starTopology.add(oscc);
 			}
 		}
-		NodeManager.nLogger.info("Initial StarTopology Size: "+starTopology.size());
+		LOG.debug("Initial StarTopology Size: {}",starTopology.size());
 		for(EndPoint ep : starTopology){
-			System.out.println("Op: "+ep.getOperatorId()+" IP: "+((DisposableCommunicationChannel)ep).getIp().toString());
+			LOG.debug("Op: {} IP: {}", ep.getOperatorId(), ((DisposableCommunicationChannel)ep).getIp().toString());
 		}
 	}
 	
@@ -338,7 +343,7 @@ public class Infrastructure {
 		byte[] data = null;
 		try {
 			//Open stream to file
-			NodeManager.nLogger.info("Opening stream to file: "+pathToQueryDefinition);
+			LOG.debug("Opening stream to file: {}", pathToQueryDefinition);
 			File f = new File(pathToQueryDefinition);
 			fis = new FileInputStream(f);
 			fileSize = f.length();
@@ -347,7 +352,7 @@ public class Infrastructure {
 			int readBytesFromFile = fis.read(data);
 			//Check if we have read correctly
 			if(readBytesFromFile != fileSize){
-				NodeManager.nLogger.warning("Mismatch between read bytes and file size");
+				LOG.warn("Mismatch between read bytes and file size");
 			}
 			//Close the stream
 			fis.close();
@@ -382,11 +387,10 @@ public class Infrastructure {
 	
 	public void setUp(Operator op){
 		byte data[] = getDataFromFile(pathToQueryDefinition);
-		NodeManager.nLogger.info("Sending code to new op: "+op.getOperatorId());
 		sendCode(op, data);
 	}
 	
-	public void broadcastState(State s){
+	public void broadcastState(StateWrapper s){
 		for(Operator op: ops){
 			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
 			bcu.sendObject(node, s);
@@ -394,7 +398,7 @@ public class Infrastructure {
 	}
 	
 	public void broadcastState(Operator op){
-		for(State s : states){
+		for(StateWrapper s : states){
 			Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
 			bcu.sendObject(node, s);
 		}
@@ -402,16 +406,12 @@ public class Infrastructure {
 	
 	public void deploy() throws OperatorDeploymentException {
 		//First broadcast the information regarding the initialStarTopology
-//		for(Operator op : ops){
-//			//Send star topology
-//			broadcastStarTopology(op);
-//		}
 		broadcastStarTopology();
 		
   		//Deploy operators (push operators to nodes)
 		for(Operator op: ops){
 	     	//Establish the connection with the specified address
-			Infrastructure.nLogger.info("-> Deploying OP-"+op.getOperatorId());
+			LOG.debug("-> Deploying OP: ", op.getOperatorId());
 			deploy(op);
 		}
 
@@ -421,8 +421,8 @@ public class Infrastructure {
 			
 			Thread t = new Thread(new ConnHandler(op, this));
 //			//Establish the connection with the specified address
-			Infrastructure.nLogger.info("-> Configuring OP-"+op.getOperatorId());
-//			init(op);
+			LOG.debug("-> Configuring OP: {}", op.getOperatorId());
+			//init(op);
 			t.start();
 			activeThreads.add(t);
 		}
@@ -430,7 +430,7 @@ public class Infrastructure {
 		for(Thread t : activeThreads){
 			try {
 				t.join();
-			} 
+			}
 			catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -438,7 +438,7 @@ public class Infrastructure {
 		}
 		
 		//Broadcast the registered states to all the worker nodes, so that these can register the classes in the custom class loader
-		for(State s : states){
+		for(StateWrapper s : states){
 			//Send every state to all the worker nodes
 			broadcastState(s);
 		}
@@ -446,7 +446,7 @@ public class Infrastructure {
 		//Finally, we tell the nodes to initialize all communications, all is ready to run
 		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
 		for(Operator op : ops){
-			Infrastructure.nLogger.info("Sending initialization message to Node");
+			LOG.debug("Sending initialization message to Node");
 			// If we havent communicated to this node yet, we do
 			if (!nodesVisited.containsKey(op.getOperatorId())){
 				initRuntime(op);
@@ -463,14 +463,14 @@ public class Infrastructure {
 		for(QuerySpecificationI op: ops){
 			//Loop through the operators, if someone has the same ip, redeploy
 			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
-				Infrastructure.nLogger.info("-> Infrastructure. Redeploy OP-"+op.getOperatorId());
+				LOG.debug("-> Redeploy OP: {}", op.getOperatorId());
 				bcu.sendObject(n, op);
 			}
 		}
 		for(QuerySpecificationI op: ops){
 			//Loop through the operators, if someone has the same ip, reconfigure
 			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
-				Infrastructure.nLogger.info("-> Infrastructure. reconfigure OP-"+op.getOperatorId());
+				LOG.debug("-> Reconfigure OP: ", op.getOperatorId());
 				bcu.sendObject(n, new Integer ((op).getOperatorId()));
 			}
 		}
@@ -499,13 +499,13 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	public void sendCode(Operator op, byte[] data){
 		///\fixme{once there are more than one op per node this code will need to be fixed}
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Sending CODE to node: "+node.toString());
+		LOG.debug("-> Sending CODE to Op: {} , Node: {}",op.getOperatorId(), node.toString());
 		bcu.sendFile(node, data);
 	}
 
 	public void deploy(Operator op) {
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Deploying OP-"+op.getOperatorId());
+		LOG.debug("-> Deploying OP: ", op.getOperatorId());
 		bcu.sendObject(node, op);
 	}
 	
@@ -513,7 +513,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		for(Operator op : ops){
 			if(!(op.getOpContext().isSink()) && !(op.getOpContext().isSource())){
 				Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-				Infrastructure.nLogger.info("-> Sending updated starTopology to OP-"+op.getOperatorId());
+				LOG.debug("-> Sending updated starTopology to OP: {}",op.getOperatorId());
 				bcu.sendObject(node, starTopology);
 			}
 		}
@@ -521,7 +521,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 
 	public void init(Operator op) {
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Initializing OP-"+op.getOperatorId());
+		LOG.debug("-> Initializing OP: {}", op.getOperatorId());
 		bcu.sendObject(node, op.getOperatorId());
 	}
 	
@@ -531,7 +531,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	
 	public void initRuntime(Operator op){
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		Infrastructure.nLogger.info("-> Starting RUNTIME-"+op.getOperatorId());
+		LOG.info("-> Starting RUNTIME of OP: {}", op.getOperatorId());
 		bcu.sendObject(node, "SET-RUNTIME");
 	}
 
@@ -553,7 +553,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 /// \todo{remove boolean paralell recovery}
 /// parallel recovery was added to force the scale out of the failed operator before recovering it. it is necessary to change this and make it properly
 	public void updateU_D(InetAddress oldIp, InetAddress newIp, boolean parallelRecovery){
-		NodeManager.nLogger.warning("-> using sendControlMsg WITHOUT ACK");
+		LOG.warn("-> Using sendControlMsg WITHOUT ACK");
 		//Update operator information
 		for(QuerySpecificationI me : ops){
 			//If there is an operator that was placed in the oldIP...
@@ -568,7 +568,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 							
 							ControlTuple ctb = new ControlTuple().makeReconfigure(me.getOperatorId(), "reconfigure_U", newIp.getHostAddress());
 							
-							Infrastructure.nLogger.info("-> Infrastructure. updating Upstream OP-"+downstream.getOperatorId());
+							LOG.debug("-> Updating Upstream OP: {}", downstream.getOperatorId());
 							//bcu.sendControlMsg(downstream.getOpContext().getOperatorStaticInformation(), ctb.build(), downstream.getOperatorId());
 							rct.sendControlMsgWithoutACK(downstream.getOpContext().getOperatorStaticInformation(), ctb, downstream.getOperatorId());
 						}
@@ -588,7 +588,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 							else{
 								ctb = new ControlTuple().makeReconfigure(me.getOperatorId(), "just_reconfigure_D", newIp.getHostAddress());
 							}
-							Infrastructure.nLogger.info("-> Infrastructure. updating Downstream OP-"+upstream.getOperatorId());
+							LOG.debug("-> Updating Downstream OP: {}", upstream.getOperatorId());
 							//bcu.sendControlMsg(upstream.getOpContext().getOperatorStaticInformation(), ctb.build(), upstream.getOperatorId());
 							rct.sendControlMsgWithoutACK(upstream.getOpContext().getOperatorStaticInformation(), ctb, upstream.getOperatorId());
 							//It needs to replay buffer
@@ -605,29 +605,27 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		//Send the messages to start the sources
 		for(Operator source : src){
 			String msg = "START "+source.getOperatorId();
-			System.out.println("STARTING SOURCE, sending-> "+msg);
-			Infrastructure.nLogger.info("-> Infrastructure. Starting source");
+			LOG.info("-> Starting source, msg = {}", msg);
 			bcu.sendObject(source.getOpContext().getOperatorStaticInformation().getMyNode(), msg);
 		}
 		//Start clock in sink.
 		bcu.sendObject(snk.getOpContext().getOperatorStaticInformation().getMyNode(), "CLOCK");
-		Infrastructure.nLogger.info("All SOURCES have been notified. Starting system...");
+		LOG.info("SOURCES have been notified. System started.");
 		systemIsRunning = true;
 	}
 
-	public synchronized Node getNodeFromPool(){
+	public synchronized Node getNodeFromPool() throws NodePoolEmptyException{
 		if(nodeStack.size() < Integer.parseInt(P.valueFor("minimumNodesAvailable"))){
 			//nLogger.info("Instantiating EC2 images");
 			//new Thread(new EC2Worker(this)).start();
 		}
 		numberRunningMachines++;
 		if(nodeStack.isEmpty()){
-			NodeManager.nLogger.warning("-> Node Pool empty, Impossible to scale-out");
-			return null;
+			throw new NodePoolEmptyException("Node pool is empty, impossible to get more nodes");
 		}
 		
 		for(Node n : nodeStack){
-			System.out.println("NODE: "+n);
+			LOG.debug("NODE: {}", n);
 		}
 		
 		return nodeStack.pop();
@@ -789,7 +787,17 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	}
 	
 	public void parallelRecovery(String oldIp_txt) throws UnknownHostException{
-		eiu.executeParallelRecovery(oldIp_txt);
+		try {
+			eiu.executeParallelRecovery(oldIp_txt);
+		} 
+		catch (NodePoolEmptyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (ParallelRecoveryException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void saveResultsSWC() {
@@ -883,6 +891,6 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	public void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);
-		NodeManager.nLogger.info("Added new Operator to Infrastructure: "+o.toString());
+		LOG.debug("Added new Operator to Infrastructure: {}", o.toString());
 	}
 }

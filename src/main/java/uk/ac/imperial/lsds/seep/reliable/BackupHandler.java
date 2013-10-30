@@ -21,10 +21,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 public class BackupHandler implements Runnable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(BackupHandler.class);
 	
 	//The core that owns this control handler
 	private CoreRE owner;
@@ -84,7 +89,7 @@ public class BackupHandler implements Runnable{
 	}
 	
 	public void openSession(int opId, InetAddress remoteAddress){
-		NodeManager.nLogger.info("New Backup session opened for OP: "+opId);
+		LOG.debug("New Backup session opened for OP: {}", opId);
 		s_sessiontime = System.currentTimeMillis();
 		// We name the new session
 		sessionName = new Long(System.currentTimeMillis()).toString();
@@ -145,8 +150,7 @@ public class BackupHandler implements Runnable{
 		try{
 			//Establish listening port
     		backupServerSocket = new ServerSocket(connPort);
-			NodeManager.nLogger.info("-> BackupHandler listening in port: "+connPort);
-			NodeManager.nLogger.info("-> BackupHandler is waiting for opening session");
+			LOG.info("-> BackupHandler listens on port: {} for connections", connPort);
 			//while goOn is active
 			while(goOn){
 				Socket incomingConn = backupServerSocket.accept();
@@ -162,18 +166,18 @@ public class BackupHandler implements Runnable{
 					newConn.start();
 				}
 				else{
-					NodeManager.nLogger.warning("Sent backup chunk from OPID. SESSION CLOSED HERE: "+incomingAddr);
+					LOG.warn("Sent backup chunk from OPID. SESSION CLOSED HERE: "+incomingAddr);
 				}
 			}
 			backupServerSocket.close();
 		}
 		catch(BindException be){
-			NodeManager.nLogger.severe("-> BIND EXC IO Error "+be.getMessage());
-			NodeManager.nLogger.severe("-> backupServerSocket.toString: "+backupServerSocket.toString());
+			LOG.error("-> BIND EXC IO Error "+be.getMessage());
+			LOG.error("-> backupServerSocket.toString: "+backupServerSocket.toString());
 			be.printStackTrace();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> BackupHandler. While listening incoming conns "+io.getMessage());
+			LOG.error("-> BackupHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
 		}
 	}

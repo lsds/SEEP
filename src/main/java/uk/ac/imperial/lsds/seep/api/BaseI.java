@@ -8,9 +8,8 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep;
+package uk.ac.imperial.lsds.seep.api;
 
-import uk.ac.imperial.lsds.seep.api.QueryPlan;
 
 public interface BaseI {
 	public QueryPlan compose();

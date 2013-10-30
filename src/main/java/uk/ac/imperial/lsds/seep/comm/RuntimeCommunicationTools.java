@@ -15,6 +15,9 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
@@ -26,6 +29,8 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class RuntimeCommunicationTools {
 
+	final private Logger LOG = LoggerFactory.getLogger(RuntimeCommunicationTools.class);
+	
 	private Map<Integer, Socket> uniqueSocket = new HashMap<Integer, Socket>();
 	private Kryo k = null;
 	
@@ -46,7 +51,7 @@ public class RuntimeCommunicationTools {
 		try{
 			if(connection == null){
 				connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
-				Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
+				LOG.debug("-> BCU. New socket in sendControlMsg");
 				uniqueSocket.put(socketId, connection);
 			}
 			Output output = new Output(connection.getOutputStream());
@@ -58,12 +63,12 @@ public class RuntimeCommunicationTools {
 			//wait for application level ack
 			ControlTuple ack = k.readObject(input, ControlTuple.class);
 			//waiting for ack
-			NodeManager.nLogger.info("-> controlMsg ACK");
+			LOG.debug("-> controlMsg ACK");
 		}
 		catch(IOException io){
-			Infrastructure.nLogger.severe("-> Infrastructure. While sending Msg "+io.getMessage());
+			LOG.error("-> Infrastructure. While sending Msg "+io.getMessage());
 			io.printStackTrace();
-			Infrastructure.nLogger.severe("CONN: "+connection.toString());
+			LOG.error("CONN: "+connection.toString());
 		}
 	}
 	
@@ -71,12 +76,10 @@ public class RuntimeCommunicationTools {
 		Socket connection = uniqueSocket.get(socketId);
 		try{
 			
-			
-			
 			//Output output = new Output(connection.getOutputStream());
 			
 			connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
-			Infrastructure.nLogger.info("-> BCU. New socket in sendControlMsg");
+			LOG.debug("-> BCU. New socket in sendControlMsg");
 			uniqueSocket.put(socketId, connection);
 			Output output = new Output(connection.getOutputStream());
 			
@@ -90,9 +93,9 @@ public class RuntimeCommunicationTools {
 			output.flush();
 		}
 		catch(IOException io){
-			Infrastructure.nLogger.severe("-> Infrastructure. While sending Msg "+io.getMessage());
+			LOG.error("-> Infrastructure. While sending Msg "+io.getMessage());
 			io.printStackTrace();
-			Infrastructure.nLogger.severe("CONN: "+connection.toString());
+			LOG.error("CONN: "+connection.toString());
 		}
 	}
 }

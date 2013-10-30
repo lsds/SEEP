@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
@@ -59,7 +62,7 @@ import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.MergerWorker;
 import uk.ac.imperial.lsds.seep.reliable.StreamerWorker;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
-import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -68,6 +71,8 @@ import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 
 public class CoreProcessingLogic implements Serializable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(CoreProcessingLogic.class);
 
 	private static final long serialVersionUID = 1L;
 	
@@ -126,7 +131,7 @@ public class CoreProcessingLogic implements Serializable{
 	}
 	
 	public synchronized void installRI(InitRI initRI){
-		NodeManager.nLogger.info("-> Installing RI from Node: "+initRI.getNodeId());
+		LOG.info("-> Installing RI from Node: {}", initRI.getNodeId());
 		//Create new LB with the information received
 		ArrayList<Integer> indexes = new ArrayList<Integer>(initRI.getIndex());
 		ArrayList<Integer> keys = new ArrayList<Integer>(initRI.getKey());
@@ -150,10 +155,10 @@ public class CoreProcessingLogic implements Serializable{
 		}
 		//If i dont have backup for that upstream, I am not in charge...
 		if(!backupRoutingInformation.containsKey(operatorType)){
-			NodeManager.nLogger.info("-> NO routing info to send");
+			LOG.debug("-> NO routing info to send");
 			return;
 		}
-		NodeManager.nLogger.info("-> Sending backupRI to upstream");
+		LOG.debug("-> Sending backupRI to upstream");
 		//Otherwise I pick the backupRI msg from the data structure where i am storing these ones
 		BackupRI backupRI = backupRoutingInformation.get(operatorType);
 		//Form the message
@@ -173,7 +178,7 @@ public class CoreProcessingLogic implements Serializable{
 			puCtx.getBuffer(opId).replaceBackupOperatorState(ct);
 		}
 		else{
-			NodeManager.nLogger.warning("-> Received state generated after the beginning of the reconfigure process");
+			LOG.warn("-> Received state generated after the beginning of the reconfigure process");
 		}
 	}
 
@@ -216,28 +221,28 @@ public class CoreProcessingLogic implements Serializable{
 		
 		BackupOperatorState backupOperatorState = puCtx.getBuffer(oldOpId).getBackupState();
 		
-		State stateToSplit = backupOperatorState.getState();
+		StateWrapper stateToSplit = backupOperatorState.getState();
 		int stateCheckpointInterval = stateToSplit.getCheckpointInterval();
 		String stateTag = stateToSplit.getStateTag();
 		TimestampTracker data_ts = stateToSplit.getData_ts();
-		State splitted[] = null;
+		StateWrapper splitted[] = null;
 		if(stateToSplit instanceof Partitionable){
 			splitted = ((Partitionable)stateToSplit).splitState(stateToSplit, key);
 		}
 		else{
-			NodeManager.nLogger.warning("-> this state is not partitionable");
+			LOG.warn("-> this state is not partitionable");
 			// Crash the system at this point
 			System.exit(0);
 		}
 		// Create the two states, and fill the necessary info, as ts, etc.
 		//Set the old partition
-		State oldStatePartition = splitted[0];
+		StateWrapper oldStatePartition = splitted[0];
 		oldStatePartition.setOwnerId(oldOpId);
 		oldStatePartition.setCheckpointInterval(stateCheckpointInterval);
 		oldStatePartition.setStateTag(stateTag);
 		oldStatePartition.setData_ts(data_ts);
 		// Set the new partition
-		State newStatePartition = splitted[1];
+		StateWrapper newStatePartition = splitted[1];
 		newStatePartition.setOwnerId(newOpId);
 		newStatePartition.setCheckpointInterval(stateCheckpointInterval);
 		newStatePartition.setStateTag(stateTag);
@@ -254,14 +259,14 @@ public class CoreProcessingLogic implements Serializable{
 		oldPartition.setStateClass(stateTag);
 		oldPartition.setState(oldStatePartition);
 
-		NodeManager.nLogger.severe("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
+		LOG.error("-> Replacing backup states for OP: "+oldOpId+" and OP: "+newOpId);
 		
 		// Replace state in the old and new operators
 		puCtx.getBuffer(oldOpId).replaceBackupOperatorState(oldPartition);
 		puCtx.getBuffer(newOpId).replaceBackupOperatorState(newPartition);
 		
 		//Indicate that we are now managing both these states
-		NodeManager.nLogger.severe("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
+		LOG.error("-> Registering management of state for OP: "+oldOpId+" and OP: "+newOpId);
 		// We state we manage the state of the old and new ops replicas
 		pu.registerManagedState(oldOpId);
 		pu.registerManagedState(newOpId);
@@ -283,12 +288,12 @@ public class CoreProcessingLogic implements Serializable{
 		boolean isStatefulScaleOut = scaleOutInfo.isStatefulScaleOut();
 		//If scaling operator is stateful
 		if(isStatefulScaleOut){
-			NodeManager.nLogger.info("-> Scaling out STATEFUL op");
+			LOG.info("-> Scaling out STATEFUL op");
 			scaleOutStatefulOperator(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 		// If operator splitting is stateless...
 		else{
-			NodeManager.nLogger.info("-> Scaling out STATELESS op");
+			LOG.info("-> Scaling out STATELESS op");
 			pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 	}
@@ -298,19 +303,19 @@ public class CoreProcessingLogic implements Serializable{
 		int newKey = configureNewDownstreamStatefulOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		//I have configured the new split, check if I am also in charge of splitting the state or not
 		if(pu.isManagingStateOf(oldOpId)){
-			NodeManager.nLogger.info("-> Splitting state");
+			LOG.debug("-> Splitting state");
 			splitState(oldOpId, newOpId, newKey);
 			pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
 			//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
-			NodeManager.nLogger.info("-> Generating and sending RI backup");
+			LOG.debug("-> Generating and sending RI backup");
 		}
 		else{
-			NodeManager.nLogger.info("-> NOT in charge of split state");
+			LOG.debug("-> NOT in charge of split state");
 		}
 		
 		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK);
 		//Just one operator needs to send routing information backup, cause downstream is saving this info according to op type.
-		NodeManager.nLogger.info("-> Generating and sending RI backup");
+		LOG.debug("-> Generating and sending RI backup");
 		
 		//I always backup the routing info. This leads to replicate messages, but I cant avoid it easily since I can have more than one type of upstream
 		///\fixme{FIX THIS INEFFICIENCY}
@@ -330,7 +335,7 @@ public class CoreProcessingLogic implements Serializable{
 		/** END BLOCK OF CODE **/
 				
 		//Stop connections to perform the update
-		NodeManager.nLogger.info("-> Stopping connections of oldOpId: "+oldOpId+" and newOpId: "+newOpId);
+		LOG.debug("-> Stopping connections of oldOpId: {}and newOpId: {}", oldOpId, newOpId);
 		pu.stopConnection(oldOpId);
 		pu.stopConnection(newOpId);
 
@@ -376,14 +381,14 @@ public class CoreProcessingLogic implements Serializable{
 		int opId = ct.getOpId();
 		owner.manageBackupUpstreamIndex(opId);
 		//Clean the data processing channel from remaining tuples in old batch
-		NodeManager.nLogger.info("Changing to INITIALISING STATE, stopping all incoming comm");
+		LOG.debug("Changing to INITIALISING STATE, stopping all incoming comm");
 		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE);
 		//Give state to processing unit for it to manage it
 		((StatefulProcessingUnit)pu).installState(ct);
 		//Once the state has been installed, recover dataProcessingChannel
 		
 		//Send a msg to ask for the rest of information. (tuple replaying)
-		NodeManager.nLogger.info("-> Sending STATE_ACK");
+		LOG.info("-> Sending STATE_ACK");
 		ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
 		owner.getControlDispatcher().sendAllUpstreams(rb);
 //		pu.cleanInputQueue();
@@ -396,7 +401,7 @@ public class CoreProcessingLogic implements Serializable{
 	public void sendInitialStateBackup(){
 		//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 		if(pu.isNodeStateful()){
-			NodeManager.nLogger.info("NODE: "+owner.getNodeDescr().getNodeId()+" INITIAL BACKUP");
+			LOG.debug("NODE: {} INITIAL BACKUP", owner.getNodeDescr().getNodeId());
 			if(P.valueFor("checkpointMode").equals("large-state")){
 				System.out.println("skip initial state backup");
 			}
@@ -420,7 +425,7 @@ public class CoreProcessingLogic implements Serializable{
 		int keeperOpId = pu.getOperator().getOperatorId(); // myself
 		// Read folder and filter out files to send through the network
 		try {
-			NodeManager.nLogger.info("-> Request to stream to a single node");
+			LOG.debug("-> Request to stream to a single node");
 			Output output = new Output(controlSocket.getOutputStream());
 			///\todo{Can't all this block of code just be avoided by accessing directly the channels}
 			// ok, cause there is no simple way to access to the filechannel names. We can use the file objects that are ready to
@@ -632,7 +637,7 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 			System.out.println("Splitting time: "+splittingTime);
 			System.out.println("time to write to old: "+writeOld);
 			System.out.println("time to write to new: "+writeNew);
-			NodeManager.nLogger.info("Finished streaming state");
+			LOG.debug("Finished streaming state");
 		}
 		catch(IOException io){	
 			io.printStackTrace();
@@ -665,10 +670,10 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 		// If null means this operator has finished streaming
 		if(stateChunk.getMemoryChunk() == null){
 			activeOpStreaming.remove(opId);
-			NodeManager.nLogger.info("OP: "+opId+" has finished streaming");
+			LOG.debug("OP: {} has finished streaming", opId);
 			if(activeOpStreaming.size() == 0){
 				// finished merging state
-				NodeManager.nLogger.info("Finished merging streaming state");
+				LOG.debug("Finished merging streaming state");
 				System.out.println("TOTAL MERGING TIME: "+mergeTotal);
 				((StatefulProcessingUnit)pu).mergeChunkToState(null);
 				ControlTuple rb = new ControlTuple().makeStateAck(owner.getNodeDescr().getNodeId(), pu.getOperator().getOperatorId());
@@ -681,7 +686,7 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 		else{
 			// New chunk to merge. We state this op is actively streaming
 			activeOpStreaming.add(opId);
-			NodeManager.nLogger.info("New OP streaming: "+opId);		
+			LOG.debug("New OP streaming: {}", opId);		
 //			// And we call the correct function to merge the state
 			long a = System.currentTimeMillis();
 			((StatefulProcessingUnit)pu).mergeChunkToState(stateChunk);

@@ -17,6 +17,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
@@ -30,6 +33,8 @@ import com.esotericsoftware.kryo.io.Input;
 */
 
 public class MonitorManager implements Runnable{
+	
+	final private Logger LOG = LoggerFactory.getLogger(MonitorManager.class);
 
 	boolean listen = true;
 	private Infrastructure inf = null;
@@ -37,10 +42,11 @@ public class MonitorManager implements Runnable{
 	private ArrayBlockingQueue<MetricsTuple> mem = new ArrayBlockingQueue<MetricsTuple>(1);
 
 	public void initSp(){
-		System.out.println("Initializing SP: ");
+		LOG.debug("Initializing Statistics Printer...");
 		sp = new StatisticsPrinter();
 		Thread stat = new Thread(sp);
 		stat.start();
+		LOG.debug("Initializing Statistics Printer... DONE");
 	}
 	
 	public void stopMManager(boolean stop){

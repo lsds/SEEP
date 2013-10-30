@@ -20,14 +20,20 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
+import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 
 
 public class MasterController {
+	
+	final private Logger LOG = LoggerFactory.getLogger(MasterController.class);
 
 	//MasterController must be a singleton
 	private static final MasterController instance = new MasterController();
@@ -48,26 +54,25 @@ public class MasterController {
     P prop = new P();
 	
 	public void init(){
-		NodeManager.nLogger.info("-> Initializing Master Controller...");
+		LOG.debug("-> Initializing Master Controller...");
 		prop.loadProperties();
 		inf = new Infrastructure(Integer.parseInt(P.valueFor("mainPort")));
 		eiu = new ElasticInfrastructureUtils(inf);
 		inf.setEiu(eiu);
 		inf.startInfrastructure();
-		NodeManager.nLogger.info("-> DONE");
+		LOG.debug("-> Initializing Master Controller...DONE");
 	}
 	
 	public void submitQuery(QueryPlan qp){
-		NodeManager.nLogger.info("-> Submitting query to the system...");
+		LOG.info("-> Submitting query to the system...");
 		inf.loadQuery(qp);
-		NodeManager.nLogger.info("-> DONE");
+		LOG.info("-> Submitting query to the system...DONE");
 	}
 	
 	public void start() throws OperatorDeploymentException{
-		NodeManager.nLogger.info("-> Starting Interactive Console: ");
+		LOG.info("-> Console, waiting for commands: ");
 		try {
 			boolean alive = true;
-			
 			/// \todo{make this robust}
 			while(alive){
 				consoleOutputMessage();
@@ -132,7 +137,6 @@ public class MasterController {
 	}
 	
 	public QueryPlan executeComposeFromQuery(String pathToJar, String definitionClass){
-//		URLClassLoader ucl = null;
 		Class<?> baseI = null;
 		Object baseInstance = null;
 		Method compose = null;
@@ -140,6 +144,7 @@ public class MasterController {
 		pathToQueryDefinition = pathToJar;
 		inf.setPathToQueryDefinition(pathToJar);
 		String urlPathToQueryDefinition = "file://" + pathToJar;
+		LOG.debug("-> Set path to query definition: {}", urlPathToQueryDefinition);
 		URL[] urls = new URL[1];
 		try {
 			urls[0] = new URL(urlPathToQueryDefinition);
@@ -158,31 +163,24 @@ public class MasterController {
 			qp = (QueryPlan) compose.invoke(baseInstance, (Object[])null);
 		}
 		catch (SecurityException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (InstantiationException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		//Finally we return the queryPlan
@@ -190,7 +188,7 @@ public class MasterController {
 	}
 	
 	private void deployQueryToNodes(){
-		NodeManager.nLogger.info("-> Deploying operators to Nodes");
+		LOG.info("-> Deploying operators to Nodes...");
 		//First configure statically (local) the connections between operators
 		inf.deployQueryToNodes();
 		// Create initial starTopology
@@ -212,7 +210,7 @@ public class MasterController {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		NodeManager.nLogger.info("-> DONE");
+		LOG.info("-> Deploying operators to Nodes...DONE");
 	}
 	
 	private String getUserInput(String msg) throws IOException{
@@ -226,10 +224,8 @@ public class MasterController {
 		getUserInput("Press a button to start the source");
 		//Start the source, and thus the stream processing system
 		inf.start();
-		System.out.println("System started, ");
 		//Initialize local statistics
 		inf.getMonitorManager().initSp();
-		System.out.println("INITIALIZEZ SP");
 	}
 	
 	public void configureSourceRateOption(Infrastructure inf) throws IOException{
@@ -252,7 +248,13 @@ public class MasterController {
 		Node newNode = null;
 		switch (opt){
 			case 1:
-				newNode = inf.getNodeFromPool();
+				try {
+					newNode = inf.getNodeFromPool();
+				} 
+				catch (NodePoolEmptyException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				break;
 			case 2:
 				option = getUserInput("Introduce IP: ");

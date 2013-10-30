@@ -15,6 +15,9 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
@@ -26,6 +29,8 @@ import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 
 public class IncomingDataHandler implements Runnable{
 
+	final private Logger LOG = LoggerFactory.getLogger(IncomingDataHandler.class);
+	
 	//private Operator owner;
 	private CoreRE owner;
 	private int connPort;
@@ -56,7 +61,7 @@ public class IncomingDataHandler implements Runnable{
 			//Establish listening port
 			incDataServerSocket = new ServerSocket(connPort);
 			incDataServerSocket.setReuseAddress(true);
-			NodeManager.nLogger.info("-> IncomingDataHandler listening in port: "+connPort);
+			LOG.info("-> IncomingDataHandler listening in port: {}", connPort);
 			//Upstream id
 			while(goOn){
 				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper, dsa));
@@ -66,12 +71,12 @@ public class IncomingDataHandler implements Runnable{
 			incDataServerSocket.close();
 		}
 		catch(BindException be){
-			NodeManager.nLogger.severe("-> BIND EXC IO Error "+be.getMessage());
-			NodeManager.nLogger.severe("-> Was trying to connect to: "+connPort);
+			LOG.error("-> BIND EXC IO Error "+be.getMessage());
+			LOG.error("-> Was trying to connect to: "+connPort);
 			be.printStackTrace();
 		}
 		catch(IOException io){
-			NodeManager.nLogger.severe("-> IncomingDataHandler. While listening incoming conns "+io.getMessage());
+			LOG.error("-> IncomingDataHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
 		}
 	}
