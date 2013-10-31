@@ -30,7 +30,6 @@ import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -141,10 +140,11 @@ public class PUContext {
 	private void configureDownstreamAndUpstreamConnections(Operator op){
 		//Gather nature of downstream operators, i.e. local or remote
 		for(PlacedOperator down: op.getOpContext().downstreams){
-			configureNewDownstreamCommunication(down.opID(),down.location());
+			LOG.debug("-> configuring downstream of {}", down.opID());
+			configureNewDownstreamCommunication(down.opID(), down.location());
 		}
 		for(PlacedOperator up: op.getOpContext().upstreams){
-			configureNewUpstreamCommunication(up.opID(),up.location());
+			configureNewUpstreamCommunication(up.opID(), up.location());
 		}
 	}
 	
@@ -161,32 +161,24 @@ public class PUContext {
 	 * @param loc
 	 */
 	public void configureNewUpstreamCommunication(int opID, OperatorStaticInformation loc) {
-		InetAddress localIp = nodeDescr.getIp();
-		if (!(loc.getMyNode().getIp().equals(localIp))){
-			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
-			LOG.debug("-> PUContext. New remote upstream (sync) conn to OP: {}", opID);
-		}
+		createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), 0, loc.getInC(), "up");
+		LOG.debug("-> PUContext. New remote upstream (sync) conn to OP: {}", opID);
 	}
 
 	/**
-	 * This function creates an asynchronous communication channel with the specified downstream operator
+	 * This function creates a synchronous communication channel with the specified downstream operator
 	 * @param opID
 	 * @param loc
 	 */
 	public void configureNewDownstreamCommunication(int opID, OperatorStaticInformation loc) {
-		InetAddress localIp = nodeDescr.getIp();
-		if(!(loc.getMyNode().getIp().equals(localIp))){
-			//If remote, create communication with other point			
-			if (P.valueFor("synchronousOutput").equals("true")){
-				
-				createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
-				LOG.debug("-> PUContext. New remote downstream (SYNC) conn to OP: ", opID);
-			}
-			else{
-				createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
-				LOG.debug("-> PUContext. New remote downstream (ASYNC) conn to OP: ", opID);
-			}
-			
+		//If remote, create communication with other point			
+		if (P.valueFor("synchronousOutput").equals("true")){
+			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
+			LOG.debug("-> New remote downstream (SYNC) conn to OP: ", opID);
+		}
+		else{
+			createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
+			LOG.debug("-> New remote downstream (ASYNC) conn to OP: ", opID);
 		}
 	}
 	

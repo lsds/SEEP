@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.comm.serialization.MetricsTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;

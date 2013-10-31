@@ -214,7 +214,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	@Override
 	public void newOperatorInstantiation(Operator o) {
-		LOG.info("-> Instantiating Operator...");
+		LOG.info("-> Instantiating Stateful Operator...");
 		//Detect the first submitted operator
 		if(runningOp == null){
 			runningOp = o;
@@ -240,7 +240,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	
 	@Override
 	public void setOpReady(int opId) {
-		LOG.info("-> Setting operator ready");
+		LOG.debug("-> Setting operator ready");
 		runningOp.setReady(true);
 	}
 	

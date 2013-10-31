@@ -13,11 +13,11 @@ package uk.ac.imperial.lsds.seep.comm;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
+import java.net.Socket;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 /** 
@@ -75,7 +75,9 @@ public class ControlHandler implements Runnable{
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
-				Thread newConn = new Thread(new ControlHandlerWorker(controlServerSocket.accept(), owner));
+				Socket incomingConn = controlServerSocket.accept();
+				String threadName = incomingConn.getInetAddress().toString();
+				Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T");
 				newConn.start();
 			}
 			controlServerSocket.close();

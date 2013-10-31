@@ -35,7 +35,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperator
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
@@ -154,11 +153,9 @@ public class CoreRE {
 		dsa = new DataStructureAdapter();
 		// We get the inputDataIngestion mode map, that consists of inputDataIngestion modes per upstream
 		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
-		System.out.println("$$$$$PRE idimMap START");
 		for(Integer i : idimMap.keySet()){
-			System.out.println("Upstream: "+i+" with this mode: "+idimMap.get(i));
+			LOG.debug("Upstream: {} with this mode: {}", i, idimMap.get(i));
 		}
-		System.out.println("$$$$$PRE idimMap END");
 		// We configure the dataStructureAdapter with this mode (per upstream), and put additional info required for some modes
 		dsa.setUp(idimMap, processingUnit.getOperator().getOpContext());
 
@@ -168,26 +165,27 @@ public class CoreRE {
 		int inBT = new Integer(P.valueFor("blindSocket"));
 		//Control worker
 		ch = new ControlHandler(this, inC);
-		controlH = new Thread(ch);
+		controlH = new Thread(ch, "controlHandlerT");
 		//Data worker
 		idh = new IncomingDataHandler(this, inD, tupleIdxMapper, dsa);
-		iDataH = new Thread(idh);
+		iDataH = new Thread(idh, "dataHandlerT");
 		//Consumer worker
 		dataConsumer = new DataConsumer(this, dsa);
-		dConsumerH = new Thread(dataConsumer);
+		dConsumerH = new Thread(dataConsumer, "dataConsumerT");
 
 		controlH.start();
 		iDataH.start();
 		
 		// Backup worker
 		bh = new BackupHandler(this, inBT);
-		backupH = new Thread(bh);
+		backupH = new Thread(bh, "backupHandlerT");
 		backupH.start();
 	}
 	
 	public void setRuntime(){
 		
 		/// At this point I need information about what connections I need to establish
+		LOG.debug("-> Configuring remote connections...");
 		puCtx = processingUnit.setUpRemoteConnections();
 		
 		// Set up output communication module

@@ -46,7 +46,8 @@ public class QueryPlan {
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
 	//Mapping of operators to node
-	private Map<Integer, ArrayList<Operator>> mapOperatorToNode = new LinkedHashMap<Integer, ArrayList<Operator>>();
+	//private Map<Integer, ArrayList<Operator>> mapOperatorToNode = new LinkedHashMap<Integer, ArrayList<Operator>>();
+	private Map<Integer, Operator> mapOperatorToNode = new LinkedHashMap<Integer, Operator>();
 	
 	public ArrayList<Operator> getOps() {
 		return ops;
@@ -76,7 +77,7 @@ public class QueryPlan {
 		return snk;
 	}
 	
-	public Map<Integer, ArrayList<Operator>> getMapOperatorToNode(){
+	public Map<Integer, Operator> getMapOperatorToNode(){
 		return mapOperatorToNode;
 	}
 	
@@ -184,17 +185,17 @@ public class QueryPlan {
 		scIntents.add(soib);
 	}
 	
-	/** Mapping between operator and node **/
-	
-	public void place(Operator o, Node n){
+	/** Mapping between operator and node. Note that only one operator is assigned to one node. Two "conceptual" operators can be
+	 * merged into one "deployable" operator. This means that at this point all optimisations regarding "conceptual" operators have
+	 * been made.
+	 * @throws NodeAlreadyInUseException **/
+	public void place(Operator o, Node n) throws NodeAlreadyInUseException{
 		int nodeId = n.getNodeId();
 		if(mapOperatorToNode.containsKey(nodeId)){
-			mapOperatorToNode.get(nodeId).add(o);
+			throw new NodeAlreadyInUseException();
 		}
 		else{
-			ArrayList<Operator> opsOfNode = new ArrayList<Operator>();
-			opsOfNode.add(o);
-			mapOperatorToNode.put(nodeId, opsOfNode);
+			mapOperatorToNode.put(nodeId, o);
 		}
 	}
 	

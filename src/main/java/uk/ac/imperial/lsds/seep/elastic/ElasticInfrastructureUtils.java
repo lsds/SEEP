@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.api.NodeAlreadyInUseException;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
@@ -151,10 +152,10 @@ public class ElasticInfrastructureUtils {
 		inf.updateContextLocations(newOp);
 		//NodeManager.nLogger.info("Created new Op: "+newOp.toString());
 		// Send query to the new node
-		inf.setUp(newOp);
+		inf.deployCodeToOperator(newOp);
 		//deploy new Operator
 		//conn to new node
-		inf.deploy(newOp);
+		inf.remoteOperatorInstantiation(newOp);
 		//ConfigureCommunications
 		//conn to new node
 		inf.init(newOp);
@@ -212,10 +213,10 @@ public class ElasticInfrastructureUtils {
 		//Send updated star topology to nodes in the system
 		inf.broadcastStarTopology();
 		// Send query to the new node
-		inf.setUp(newOp);
+		inf.deployCodeToOperator(newOp);
 		//deploy new Operator
 		//conn to new node
-		inf.deploy(newOp);
+		inf.remoteOperatorInstantiation(newOp);
 		//ConfigureCommunications
 		//conn to new node
 		inf.init(newOp);
@@ -341,7 +342,13 @@ public class ElasticInfrastructureUtils {
 			e.printStackTrace();
 		}
 		// Register new op associated to new node in the infrastructure
-		qp.place(newOp, newNode);
+		try {
+			qp.place(newOp, newNode);
+		} 
+		catch (NodeAlreadyInUseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		// conf operator context
 		configureOperatorContext(oldOpId, newOp);
 		// router for the new op

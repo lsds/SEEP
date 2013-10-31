@@ -159,14 +159,14 @@ public class NodeManager{
 					o = ois.readObject();
 				}
 				//Check the class of the object received and initialized accordingly
-				if(o instanceof Operator){
+				if(o instanceof ArrayList<?>){
+					core.pushStarTopology((ArrayList<EndPoint>)o);
+				}
+				else if(o instanceof Operator){
 					core.pushOperator((Operator)o);
 				}
 				else if(o instanceof Integer){
 					core.setOpReady((Integer)o);
-				}
-				else if(o instanceof ArrayList<?>){
-					core.pushStarTopology((ArrayList<EndPoint>)o);
 				}
 				else if(o instanceof String){
 					String tokens[] = ((String)o).split(" ");

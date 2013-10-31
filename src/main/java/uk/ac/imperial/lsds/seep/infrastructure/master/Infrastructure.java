@@ -90,8 +90,8 @@ public class Infrastructure {
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
-	//Mapping of operators to node
-	private Map<Integer, ArrayList<Operator>> queryToNodesMapping = new HashMap<Integer, ArrayList<Operator>>();
+	//Mapping of nodeId-operator
+	private Map<Integer, Operator> queryToNodesMapping = new HashMap<Integer, Operator>();
 	//map with star topology information
 	private ArrayList<EndPoint> starTopology = new ArrayList<EndPoint>();
 	
@@ -275,7 +275,7 @@ public class Infrastructure {
 	public void startInfrastructure(){
 		LOG.debug("-> ManagerWorker running");
 		manager = new ManagerWorker(this, port);
-		Thread centralManagerT = new Thread(manager);
+		Thread centralManagerT = new Thread(manager, "managerWorkerT");
 		centralManagerT.start();
 
 		LOG.debug("-> MonitorManager running");
@@ -289,9 +289,9 @@ public class Infrastructure {
 		monitorManager.stopMManager(true);
 	}
 	
-	public void deployQueryToNodes(){
+	public void localMapPhysicalOperatorsToNodes(){
 		//	Finally get the mapping for this query and assign real nodes
-		for(Entry<Integer, ArrayList<Operator>> e : queryToNodesMapping.entrySet()){
+		for(Entry<Integer, Operator> e : queryToNodesMapping.entrySet()){
 			Node a = null;
 			try {
 				a = getNodeFromPool();
@@ -300,9 +300,12 @@ public class Infrastructure {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-			for(Operator o : e.getValue()){
-				placeNew(o, a);
-			}
+			LOG.debug("-> Mapping OP: {} to Node: {}", e.getValue().getOperatorId(), a);
+			placeNew(e.getValue(), a);
+		}
+		LOG.debug("-> All operators have been mapped");
+		for(Operator o : queryToNodesMapping.values()){
+			LOG.debug("OP: {}, CONF: {}", o.getOperatorId(), o);
 		}
 	}
 	
@@ -377,15 +380,17 @@ public class Infrastructure {
 		return data;
 	}
 	
-	public void setUp() throws CodeDeploymentException{
+	public void deployCodeToAllOperators() throws CodeDeploymentException{
+		LOG.debug("-> Deploying code to operators...");
 		byte data[] = getDataFromFile(pathToQueryDefinition);
 		//Send data to operators
 		for(Operator op: ops){
 			sendCode(op, data);
 		}
+		LOG.debug("-> Deploying code to operators...DONE");
 	}
 	
-	public void setUp(Operator op){
+	public void deployCodeToOperator(Operator op){
 		byte data[] = getDataFromFile(pathToQueryDefinition);
 		sendCode(op, data);
 	}
@@ -404,7 +409,8 @@ public class Infrastructure {
 		}
 	}
 	
-	public void deploy() throws OperatorDeploymentException {
+	public void deployQuery() throws OperatorDeploymentException {
+		LOG.debug("-> Deploying query...");
 		//First broadcast the information regarding the initialStarTopology
 		broadcastStarTopology();
 		
@@ -412,7 +418,7 @@ public class Infrastructure {
 		for(Operator op: ops){
 	     	//Establish the connection with the specified address
 			LOG.debug("-> Deploying OP: ", op.getOperatorId());
-			deploy(op);
+			remoteOperatorInstantiation(op);
 		}
 
 		//Once all operators have been pushed to the nodes, we say that those are ready to run
@@ -441,18 +447,19 @@ public class Infrastructure {
 		for(StateWrapper s : states){
 			//Send every state to all the worker nodes
 			broadcastState(s);
+			LOG.debug("-> Broadcasting state {} to nodes", s);
 		}
 		
-		//Finally, we tell the nodes to initialize all communications, all is ready to run
+		//Finally, we tell the nodes to initialize all communications
 		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
 		for(Operator op : ops){
-			LOG.debug("Sending initialization message to Node");
 			// If we havent communicated to this node yet, we do
 			if (!nodesVisited.containsKey(op.getOperatorId())){
 				initRuntime(op);
 				nodesVisited.put(op.getOperatorId(), true);
 			}
 		}
+		LOG.debug("-> Deploying query...DONE");
 	}
 
 	public void reDeploy(Node n){
@@ -503,9 +510,9 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		bcu.sendFile(node, data);
 	}
 
-	public void deploy(Operator op) {
+	public void remoteOperatorInstantiation(Operator op) {
 		Node node = op.getOpContext().getOperatorStaticInformation().getMyNode();
-		LOG.debug("-> Deploying OP: ", op.getOperatorId());
+		LOG.debug("-> Remotely instantiating OP: ", op.getOperatorId());
 		bcu.sendObject(node, op);
 	}
 	
@@ -624,10 +631,6 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			throw new NodePoolEmptyException("Node pool is empty, impossible to get more nodes");
 		}
 		
-		for(Node n : nodeStack){
-			LOG.debug("NODE: {}", n);
-		}
-		
 		return nodeStack.pop();
 	}
 	
@@ -638,7 +641,6 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	public void placeNew(Operator o, Node n) {
 		int opId = o.getOperatorId();
 		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
-//		OperatorStaticInformation l = new OperatorStaticInformation(n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
 		// Note that opId and originalOpId are the same value here, since placeNew places only original operators in the query
 		OperatorStaticInformation l = new OperatorStaticInformation(opId, opId, n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);

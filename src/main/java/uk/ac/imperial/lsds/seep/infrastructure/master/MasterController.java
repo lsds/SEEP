@@ -27,20 +27,16 @@ import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 
 
 public class MasterController {
 	
-	final private Logger LOG = LoggerFactory.getLogger(MasterController.class);
+	final private Logger LOG = LoggerFactory.getLogger(MasterController.class.getName());
 
 	//MasterController must be a singleton
 	private static final MasterController instance = new MasterController();
 	
-	//The current path to the query being submitted. If another query is submitted this is overwritten
-	///\todo{Check if this is an issue or not}
-	private String pathToQueryDefinition = null;
 	private URLClassLoader ucl = null;
 	
     private MasterController() {}
@@ -94,9 +90,9 @@ public class MasterController {
 							startSystemOption(inf);
 							break;
 						//configure source rate
-						case 3:
-							configureSourceRateOption(inf);
-							break;
+//						case 3:
+//							configureSourceRateOption(inf);
+//							break;
 						//parallelize operator manually
 						case 4:
 							parallelizeOpManualOption(inf, eiu);
@@ -141,7 +137,6 @@ public class MasterController {
 		Object baseInstance = null;
 		Method compose = null;
 		QueryPlan qp = null;
-		pathToQueryDefinition = pathToJar;
 		inf.setPathToQueryDefinition(pathToJar);
 		String urlPathToQueryDefinition = "file://" + pathToJar;
 		LOG.debug("-> Set path to query definition: {}", urlPathToQueryDefinition);
@@ -188,29 +183,27 @@ public class MasterController {
 	}
 	
 	private void deployQueryToNodes(){
-		LOG.info("-> Deploying operators to Nodes...");
+		LOG.info("-> Configuring and deploying query...");
 		//First configure statically (local) the connections between operators
-		inf.deployQueryToNodes();
+		inf.localMapPhysicalOperatorsToNodes();
 		// Create initial starTopology
 		inf.createInitialStarTopology();
 		//Finally deploy the new submitted query (instantiation, etc)
 		try {
 			// The code is previously sent to the nodes (when these attached to the master)
 			//Send code to nodes (query code)
-			try {
-				inf.setUp();
-			} 
-			catch (CodeDeploymentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			inf.deploy();
+			inf.deployCodeToAllOperators();
+			inf.deployQuery();
 		}
+		catch (CodeDeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
 		catch (OperatorDeploymentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		LOG.info("-> Deploying operators to Nodes...DONE");
+		LOG.info("-> Configuring and deploying query...DONE");
 	}
 	
 	private String getUserInput(String msg) throws IOException{
@@ -229,11 +222,11 @@ public class MasterController {
 	}
 	
 	public void configureSourceRateOption(Infrastructure inf) throws IOException{
-		String option = getUserInput("Introduce number of events: ");
-		int numberEvents = Integer.parseInt(option);
-		option = getUserInput("Introduce time (ms): ");
-		int time = Integer.parseInt(option);
-		inf.configureSourceRate(numberEvents, time);
+//		String option = getUserInput("Introduce number of events: ");
+//		int numberEvents = Integer.parseInt(option);
+//		option = getUserInput("Introduce time (ms): ");
+//		int time = Integer.parseInt(option);
+//		inf.configureSourceRate(numberEvents, time);
 	}
 	
 	public void parallelizeOpManualOption(Infrastructure inf, ElasticInfrastructureUtils eiu) throws IOException{
@@ -280,7 +273,7 @@ public class MasterController {
 		System.out.println("0- Submit query to the System");
 		System.out.println("1- Deploy query to Nodes");
 		System.out.println("2- Start system");
-		System.out.println("3- Configure source rate");
+//		System.out.println("3- Configure source rate");
 		System.out.println("4- Parallelize Operator Manually");
 		System.out.println("5- Stop system console (EXP)");
 		System.out.println("6- Exit");

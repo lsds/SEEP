@@ -13,4 +13,5 @@ package uk.ac.imperial.lsds.seep.operator;
 public interface EndPoint {
 
 	public int getOperatorId();
+	
 }

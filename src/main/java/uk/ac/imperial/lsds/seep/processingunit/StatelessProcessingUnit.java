@@ -158,7 +158,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public void newOperatorInstantiation(Operator o) {
-		LOG.info("-> Instantiating Operator");
+		LOG.info("-> Instantiating Operator...");
 		//Detect the first submitted operator
 		if(runningOp == null){
 			runningOp = o;
@@ -169,6 +169,8 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		o.setProcessingUnit(this);
 		// To identify the monitor with the op id instead of the node id
 		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
+		LOG.debug("Operator: {}", o);
+		LOG.info("-> Instantiating Operator...DONE");
 	}
 
 	@Override

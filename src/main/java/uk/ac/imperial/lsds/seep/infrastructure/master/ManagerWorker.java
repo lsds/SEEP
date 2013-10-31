@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.elastic.IPNotBoundToOperatorException;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
@@ -251,30 +250,20 @@ System.out.println("broadcast state and runtime init");
 		try {
 		//TODO change this
 		managerS = new ServerSocket(port);
-		System.out.println("MANAGERWORKER: Listening on ip: "+InetAddress.getLocalHost()+" port: "+port);
+		LOG.info(" Listening on {}:{}", InetAddress.getLocalHost(), port);
 		BufferedReader bis = null;
-//			InputStream is = null;
 		goOn = true;
 		while(goOn){
 			try {
 				clientSocket = managerS.accept();
 				bis = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-//					is = clientSocket.getInputStream();
-//					byte data[] = null;
-//					int len = is.read(data);
-//					String com = new String(data);
 				String com = "";
 				while( (com = bis.readLine()) != null) {
-//					if(com != null){
 					String token[] = com.split(" ");
 					System.out.println("Manager: Command received -> "+com);
 						
 					if(token[0].equals("crash")){
-//							System.out.println("CRASH");
-//							System.exit(2);
 						if(P.valueFor("parallelRecovery").equals("true")){
-								//params oldIp
-//								inf.parallelRecovery(token[1]);
 							crashCommandParallelRecovery(token[1],token[2],token[3],token[4]);
 						}
 						else{
@@ -291,16 +280,12 @@ System.out.println("broadcast state and runtime init");
 					else if(token[0].equals("add_operator")) {
 						addOperatorCommand(token[1], token[2], token[3]);
 					}
-						//should I place connect in infrastructure?
-//						else if(token[0].equals("connect")) {
-//							connectCommand(token);
-//						}
 					else if(token[0].equals("place")) {
 						placeCommand(token);
 					}
 					else if(token[0].equals("deploy_operator")) {
 						Operator op = (Operator) inf.elements.get(Integer.parseInt(token[1]));
-						inf.deploy(op);
+						inf.remoteOperatorInstantiation(op);
 					}
 					else if(token[0].equals("add_upstream_conn")) {
 						addUpstreamConnectionCommand(token);
