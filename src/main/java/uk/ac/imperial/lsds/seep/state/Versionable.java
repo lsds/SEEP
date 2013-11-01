@@ -17,9 +17,9 @@ package uk.ac.imperial.lsds.seep.state;
  */
 public interface Versionable {
 
-	public void setDirtyMode(boolean newValue);
+	public void setSnapshotMode(boolean newValue);
 	public void reconcile();
-	public void lockStateAccess();
-	public void releaseStateAccess();
+	public void lock();
+	public void release();
 	
 }

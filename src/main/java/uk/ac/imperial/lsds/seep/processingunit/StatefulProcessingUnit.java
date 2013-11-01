@@ -52,6 +52,8 @@ import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 import uk.ac.imperial.lsds.seep.state.LargeState;
+import uk.ac.imperial.lsds.seep.state.MalformedStateChunk;
+import uk.ac.imperial.lsds.seep.state.NullChunkWhileMerging;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 import uk.ac.imperial.lsds.seep.state.Streamable;
@@ -493,14 +495,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		}
 				
 		//State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
-		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
+//		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
+//		if (runningOp instanceof Versionable){
+//			
+//		}
 		
-		if(!(vns instanceof Versionable) || !(vns instanceof Streamable)){
-			LOG.error("-> Trying to stream a non-streamable state");
-			// Make noise during debugging
-			System.exit(-666);
-			return null;
-		}
+//		if(!(vns instanceof Versionable) || !(vns instanceof Streamable)){
+//			LOG.error("-> Trying to stream a non-streamable state");
+//			// Make noise during debugging
+//			System.exit(-666);
+//			return null;
+//		}
 		
 		TimestampTracker incomingTT = null;
 		
@@ -510,10 +515,16 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		incomingTT = owner.getIncomingTT();
 		///\todo{this assignment should go with the chunks ?? }
 		runningOpState.setData_ts(incomingTT);
-		
-		((Versionable)vns).setDirtyMode(true);
+		((Versionable)runningOpState).setSnapshotMode(true); //((Versionable)vns).setSnapshotMode(true);
+		StreamStateManager ssm = null;
 		// Create a manager for stream the state
-		StreamStateManager ssm = new StreamStateManager(((Streamable)vns));
+		if(((Streamable)runningOpState).getSize() > 0){
+			ssm = new StreamStateManager((Streamable)runningOpState); //StreamStateManager ssm = new StreamStateManager(((Streamable)vns));
+		}
+		else{
+			LOG.warn("State size is 0, so no backup is necessary ?");
+			return incomingTT;
+		}
 		
 		// Get and send all chunks
 		MemoryChunk mc = null;
@@ -685,14 +696,22 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 	
 	public synchronized void mergeChunkToState(StateChunk chunk){
-		if(chunk == null){
-			//((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(null);
-			((LargeState)runningOpState).appendChunk(null);
-			return;
+		try{
+			if(chunk == null){
+				LOG.info("Finished recreating state, current size: {}", ((LargeState)runningOpState).getSize());
+				return;
+			}
+			MemoryChunk mc = chunk.getMemoryChunk();
+			//	((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(mc.chunk);
+			((LargeState)runningOpState).appendChunk(mc.chunk);
 		}
-		MemoryChunk mc = chunk.getMemoryChunk();
-		//((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).appendChunk(mc.chunk);
-		((LargeState)runningOpState).appendChunk(mc.chunk);
+		catch(NullChunkWhileMerging ncwm){
+			ncwm.printStackTrace();
+		} 
+		catch (MalformedStateChunk e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 		/** Who manages which state? **/
@@ -789,7 +808,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 
 	public void resetState() {
-		((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).reset();
+		//((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).reset();
+		((Streamable)runningOpState).reset();
 	}
 
 	@Override

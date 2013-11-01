@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.P;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seep.state.EmptyStateException;
 import uk.ac.imperial.lsds.seep.state.Streamable;
 
 public class StreamStateManager {
@@ -28,12 +28,18 @@ public class StreamStateManager {
 	
 	private Streamable state;
 	private int totalNumberChunks;
-	private Iterator stateIterator;
+	private Iterator<?> stateIterator;
 	
 	public StreamStateManager(Streamable state){
 		this.state = state;
 		this.chunkSize = new Integer(P.valueFor("stateChunkSize"));
-		this.totalNumberChunks = state.getTotalNumberOfChunks(chunkSize);
+		try {
+			this.totalNumberChunks = state.getTotalNumberOfChunks(chunkSize);
+		} 
+		catch (EmptyStateException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		if(totalNumberChunks == 1){
 			LOG.error("-> State fits in less than one chunk. Fix");
 			try {

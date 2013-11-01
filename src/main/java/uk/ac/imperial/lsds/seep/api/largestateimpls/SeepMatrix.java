@@ -42,7 +42,7 @@ public class SeepMatrix extends Matrix implements Versionable, Streamable{
 	}
 	
 	@Override
-	public void lockStateAccess(){
+	public void lock(){
 		try {
 			this.mutex.acquire();
 		} 
@@ -53,7 +53,7 @@ public class SeepMatrix extends Matrix implements Versionable, Streamable{
 	}
 	
 	@Override
-	public void releaseStateAccess(){
+	public void release(){
 		this.mutex.release();
 	}
 	
@@ -161,7 +161,7 @@ if(row == null){
 	
 	/** IFACE methods **/
 	
-	public void setDirtyMode(boolean newValue){
+	public void setSnapshotMode(boolean newValue){
 		this.dirtyMode.set(newValue);
 	}
 	

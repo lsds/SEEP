@@ -22,11 +22,11 @@ import java.util.Iterator;
 public interface Streamable {
 
 	public int getSize();
-	public int getTotalNumberOfChunks(int chunkSize);
+	public int getTotalNumberOfChunks(int chunkSize) throws EmptyStateException;
 	public Iterator<?> getIterator();
 	public ArrayList<Object> streamSplitState(int chunkSize);
 	public void reset();
-	public void appendChunk(ArrayList<Object> s);
+	public void appendChunk(ArrayList<Object> s) throws NullChunkWhileMerging, MalformedStateChunk;
 	public Object getFromBackup(Object key);
 	
 }
