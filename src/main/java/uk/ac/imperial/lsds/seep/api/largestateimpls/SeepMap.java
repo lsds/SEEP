@@ -28,6 +28,7 @@ import uk.ac.imperial.lsds.seep.state.NullChunkWhileMerging;
 import uk.ac.imperial.lsds.seep.state.Streamable;
 import uk.ac.imperial.lsds.seep.state.Versionable;
 import uk.ac.imperial.lsds.seep.state.annotations.GlobalStateAccess;
+import uk.ac.imperial.lsds.seep.state.annotations.OperatorState;
 import uk.ac.imperial.lsds.seep.state.annotations.PartitionStateAccess;
 import uk.ac.imperial.lsds.seep.state.annotations.PartitioningKey;
 import uk.ac.imperial.lsds.seep.state.annotations.ReadAccess;
@@ -41,6 +42,7 @@ import uk.ac.imperial.lsds.seep.state.annotations.WriteAccess;
  * @param <K>
  * @param <V>
  */
+@OperatorState(partitionable=true)
 public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionable, Streamable{
 	
 	final Logger LOG = LoggerFactory.getLogger(SeepMap.class);
@@ -62,7 +64,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 	public SeepMap(){
 		super();
 	}
-	
+
 	public SeepMap(int initialSize) {
 		super(initialSize);
 	}
@@ -82,7 +84,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		this.release();
 	}
 	
-	@PartitionStateAccess
+	@PartitionStateAccess(partitioningKeyPositionInArguments=0)
 	@ReadAccess
 	public boolean containsKey(@PartitioningKey Object key){
 		this.lock();
@@ -142,7 +144,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		return isEmpty;
 	}
 	
-	@PartitionStateAccess
+	@PartitionStateAccess(partitioningKeyPositionInArguments=0)
 	@WriteAccess
 	public Object remove(@PartitioningKey Object key){
 		this.lock();
@@ -166,6 +168,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		this.lock();
 		if(snapshotMode.get()){
 			LOG.warn("NOT IMPLEMENTED");
+			System.exit(0);
 		}
 		Set<Map.Entry<Object,Object>> toReturn = super.entrySet();
 		this.release();
@@ -178,6 +181,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		this.lock();
 		if(snapshotMode.get()){
 			LOG.warn("NOT IMPLEMENTED");
+			System.exit(0);
 		}
 		Set<Object> toReturn = super.keySet();
 		this.release();
@@ -190,6 +194,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		this.lock();
 		if(snapshotMode.get()){
 			LOG.warn("NOT IMPLEMENTED");
+			System.exit(0);
 		}
 		Collection<Object> toReturn = super.values();
 		this.release();
@@ -202,7 +207,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		return super.size();
 	}
 	
-	@PartitionStateAccess
+	@PartitionStateAccess(partitioningKeyPositionInArguments=0)
 	@ReadAccess
 	public Object get(@PartitioningKey Object key){
 		this.lock();
@@ -224,7 +229,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		return toReturn;
 	}
 	
-	@PartitionStateAccess
+	@PartitionStateAccess(partitioningKeyPositionInArguments=0)
 	@WriteAccess
 	public Object put(@PartitioningKey Object key, Object value){
 		this.lock();
@@ -317,6 +322,7 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 		}
 	}
 	
+	@Override
 	public Object getFromBackup(Object key){
 		return super.get(key);
 	}
@@ -326,11 +332,13 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 	 */
 	
 	/** Flag this structure as Snapshot, so that new updates and reads happen in a new version **/
+	@Override
 	public void setSnapshotMode(boolean newValue){
 		this.snapshotMode.set(newValue);
 	}
 	
 	/** Reconcile changes kept in version with the original snapshot. **/
+	@Override
 	public synchronized void reconcile(){
 		System.out.println("OR: "+super.size()+" DIRTY: "+dirtyUpdates.size());
 		this.lock();

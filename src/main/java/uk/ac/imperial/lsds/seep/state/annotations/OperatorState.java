@@ -1,5 +1,9 @@
 package uk.ac.imperial.lsds.seep.state.annotations;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
 public @interface OperatorState {
-	int partitionable() default 1;
+	boolean partitionable() default true;
 }
