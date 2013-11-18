@@ -40,10 +40,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
-import uk.ac.imperial.lsds.seep.processingunit.StreamStateChunk;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -58,6 +56,10 @@ public class ControlDispatcher {
 	
 	private PUContext puCtx = null;
 	private Kryo k = null;
+	
+	///\fixme{remove this variable asap. debugging for now}
+	// FIXME: REMOVE THIS FROM HERE ASAP
+	private Output largeOutput = new Output(10000000);
 	
 	public ControlDispatcher(PUContext puCtx){
 		this.puCtx = puCtx;
@@ -172,8 +174,6 @@ public class ControlDispatcher {
 		}
 	}
 	
-	///\fixme{remove this variable asap. debugging for now}
-	private Output largeOutput = new Output(1000000000);
 	public void sendUpstream_blind(ControlTuple ct, int index){
 		long startSend = System.currentTimeMillis();
 //		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
@@ -273,35 +273,3 @@ public class ControlDispatcher {
 		}
 	}
 }
-
-//public void sendUpstream_large(ControlTuple ct, int index){
-//long startSend = System.currentTimeMillis();
-//EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-//Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
-//Output output = null;
-//BackupOperatorState bos = ct.getBackupState();
-//System.out.println("About to send: "+bos.getOpId());
-//try{
-//	//output = new Output(socket.getOutputStream(), 1000000000);
-//	largeOutput.setOutputStream(socket.getOutputStream());
-//	synchronized(k){
-//		synchronized(socket){
-//			synchronized (largeOutput){
-//				long startWrite = System.currentTimeMillis();
-//				k.writeObject(largeOutput, ct);
-//				System.out.println("%*% SER SIZE: "+largeOutput.toBytes().length+" bytes");
-//				largeOutput.flush();
-//				long stopWrite = System.currentTimeMillis();
-//				System.out.println("% Write socket: "+(stopWrite-startWrite));
-////			output.close();
-//			}
-//		}
-//	}
-//}
-//catch(IOException io){
-//	NodeManager.nLogger.severe("-> Dispatcher. While sending control msg "+io.getMessage());
-//	io.printStackTrace();
-//}
-//long stopSend = System.currentTimeMillis();
-//System.out.println("% Send : "+(stopSend-startSend));
-//}

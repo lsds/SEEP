@@ -493,19 +493,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			System.exit(-666);
 			return null;
 		}
-				
-		//State vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
-//		Object vns = ((LargeState)runningOpState).getVersionableAndStreamableState();
-//		if (runningOp instanceof Versionable){
-//			
-//		}
-		
-//		if(!(vns instanceof Versionable) || !(vns instanceof Streamable)){
-//			LOG.error("-> Trying to stream a non-streamable state");
-//			// Make noise during debugging
-//			System.exit(-666);
-//			return null;
-//		}
 		
 		TimestampTracker incomingTT = null;
 		

@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 public class BackupHandler implements Runnable{
@@ -182,14 +181,3 @@ public class BackupHandler implements Runnable{
 		}
 	}
 }
-
-
-//public ArrayList<MappedByteBuffer> getBackupHandler(){
-//	if(isSessionClosed.get()){
-//		return lastBackupHandlers;
-//	}
-//	else{
-//		//this option or better yet: wait for current session to finish
-//		return backupLastBackupHandlers;
-//	}
-//}

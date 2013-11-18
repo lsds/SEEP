@@ -21,8 +21,6 @@ import java.nio.channels.FileChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-
 public class BackupHandlerWorker implements Runnable{
 	
 	final private Logger LOG = LoggerFactory.getLogger(BackupHandlerWorker.class);
@@ -32,7 +30,6 @@ public class BackupHandlerWorker implements Runnable{
 	private BackupHandler owner = null;
 	private String sessionName = null;
 	private int transNumber = -1;
-
 	
 	private MappedByteBuffer mbb1;
 	
@@ -65,7 +62,7 @@ public class BackupHandlerWorker implements Runnable{
 				FileChannel fc = raf.getChannel();
 				File f = new File(fileName);
 				
-				mbb1 = fc.map(FileChannel.MapMode.READ_WRITE, 0, 1000000000);
+				mbb1 = fc.map(FileChannel.MapMode.READ_WRITE, 0, 10000000);
 				owner.addBackupHandler(opId, fc, f);
 			}
 			catch(Exception e){

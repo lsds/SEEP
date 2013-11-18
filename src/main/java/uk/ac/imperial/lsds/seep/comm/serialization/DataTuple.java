@@ -72,7 +72,29 @@ public class DataTuple implements DataTupleI, Serializable{
 		return dt;
 	}
 	
+	// to be used by java2sdg
+	@Deprecated
+	public DataTuple _setValues(Object[] objects){
+		TuplePayload tp = new TuplePayload();
+		tp.attrValues = new Payload(objects);
+		tp.timestamp = this.payload.timestamp;
+		tp.instrumentation_ts = this.payload.instrumentation_ts;
+		DataTuple dt = new DataTuple(idxMapper, tp);
+		return dt;
+	}
+	
 	public DataTuple newTuple(Object...objects){
+		TuplePayload tp = new TuplePayload();
+		tp.attrValues = new Payload(objects);
+		tp.timestamp = System.currentTimeMillis();
+		tp.instrumentation_ts =  tp.timestamp;
+		DataTuple dt = new DataTuple(idxMapper, tp);
+		return dt;
+	}
+	
+	// to be used by java2sdg
+	@Deprecated
+	public DataTuple _newTuple(Object[] objects){
 		TuplePayload tp = new TuplePayload();
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = System.currentTimeMillis();

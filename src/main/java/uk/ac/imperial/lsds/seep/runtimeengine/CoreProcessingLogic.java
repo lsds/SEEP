@@ -10,15 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Serializable;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +27,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.Main;
 import uk.ac.imperial.lsds.seep.P;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
@@ -50,16 +45,12 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
-import uk.ac.imperial.lsds.seep.processingunit.StreamStateChunk;
 import uk.ac.imperial.lsds.seep.reliable.BackupHandler;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
-import uk.ac.imperial.lsds.seep.reliable.MergerWorker;
 import uk.ac.imperial.lsds.seep.reliable.StreamerWorker;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
