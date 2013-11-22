@@ -12,7 +12,7 @@ package uk.ac.imperial.lsds.seep.reliable;
 
 import java.io.Serializable;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
@@ -36,7 +36,7 @@ public class ACKWorker implements Runnable, Serializable{
 	}
 	
 	public void run(){
-		int sleep = new Integer(P.valueFor("ackEmitInterval"));
+		int sleep = new Integer(GLOBALS.valueFor("ackEmitInterval"));
 		while(goOn){
 			TimestampTracker currentTsV = processingUnit.getLastACK();
 			System.out.println("ACKWorker: EmitACK");

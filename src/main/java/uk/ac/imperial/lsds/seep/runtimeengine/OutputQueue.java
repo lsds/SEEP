@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -109,9 +109,9 @@ public class OutputQueue {
 					//Flush the buffer to the stream
 					channelRecord.getOutput().flush();
 					// We save the data
-					if(P.valueFor("eftMechanismEnabled").equals("true")){
+					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
-						if(P.valueFor("TTT").equals("TRUE")){
+						if(GLOBALS.valueFor("TTT").equals("TRUE")){
 							
 						}
 						else{

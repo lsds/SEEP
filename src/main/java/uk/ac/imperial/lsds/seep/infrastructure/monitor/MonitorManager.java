@@ -20,7 +20,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -65,7 +65,7 @@ public class MonitorManager implements Runnable{
 		ServerSocket ss = null;
 		Socket currentConn = null;
 		try{
-			ss = new ServerSocket(Integer.parseInt(P.valueFor("monitorManagerPort")));
+			ss = new ServerSocket(Integer.parseInt(GLOBALS.valueFor("monitorManagerPort")));
 			Thread consumer = new Thread(new Consumer(mem));
 			consumer.start();
 			while(listen){
@@ -202,7 +202,7 @@ public class MonitorManager implements Runnable{
 				}
 			}
 			if(queueSize > 90000){
-				if(P.valueFor("enableAutomaticScaleOut").equals("true")){
+				if(GLOBALS.valueFor("enableAutomaticScaleOut").equals("true")){
 					if(!scalingOut){
 						synchronized(inf){
 							scalingOut = true;

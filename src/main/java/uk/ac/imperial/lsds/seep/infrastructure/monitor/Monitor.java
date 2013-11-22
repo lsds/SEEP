@@ -18,7 +18,7 @@ import java.net.Socket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.MetricsTuple;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -80,14 +80,14 @@ public class Monitor implements Runnable{
 		
 		try{
 			//Establish connection with the monitor manager.
-			InetAddress addrMon = InetAddress.getByName(P.valueFor("mainAddr"));
-			int portMon = Integer.parseInt(P.valueFor("monitorManagerPort"));
+			InetAddress addrMon = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
+			int portMon = Integer.parseInt(GLOBALS.valueFor("monitorManagerPort"));
 			LOG.info("MONITOR-> conn ip: {} port: {}", addrMon.toString(), portMon);
 			Socket conn = new Socket(addrMon, portMon);
 			OutputStream out = conn.getOutputStream();
 			output = new Output(out);
 			//Monitoring interval
-			int sleepInterval = 1000*(Integer.parseInt(P.valueFor("monitorInterval"))-1);
+			int sleepInterval = 1000*(Integer.parseInt(GLOBALS.valueFor("monitorInterval"))-1);
 			
 			//Runtime monitor loop
 			while(listen){

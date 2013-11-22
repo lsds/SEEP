@@ -26,8 +26,7 @@ import java.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.Main;
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
@@ -46,7 +45,9 @@ public class PUContext {
 
 	final private Logger LOG = LoggerFactory.getLogger(PUContext.class);
 	
-	private WorkerNodeDescription nodeDescr = null;
+//	private WorkerNodeDescription nodeDescr = null;
+	
+	private final int CONTROL_SOCKET;
 	
 	private ArrayList<EndPoint> remoteUpstream = new ArrayList<EndPoint>();
 	private ArrayList<EndPoint> remoteDownstream = new ArrayList<EndPoint>();
@@ -65,7 +66,8 @@ public class PUContext {
 	private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
-		this.nodeDescr = nodeDescr;
+		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket")); 
+//		this.nodeDescr = nodeDescr;
 		this.starTopology = starTopology;
 		try {
 			this.selector = SelectorProvider.provider().openSelector();
@@ -172,7 +174,7 @@ public class PUContext {
 	 */
 	public void configureNewDownstreamCommunication(int opID, OperatorStaticInformation loc) {
 		//If remote, create communication with other point			
-		if (P.valueFor("synchronousOutput").equals("true")){
+		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
 			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
 			LOG.debug("-> New remote downstream (SYNC) conn to OP: ", opID);
 		}
@@ -236,7 +238,7 @@ public class PUContext {
 		Socket socketD = null;
 		Socket socketC = null;
 		Socket socketBlind = null;
-		int blindPort = new Integer(P.valueFor("blindSocket"));
+		int blindPort = new Integer(GLOBALS.valueFor("blindSocket"));
 		
 		try{
 			if(type.equals("down")){
@@ -308,7 +310,7 @@ public class PUContext {
 		int opId = opRecId;
 		int dataPort = 0;
 		int controlPort = 0;
-		int blindPort = new Integer(P.valueFor("blindSocket"));
+		int blindPort = new Integer(GLOBALS.valueFor("blindSocket"));
 		
 		if(opToReconfigure.getOpContext().downstreams.size() > 0){
 			dataPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInD();
@@ -333,7 +335,7 @@ public class PUContext {
 		}
 		for(EndPoint ep : upstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
-				int upControlPort = Main.CONTROL_SOCKET + ep.getOperatorId();
+				int upControlPort = CONTROL_SOCKET + ep.getOperatorId();
 				try{
 					Socket controlS = new Socket(newIp, upControlPort);
 					Socket blindS = new Socket(newIp, blindPort);

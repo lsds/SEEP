@@ -20,7 +20,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
@@ -54,7 +54,7 @@ public class SerialiserWorker implements Runnable{
 	
 	public SerialiserWorker(ArrayBlockingQueue<JobBean> jobQueue){
 		this.k = initializeKryo();
-		this.BLIND_SOCKET = new Integer(P.valueFor("blindSocket"));
+		this.BLIND_SOCKET = new Integer(GLOBALS.valueFor("blindSocket"));
 		this.jobQueue = jobQueue;
 	}
 	

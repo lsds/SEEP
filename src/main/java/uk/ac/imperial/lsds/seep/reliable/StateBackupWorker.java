@@ -15,7 +15,7 @@ import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
@@ -50,11 +50,11 @@ public class StateBackupWorker implements Runnable, Serializable{
 	public StateBackupWorker(StatefulProcessingUnit processingUnit, StateWrapper s){
 		this.processingUnit = processingUnit;
 		this.state = s;
-		if(P.valueFor("checkpointMode").equals("large-state")){
+		if(GLOBALS.valueFor("checkpointMode").equals("large-state")){
 			LOG.info("Checkpoint mode of this operator is LARGE-STATE");
 			this.CHECKPOINTMODE = CheckpointMode.LARGE_STATE;
 		}
-		else if(P.valueFor("checkpointMode").equals("light-state")){
+		else if(GLOBALS.valueFor("checkpointMode").equals("light-state")){
 			LOG.info("Checkpoint mode of this operator is LIGHT-STATE");
 			this.CHECKPOINTMODE = CheckpointMode.LIGHT_STATE;
 		}
@@ -95,7 +95,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 			long elapsedTime = System.currentTimeMillis() - initTime;
 			if(elapsedTime > checkpointInterval){
 				//synch this call
-				if(P.valueFor("eftMechanismEnabled").equals("true")){
+				if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 					//if not initialisin state...
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						long startCheckpoint = System.currentTimeMillis();
@@ -137,7 +137,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 			long elapsedTime = System.currentTimeMillis() - initTime;
 			if(elapsedTime > checkpointInterval){
 				//synch this call
-				if(P.valueFor("eftMechanismEnabled").equals("true")){
+				if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 					//if not initialisin state...
 					if(!processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE)){
 						long startCheckpoint = System.currentTimeMillis();

@@ -13,30 +13,30 @@ package uk.ac.imperial.lsds.seep.elastic;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.api.NodeAlreadyInUseException;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
+import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
+import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
@@ -110,10 +110,10 @@ public class ElasticInfrastructureUtils {
 	
 	public synchronized void scaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
 		try {
-			if(P.valueFor("checkpointMode").equals("light-state")){
+			if(GLOBALS.valueFor("checkpointMode").equals("light-state")){
 				lightScaleOutOperator(opIdToParallelize, newOpId, newNode);
 			}
-			else if(P.valueFor("checkpointMode").equals("large-state")){
+			else if(GLOBALS.valueFor("checkpointMode").equals("large-state")){
 				largeScaleOutOperator(opIdToParallelize, newOpId, newNode);
 			}
 		} 
@@ -343,7 +343,8 @@ public class ElasticInfrastructureUtils {
 		}
 		// Register new op associated to new node in the infrastructure
 		try {
-			qp.place(newOp, newNode);
+			//qp.place(newOp, newNode);
+			qp.place(newOp);
 		} 
 		catch (NodeAlreadyInUseException e) {
 			// TODO Auto-generated catch block
@@ -426,7 +427,7 @@ public class ElasticInfrastructureUtils {
 		boolean isStateful = false;
 		for (Operator o: ops) {
 			if (o.getOperatorId() == opIdToParallelize) {
-				if(o instanceof StatefulOperator){
+				if(o.getOperatorCode() instanceof StatefulOperator){
 					isStateful = true;
 				}
 				for (PlacedOperator upstream: o.getOpContext().upstreams) {
@@ -472,8 +473,8 @@ public class ElasticInfrastructureUtils {
 
 	public void addDownstreamConnections(Operator newOp){
 		//Search for all upstream ids
-		QuerySpecificationI opToAdd = newOp;
-		QuerySpecificationI opToContact = null;
+		Connectable opToAdd = newOp;
+		Connectable opToContact = null;
 		for(PlacedOperator op : newOp.getOpContext().upstreams){
 			//deploy new connection with all of them?
 			opToContact = inf.getElements().get(op.opID());
@@ -483,8 +484,8 @@ public class ElasticInfrastructureUtils {
 	}
 
 	public void addUpstreamConnections(Operator newOp){
-		QuerySpecificationI opToAdd = newOp;
-		QuerySpecificationI opToContact = null;
+		Connectable opToAdd = newOp;
+		Connectable opToContact = null;
 		for(PlacedOperator op : newOp.getOpContext().downstreams){
 			opToContact = inf.getElements().get(op.opID());
 			//the operator that must change, the id of the new replica, the type of operator splitting
@@ -494,67 +495,32 @@ public class ElasticInfrastructureUtils {
 	}
 
 	public Operator addOperator(int opId, int newOpId) throws OperatorNotRegisteredException{
+		OperatorCode opCode = getOperatorCode(opId);
+		if(opCode == null){
+			throw new OperatorNotRegisteredException("opId does not match any registered operator");
+		}
 		Operator op = null;
-		String className = getOperatorClassName(opId);
-		if(className == null){
-			throw new OperatorNotRegisteredException("Operator class name not found");
+		List<String> attributes = inf.getOperatorById(opId).getOpContext().getDeclaredWorkingAttributes();
+		if(opCode instanceof StatefulOperator){
+			StateWrapper copyOfState = (StateWrapper) inf.getOperatorById(opId).getStateWrapper().clone();
+			copyOfState.setOwnerId(newOpId);
+			op = Operator.getStatefulOperator(newOpId, opCode, copyOfState, attributes);
 		}
-		try{
-			LOG.debug("-> Registering new OP: "+newOpId+" as OPType: "+className);
-			// I use the custom class loader to load the operator, since its code coming from the user side
-			Object instance = null;
-			Constructor<?> constructor = null;
-			// We load the class
-			Class<?> operatorClass = ucl.loadClass(className);
-			// By reflection we extract the constructor for this class
-			Class<?> parameterTypes[] = {};
-			constructor = operatorClass.getConstructor(parameterTypes);
-			
-			instance = constructor.newInstance();
-			// Cast instance to operator
-			op = (Operator)instance;
-			
-			Operator toScaleOut = inf.getOperatorById(opId);
-			if(toScaleOut instanceof StatefulOperator){
-				// State injection. Pick the already existing operator, getState, clone it and then change the operatorId
-				StateWrapper copyOfState = (StateWrapper) inf.getOperatorById(opId).getStateWrapper().clone();
-				copyOfState.setOwnerId(newOpId);
-				op.setStateWrapper(copyOfState);
-			}
-			op.setOperatorId(newOpId);
-			op.setSubclassOperator();
-			//op = (Operator) Class.forName(className).getConstructor(int.class).newInstance(newOpId);
-		}
-		catch(ClassNotFoundException cnfe){
-			System.out.println("While looking for className: "+cnfe.getMessage());
-			cnfe.printStackTrace();
-		}
-		catch(InstantiationException ie){
-			System.out.println("While instantiating operator: "+ie.getMessage());
-			ie.printStackTrace();
-		}
-		catch(IllegalAccessException iae){
-			System.out.println("While instantiating...: "+iae.getMessage());
-			iae.printStackTrace();
-		} 
-		catch (SecurityException se) {
-			System.out.println("While instantiating...: "+se.getMessage());
-			se.printStackTrace();
-		} 
-		catch (NoSuchMethodException e) {
-			System.out.println("While instantiating...: "+e.getMessage());
-			e.printStackTrace();
-		} 
-		catch (IllegalArgumentException e) {
-			System.out.println("While instantiating...: "+e.getMessage());
-			e.printStackTrace();
-		} 
-		catch (InvocationTargetException e) {
-			System.out.println("While instantiating...: "+e.getMessage());
-			e.printStackTrace();
+		else if(opCode instanceof StatelessOperator){
+			op = Operator.getStatelessOperator(newOpId, opCode, attributes);
 		}
 		inf.addOperator(op);
 		return op;
+	}
+	
+	private OperatorCode getOperatorCode(int opId){
+		ArrayList<Operator> ops = inf.getOps();
+		for(Operator op : ops){
+			if(op.getOperatorId() == opId){
+				return op.getOperatorCode();
+			}
+		}
+		return null;
 	}
 
 	public void configureOperatorContext(int opId, Operator newOp){

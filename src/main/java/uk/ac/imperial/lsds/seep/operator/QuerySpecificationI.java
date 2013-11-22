@@ -12,10 +12,6 @@ package uk.ac.imperial.lsds.seep.operator;
 
 
 public interface QuerySpecificationI {
-
-	public enum InputDataIngestionMode{
-		ONE_AT_A_TIME, WINDOW, ORDERED, UPSTREAM_SYNC_BARRIER
-	}
 	
 	public int getOperatorId();
 
@@ -23,8 +19,6 @@ public interface QuerySpecificationI {
 	
 	public void setOpContext(OperatorContext opContext);
 
-	public void connectTo(QuerySpecificationI down, boolean originalQuery);
-	
-//	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery);
+//	public void connectTo(QuerySpecificationI down, boolean originalQuery);
 
 }

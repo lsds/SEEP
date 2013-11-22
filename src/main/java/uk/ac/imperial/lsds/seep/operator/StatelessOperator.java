@@ -10,5 +10,6 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
-public interface StatelessOperator {
+public interface StatelessOperator extends OperatorCode{
+	
 }

@@ -27,24 +27,11 @@ import uk.ac.imperial.lsds.seep.infrastructure.master.MasterController;
 
 public class Main {
 	
-	final Logger LOG = LoggerFactory.getLogger(Main.class);
-	//Properties variable
-	static P p = new P();
-	
-	// Base ports
-	public static int CONTROL_SOCKET = 0;
-	public static int DATA_SOCKET = 0;
-	public static int BLIND_SOCKET = 0;
+	final private static Logger LOG = LoggerFactory.getLogger(Main.class);
 	
 	public static void main(String args[]){
 		
 		Main instance = new Main();
-		//Load configuration properties from the config file
-		
-		p.loadProperties();
-		CONTROL_SOCKET = new Integer(P.valueFor("controlSocket"));
-		DATA_SOCKET = new Integer(P.valueFor("dataSocket"));
-		BLIND_SOCKET = new Integer(P.valueFor("blindSocket"));
 		
 		if(args.length == 0){
 			System.out.println("ARGS:");
@@ -94,10 +81,10 @@ public class Main {
 	
 	private void executeSec(String args[]){
 		//Read parameters from properties
-		int port = Integer.parseInt(P.valueFor("mainPort"));
+		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		InetAddress bindAddr = null;
 		try {
-			bindAddr = InetAddress.getByName(P.valueFor("mainAddr"));
+			bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -111,7 +98,7 @@ public class Main {
 			ownPort = new Integer(args[1]);
 		}
 		else{
-			ownPort = Integer.parseInt(P.valueFor("ownPort"));
+			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
 		}
 		
 		

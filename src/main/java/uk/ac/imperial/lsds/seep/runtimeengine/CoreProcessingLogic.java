@@ -27,7 +27,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -45,6 +45,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
@@ -185,7 +186,7 @@ public class CoreProcessingLogic implements Serializable{
 		TimestampTracker oldest = buffer.trim(ack_ts);
 		
 		// Check whether this operator is responsible to control when to backpropagate acks
-//		if(pu.getOperator() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
+		if(pu.getOperator().getOperatorCode() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
 			// First assign this ackV to the opId, in case it is updating a previous value
 			if(oldest != null){
 				downstreamLastAck.put(opId, oldest);
@@ -205,7 +206,7 @@ public class CoreProcessingLogic implements Serializable{
 			else{
 				System.out.println("is NULL");
 			}
-//		}
+		}
 	}
 	
 	public void splitState(int oldOpId, int newOpId, int key) {
@@ -393,10 +394,10 @@ public class CoreProcessingLogic implements Serializable{
 		//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
 		if(pu.isNodeStateful()){
 			LOG.debug("NODE: {} INITIAL BACKUP", owner.getNodeDescr().getNodeId());
-			if(P.valueFor("checkpointMode").equals("large-state")){
+			if(GLOBALS.valueFor("checkpointMode").equals("large-state")){
 				System.out.println("skip initial state backup");
 			}
-			else if(P.valueFor("checkpointMode").equals("light-state")){
+			else if(GLOBALS.valueFor("checkpointMode").equals("light-state")){
 				((StatefulProcessingUnit)pu).checkpointAndBackupState();
 			}
 			else{

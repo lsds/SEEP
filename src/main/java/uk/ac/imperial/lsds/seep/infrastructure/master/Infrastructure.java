@@ -29,11 +29,11 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.api.ScaleOutIntentBean;
-import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.comm.ConnHandler;
+import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -45,17 +45,16 @@ import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializ
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
 import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MonitorManager;
+import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
+import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
@@ -71,10 +70,10 @@ public class Infrastructure {
 
 	final private Logger LOG = LoggerFactory.getLogger(Infrastructure.class);
 	
-	int value = Integer.parseInt(P.valueFor("maxLatencyAllowed"));
+	int value = Integer.parseInt(GLOBALS.valueFor("maxLatencyAllowed"));
 	static public MasterStatisticsHandler msh = new MasterStatisticsHandler();
 	
-	private int baseId = Integer.parseInt(P.valueFor("baseId"));
+	private int baseId = Integer.parseInt(GLOBALS.valueFor("baseId"));
 	
 	private Deque<Node> nodeStack = new ArrayDeque<Node>();
 	private int numberRunningMachines = 0;
@@ -86,7 +85,8 @@ public class Infrastructure {
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	// States of the query
 	private ArrayList<StateWrapper> states = new ArrayList<StateWrapper>();
-	public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
+	//public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
+	public Map<Integer,Connectable> elements = new HashMap<Integer, Connectable>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
@@ -188,7 +188,7 @@ public class Infrastructure {
 			}
 			r.configureRoutingImpl(op.getOpContext(), downstream);
 			op.setRouter(r);
-			LOG.info("Configuring Routing for OP {} ...DONE");
+			LOG.info("Configuring Routing for OP {} ...DONE", op.getOperatorId());
 		}
 	}
 	
@@ -212,7 +212,11 @@ public class Infrastructure {
 		return ops;
 	}
 	
-	public Map<Integer, QuerySpecificationI> getElements() {
+//	public Map<Integer, QuerySpecificationI> getElements() {
+//		return elements;
+//	}
+	
+	public Map<Integer, Connectable> getElements() {
 		return elements;
 	}
 	
@@ -247,7 +251,7 @@ public class Infrastructure {
 	}
 	
 	public void updateContextLocations(Operator o) {
-		for (QuerySpecificationI op: elements.values()) {
+		for (Connectable op: elements.values()) {
 			if (op!=o){
 				setDownstreamLocationFromPotentialDownstream(o, op);
 				setUpstreamLocationFromPotentialUpstream(o, op);
@@ -255,7 +259,7 @@ public class Infrastructure {
 		}
 	}
 
-	private void setDownstreamLocationFromPotentialDownstream(QuerySpecificationI target, QuerySpecificationI downstream) {
+	private void setDownstreamLocationFromPotentialDownstream(Connectable target, Connectable downstream) {
 		for (PlacedOperator op: downstream.getOpContext().upstreams) {
 			if (op.opID() == target.getOperatorId()) {
 				target.getOpContext().setDownstreamOperatorStaticInformation(downstream.getOperatorId(), downstream.getOpContext().getOperatorStaticInformation());
@@ -263,7 +267,7 @@ public class Infrastructure {
 		}
 	}
 	
-	private void setUpstreamLocationFromPotentialUpstream(QuerySpecificationI target, QuerySpecificationI upstream) {
+	private void setUpstreamLocationFromPotentialUpstream(Connectable target, Connectable upstream) {
 		for (PlacedOperator op: upstream.getOpContext().downstreams) {
 			if (op.opID() == target.getOperatorId()) {
 				target.getOpContext().setUpstreamOperatorStaticInformation(upstream.getOperatorId(), upstream.getOpContext().getOperatorStaticInformation());
@@ -467,14 +471,14 @@ public class Infrastructure {
 		System.out.println("REDEPLOY-operators with ip: "+n.toString());
 
 		//Redeploy operators
-		for(QuerySpecificationI op: ops){
+		for(Connectable op: ops){
 			//Loop through the operators, if someone has the same ip, redeploy
 			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
 				LOG.debug("-> Redeploy OP: {}", op.getOperatorId());
 				bcu.sendObject(n, op);
 			}
 		}
-		for(QuerySpecificationI op: ops){
+		for(Connectable op: ops){
 			//Loop through the operators, if someone has the same ip, reconfigure
 			if(op.getOpContext().getOperatorStaticInformation().getMyNode().equals(n)){
 				LOG.debug("-> Reconfigure OP: ", op.getOperatorId());
@@ -545,7 +549,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	/// \test {some variables were bad, check if now is working}
 	public void reMap(InetAddress oldIp, InetAddress newIp){
 		OperatorContext opCtx = null;
-		for(QuerySpecificationI op: ops){
+		for(Connectable op: ops){
 			opCtx = op.getOpContext();
 			OperatorStaticInformation loc = opCtx.getOperatorStaticInformation();
 			Node node = loc.getMyNode();
@@ -562,13 +566,13 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	public void updateU_D(InetAddress oldIp, InetAddress newIp, boolean parallelRecovery){
 		LOG.warn("-> Using sendControlMsg WITHOUT ACK");
 		//Update operator information
-		for(QuerySpecificationI me : ops){
+		for(Connectable me : ops){
 			//If there is an operator that was placed in the oldIP...
 			if(me.getOpContext().getOperatorStaticInformation().getMyNode().getIp().equals(oldIp)){
 				//We get its downstreams
 				for(PlacedOperator downD : me.getOpContext().downstreams){
 					//Now we change each downstream info (about me) and update its conn with me
-					for(QuerySpecificationI downstream: ops){
+					for(Connectable downstream: ops){
 						if(downstream.getOperatorId() == downD.opID()){
 							//To change info of this operator, locally first
 							downstream.getOpContext().changeLocation(oldIp, newIp);
@@ -582,7 +586,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 					}
 				}
 				for(PlacedOperator upU: me.getOpContext().upstreams){
-					for(QuerySpecificationI upstream: ops){
+					for(Connectable upstream: ops){
 						if(upstream.getOperatorId() == upU.opID()){
 							//To change info of this operator, locally and remotely
 							upstream.getOpContext().changeLocation(oldIp, newIp);
@@ -622,7 +626,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	}
 
 	public synchronized Node getNodeFromPool() throws NodePoolEmptyException{
-		if(nodeStack.size() < Integer.parseInt(P.valueFor("minimumNodesAvailable"))){
+		if(nodeStack.size() < Integer.parseInt(GLOBALS.valueFor("minimumNodesAvailable"))){
 			//nLogger.info("Instantiating EC2 images");
 			//new Thread(new EC2Worker(this)).start();
 		}
@@ -640,20 +644,22 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	
 	public void placeNew(Operator o, Node n) {
 		int opId = o.getOperatorId();
-		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
+		boolean isStatefull = (o.getOperatorCode() instanceof StatefulOperator) ? true : false;
 		// Note that opId and originalOpId are the same value here, since placeNew places only original operators in the query
-		OperatorStaticInformation l = new OperatorStaticInformation(opId, opId, n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, opId, n, 
+				Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId, 
+				Integer.parseInt(GLOBALS.valueFor("dataSocket")) + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
 		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
 			int downID = downDescr.opID();
-			QuerySpecificationI downOp = elements.get(downID);
+			Connectable downOp = elements.get(downID);
 			downOp.getOpContext().setUpstreamOperatorStaticInformation(opId, l);
 		}
 
 		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
 			int upID = upDescr.opID();
-			QuerySpecificationI upOp = elements.get(upID);
+			Connectable upOp = elements.get(upID);
 			upOp.getOpContext().setDownstreamOperatorStaticInformation(opId, l);
 		}
 	}
@@ -661,25 +667,27 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	public void placeNewParallelReplica(Operator originalOp, Operator o, Node n){
 		int opId = o.getOperatorId();
 		int originalOpId = originalOp.getOpContext().getOperatorStaticInformation().getOpId();
-		boolean isStatefull = (o instanceof StatefulOperator) ? true : false;
+		boolean isStatefull = (o.getOperatorCode() instanceof StatefulOperator) ? true : false;
 		
-		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, QueryPlan.CONTROL_SOCKET + opId, QueryPlan.DATA_SOCKET + opId, isStatefull);
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, 
+				Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId, 
+				Integer.parseInt(GLOBALS.valueFor("dataSocket")) + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
 		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {
 			int downID = downDescr.opID();
-			QuerySpecificationI downOp = elements.get(downID);
+			Connectable downOp = elements.get(downID);
 			downOp.getOpContext().setUpstreamOperatorStaticInformation(opId, l);
 		}
 
 		for (OperatorContext.PlacedOperator upDescr: o.getOpContext().upstreams) {
 			int upID = upDescr.opID();
-			QuerySpecificationI upOp = elements.get(upID);
+			Connectable upOp = elements.get(upID);
 			upOp.getOpContext().setDownstreamOperatorStaticInformation(opId, l);
 		}
 	}
 
-	public void deployConnection(String command, QuerySpecificationI opToContact, QuerySpecificationI opToAdd, String operatorType) {
+	public void deployConnection(String command, Connectable opToContact, Connectable opToAdd, String operatorType) {
 		System.out.println("OPERATOR TYPE: "+operatorType);
 		ControlTuple ct = null;
 		String ip = null;
@@ -754,7 +762,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		System.out.println("  ");
 
 		System.out.println("OPERATORS: ");
-		for (QuerySpecificationI op: ops) {
+		for (Connectable op: ops) {
 			System.out.println(op);
 			System.out.println();
 		}

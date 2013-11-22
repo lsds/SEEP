@@ -24,12 +24,12 @@ import java.net.UnknownHostException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.elastic.IPNotBoundToOperatorException;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
+import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
 
 /**
@@ -221,21 +221,24 @@ System.out.println("broadcast state and runtime init");
 	}
 		
 	private void addPartitioningConnectionCommand(String[] token)	throws NumberFormatException {
-		QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
-		QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
+		Connectable src = inf.elements.get(Integer.parseInt(token[1]));
+		Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
 		inf.deployConnection("add_downstream_partition", src, dst, "Null");
 	}
-		private void addDownstreamConnectionCommand(String[] token)	throws NumberFormatException {
-		QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
-		QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
+	
+	private void addDownstreamConnectionCommand(String[] token)	throws NumberFormatException {
+		Connectable src = inf.elements.get(Integer.parseInt(token[1]));
+		Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
 		inf.deployConnection("add_downstream", src, dst, "null");
 	}
-		private void addUpstreamConnectionCommand(String[] token)throws NumberFormatException {
-		QuerySpecificationI src = inf.elements.get(Integer.parseInt(token[1]));
-		QuerySpecificationI dst = inf.elements.get(Integer.parseInt(token[2]));
+	
+	private void addUpstreamConnectionCommand(String[] token)throws NumberFormatException {
+		Connectable src = inf.elements.get(Integer.parseInt(token[1]));
+		Connectable dst = inf.elements.get(Integer.parseInt(token[2]));
 		inf.deployConnection("add_upstream", dst, src, "NuLL");
 	}
-		private void placeCommand(String[] token) throws NumberFormatException, UnknownHostException {
+	
+	private void placeCommand(String[] token) throws NumberFormatException, UnknownHostException {
 		Operator op = (Operator) inf.elements.get(Integer.parseInt(token[1]));
 		Node n = new Node(InetAddress.getByName(token[2]),Integer.parseInt(token[3]));
 		System.out.println(op);
@@ -263,7 +266,7 @@ System.out.println("broadcast state and runtime init");
 					System.out.println("Manager: Command received -> "+com);
 						
 					if(token[0].equals("crash")){
-						if(P.valueFor("parallelRecovery").equals("true")){
+						if(GLOBALS.valueFor("parallelRecovery").equals("true")){
 							crashCommandParallelRecovery(token[1],token[2],token[3],token[4]);
 						}
 						else{

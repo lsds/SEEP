@@ -23,7 +23,7 @@ import java.net.URLClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
@@ -47,12 +47,10 @@ public class MasterController {
 	
     private Infrastructure inf;
     ElasticInfrastructureUtils eiu;
-    P prop = new P();
 	
 	public void init(){
 		LOG.debug("-> Initializing Master Controller...");
-		prop.loadProperties();
-		inf = new Infrastructure(Integer.parseInt(P.valueFor("mainPort")));
+		inf = new Infrastructure(Integer.parseInt(GLOBALS.valueFor("mainPort")));
 		eiu = new ElasticInfrastructureUtils(inf);
 		inf.setEiu(eiu);
 		inf.startInfrastructure();

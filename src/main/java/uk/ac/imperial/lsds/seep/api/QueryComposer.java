@@ -10,7 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.api;
 
-
-public interface BaseI {
+public interface QueryComposer {
+	
 	public QueryPlan compose();
 }

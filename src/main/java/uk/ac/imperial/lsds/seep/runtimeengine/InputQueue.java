@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 
@@ -23,7 +23,7 @@ public class InputQueue implements DataStructureI{
 	private BlockingQueue<DataTuple> inputQueue;
 	
 	public InputQueue(){
-		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(P.valueFor("inputQueueLength")));
+		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
 	}
 	
 	public InputQueue(int size){

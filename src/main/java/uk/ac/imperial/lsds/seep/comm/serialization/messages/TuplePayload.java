@@ -26,6 +26,11 @@ public class TuplePayload implements Serializable{
 	
 	@Override
 	public String toString(){
-		return attrValues.toString();
+		if(attrValues.size() > 0){
+			return attrValues.toString();
+		}
+		else{
+			return "empty tuple";
+		}
 	}
 }

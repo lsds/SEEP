@@ -9,3 +9,5 @@ examples/*/lib/*.jar
 .project
 .classpath
 .codepro
+query.jar
+

@@ -17,7 +17,7 @@ import java.net.Socket;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
@@ -50,7 +50,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	//Batch information for this channel
 	private BatchTuplePayload batch = new BatchTuplePayload();
-	private int channelBatchSize = Integer.parseInt(P.valueFor("batchLimit"));
+	private int channelBatchSize = Integer.parseInt(GLOBALS.valueFor("batchLimit"));
 	private long tick = 0;
 
 	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, Buffer buffer){
@@ -152,7 +152,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	public void cleanBatch(){
 		batch.clear();
-		int limit = Integer.parseInt(P.valueFor("batchLimit"));
+		int limit = Integer.parseInt(GLOBALS.valueFor("batchLimit"));
 		channelBatchSize = limit;
 	}
 	

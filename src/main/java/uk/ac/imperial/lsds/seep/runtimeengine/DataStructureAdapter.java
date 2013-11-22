@@ -17,10 +17,9 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 
 public class DataStructureAdapter {
 	
@@ -66,12 +65,12 @@ public class DataStructureAdapter {
 			LOG.debug("-> Setting up multiple inputDataIngestionModes");
 			// For processing one event per iteration, the queue is the best abstraction
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
-				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
+				if(entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();
 					dsoMap.put(entry.getKey(), iq);
 					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}
-				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
 					int originalOperatorOnBarrier = entry.getKey();
 					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
@@ -84,12 +83,12 @@ public class DataStructureAdapter {
 		else if(iimMap.size() == 1){
 			LOG.debug("-> Setting up a unique InputDataIngestionMode");
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
-				if(entry.getValue().equals(Operator.InputDataIngestionMode.ONE_AT_A_TIME)){
+				if(entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)){
 					InputQueue iq = new InputQueue();
 					uniqueDso = iq;
 					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}
-				else if(entry.getValue().equals(Operator.InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
 					int originalOperatorOnBarrier = entry.getKey();
 					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);

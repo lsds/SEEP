@@ -23,8 +23,7 @@ import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.Main;
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
@@ -53,6 +52,7 @@ public class ControlDispatcher {
 	final private Logger LOG = LoggerFactory.getLogger(ControlDispatcher.class);
 
 	private final int BLIND_SOCKET;
+	private final int CONTROL_SOCKET;
 	
 	private PUContext puCtx = null;
 	private Kryo k = null;
@@ -63,7 +63,8 @@ public class ControlDispatcher {
 	
 	public ControlDispatcher(PUContext puCtx){
 		this.puCtx = puCtx;
-		this.BLIND_SOCKET = new Integer(P.valueFor("blindSocket"));
+		this.BLIND_SOCKET = new Integer(GLOBALS.valueFor("blindSocket"));
+		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket"));
 		this.k = initializeKryo();
 	}
 	
@@ -126,7 +127,7 @@ public class ControlDispatcher {
 		Output output = null;
 		BufferedReader in = null;
 		try{
-			Socket socket = new Socket(ip_endpoint, (Main.CONTROL_SOCKET+targetOpId));
+			Socket socket = new Socket(ip_endpoint, (CONTROL_SOCKET+targetOpId));
 			output = new Output(socket.getOutputStream());
 			synchronized(k){
 				synchronized(socket){
@@ -156,7 +157,7 @@ public class ControlDispatcher {
 		InetAddress ip_endpoint = dcc.getIp();
 		Output output = null;
 		try{
-			Socket socket = new Socket(ip_endpoint, (Main.CONTROL_SOCKET+targetOpId));
+			Socket socket = new Socket(ip_endpoint, (CONTROL_SOCKET+targetOpId));
 			output = new Output(socket.getOutputStream());
 			synchronized(k){
 				synchronized(socket){

@@ -104,14 +104,14 @@ return null;
 			}
 			// Get index of downstream
 			int index = opContext.getDownOpIndexFromOpId(id);
-			if(down instanceof StatelessOperator){
+			if(down.getOperatorCode() instanceof StatelessOperator){
 				int numDownstreams = downstream.size();
 				LOG.debug("Configuring Static Stateless Routing Impl with {} downstreams", numDownstreams);
 				// At this point there can only be 1 downstream (an operator can have N downstream types,
 				//but only 1 instance of a given type Ni)
 				rs = new StatelessRoutingImpl(DEFAULT_SPLIT_WINDOW, index, 1);
 			}
-			else if(down instanceof StatefulOperator){
+			else if(down.getOperatorCode() instanceof StatefulOperator){
 				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
 				rs = new StatefulRoutingImpl(index);
 			}
@@ -163,7 +163,6 @@ return null;
 			System.out.println("idx for routing impl");
 			System.exit(0); // xtreme
 		}
-	
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
 	}
 	

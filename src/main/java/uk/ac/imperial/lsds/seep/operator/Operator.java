@@ -21,40 +21,53 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
-public abstract class Operator implements Serializable, QuerySpecificationI, EndPoint{
+public class Operator implements Serializable, EndPoint, Connectable{
 
 	private static final long serialVersionUID = 1L;
-	final private Logger LOG = LoggerFactory.getLogger(Operator.class);
+	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
 
-	private int operatorId;
+	private final int operatorId;
+	private final OperatorCode operatorCode;
+	private final StateWrapper stateWrapper;
+	
+	
 	private OperatorContext opContext = new OperatorContext();
-	private StateWrapper stateWrapper = null;
 	private boolean ready = false;
-	public Operator subclassOperator = null;
+	//public Operator subclassOperator = null;
 	public IProcessingUnit processingUnit = null;
 	private Router router = null;	
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionMode = new HashMap<Integer, InputDataIngestionMode>();
-
-	public Operator(){}
 	
-	/** Instantiation methods **/
+	public static Operator getStatefulOperator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
+		return new Operator(opId, opCode, s, attributes);
+	}
 	
-	public void setOperatorId(int opId){
+	public static Operator getStatelessOperator(int opId, OperatorCode opCode, List<String> attributes){
+		return new Operator(opId, opCode, attributes);
+	}
+	
+	public OperatorCode getOperatorCode(){
+		return operatorCode;
+	}
+	
+	private Operator(int opId, OperatorCode opCode, List<String> attributes){
 		this.operatorId = opId;
+		this.operatorCode = opCode;
+		this.stateWrapper = null;
+		opContext.setDeclaredWorkingAttributes(attributes);
 	}
 	
-	public void setStateWrapper(StateWrapper state){
-		this.stateWrapper = state;
+	private Operator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
+		this.operatorId = opId;
+		this.operatorCode = opCode;
+		this.stateWrapper = s;
+		opContext.setDeclaredWorkingAttributes(attributes);
 	}
-	
-	public void setSubclassOperator(){
-		subclassOperator = this;
-	}
+
 	
 	/** Other methods **/
 	
@@ -78,27 +91,16 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		this.router = router;
 	}
 	
-	public Operator getSubclassOperator() {
-		return subclassOperator;
-	}
-	
 	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
+		
+		this.operatorCode.api.setOperator(this); //compose
 	}
-	
-	/** Mandatory methods to implement by developers **/
-	
-	public abstract void setUp();
 
-	public abstract void processData(DataTuple dt);
-	
-	public abstract void processData(ArrayList<DataTuple> ldt);
-	
 	/** Methods used by the developers to send data **/
 	
 	// Send downstream to non-stateful op or stateful non-parallelizable op
 	public synchronized void send(DataTuple dt){
-		/// \todo{FIX THIS, look for a value that cannot be present in the tuples...}
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt);
 		processingUnit.sendData(dt, targets);
@@ -176,27 +178,6 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 		this.opContext.setOriginalDownstream(originalDownstream);
 	}
 	
-	public void connectTo(QuerySpecificationI down, boolean originalQuery){
-		// default inputdataingestion and default stream
-		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, 0);
-	}
-	
-	public void connectTo(QuerySpecificationI down, boolean originalQuery, int streamId) {
-		// default inputdataingestion 
-		this.connectTo(down, QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, streamId);
-	}
-	
-	public void connectTo(QuerySpecificationI down, InputDataIngestionMode mode, boolean originalQuery, int streamId){
-		LOG.debug("Connecting OP: "+this.getOperatorId()+" with downstream Op: "+down.getOperatorId());
-		opContext.addDownstream(down.getOperatorId());
-		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
-		down.getOpContext().addUpstream(getOperatorId());
-		// We store routing info, an operator sends to a streamId, who knows the end-stream edge
-		opContext.routeValueToDownstream(streamId, down.getOperatorId());
-		// Store in the opContext of the downstream I am adding, the inputdataingestion mode that I demand
-		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
-	}
-	
 	public void _declareWorkingAttributes(List<String> attributes){
 		opContext.setDeclaredWorkingAttributes(attributes);
 	}
@@ -211,7 +192,44 @@ public abstract class Operator implements Serializable, QuerySpecificationI, End
 			this.getOpContext().setInputDataIngestionModePerUpstream(opId, idim.get(opId));
 		}
 	}
+	
+	public void processData(DataTuple data){
+		operatorCode.processData(data);
+	}
+	
+	public void processData(ArrayList<DataTuple> dataList){
+		operatorCode.processData(dataList);
+	}
+	
+	public void setUp(){
+		operatorCode.setUp();
+	}
 
+	@Override
+	public void connectTo(Connectable down, boolean originalQuery) {
+		// default inputdataingestion and default stream
+		this.connectTo(down, InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, 0);
+	}
+
+	@Override
+	public void connectTo(Connectable down, boolean originalQuery, int streamId) {
+		// default inputdataingestion 
+		this.connectTo(down, InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, streamId);
+	}
+
+	@Override
+	public void connectTo(Connectable down, InputDataIngestionMode mode,
+			boolean originalQuery, int streamId) {
+		LOG.debug("Connecting OP: "+this.getOperatorId()+" with downstream Op: "+down.getOperatorId());
+		opContext.addDownstream(down.getOperatorId());
+		if(originalQuery) opContext.addOriginalDownstream(down.getOperatorId());
+		down.getOpContext().addUpstream(getOperatorId());
+		// We store routing info, an operator sends to a streamId, who knows the end-stream edge
+		opContext.routeValueToDownstream(streamId, down.getOperatorId());
+		// Store in the opContext of the downstream I am adding, the inputdataingestion mode that I demand
+		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
+	}
+	
 	/** HELPER METHODS **/
 	
 	@Override 

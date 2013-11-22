@@ -10,12 +10,17 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
-import uk.ac.imperial.lsds.seep.state.StateWrapper;
+import java.io.Serializable;
+import java.util.ArrayList;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
-public interface StatefulOperator extends OperatorCode{
+public interface OperatorCode extends Serializable{
 
-	public StateWrapper getState();
-	public void replaceState(StateWrapper state);
-
+	public Api api = Api.getInstance();
+	
+	public void setUp();
+	public void processData(DataTuple data);
+	public void processData(ArrayList<DataTuple> dataList);
+	
 }

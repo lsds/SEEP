@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
+
 
 public class OperatorContext implements Serializable{
 

@@ -1,11 +1,11 @@
 package uk.ac.imperial.lsds.seep;
 
 import junit.framework.*;
-import uk.ac.imperial.lsds.seep.api.BaseI;
+import uk.ac.imperial.lsds.seep.api.QueryComposer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 
 /**
- * The class <code>BaseITest</code> contains tests for the class <code>{@link BaseI}</code>.
+ * The class <code>BaseITest</code> contains tests for the class <code>{@link QueryComposer}</code>.
  *
  * @generatedBy CodePro at 18/10/13 19:08
  * @author rc3011

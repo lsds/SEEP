@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.ControlHandler;
 import uk.ac.imperial.lsds.seep.comm.IncomingDataHandler;
 import uk.ac.imperial.lsds.seep.comm.OutgoingDataHandlerWorker;
@@ -39,10 +39,10 @@ import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
+import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
@@ -109,7 +109,7 @@ public class CoreRE {
 	}
 	
 	public void pushOperator(Operator o){
-		boolean multicoreSupport = P.valueFor("multicoreSupport").equals("true") ? true : false; 
+		boolean multicoreSupport = GLOBALS.valueFor("multicoreSupport").equals("true") ? true : false; 
 		if(o.getOpContext().getOperatorStaticInformation().isStatefull() ){
 			processingUnit = new StatefulProcessingUnit(this, multicoreSupport);
 		}
@@ -152,7 +152,7 @@ public class CoreRE {
 		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
 		// We get the inputDataIngestion mode map, that consists of inputDataIngestion modes per upstream
-		Map<Integer,InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
+		Map<Integer, InputDataIngestionMode> idimMap = processingUnit.getOperator().getOpContext().getInputDataIngestionModePerUpstream();
 		for(Integer i : idimMap.keySet()){
 			LOG.debug("Upstream: {} with this mode: {}", i, idimMap.get(i));
 		}
@@ -162,7 +162,7 @@ public class CoreRE {
 		// Start communications and worker threads
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInD();
-		int inBT = new Integer(P.valueFor("blindSocket"));
+		int inBT = new Integer(GLOBALS.valueFor("blindSocket"));
 		//Control worker
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch, "controlHandlerT");
@@ -189,7 +189,7 @@ public class CoreRE {
 		puCtx = processingUnit.setUpRemoteConnections();
 		
 		// Set up output communication module
-		if (P.valueFor("synchronousOutput").equals("true")){
+		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
 			processingUnit.setOutputQueue(outputQueue);
 			LOG.debug("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
 		}
@@ -202,7 +202,7 @@ public class CoreRE {
 		}
 		
 		// Set up multi-core support structures
-		if(P.valueFor("multicoreSupport").equals("true")){
+		if(GLOBALS.valueFor("multicoreSupport").equals("true")){
 			if(processingUnit.isMultiCoreEnabled()){
 				processingUnit.launchMultiCoreMechanism(this, dsa);
 				LOG.debug("-> Multi core support enabled");
@@ -250,7 +250,7 @@ public class CoreRE {
 		LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 		
 		// If ackworker is active
-		if(P.valueFor("ackWorkerActive").equals("true")){
+		if(GLOBALS.valueFor("ackWorkerActive").equals("true")){
 			//If this is the sink operator (extremely ugly)
 			//if(processingUnit.getOperator().getOpContext().downstreams.size() == 0){
 			if(processingUnit.getOperator().getOpContext().isSink()){

@@ -19,11 +19,10 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.QuerySpecificationI;
+import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
@@ -34,22 +33,20 @@ public class QueryPlan {
 	
 	final private Logger LOG = LoggerFactory.getLogger(QueryPlan.class);
 	
-	public static final int CONTROL_SOCKET = Integer.parseInt(P.valueFor("controlSocket"));
-	public static final int DATA_SOCKET = Integer.parseInt(P.valueFor("dataSocket"));
+	private int nodeId = 0;
 	
 	private ArrayList<Operator> ops = new ArrayList<Operator>();
 	private ArrayList<StateWrapper> states = new ArrayList<StateWrapper>();
 	private ArrayList<ScaleOutIntentBean> scIntents = new ArrayList<ScaleOutIntentBean>();
 	private Map<Operator, Integer> partitionRequirements = new LinkedHashMap<Operator, Integer>(0);
-	public Map<Integer, QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
+	private Map<Integer, Connectable> elements = new HashMap<Integer, Connectable>();
 	//More than one source is supported
 	private ArrayList<Operator> src = new ArrayList<Operator>();
 	private Operator snk;
 	//Mapping of operators to node
-	//private Map<Integer, ArrayList<Operator>> mapOperatorToNode = new LinkedHashMap<Integer, ArrayList<Operator>>();
 	private Map<Integer, Operator> mapOperatorToNode = new LinkedHashMap<Integer, Operator>();
 	
-	public ArrayList<Operator> getOps() {
+	public ArrayList<Operator> getOps(){
 		return ops;
 	}
 	
@@ -61,7 +58,7 @@ public class QueryPlan {
 		return scIntents;
 	}
 
-	public Map<Integer, QuerySpecificationI> getElements() {
+	public Map<Integer, Connectable> getElements() {
 		return elements;
 	}
 	
@@ -83,75 +80,116 @@ public class QueryPlan {
 	
 	/** User facing methods **/
 	
-	public Operator newStatefulSource(Operator op, int opId, StateWrapper s, List<String> attributes){
+	public Operator newStatefulSource(OperatorCode opCode, int opId, StateWrapper s, List<String> attributes){
 		// Configure operator
 		if(s.getOwnerId() != opId){
 			LOG.error("Operator id: "+opId+" does not own state: "+s.getOwnerId());
 			System.exit(0);
 		}
-		this.newStatefulOperator(op, opId, s, attributes);
+		Operator op = this.newStatefulOperator(opCode, opId, s, attributes);
 		this.setSource(op);
 		
 		op.getOpContext().setIsSource(true);
+//		try {
+//			this.place(op);
+//		} 
+//		catch (NodeAlreadyInUseException e) {
+//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+//			e.printStackTrace();
+//		}
 		return op;
 	}
 	
-	public Operator newStatelessSource(Operator op, int opId, List<String> attributes){
+	public Operator newStatelessSource(OperatorCode opCode, int opId, List<String> attributes){
 		// Configure operator
-		this.newStatelessOperator(op, opId, attributes);
+		Operator op = this.newStatelessOperator(opCode, opId, attributes);
 		this.setSource(op);
 		
 		op.getOpContext().setIsSource(true);
+//		try {
+//			this.place(op);
+//		} 
+//		catch (NodeAlreadyInUseException e) {
+//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+//			e.printStackTrace();
+//		}
 		return op;
 	}
 	
-	public Operator newStatefulSink(Operator op, int opId, StateWrapper s, List<String> attributes){
+	public Operator newStatefulSink(OperatorCode opCode, int opId, StateWrapper s, List<String> attributes){
 		// Configure operator
 		if(s.getOwnerId() != opId){
 			LOG.error("Operator id: "+opId+" does not own state: "+s.getOwnerId());
 			System.exit(0);
 		}
-		this.newStatefulOperator(op, opId, s, attributes);
+		Operator op = this.newStatefulOperator(opCode, opId, s, attributes);
 		this.setSink(op);
 		
 		op.getOpContext().setIsSink(true);
-		
+//		try {
+//			this.place(op);
+//		} 
+//		catch (NodeAlreadyInUseException e) {
+//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+//			e.printStackTrace();
+//		}
 		return op;
 	}
 	
-	public Operator newStatelessSink(Operator op, int opId, List<String> attributes){
-		this.newStatelessOperator(op, opId, attributes);
+	public Operator newStatelessSink(OperatorCode opCode, int opId, List<String> attributes){
+		Operator op = this.newStatelessOperator(opCode, opId, attributes);
 		this.setSink(op);
 		
 		op.getOpContext().setIsSink(true);
-		
+//		try {
+//			this.place(op);
+//		} 
+//		catch (NodeAlreadyInUseException e) {
+//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+//			e.printStackTrace();
+//		}
 		return op;
 	}
 	
-	public Operator newStatelessOperator(Operator op, int opId, List<String> attributes){
+	public Operator newStatelessOperator(OperatorCode opCode, int opId, List<String> attributes){
 		// Configure operator
-		op.setOperatorId(opId);
-		op.setSubclassOperator();
-		op._declareWorkingAttributes(attributes);
+		Operator op = Operator.getStatelessOperator(opId, opCode, attributes);
+//		op.setOperatorId(opId);
+//		op.setSubclassOperator();
+//		op._declareWorkingAttributes(attributes);
 
 		this.addOperator(op);
-		
+		try {
+			this.place(op);
+		} 
+		catch (NodeAlreadyInUseException e) {
+			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+			e.printStackTrace();
+		}
 		return op;
 	}
 	
-	public Operator newStatefulOperator(Operator op, int opId, StateWrapper s, List<String> attributes){
+	public Operator newStatefulOperator(OperatorCode opCode, int opId, StateWrapper s, List<String> attributes){
 		// Configure operator
 		if(s.getOwnerId() != opId){
 			LOG.error("Operator id: "+opId+" does not own state: "+s.getOwnerId());
 			System.exit(0);
 		}
-		op.setOperatorId(opId);
-		op.setStateWrapper(s);
-		op.setSubclassOperator();
-		op._declareWorkingAttributes(attributes);
+		Operator op = Operator.getStatefulOperator(opId, opCode, s, attributes);
+//		op.setOperatorId(opId);
+//		op.setStateWrapper(s);
+//		op.setSubclassOperator();
+//		op._declareWorkingAttributes(attributes);
 		// Register state
 		this.registerState(s);
 		this.addOperator(op);
+		try {
+			this.place(op);
+		} 
+		catch (NodeAlreadyInUseException e) {
+			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+			e.printStackTrace();
+		}
 		return op;
 	}
 	
@@ -174,32 +212,42 @@ public class QueryPlan {
 	/** Static scaling methods **/
 	
 	/** This is the preferred function, that will automatically load balance the static partitioning**/
-	public void scaleOut(Operator opToScaleOut, int numPartitions){
-		partitionRequirements.put(opToScaleOut, numPartitions);
+	public void scaleOut(int opId, int numPartitions){
+		Operator op = getOperatorWithOpId(opId);
+		partitionRequirements.put(op, numPartitions);
 	}
 	
 	/** This function is provided in case the user wants to manually define which partitions to be done**/
-	public void scaleOut(Operator opToScaleOut, int newOpId, Node newProvisionedNode){
+	public void scaleOut(int opId, int newOpId, Node newProvisionedNode){
+		Operator op = getOperatorWithOpId(opId);
 		// Register the intent to scale out
-		ScaleOutIntentBean soib = new ScaleOutIntentBean(opToScaleOut, newOpId, newProvisionedNode);
+		ScaleOutIntentBean soib = new ScaleOutIntentBean(op, newOpId, newProvisionedNode);
 		scIntents.add(soib);
 	}
+	
+	private Operator getOperatorWithOpId(int opId){
+		for(Operator op : ops){
+			if(op.getOperatorId() == opId) return op;
+		}
+		return null;
+	}
+	
 	
 	/** Mapping between operator and node. Note that only one operator is assigned to one node. Two "conceptual" operators can be
 	 * merged into one "deployable" operator. This means that at this point all optimisations regarding "conceptual" operators have
 	 * been made.
 	 * @throws NodeAlreadyInUseException **/
-	public void place(Operator o, Node n) throws NodeAlreadyInUseException{
-		int nodeId = n.getNodeId();
+	public void place(Operator o) throws NodeAlreadyInUseException{
 		if(mapOperatorToNode.containsKey(nodeId)){
 			throw new NodeAlreadyInUseException();
 		}
 		else{
 			mapOperatorToNode.put(nodeId, o);
 		}
+		// Finally we increase the nodeId
+		nodeId++;
 	}
 	
-	/** Private methods **/
 	private void setSource(Operator source) {
 		LOG.info("Configured NEW SOURCE, Operator: {}", src.toString());
 		src.add(source);

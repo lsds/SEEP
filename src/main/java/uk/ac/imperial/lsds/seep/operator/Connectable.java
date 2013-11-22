@@ -10,12 +10,18 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
-import uk.ac.imperial.lsds.seep.state.StateWrapper;
+import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 
+public interface Connectable {
 
-public interface StatefulOperator extends OperatorCode{
+	public int getOperatorId();
 
-	public StateWrapper getState();
-	public void replaceState(StateWrapper state);
-
+	public OperatorContext getOpContext();
+	
+	public void setOpContext(OperatorContext opContext);
+	
+	public void connectTo(Connectable down, boolean originalQuery);
+	public void connectTo(Connectable down, boolean originalQuery, int streamId);
+	public void connectTo(Connectable down, InputDataIngestionMode mode, boolean originalQuery, int streamId);
+	
 }

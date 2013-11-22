@@ -16,7 +16,7 @@ import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.P;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.state.EmptyStateException;
 import uk.ac.imperial.lsds.seep.state.Streamable;
 
@@ -32,7 +32,7 @@ public class StreamStateManager {
 	
 	public StreamStateManager(Streamable state){
 		this.state = state;
-		this.chunkSize = new Integer(P.valueFor("stateChunkSize"));
+		this.chunkSize = new Integer(GLOBALS.valueFor("stateChunkSize"));
 		try {
 			this.totalNumberChunks = state.getTotalNumberOfChunks(chunkSize);
 		} 

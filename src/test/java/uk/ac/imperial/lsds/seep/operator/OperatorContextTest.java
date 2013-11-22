@@ -1101,7 +1101,7 @@ public class OperatorContextTest extends TestCase {
 		fixture.routeInfo = new HashMap();
 		fixture.addDownstream(1);
 
-		Map<Integer, QuerySpecificationI.InputDataIngestionMode> result = fixture.getInputDataIngestionModePerUpstream();
+		Map<Integer, InputDataIngestionMode> result = fixture.getInputDataIngestionModePerUpstream();
 
 		// add additional test code here
 		assertNotNull(result);
@@ -2310,7 +2310,7 @@ public class OperatorContextTest extends TestCase {
 		fixture.routeInfo = new HashMap();
 		fixture.addDownstream(1);
 		int opId = 1;
-		QuerySpecificationI.InputDataIngestionMode mode = QuerySpecificationI.InputDataIngestionMode.ONE_AT_A_TIME;
+		InputDataIngestionMode mode = InputDataIngestionMode.ONE_AT_A_TIME;
 
 		fixture.setInputDataIngestionModePerUpstream(opId, mode);
 
