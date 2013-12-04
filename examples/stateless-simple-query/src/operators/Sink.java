@@ -3,16 +3,15 @@ package operators;
 import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
-public class Sink extends Operator implements StatelessOperator {
+public class Sink implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
 
-	@Override
+	
 	public void setUp() {
-		myId = this.getOperatorId();
+		myId = api.getOperatorId();
 	}
 	
 	//latency measurements
@@ -24,7 +23,7 @@ public class Sink extends Operator implements StatelessOperator {
 	int sec = 0;
 	int myId = 0;
 	
-	@Override
+	
 	public void processData(DataTuple dt) {
 		int value2 = dt.getInt("value2");
 		// TIME CONTROL
@@ -37,7 +36,7 @@ public class Sink extends Operator implements StatelessOperator {
 		}
 	}
 
-	@Override
+	
 	public void processData(ArrayList<DataTuple> arg0) {
 	}
 }

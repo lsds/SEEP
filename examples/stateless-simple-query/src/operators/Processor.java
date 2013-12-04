@@ -3,14 +3,19 @@ package operators;
 import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
-public class Processor extends Operator implements StatelessOperator{
+public class Processor implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
+	
+	private Neuron neuron = new Neuron();
+	
+	public class Neuron{
+		
+	}
 
-	@Override
+	
 	public void processData(DataTuple data) {
 		int value1 = data.getInt("value1");
 		int value2 = data.getInt("value2");
@@ -21,16 +26,16 @@ public class Processor extends Operator implements StatelessOperator{
 		value3 = value3*value3;
 		
 		DataTuple outputTuple = data.setValues(value1, value2, value3);
-		send(outputTuple);
+		api.send(outputTuple);
 	}
 
-	@Override
+	
 	public void processData(ArrayList<DataTuple> arg0) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	@Override
+	
 	public void setUp() {
 		// TODO Auto-generated method stub
 		
