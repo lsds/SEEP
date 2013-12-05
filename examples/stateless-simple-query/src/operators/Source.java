@@ -44,14 +44,3 @@ public class Source implements StatelessOperator {
 		
 	}
 }
-
-
-//DataTuple output = DataTuple.getNoopDataTuple();
-//
-//	TuplePayload tp = new TuplePayload();
-//	Payload p = new Payload();
-//	p.add(value1);
-//	p.add(value2);
-//	p.add(value3);
-//	tp.attrValues = p;
-//	output.set(tp);

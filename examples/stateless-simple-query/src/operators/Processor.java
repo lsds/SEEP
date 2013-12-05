@@ -8,12 +8,6 @@ import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 public class Processor implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
-	
-	private Neuron neuron = new Neuron();
-	
-	public class Neuron{
-		
-	}
 
 	
 	public void processData(DataTuple data) {
