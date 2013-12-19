@@ -10,4 +10,5 @@ examples/*/lib/*.jar
 .classpath
 .codepro
 query.jar
-
+examples/stateless-simple-query/bin/*
+*.class
