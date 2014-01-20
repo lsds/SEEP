@@ -26,7 +26,6 @@ import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
-import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class QueryPlan {
@@ -88,15 +87,7 @@ public class QueryPlan {
 		}
 		Operator op = this.newStatefulOperator(opCode, opId, s, attributes);
 		this.setSource(op);
-		
 		op.getOpContext().setIsSource(true);
-//		try {
-//			this.place(op);
-//		} 
-//		catch (NodeAlreadyInUseException e) {
-//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
-//			e.printStackTrace();
-//		}
 		return op;
 	}
 	
@@ -104,15 +95,7 @@ public class QueryPlan {
 		// Configure operator
 		Operator op = this.newStatelessOperator(opCode, opId, attributes);
 		this.setSource(op);
-		
 		op.getOpContext().setIsSource(true);
-//		try {
-//			this.place(op);
-//		} 
-//		catch (NodeAlreadyInUseException e) {
-//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
-//			e.printStackTrace();
-//		}
 		return op;
 	}
 	
@@ -124,40 +107,20 @@ public class QueryPlan {
 		}
 		Operator op = this.newStatefulOperator(opCode, opId, s, attributes);
 		this.setSink(op);
-		
 		op.getOpContext().setIsSink(true);
-//		try {
-//			this.place(op);
-//		} 
-//		catch (NodeAlreadyInUseException e) {
-//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
-//			e.printStackTrace();
-//		}
 		return op;
 	}
 	
 	public Operator newStatelessSink(OperatorCode opCode, int opId, List<String> attributes){
 		Operator op = this.newStatelessOperator(opCode, opId, attributes);
 		this.setSink(op);
-		
 		op.getOpContext().setIsSink(true);
-//		try {
-//			this.place(op);
-//		} 
-//		catch (NodeAlreadyInUseException e) {
-//			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
-//			e.printStackTrace();
-//		}
 		return op;
 	}
 	
 	public Operator newStatelessOperator(OperatorCode opCode, int opId, List<String> attributes){
 		// Configure operator
 		Operator op = Operator.getStatelessOperator(opId, opCode, attributes);
-//		op.setOperatorId(opId);
-//		op.setSubclassOperator();
-//		op._declareWorkingAttributes(attributes);
-
 		this.addOperator(op);
 		try {
 			this.place(op);
@@ -176,10 +139,6 @@ public class QueryPlan {
 			System.exit(0);
 		}
 		Operator op = Operator.getStatefulOperator(opId, opCode, s, attributes);
-//		op.setOperatorId(opId);
-//		op.setStateWrapper(s);
-//		op.setSubclassOperator();
-//		op._declareWorkingAttributes(attributes);
 		// Register state
 		this.registerState(s);
 		this.addOperator(op);
@@ -193,20 +152,19 @@ public class QueryPlan {
 		return op;
 	}
 	
-	public StateWrapper newState(State s, int ownerId, int checkpointInterval, String keyAttribute){
+	public StateWrapper newCustomState(CustomState s, int ownerId, int checkpointInterval, String keyAttribute){
 		StateWrapper sw = new StateWrapper(ownerId, checkpointInterval, s);
-		if(s instanceof CustomState){
-			if((CustomState)s instanceof Partitionable){
-				((Partitionable)s).setKeyAttribute(keyAttribute);
-			}
-			else{
-				// say that keyattribute is ignored as state does not implement Partitionable
-			}
+		if(s instanceof Partitionable){
+			((Partitionable)s).setKeyAttribute(keyAttribute);
 		}
-		else if(s instanceof LargeState){
-			// say that keyAttribute is ignored
+		else{
+			// TODO: say that keyattribute is ignored as state does not implement Partitionable
 		}
 		return sw;
+	}
+	
+	public StateWrapper newLargeState(LargeState s, int ownerId, int checkpointInterval){
+		return new StateWrapper(ownerId, checkpointInterval, s);
 	}
 	
 	/** Static scaling methods **/

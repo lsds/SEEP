@@ -10,7 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.state;
 /**
- * LargeState is State that also implements the superinterfaces Versionable and Streamable.
+ * LargeState is State that also implements the interfaces Versionable and Streamable.
  * @author raulcf
  *
  */

@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.state.EmptyStateException;
+import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.MalformedStateChunk;
 import uk.ac.imperial.lsds.seep.state.NullChunkWhileMerging;
 import uk.ac.imperial.lsds.seep.state.Streamable;
@@ -43,7 +44,7 @@ import uk.ac.imperial.lsds.seep.state.annotations.WriteAccess;
  * @param <V>
  */
 @OperatorState(partitionable=true)
-public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionable, Streamable{
+public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionable, Streamable, LargeState{
 	
 	final Logger LOG = LoggerFactory.getLogger(SeepMap.class);
 
@@ -380,5 +381,10 @@ public class SeepMap<K, V> extends HashMap<Object, Object> implements Versionabl
 	@Override
 	public void release(){
 		this.mutex.release();
+	}
+
+	@Override
+	public Object getVersionableAndStreamableState() {
+		return this;
 	}
 }

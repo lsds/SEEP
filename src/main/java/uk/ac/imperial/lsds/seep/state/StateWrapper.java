@@ -94,7 +94,6 @@ public class StateWrapper implements Serializable, Cloneable{
 	}
 	
 	public StateWrapper clone(){
-		
 		try {
 			return (StateWrapper) super.clone();
 		}
