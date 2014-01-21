@@ -72,4 +72,14 @@ public class Api implements Serializable{
 		return mapper;
 	}
 	
+	// System configuration
+	
+	public void disableCheckpointing(){
+		op.disableCheckpointing();
+	}
+	
+	public void disableMultiCoreSupport(){
+		op.disableMultiCoreSupport();
+	}
+	
 }
