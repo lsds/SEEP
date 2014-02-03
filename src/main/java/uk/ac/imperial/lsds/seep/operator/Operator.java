@@ -37,7 +37,6 @@ public class Operator implements Serializable, EndPoint, Connectable{
 	
 	private OperatorContext opContext = new OperatorContext();
 	private boolean ready = false;
-	//public Operator subclassOperator = null;
 	public IProcessingUnit processingUnit = null;
 	private Router router = null;	
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionMode = new HashMap<Integer, InputDataIngestionMode>();
@@ -99,36 +98,46 @@ public class Operator implements Serializable, EndPoint, Connectable{
 
 	/** Methods used by the developers to send data **/
 	
-	// Send downstream to non-stateful op or stateful non-parallelizable op
+	// Send downstream in round robin fashion
 	public synchronized void send(DataTuple dt){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt);
 		processingUnit.sendData(dt, targets);
 	}
 	
+	// Send to a particular downstream index
 	public synchronized void send_toIndex(DataTuple dt, int idx){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		targets.add(idx);
 		processingUnit.sendData(dt, targets);
 	}
 	
-	// Send downstream to stateful parallelizable
+	// Send downstream to stateful partitionable operator
 	public synchronized void send_splitKey(DataTuple dt, int key){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward_splitKey(dt, key);
 		processingUnit.sendData(dt, targets);
 	}
 	
+	// Send to specific streamId in round robin
 	public synchronized void send_toStreamId(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forward_toOp(dt, streamId);
 		processingUnit.sendData(dt, targets);
 	}
 	
+	// Send to stateful partition of a given streamId
 	public synchronized void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
 		ArrayList<Integer> targets = router.forward_toOp_splitKey(dt, streamId, key);
 		processingUnit.sendData(dt, targets);
 	}
 	
+	// Send to all instances of a specific streamId
+	public synchronized void send_toStreamId_toAll(DataTuple dt, int streamId){
+		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
+		processingUnit.sendData(dt, targets);
+	}
+	
+	// Send to all downstream
 	public void send_all(DataTuple dt){
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
