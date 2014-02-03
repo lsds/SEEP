@@ -117,9 +117,18 @@ public class OperatorContext implements Serializable{
 		return total;
 	}
 	
+	private static boolean ipEquals(InetAddress ip1, InetAddress ip2) {
+		String ip1Str = ip1.getHostAddress();
+		String ip2Str = ip2.getHostAddress();
+
+		return ip1.equals(ip2) ||
+				ip1Str.equals("127.0.0.1") && ip2Str.equals("127.0.1.1") ||
+				ip1Str.equals("127.0.1.1") && ip2Str.equals("127.0.0.1");
+	}
+
 	public int getOpIdFromUpstreamIp(InetAddress ip){
 		for(OperatorStaticInformation op : upstream){
-			if(op.getMyNode().getIp().equals(ip)){
+			if(ipEquals(op.getMyNode().getIp(), ip)){
 				return op.getOpId();
 			}
 		}
