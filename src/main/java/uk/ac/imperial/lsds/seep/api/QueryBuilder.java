@@ -15,6 +15,9 @@ import java.util.List;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
+import uk.ac.imperial.lsds.seep.state.CustomState;
+import uk.ac.imperial.lsds.seep.state.LargeState;
+import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class QueryBuilder {
@@ -47,6 +50,14 @@ public class QueryBuilder {
 	
 	public static Connectable newStatelessSink(OperatorCode op, int opId, List<String> attributes){
 		return qp.newStatelessSink(op, opId, attributes);
+	}
+	
+	public static StateWrapper newCustomState(CustomState s, int ownerId, int checkpointInterval, String keyAttribute){
+		return qp.newCustomState(s, ownerId, checkpointInterval, keyAttribute);
+	}
+	
+	public static StateWrapper newLargeState(LargeState s, int ownerId, int checkpointInterval){
+		return qp.newLargeState(s, ownerId, checkpointInterval);
 	}
 
 	public static void scaleOut(int opToScaleOut, int numPartitions){

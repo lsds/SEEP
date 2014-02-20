@@ -54,6 +54,10 @@ public class Api implements Serializable{
 		op.send_toStreamId_splitKey(dt, streamId, key);
 	}
 	
+	public synchronized void send_toStreamId_toAll(DataTuple dt, int streamId){
+		op.send_toStreamId_toAll(dt, streamId);
+	}
+	
 	public void send_all(DataTuple dt){
 		op.send_all(dt);
 	}
@@ -70,6 +74,16 @@ public class Api implements Serializable{
 			mapper.put(op.getOpContext().getDeclaredWorkingAttributes().get(i), i);
 		}
 		return mapper;
+	}
+	
+	// System configuration
+	
+	public void disableCheckpointing(){
+		op.disableCheckpointing();
+	}
+	
+	public void disableMultiCoreSupport(){
+		op.disableMultiCoreSupport();
 	}
 	
 }

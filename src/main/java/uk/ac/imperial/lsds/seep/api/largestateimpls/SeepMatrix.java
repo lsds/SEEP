@@ -17,10 +17,11 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Streamable;
 import uk.ac.imperial.lsds.seep.state.Versionable;
 
-public class SeepMatrix extends Matrix implements Versionable, Streamable{
+public class SeepMatrix extends Matrix implements Versionable, Streamable, LargeState{
 
 	private static final long serialVersionUID = 1L;
 	
@@ -287,5 +288,10 @@ if(row == null){
 			}
 		}
 		return null;
+	}
+
+	@Override
+	public Object getVersionableAndStreamableState() {
+		return this;
 	}
 }

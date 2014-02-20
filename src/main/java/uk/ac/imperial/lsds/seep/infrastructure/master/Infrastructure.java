@@ -832,8 +832,8 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	
 	public void parseFileForNetflix() {
 		System.out.println("Parse file for Netflix...");
-		File f = new File("/home/ec2-user/data/data.txt");
-		File o = new File("/home/ec2-user/data/data.bin");
+		File f = new File("data.txt");
+		File o = new File("data.bin");
 		
 		Kryo k = new Kryo();
 		k.register(ArrayList.class, new ArrayListSerializer());
@@ -851,7 +851,6 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			String currentLine = null;
 			
 			//PARSE
-			
 			Map<String, Integer> mapper = new HashMap<String, Integer>();
 			ArrayList<String> artList = new ArrayList<String>();
 			artList.add("userId");

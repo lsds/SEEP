@@ -15,6 +15,7 @@ import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public interface StatefulOperator extends OperatorCode{
 
+	// FIXME: State (state impl) instead of StateWrapper
 	public StateWrapper getState();
 	public void replaceState(StateWrapper state);
 

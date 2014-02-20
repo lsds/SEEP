@@ -71,7 +71,7 @@ public class ControlHandler implements Runnable{
 			//Establish listening port
     		controlServerSocket = new ServerSocket(connPort);
 			controlServerSocket.setReuseAddress(true);
-			LOG.info("-> ControlHandler listening in port: {}", connPort);
+			LOG.info("-> ControlHandler listening on port: {}", connPort);
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
@@ -84,7 +84,7 @@ public class ControlHandler implements Runnable{
 		}
 		catch(BindException be){
 			LOG.error("-> BIND EXC IO Error "+be.getMessage());
-			LOG.error("-> controlServerSocket.toString: "+controlServerSocket.toString());
+			//LOG.error("-> controlServerSocket.toString: "+controlServerSocket.toString());
 			be.printStackTrace();
 		}
 		catch(IOException io){

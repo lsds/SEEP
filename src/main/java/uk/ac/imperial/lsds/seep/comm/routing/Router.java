@@ -40,7 +40,7 @@ public class Router implements Serializable{
 	
 	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
 	private boolean requiresLogicalRouting = false;
-	public HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
+	private HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
 	
 	//This map stores the load balancer for each type of downstream. This map is related to routeInfo
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
@@ -57,7 +57,6 @@ public class Router implements Serializable{
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
-try{
 		RoutingStrategyI rs = null;
 		if(!requiresLogicalRouting){
 			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
@@ -65,17 +64,10 @@ try{
 		}
 		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
-}
-catch(ClassCastException cce){
-	System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
-}
-//remove with the try-catch
-return null;
 	}
 	
 	//Gather keys from statefulDynamic Load balancer
 	public ArrayList<Integer> getKeysInformation(int oldOpId){
-try{
 		RoutingStrategyI rs = null;
 		if(!requiresLogicalRouting){
 			rs = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL);
@@ -83,12 +75,6 @@ try{
 		}
 		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
-}
-catch(ClassCastException cce){
-System.out.println("HACKED-HACKED-HACKED-HACKED-HACKED-HACKED-HACKED");
-}
-//remove with the try-catch
-return null;
 }
 
 	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
@@ -130,14 +116,6 @@ return null;
 		}
 	}
 	
-	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
-		ArrayList<Integer> targets = new ArrayList<Integer>();
-		for(Integer lt : logicalTargets){
-			targets = downstreamRoutingImpl.get(lt).routeToAll(targets);
-		}
-		return targets;
-	}
-	
 	public ArrayList<Integer> forwardToAllDownstream(DataTuple dt){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		if(requiresLogicalRouting){
@@ -147,6 +125,13 @@ return null;
 		else{
 			targets = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).routeToAll();
 		}
+		return targets;
+	}
+	
+	public ArrayList<Integer> forwardToAllOpsInStreamId(DataTuple dt, int streamId){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
+		targets = routeToAll(logicalTargets);
 		return targets;
 	}
 	
@@ -184,9 +169,15 @@ return null;
 		return targets;
 	}
 	
+	private ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		for(Integer lt : logicalTargets){
+			targets = downstreamRoutingImpl.get(lt).routeToAll(targets);
+		}
+		return targets;
+	}
+	
 	private ArrayList<Integer> logicalRouting(DataTuple dt, int streamId){
-		//int contentValue = dt.getInt(queryAttribute);
-		//return routeInfo.get(contentValue);
 		return routeInfo.get(streamId);
 	}
 	

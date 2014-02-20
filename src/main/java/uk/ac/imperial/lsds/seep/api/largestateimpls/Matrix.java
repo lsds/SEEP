@@ -616,11 +616,13 @@ public int its = 0;
 		else{
 			return null;
 		}
+		estimatedColSize++; // Add additional column
 		for(int i = 0; i<estimatedColSize; i++){
 			r.add(0);
 		}
 		for(Component c : v){
-			int idx = (c.col-1 < 0) ? 0 : c.col-1;
+			//int idx = (c.col-1 < 0) ? 0 : c.col-1;
+			int idx = c.col;
 			r.set(idx, c.value);
 		}
 		return r;
