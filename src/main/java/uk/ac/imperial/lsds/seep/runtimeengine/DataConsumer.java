@@ -48,8 +48,16 @@ public class DataConsumer implements Runnable {
 			if(dso instanceof InputQueue){
 				while(doWork){
 					DataTuple data = dso.pull();
+//					DataTuple[] dataBatch = ((InputQueue)dso).pullMiniBatch();
 					if(owner.checkSystemStatus()){
 						owner.forwardData(data);
+//						for(int i = 0; i<dataBatch.length; i++){
+//							DataTuple data = dataBatch[i];
+//							if(data != null)
+//								owner.forwardData(data);
+//							else
+//								break;
+//						}
 					}
 				}
 			}

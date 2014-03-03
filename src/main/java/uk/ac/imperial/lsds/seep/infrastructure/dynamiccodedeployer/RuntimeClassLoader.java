@@ -16,8 +16,6 @@ import java.net.URLClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-
 public class RuntimeClassLoader extends URLClassLoader{
 	
 	final private Logger LOG = LoggerFactory.getLogger(RuntimeClassLoader.class);
@@ -38,10 +36,18 @@ public class RuntimeClassLoader extends URLClassLoader{
 		catch (ClassNotFoundException e) {
 			URL[] loadURLs = super.getURLs();
 			for(URL u : loadURLs){
-				LOG.error("URL: "+u);
+				LOG.error("This URL: "+u);
 			}
 			LOG.error("When trying to load: "+name);
-			e.printStackTrace();
+			try {
+				return Class.forName(name);
+			} 
+			catch (ClassNotFoundException e1) {
+				// TODO Auto-generated catch block
+				LOG.error("MSG: "+e1.getMessage());
+				e1.printStackTrace();
+			}
+			//e.printStackTrace();
 		}
 		return null;
 	}

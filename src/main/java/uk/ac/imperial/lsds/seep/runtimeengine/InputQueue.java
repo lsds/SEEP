@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -24,13 +25,16 @@ public class InputQueue implements DataStructureI{
 	
 	public InputQueue(){
 		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
+		//inputQueue = new LinkedBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
+		//Unbounded
+		//inputQueue = new LinkedBlockingQueue<DataTuple>();
 	}
 	
 	public InputQueue(int size){
 		inputQueue = new ArrayBlockingQueue<DataTuple>(size);
 	}
 	
-	public synchronized void push(DataTuple data){
+	public void push(DataTuple data){
 		try {
 			inputQueue.put(data);
 			MetricsReader.eventsInputQueue.inc();
@@ -45,6 +49,20 @@ public class InputQueue implements DataStructureI{
 		boolean inserted = inputQueue.offer(data);
 		if (inserted) MetricsReader.eventsInputQueue.inc();
 		return inserted;
+	}
+	
+	public DataTuple[] pullMiniBatch(){
+		int miniBatchSize = 10;
+		DataTuple[] batch = new DataTuple[miniBatchSize];
+		MetricsReader.eventsInputQueue.dec();
+		for(int i = 0; i<miniBatchSize; i++){
+			DataTuple dt = inputQueue.poll();
+			if(dt != null)
+				batch[i] = dt;
+			else
+				break;
+		}
+		return batch;
 	}
 	
 	public DataTuple pull(){
