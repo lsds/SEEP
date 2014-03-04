@@ -336,6 +336,7 @@ public class ElasticInfrastructureUtils {
 		Operator newOp = null;
 		try {
 			newOp = addOperator(oldOpId, newOpId);
+                        newOp.setOriginalOpId(oldOpId);
 		} 
 		catch (OperatorNotRegisteredException e) {
 			
