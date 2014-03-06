@@ -74,6 +74,7 @@ public class DataStructureAdapter {
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
 					int originalOperatorOnBarrier = entry.getKey();
 					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+                                        LOG.debug("-> ^^^^^ numberUpstreamsOnBarrier {}", numberUpstreamsOnBarrier);
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					dsoMap.put(entry.getKey(), b);
 					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());

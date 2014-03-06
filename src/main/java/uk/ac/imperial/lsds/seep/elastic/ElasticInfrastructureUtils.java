@@ -271,21 +271,25 @@ public class ElasticInfrastructureUtils {
 			int newOpId = 10 + (op.getOperatorId()*100);
 			int nodeId = -1 * newOpId;
 			// the list where replicas will be saved
-			ArrayList<Operator> listOfReplicas = new ArrayList<Operator>();
-			listOfReplicas.add(op);
-			int accessIdx = 0;
+			//ArrayList<Operator> listOfReplicas = new ArrayList<Operator>();
+			//listOfReplicas.add(op);
+			//int accessIdx = 0;
 			// We have to scale out the number of partitions minus one -> [partitions.get(op)-1]
 			for(int i = 0; i<(partitions.get(op)-1); i++){
+                            
+                                //LOG.debug("%%%%%%% accessIdx == {}", accessIdx);
 				Node newNode = new Node(nodeId);
 				//oldOpId, newOpId, newNode, qp
-				int oldOpId = listOfReplicas.get(accessIdx).getOperatorId();
+				//int oldOpId = listOfReplicas.get(accessIdx).getOperatorId();
+                                int oldOpId = op.getOperatorId();
 				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp);
+                                
 				if(op.getOpContext().isSource()){ // probably not the best place to do this
 					LOG.debug("-> Statically scaling out SOURCE operator");
 					inf.addSource(newReplica);
 				}
 				// First modify accessIdx for next iteration
-				if(listOfReplicas.size()-1 == accessIdx){
+				/*if(listOfReplicas.size()-1 == accessIdx){
 					// So it will be reset
 					accessIdx = 0;
 					// Add to the end
@@ -297,6 +301,7 @@ public class ElasticInfrastructureUtils {
 					// We jump the new addition and go to the next op
 					accessIdx += 2;
 				}
+                                 */
 				// Add scaleout intent to the list (ordered)
 				ScaleOutIntentBean so = new ScaleOutIntentBean(inf.getOperatorById(oldOpId), newOpId, newNode);
 				so.setNewReplicaInstantiation(newReplica);
