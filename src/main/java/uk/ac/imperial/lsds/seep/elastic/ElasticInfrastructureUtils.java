@@ -17,8 +17,10 @@ import java.net.InetAddress;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -270,17 +272,11 @@ public class ElasticInfrastructureUtils {
 			/// \fixme{ automatic assignation of id lets 90 ops per partition, and make sure nodeId is different}
 			int newOpId = 10 + (op.getOperatorId()*100);
 			int nodeId = -1 * newOpId;
-			// the list where replicas will be saved
-			//ArrayList<Operator> listOfReplicas = new ArrayList<Operator>();
-			//listOfReplicas.add(op);
-			//int accessIdx = 0;
+			
 			// We have to scale out the number of partitions minus one -> [partitions.get(op)-1]
 			for(int i = 0; i<(partitions.get(op)-1); i++){
                             
-                                //LOG.debug("%%%%%%% accessIdx == {}", accessIdx);
 				Node newNode = new Node(nodeId);
-				//oldOpId, newOpId, newNode, qp
-				//int oldOpId = listOfReplicas.get(accessIdx).getOperatorId();
                                 int oldOpId = op.getOperatorId();
 				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp);
                                 
@@ -288,20 +284,7 @@ public class ElasticInfrastructureUtils {
 					LOG.debug("-> Statically scaling out SOURCE operator");
 					inf.addSource(newReplica);
 				}
-				// First modify accessIdx for next iteration
-				/*if(listOfReplicas.size()-1 == accessIdx){
-					// So it will be reset
-					accessIdx = 0;
-					// Add to the end
-					listOfReplicas.add(newReplica);
-				}
-				else{
-					// Add right next to the just scaled out op
-					listOfReplicas.add((accessIdx+1), newReplica);
-					// We jump the new addition and go to the next op
-					accessIdx += 2;
-				}
-                                 */
+				
 				// Add scaleout intent to the list (ordered)
 				ScaleOutIntentBean so = new ScaleOutIntentBean(inf.getOperatorById(oldOpId), newOpId, newNode);
 				so.setNewReplicaInstantiation(newReplica);
@@ -360,11 +343,27 @@ public class ElasticInfrastructureUtils {
 		configureOperatorContext(oldOpId, newOp);
 		// router for the new op
 		Router copyOfRouter = opToScaleOut.getRouter();
-		newOp.setRouter(copyOfRouter);
+                
+                newOp.setRouter(copyOfRouter);
+                
 		// inf place new and update context
 		System.out.println("checking new node: "+newNode.toString());
 		inf.placeNew(newOp, newNode);
 		inf.updateContextLocations(newOp);
+                
+                //SANITY CHECK
+                ArrayList<Operator> allOps = inf.getOps();
+                for(Operator eachOp : allOps){
+                    HashMap<Integer, ArrayList<Integer>> routInfoMap = eachOp.getOpContext().getRouteInfo();
+                    
+                        LOG.debug("-------- CHECK ROUTING FOR opID *{}*---------- ",eachOp.getOperatorId()) ;
+                        
+                        for(Entry<Integer, ArrayList<Integer>> entry : routInfoMap.entrySet() ){
+                            LOG.debug("ROUTING: key stream id {}, value downs op id {}", entry.getKey(), entry.getValue());
+                        }
+                    
+                }
+                
 		LOG.debug("STATIC Created new Op: {}", newOp.toString());
 		return newOp;
 	}
@@ -528,15 +527,37 @@ public class ElasticInfrastructureUtils {
 		}
 		return null;
 	}
+        
+   private void configureStreamIdFromUpstreamOps(Operator op, Operator newOp, int opId) {
+       
+        HashMap<Integer, Integer> op_streamId_map = new HashMap<>();
+        
+        for (PlacedOperator up : op.getOpContext().upstreams) {
+            Operator upOp = inf.getOperatorById(up.opID());
+            HashMap<Integer, ArrayList<Integer>> routInfoMap = upOp.getOpContext().getRouteInfo();
 
-	public void configureOperatorContext(int opId, Operator newOp){
-		ArrayList<Operator> ops = inf.getOps();
+            for (Entry<Integer, ArrayList<Integer>> entry : routInfoMap.entrySet()) {
+                for (int o : entry.getValue()) {
+                    op_streamId_map.put(o, entry.getKey()); //downstreamOp (KEY) - streamID (VAL)
+                }
+            }
+
+            (inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()), true, op_streamId_map.get(opId));
+            //(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()),false);
+        }
+    }
+
+    public void configureOperatorContext(int opId, Operator newOp) {
+        
+        ArrayList<Operator> ops = inf.getOps();
+               
 		for(Operator op : ops){
 			if(opId == op.getOperatorId()){
 				//op.getOpContext().copyContext(newOp);
-				for(PlacedOperator up : op.getOpContext().upstreams){
-					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()), false);
-				}
+                            
+                                //configure streamIds that upstreams connect to the newOp
+                                configureStreamIdFromUpstreamOps(op, newOp, opId);
+                                
 				for(PlacedOperator down : op.getOpContext().downstreams){
 					inf.getElements().get(newOp.getOperatorId()).connectTo(inf.getElements().get(down.opID()), false);
 				}
@@ -546,6 +567,10 @@ public class ElasticInfrastructureUtils {
 				newOp._declareWorkingAttributes(op.getOpContext().getDeclaredWorkingAttributes());
 				//Copy inputDataIngestionMode information
 				newOp.initializeInputDataIngestionModePerUpstream(op.getOpContext().getInputDataIngestionModePerUpstream());
+                                
+                                HashMap<Integer, ArrayList<Integer>> originalRouteMap = inf.getOperatorById(opId).getOpContext().getRouteInfo();
+                                newOp.getOpContext().setRouteInfo(originalRouteMap);
+                                
 				
 				if(op.getOpContext().isSource()){
 					newOp.getOpContext().setIsSource(true);
