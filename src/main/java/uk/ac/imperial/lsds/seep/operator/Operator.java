@@ -31,6 +31,8 @@ public class Operator implements Serializable, EndPoint, Connectable{
 	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
 
 	private final int operatorId;
+        private int originalOpId ;
+        
 	private final OperatorCode operatorCode;
 	private final StateWrapper stateWrapper;
 	
@@ -58,6 +60,7 @@ public class Operator implements Serializable, EndPoint, Connectable{
 		this.operatorCode = opCode;
 		this.stateWrapper = null;
 		opContext.setDeclaredWorkingAttributes(attributes);
+                this.originalOpId = opId;
 	}
 	
 	private Operator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
@@ -65,8 +68,16 @@ public class Operator implements Serializable, EndPoint, Connectable{
 		this.operatorCode = opCode;
 		this.stateWrapper = s;
 		opContext.setDeclaredWorkingAttributes(attributes);
+                this.originalOpId = opId;
 	}
 
+        public void setOriginalOpId(int x){
+            originalOpId = x ;
+        }
+        
+        public int getOriginalOpId(){
+            return originalOpId;
+        }
 	
 	/** Other methods **/
 	

@@ -91,6 +91,9 @@ public class OperatorContext implements Serializable{
 		return routeInfo;
 	}
 	
+        public void setRouteInfo(HashMap<Integer, ArrayList<Integer>> map){
+		routeInfo = map;
+	}
 	public Map<Integer, InputDataIngestionMode> getInputDataIngestionModePerUpstream(){
 		return inputDataIngestionModePerUpstream;
 	}
