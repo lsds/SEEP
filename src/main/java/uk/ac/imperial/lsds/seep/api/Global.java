@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.LOCAL_VARIABLE)
-public @interface All {
+public @interface Global {
 
 }
