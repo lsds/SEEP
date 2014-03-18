@@ -7,9 +7,11 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Added new metrics to 
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.processingunit;
 
+import com.codahale.metrics.Timer;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,14 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
+import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
@@ -167,24 +167,42 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			LOG.warn("-> The operator in this node is being overwritten");
 		}
 		o.setProcessingUnit(this);
+        
 		// To identify the monitor with the op id instead of the node id
-		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
+		NodeManager.monitorSlave.setOperatorId(o.getOperatorId());
 		LOG.debug("Operator: {}", o);
+        
 		LOG.info("-> Instantiating Operator...DONE");
 	}
 
 	@Override
 	public void processData(DataTuple data) {
-		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
+        
+        // Seep monitoring: notify start of data tuple processing
+        int operatorId = runningOp.getOperatorId();
+        
+        Timer.Context context = notifyThat(operatorId).operatorStart();
+        
 		runningOp.processData(data);
+        
+        // Seep monitoring: notify end of data tuple processing
+        notifyThat(operatorId).operatorEnd(context);
 	}
 
 	@Override
 	public void processData(ArrayList<DataTuple> data) {
-		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
+        
+        // Seep monitoring: notify start of data tuple processing
+        int operatorId = runningOp.getOperatorId();
+        
+        Timer.Context context = notifyThat(operatorId).operatorStart();
+        
 		runningOp.processData(data);
+        
+        // Seep monitoring: notify end of data tuple processing
+        notifyThat(operatorId).operatorEnd(context);
 	}
 
 	@Override
@@ -226,7 +244,16 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 				// LOCAL
 				else if(dest instanceof Operator){
 					Operator operatorObj = (Operator) dest;
-					operatorObj.processData(dt);
+                    
+                    // Seep monitoring: notify start of data tuple processing
+                    int operatorId = runningOp.getOperatorId();
+
+                    Timer.Context context = notifyThat(operatorId).operatorStart();
+
+                    operatorObj.processData(dt);
+
+                    // Seep monitoring: notify end of data tuple processing
+                    notifyThat(operatorId).operatorEnd(context);
 				}
 			}
 			catch(ArrayIndexOutOfBoundsException aioobe){

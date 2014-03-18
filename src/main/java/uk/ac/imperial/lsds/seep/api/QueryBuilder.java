@@ -7,17 +7,18 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - support for generic scaling rules
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
-import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class QueryBuilder {
@@ -67,5 +68,8 @@ public class QueryBuilder {
 	public static void scaleOut(int opToScaleOut, int newOpId, Node newProvisionedNode){
 		qp.scaleOut(opToScaleOut, newOpId, newProvisionedNode);
 	}
-	
+    
+    public static void withPolicyRules(PolicyRules rules) {
+        qp.withPolicyRules(rules);
+    }
 }

@@ -50,7 +50,8 @@ import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
 import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.MonitorManager;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMaster;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterFactory;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
@@ -64,6 +65,10 @@ import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
+import java.util.List;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterListener;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
@@ -104,9 +109,14 @@ public class Infrastructure {
 	private ElasticInfrastructureUtils eiu;
 
 	private ManagerWorker manager = null;
-	private MonitorManager monitorManager = null;
+	private MonitorMaster monitorMaster = null;
 	private int port;
 	
+    // Scaling policy rules. These are needed by the MonitorMaster instance.
+    private PolicyRules policyRules;
+    
+    public static int RESET_SYSTEM_STABLE_TIME_OP_ID = -666;
+    
 	public Infrastructure(int listeningPort) {
 		this.port = listeningPort;
 	}
@@ -127,7 +137,31 @@ public class Infrastructure {
 	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
 	 * and then, for the below methods, indicate the query id that needs to be accessed.
 	**/
-	public void loadQuery(QueryPlan qp){
+	public void loadQuery(QueryPlan qp) {
+        // We can only start the monitor master process at this point because
+        // we need to know the scaling rules in advance. These are only accessible
+        // through the QueryPlan.
+        LOG.debug("-> MonitorMaster running");
+        MonitorMasterFactory factory = new MonitorMasterFactory(this, qp.getPolicyRules());
+        monitorMaster = factory.create();
+        
+        // We need a listener to reset the system stable time
+        monitorMaster.addListener(new MonitorMasterListener() {
+
+            @Override
+            public int getOperatorId() {
+                return RESET_SYSTEM_STABLE_TIME_OP_ID;
+            }
+
+            @Override
+            public void onTupleReceived(MetricsTuple tuple) {
+                Infrastructure.msh.setSystemStableTime(System.currentTimeMillis());
+            }
+        });
+        
+		Thread monitorManagerT = new Thread(monitorMaster);
+		monitorManagerT.start();
+        
 		ops = qp.getOps();
 		states = qp.getStates();
 		elements = qp.getElements();
@@ -208,8 +242,8 @@ public class Infrastructure {
 		return pathToQueryDefinition;
 	}
 
-	public MonitorManager getMonitorManager(){
-		return monitorManager;
+	public MonitorMaster getMonitorMaster(){
+		return monitorMaster;
 	}
 	
 	public ArrayList<Operator> getOps() {
@@ -285,16 +319,12 @@ public class Infrastructure {
 		manager = new ManagerWorker(this, port);
 		Thread centralManagerT = new Thread(manager, "managerWorkerT");
 		centralManagerT.start();
-
-		LOG.debug("-> MonitorManager running");
-		monitorManager = new MonitorManager(this);
-		Thread monitorManagerT = new Thread(monitorManager);
-		monitorManagerT.start();
 	}
 
 	public void stopWorkers(){
-		//stop monitor manager.. 
-		monitorManager.stopMManager(true);
+		// Stop monitor manager
+        LOG.debug("-> MonitorMaster stoping");
+		monitorMaster.stop();
 	}
 	
 	public void localMapPhysicalOperatorsToNodes(){
@@ -648,11 +678,9 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	
 	public void placeNew(Operator o, Node n) {
 		int opId = o.getOperatorId();
-                int originalOpId = o.getOriginalOpId();
-                
 		boolean isStatefull = (o.getOperatorCode() instanceof StatefulOperator) ? true : false;
 		// Note that opId and originalOpId are the same value here, since placeNew places only original operators in the query
-		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, 
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, opId, n, 
 				Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId, 
 				Integer.parseInt(GLOBALS.valueFor("dataSocket")) + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
@@ -908,4 +936,20 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		elements.put(o.getOperatorId(), o);
 		LOG.debug("Added new Operator to Infrastructure: {}", o.toString());
 	}
+    
+    /**
+     * @return Returns a list of identifiers for the nodes that are executing a 
+     * given operator at the time of invocation.
+     */
+    public List<Integer> getNodeIdsForOperatorId(int operatorId) {
+        List<Integer> nodeIds = new ArrayList<Integer>();
+        
+        for(Integer nodeId : queryToNodesMapping.keySet()) {
+            if(queryToNodesMapping.get(nodeId).getOperatorId() == operatorId) {
+                nodeIds.add(nodeId);
+            }
+        }
+                
+        return nodeIds;
+    }
 }

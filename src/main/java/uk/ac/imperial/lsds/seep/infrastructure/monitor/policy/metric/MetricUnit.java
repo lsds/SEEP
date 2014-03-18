@@ -11,6 +11,7 @@ package uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric;
 public enum MetricUnit {
     
     PERCENT("percent"),
+    BYTES("bytes"),
     MEGABYTES("megabytes"),
     GIGABYTES("gigabytes"),
     MILLISECONDS("milliseconds"),

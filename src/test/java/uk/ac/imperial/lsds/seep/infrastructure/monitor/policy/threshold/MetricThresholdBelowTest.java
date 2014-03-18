@@ -6,14 +6,16 @@ package uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.threshold;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricUnit;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricValue;
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class MetricThresholdBelowTest {
     
@@ -35,9 +37,38 @@ public class MetricThresholdBelowTest {
     @After
     public void tearDown() {
     }
-    // TODO add test methods here.
-    // The methods must be annotated with annotation @Test. For example:
-    //
-    // @Test
-    // public void hello() {}
+
+    @Test
+    public void testThresholdEvaluation() {
+        System.out.println("testThresholdEvaluation");
+        
+        MetricValue thresholdValue = new MetricValue();
+        thresholdValue.setValue(10);
+        thresholdValue.setUnit(MetricUnit.GIGABYTES);
+        
+        MetricThresholdBelow threshold = new MetricThresholdBelow(thresholdValue);
+        
+        MetricValue value = new MetricValue();
+        value.setValue(1);
+        value.setUnit(MetricUnit.GIGABYTES);
+        
+        assertTrue("The value is below the threshold", threshold.evaluate(value));
+    }
+    
+    @Test
+    public void testThresholdEvaluationWithUnitConversion() {
+        System.out.println("testThresholdEvaluationWithUnitConversion");
+        
+        MetricValue thresholdValue = new MetricValue();
+        thresholdValue.setValue(10);
+        thresholdValue.setUnit(MetricUnit.GIGABYTES);
+        
+        MetricThresholdBelow threshold = new MetricThresholdBelow(thresholdValue);
+        
+        MetricValue value = new MetricValue();
+        value.setValue(500);
+        value.setUnit(MetricUnit.MEGABYTES);
+        
+        assertTrue("The value is below the threshold", threshold.evaluate(value));
+    }
 }

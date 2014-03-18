@@ -24,7 +24,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.trigger.ActionTrig
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class PolicyRulesTest {
     

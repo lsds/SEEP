@@ -213,10 +213,9 @@ public class MasterController {
 	
 	public void startSystemOption(Infrastructure inf) throws IOException, ESFTRuntimeException{
 		getUserInput("Press a button to start the source");
-		//Start the source, and thus the stream processing system
+		
+        //Start the source, and thus the stream processing system
 		inf.start();
-		//Initialize local statistics
-		inf.getMonitorManager().initSp();
 	}
 	
 	public void configureSourceRateOption(Infrastructure inf) throws IOException{

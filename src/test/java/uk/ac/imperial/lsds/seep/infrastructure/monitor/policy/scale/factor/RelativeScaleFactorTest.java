@@ -15,7 +15,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.action.ScaleOutAct
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class RelativeScaleFactorTest {
     

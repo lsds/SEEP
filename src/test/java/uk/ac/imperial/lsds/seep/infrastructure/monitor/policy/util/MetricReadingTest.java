@@ -19,7 +19,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricValue
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class MetricReadingTest {
     

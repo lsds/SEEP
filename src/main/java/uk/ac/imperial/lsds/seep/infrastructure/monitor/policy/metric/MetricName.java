@@ -10,8 +10,10 @@ package uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric;
  */
 public enum MetricName {
     
+    DEFAULT("default"),
     CPU_UTILIZATION("cpu"),
     HEAP_SIZE("memory"),
+    HEAP_UTILIZATION("memory-usage"),
     QUEUE_LENGTH("queue-length"),
     OPERATOR_LATENCY("latency");
     

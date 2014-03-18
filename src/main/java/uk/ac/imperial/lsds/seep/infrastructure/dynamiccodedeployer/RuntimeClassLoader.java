@@ -16,6 +16,8 @@ import java.net.URLClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
+
 public class RuntimeClassLoader extends URLClassLoader{
 	
 	final private Logger LOG = LoggerFactory.getLogger(RuntimeClassLoader.class);

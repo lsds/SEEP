@@ -13,4 +13,5 @@ package uk.ac.imperial.lsds.seep.api;
 public interface QueryComposer {
 	
 	public QueryPlan compose();
+    
 }

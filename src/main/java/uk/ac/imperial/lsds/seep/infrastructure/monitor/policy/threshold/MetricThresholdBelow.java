@@ -18,6 +18,6 @@ public class MetricThresholdBelow extends MetricThreshold {
     
     @Override
     public boolean evaluate(MetricValue value) {
-        return value.getValue() < getThreshold().getValue();
+        return value.convertTo(getThreshold().getUnit()).getValue() < getThreshold().getValue();
     }
 }
