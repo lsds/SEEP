@@ -35,7 +35,7 @@ public class Main {
 		
 		if(args.length == 0){
 			System.out.println("ARGS:");
-			System.out.println("Master <querySourceFile.jar> <MainClass>");
+			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass>");
 			System.out.println("Worker <localPort>");
 			System.exit(0);
 		}

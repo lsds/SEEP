@@ -7,17 +7,17 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Added calls to notify arrival and departure of tuples
+ *     to DefaultMetricsReader.
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
+import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 
 public class InputQueue implements DataStructureI{
 
@@ -34,12 +34,14 @@ public class InputQueue implements DataStructureI{
 		inputQueue = new ArrayBlockingQueue<DataTuple>(size);
 	}
 	
-	public void push(DataTuple data){
+	public synchronized void push(DataTuple data){
 		try {
 			inputQueue.put(data);
-			MetricsReader.eventsInputQueue.inc();
-		} 
-		catch (InterruptedException e) {
+            
+            // Seep monitoring
+            notifyThat(0).inputQueuePut();
+            
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -47,15 +49,22 @@ public class InputQueue implements DataStructureI{
 	
 	public synchronized boolean pushOrShed(DataTuple data){
 		boolean inserted = inputQueue.offer(data);
-		if (inserted) MetricsReader.eventsInputQueue.inc();
+		if (inserted) {
+            // Seep monitoring
+            notifyThat(0).inputQueuePut();
+        }
+        
 		return inserted;
 	}
 	
 	public DataTuple[] pullMiniBatch(){
 		int miniBatchSize = 10;
 		DataTuple[] batch = new DataTuple[miniBatchSize];
-		MetricsReader.eventsInputQueue.dec();
-		for(int i = 0; i<miniBatchSize; i++){
+
+        // Seep monitoring: notify reset of input queue
+        notifyThat(0).inputQueueTake();
+            
+        for(int i = 0; i<miniBatchSize; i++){
 			DataTuple dt = inputQueue.poll();
 			if(dt != null)
 				batch[i] = dt;
@@ -67,10 +76,11 @@ public class InputQueue implements DataStructureI{
 	
 	public DataTuple pull(){
 		try {
-			MetricsReader.eventsInputQueue.dec();
+            // Seep monitoring
+            notifyThat(0).inputQueueTake();
+            
 			return inputQueue.take();
-		}
-		catch (InterruptedException e) {
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -79,20 +89,22 @@ public class InputQueue implements DataStructureI{
 	
 	public void clean(){
 		try {
-			MetricsReader.eventsInputQueue.dec();
-			inputQueue.take();
+            // Seep monitoring
+            notifyThat(1).inputQueueTake();
+        
+            inputQueue.take();
 		} 
 		catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println("INPUT QUEUE SIZE BEFORE CLEANING: "+MetricsReader.eventsInputQueue.getCount());
-		System.out.println("BEFORE- REAL SIZE OF INPUT QUEUE: "+inputQueue.size());
-		//MetricsReader.eventsInputQueue.clear();
-		MetricsReader.reset(MetricsReader.eventsInputQueue);
+		System.out.println("BEFORE- REAL SIZE OF INPUT QUEUE: " + inputQueue.size());
+		
+        // Seep monitoring: notify reset of input queue
+        notifyThat(0).inputQueueReset();
+        
 		inputQueue.clear();
-		System.out.println("AFTER- REAL SIZE OF INPUT QUEUE: "+inputQueue.size());
-		System.out.println("INPUT QUEUE SIZE AFTER CLEANING: "+MetricsReader.eventsInputQueue.getCount());
+		System.out.println("AFTER- REAL SIZE OF INPUT QUEUE: " + inputQueue.size());
 	}
 
 	@Override

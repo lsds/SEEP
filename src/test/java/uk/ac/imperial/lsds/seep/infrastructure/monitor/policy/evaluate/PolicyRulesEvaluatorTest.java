@@ -15,9 +15,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import static org.mockito.Mockito.*;
-import org.mockito.internal.InOrderImpl;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRule;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricName.*;
@@ -33,7 +31,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.util.MetricReading
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class PolicyRulesEvaluatorTest {
     

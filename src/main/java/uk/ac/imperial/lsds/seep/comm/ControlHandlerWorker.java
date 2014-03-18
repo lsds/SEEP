@@ -36,6 +36,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
