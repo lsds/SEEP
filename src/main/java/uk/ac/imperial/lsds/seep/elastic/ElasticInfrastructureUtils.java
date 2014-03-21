@@ -340,7 +340,7 @@ public class ElasticInfrastructureUtils {
 			e.printStackTrace();
 		}
 		// conf operator context
-		configureOperatorContext(oldOpId, newOp);
+		configureStaticOperatorContext(oldOpId, newOp);
 		// router for the new op
 		Router copyOfRouter = opToScaleOut.getRouter();
                 
@@ -547,7 +547,7 @@ public class ElasticInfrastructureUtils {
         }
     }
 
-    public void configureOperatorContext(int opId, Operator newOp) {
+    public void configureStaticOperatorContext(int opId, Operator newOp) {
         
         ArrayList<Operator> ops = inf.getOps();
                
@@ -578,6 +578,32 @@ public class ElasticInfrastructureUtils {
 			}
 		}
 	}
+    
+    public void configureOperatorContext(int opId, Operator newOp){
+		ArrayList<Operator> ops = inf.getOps();
+		for(Operator op : ops){
+			if(opId == op.getOperatorId()){
+				//op.getOpContext().copyContext(newOp);
+				for(PlacedOperator up : op.getOpContext().upstreams){
+					(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()), false);
+				}
+				for(PlacedOperator down : op.getOpContext().downstreams){
+					inf.getElements().get(newOp.getOperatorId()).connectTo(inf.getElements().get(down.opID()), false);
+				}
+				//Copy the original operators to the new operatorContext
+				newOp.setOriginalDownstream(op.getOpContext().getOriginalDownstream());
+				//Copy the tuple declaration fields
+				newOp._declareWorkingAttributes(op.getOpContext().getDeclaredWorkingAttributes());
+				//Copy inputDataIngestionMode information
+				newOp.initializeInputDataIngestionModePerUpstream(op.getOpContext().getInputDataIngestionModePerUpstream());
+				
+				if(op.getOpContext().isSource()){
+					newOp.getOpContext().setIsSource(true);
+				}
+			}
+		}
+	}
+
 
 	public String getOperatorClassName(int opId){
 		ArrayList<Operator> ops = inf.getOps();
