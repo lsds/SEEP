@@ -83,41 +83,10 @@ public class NodeManager{
 	static public void setSystemStable(){
         MetricsTuple tuple = new MetricsTuple();
         tuple.setOperatorId(Infrastructure.RESET_SYSTEM_STABLE_TIME_OP_ID);
-        
 		monitorSlave.pushMetricsTuple(tuple);
-		
-//		String command = "systemStable";
-//		try{
-//			Socket connMaster = new Socket(InetAddress.getByName(P.valueFor("mainAddr")), Integer.parseInt(P.valueFor("mainPort")));
-//			OutputStream os = connMaster.getOutputStream();
-//			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os));
-////			os.write(command.getBytes());
-//			bw.write(command);
-//			bw.newLine();
-//			bw.flush();
-//			System.out.println("SET SYSTEM STABLE ()()()()()()()()");
-//			Thread.sleep(100);
-//			
-////			bw.close();
-////			os.close();
-////			connMaster.close();
-//		}
-//		catch(UnknownHostException uhe){
-//			System.out.println("NodeManager.setSystemStable: "+uhe.getMessage());
-//			uhe.printStackTrace();
-//		}
-//		catch(IOException io){
-//			System.out.println("NodeManager.setSystemStable: "+io.getMessage());
-//			io.printStackTrace();
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 	}
 	
 	public void init(){
-		// Get unique identifier for this node
-		int nodeId = nodeDescr.getNodeId();
 		//Initialize node engine ( CoreRE + ProcessingUnit )
 		CoreRE core = new CoreRE(nodeDescr, rcl);
 		

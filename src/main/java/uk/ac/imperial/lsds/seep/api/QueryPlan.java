@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +26,11 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
-import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class QueryPlan {
@@ -150,7 +152,24 @@ public class QueryPlan {
 		this.addOperator(op);
 		try {
 			this.place(op);
-		} 
+		}
+		catch (NodeAlreadyInUseException e) {
+			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+			e.printStackTrace();
+		}
+		return op;
+	}
+	
+	public Connectable newMultiOperator(Set<SubOperator> subOperators,
+			int multiOpId, List<String> attributes) {
+		// First create multiOperator
+		MultiOperator mo = MultiOperator.synthesizeFrom(subOperators, multiOpId);
+		// Then compose the multiOperator into a SEEP Operator
+		Operator op = Operator.getStatelessOperator(multiOpId, mo, attributes);
+		this.addOperator(op);
+		try {
+			this.place(op);
+		}
 		catch (NodeAlreadyInUseException e) {
 			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
 			e.printStackTrace();

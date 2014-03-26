@@ -31,11 +31,10 @@ public class Operator implements Serializable, EndPoint, Connectable{
 	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
 
 	private final int operatorId;
-        private int originalOpId ;
+	private int originalOpId;
         
 	private final OperatorCode operatorCode;
 	private final StateWrapper stateWrapper;
-	
 	
 	private OperatorContext opContext = new OperatorContext();
 	private boolean ready = false;

@@ -109,7 +109,7 @@ public class CoreRE {
 	}
 	
 	public void pushOperator(Operator o){
-		boolean multicoreSupport = GLOBALS.valueFor("multicoreSupport").equals("true") ? true : false; 
+		boolean multicoreSupport = GLOBALS.valueFor("multicoreSupport").equals("true") ? true : false;
 		if(o.getOpContext().getOperatorStaticInformation().isStatefull() ){
 			processingUnit = new StatefulProcessingUnit(this, multicoreSupport);
 		}

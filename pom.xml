@@ -172,8 +172,7 @@
                     <phase>package</phase>
                 </execution>
             </executions>
-        </plugin>
-        
+        </plugin>     
         <plugin>
             <artifactId>maven-surefire-plugin</artifactId>
             <version>2.16</version>

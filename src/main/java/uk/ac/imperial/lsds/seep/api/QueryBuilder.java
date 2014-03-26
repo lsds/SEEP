@@ -12,11 +12,13 @@
 package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -51,6 +53,10 @@ public class QueryBuilder {
 	
 	public static Connectable newStatelessSink(OperatorCode op, int opId, List<String> attributes){
 		return qp.newStatelessSink(op, opId, attributes);
+	}
+	
+	public static Connectable newMultiOperator(Set<SubOperator> subOperators, int multiOpId, List<String> attributes){
+		return qp.newMultiOperator(subOperators, multiOpId, attributes);
 	}
 	
 	public static StateWrapper newCustomState(CustomState s, int ownerId, int checkpointInterval, String keyAttribute){
