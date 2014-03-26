@@ -153,23 +153,23 @@
       	<plugin>
           	<artifactId>maven-assembly-plugin</artifactId>
           	<version>2.4</version>
+          	<configuration>
+	            <archive>
+	            	<manifest>
+	                	<mainClass>uk.ac.imperial.lsds.seep.Main</mainClass>
+	                </manifest>
+	            </archive>
+	            <descriptorRefs>
+	            	<descriptorRef>jar-with-dependencies</descriptorRef>
+	            </descriptorRefs>
+	            <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
             <executions>
                 <execution>
                     <goals>
                         <goal>attached</goal>
                     </goals>
                     <phase>package</phase>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <mainClass>uk.ac.imperial.lsds.seep.Main</mainClass>
-                            </manifest>
-                        </archive>
-                        <descriptorRefs>
-                            <descriptorRef>jar-with-dependencies</descriptorRef>
-                        </descriptorRefs>
-                        <appendAssemblyId>false</appendAssemblyId>
-                    </configuration>
                 </execution>
             </executions>
         </plugin>
