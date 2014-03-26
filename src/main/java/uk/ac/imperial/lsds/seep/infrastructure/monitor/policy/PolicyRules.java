@@ -54,7 +54,10 @@ public abstract class PolicyRules implements Iterable<PolicyRule> {
             sb.append(rule.toString());
             sb.append(",");
         }
-        sb.deleteCharAt(sb.length() - 1);
+        
+        if(sb.length() > 1) {
+            sb.deleteCharAt(sb.length() - 1);
+        }
         
         return "PolicyRules{" 
                     + "rules=" + sb.toString() + '}';

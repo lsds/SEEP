@@ -116,6 +116,14 @@ public class Router implements Serializable{
 		}
 	}
 	
+	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		for(Integer lt : logicalTargets){
+			targets = downstreamRoutingImpl.get(lt).routeToAll(targets);
+		}
+		return targets;
+	}
+	
 	public ArrayList<Integer> forwardToAllDownstream(DataTuple dt){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		if(requiresLogicalRouting){
@@ -166,14 +174,6 @@ public class Router implements Serializable{
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
 		targets = physicalRouting(logicalTargets, key);
-		return targets;
-	}
-	
-	private ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
-		ArrayList<Integer> targets = new ArrayList<Integer>();
-		for(Integer lt : logicalTargets){
-			targets = downstreamRoutingImpl.get(lt).routeToAll(targets);
-		}
 		return targets;
 	}
 	

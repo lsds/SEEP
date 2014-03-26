@@ -50,7 +50,7 @@ public class PolicyRulesEvaluator
      * @param provider 
      */
     @Override
-    public void evaluate(MetricReadingProvider provider) {
+    public synchronized void evaluate(MetricReadingProvider provider) {
         routeReadingToEvaluators(provider);
     }
     

@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class PolicyRuleEvaluatorTest {
     

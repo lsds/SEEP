@@ -497,32 +497,38 @@ public class CoreRE {
 		else if (ctt.equals(ControlTupleType.RESUME)) {
 			LOG.info("-> Node {} recv ControlTuple.RESUME", nodeDescr.getNodeId());
 			Resume resumeM = ct.getResume();
-			
-			if(((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LIGHT_STATE)){
-				// If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
-				// I may be managing a state but I dont have to replay it if I have not splitted it previously
-				if(processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK)){
-					/// \todo {why has resumeM a list?? check this}
-					for (int opId: resumeM.getOpId()){
-						//Check if I am managing the state of any of the operators to which state must be replayed
-						if(processingUnit.isManagingStateOf(opId)){
-							LOG.debug("-> Replaying State");
-							coreProcessLogic.replayState(opId);
-						}
-						else{
-							LOG.info("-> NOT in charge of managing this state");
-						}
-					}
-					//Once I have replayed the required states I put my status to NORMAL
-					processingUnit.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
-				}
-				else{
-					LOG.info("-> Ignoring RESUME state, I did not split this one");
-				}
-			}
-			else if(((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LARGE_STATE)){
-				LOG.info("Ignoring RESUME message because checkpoint mode is LARGE-STATE");
-			}
+            
+            // This if statement is necessary because processingUnit might be
+            // of type StatelessProcessingUnit. Otherwise, a ClassCastException is thrown.
+			if (processingUnit instanceof StatefulProcessingUnit) {
+                
+                if (((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LIGHT_STATE)) {
+                    // If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
+                    // I may be managing a state but I dont have to replay it if I have not splitted it previously
+                    if(processingUnit.getSystemStatus().equals(StatefulProcessingUnit.SystemStatus.WAITING_FOR_STATE_ACK)){
+                        /// \todo {why has resumeM a list?? check this}
+                        for (int opId: resumeM.getOpId()){
+                            //Check if I am managing the state of any of the operators to which state must be replayed
+                            if(processingUnit.isManagingStateOf(opId)){
+                                LOG.debug("-> Replaying State");
+                                coreProcessLogic.replayState(opId);
+                            }
+                            else{
+                                LOG.info("-> NOT in charge of managing this state");
+                            }
+                        }
+                        //Once I have replayed the required states I put my status to NORMAL
+                        processingUnit.setSystemStatus(StatefulProcessingUnit.SystemStatus.NORMAL);
+                    }
+                    else{
+                        LOG.info("-> Ignoring RESUME state, I did not split this one");
+                    }
+                }
+                else if (((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LARGE_STATE)){
+                    LOG.info("Ignoring RESUME message because checkpoint mode is LARGE-STATE");
+                }
+            }
+        
 			//Finally ack the processing of this message
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}

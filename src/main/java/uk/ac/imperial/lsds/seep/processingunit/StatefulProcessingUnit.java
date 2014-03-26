@@ -19,10 +19,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -31,7 +29,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperator
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
@@ -41,8 +38,8 @@ import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.SerialiserWorker;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker;
-import uk.ac.imperial.lsds.seep.reliable.StreamStateManager;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
+import uk.ac.imperial.lsds.seep.reliable.StreamStateManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
@@ -225,8 +222,9 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			LOG.warn("-> The operator in this node is being overwritten");
 		}
 		o.setProcessingUnit(this);
+        
 		// To identify the monitor with the op id instead of the node id
-		NodeManager.nodeMonitor.setNodeId(o.getOperatorId());
+		NodeManager.monitorSlave.setOperatorId(o.getOperatorId());
 		if(o.getStateWrapper() != null){
 			runningOpState = o.getStateWrapper();
 		}
@@ -321,8 +319,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			}
 		}
 		
-		// Instrumentation
-		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
 		runningOp.processData(data);
 		// Release the mutex
@@ -357,7 +353,6 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			}
 		}
 	
-		MetricsReader.eventsProcessed.inc();
 		// TODO: Adjust timestamp of state
 		runningOp.processData(data);
 		// Release the mutex		

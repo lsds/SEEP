@@ -30,23 +30,30 @@
   
   <dependencies>
     <dependency>
-    	<groupId>junit</groupId>
-      	<artifactId>junit</artifactId>
-      	<version>4.11</version>
-      	<scope>test</scope>
-    </dependency>
-    <dependency>
     	<groupId>com.esotericsoftware.kryo</groupId>
     	<artifactId>kryo</artifactId>
     	<version>2.22</version>
-		<scope>compile</scope>
     </dependency>
+    
+    <!-- Instrumentation of JVM to obtain various metrics -->
     <dependency>
     	<groupId>com.codahale.metrics</groupId>
     	<artifactId>metrics-core</artifactId>
     	<version>3.0.1</version>
     	<scope>compile</scope>
     </dependency>
+    <dependency>
+    	<groupId>com.codahale.metrics</groupId>
+    	<artifactId>metrics-jvm</artifactId>
+    	<version>3.0.1</version>
+    	<scope>compile</scope>
+    </dependency>
+    <dependency>
+        <groupId>com.outr.javasysmon</groupId>
+        <artifactId>javasysmon_2.10</artifactId>
+        <version>0.3.4</version>
+    </dependency>
+    
     <dependency>
     	<groupId>it.unimi.dsi</groupId>
     	<artifactId>fastutil</artifactId>
@@ -62,6 +69,11 @@
   		<artifactId>logback-classic</artifactId>
   		<version>1.0.13</version>
 	</dependency>
+	<dependency> 
+  		<groupId>ch.qos.logback</groupId>
+  		<artifactId>logback-core</artifactId>
+  		<version>1.0.13</version>
+	</dependency>    
     <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
@@ -71,6 +83,20 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-collections4</artifactId>
         <version>4.0</version>
+    </dependency>
+
+    <!-- Dependencies for tests -->
+    <dependency>
+    	<groupId>junit</groupId>
+      	<artifactId>junit</artifactId>
+      	<version>4.11</version>
+      	<scope>test</scope>
+    </dependency>
+     <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.2.1</version>
+        <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>org.hamcrest</groupId>
@@ -126,28 +152,40 @@
       	 
       	<plugin>
           	<artifactId>maven-assembly-plugin</artifactId>
-          	<version>2.2-beta-5</version>
-          	<configuration>
-				<archive>
-          			<manifest>
-            			<mainClass>uk.ac.imperial.lsds.seep.Main</mainClass>
-          			</manifest>
-        		</archive>
-        		<descriptorRefs>
-          			<descriptorRef>jar-with-dependencies</descriptorRef>
-        		</descriptorRefs>
-      		</configuration>
+          	<version>2.4</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>attached</goal>
+                    </goals>
+                    <phase>package</phase>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <mainClass>uk.ac.imperial.lsds.seep.Main</mainClass>
+                            </manifest>
+                        </archive>
+                        <descriptorRefs>
+                            <descriptorRef>jar-with-dependencies</descriptorRef>
+                        </descriptorRefs>
+                        <appendAssemblyId>false</appendAssemblyId>
+                    </configuration>
+                </execution>
+            </executions>
         </plugin>
         
-        <!-- <plugin>
+        <plugin>
             <artifactId>maven-surefire-plugin</artifactId>
             <version>2.16</version>
             <configuration>
                 <includes>
-                    <include>uk/ac/imperial/lsds/seep/infrastructure/monitor/policy/**/*Test.java</include>
+                    <include>uk/ac/imperial/lsds/seep/infrastructure/monitor/**/*Test.java</include>
                 </includes>
+                <excludes>
+                    <exclude>uk/ac/imperial/lsds/seep/infrastructure/monitor/LocalReporterMonitorTest.java</exclude>
+                </excludes>
             </configuration>
-        </plugin> -->
+        </plugin>
   	</plugins>
   </build>
 </project>

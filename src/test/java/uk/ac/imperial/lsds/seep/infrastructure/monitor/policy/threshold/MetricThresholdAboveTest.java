@@ -10,10 +10,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricUnit;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricValue;
 
 /**
  *
- * @author martinrouaux
+ * @author mrouaux
  */
 public class MetricThresholdAboveTest {
     
@@ -35,9 +37,38 @@ public class MetricThresholdAboveTest {
     @After
     public void tearDown() {
     }
-    // TODO add test methods here.
-    // The methods must be annotated with annotation @Test. For example:
-    //
-    // @Test
-    // public void hello() {}
+
+    @Test
+    public void testThresholdEvaluation() {
+        System.out.println("testThresholdEvaluation");
+        
+        MetricValue thresholdValue = new MetricValue();
+        thresholdValue.setValue(10);
+        thresholdValue.setUnit(MetricUnit.GIGABYTES);
+        
+        MetricThresholdAbove threshold = new MetricThresholdAbove(thresholdValue);
+        
+        MetricValue value = new MetricValue();
+        value.setValue(20);
+        value.setUnit(MetricUnit.GIGABYTES);
+        
+        assertTrue("The value is below the threshold", threshold.evaluate(value));
+    }
+    
+    @Test
+    public void testThresholdEvaluationWithUnitConversion() {
+        System.out.println("testThresholdEvaluationWithUnitConversion");
+        
+        MetricValue thresholdValue = new MetricValue();
+        thresholdValue.setValue(20);
+        thresholdValue.setUnit(MetricUnit.MEGABYTES);
+        
+        MetricThresholdAbove threshold = new MetricThresholdAbove(thresholdValue);
+        
+        MetricValue value = new MetricValue();
+        value.setValue(1);
+        value.setUnit(MetricUnit.GIGABYTES);
+        
+        assertTrue("The value is below the threshold", threshold.evaluate(value));
+    }
 }

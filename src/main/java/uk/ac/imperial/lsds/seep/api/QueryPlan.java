@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - support for generic scaling rules
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.api;
 
@@ -20,12 +21,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
+import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 public class QueryPlan {
@@ -45,6 +48,8 @@ public class QueryPlan {
 	//Mapping of operators to node
 	private Map<Integer, Operator> mapOperatorToNode = new LinkedHashMap<Integer, Operator>();
 	
+    private PolicyRules policyRules;
+    
 	public ArrayList<Operator> getOps(){
 		return ops;
 	}
@@ -87,6 +92,7 @@ public class QueryPlan {
 		}
 		Operator op = this.newStatefulOperator(opCode, opId, s, attributes);
 		this.setSource(op);
+		
 		op.getOpContext().setIsSource(true);
 		return op;
 	}
@@ -226,4 +232,13 @@ public class QueryPlan {
 		elements.put(o.getOperatorId(), o);
 		LOG.info("Added new Operator to Infrastructure: {}", o.toString());
 	}
+    
+    public void withPolicyRules(PolicyRules rules) {
+        policyRules = rules;
+        LOG.info("Initialising query with scaling policy: {}", rules.toString());
+    }
+    
+    public PolicyRules getPolicyRules() {
+        return policyRules;
+    }
 }

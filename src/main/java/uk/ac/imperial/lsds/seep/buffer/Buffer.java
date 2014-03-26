@@ -14,11 +14,9 @@ import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
-
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 /**
@@ -94,7 +92,6 @@ public class Buffer implements Serializable{
 
 	public void save(BatchTuplePayload batch, long outputTs, TimestampTracker inputTs){
 		log.add(new OutputLogEntry(outputTs, inputTs, batch));
-		MetricsReader.loggedEvents.inc();
 	}
 	
 	public TimestampTracker trim(long ts){
@@ -127,10 +124,8 @@ public class Buffer implements Serializable{
 //		}
 		long endTrim = System.currentTimeMillis();
 		System.out.println("TOTAL-TRIM: "+(endTrim-startTrim));
-		//MetricsReader.loggedEvents.clear();
-		MetricsReader.reset(MetricsReader.loggedEvents);
-		MetricsReader.loggedEvents.inc(log.size());
-		return oldest;
+
+        return oldest;
 	}
 	
 	///fixme{just for testing, do binary search on structure}

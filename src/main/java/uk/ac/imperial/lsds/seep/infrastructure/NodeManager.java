@@ -23,14 +23,15 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.Monitor;
+import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.MonitorSlave;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.MonitorSlaveFactory;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
@@ -57,7 +58,7 @@ public class NodeManager{
 	
 	static public boolean monitorOfSink = false;
 	static public long clock = 0;
-	static public Monitor nodeMonitor = new Monitor();
+	static public MonitorSlave monitorSlave;
 	static public int second;
 	static public double throughput;
 		
@@ -66,6 +67,7 @@ public class NodeManager{
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
+        
 		this.ownPort = ownPort;
 		try {
 			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
@@ -73,13 +75,16 @@ public class NodeManager{
 		catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
+        
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
-		
-		Monitor.send666();
+        MetricsTuple tuple = new MetricsTuple();
+        tuple.setOperatorId(Infrastructure.RESET_SYSTEM_STABLE_TIME_OP_ID);
+        
+		monitorSlave.pushMetricsTuple(tuple);
 		
 //		String command = "systemStable";
 //		try{
@@ -111,15 +116,11 @@ public class NodeManager{
 	}
 	
 	public void init(){
-		//Get unique identifier for this node
+		// Get unique identifier for this node
 		int nodeId = nodeDescr.getNodeId();
 		//Initialize node engine ( CoreRE + ProcessingUnit )
 		CoreRE core = new CoreRE(nodeDescr, rcl);
-		//Initialize monitor
-		nodeMonitor.setNodeId(nodeId);
-		monitorT = new Thread(nodeMonitor);
-		monitorT.start();
-		LOG.info("-> Node Monitor running");
+		
 		//Local variables
 		ServerSocket serverSocket = null;
 		PrintWriter out = null;
@@ -150,7 +151,7 @@ public class NodeManager{
 					o = ois.readObject();
 					if(o instanceof Operator){
 						LOG.debug("-> OPERATOR resolved, OP-ID: {}", ((Operator)o).getOperatorId());
-					}
+                    }
 					else if (o instanceof StateWrapper){
 						LOG.info("-> STATE resolved, Class: {}", o.getClass().getName());
 					}
@@ -163,6 +164,18 @@ public class NodeManager{
 					core.pushStarTopology((ArrayList<EndPoint>)o);
 				}
 				else if(o instanceof Operator){
+                    // Initialize monitor slave, start thread, we do it at
+                    // this stage because we need to know the node is running an operator
+                    int operatorId = ((Operator)o).getOperatorId();
+
+                    MonitorSlaveFactory factory = new MonitorSlaveFactory(operatorId);
+                    monitorSlave = factory.create();
+
+                    monitorT = new Thread(monitorSlave);
+                    monitorT.start();
+
+                    LOG.info("-> Node Monitor running for operatorId={}", operatorId);
+                    
 					core.pushOperator((Operator)o);
 				}
 				else if(o instanceof Integer){

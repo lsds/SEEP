@@ -14,11 +14,8 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.MetricsReader;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 
@@ -65,7 +62,6 @@ public class IncomingDataHandler implements Runnable{
 			while(goOn){
 				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper, dsa));
 				newConn.start();
-				MetricsReader.numberIncomingDataHandlerWorkers.inc();
 			}
 			incDataServerSocket.close();
 		}
