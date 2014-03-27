@@ -11,8 +11,8 @@ public interface SubOperatorAPI extends Serializable{
 	public boolean isMostLocalUpstream();
 	public void connectSubOperatorTo(int localStreamId, SubOperator so);
 	
+	public void setUp();
 	public void processData(DataTuple data);
 	public void processData(ArrayList<DataTuple> dataList);
-	public void setUp();
 	
 }
