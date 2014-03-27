@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
-public class MultiOperator implements OperatorCode, ComposedOperator{
+public class MultiOperator implements OperatorCode, ComposedOperator, CommunicationPrimitives{
 
 	private static final long serialVersionUID = 1L;
 
@@ -14,7 +15,6 @@ public class MultiOperator implements OperatorCode, ComposedOperator{
 	
 	private Set<SubOperator> subOperators;
 	private SubOperator mostUpstream;
-	private SubOperator mostDownstream;
 	
 	private MultiOperator(Set<SubOperator> subOperators, int multiOpId){
 		this.id = multiOpId;
@@ -38,21 +38,21 @@ public class MultiOperator implements OperatorCode, ComposedOperator{
 	
 	@Override
 	public void processData(DataTuple data) {
-		// TODO Grab mostUpstream and execute, get data back and call its downstream... and so on
-		// Once the next downstream is mostDownstream, grab data and make use of api in OperatorCode to
-		// forward the data to the next node
+		// just call the first op to start processing data
+		mostUpstream.processData(data);
 	}
 
 	@Override
 	public void processData(ArrayList<DataTuple> dataList) {
-		// TODO Auto-generated method stub
-		
+		mostUpstream.processData(dataList);
 	}
 
 	@Override
 	public void setUp() {
-		// TODO Auto-generated method stub
-		
+		for(SubOperator so : subOperators){
+			so.setMultiOperator(this);
+			so.setUp();
+		}
 	}
 
 	/** Implementation of ComposedOperator interface **/
@@ -77,4 +77,43 @@ public class MultiOperator implements OperatorCode, ComposedOperator{
 		return false;
 	}
 
+	@Override
+	public void send(DataTuple dt) {
+		api.send(dt);
+	}
+	
+	@Override
+	public void send_toStreamId(DataTuple dt, int streamId) {
+		api.send_toStreamId(dt, streamId);
+	}
+
+	@Override
+	public void send_all(DataTuple dt) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void send_splitKey(DataTuple dt, int key) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void send_toIndex(DataTuple dt, int idx) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void send_toStreamId_splitKey(DataTuple dt, int streamId, int key) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void send_toStreamId_toAll(DataTuple dt, int streamId) {
+		// TODO Auto-generated method stub
+		
+	}
 }

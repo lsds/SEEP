@@ -4,15 +4,14 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.LocalApi;
 
-public interface SubOperatorAPI extends Serializable{
+public interface SubOperatorCode extends Serializable{
 
-	public boolean isMostLocalDownstream();
-	public boolean isMostLocalUpstream();
-	public void connectSubOperatorTo(int localStreamId, SubOperator so);
+	public LocalApi api = LocalApi.getInstance();
 	
+	public void setUp();
 	public void processData(DataTuple data);
 	public void processData(ArrayList<DataTuple> dataList);
-	public void setUp();
 	
 }

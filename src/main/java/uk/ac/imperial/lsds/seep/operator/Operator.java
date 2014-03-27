@@ -25,7 +25,7 @@ import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
-public class Operator implements Serializable, EndPoint, Connectable{
+public class Operator implements Serializable, EndPoint, Connectable, Callback{
 
 	private static final long serialVersionUID = 1L;
 	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
@@ -102,8 +102,7 @@ public class Operator implements Serializable, EndPoint, Connectable{
 	
 	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
-		
-		this.operatorCode.api.setOperator(this); //compose
+		this.operatorCode.api.setCallbackObject(this);
 	}
 
 	/** Methods used by the developers to send data **/

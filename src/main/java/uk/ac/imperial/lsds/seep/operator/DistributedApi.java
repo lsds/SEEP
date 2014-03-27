@@ -16,48 +16,56 @@ import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
-public class Api implements Serializable{
+public class DistributedApi implements API, CommunicationPrimitives, Serializable{
 
 	private static final long serialVersionUID = 1L;
-	private final static Api instance = new Api();
+	private static DistributedApi instance = new DistributedApi();
 	private Operator op;
 	
-	void setOperator(Operator op){
-		this.op = op;
+	@Override
+	public void setCallbackObject(Callback c) {
+		this.op = (Operator)c;
 	}
 	
-	public static Api getInstance(){
+	public static DistributedApi getInstance(){
 		return instance;
 	}
 
-	private Api(){}
+	private DistributedApi(){}
 	
 	// Communication primitives
 	
+	@Override
 	public synchronized void send(DataTuple dt){
 		op.send(dt);
 	}
 	
+	@Override
 	public synchronized void send_toIndex(DataTuple dt, int idx){
 		op.send_toIndex(dt, idx);
 	}
 	
+	@Override
 	public synchronized void send_splitKey(DataTuple dt, int key){
 		op.send_splitKey(dt, key);
 	}
 	
+	@Override
 	public synchronized void send_toStreamId(DataTuple dt, int streamId){
 		op.send_toStreamId(dt, streamId);
 	}
 	
+	@Override
 	public synchronized void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
 		op.send_toStreamId_splitKey(dt, streamId, key);
 	}
 	
+	@Override
 	public synchronized void send_toStreamId_toAll(DataTuple dt, int streamId){
 		op.send_toStreamId_toAll(dt, streamId);
 	}
 	
+	@Override
 	public void send_all(DataTuple dt){
 		op.send_all(dt);
 	}
@@ -85,5 +93,4 @@ public class Api implements Serializable{
 	public void disableMultiCoreSupport(){
 		op.disableMultiCoreSupport();
 	}
-	
 }

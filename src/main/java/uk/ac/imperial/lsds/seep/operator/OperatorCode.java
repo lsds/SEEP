@@ -17,7 +17,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public interface OperatorCode extends Serializable{
 
-	public Api api = Api.getInstance();
+	public DistributedApi api = DistributedApi.getInstance();
 	
 	public void setUp();
 	public void processData(DataTuple data);
