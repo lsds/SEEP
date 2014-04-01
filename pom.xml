@@ -1,7 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>uk.ac.imperial.lsds.seep-system</groupId>
-  <artifactId>seep-system</artifactId>
+  <groupId>uk.ac.imperial.lsds.seep</groupId>
+  <artifactId>seep</artifactId>
+  <packaging>pom</packaging>
   <name>seep</name>
   <version>0.0.1-SNAPSHOT</version>
   <repositories>
@@ -13,6 +15,12 @@
       <name>Maven Repository Switchboard</name>
       <url>http://repo1.maven.org/maven2</url>
     </repository>
+    <!-- Local repo for external jars -->
+    <repository>
+    	<id>uk.ac.imperial.lsds.seep-system</id>
+    	<name>seep-inprojectrepo</name>
+    	<url>file://${project.basedir}/libs</url>
+	</repository>
   </repositories>
   <pluginRepositories>
     <pluginRepository>
@@ -27,6 +35,11 @@
       <url>http://repo1.maven.org/maven2</url>
     </pluginRepository>
   </pluginRepositories>
+  
+  <modules>
+  	<module>seep-system</module>
+    <module>seep-java2sdg</module>
+  </modules>
   
   <dependencies>
     <dependency>
@@ -86,6 +99,7 @@
     </dependency>
 
     <!-- Dependencies for tests -->
+    
     <dependency>
     	<groupId>junit</groupId>
       	<artifactId>junit</artifactId>
@@ -110,6 +124,19 @@
         <version>1.9.5</version>
         <scope>test</scope>
     </dependency>
+    
+    <!-- Dependencies for java2sdg -->
+    
+    <dependency>
+		<groupId>soot</groupId>
+		<artifactId>soot-framework</artifactId>
+		<version>2.5.0</version>
+	</dependency>
+	<dependency>
+		<groupId>javassist</groupId>
+		<artifactId>javassist</artifactId>
+		<version>3.12.1.GA</version>
+	</dependency>
   </dependencies>
   
   <url>http://lsds.doc.ic.ac.uk/projects/SEEP</url>
