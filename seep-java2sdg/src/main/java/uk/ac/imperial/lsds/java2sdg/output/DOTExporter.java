@@ -66,7 +66,9 @@ public class DOTExporter implements SDGExporter{
 	}
 	
 	private void writeToFile(List<String> output, String filename){
-		filename = filename+".dot";
+		if(!filename.endsWith(".dot")){
+			filename = filename+".dot";
+		}
 		File f = new File(filename);
 		BufferedWriter fw = null;
 		try {
