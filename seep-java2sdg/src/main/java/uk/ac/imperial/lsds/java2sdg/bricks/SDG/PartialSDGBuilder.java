@@ -41,7 +41,9 @@ public class PartialSDGBuilder {
 						// If op is stateful AND its state is the same
 						if(looping.getTE().getOpType().getNature().equals(TaskElementNature.Nature.STATEFUL_OPERATOR) &&
 								looping.getStateId() == stateId){
-							// assume there is no barrier in this conn (usually is just to update or something...)
+							// we get the sendType required by our upstream
+							SendType demandedSendType = SendType.getSendType(looping.getTE().getAnn(), looping.getTE().getOpType());
+							te.setSendType(demandedSendType);
 							ob.addDownstream(looping.getId(), workflowId, StreamType.ONE_AT_A_TIME);
 							looping.addUpstream(id, workflowId);
 						}
@@ -52,7 +54,7 @@ public class PartialSDGBuilder {
 				int stateRef = te.getOpType().getStateElementId();
 				ob = OperatorBlock.makeStatelessOperator(id, workflowId, stateRef);
 			}
-			ob.addTE(te);
+			ob.addTE(te, id, workflowId);
 			// Perform connections with previous OB
 			if(!partialSDG.isEmpty()){
 				// Create a stream to connect upstream to me. For now, only annotations decide on this
@@ -66,7 +68,9 @@ public class PartialSDGBuilder {
 						st = StreamType.ONE_AT_A_TIME;
 					}
 				}
-				// OperatorBlock up = partialSDG.getLast();
+				// Detect the type of send I need
+				SendType demandedSendType = SendType.getSendType(ob.getTE().getAnn(), ob.getTE().getOpType());
+				partialSDG.getLast().getTE().setSendType(demandedSendType);
 				// connect upstream to me
 				partialSDG.getLast().addDownstream(ob.getId(), workflowId, st);
 				// connect myself to upstream

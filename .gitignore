@@ -15,3 +15,5 @@ examples/stateless-simple-query/bin/*
 *test*
 seep-system/examples/stateless-simple-query/.settings/
 seep-system/examples/stateless-simple-query/lib/*
+seep-java2sdg/target/seep-java2sdg-0.0.1-SNAPSHOT.jar
+seep-system/target/seep-system-0.0.1-SNAPSHOT.jar

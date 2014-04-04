@@ -11,8 +11,10 @@
 package uk.ac.imperial.lsds.java2sdg.bricks.SDG;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import uk.ac.imperial.lsds.java2sdg.bricks.TaskElement;
 
@@ -26,6 +28,9 @@ public class OperatorBlock {
 	
 	private List<Stream> downstreamOperator;
 	private List<Stream> upstreamOperator;
+	
+	// Keeps the relation between a streamId<String> and a TE<TaskElement>
+	private Map<String, TaskElement> streamId_TE;
 
 	private OperatorBlock(int id, int workflowId, int stateId, boolean stateful){
 		this.id = id;
@@ -35,6 +40,7 @@ public class OperatorBlock {
 		this.taskElements = new ArrayList<TaskElement>();
 		this.downstreamOperator = new ArrayList<Stream>();
 		this.upstreamOperator = new ArrayList<Stream>();
+		this.streamId_TE = new HashMap<String, TaskElement>();
 	}
 	
 	public int getId(){
@@ -57,8 +63,12 @@ public class OperatorBlock {
 		return new OperatorBlock(id, workflowId, stateId, false);
 	}
 	
-	public void addTE(TaskElement te){
+	public void addTE(TaskElement te, int id, int workflowId){
+		// We add the TE to the collection
 		this.taskElements.add(te);
+		// and save its connection
+		String key = Stream.getStreamId(id, workflowId);
+		streamId_TE.put(key, te);
 	}
 	
 	public TaskElement getTE(){

@@ -118,8 +118,8 @@ public class SDGBuilder {
 							&& toInspect.getTE().getAnn().equals(SDGAnnotation.COLLECTION)))
 				continue;
 			if(toInspect.getStateId() == stateId){
-				// We found the ob where to merge, so we merge it
-				toInspect.addTE(toMerge.getTE());
+				// We found the ob where to merge, so we merge it, along with its id to keep track of TE connection
+				toInspect.addTE(toMerge.getTE(), toMerge.getId(), toMerge.getWorkflowId());
 				// and then we change the connections
 				for(Stream st : toMerge.getDownstreamOperator()){
 					//First reconfigure those downstream to point to the new ob
@@ -152,7 +152,7 @@ public class SDGBuilder {
 			if(toInspect.getStateId() == stateId){
 				// We found the ob where to merge, so we merge it
 				OperatorBlock toMerge = this.getOb(obId, workflowId, a.getPartialSDG());
-				toInspect.addTE(toMerge.getTE());
+				toInspect.addTE(toMerge.getTE(), toMerge.getId(), toMerge.getWorkflowId());
 				// and then we change the connections
 				for(Stream st : toMerge.getDownstreamOperator()){
 					//First reconfigure those downstream to point to the new ob

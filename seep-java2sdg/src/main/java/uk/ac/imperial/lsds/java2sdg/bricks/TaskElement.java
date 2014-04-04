@@ -11,9 +11,8 @@
 package uk.ac.imperial.lsds.java2sdg.bricks;
 
 import java.util.List;
-import java.util.Map;
 
-import uk.ac.imperial.lsds.java2sdg.bricks.sdg.DataShipmentMode;
+import uk.ac.imperial.lsds.java2sdg.bricks.SDG.SendType;
 
 public class TaskElement implements SDGElement{
 
@@ -29,7 +28,7 @@ public class TaskElement implements SDGElement{
 	// The variables to stream
 	private final List<String> varsToStream;
 	// A map that indicates for each downstream connection how data is sent (record-at-a-time, barrier, etc)
-	private final Map<String, DataShipmentMode> connectionsType;
+	private SendType sendType;
 	// The actual code of this operator
 	private final String code;
 	
@@ -75,7 +74,6 @@ public class TaskElement implements SDGElement{
 		private SDGAnnotation ann;
 		private List<String> localVars;
 		private List<String> varsToStream;
-		private Map<String, DataShipmentMode> connectionsType;
 		private String code;
 		private StringBuilder sb = new StringBuilder();
 		
@@ -114,16 +112,6 @@ public class TaskElement implements SDGElement{
 		
 		public TaskElementBuilder varsToStream(List<String> val){
 			varsToStream = val;
-			return this;
-		}
-		
-		public TaskElementBuilder connectionsType(Map<String, DataShipmentMode> val){
-			connectionsType = val;
-			return this;
-		}
-		
-		public TaskElementBuilder addConnection(String opToConnect, DataShipmentMode connType){
-			this.connectionsType.put(opToConnect, connType);
 			return this;
 		}
 		
@@ -173,8 +161,15 @@ public class TaskElement implements SDGElement{
 		ann = builder.ann;
 		localVars = builder.localVars;
 		varsToStream = builder.varsToStream;
-		connectionsType = builder.connectionsType;
 		code = builder.code;
+	}
+	
+	public void setSendType(SendType st){
+		this.sendType = st;
+	}
+	
+	public SendType getSendType(){
+		return sendType;
 	}
 	
 	@Override

@@ -33,4 +33,15 @@ public final class Stream {
 	public StreamType getType(){
 		return type;
 	}
+	
+	public static String getStreamId(int id, int workflowId){
+		return new String(id+""+workflowId);
+	}
+	
+	@Override
+	public String toString(){
+		StringBuilder sb = new StringBuilder();
+		sb.append("Type: "+type.toString()+" to ID: "+id+" WID: "+workflowId);
+		return sb.toString();
+	}
 }

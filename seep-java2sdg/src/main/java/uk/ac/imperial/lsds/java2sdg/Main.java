@@ -35,6 +35,7 @@ import uk.ac.imperial.lsds.java2sdg.bricks.SDG.OperatorBlock;
 import uk.ac.imperial.lsds.java2sdg.bricks.SDG.PartialSDGBuilder;
 import uk.ac.imperial.lsds.java2sdg.bricks.SDG.SDGBuilder;
 import uk.ac.imperial.lsds.java2sdg.bricks.TaskElement.TaskElementBuilder;
+import uk.ac.imperial.lsds.java2sdg.codegenerator.CodeGenerator;
 import uk.ac.imperial.lsds.java2sdg.flowanalysis.LiveVariableAnalysis;
 import uk.ac.imperial.lsds.java2sdg.flowanalysis.TEBoundaryAnalysis;
 import uk.ac.imperial.lsds.java2sdg.input.SourceCodeHandler;
@@ -218,15 +219,16 @@ public class Main {
 			log.info("Exporting SDG to DOT file...OK");
 		}
 		else if(outputTarget.equals("seepjar")){
-		//Set<TaskElement> sdg = SDGAssembler.getSDG(oba, lva, sch);
-//		
-////		SDGAssembler sdgAssembler = new SDGAssembler();
-////		Set<OperatorBlock> sdg = sdgAssembler.getFakeLinearPipelineOfStatelessOperators(1);
-//		
-//		QueryBuilder qBuilder = new QueryBuilder();
-//		String q = qBuilder.generateQueryPlanDriver(sdg);
-//		System.out.println("QueryPlan: "+q);
-//		qBuilder.buildAndPackageQuery();
+			List<OperatorBlock> assembledCode = CodeGenerator.assemble(sdg);
+//			Set<TaskElement> sdg = SDGAssembler.getSDG(oba, lva, sch);
+//			
+//		//		SDGAssembler sdgAssembler = new SDGAssembler();
+//		//		Set<OperatorBlock> sdg = sdgAssembler.getFakeLinearPipelineOfStatelessOperators(1);
+//			
+//			QueryBuilder qBuilder = new QueryBuilder();
+//			String q = qBuilder.generateQueryPlanDriver(sdg);
+//			System.out.println("QueryPlan: "+q);
+//			qBuilder.buildAndPackageQuery();
 		}
 	}
 }
