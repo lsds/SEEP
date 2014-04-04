@@ -66,6 +66,11 @@
 		<artifactId>commons-cli</artifactId>
 		<version>1.2</version>
 	</dependency>
+	<dependency>
+		<groupId>soot</groupId>
+		<artifactId>soot-framework</artifactId>
+		<version>2.5.0</version>
+	</dependency>
 
     <!-- Dependencies for tests -->
     
