@@ -14,35 +14,32 @@ import java.util.List;
 
 import uk.ac.imperial.lsds.java2sdg.bricks.TaskElement;
 import uk.ac.imperial.lsds.java2sdg.bricks.SDG.OperatorBlock;
-import uk.ac.imperial.lsds.java2sdg.bricks.SDG.SendType;
-import uk.ac.imperial.lsds.java2sdg.bricks.SDG.Stream;
 
 public class CodeGenerator {
 
 	public static List<OperatorBlock> assemble(List<OperatorBlock> ops){
 		
-		List<OperatorBlock> assembledCom = CodeGenerator.addConnectivityInformation(ops);
-		List<OperatorBlock> assembled = CodeGenerator.assembleMultiTEOperators(assembledCom);
+		List<OperatorBlock> assembled = CodeGenerator.assembleMultiTEOperators(ops);
 		
 		return assembled;
 	}
 	
-	private static List<OperatorBlock> addConnectivityInformation(List<OperatorBlock> ops){
+	private static List<OperatorBlock> assembleMultiTEOperators(List<OperatorBlock> ops){
 		for(OperatorBlock op : ops){
-			// We first select a TE
-			for(TaskElement te : op.getTEs()){
-				// We then select the sendType required to send to this TE
-				SendType demandedSendType = SendType.getSendType(te.getAnn(), te.getOpType());
-				// We assign such sendType to the upstreamTypes that connect to this TE in particular
-				for(Stream up : op.getUpstreamOperator()){
+			System.out.println("---->");
+			System.out.println(op);
+			System.out.println("");
+			System.out.println("");
+			System.out.println("");
+		}
+		for(OperatorBlock op : ops){
+			// Check if it is multi-operator
+			if(op.getTEs().size() > 1){
+				for(TaskElement te : op.getTEs()){
 					
 				}
 			}
 		}
-		return ops;
-	}
-	
-	private static List<OperatorBlock> assembleMultiTEOperators(List<OperatorBlock> ops){
 		
 		return ops;
 	}
@@ -56,5 +53,4 @@ public class CodeGenerator {
 		}
 		return null;
 	}
-	
 }

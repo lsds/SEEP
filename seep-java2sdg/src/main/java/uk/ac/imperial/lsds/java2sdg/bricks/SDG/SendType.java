@@ -17,9 +17,20 @@ import uk.ac.imperial.lsds.java2sdg.bricks.TaskElementNature.Nature;
 public enum SendType {
 	SEND, SEND_ALL, SEND_KEY, SEND_STREAMID, SEND_STREAMID_KEY;
 	
+	// This special argument gets translated into a variable that indicates the tuple scheme, used by downstream nodes to know how to process it
+	private int branchingIdentifier = -1;
+	// All variables related to state, stateId, stateName and most importantly, partitioningKey required in case of stateful operators
 	private int stateElementId;
 	private String stateName;
 	private String partitioningKey;
+	
+	public void setBranchingIdentifier(int branchingIdentifier){
+		this.branchingIdentifier = branchingIdentifier;
+	}
+	
+	public int getBranchingIdentifier(){
+		return branchingIdentifier;
+	}
 	
 	public static SendType getSendType(SDGAnnotation ann, TaskElementNature opType){
 		if(ann == SDGAnnotation.COLLECTION){

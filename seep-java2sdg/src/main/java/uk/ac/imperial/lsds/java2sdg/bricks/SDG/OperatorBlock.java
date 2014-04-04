@@ -30,7 +30,7 @@ public class OperatorBlock {
 	private List<Stream> upstreamOperator;
 	
 	// Keeps the relation between a streamId<String> and a TE<TaskElement>
-	private Map<String, TaskElement> streamId_TE;
+	private Map<Integer, TaskElement> branchingId_TE;
 
 	private OperatorBlock(int id, int workflowId, int stateId, boolean stateful){
 		this.id = id;
@@ -40,7 +40,11 @@ public class OperatorBlock {
 		this.taskElements = new ArrayList<TaskElement>();
 		this.downstreamOperator = new ArrayList<Stream>();
 		this.upstreamOperator = new ArrayList<Stream>();
-		this.streamId_TE = new HashMap<String, TaskElement>();
+		this.branchingId_TE = new HashMap<Integer, TaskElement>();
+	}
+	
+	public void associateBranchingIdWithTE(int branchingIdentifier, TaskElement te){
+		this.branchingId_TE.put(branchingIdentifier, te);
 	}
 	
 	public int getId(){
@@ -66,9 +70,9 @@ public class OperatorBlock {
 	public void addTE(TaskElement te, int id, int workflowId){
 		// We add the TE to the collection
 		this.taskElements.add(te);
-		// and save its connection
-		String key = Stream.getStreamId(id, workflowId);
-		streamId_TE.put(key, te);
+		// Set up the branchingID
+		// where branchingId == workflowId
+		branchingId_TE.put(workflowId, te);
 	}
 	
 	public TaskElement getTE(){
@@ -149,11 +153,19 @@ public class OperatorBlock {
 			sb.append("Stateless \n");
 		}
 		sb.append("#TEs: "+this.taskElements.size()+"\n");
-		for(int i = 0; i < this.taskElements.size(); i++){
+		for(Integer branchId : branchingId_TE.keySet()){
+			sb.append("TE attached to branchId: "+branchId);
 			sb.append("\n");
-			sb.append(this.taskElements.get(i));
+			TaskElement te = branchingId_TE.get(branchId);
+			sb.append(te);
 			sb.append("\n");
 		}
+//		for(int i = 0; i < this.taskElements.size(); i++){
+//			sb.append("\n");
+//			sb.append("TE attached to branchId: ");
+//			sb.append(this.taskElements.get(i));
+//			sb.append("\n");
+//		}
 		StringBuilder sbdown = new StringBuilder();
 		sbdown.append("[");
 		for(Stream s : downstreamOperator){

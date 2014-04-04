@@ -192,9 +192,9 @@ public class Main {
 			TEBoundaryAnalysis oba = TEBoundaryAnalysis.getBoundaryAnalyzer(cfg, stateElements, sch, lva);
 			List<TaskElementBuilder> sequentialTEList = oba.performTEAnalysis();
 			List<OperatorBlock> partialSDG = PartialSDGBuilder.buildPartialSDG(sequentialTEList, workflowId);
-			for(OperatorBlock ob : partialSDG){
-				System.out.println(ob);
-			}
+//			for(OperatorBlock ob : partialSDG){
+//				System.out.println(ob);
+//			}
 			workflowId++;
 			sdgBuilder.addPartialSDG(partialSDG);
 		}
@@ -203,9 +203,9 @@ public class Main {
 		
 		log.info("Building SDG from "+sdgBuilder.getNumberOfPartialSDGs()+" partialSDGs...");
 		List<OperatorBlock> sdg = sdgBuilder.synthetizeSDG();
-		for(OperatorBlock ob : sdg){
-			System.out.println(ob);
-		}
+//		for(OperatorBlock ob : sdg){
+//			System.out.println(ob);
+//		}
 		log.info("Building SDG from partialSDGs...OK");
 		
 		/** Ouput SDG in a given format **/

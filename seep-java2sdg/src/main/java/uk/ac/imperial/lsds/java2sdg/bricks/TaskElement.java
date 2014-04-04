@@ -187,6 +187,14 @@ public class TaskElement implements SDGElement{
 			sb.append("PK: "+this.opType.getPartitioningKey());
 			sb.append("\n");
 		}
+		sb.append("TX: "+this.sendType);
+		sb.append("\n");
+		sb.append("TXtoBranchID: "+this.sendType.getBranchingIdentifier());
+		sb.append("\n");
+		sb.append("localVars: "+this.localVars);
+		sb.append("\n");
+		sb.append("varsToStream: "+this.varsToStream);
+		sb.append("\n");
 		sb.append(this.code);
 		return sb.toString();
 	}

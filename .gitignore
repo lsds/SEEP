@@ -19,3 +19,4 @@ seep-java2sdg/target/seep-java2sdg-0.0.1-SNAPSHOT.jar
 seep-system/target/seep-system-0.0.1-SNAPSHOT.jar
 seep-java2sdg/target/
 seep-system/target/
+seep-java2sdg/showGraph.sh

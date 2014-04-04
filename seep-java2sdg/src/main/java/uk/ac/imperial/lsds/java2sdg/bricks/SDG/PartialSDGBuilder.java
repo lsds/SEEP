@@ -43,6 +43,7 @@ public class PartialSDGBuilder {
 								looping.getStateId() == stateId){
 							// we get the sendType required by our upstream
 							SendType demandedSendType = SendType.getSendType(looping.getTE().getAnn(), looping.getTE().getOpType());
+							demandedSendType.setBranchingIdentifier(workflowId);
 							te.setSendType(demandedSendType);
 							ob.addDownstream(looping.getId(), workflowId, StreamType.ONE_AT_A_TIME);
 							looping.addUpstream(id, workflowId);
@@ -70,6 +71,7 @@ public class PartialSDGBuilder {
 				}
 				// Detect the type of send I need
 				SendType demandedSendType = SendType.getSendType(ob.getTE().getAnn(), ob.getTE().getOpType());
+				demandedSendType.setBranchingIdentifier(workflowId);
 				partialSDG.getLast().getTE().setSendType(demandedSendType);
 				// connect upstream to me
 				partialSDG.getLast().addDownstream(ob.getId(), workflowId, st);
@@ -80,6 +82,20 @@ public class PartialSDGBuilder {
 			partialSDG.add(ob);
 			id++;
 		}
+		
+		// Finishing by completing the SendInfo for those ops that will send to sink
+		for(OperatorBlock op : partialSDG){
+			if(op.getTE().getSendType() == null){
+				//SendType demandedSendType = SendType.getSendType(op.getTE().getAnn(), op.getTE().getOpType());
+				// to fill ops connecting to sinks
+				if(op.getDownstreamOperator().size() == 0){
+					SendType st = SendType.SEND;
+					st.setBranchingIdentifier(workflowId);
+					op.getTE().setSendType(SendType.SEND);
+				}
+			}
+		}
+		
 		return partialSDG;
 	}
 }
