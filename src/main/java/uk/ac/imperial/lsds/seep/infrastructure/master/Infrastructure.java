@@ -658,7 +658,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		LOG.info("SOURCES have been notified. System started.");
 		systemIsRunning = true;
 	}
-
+    
 	public synchronized Node getNodeFromPool() throws NodePoolEmptyException{
 		if(nodeStack.size() < Integer.parseInt(GLOBALS.valueFor("minimumNodesAvailable"))){
 			//nLogger.info("Instantiating EC2 images");
@@ -936,20 +936,4 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		elements.put(o.getOperatorId(), o);
 		LOG.debug("Added new Operator to Infrastructure: {}", o.toString());
 	}
-    
-    /**
-     * @return Returns a list of identifiers for the nodes that are executing a 
-     * given operator at the time of invocation.
-     */
-    public List<Integer> getNodeIdsForOperatorId(int operatorId) {
-        List<Integer> nodeIds = new ArrayList<Integer>();
-        
-        for(Integer nodeId : queryToNodesMapping.keySet()) {
-            if(queryToNodesMapping.get(nodeId).getOperatorId() == operatorId) {
-                nodeIds.add(nodeId);
-            }
-        }
-                
-        return nodeIds;
-    }
 }

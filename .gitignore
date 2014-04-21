@@ -12,3 +12,5 @@ examples/*/lib/*.jar
 query.jar
 examples/stateless-simple-query/bin/*
 *.class
+.DS_Store
+

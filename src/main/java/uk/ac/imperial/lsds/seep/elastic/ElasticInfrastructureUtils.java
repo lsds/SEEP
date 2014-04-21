@@ -50,11 +50,18 @@ public class ElasticInfrastructureUtils {
 	private Infrastructure inf = null;
 	private RuntimeCommunicationTools rct = null;
 	private URLClassLoader ucl = null;
+    
+    // Data structure that returns the list of identifiers for scaled out physical 
+    // instances of a logical query identifier. So, if operator 1 is scaled out 
+    // twice and instances 50 and 51 are started, the map contains: <1, [50, 51]>
+    private Map<Integer, List<Integer>> scalingMap;
 	
 	public ElasticInfrastructureUtils(Infrastructure inf){
 		this.inf = inf;
 		this.rct = inf.getRCT();
 		inf.getBCU();
+        
+        scalingMap = new HashMap<Integer, List<Integer>>();
 	}
 	
 	public void setClassLoader(URLClassLoader ucl){
@@ -87,7 +94,7 @@ public class ElasticInfrastructureUtils {
 	
 	/// \todo {this method should not be in infrastructure}
 	public synchronized void alertCPU(int opIdToParallelize){
-		System.out.println("INF: MONITOR reports system alert");
+		System.out.println("INF: MONITOR reports system alert SCALE OUT");
 		System.out.println("###################");
 		Node newNode = null;
 		try {
@@ -102,6 +109,13 @@ public class ElasticInfrastructureUtils {
 			System.out.println("INF: Parallelization PARAMS: OpToParal "+opIdToParallelize+" newOp: "+newId+" newNode: "+newNode.toString());
 			inf.getEiu().scaleOutOperator(opIdToParallelize, newId, newNode);
 			inf.incrementBaseId();
+            
+            // Add the new identifier to the scaling map
+            if (!scalingMap.containsKey(opIdToParallelize)) {
+                scalingMap.put(opIdToParallelize, new ArrayList<Integer>());
+            }
+            
+            scalingMap.get(opIdToParallelize).add(newId);
 		}
 		else{
 			System.out.println("NO NODES AVAILABLE. IMPOSSIBLE TO PARALLELIZE");
@@ -110,6 +124,14 @@ public class ElasticInfrastructureUtils {
 		System.out.println("INF: MASTER FINISHED SCALE OUT");
 	}
 	
+    public synchronized void unalertCPU(int opIdToUnparallelize) {
+		System.out.println("INF: MONITOR reports system alert SCALE IN");
+		System.out.println("###################");
+
+		System.out.println("###################");
+		System.out.println("INF: MASTER FINISHED SCALE IN");
+    }
+    
 	public synchronized void scaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
 		try {
 			if(GLOBALS.valueFor("checkpointMode").equals("light-state")){
@@ -589,4 +611,19 @@ public class ElasticInfrastructureUtils {
 		}
 		return className;
 	}
+    
+    /**
+     * @return Returns a list of identifiers for the nodes that are executing a 
+     * given operator at the time of invocation.
+     */
+    public List<Integer> getNodeIdsForOperatorId(int operatorId) {
+        List<Integer> nodeIds = new ArrayList<Integer>();
+        
+        nodeIds.add(operatorId);
+        if (scalingMap.containsKey(operatorId)) {
+            nodeIds.addAll(scalingMap.get(operatorId));
+        }
+                
+        return nodeIds;
+    }
 }
