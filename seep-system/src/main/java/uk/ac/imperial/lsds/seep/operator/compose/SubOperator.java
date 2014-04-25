@@ -40,7 +40,7 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		this.mostUpstream = true;
 		this.localDownstream = new HashMap<Integer, SubOperator>();
 		this.localUpstream = new HashMap<Integer, SubOperator>();
-		code.api.setCallbackObject(this);
+		//code.api.setCallbackObject(this);
 	}
 	
 	private void addLocalDownstream(int localStreamId, SubOperator so){

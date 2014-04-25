@@ -17,8 +17,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
@@ -50,6 +53,8 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	private OutputQueue outputQueue = null;
+        
+        private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors()-1 );
 	
 	//Multi-core support
 	private Executor pool;
@@ -262,7 +267,104 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			}
 		}
 	}
+        
+        @Override
+        public void sendDataByThreadPool(DataTuple dt, ArrayList<Integer> targets){
+        
+            int numTargets = targets.size();
+            final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
+            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            
+            for (int i = 0; i < numTargets; i++) {
+                
+                final int j = i;
+                final int target = targetsCopy.get(j);
+                final DataTuple dtCopy = dt; 
+                
+                taskList.add(new Callable() {
+                    public Object call() throws Exception {
+                        
+                        EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 
+                        // REMOTE ASYNC
+                        if (dest instanceof AsynchronousCommunicationChannel) {
+                            ((AsynchronousCommunicationChannel) dest).writeDataToOutputBuffer(dtCopy);
+                        } // REMOTE SYNC
+                        
+                        else if (dest instanceof SynchronousCommunicationChannel) {
+                            ///\fixme{do some proper thing with var now}
+                            outputQueue.sendToDownstream(dtCopy, dest);
+                            //System.out.println("Send to: "+dest.toString());
+                        } // LOCAL
+                        
+                        else if (dest instanceof Operator) {
+                            Operator operatorObj = (Operator) dest;
+                            operatorObj.processData(dtCopy);
+                        }
+                        
+                        return null;
+                    }
+                });
+            }
+            
+            try {
+                poolOfThreads.invokeAll(taskList);
+            } catch (InterruptedException ex) {
+                java.util.logging.Logger.getLogger(StatelessProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+       
+        }
+        
+        @Override
+        public void sendPartitionedData(DataTuple[] dts, ArrayList<Integer> targets){
+            
+            //Send each data tuple to its corresponding target
+            
+            int numTargets = targets.size();
+            final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
+            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            
+            for (int i = 0; i < numTargets; i++) {
+                
+                final int j = i;
+                final int target = targetsCopy.get(j);
+                final DataTuple dtCopy = dts[i]; 
+                
+                taskList.add(new Callable() {
+                    public Object call() throws Exception {
+                        
+                        EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+
+                        // REMOTE ASYNC
+                        if (dest instanceof AsynchronousCommunicationChannel) {
+                            ((AsynchronousCommunicationChannel) dest).writeDataToOutputBuffer(dtCopy);
+                        } // REMOTE SYNC
+                        
+                        else if (dest instanceof SynchronousCommunicationChannel) {
+                            ///\fixme{do some proper thing with var now}
+                            outputQueue.sendToDownstream(dtCopy, dest);
+                            //System.out.println("Send to: "+dest.toString());
+                        } // LOCAL
+                        
+                        else if (dest instanceof Operator) {
+                            Operator operatorObj = (Operator) dest;
+                            operatorObj.processData(dtCopy);
+                        }
+                        
+                        return null;
+                    }
+                });
+            }
+            
+            try {
+                poolOfThreads.invokeAll(taskList);
+            } catch (InterruptedException ex) {
+                java.util.logging.Logger.getLogger(StatelessProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+       
+        }
 	@Override
 	public void setOpReady(int opId) {
 		LOG.info("-> Setting operator ready");

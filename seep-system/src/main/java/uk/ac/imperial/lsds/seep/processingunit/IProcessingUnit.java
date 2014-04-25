@@ -61,6 +61,10 @@ public interface IProcessingUnit {
 	public void processData(ArrayList<DataTuple> data);
 	
 	public void sendData(DataTuple dt, ArrayList<Integer> targets);
+        
+        public void sendPartitionedData(DataTuple[] dt, ArrayList<Integer> targets);
+        
+        public void sendDataByThreadPool(DataTuple dt, ArrayList<Integer> targets);
 
 	public void stopConnection(int opId);
 	

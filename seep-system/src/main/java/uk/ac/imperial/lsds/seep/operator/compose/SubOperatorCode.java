@@ -18,7 +18,7 @@ import uk.ac.imperial.lsds.seep.operator.LocalApi;
 
 public interface SubOperatorCode extends Serializable{
 
-	public LocalApi api = LocalApi.getInstance();
+	//public LocalApi api = LocalApi.getInstance();
 	
 	public void setUp();
 	public void processData(DataTuple data);
