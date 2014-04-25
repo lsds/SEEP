@@ -121,6 +121,16 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		// TODO Auto-generated method stub
 		
 	}
+        
+        @Override
+        public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
+                
+        }
+        
+        @Override
+        public void send_all_threadPool(DataTuple dt){
+                
+        }
 	
 	/** Implementation of SubOperatorAPI **/
 	
@@ -158,4 +168,19 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	public void setMultiOperator(MultiOperator multiOperator) {
 		this.multiOp = multiOp;
 	}
+
+    @Override
+    public void send_to_OpId(DataTuple dt, int opId) {
+        
+    }
+
+    @Override
+    public void send_to_OpIds(DataTuple[] dt, int[] opId) {
+        
+    }
+
+    @Override
+    public void send_toIndices(DataTuple[] dts, int[] indices) {
+        
+    }
 }

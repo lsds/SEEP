@@ -120,6 +120,14 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		targets.add(idx);
 		processingUnit.sendData(dt, targets);
 	}
+        
+        public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
+                ArrayList<Integer> targets = new ArrayList<>();
+                for(int idx : idxs){
+                    targets.add(idx);
+                }
+                processingUnit.sendPartitionedData(dts, targets);
+        }
 	
 	// Send downstream to stateful partitionable operator
 	public synchronized void send_splitKey(DataTuple dt, int key){
@@ -151,6 +159,19 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
 		processingUnit.sendData(dt, targets);
+	}
+        
+        
+	public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
+		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
+                processingUnit.sendDataByThreadPool(dt, targets);
+	}
+	
+	
+	public void send_all_threadPool(DataTuple dt){
+		// When routing to all, targets are all the logical downstreamoperators
+		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
+                processingUnit.sendDataByThreadPool(dt, targets);
 	}
 	
 	/** System Configuration Settings **/
