@@ -7,7 +7,8 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
- *     Martin Rouaux - Added new metrics to 
+ *     Martin Rouaux - Removal of upstream and downstream connections
+ *     which is required to support scale-in of operators. Scaling metrics.
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.processingunit;
 
@@ -60,6 +61,10 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
 	}
+
+    public PUContext getPUContext() {
+        return ctx;
+    }
 	
 	@Override
 	public void addDownstream(int opId, OperatorStaticInformation location) {
@@ -70,6 +75,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx.configureNewDownstreamCommunication(opId, location);
 	}
 
+    @Override
+    public void removeDownstream(int opId) {
+        OperatorContext opContext = runningOp.getOpContext();
+        opContext.removeDownstream(opId);
+    }
+    
 	@Override
 	public void addUpstream(int opId, OperatorStaticInformation location) {
 		// First pick the most upstream operator, and add the upstream to that one
@@ -79,6 +90,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx.configureNewUpstreamCommunication(opId, location);
 	}
 
+    @Override
+    public void removeUpstream(int opId) {
+        OperatorContext opContext = runningOp.getOpContext();
+        opContext.removeUpstream(opId);
+    }
+    
 	@Override
 	public Map<String, Integer> createTupleAttributeMapper() {
 		Map<String, Integer> idxMapper = new HashMap<String, Integer>();

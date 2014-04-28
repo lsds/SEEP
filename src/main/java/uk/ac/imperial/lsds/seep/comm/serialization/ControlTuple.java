@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Changes to support scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.serialization;
 
@@ -26,6 +27,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReplayStateInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleInInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
@@ -42,6 +44,7 @@ public class ControlTuple {
 	private BackupOperatorState backupState;
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
+    private ScaleInInfo scaleInInfo;
 	private DistributedScaleOutInfo distributedScaleOutInfo;
 	private Resume resume;
 	private InitOperatorState initState;
@@ -250,6 +253,12 @@ public class ControlTuple {
 		return this;
 	}
 	
+    public ControlTuple makeScaleIn(int opId, int victimOpId, boolean isStateful) {
+        this.type = CoreRE.ControlTupleType.SCALE_IN;
+        this.scaleInInfo = new ScaleInInfo(opId, victimOpId, isStateful);
+        return this;
+    }
+    
 	public ControlTuple makeDistributedScaleOut(int opIdToParallelize, int newOpId){
 		this.type = CoreRE.ControlTupleType.DISTRIBUTED_SCALE_OUT;
 		this.distributedScaleOutInfo = new DistributedScaleOutInfo(opIdToParallelize, newOpId);
@@ -342,6 +351,14 @@ public class ControlTuple {
 		this.streamState = new StreamState(targetOpId);
 		return this;
 	}
+
+    public ScaleInInfo getScaleInInfo() {
+        return scaleInInfo;
+    }
+
+    public void setScaleInInfo(ScaleInInfo scaleInInfo) {
+        this.scaleInInfo = scaleInInfo;
+    }
 	
 	@Override
 	public String toString(){

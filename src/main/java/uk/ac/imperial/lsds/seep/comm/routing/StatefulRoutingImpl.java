@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Added methods to collapse replicas
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.routing;
 
@@ -209,4 +210,14 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 //		System.exit(0);
 		return keyToDownstreamRealIndex;
 	}
+
+    @Override
+    public int[] collapseReplica(int opIndex) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public int[] collapseStaticReplica(int opIndex) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

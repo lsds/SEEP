@@ -7,6 +7,8 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Removal of upstream and downstream connections
+ *     which is required to support scale-in of operators.
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.processingunit;
 
@@ -738,6 +740,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		ctx.configureNewDownstreamCommunication(opId, location);
 	}
 	
+    /**
+     * Removes downstream operator from the processing unit (and indirectly,
+     * from the context of the currently running operator).
+     * @param opId Operator identifier
+     */
+    @Override
+    public void removeDownstream(int opId) {
+        OperatorContext opContext = runningOp.getOpContext();
+		opContext.removeDownstream(opId);
+    }
+    
 	@Override
 	public void addUpstream(int opId, OperatorStaticInformation location){
 		OperatorContext opContext = runningOp.getOpContext();
@@ -746,6 +759,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		ctx.configureNewUpstreamCommunication(opId, location);
 	}
 
+    /**
+     * Removes upstream operator from the processing unit (and indirectly,
+     * from the context of the currently running operator).
+     * @param opId Operator identifier
+     */
+    @Override
+    public void removeUpstream(int opId) {
+    	OperatorContext opContext = runningOp.getOpContext();
+		opContext.removeUpstream(opId);
+	}
+    
 	@Override
 	public void launchMultiCoreMechanism(CoreRE owner, DataStructureAdapter dsa) {
 		// Different strategies depending on whether the state is partitionable or not

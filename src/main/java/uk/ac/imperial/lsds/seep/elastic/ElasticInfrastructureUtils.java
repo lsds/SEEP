@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Changes to support scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.elastic;
 
@@ -17,10 +18,13 @@ import java.net.InetAddress;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +66,31 @@ public class ElasticInfrastructureUtils {
 		inf.getBCU();
         
         scalingMap = new HashMap<Integer, List<Integer>>();
+        
+               
+        // Timer to periodically log the physical query plan (i.e.: how many
+        // replicas of a given instance type running at any time).
+        Timer reportTimer = new Timer();
+            reportTimer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    StringBuilder sb = new StringBuilder();
+                    
+                    for(Integer logicalOperatorId : scalingMap.keySet()) {
+                        List<Integer> physicalOpIds = scalingMap.get(logicalOperatorId);
+                        
+                        sb.append("{logicalOpId=");
+                        sb.append(logicalOperatorId);
+                        sb.append(" physicalOpIds=");
+                        sb.append(Arrays.deepToString(physicalOpIds.toArray()));
+                        sb.append(" totalSize=");
+                        sb.append(physicalOpIds.size() + 1);
+                        sb.append("} ");
+                        
+                        LOG.debug("Physical query plan: {}", sb.toString());
+                    }
+                }
+            }, 5000, 5000);
 	}
 	
 	public void setClassLoader(URLClassLoader ucl){
@@ -91,12 +120,18 @@ public class ElasticInfrastructureUtils {
 		alertCPU(opIdToParallelize);
 //		else System.out.println("IGNORED");
 	}
-	
+    
+    public synchronized void unalert(int opIdToUnparallelize) {
+        unalertCPU(opIdToUnparallelize);
+    }
+    
 	/// \todo {this method should not be in infrastructure}
 	public synchronized void alertCPU(int opIdToParallelize){
+		System.out.println("#########################################################");
 		System.out.println("INF: MONITOR reports system alert SCALE OUT");
-		System.out.println("###################");
-		Node newNode = null;
+		System.out.println("#########################################################");
+		
+        Node newNode = null;
 		try {
 			newNode = inf.getNodeFromPool();
 		} 
@@ -104,6 +139,7 @@ public class ElasticInfrastructureUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+        
 		if(newNode != null){
 			int newId = inf.getBaseId();
 			System.out.println("INF: Parallelization PARAMS: OpToParal "+opIdToParallelize+" newOp: "+newId+" newNode: "+newNode.toString());
@@ -120,16 +156,29 @@ public class ElasticInfrastructureUtils {
 		else{
 			System.out.println("NO NODES AVAILABLE. IMPOSSIBLE TO PARALLELIZE");
 		}
-		System.out.println("###################");
+	
+        System.out.println("#########################################################");
 		System.out.println("INF: MASTER FINISHED SCALE OUT");
-	}
+        System.out.println("#########################################################");
+    }
 	
     public synchronized void unalertCPU(int opIdToUnparallelize) {
+		System.out.println("#########################################################");
 		System.out.println("INF: MONITOR reports system alert SCALE IN");
-		System.out.println("###################");
+		System.out.println("#########################################################");
 
-		System.out.println("###################");
+        List<Integer> stoppableIds = scalingMap.get(opIdToUnparallelize);
+        if (!stoppableIds.isEmpty()) {
+            // We always pick the first identifier to stop first
+            inf.stop(stoppableIds.get(0));
+            
+            // Remove stopped operator's identifier from scaling map
+            scalingMap.get(opIdToUnparallelize).remove(0);
+        }
+        
+		System.out.println("#########################################################");
 		System.out.println("INF: MASTER FINISHED SCALE IN");
+        System.out.println("#########################################################");
     }
     
 	public synchronized void scaleOutOperator(int opIdToParallelize, int newOpId, Node newNode){
@@ -577,9 +626,9 @@ public class ElasticInfrastructureUtils {
 			if(opId == op.getOperatorId()){
 				//op.getOpContext().copyContext(newOp);
                             
-                                //configure streamIds that upstreams connect to the newOp
-                                configureStreamIdFromUpstreamOps(op, newOp, opId);
-                                
+                //configure streamIds that upstreams connect to the newOp
+                configureStreamIdFromUpstreamOps(op, newOp, opId);
+
 				for(PlacedOperator down : op.getOpContext().downstreams){
 					inf.getElements().get(newOp.getOperatorId()).connectTo(inf.getElements().get(down.opID()), false);
 				}
@@ -590,9 +639,8 @@ public class ElasticInfrastructureUtils {
 				//Copy inputDataIngestionMode information
 				newOp.initializeInputDataIngestionModePerUpstream(op.getOpContext().getInputDataIngestionModePerUpstream());
                                 
-                                HashMap<Integer, ArrayList<Integer>> originalRouteMap = inf.getOperatorById(opId).getOpContext().getRouteInfo();
-                                newOp.getOpContext().setRouteInfo(originalRouteMap);
-                                
+                HashMap<Integer, ArrayList<Integer>> originalRouteMap = inf.getOperatorById(opId).getOpContext().getRouteInfo();
+                newOp.getOpContext().setRouteInfo(originalRouteMap);
 				
 				if(op.getOpContext().isSource()){
 					newOp.getOpContext().setIsSource(true);

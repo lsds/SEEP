@@ -113,7 +113,7 @@ public class Operator implements Serializable, EndPoint, Connectable{
 	public synchronized void send(DataTuple dt){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt);
-		processingUnit.sendData(dt, targets);
+        processingUnit.sendData(dt, targets);
 	}
 	
 	// Send to a particular downstream index
