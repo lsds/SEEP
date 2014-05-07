@@ -1,8 +1,5 @@
 package uk.ac.imperial.lsds.streamsql.operator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.FromItemVisitor;
 import net.sf.jsqlparser.statement.select.LateralSubSelect;
@@ -14,6 +11,9 @@ import net.sf.jsqlparser.statement.select.SubJoin;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SeepSelectVisitor implements SelectVisitor, FromItemVisitor {
 
