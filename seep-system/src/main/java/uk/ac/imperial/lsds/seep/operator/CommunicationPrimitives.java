@@ -21,5 +21,9 @@ public interface CommunicationPrimitives {
 	public void send_toStreamId_toAll(DataTuple dt, int streamId);
 	public void send_all(DataTuple dt);
 	public void send_toStreamId(DataTuple dt, int streamId);
-	
+	public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId);
+        public void send_all_threadPool(DataTuple dt);
+        public void send_to_OpId(DataTuple dt, int opId);
+        public void send_to_OpIds(DataTuple[] dt, int[] opId);
+        public void send_toIndices(DataTuple[] dts, int[] indices);
 }

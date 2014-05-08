@@ -32,20 +32,36 @@ public class Barrier implements DataStructureI {
 	
 	private long lastTimestamp = 0;
 	private int repetitions = 0;
+        private int repetitionsANN = 0 ;
 	private long cummulatedTime = 0;
+        private long cummulatedBarrierTime = 0 ; 
+        private long barrierTimeEachPhase;
 	
 	public Barrier(int initialNumberOfThreads){
 		staticBarrier = new Phaser(initialNumberOfThreads){
 			protected boolean onAdvance(int phase, int parties) {
-				long now = System.currentTimeMillis();
+				
+                                cummulatedBarrierTime += (System.nanoTime() - barrierTimeEachPhase);
+                                long now = System.currentTimeMillis();
+                                
 				if(lastTimestamp != 0){
+                                    
 					cummulatedTime += (now-lastTimestamp);
 					lastTimestamp = now;
 					repetitions++;
-					if(repetitions == 5000){
+                                        repetitionsANN++;
+					
+                                        if(repetitions == 5000){
 						System.out.println("AVG barrier time: "+(cummulatedTime)+" ms");
 						repetitions = 0;
 						cummulatedTime = 0;
+					}
+                                        
+                                        if(repetitionsANN == 9500){
+                                                System.out.println("Accum barrier time: "+((double)(cummulatedBarrierTime/1000000000.0))+" s");
+                                                System.out.println("repetitions = " + repetitionsANN);
+						repetitionsANN = 0 ; 
+                                                cummulatedBarrierTime = 0 ;
 					}
 				}
 				else{
@@ -95,6 +111,10 @@ public class Barrier implements DataStructureI {
 		// We put the data
 		synchronized(data){
 			data.add(dt);
+                        
+                        if( (data.size() == 1) ){
+                            barrierTimeEachPhase = System.nanoTime();
+                        }
 		}
 		try{
 			// And wait on the barrier

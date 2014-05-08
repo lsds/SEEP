@@ -340,7 +340,7 @@ public class ElasticInfrastructureUtils {
 			e.printStackTrace();
 		}
 		// conf operator context
-		configureStaticOperatorContext(oldOpId, newOp);
+		configureStaticReplicaContext(oldOpId, newOp);
 		// router for the new op
 		Router copyOfRouter = opToScaleOut.getRouter();
                 
@@ -530,7 +530,7 @@ public class ElasticInfrastructureUtils {
         
    private void configureStreamIdFromUpstreamOps(Operator op, Operator newOp, int opId) {
        
-        HashMap<Integer, Integer> op_streamId_map = new HashMap<Integer, Integer>();
+        HashMap<Integer, Integer> op_streamId_map = new HashMap<>();
         
         for (PlacedOperator up : op.getOpContext().upstreams) {
             Operator upOp = inf.getOperatorById(up.opID());
@@ -547,7 +547,7 @@ public class ElasticInfrastructureUtils {
         }
     }
 
-    public void configureStaticOperatorContext(int opId, Operator newOp) {
+    public void configureStaticReplicaContext(int opId, Operator newOp) {
         
         ArrayList<Operator> ops = inf.getOps();
                

@@ -327,6 +327,15 @@ public class OperatorContext implements Serializable{
 		}
 	}
 	
+        public int findOpIndexFromDownstream(int opId){
+            for(Integer id : connectionsD){
+                if(id == opId){
+                    return connectionsD.indexOf(id);
+                }
+            }
+            return -1;
+        }
+        
 	private int findOpIndex(int opID, ArrayList<Integer> IDList) {
 		for(Integer id : IDList){
 			if(id == opID){
