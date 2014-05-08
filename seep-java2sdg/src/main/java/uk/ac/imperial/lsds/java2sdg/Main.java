@@ -13,13 +13,14 @@ package uk.ac.imperial.lsds.java2sdg;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import soot.CompilationDeathException;
 import soot.PhaseOptions;
@@ -43,10 +44,10 @@ import uk.ac.imperial.lsds.java2sdg.output.DOTExporter;
 
 public class Main {
 
-	private final static Logger log = Logger.getLogger(Main.class.getCanonicalName());
+	private final static Logger log = LoggerFactory.getLogger(Main.class.getName());
+	
 	
 	public static void main(String args[]){
-		
 		/** Parse input parameters **/
 		
 		// Define options
@@ -142,10 +143,10 @@ public class Main {
 		/** Initialise soot and load input program **/
 		
 		// With the class loaded, we can then get the SootClass wrapper to work with
-		log.info("-> Setting soot classpath: "+sootClassPath);
+		log.info("Setting soot classpath: "+sootClassPath);
 		Scene.v().setSootClassPath(sootClassPath);
 		Options.v().setPhaseOption("jb", "preserve-source-annotations");
-		log.info("-> Loading class...");
+		log.info("Loading class...");
 		SootClass c = null;
 		try{
 			System.out.println();
@@ -154,10 +155,10 @@ public class Main {
 		}
 		catch(CompilationDeathException cde){
 			System.out.println();
-			log.severe(cde.getMessage());
+			log.error(cde.getMessage());
 			System.exit(1);
 		}
-		log.info("-> Loading class...OK");
+		log.info("Loading class...OK");
 		
 		/** Extract fields and workflows **/
 		
@@ -170,10 +171,10 @@ public class Main {
 		log.info("Extracting state information...OK");
 		
 		// List relevant methods (the ones that need to be analyzed)
-		log.info("-> Extracting workflows...");
+		log.info("Extracting workflows...");
 		Iterator<SootMethod> methodIterator = c.methodIterator();
 		List<String> workflows = Util.extractWorkflows(methodIterator, c);
-		log.info("-> Extracting workflows...OK");
+		log.info("Extracting workflows...OK");
 		
 		//TODO: Insert a module here that checks for illegal programs (lower level than only parsing source code)
 		
@@ -219,7 +220,20 @@ public class Main {
 			log.info("Exporting SDG to DOT file...OK");
 		}
 		else if(outputTarget.equals("seepjar")){
+			log.info("Exporting SEEP runnable query...");
 			List<OperatorBlock> assembledCode = CodeGenerator.assemble(sdg);
+			for(OperatorBlock ob : assembledCode){
+				System.out.println("---->");
+				System.out.println("");
+				System.out.println("");
+				System.out.println("");
+				System.out.println("");
+				System.out.println(ob.getCode());
+				System.out.println("");
+				System.out.println("");
+				System.out.println("");
+				System.out.println("");
+			}
 //			Set<TaskElement> sdg = SDGAssembler.getSDG(oba, lva, sch);
 //			
 //		//		SDGAssembler sdgAssembler = new SDGAssembler();

@@ -14,14 +14,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.java2sdg.Main;
 import uk.ac.imperial.lsds.java2sdg.bricks.SDGAnnotation;
 
 public class SDGBuilder {
 
-	private final static Logger log = Logger.getLogger(Main.class.getCanonicalName());
+	private final static Logger log = LoggerFactory.getLogger(Main.class.getCanonicalName());
 	
 	private int numPartialSDG;
 	private int partialSDGid;
@@ -48,7 +50,7 @@ public class SDGBuilder {
 		PartialSDGWrapper sdg = partialSDGs.pollLast();
 		while(partialSDGs.size() > 0){
 			PartialSDGWrapper next = partialSDGs.pollLast();
-			log.info("-> Merge "+next.getId()+" into: "+sdg.getId());
+			log.info("Merge "+next.getId()+" into: "+sdg.getId());
 			sdg = merge(sdg, next);
 		}
 		// Although the name is partialSDG, this is the merged, final SDG we've generated
@@ -71,7 +73,7 @@ public class SDGBuilder {
 			// If state is in a, then we merge.
 			System.out.println("Does a contains: "+stateId+"?");
 			if(a.containsState(stateId)){
-				log.info("-> Merge OB: "+obId+"-"+workflowId+" because it has stateId: "+stateId);
+				log.info("Merge OB: "+obId+"-"+workflowId+" because it has stateId: "+stateId);
 				// The TE inside ob is to be merged into a. Where exactly depends on the Nature of the state
 				if(this.isStateHandledAsPartial(stateId, a)){
 					// in this case we merge obId from workflowId into a as downstream as possible

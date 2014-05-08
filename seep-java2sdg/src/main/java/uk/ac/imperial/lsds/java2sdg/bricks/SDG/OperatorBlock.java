@@ -29,6 +29,23 @@ public class OperatorBlock {
 	private List<Stream> downstreamOperator;
 	private List<Stream> upstreamOperator;
 	
+	private String finalCode = null;
+	
+	public void setCode(String code) throws Exception{
+		//this.finalCode = finalCode == null ? code : finalCode;
+		// If it was previously assigned
+		if(this.finalCode != null){
+			throw new Exception("Code in operatorBlock can only be set once");
+		}
+		else{
+			this.finalCode = code;
+		}
+	}
+	
+	public String getCode(){
+		return finalCode;
+	}
+	
 	// Keeps the relation between a streamId<String> and a TE<TaskElement>
 	private Map<Integer, TaskElement> branchingId_TE;
 

@@ -24,9 +24,9 @@ public class TaskElement implements SDGElement{
 	// Potential annotation
 	private final SDGAnnotation ann;
 	// The variables this operator requires locally
-	private final List<String> localVars;
+	private final List<Variable> localVars;
 	// The variables to stream
-	private final List<String> varsToStream;
+	private final List<Variable> varsToStream;
 	// A map that indicates for each downstream connection how data is sent (record-at-a-time, barrier, etc)
 	private SendType sendType;
 	// The actual code of this operator
@@ -48,11 +48,11 @@ public class TaskElement implements SDGElement{
 		return ann;
 	}
 
-	public List<String> getLocalVars() {
+	public List<Variable> getLocalVars() {
 		return localVars;
 	}
 	
-	public List<String> getVarsToStream() {
+	public List<Variable> getVarsToStream() {
 		return varsToStream;
 	}
 
@@ -72,8 +72,8 @@ public class TaskElement implements SDGElement{
 		//Optional fields
 //		private final TaskElementNature opType;
 		private SDGAnnotation ann;
-		private List<String> localVars;
-		private List<String> varsToStream;
+		private List<Variable> localVars;
+		private List<Variable> varsToStream;
 		private String code;
 		private StringBuilder sb = new StringBuilder();
 		
@@ -105,12 +105,12 @@ public class TaskElement implements SDGElement{
 			return this;
 		}
 		
-		public TaskElementBuilder localVars(List<String> val){
+		public TaskElementBuilder localVars(List<Variable> val){
 			localVars = val;
 			return this;
 		}
 		
-		public TaskElementBuilder varsToStream(List<String> val){
+		public TaskElementBuilder varsToStream(List<Variable> val){
 			varsToStream = val;
 			return this;
 		}

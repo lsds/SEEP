@@ -2,6 +2,8 @@ package operators;
 
 import java.util.ArrayList;
 
+import org.hamcrest.generator.qdox.junit.APITestCase;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 

@@ -12,35 +12,45 @@ package uk.ac.imperial.lsds.java2sdg.codegenerator;
 
 import java.util.List;
 
-import uk.ac.imperial.lsds.java2sdg.bricks.TaskElement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import uk.ac.imperial.lsds.java2sdg.Main;
 import uk.ac.imperial.lsds.java2sdg.bricks.SDG.OperatorBlock;
 
 public class CodeGenerator {
 
+	private final static Logger log = LoggerFactory.getLogger(CodeGenerator.class.getCanonicalName());
+	
 	public static List<OperatorBlock> assemble(List<OperatorBlock> ops){
 		
-		List<OperatorBlock> assembled = CodeGenerator.assembleMultiTEOperators(ops);
+		List<OperatorBlock> assembled = CodeGenerator.assembleTE(ops);
 		
 		return assembled;
 	}
 	
-	private static List<OperatorBlock> assembleMultiTEOperators(List<OperatorBlock> ops){
+	private static List<OperatorBlock> assembleTE(List<OperatorBlock> ops){
 		for(OperatorBlock op : ops){
-			System.out.println("---->");
-			System.out.println(op);
-			System.out.println("");
-			System.out.println("");
-			System.out.println("");
-		}
-		for(OperatorBlock op : ops){
-			// Check if it is multi-operator
+			// Check if it is multi-TE
+			String builtCode = null;
 			if(op.getTEs().size() > 1){
-				for(TaskElement te : op.getTEs()){
-					
+				builtCode = SeepOperatorInternalCodeTemplate.getCodeForMultiOp(op.getTEs());
+			}
+			// In case it is single te
+			else{
+				builtCode = SeepOperatorInternalCodeTemplate.getCodeForSingleOp(op.getTE());
+			}
+			try {
+				if(builtCode == null){
+					System.out.println("ERROR HERE");
 				}
+				op.setCode(builtCode);
+			} 
+			catch (Exception e) {
+				e.printStackTrace();
+				log.error("Invalid code assigment: "+e.getMessage());
 			}
 		}
-		
 		return ops;
 	}
 	

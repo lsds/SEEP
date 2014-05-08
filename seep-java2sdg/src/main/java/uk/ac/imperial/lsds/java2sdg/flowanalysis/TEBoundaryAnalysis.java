@@ -17,7 +17,9 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import soot.SootClass;
 import soot.SootMethod;
@@ -34,13 +36,14 @@ import uk.ac.imperial.lsds.java2sdg.Main;
 import uk.ac.imperial.lsds.java2sdg.bricks.InternalStateRepr;
 import uk.ac.imperial.lsds.java2sdg.bricks.SDGAnnotation;
 import uk.ac.imperial.lsds.java2sdg.bricks.TaskElementNature;
+import uk.ac.imperial.lsds.java2sdg.bricks.Variable;
 import uk.ac.imperial.lsds.java2sdg.bricks.InternalStateRepr.StateLabel;
 import uk.ac.imperial.lsds.java2sdg.bricks.TaskElement.TaskElementBuilder;
 import uk.ac.imperial.lsds.java2sdg.input.SourceCodeHandler;
 
 public class TEBoundaryAnalysis {
 	
-	private final static Logger log = Logger.getLogger(Main.class.getCanonicalName());
+	private final static Logger log = LoggerFactory.getLogger(Main.class.getCanonicalName());
 	
 	private StateAccessUtil util = new StateAccessUtil();
 	private UnitGraph cfg = null;
@@ -177,13 +180,13 @@ public class TEBoundaryAnalysis {
 				(ann.equals(SDGAnnotation.GLOBAL_READ)
 				|| ann.equals(SDGAnnotation.GLOBAL_READ) 
 				|| ann.equals(SDGAnnotation.COLLECTION))){
-			log.info("ANN bound at line: "+poi.getSourceCodeLine());
+			log.debug("ANN bound at line: "+poi.getSourceCodeLine());
 			return true;
 		}
 		if(poi.isStateAccess()){
 			if(lastSAccess != -1){ // first TE does not count (group more lines)
 				if(!(poi.getStateElementId() == lastSAccess)){
-					log.info("StateAccess bound at line: "+poi.getSourceCodeLine());
+					log.debug("StateAccess bound at line: "+poi.getSourceCodeLine());
 					return true;
 				}
 			}
@@ -230,6 +233,17 @@ public class TEBoundaryAnalysis {
 		return buildingTE;
 	}
 	
+	private List<Variable> filterThis(List<Variable> vars){
+		Iterator<Variable> iv = vars.iterator();
+		while(iv.hasNext()){
+			Variable v = iv.next();
+			if(v.getName().equals("this")){
+				iv.remove();
+			}
+		}
+		return vars;
+	}
+	
 	private List<TaskElementBuilder> getTeInSequence(){
 		int teId = 0;
 		int lastSAccess = -1;
@@ -240,9 +254,9 @@ public class TEBoundaryAnalysis {
 		List<Unit> jimpleCodeLines = new ArrayList<Unit>();
 		Unit firstUnit = units.next();
 		int firstLine = getLineNumber(firstUnit);
-		List<String> localVars = null;
+		List<Variable> localVars = null;
 		try {
-			localVars = lva.getInLiveVariablesAtLine(firstLine);
+			localVars = filterThis(lva.getInLiveVariablesAtLine(firstLine));
 		}
 		catch (NoDataForLine e) {
 			// TODO Auto-generated catch block
@@ -263,9 +277,9 @@ public class TEBoundaryAnalysis {
 				else{ // process poi
 					if(setsNewBound(poi, lastSAccess)){
 						// BUILD AND STORE PREVIOUS TE
-						List<String> varsToStream = null;
+						List<Variable> varsToStream = null;
 						try {
-							varsToStream = lva.getInLiveVariablesAtLine(poi.getSourceCodeLine());
+							varsToStream = filterThis(lva.getInLiveVariablesAtLine(poi.getSourceCodeLine()));
 						} 
 						catch (NoDataForLine e) {
 							// TODO Auto-generated catch block
@@ -281,7 +295,7 @@ public class TEBoundaryAnalysis {
 						teb.addCodeLine(originalSourceCodeLine); // Add the POI
 						teb = processPOI(poi, teb); // PROCESS poi
 						try {
-							localVars = lva.getInLiveVariablesAtLine(firstLine);
+							localVars = filterThis(lva.getInLiveVariablesAtLine(firstLine));
 						} 
 						catch (NoDataForLine e) {
 							// TODO Auto-generated catch block
@@ -308,9 +322,9 @@ public class TEBoundaryAnalysis {
 		PointOfInterest poi = analyzeLine(prevLineNumber, jimpleCodeLines);
 		if(poi.isPointOfInterest() && setsNewBound(poi, lastSAccess)){
 			// BUILD PREV TEB
-			List<String> varsToStream = null;
+			List<Variable> varsToStream = null;
 			try {
-				varsToStream = lva.getInLiveVariablesAtLine(poi.getSourceCodeLine());
+				varsToStream = filterThis(lva.getInLiveVariablesAtLine(poi.getSourceCodeLine()));
 			} 
 			catch (NoDataForLine e) {
 				e.printStackTrace();
@@ -325,7 +339,7 @@ public class TEBoundaryAnalysis {
 			teb.addCodeLine(originalSourceCodeLine); // Add the POI
 			teb = processPOI(poi, teb); // PROCESS poi
 			try {
-				localVars = lva.getInLiveVariablesAtLine(firstLine);
+				localVars = filterThis(lva.getInLiveVariablesAtLine(firstLine));
 			} 
 			catch (NoDataForLine e) {
 				e.printStackTrace();
@@ -338,9 +352,9 @@ public class TEBoundaryAnalysis {
 			// We check if there is a previous TEB, so that we can tell it which vars to stream
 			if(!sequentialListOfTeb.isEmpty()){
 				TaskElementBuilder previous = sequentialListOfTeb.get(sequentialListOfTeb.size()-1);
-				List<String> varsToStream = null;
+				List<Variable> varsToStream = null;
 				try {
-					varsToStream = lva.getInLiveVariablesAtLine(curLineNumber);
+					varsToStream = filterThis(lva.getInLiveVariablesAtLine(curLineNumber));
 				} 
 				catch (NoDataForLine e) {
 					e.printStackTrace();

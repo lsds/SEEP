@@ -24,6 +24,7 @@ import soot.tagkit.SourceLnPosTag;
 import soot.toolkits.graph.UnitGraph;
 import soot.toolkits.scalar.SimpleLiveLocals;
 import uk.ac.imperial.lsds.java2sdg.Main;
+import uk.ac.imperial.lsds.java2sdg.bricks.Variable;
 
 public class LiveVariableAnalysis {
 
@@ -36,8 +37,8 @@ public class LiveVariableAnalysis {
 	private Iterator<Unit> units = null;
 	
 	// map line with live variables at that point
-	private SortedMap<Integer, List<String>> outLive = new TreeMap<Integer, List<String>>();
-	private SortedMap<Integer, List<String>> inLive = new TreeMap<Integer, List<String>>();
+	private SortedMap<Integer, List<Variable>> outLive = new TreeMap<Integer, List<Variable>>();
+	private SortedMap<Integer, List<Variable>> inLive = new TreeMap<Integer, List<Variable>>();
 	
 	private LiveVariableAnalysis(){
 		
@@ -58,7 +59,7 @@ public class LiveVariableAnalysis {
 		}
 	}
 	
-	public List<String> getOutLiveVariablesAtLine(int line) throws NoDataForLine{
+	public List<Variable> getOutLiveVariablesAtLine(int line) throws NoDataForLine{
 		if(outLive.containsKey(line)){
 			return outLive.get(line);
 		}
@@ -67,7 +68,7 @@ public class LiveVariableAnalysis {
 		}
 	}
 	
-	public List<String> getInLiveVariablesAtLine(int line) throws NoDataForLine{
+	public List<Variable> getInLiveVariablesAtLine(int line) throws NoDataForLine{
 		if(inLive.containsKey(line)){
 			return inLive.get(line);
 		}
@@ -93,22 +94,22 @@ public class LiveVariableAnalysis {
 			List<Value> OUT = sll.getLiveLocalsAfter(u);
 			List<Value> IN = sll.getLiveLocalsBefore(u);
 			// In case several 
-			outLive.put(lineNumber, getVarNames(OUT));
-			inLive.put(lineNumber, getVarNames(IN));
+			outLive.put(lineNumber, getVars(OUT));
+			inLive.put(lineNumber, getVars(IN));
 		}
 		return this;
 	}
 	
-	private List<String> getVarNames(List<Value> out){
-		List<String> names = new ArrayList<String>();
+	private List<Variable> getVars(List<Value> out){
+		List<Variable> vars = new ArrayList<Variable>();
 		for(Value v : out){
-			names.add(v.toString());
+			vars.add(Variable.var(v.getType(), v.toString()));
 		}
-		return names;
+		return vars;
 	}
 	
 	public void printTest(){
-		for(Map.Entry<Integer, List<String>> entry : outLive.entrySet()){
+		for(Map.Entry<Integer, List<Variable>> entry : outLive.entrySet()){
 			System.out.println("L: "+entry.getKey()+" V: "+entry.getValue());
 		}
 	}
