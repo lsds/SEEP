@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Support for scale-in of operators.
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
@@ -59,7 +60,10 @@ public class CoreRE {
 	final private Logger LOG = LoggerFactory.getLogger(CoreRE.class);
 
 	private WorkerNodeDescription nodeDescr = null;
-	private IProcessingUnit processingUnit = null;
+	
+    private Thread processingUnitThread = null;
+    private IProcessingUnit processingUnit = null;
+    
 	private PUContext puCtx = null;
 	private RuntimeClassLoader rcl = null;
 	private ArrayList<EndPoint> starTopology = null;
@@ -107,6 +111,10 @@ public class CoreRE {
 	public ControlDispatcher getControlDispatcher(){
 		return controlDispatcher;
 	}
+
+    public IProcessingUnit getProcessingUnit() {
+        return processingUnit;
+    }
 	
 	public void pushOperator(Operator o){
 		boolean multicoreSupport = GLOBALS.valueFor("multicoreSupport").equals("true") ? true : false;
@@ -260,17 +268,49 @@ public class CoreRE {
 		}
 	}
 	
+    /**
+     * This method is blocking. So, basically, if invoked from NodeManager directly,
+     * we are unable to send any more control tuples to the node.
+     */
 	public void startDataProcessing(){
 		LOG.info("-> Starting to process data...");
 		processingUnit.startDataProcessing();
 	}
+    
+    /**
+     * Starts data processing on a separate thread and returns immediately. If
+     * invoked from NodeManager, then control is returned immediately 
+     */
+    public void startDataProcessingAsync() {
+        processingUnitThread = new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                LOG.info("-> Starting to process data (asynchronous)...");
+                
+                while(true) {
+                    // Let's protect the operator against exceptions
+                    try {
+                        processingUnit.startDataProcessing();
+                    } catch(Throwable t) {
+                        LOG.error("Exception while processing data " + t.getMessage());
+                    }
+                }
+            }
+        });
+        
+        processingUnitThread.start();
+    }
 	
 	public void stopDataProcessing(){
 		LOG.info("-> The system has been remotely stopped. No processing data");
-	}
+        if (dataConsumer != null) {
+            dataConsumer.setDoWork(false);
+        }
+    }
 	
 	public enum ControlTupleType{
-		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
+		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, SCALE_IN, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
 		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT,
 		KEY_SPACE_BOUNDS
 	}
@@ -434,15 +474,38 @@ public class CoreRE {
 			// Get index of new replica operator
 			int newOpIndex = -1;
 			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
-				if (op.opID() == ct.getScaleOutInfo().getNewOpId())
+				if (op.opID() == ct.getScaleOutInfo().getNewOpId()) {
 					newOpIndex = op.index();
-				}
-			// Get index of the scaling operator
+                }
+            }
+			
+            // Get index of the scaling operator
 			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
+            
 			//Ack the message
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
+        /** SCALE_IN message **/
+        else if(ctt.equals(ControlTupleType.SCALE_IN)) {
+        
+        	LOG.info("-> Node {} recv ControlTuple.SCALE_IN ", nodeDescr.getNodeId());
+		
+            // Get index of replica operator being terminated as part of scale-in
+            // We usually refer to this replica as "victim" of the scale-in action
+			int victimOpIndex = -1;
+			for(PlacedOperator op: processingUnit.getOperator().getOpContext().downstreams) {
+				if (op.opID() == ct.getScaleInInfo().getVictimOperatorId()) {
+					victimOpIndex = op.index();
+				}
+            }
+        
+            // Perform scale-in action
+            coreProcessLogic.scaleIn(ct.getScaleInInfo(), victimOpIndex);
+            
+            // Ack the message
+			controlDispatcher.ackControlMessage(genericAck, os);
+        }
 		/** DISTRIBUTED_SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.DISTRIBUTED_SCALE_OUT)){
 			LOG.info("-> Node {} recv ControlTuple.DISTRIBUTED_SCALE_OUT",nodeDescr.getNodeId());

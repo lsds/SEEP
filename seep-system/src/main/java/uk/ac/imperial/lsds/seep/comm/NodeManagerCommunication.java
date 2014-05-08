@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Changes to support scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm;
 
@@ -37,7 +38,11 @@ public class NodeManagerCommunication {
 	
 	final private Logger LOG = LoggerFactory.getLogger(NodeManagerCommunication.class);
 	
-	public boolean sendObject(Node n, Object o){
+    public boolean sendObject(Node n, Object o) {
+        return sendObject(n, 0, o);
+    }
+    
+	public boolean sendObject(Node n, int operatorId, Object o){
 		//Get destiny address, port is preconfigured to 3500 for deployer tasks
 		InetAddress ip = n.getIp();
 		int port = n.getPort();
@@ -53,11 +58,16 @@ public class NodeManagerCommunication {
 			}
 			oos = new ExtendedObjectOutputStream(connection.getOutputStream());
 			in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-			LOG.debug("Class about to send: "+o.getClass());
+			
+            LOG.debug("Class about to send: "+o.getClass());
 			oos.writeClassDescriptor(ObjectStreamClass.lookup(o.getClass()));
 			oos.writeObject(o);
+            
+            LOG.debug("Waiting for ack/nack reply from operatorId [{}]", operatorId);
 			String reply = null;
 			reply = in.readLine();
+            LOG.debug("Received response [{}] from operatorId [{}]", reply, operatorId);
+            
 			///\fixme{handle error properly}
 			if(reply.equals("ack")){
 				success = true;

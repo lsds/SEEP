@@ -7,6 +7,8 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Removal of upstream and downstream connections
+ *     which is required to support scale-in of operators.
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.processingunit;
 
@@ -80,8 +82,12 @@ public interface IProcessingUnit {
 		
 	public void addDownstream(int opId, OperatorStaticInformation location);
 	
-	public void addUpstream(int opId, OperatorStaticInformation location);
+	public void removeDownstream(int opId);
+
+    public void addUpstream(int opId, OperatorStaticInformation location);
 	
+    public void removeUpstream(int opId);
+    
 	public void launchMultiCoreMechanism(CoreRE core, DataStructureAdapter dsa);
 	
 	public void disableMultiCoreSupport();

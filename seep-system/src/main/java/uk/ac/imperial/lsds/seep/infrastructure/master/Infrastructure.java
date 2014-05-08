@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Changes to support operator scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.infrastructure.master;
 
@@ -66,9 +67,13 @@ import uk.ac.imperial.lsds.seep.state.StateWrapper;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterListener;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
+import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
+import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 
 /**
 * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
@@ -119,7 +124,7 @@ public class Infrastructure {
     
 	public Infrastructure(int listeningPort) {
 		this.port = listeningPort;
-	}
+ 	}
 	
 	public boolean isSystemRunning(){
 		return systemIsRunning;
@@ -658,7 +663,42 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		LOG.info("SOURCES have been notified. System started.");
 		systemIsRunning = true;
 	}
-
+    
+    public void stop(int opId) {
+        LOG.info("Stopping operator [{}]", opId);
+        for(Operator op : ops) {
+            if (op.getOperatorId() == opId) {
+                String msg = "STOP " + op.getOperatorId();
+                LOG.info("-> Stopping operator, msg = {}", msg);
+                
+                bcu.sendObject(op.getOpContext().getOperatorStaticInformation().getMyNode(), opId, msg);
+                
+                // Monitoring: scale-in feature
+                
+                // We first find the upstream operator for the chosen victim
+                
+                // TODO: support multiple upstreams. I only intend to support one 
+                // upstream at the moment. Not difficult to support many.
+                int size = op.getOpContext().getUpstreamSize();
+                if (size != 1) {
+                    LOG.warn("More than one upstream operator detected for [{}]", opId);
+                }
+               
+                // Send SCALE_IN control tuple to the upstream of the victim
+                PlacedOperator upstreamVictimOp = op.getOpContext().upstreams.iterator().next();
+                if (upstreamVictimOp != null) {
+                    LOG.info("-> Stopping upstream operator {}, msg = {}", 
+                            upstreamVictimOp.opID(), ControlTupleType.SCALE_IN.toString());
+                    
+                    ControlTuple ct = new ControlTuple()
+                            .makeScaleIn(upstreamVictimOp.opID(), opId, upstreamVictimOp.isStateful());
+                    
+                    rct.sendControlMsg(upstreamVictimOp.location(), ct, upstreamVictimOp.opID());
+                }
+            }
+        }
+    }
+    
 	public synchronized Node getNodeFromPool() throws NodePoolEmptyException{
 		if(nodeStack.size() < Integer.parseInt(GLOBALS.valueFor("minimumNodesAvailable"))){
 			//nLogger.info("Instantiating EC2 images");
@@ -940,20 +980,4 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		elements.put(o.getOperatorId(), o);
 		LOG.debug("Added new Operator to Infrastructure: {}", o.toString());
 	}
-    
-    /**
-     * @return Returns a list of identifiers for the nodes that are executing a 
-     * given operator at the time of invocation.
-     */
-    public List<Integer> getNodeIdsForOperatorId(int operatorId) {
-        List<Integer> nodeIds = new ArrayList<Integer>();
-        
-        for(Integer nodeId : queryToNodesMapping.keySet()) {
-            if(queryToNodesMapping.get(nodeId).getOperatorId() == operatorId) {
-                nodeIds.add(nodeId);
-            }
-        }
-                
-        return nodeIds;
-    }
 }

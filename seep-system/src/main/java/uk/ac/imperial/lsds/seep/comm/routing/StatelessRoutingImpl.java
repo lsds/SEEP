@@ -7,17 +7,22 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Added methods to collapse replicas
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.routing;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 
+    private static final Logger LOG = LoggerFactory.getLogger(StatelessRoutingImpl.class);
 	private static final long serialVersionUID = 1L;
-	private int splitWindow = 0;
+	
+    private int splitWindow = 0;
 	private int target = 0;
 	private int downstreamIndex = 0;
 	private int remainingWindow = 0;
@@ -43,7 +48,8 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		this.numberOfDownstreams = numOfDownstreams;
 	}
 		
-	public ArrayList<Integer> route(ArrayList<Integer> targets, int value){
+    @Override
+	public synchronized ArrayList<Integer> route(ArrayList<Integer> targets, int value){
 		int targetRealIndex = -1;
 		if(remainingWindow == 0){
 			//Reinitialize the window size
@@ -83,7 +89,8 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 	}
 	
 	//overriden to make ANY faster...
-	public ArrayList<Integer> route(int value){
+    @Override
+	public synchronized ArrayList<Integer> route(int value){
 //System.out.println("Rem window: "+remainingWindow);
 //System.out.println("splitWindow: "+splitWindow);
 		ArrayList<Integer> targets = new ArrayList<Integer>();
@@ -107,7 +114,8 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		return targets;
 	}
 	
-	public int[] newReplica(int oldOpIndex, int newOpIndex) {
+    @Override
+	public synchronized int[] newReplica(int oldOpIndex, int newOpIndex) {
 		//In this case oldOpIndex does not do anything
 //System.out.println("#### There is a NEW SPLIT here, newOpIndex: "+newOpIndex);
 		//First of all, we map the real index to virtual index
@@ -124,8 +132,43 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		int[] fakeKeys = {-1, -1};
 		return fakeKeys;
 	}
-	
-	public int[] newStaticReplica(int oldOpIndex, int newOpIndex){
+
+    /**
+     * Collapses an existing replica and ensures that no more tuples are routed
+     * @param opIndex
+     * @return 
+     */
+    @Override
+    public synchronized int[] collapseReplica(int opIndex) {
+        numberOfDownstreams--;
+        virtualIndex--;
+    
+        HashMap<Integer, Integer> copyVirtualIndexToRealIndex = new HashMap<Integer, Integer>();
+        
+        // Just copy every virtual to real index mapping, except for the 
+        // one corresponding to the replica being collapsed.
+        int newVirtualIndex = 0;
+        for(Integer virtualIndex : virtualIndexToRealIndex.keySet()) {
+            Integer realIndex = virtualIndexToRealIndex.get(virtualIndex);
+            
+            if (!realIndex.equals(opIndex)) {
+                copyVirtualIndexToRealIndex.put(newVirtualIndex, realIndex);
+                newVirtualIndex++;
+            }
+        }
+        
+        // Now we replace the map with the new one, excluding the collapsed replica
+        virtualIndexToRealIndex = copyVirtualIndexToRealIndex;
+        
+        // Close window to force the router to calculate the target operator for tuples
+        remainingWindow = 0;
+        
+        int[] fakeKeys = {-1, -1};
+		return fakeKeys;
+    }
+
+    @Override
+    public synchronized int[] newStaticReplica(int oldOpIndex, int newOpIndex){
 		//In this case oldOpIndex does not do anything
 		//First of all, we map the real index to virtual index
 		virtualIndexToRealIndex.put(virtualIndex, newOpIndex);
@@ -137,14 +180,19 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		int[] fakeKeys = {-1, -1};
 		return fakeKeys;
 	}
+    
+    @Override
+    public synchronized int[] collapseStaticReplica(int opIndex) {
+        return collapseReplica(opIndex);
+    }
 		
 	@Override
-	public ArrayList<Integer> routeToAll(ArrayList<Integer> targets) {
+	public synchronized ArrayList<Integer> routeToAll(ArrayList<Integer> targets) {
 		return new ArrayList<Integer>(virtualIndexToRealIndex.values());
 	}
 
 	@Override
-	public ArrayList<Integer> routeToAll() {
+	public synchronized ArrayList<Integer> routeToAll() {
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		return routeToAll(targets);
 	}

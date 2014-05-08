@@ -10,10 +10,12 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.infrastructure.monitor.master;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import org.joda.time.DateTime;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
@@ -120,6 +122,15 @@ public class MonitorMasterWorker
                 if (listeners.containsKey(tuple.getOperatorId())) {
                     listeners.get(tuple.getOperatorId()).onTupleReceived(tuple);
                 }
+            } else {
+                // A null tuple indicates that the counter-part worker on the slave
+                // has been closed and no further tuples will be sent by the slave.
+                try {
+                    slaveSocket.close();
+                } catch (IOException ex) {
+                }
+                
+                receive = false;
             }
         }
         
