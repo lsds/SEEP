@@ -8,6 +8,8 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  *     Matteo Migliavacca - Definition of inner classes and method implementation
+ *     Martin Rouaux - Removal of upstream and downstream connections (OperatorStaticInformation)
+ *     which is required to support scale-in of operators.
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
@@ -252,16 +254,24 @@ public class OperatorContext implements Serializable{
 	}
 	
 	public void addDownstream(int opID) {
-		connectionsD.add(opID);
+		connectionsD.add(new Integer(opID));
 	}
 	
+    public void removeDownstream(int opID) {
+        connectionsD.remove(new Integer(opID));
+    }
+    
 	public void addOriginalDownstream(Integer opId){
 		originalDownstream.add(opId);
 	}
 	
 	public void addUpstream(int opID) {
-		connectionsU.add(opID);
+		connectionsU.add(new Integer(opID));
 	}
+    
+    public void removeUpstream(int opID) {
+        connectionsU.remove(new Integer(opID));
+    }
 
 //	public void setQueryAttribute(String queryAttribute){
 //		this.queryAttribute = queryAttribute;

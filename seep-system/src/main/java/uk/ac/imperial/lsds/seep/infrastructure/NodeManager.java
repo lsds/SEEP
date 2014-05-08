@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Changes to support scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.infrastructure;
 
@@ -23,6 +24,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
@@ -34,6 +36,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.MonitorSlave;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.MonitorSlaveFactory;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
+import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
@@ -86,7 +89,9 @@ public class NodeManager{
 		monitorSlave.pushMetricsTuple(tuple);
 	}
 	
-	public void init(){
+	public void init() {
+		// Get unique identifier for this node
+		int nodeId = nodeDescr.getNodeId();
 		//Initialize node engine ( CoreRE + ProcessingUnit )
 		CoreRE core = new CoreRE(nodeDescr, rcl);
 		
@@ -124,13 +129,20 @@ public class NodeManager{
 					else if (o instanceof StateWrapper){
 						LOG.info("-> STATE resolved, Class: {}", o.getClass().getName());
 					}
+                    
+                    out.println("ack");
+                    out.flush();
 				}
 				else{
 					o = ois.readObject();
 				}
+                
 				//Check the class of the object received and initialized accordingly
 				if(o instanceof ArrayList<?>){
 					core.pushStarTopology((ArrayList<EndPoint>)o);
+                    
+                    out.println("ack");
+                    out.flush();
 				}
 				else if(o instanceof Operator){
                     // Initialize monitor slave, start thread, we do it at
@@ -146,13 +158,20 @@ public class NodeManager{
                     LOG.info("-> Node Monitor running for operatorId={}", operatorId);
                     
 					core.pushOperator((Operator)o);
-				}
+                    
+                    out.println("ack");
+                    out.flush();
+                }
 				else if(o instanceof Integer){
 					core.setOpReady((Integer)o);
+                    
+                    out.println("ack");
+                    out.flush();
 				}
 				else if(o instanceof String){
 					String tokens[] = ((String)o).split(" ");
-					System.out.println("Tokens received: "+tokens[0]);
+					
+                    LOG.debug("Tokens received: " +tokens[0]);
 					if(tokens[0].equals("CODE")){
 						LOG.info("-> CODE Command");
 						//Send ACK back
@@ -192,26 +211,33 @@ public class NodeManager{
 					if(tokens[0].equals("STOP")){
 						LOG.info("-> STOP Command");
 						core.stopDataProcessing();
-						listen = false;
-						out.println("ack");
-						o = null;
-						ois.close();
-						out.close();
-						clientSocket.close();
-						//since listen=false now, finish the loop
+						
+                        // Stop the monitoring slave, this node is stopping
+                        if (monitorSlave != null) {
+                            monitorSlave.stop();
+                        }
+                        
+                        listen = false;
+						
+                        LOG.info("Sending ACK message back to the master");
+                        out.println("ack");
+						out.flush();
+                        
+                        //since listen=false now, finish the loop
 						continue;
 					}
-					if(tokens[0].equals("SET-RUNTIME")){
+					if(tokens[0].equals("SET-RUNTIME")) {
 						LOG.info("-> SET-RUNTIME Command");
 						core.setRuntime();
 						out.println("ack");
 					}
 					if(tokens[0].equals("START")){
 						LOG.info("-> START Command");
+                        core.startDataProcessingAsync();
+                        
                         //We call the processData method on the source
                         /// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
                         out.println("ack");
-                        core.startDataProcessing();
 					}
 					if(tokens[0].equals("CLOCK")){
 						LOG.info("-> CLOCK Command");
@@ -219,14 +245,22 @@ public class NodeManager{
 						out.println("ack");
 					}
 				}
-				//Send message back.
-				out.println("ack");
-				o = null;
+               
+                o = null;
 				ois.close();
 				out.close();
 				clientSocket.close();
 			}
-			serverSocket.close();
+            
+            LOG.info("Waiting before stopping manager and terminating this process");
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException ex) {
+                LOG.error("Unable to wait for 5 seconds");
+            }
+            
+            serverSocket.close();
+            System.exit(0);
 		}
 		//For now send nack, probably this is not the best option...
 		catch(IOException io){

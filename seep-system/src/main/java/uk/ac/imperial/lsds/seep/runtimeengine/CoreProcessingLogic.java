@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Support for scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
@@ -60,6 +61,9 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleInInfo;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
+import uk.ac.imperial.lsds.seep.processingunit.StatelessProcessingUnit;
 
 
 public class CoreProcessingLogic implements Serializable{
@@ -289,6 +293,36 @@ public class CoreProcessingLogic implements Serializable{
 			pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		}
 	}
+    
+    public synchronized void scaleIn(ScaleInInfo scaleInInfo, int victimOperatorIndex) {
+        int victimOperatorId = scaleInInfo.getVictimOperatorId();
+        boolean isStatefulScaleIn = scaleInInfo.isStatefulScaleOut();
+        
+        // If scaling operator is stateful
+		if (isStatefulScaleIn){
+			LOG.info("-> Scaling in STATEFUL op");
+            // TODO: this is not yet supported. State needs to be collapsed and 
+            // re-partiotioned amonst surviving instances. This is a complex task.
+		} else {
+			LOG.info("-> Scaling in STATELESS op");
+            LOG.info("Removing connection from [{}] to [{}]", 
+                    pu.getOperator().getOperatorId(), victimOperatorId);
+            
+            // Remove downstream connections
+            pu.getOperator().getOpContext().removeDownstream(victimOperatorId);
+            
+            if (pu instanceof StatelessProcessingUnit) {
+                LOG.info("Removing end point at index " + victimOperatorIndex);
+                
+                ((StatelessProcessingUnit)pu).getPUContext()
+                        .getDownstreamTypeConnection()
+                        .remove(victimOperatorIndex);
+            }
+            
+            // Remove partition at the router level
+			pu.getOperator().getRouter().collapseOperatorPartition(victimOperatorId, victimOperatorIndex);
+        }
+    }
 	
 	public void scaleOutStatefulOperator(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		//All operators receiving the scale-out message have to change their routing information

@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
+ *     Martin Rouaux - Changes to support scale-in of operators
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.comm.routing;
 
@@ -213,6 +214,13 @@ public class Router implements Serializable{
 		}
 		return key;
 	}
+    
+    public int[] collapseOperatorPartition(int operatorId, int operatorIndex) {
+        int key[];
+        
+        key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).collapseReplica(operatorIndex);
+        return key;
+    }
 	
 	/** this can be moved along with downTypeToLoadBalancer */
 	private int[] configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
