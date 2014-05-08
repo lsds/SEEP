@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.operator;
 
+import uk.ac.imperial.lsds.streamsql.visitors.SeepSQLVisitor;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;

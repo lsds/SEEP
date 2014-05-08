@@ -1,15 +1,19 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.streamsql.expressions.IValue;
+import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
 public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate {
 
 	/*
 	 * Values compared by this predicate
 	 */
-	IValue<T> v1;
-	IValue<T> v2;
+	IValueExpression<T> v1;
+	IValueExpression<T> v2;
 
 	/*
 	 * Code of the comparison operator
@@ -26,13 +30,13 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 	public static final int GREATER_OP = 4;
 	public static final int NONGREATER_OP = 5;
 	
-	public ComparisonPredicate(int comparisonOperation, IValue<T> v1, IValue<T> v2) {
+	public ComparisonPredicate(int comparisonOperation, IValueExpression<T> v1, IValueExpression<T> v2) {
 		this.comparisonOperation = comparisonOperation;
 		this.v1 = v1;
 		this.v2 = v2;
 	}
 
-	public ComparisonPredicate(IValue<T> v1, IValue<T> v2) {
+	public ComparisonPredicate(IValueExpression<T> v1, IValueExpression<T> v2) {
 		this(EQUAL_OP, v1, v2);
 	}
 
@@ -66,8 +70,8 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 
 	@Override
 	public boolean satisfied(DataTuple tuple) {
-		Comparable val1 = v1.evaluate(tuple);
-		Comparable val2 = v2.evaluate(tuple);
+		Comparable val1 = v1.eval(tuple);
+		Comparable val2 = v2.eval(tuple);
 
 		// All the Numeric types are converted to double,
 		// because different types cannot be compared
@@ -106,8 +110,8 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 
 	@Override
 	public boolean satisfied(DataTuple firstTuple, DataTuple secondTuple) {
-		final Comparable val1 = v1.evaluate(firstTuple);
-		final Comparable val2 = v2.evaluate(secondTuple);
+		final Comparable val1 = v1.eval(firstTuple);
+		final Comparable val2 = v2.eval(secondTuple);
 		final int compared = val1.compareTo(val2);
 
 		boolean result = false;
@@ -198,5 +202,15 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 				break;
 		}
 		return result;
+	}
+
+	@Override
+	public void accept(PredicateVisitor pv) {
+		pv.visit(this);
+	}
+
+	@Override
+	public List<IPredicate> getInnerPredicates() {
+		return new ArrayList<IPredicate>();
 	}
 }

@@ -6,8 +6,9 @@ import java.util.List;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.streamsql.expressions.Constants;
+import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Projection implements StatelessOperator {
+public class Projection implements StatelessOperator, IStreamSQLOperator {
 
 	/*
 	 * Attributes for the projection
@@ -57,7 +58,7 @@ public class Projection implements StatelessOperator {
 
 
 	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
+	public void processData(List<DataTuple> dataList) {
 		for (DataTuple tuple : dataList)
 			processData(tuple);
 	}
@@ -70,6 +71,11 @@ public class Projection implements StatelessOperator {
 			sb.append(att.toString() + " ");
 		sb.append(")");
 		return sb.toString();
+	}
+
+	@Override
+	public void accept(OperatorVisitor ov) {
+		ov.visit(this);		
 	}
 
 }

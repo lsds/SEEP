@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.operator;
+package uk.ac.imperial.lsds.streamsql.visitors;
 
 
 import net.sf.jsqlparser.statement.Statement;
