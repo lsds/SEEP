@@ -10,11 +10,13 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seep.operator.DistributedApi;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
 public class MultiOperator implements OperatorCode, ComposedOperator, CommunicationPrimitives{
@@ -24,6 +26,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 	private final int id;
 	
 	private Set<SubOperator> subOperators;
+	private DistributedApi dApi;
 	private SubOperator mostUpstream;
 	
 	private MultiOperator(Set<SubOperator> subOperators, int multiOpId){
@@ -36,6 +39,10 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 		}
 	}
 	
+	public void setApi(DistributedApi api){
+		this.dApi = api;
+	}
+	
 	private boolean checkConstraints(Set<SubOperator> subOperators){
 		// TODO:
 		// - constains:
@@ -45,16 +52,16 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 	}
 	
 	/** Implementation of OperatorCode interface **/
-	
-	@Override
-	public void processData(DataTuple data) {
-		// just call the first op to start processing data
-		mostUpstream.processData(data);
-	}
 
 	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
-		mostUpstream.processData(dataList);
+	public void processData(DataTuple data, API localApi) {
+		// just call the first op to start processing data
+		mostUpstream.processData(data, localApi);
+	}
+	
+	@Override
+	public void processData(List<DataTuple> dataList, API localApi) {
+		mostUpstream.processData(dataList, localApi);
 	}
 
 	@Override
@@ -89,17 +96,16 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 
 	@Override
 	public void send(DataTuple dt) {
-		api.send(dt);
+		dApi.send(dt);
 	}
 	
 	@Override
 	public void send_toStreamId(DataTuple dt, int streamId) {
-		api.send_toStreamId(dt, streamId);
+		dApi.send_toStreamId(dt, streamId);
 	}
 
 	@Override
 	public void send_all(DataTuple dt) {
-		// TODO Auto-generated method stub
 		
 	}
 

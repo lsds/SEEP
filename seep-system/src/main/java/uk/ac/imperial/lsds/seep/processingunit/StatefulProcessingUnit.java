@@ -431,8 +431,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
         public void sendDataByThreadPool(DataTuple dt, ArrayList<Integer> targets){
         
             int numTargets = targets.size();
-            final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
-            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            final ArrayList<Integer> targetsCopy =  new ArrayList<Integer>(targets);
+            List<Callable<Object>> taskList = new ArrayList<Callable<Object>>(numTargets);
             
             for (int i = 0; i < numTargets; i++) {
                 
@@ -481,8 +481,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
             //Send each data tuple to its corresponding target
             
             int numTargets = targets.size();
-            final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
-            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            final ArrayList<Integer> targetsCopy =  new ArrayList<Integer>(targets);
+            List<Callable<Object>> taskList = new ArrayList<Callable<Object>>(numTargets);
             
             for (int i = 0; i < numTargets; i++) {
                 

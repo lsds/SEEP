@@ -10,10 +10,9 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
-import uk.ac.imperial.lsds.seep.operator.compose.SubOperatorCode;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
-public interface StatefulOperator extends OperatorCode, SubOperatorCode{
+public interface StatefulOperator extends OperatorCode{
 
 	// FIXME: State (state impl) instead of StateWrapper
 	public StateWrapper getState();

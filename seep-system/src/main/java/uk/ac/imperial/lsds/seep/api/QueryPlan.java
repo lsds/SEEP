@@ -161,7 +161,7 @@ public class QueryPlan {
 	}
 	
 	public Connectable newMultiOperator(Set<SubOperator> subOperators,
-			int multiOpId, List<String> attributes) {
+		int multiOpId, List<String> attributes) {
 		// First create multiOperator
 		MultiOperator mo = MultiOperator.synthesizeFrom(subOperators, multiOpId);
 		// Then compose the multiOperator into a SEEP Operator

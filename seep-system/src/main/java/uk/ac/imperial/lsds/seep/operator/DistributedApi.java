@@ -70,36 +70,36 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 		op.send_all(dt);
 	}
         
-        @Override
-        public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
-                op.send_toStreamId_toAll_threadPool(dt, streamId);
-        }
+    @Override
+    public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
+    	op.send_toStreamId_toAll_threadPool(dt, streamId);
+    }
+    
+    @Override
+    public synchronized void send_all_threadPool(DataTuple dt){
+        op.send_all_threadPool(dt);
+    }
         
-        @Override
-        public synchronized void send_all_threadPool(DataTuple dt){
-                op.send_all_threadPool(dt);
-        }
-        
-        @Override
+    @Override
 	public synchronized void send_to_OpId(DataTuple dt, int opId){
-                int opIndex = op.getOpContext().findOpIndexFromDownstream(opId);
-                this.send_toIndex(dt, opIndex);
-        }
+    	int opIndex = op.getOpContext().findOpIndexFromDownstream(opId);
+        this.send_toIndex(dt, opIndex);
+    }
         
-        @Override
-        public synchronized void send_to_OpIds(DataTuple[] dt, int[] opId){
-            int[] indices = new int[opId.length];
-            int opIndex;
-            for(int i = 0 ; i < opId.length ; i++){
-                indices[i] = op.getOpContext().findOpIndexFromDownstream(opId[i]);
-            }
-            this.send_toIndices(dt, indices);
+    @Override
+    public synchronized void send_to_OpIds(DataTuple[] dt, int[] opId){
+        int[] indices = new int[opId.length];
+        int opIndex;
+        for(int i = 0 ; i < opId.length ; i++){
+            indices[i] = op.getOpContext().findOpIndexFromDownstream(opId[i]);
         }
-        
-        @Override
-        public synchronized void send_toIndices(DataTuple[] dts, int[] indices){
-            op.send_toIndices(dts, indices);
-        }
+        this.send_toIndices(dt, indices);
+    }
+    
+    @Override
+    public synchronized void send_toIndices(DataTuple[] dts, int[] indices){
+        op.send_toIndices(dts, indices);
+    }
         
 	// Other
 	

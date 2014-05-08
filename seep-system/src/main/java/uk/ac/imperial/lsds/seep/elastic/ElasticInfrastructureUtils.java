@@ -601,7 +601,7 @@ public class ElasticInfrastructureUtils {
         
    private void configureStreamIdFromUpstreamOps(Operator op, Operator newOp, int opId) {
        
-        HashMap<Integer, Integer> op_streamId_map = new HashMap<>();
+        HashMap<Integer, Integer> op_streamId_map = new HashMap<Integer, Integer>();
         
         for (PlacedOperator up : op.getOpContext().upstreams) {
             Operator upOp = inf.getOperatorById(up.opID());
@@ -614,7 +614,6 @@ public class ElasticInfrastructureUtils {
             }
 
             (inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()), true, op_streamId_map.get(opId));
-            //(inf.getElements().get(up.opID())).connectTo(inf.getElements().get(newOp.getOperatorId()),false);
         }
     }
 

@@ -55,7 +55,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	private OutputQueue outputQueue = null;
         
-        private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors()-1 );
+    private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors()-1 );
 	
 	//Multi-core support
 	private Executor pool;
@@ -289,8 +289,8 @@ public class StatelessProcessingUnit implements IProcessingUnit {
         public void sendDataByThreadPool(DataTuple dt, ArrayList<Integer> targets){
         
             int numTargets = targets.size();
-            final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
-            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            final ArrayList<Integer> targetsCopy =  new ArrayList<Integer>(targets);
+            List<Callable<Object>> taskList = new ArrayList<Callable<Object>>(numTargets);
             
             for (int i = 0; i < numTargets; i++) {
                 
@@ -339,8 +339,8 @@ public class StatelessProcessingUnit implements IProcessingUnit {
             //Send each data tuple to its corresponding target
             
             int numTargets = targets.size();
-            final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
-            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            final ArrayList<Integer> targetsCopy =  new ArrayList<Integer>(targets);
+            List<Callable<Object>> taskList = new ArrayList<Callable<Object>>(numTargets);
             
             for (int i = 0; i < numTargets; i++) {
                 

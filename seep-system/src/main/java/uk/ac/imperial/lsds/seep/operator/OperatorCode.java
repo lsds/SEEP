@@ -11,16 +11,14 @@
 package uk.ac.imperial.lsds.seep.operator;
 
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public interface OperatorCode extends Serializable{
-
-	public DistributedApi api = DistributedApi.getInstance();
 	
 	public void setUp();
-	public void processData(DataTuple data);
-	public void processData(ArrayList<DataTuple> dataList);
+	public void processData(DataTuple data, API api);
+	public void processData(List<DataTuple> dataList, API api);
 	
 }

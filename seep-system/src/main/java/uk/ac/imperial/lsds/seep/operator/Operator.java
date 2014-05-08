@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.MultiOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -34,6 +35,8 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	private int originalOpId;
         
 	private final OperatorCode operatorCode;
+	private final DistributedApi distApi;
+	private final LocalApi localApi;
 	private final StateWrapper stateWrapper;
 	
 	private OperatorContext opContext = new OperatorContext();
@@ -57,6 +60,8 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	private Operator(int opId, OperatorCode opCode, List<String> attributes){
 		this.operatorId = opId;
 		this.operatorCode = opCode;
+		this.distApi = DistributedApi.getInstance();
+		this.localApi = LocalApi.getInstance();
 		this.stateWrapper = null;
 		opContext.setDeclaredWorkingAttributes(attributes);
                 this.originalOpId = opId;
@@ -65,18 +70,20 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	private Operator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
 		this.operatorId = opId;
 		this.operatorCode = opCode;
+		this.distApi = DistributedApi.getInstance();
+		this.localApi = LocalApi.getInstance();
 		this.stateWrapper = s;
 		opContext.setDeclaredWorkingAttributes(attributes);
                 this.originalOpId = opId;
 	}
 
-        public void setOriginalOpId(int x){
-            originalOpId = x ;
-        }
-        
-        public int getOriginalOpId(){
-            return originalOpId;
-        }
+    public void setOriginalOpId(int x){
+        originalOpId = x ;
+    }
+    
+    public int getOriginalOpId(){
+        return originalOpId;
+    }
 	
 	/** Other methods **/
 	
@@ -102,7 +109,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	
 	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
-		this.operatorCode.api.setCallbackObject(this);
+		// Configure distApi with own reference
+		distApi.setCallbackObject(this);
+		// Set distributedApi in case we have a multiOperator
+		if(operatorCode instanceof MultiOperator){
+			((MultiOperator)operatorCode).setApi(distApi);
+		}
 	}
 
 	/** Methods used by the developers to send data **/
@@ -121,13 +133,13 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		processingUnit.sendData(dt, targets);
 	}
         
-        public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
-                ArrayList<Integer> targets = new ArrayList<>();
-                for(int idx : idxs){
-                    targets.add(idx);
-                }
-                processingUnit.sendPartitionedData(dts, targets);
+    public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
+    	ArrayList<Integer> targets = new ArrayList<Integer>();
+        for(int idx : idxs){
+            targets.add(idx);
         }
+        processingUnit.sendPartitionedData(dts, targets);
+    }
 	
 	// Send downstream to stateful partitionable operator
 	public synchronized void send_splitKey(DataTuple dt, int key){
@@ -164,14 +176,14 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
         
 	public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
-                processingUnit.sendDataByThreadPool(dt, targets);
+		processingUnit.sendDataByThreadPool(dt, targets);
 	}
 	
 	
 	public void send_all_threadPool(DataTuple dt){
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
-                processingUnit.sendDataByThreadPool(dt, targets);
+        processingUnit.sendDataByThreadPool(dt, targets);
 	}
 	
 	/** System Configuration Settings **/
@@ -233,11 +245,23 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	}
 	
 	public void processData(DataTuple data){
-		operatorCode.processData(data);
+		// If we have a multiOperator, we pass localApi so that those subOperators can communicate
+		if(operatorCode instanceof MultiOperator){
+			operatorCode.processData(data, localApi);
+		}
+		// If we host a single operator, then we pass distApi, so that it can communicate with other machines
+		else{
+			operatorCode.processData(data, distApi);
+		}
 	}
 	
 	public void processData(ArrayList<DataTuple> dataList){
-		operatorCode.processData(dataList);
+		if(operatorCode instanceof MultiOperator){
+			operatorCode.processData(dataList, localApi);
+		}
+		else{
+			operatorCode.processData(dataList, distApi);
+		}
 	}
 	
 	public void setUp(){

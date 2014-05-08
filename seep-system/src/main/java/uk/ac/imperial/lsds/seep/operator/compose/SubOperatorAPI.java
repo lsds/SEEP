@@ -11,9 +11,10 @@
 package uk.ac.imperial.lsds.seep.operator.compose;
 
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.API;
 
 public interface SubOperatorAPI extends Serializable{
 
@@ -22,7 +23,7 @@ public interface SubOperatorAPI extends Serializable{
 	public void connectSubOperatorTo(int localStreamId, SubOperator so);
 	
 	public void setUp();
-	public void processData(DataTuple data);
-	public void processData(ArrayList<DataTuple> dataList);
+	public void processData(DataTuple data, API api);
+	public void processData(List<DataTuple> dataList, API api);
 	
 }

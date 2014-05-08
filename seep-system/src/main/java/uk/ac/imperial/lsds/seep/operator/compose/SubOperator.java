@@ -10,19 +10,24 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seep.operator.LocalApi;
+import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
 public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Callback{
 
 	private static final long serialVersionUID = 1L;
 	
-	private SubOperatorCode code;
+	private OperatorCode code;
+	private LocalApi api;
+	
 	private MultiOperator multiOp;
 	
 	private boolean mostDownstream;
@@ -30,17 +35,16 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	private Map<Integer, SubOperator> localDownstream;
 	private Map<Integer, SubOperator> localUpstream;
 	
-	public static SubOperator getSubOperator(SubOperatorCode code){
+	public static SubOperator getSubOperator(OperatorCode code){
 		return new SubOperator(code);
 	}
 	
-	private SubOperator(SubOperatorCode code){
+	private SubOperator(OperatorCode code){
 		this.code = code;
 		this.mostDownstream = true;
 		this.mostUpstream = true;
 		this.localDownstream = new HashMap<Integer, SubOperator>();
 		this.localUpstream = new HashMap<Integer, SubOperator>();
-		//code.api.setCallbackObject(this);
 	}
 	
 	private void addLocalDownstream(int localStreamId, SubOperator so){
@@ -70,7 +74,7 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		if(localDownstream.size() == 1){
 			SubOperator target = localDownstream.entrySet().iterator().next().getValue();
 			if(!target.isMostLocalDownstream()){
-				target.processData(dt);
+				target.processData(dt, api);
 			}
 			else{
 				multiOp.send(dt);
@@ -85,7 +89,7 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	public void send_toStreamId(DataTuple dt, int streamId) {
 		SubOperator target = localDownstream.get(streamId);
 		if(!target.isMostLocalDownstream()){
-			target.processData(dt);
+			target.processData(dt, api);
 		}
 		else{
 			multiOp.send_toStreamId(dt, streamId);
@@ -122,15 +126,30 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		
 	}
         
-        @Override
-        public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
-                
-        }
+    @Override
+    public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
+            
+    }
+    
+    @Override
+    public void send_all_threadPool(DataTuple dt){
+            
+    }
+    
+    @Override
+    public void send_to_OpId(DataTuple dt, int opId) {
         
-        @Override
-        public void send_all_threadPool(DataTuple dt){
-                
-        }
+    }
+
+    @Override
+    public void send_to_OpIds(DataTuple[] dt, int[] opId) {
+        
+    }
+
+    @Override
+    public void send_toIndices(DataTuple[] dts, int[] indices) {
+        
+    }
 	
 	/** Implementation of SubOperatorAPI **/
 	
@@ -150,14 +169,17 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		return mostUpstream;
 	}
 
-	@Override
-	public void processData(DataTuple data) {
-		code.processData(data);
+	public void processData(DataTuple data, API localApi) {
+		// We set our own reference as callback and then call processData
+		this.api = (LocalApi) localApi;
+		localApi.setCallbackObject(this);
+		code.processData(data, localApi);
 	}
 
-	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
-		code.processData(dataList);
+	public void processData(List<DataTuple> dataList, API localApi) {
+		localApi.setCallbackObject(this);
+		this.api = (LocalApi) localApi;
+		code.processData(dataList, localApi);
 	}
 
 	@Override
@@ -168,19 +190,4 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	public void setMultiOperator(MultiOperator multiOperator) {
 		this.multiOp = multiOp;
 	}
-
-    @Override
-    public void send_to_OpId(DataTuple dt, int opId) {
-        
-    }
-
-    @Override
-    public void send_to_OpIds(DataTuple[] dt, int[] opId) {
-        
-    }
-
-    @Override
-    public void send_toIndices(DataTuple[] dts, int[] indices) {
-        
-    }
 }

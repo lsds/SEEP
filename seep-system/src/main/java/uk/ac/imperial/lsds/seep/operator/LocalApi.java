@@ -65,29 +65,28 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
 		so.send_toStreamId_toAll(dt, streamId);
 	}
 
-        @Override
-        public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId) {
-                so.send_toStreamId_toAll_threadPool(dt, streamId);
-        }
+    @Override
+    public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId) {
+        so.send_toStreamId_toAll_threadPool(dt, streamId);
+    }
 
-        @Override
-        public void send_all_threadPool(DataTuple dt) {
-                so.send_all_threadPool(dt);
-        }
+    @Override
+    public void send_all_threadPool(DataTuple dt) {
+        so.send_all_threadPool(dt);
+    }
 
-        @Override
-        public void send_to_OpId(DataTuple dt, int opId) {
-            
-        }
-
-        @Override
-        public void send_to_OpIds(DataTuple[] dt, int[] opId) {
-            
-        }
-
-        @Override
-        public void send_toIndices(DataTuple[] dts, int[] indices) {
-            
-        }
+    @Override
+    public void send_to_OpId(DataTuple dt, int opId) {
         
+    }
+
+    @Override
+    public void send_to_OpIds(DataTuple[] dt, int[] opId) {
+        
+    }
+
+    @Override
+    public void send_toIndices(DataTuple[] dts, int[] indices) {
+        
+    }
 }
