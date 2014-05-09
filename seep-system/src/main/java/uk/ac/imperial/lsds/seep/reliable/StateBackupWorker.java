@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
@@ -127,10 +126,6 @@ public class StateBackupWorker implements Runnable, Serializable{
 		// First filter starTopology by removing this own operator
 		processingUnit.getPuContext().filterStarTopology(processingUnit.getOperator().getOperatorId());
 //		// Blocking call
-//		int starTopologySize = processingUnit.getPuContext().getStarTopology().size();
-//		processingUnit.getOwner().signalOpenBackupSession(starTopologySize);
-//		processingUnit.lockFreeParallelCheckpointAndBackupState();
-//		processingUnit.getOwner().signalCloseBackupSession(starTopologySize);
 		checkpointInterval = state.getCheckpointInterval();
 		int starTopologySize = 0;
 		while(goOn){

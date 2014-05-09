@@ -34,7 +34,7 @@ public class InitOperatorState {
 		this.opId = opId;
 	}
 	
-	public StateWrapper getState() {
+	public StateWrapper getStateWrapper() {
 		return state;
 	}
 	

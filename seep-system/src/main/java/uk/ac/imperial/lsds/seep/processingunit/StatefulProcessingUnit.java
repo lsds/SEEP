@@ -232,7 +232,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
         
 		// To identify the monitor with the op id instead of the node id
 		NodeManager.monitorSlave.setOperatorId(o.getOperatorId());
-		if(o.getStateWrapper() != null){
+		if(o.isStatefulOperator()){
 			runningOpState = o.getStateWrapper();
 		}
 		else{
@@ -770,16 +770,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 	
 	public void installState(InitOperatorState initOperatorState){
-//		System.out.println("Installing state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 		// Simply replace the state and update operator references
-		int stateOwnerId = initOperatorState.getState().getOwnerId();
-		LOG.info("Installing state (whom owner is {}) in the operator");
-		StateWrapper state = initOperatorState.getState();
+		int stateOwnerId = initOperatorState.getStateWrapper().getOwnerId();
+		LOG.info("Installing state (whom owner is "+stateOwnerId+") in the operator");
+		StateWrapper state = initOperatorState.getStateWrapper();
 		// Replace state
 		this.runningOpState = state;
 		// And reference in operator
-		((StatefulOperator)runningOp).replaceState(state);
-//		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
+		((StatefulOperator)runningOp).replaceState(state.getState());
 	}
 	
 	public synchronized void mergeChunkToState(StateChunk chunk){

@@ -87,6 +87,11 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	
 	/** Other methods **/
 	
+    public boolean isStatefulOperator(){
+    	if(stateWrapper != null) return true;
+    	return false;
+    }
+    
 	public StateWrapper getStateWrapper(){
 		return stateWrapper;
 	}
@@ -114,6 +119,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		// Set distributedApi in case we have a multiOperator
 		if(operatorCode instanceof MultiOperator){
 			((MultiOperator)operatorCode).setApi(distApi);
+		}
+		// If we are stateful, then we pass the state reference to opCode
+		if(processingUnit instanceof StatefulProcessingUnit){
+			if(operatorCode instanceof StatefulOperator){
+				((StatefulOperator)operatorCode).setState(stateWrapper.getState());
+			}
 		}
 	}
 
