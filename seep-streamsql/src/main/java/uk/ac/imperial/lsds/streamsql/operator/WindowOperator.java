@@ -6,7 +6,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public interface WindowOperator {
 
-	public void processData(Queue<DataTuple> dataList);
+	public void evaluateWindow(Queue<DataTuple> dataList);
 
 	
 }

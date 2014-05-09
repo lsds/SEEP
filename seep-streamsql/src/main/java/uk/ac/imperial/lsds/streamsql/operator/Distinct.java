@@ -9,30 +9,29 @@ import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 import uk.ac.imperial.lsds.streamsql.util.Util;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
+import uk.ac.imperial.lsds.streamsql.windows.Window;
 
 public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOperator {
 
 	private static final long serialVersionUID = 1L;
 
-	SeepMap<String, String> state;
+	private SeepMap<String, String> state;
+	
+	private Window window;
+	
+	public Distinct(Window window) {
+		this.window = window;
+	}
 	
 	@Override
 	public void setUp() {
 		state = new SeepMap<>();
+		this.window.registerCallback(this);
 	}
 
 	@Override
 	public void processData(DataTuple data) {
-		String key = Util.generateTupleString(data);
-		
-		/*
-		 * Check whether tuple was observed already
-		 */
-		if (!state.containsKey(key))
-			/*
-			 * Send the respective tuple
-			 */
-			api.send(data);
+		this.window.updateWindow(data);
 	}
 
 	@Override
@@ -44,14 +43,22 @@ public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOpe
 
 	@Override
 	public void processData(List<DataTuple> dataList) {
-		// TODO Auto-generated method stub
-		
+		this.window.updateWindow(dataList);
 	}
 
 	@Override
-	public void processData(Queue<DataTuple> dataList) {
-		// TODO Auto-generated method stub
-		
+	public void evaluateWindow(Queue<DataTuple> dataList) {
+//		String key = Util.generateTupleString(data);
+//		
+//		/*
+//		 * Check whether tuple was observed already
+//		 */
+//		if (!state.containsKey(key))
+//			/*
+//			 * Send the respective tuple
+//			 */
+//			api.send(data);
+
 	}
 
 	@Override

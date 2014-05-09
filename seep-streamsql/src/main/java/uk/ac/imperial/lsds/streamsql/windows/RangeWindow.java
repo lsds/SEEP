@@ -74,7 +74,7 @@ public class RangeWindow implements Window {
 		 */
 		if (this.currentTime - this.lastTriggerTime >= slide) {
 			for (WindowOperator op : this.callBacks)
-				op.processData(this.state);
+				op.evaluateWindow(this.state);
 			
 			this.lastTriggerTime = this.currentTime;
 		}

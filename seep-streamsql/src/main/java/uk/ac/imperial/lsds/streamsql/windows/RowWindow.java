@@ -63,7 +63,7 @@ public class RowWindow implements Window {
 		 */
 		if (tuplesSinceLastEvaluation >= slide) {
 			for (WindowOperator op : this.callBacks)
-				op.processData(this.state);
+				op.evaluateWindow(this.state);
 			
 			tuplesSinceLastEvaluation = 0;
 		}
