@@ -15,7 +15,7 @@ import java.io.Serializable;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 
-public class LocalApi implements API, CommunicationPrimitives, Serializable{
+public class LocalApi implements Serializable, API {
 
 	private static final long serialVersionUID = 1L;
 	private static LocalApi instance = new LocalApi();

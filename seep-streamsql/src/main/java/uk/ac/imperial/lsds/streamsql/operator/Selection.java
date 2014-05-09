@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.streamsql.operator;
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
@@ -18,7 +19,7 @@ public class Selection implements StatelessOperator, IStreamSQLOperator {
 	}
 
 	@Override
-	public void processData(DataTuple data) {
+	public void processData(DataTuple data, API api) {
 
 		/*
 		 * Check whether predicate is satisfied for tuple 
@@ -46,9 +47,9 @@ public class Selection implements StatelessOperator, IStreamSQLOperator {
 	}
 
 	@Override
-	public void processData(List<DataTuple> dataList) {
+	public void processData(List<DataTuple> dataList, API api) {
 		for (DataTuple tuple : dataList)
-			processData(tuple);
+			processData(tuple, api);
 	}
 
 	@Override

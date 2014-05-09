@@ -14,12 +14,12 @@ import java.util.List;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.API;
-import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
 import uk.ac.imperial.lsds.seep.operator.DistributedApi;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
-public class MultiOperator implements OperatorCode, ComposedOperator, CommunicationPrimitives{
+public class MultiOperator implements OperatorCode, ComposedOperator, API{
 
 	private static final long serialVersionUID = 1L;
 
@@ -157,4 +157,9 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
     public void send_toIndices(DataTuple[] dts, int[] indices) {
         
     }
+
+	@Override
+	public void setCallbackObject(Callback c) {
+	}
+
 }

@@ -15,13 +15,12 @@ import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Callback;
-import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.LocalApi;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
-public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Callback{
+public class SubOperator implements SubOperatorAPI, API, Callback{
 
 	private static final long serialVersionUID = 1L;
 	
@@ -190,4 +189,9 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	public void setMultiOperator(MultiOperator multiOperator) {
 		this.multiOp = multiOp;
 	}
+	
+	@Override
+	public void setCallbackObject(Callback c) {
+	}
+
 }

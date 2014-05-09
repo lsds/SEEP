@@ -16,7 +16,7 @@ import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
-public class DistributedApi implements API, CommunicationPrimitives, Serializable{
+public class DistributedApi implements Serializable, API {
 
 	private static final long serialVersionUID = 1L;
 	private static DistributedApi instance = new DistributedApi();
