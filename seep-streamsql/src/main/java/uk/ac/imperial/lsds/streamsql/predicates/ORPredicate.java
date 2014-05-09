@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
 public class ORPredicate implements IPredicate {
 	
@@ -41,6 +42,16 @@ public class ORPredicate implements IPredicate {
 				sb.append(" OR ");
 		}
 		return sb.toString();
+	}
+
+	@Override
+	public void accept(PredicateVisitor pv) {
+		pv.visit(this);
+	}
+
+	@Override
+	public List<IPredicate> getInnerPredicates() {
+		return predicates;
 	}
 
 

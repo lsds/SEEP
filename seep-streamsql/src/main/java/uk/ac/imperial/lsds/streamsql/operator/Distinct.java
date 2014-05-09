@@ -1,36 +1,37 @@
 package uk.ac.imperial.lsds.streamsql.operator;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
 
 import uk.ac.imperial.lsds.seep.api.largestateimpls.SeepMap;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 import uk.ac.imperial.lsds.streamsql.util.Util;
+import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
+import uk.ac.imperial.lsds.streamsql.windows.Window;
 
-public class Distinct implements StatefulOperator {
+public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOperator {
 
 	private static final long serialVersionUID = 1L;
 
-	SeepMap<String, String> state;
+	private SeepMap<String, String> state;
+	
+	private Window window;
+	
+	public Distinct(Window window) {
+		this.window = window;
+	}
 	
 	@Override
 	public void setUp() {
 		state = new SeepMap<>();
+		this.window.registerCallback(this);
 	}
 
 	@Override
 	public void processData(DataTuple data) {
-		String key = Util.generateTupleString(data);
-		
-		/*
-		 * Check whether tuple was observed already
-		 */
-		if (!state.containsKey(key))
-			/*
-			 * Send the respective tuple
-			 */
-			api.send(data);
+		this.window.updateWindow(data);
 	}
 
 	@Override
@@ -41,9 +42,23 @@ public class Distinct implements StatefulOperator {
 	}
 
 	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
-		// TODO Auto-generated method stub
-		
+	public void processData(List<DataTuple> dataList) {
+		this.window.updateWindow(dataList);
+	}
+
+	@Override
+	public void evaluateWindow(Queue<DataTuple> dataList) {
+//		String key = Util.generateTupleString(data);
+//		
+//		/*
+//		 * Check whether tuple was observed already
+//		 */
+//		if (!state.containsKey(key))
+//			/*
+//			 * Send the respective tuple
+//			 */
+//			api.send(data);
+
 	}
 
 	@Override
@@ -55,6 +70,11 @@ public class Distinct implements StatefulOperator {
 	@Override
 	public void replaceState(StateWrapper state) {
 		this.state = (SeepMap<String, String>) state.getStateImpl();
+	}
+	
+	@Override
+	public void accept(OperatorVisitor ov) {
+		ov.visit(this);
 	}
 
 }

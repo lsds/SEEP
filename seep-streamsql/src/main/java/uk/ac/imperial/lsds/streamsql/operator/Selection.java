@@ -1,17 +1,17 @@
 package uk.ac.imperial.lsds.streamsql.operator;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
-import uk.ac.imperial.lsds.seep.state.StateWrapper;
+import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Selection implements StatefulOperator {
+public class Selection implements StatelessOperator, IStreamSQLOperator {
 
 	private static final long serialVersionUID = 1L;
 
-	IPredicate predicate;
+	private IPredicate predicate;
 
 	public Selection(IPredicate predicate) {
 		this.predicate = predicate;
@@ -46,21 +46,15 @@ public class Selection implements StatefulOperator {
 	}
 
 	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
+	public void processData(List<DataTuple> dataList) {
 		for (DataTuple tuple : dataList)
 			processData(tuple);
 	}
 
 	@Override
-	public StateWrapper getState() {
-		// TODO Auto-generated method stub
-		return null;
+	public void accept(OperatorVisitor ov) {
+		ov.visit(this);
 	}
 
-	@Override
-	public void replaceState(StateWrapper state) {
-		// TODO Auto-generated method stub
-		
-	}
 
 }
