@@ -34,7 +34,7 @@ public class StateWrapper implements Serializable, Cloneable{
 	/** A name that represents this state **/
 	private String stateTag;
 	/** The actual State being wrapped **/
-	private State stateImpl;
+	private State state;
 	/** The {@link TimestampTracker} at the time the last update on the State wrapped by this class **/
 	private TimestampTracker data_ts;
 	/** The checkpointing interval defined by the user **/
@@ -72,8 +72,8 @@ public class StateWrapper implements Serializable, Cloneable{
 		this.data_ts = data_ts;
 	}
 	
-	public State getStateImpl(){
-		return stateImpl;
+	public State getState(){
+		return state;
 	}
 	
 	public StateWrapper(){
@@ -87,10 +87,10 @@ public class StateWrapper implements Serializable, Cloneable{
 		this.checkpointInterval = checkpointInterval;
 	}
 	
-	public StateWrapper(int ownerId, int checkpointInterval, State stateImpl){
+	public StateWrapper(int ownerId, int checkpointInterval, State state){
 		this.ownerId = ownerId;
 		this.checkpointInterval = checkpointInterval;
-		this.stateImpl = stateImpl;
+		this.state = state;
 	}
 	
 	public StateWrapper clone(){

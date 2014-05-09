@@ -183,7 +183,7 @@ public class QueryPlan {
 			((Partitionable)s).setKeyAttribute(keyAttribute);
 		}
 		else{
-			// TODO: say that keyattribute is ignored as state does not implement Partitionable
+			LOG.info("Key attribute is ignored as this state does not implement Partitionable");
 		}
 		return sw;
 	}
