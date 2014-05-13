@@ -11,10 +11,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.ValueExpression;
 
 public class Util {
 	
-	public static String generateTupleString(DataTuple tuple) {
-		return tuple.getPayload().toString();
-	}
-
 	public static TypeConversion getDominantNumericType(List<IValueExpression> veList) {
 		TypeConversion wrapper = veList.get(0).getType();
 		for (int i = 1; i < veList.size(); i++) {

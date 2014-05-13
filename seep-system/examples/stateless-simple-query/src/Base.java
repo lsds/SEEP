@@ -40,6 +40,7 @@ public class Base implements QueryComposer{
 		pFields.add("value1");
 		pFields.add("value2");
 		pFields.add("value3");
+		QueryBuilder.newStatefulOperator(op, opId, s, attributes)
 //		Connectable p = QueryBuilder.newStatelessOperator(new Processor(), 1, pFields);
 		SubOperator p = SubOperator.getSubOperator(new Processor());
 		

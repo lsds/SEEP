@@ -1,16 +1,13 @@
 package uk.ac.imperial.lsds.streamsql.windows;
 
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.streamsql.expressions.Constants;
 import uk.ac.imperial.lsds.streamsql.operator.WindowOperator;
 
-public class RangeWindow implements Window {
+public class RangeWindow extends Window {
 
 	/*
 	 * Size of the window in terms of timestamp units, i.e.,
@@ -28,17 +25,14 @@ public class RangeWindow implements Window {
 
 	private Queue<DataTuple> state;
 	
-	private Set<WindowOperator> callBacks;
-	
 	public RangeWindow(int size, int slide) {
-		
+		super();
 		assert(size >= slide);
 		
 		this.size = size;
 		this.slide = slide;
 		
 		this.state = new LinkedList<>();
-		this.callBacks = new HashSet<>();
 	}
 
 	public RangeWindow(int size) {
@@ -56,6 +50,8 @@ public class RangeWindow implements Window {
 		 */
 		this.state.add(tuple);
 		this.currentTime = tuple.getLong(Constants.TIMESTAMP);
+		for (WindowOperator op : this.callBacksEnter)
+			op.enteredWindow(tuple,this.callBackAPI.get(op));
 		
 		DataTuple head = this.state.peek();
 		if (head != null) {
@@ -63,7 +59,11 @@ public class RangeWindow implements Window {
 			
 			while ((head != null) 
 					&& (this.size >= this.currentTime - headTime)) {
-				this.state.remove();
+
+				DataTuple removed = this.state.remove();
+				for (WindowOperator op : this.callBacksExit)
+					op.exitedWindow(removed, this.callBackAPI.get(op));
+				
 				head = this.state.peek();
 				headTime = head.getLong(Constants.TIMESTAMP);
 			}
@@ -73,22 +73,11 @@ public class RangeWindow implements Window {
 		 * Check whether operator evaluation shall be triggered
 		 */
 		if (this.currentTime - this.lastTriggerTime >= slide) {
-			for (WindowOperator op : this.callBacks)
-				op.evaluateWindow(this.state);
+			for (WindowOperator op : this.callBacksEvaluation)
+				op.evaluateWindow(this.state, this.callBackAPI.get(op));
 			
 			this.lastTriggerTime = this.currentTime;
 		}
-	}
-
-	@Override
-	public void updateWindow(List<DataTuple> tuples) {
-		for (DataTuple tuple : tuples)
-			updateWindow(tuple);
-	}
-
-	@Override
-	public void registerCallback(WindowOperator operator) {
-		this.callBacks.add(operator);
 	}
 
 }
