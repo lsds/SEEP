@@ -24,8 +24,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -777,7 +779,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// Replace state
 		this.runningOpState = state;
 		// And reference in operator
-		((StatefulOperator)runningOp).replaceState(state.getState());
+		((StatefulOperator)runningOp).setState(state.getState());
 	}
 	
 	public synchronized void mergeChunkToState(StateChunk chunk){

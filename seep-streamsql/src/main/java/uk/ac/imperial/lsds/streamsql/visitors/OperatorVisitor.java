@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.visitors;
 
+import uk.ac.imperial.lsds.streamsql.operator.Aggregation;
 import uk.ac.imperial.lsds.streamsql.operator.Distinct;
 import uk.ac.imperial.lsds.streamsql.operator.Projection;
 import uk.ac.imperial.lsds.streamsql.operator.Selection;
@@ -15,5 +16,7 @@ public interface OperatorVisitor {
 	public void visit(Projection projection);
 
 	public void visit(Selection selection);
+
+	public void visit(Aggregation aggregation);
 
 }

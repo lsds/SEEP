@@ -20,12 +20,18 @@ import uk.ac.imperial.lsds.seep.state.State;
 
 public interface StatefulOperator extends OperatorCode{
 
-	/** The system calls setState to pass a reference to the state. A user should set this reference to the state the op is using **/
+	/** 
+	 * The system calls setState to pass a reference to 
+	 * the state. A user should set this reference to the 
+	 * state the op is using. 
+	 * 
+	 * In addition, on the event of a failure recovery or 
+	 * scale out, the system will dynamically call this 
+	 * method. The user can then implement custom logic to set 
+	 * up the current reference to the new state in a 
+	 * correct manner. 
+	 **/
 	public void setState(State state);
 	/** This function should return the state the user has implemented in the operator **/
 	public State getState();
-	/** On the event of a failure recovery or scale out, the system will dynamically call this method. The user can then implement
-	 * custom logic to set up the current reference to the new state in a correct manner **/
-	public void replaceState(State state);
-
 }

@@ -5,18 +5,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
-import uk.ac.imperial.lsds.streamsql.windows.WindowState;
+import uk.ac.imperial.lsds.streamsql.windows.Window;
 
 public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOperator {
 
+	private static Logger LOG = LoggerFactory.getLogger(Distinct.class);
+
 	private static final long serialVersionUID = 1L;
 
-	private WindowState<DistinctState> windowState;
+	private Window window;
+	
+	private transient DistinctState state;
 
 	public class DistinctState {
 		public Map<String, Integer> tupleCount = new HashMap<>();
@@ -29,14 +36,14 @@ public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOpe
 	
 	@Override
 	public void setUp() {
-		this.windowState.getWindow().registerCallbackEvaluateWindow(this);
-		this.windowState.getWindow().registerCallbackEnterWindow(this);
-		this.windowState.getWindow().registerCallbackExitWindow(this);
+		this.window.registerCallbackEvaluateWindow(this);
+		this.window.registerCallbackEnterWindow(this);
+		this.window.registerCallbackExitWindow(this);
 	}
 
 	@Override
 	public void processData(DataTuple data, API api) {
-		this.windowState.getWindow().updateWindow(data);
+		this.window.updateWindow(data);
 	}
 
 	@Override
@@ -48,8 +55,8 @@ public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOpe
 
 	@Override
 	public void processData(List<DataTuple> dataList, API api) {
-		this.windowState.getWindow().registerAPI(this, api);
-		this.windowState.getWindow().updateWindow(dataList);
+		this.window.registerAPI(this, api);
+		this.window.updateWindow(dataList);
 	}
 
 	@Override
@@ -61,7 +68,7 @@ public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOpe
 		 * using the callbacks for events entering and existing
 		 * the window.
 		 */
-		for (DataTuple t : this.windowState.getState().tupleRef.values())
+		for (DataTuple t : this.state.tupleRef.values())
 			api.send(t);
 	}
 
@@ -72,45 +79,43 @@ public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOpe
 
 	@Override
 	public void setState(State state) {
-		this.windowState = (WindowState<DistinctState>) state;
+		this.window = (Window) state;
+
+		for (DataTuple tuple : this.window.getWindowContent()) 
+			this.enteredWindow(tuple, null);
 	}
 
 	@Override
 	public State getState() {
-		return this.windowState;
-	}
-
-	@Override
-	public void replaceState(State state) {
-		this.windowState = (WindowState<DistinctState>) state;
+		return this.window;
 	}
 
 	@Override
 	public void enteredWindow(DataTuple tuple, API api) {
 		String stringPayload = tuple.getPayload().toString();
-		if (this.windowState.getState().tupleCount.containsKey(stringPayload)) {
-			int currentCount = this.windowState.getState().tupleCount.get(stringPayload);
-			this.windowState.getState().tupleCount.put(stringPayload, currentCount++);
+		if (this.state.tupleCount.containsKey(stringPayload)) {
+			int currentCount = this.state.tupleCount.get(stringPayload);
+			this.state.tupleCount.put(stringPayload, currentCount++);
 		}
 		else {
-			this.windowState.getState().tupleCount.put(stringPayload, 1);
-			this.windowState.getState().tupleRef.put(stringPayload, tuple);
+			this.state.tupleCount.put(stringPayload, 1);
+			this.state.tupleRef.put(stringPayload, tuple);
 		}
 	}
 
 	@Override
 	public void exitedWindow(DataTuple tuple, API api) {
 		String stringPayload = tuple.getPayload().toString();
-		assert(this.windowState.getState().tupleCount.containsKey(stringPayload));
+		assert(this.state.tupleCount.containsKey(stringPayload));
 		
-		if (this.windowState.getState().tupleCount.containsKey(stringPayload)) {
-			int currentCount = this.windowState.getState().tupleCount.get(stringPayload);
+		if (this.state.tupleCount.containsKey(stringPayload)) {
+			int currentCount = this.state.tupleCount.get(stringPayload);
 			if (currentCount == 1) {
-				this.windowState.getState().tupleCount.remove(stringPayload);
-				this.windowState.getState().tupleRef.remove(stringPayload);
+				this.state.tupleCount.remove(stringPayload);
+				this.state.tupleRef.remove(stringPayload);
 			}
 			else
-				this.windowState.getState().tupleCount.put(stringPayload, currentCount--);
+				this.state.tupleCount.put(stringPayload, currentCount--);
 		}
 	}
 

@@ -80,4 +80,8 @@ public class RangeWindow extends Window {
 		}
 	}
 
+	@Override
+	public Queue<DataTuple> getWindowContent() {
+		return this.state;
+	}
 }

@@ -68,5 +68,11 @@ public class RowWindow extends Window {
 			tuplesSinceLastEvaluation = 0;
 		}
 	}
+	
+	
+	@Override
+	public Queue<DataTuple> getWindowContent() {
+		return this.state;
+	}
 
 }
