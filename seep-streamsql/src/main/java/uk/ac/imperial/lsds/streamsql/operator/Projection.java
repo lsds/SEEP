@@ -6,27 +6,32 @@ import java.util.List;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.streamsql.conversion.StringConversion;
+import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.Constants;
+import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class Projection implements StatelessOperator, IStreamSQLOperator {
 
 	/*
-	 * Attributes for the projection
+	 * Expressions for the extended projection
 	 */
-	List<String> attributes;
+	List<IValueExpression> expressions;
 
-	public Projection(List<String> attributes) {
-		this.attributes = attributes;
+	public Projection(List<IValueExpression> expression) {
+		this.expressions = expression;
 	}
 
 	public Projection(String attribute) {
-		this(new ArrayList<String>());
-		attributes.add(attribute);
+		this.expressions = new ArrayList<IValueExpression>();
+		this.expressions.add(new ColumnReference(new StringConversion(), attribute));
 	}
-
-	public Projection() {
-		this(new ArrayList<String>());
+	
+	public Projection(String[] attributes) {
+		this.expressions = new ArrayList<IValueExpression>();
+		for (String attribute : attributes)
+		this.expressions.add(new ColumnReference(new StringConversion(), attribute));
 	}
 
 	@Override
@@ -45,10 +50,11 @@ public class Projection implements StatelessOperator, IStreamSQLOperator {
 		projectedValues.add(data.getValue(Constants.TIMESTAMP));
 		
 		/*
-		 * Add all attributes referred to in the projection operator
+		 * Add all the content as defined by the projection expressions
 		 */
-		for (String att : attributes) 
-			projectedValues.add(data.getValue(att));
+		for (IValueExpression expression : expressions) 
+			projectedValues.add(expression.eval(data));
+
 		
 		/*
 		 * Send the projected tuple
@@ -68,7 +74,7 @@ public class Projection implements StatelessOperator, IStreamSQLOperator {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Projection (");
-		for (String att : attributes)
+		for (IValueExpression att : expressions)
 			sb.append(att.toString() + " ");
 		sb.append(")");
 		return sb.toString();
