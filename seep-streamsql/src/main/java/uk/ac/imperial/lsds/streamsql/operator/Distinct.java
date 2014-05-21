@@ -43,8 +43,6 @@ public class Distinct implements StatefulOperator, IStreamSQLOperator, WindowOpe
 
 	@Override
 	public void processData(DataTuple data, API api) {
-		api.get
-		
 		this.window.updateWindow(data);
 	}
 
