@@ -19,6 +19,9 @@ import uk.ac.imperial.lsds.seep.api.QueryBuilder;
 import uk.ac.imperial.lsds.seep.api.QueryComposer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
+import uk.ac.imperial.lsds.seep.operator.compose.LocalConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.MicroOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.StatelessMicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 
 public class Base implements QueryComposer{
@@ -51,7 +54,21 @@ public class Base implements QueryComposer{
 		snkFields.add("value3");
 //		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		SubOperator snk = SubOperator.getSubOperator(new Sink());
+		
+		
+		LocalConnectable c1 = QueryBuilder.newStatelessMicroOperator(new Sink(), 1, null);
+		LocalConnectable c2 = QueryBuilder.newStatelessMicroOperator(new Sink(), 2, null);
+		
+		c1.connectSubOperatorTo(1, c2);
+		
+		
+		Set<LocalConnectable> connectors = new HashSet<>();
+		connectors.add(c1);
+		connectors.add(c2);
+		
+		QueryBuilder.newMultiOperator(connectors, 1, srcFields);
 
+		
 		
 		src.connectSubOperatorTo(0, p);
 		p.connectSubOperatorTo(0, snk);
@@ -67,7 +84,7 @@ public class Base implements QueryComposer{
 
 		
 		/** Connect operators **/
-//		src.connectTo(p, true, 0);
+		src.connectTo(p, true, 0);
 //		p.connectTo(snk, true, 0);
 		
 		return QueryBuilder.build();

@@ -18,7 +18,8 @@ import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.LocalConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.MicroOperator;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -55,8 +56,16 @@ public class QueryBuilder {
 		return qp.newStatelessSink(op, opId, attributes);
 	}
 	
-	public static Connectable newMultiOperator(Set<SubOperator> subOperators, int multiOpId, List<String> attributes){
+	public static Connectable newMultiOperator(Set<LocalConnectable> subOperators, int multiOpId, List<String> attributes){
 		return qp.newMultiOperator(subOperators, multiOpId, attributes);
+	}
+
+	public static LocalConnectable newStatefulMicroOperator(OperatorCode op, int opId, StateWrapper s, List<String> attributes){
+		return qp.newStatefulMicroOperator(op, opId, s, attributes);
+	}
+	
+	public static LocalConnectable newStatelessMicroOperator(OperatorCode op, int opId, List<String> attributes){
+		return qp.newStatelessMicroOperator(op, opId, attributes);
 	}
 	
 	public static StateWrapper newCustomState(CustomState s, int ownerId, int checkpointInterval, String keyAttribute){

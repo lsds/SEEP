@@ -13,21 +13,20 @@ package uk.ac.imperial.lsds.seep.operator;
 import java.io.Serializable;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.StatelessMicroOperator.OPWorker;
 
 public class LocalApi implements Serializable, API {
 
 	private static final long serialVersionUID = 1L;
-	private static LocalApi instance = new LocalApi();
-	private SubOperator so;
+	private OPWorker so;
 	
 	@Override
 	public void setCallbackObject(Callback c) {
-		this.so = (SubOperator)c;
+		this.so = (OPWorker)c;
 	}
 	
-	public static LocalApi getInstance(){
-		return instance;
+	public LocalApi(Callback c) {
+		this.so = (OPWorker)c;
 	}
 	
 	@Override

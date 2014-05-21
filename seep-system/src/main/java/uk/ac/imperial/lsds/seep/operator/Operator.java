@@ -36,7 +36,6 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
         
 	private final OperatorCode operatorCode;
 	private final DistributedApi distApi;
-	private final LocalApi localApi;
 	private final StateWrapper stateWrapper;
 	
 	private OperatorContext opContext = new OperatorContext();
@@ -61,7 +60,6 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.operatorId = opId;
 		this.operatorCode = opCode;
 		this.distApi = DistributedApi.getInstance();
-		this.localApi = LocalApi.getInstance();
 		this.stateWrapper = null;
 		opContext.setDeclaredWorkingAttributes(attributes);
                 this.originalOpId = opId;
@@ -71,7 +69,6 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.operatorId = opId;
 		this.operatorCode = opCode;
 		this.distApi = DistributedApi.getInstance();
-		this.localApi = LocalApi.getInstance();
 		this.stateWrapper = s;
 		opContext.setDeclaredWorkingAttributes(attributes);
                 this.originalOpId = opId;
@@ -256,9 +253,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	}
 	
 	public void processData(DataTuple data){
-		// If we have a multiOperator, we pass localApi so that those subOperators can communicate
+		/*
+		 * If we have a multiOperator, the contained microOperators will create 
+		 * their own local copy of localApi
+		 */
 		if(operatorCode instanceof MultiOperator){
-			operatorCode.processData(data, localApi);
+			operatorCode.processData(data, null);
 		}
 		// If we host a single operator, then we pass distApi, so that it can communicate with other machines
 		else{
@@ -267,8 +267,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	}
 	
 	public void processData(ArrayList<DataTuple> dataList){
+		/*
+		 * If we have a multiOperator, the contained microOperators will create 
+		 * their own local copy of localApi
+		 */
 		if(operatorCode instanceof MultiOperator){
-			operatorCode.processData(dataList, localApi);
+			operatorCode.processData(dataList, null);
 		}
 		else{
 			operatorCode.processData(dataList, distApi);

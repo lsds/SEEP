@@ -11,19 +11,20 @@
 package uk.ac.imperial.lsds.seep.operator.compose;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.API;
+public interface LocalConnectable extends Serializable {
 
-public interface SubOperatorAPI extends Serializable{
-
+	public MicroOperator getMicroOperator();
+	
+	public void setParentMultiOperator(MultiOperator parent); 
+	public MultiOperator getParentMultiOperator();
+	
 	public boolean isMostLocalDownstream();
 	public boolean isMostLocalUpstream();
-	public void connectSubOperatorTo(int localStreamId, SubOperator so);
-	
-	public void setUp();
-	public void processData(DataTuple data, API api);
-	public void processData(List<DataTuple> dataList, API api);
+	public void connectSubOperatorTo(int localStreamId, LocalOperator so);
+
+	public Map<Integer, LocalOperator> getLocalDownstream();
+	public Map<Integer, LocalOperator> getLocalUpstream();
 	
 }

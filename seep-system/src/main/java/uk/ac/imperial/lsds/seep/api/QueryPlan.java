@@ -26,8 +26,13 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.LocalConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.LocalOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.MicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.MicroOperatorOLD;
+import uk.ac.imperial.lsds.seep.operator.compose.StatefulMicroOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.StatelessMicroOperator;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
@@ -160,8 +165,9 @@ public class QueryPlan {
 		return op;
 	}
 	
-	public Connectable newMultiOperator(Set<SubOperator> subOperators,
+	public Connectable newMultiOperator(Set<LocalConnectable> subOperators,
 		int multiOpId, List<String> attributes) {
+		
 		// First create multiOperator
 		MultiOperator mo = MultiOperator.synthesizeFrom(subOperators, multiOpId);
 		// Then compose the multiOperator into a SEEP Operator
@@ -260,4 +266,22 @@ public class QueryPlan {
     public PolicyRules getPolicyRules() {
         return policyRules;
     }
+
+	public LocalConnectable newStatelessMicroOperator(OperatorCode op,
+			int opId, List<String> attributes) {
+
+		MicroOperator m = StatelessMicroOperator.newStatelessMicroOperator(op, opId);
+		LocalConnectable c = new LocalOperator(m);
+		
+		return c;
+	}
+
+	public LocalConnectable newStatefulMicroOperator(OperatorCode op, int opId,
+			StateWrapper s, List<String> attributes) {
+		
+		MicroOperator m = StatefulMicroOperator.newStatefulMicroOperator(op, opId, s);
+		LocalConnectable c = new LocalOperator(m);
+		
+		return null;
+	}
 }

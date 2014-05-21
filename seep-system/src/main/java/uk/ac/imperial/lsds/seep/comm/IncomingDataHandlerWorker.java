@@ -130,8 +130,13 @@ public class IncomingDataHandlerWorker implements Runnable{
 					lastIncomingTs = incomingTs;
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
+						/*
+						 * Set the id of the operator that emitted that particular tuple
+						 * in order to be able to use this provenance information in the 
+						 * processing of the tuple in case of multiple input streams.
+						 */
+						t_payload.emittingOperatorId = originalOpId;
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
-						
 						dso.push(reg);
 					}
 					else{

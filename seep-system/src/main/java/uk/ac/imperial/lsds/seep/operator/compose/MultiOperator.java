@@ -10,66 +10,116 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.API;
+import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.DistributedApi;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
-public class MultiOperator implements OperatorCode, ComposedOperator, API{
+public class MultiOperator implements OperatorCode, ComposedOperator, API {
 
+	//TODO: read from properties file
+	public static final int CAPACITY = 10000;
+	public static final int BATCH_SIZE = 1000;
+	
 	private static final long serialVersionUID = 1L;
 
 	private final int id;
 	
-	private Set<SubOperator> subOperators;
+	private Set<LocalConnectable> subOperators;
 	private DistributedApi dApi;
-	private SubOperator mostUpstream;
+	private Set<LocalConnectable> mostUpstreamMicroOperators;
+
+	private ExecutorService executorService;
 	
-	private MultiOperator(Set<SubOperator> subOperators, int multiOpId){
+	private MultiOperator(Set<LocalConnectable> subOperators, int multiOpId){
 		this.id = multiOpId;
-		if(checkConstraints(subOperators)){
-			this.subOperators = subOperators;
-		}
-		else{
-			//TODO throw error
-		}
+		this.subOperators = subOperators;
+		for (LocalConnectable c : this.subOperators)
+			c.setParentMultiOperator(this);
+		
 	}
 	
 	public void setApi(DistributedApi api){
 		this.dApi = api;
 	}
 	
-	private boolean checkConstraints(Set<SubOperator> subOperators){
-		// TODO:
-		// - constains:
-		// - 1 single upstream and 1 single downstream
-		// - ...
-		return true;
-	}
 	
+
 	/** Implementation of OperatorCode interface **/
 
 	@Override
 	public void processData(DataTuple data, API localApi) {
-		// just call the first op to start processing data
-		mostUpstream.processData(data, localApi);
+		/*
+		 * If there is more than one most upstream operator, default 
+		 * behaviour is that EVERY tuple is pushed to ALL input
+		 * queues of these most upstream operators
+		 */
+		for (LocalConnectable c : mostUpstreamMicroOperators) {
+			c.getMicroOperator().pushData(data);
+		}
 	}
 	
 	@Override
 	public void processData(List<DataTuple> dataList, API localApi) {
-		mostUpstream.processData(dataList, localApi);
+		for (DataTuple tuple : dataList)
+			this.processData(tuple, localApi);
 	}
 
 	@Override
 	public void setUp() {
-		for(SubOperator so : subOperators){
-			so.setMultiOperator(this);
-			so.setUp();
+		
+		/*
+		 * Create the thread pool 
+		 */
+		int numberOfCores = Runtime.getRuntime().availableProcessors();
+		//TODO: think about tuning this selection
+		int numberOfCoresToUse = Math.max(numberOfCores, subOperators.size());
+		
+		this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
+
+		/*
+		 * Identify most upstream and most downstream local operators
+		 */
+		this.mostUpstreamMicroOperators = new HashSet<>();
+		for (LocalConnectable connectable : subOperators){
+			if (connectable.isMostLocalUpstream())
+				this.mostUpstreamMicroOperators.add(connectable);
 		}
+		
+		/*
+		 * Create graph of queues starting with most upstream
+		 */
+		for (LocalConnectable c : this.subOperators) {
+			for (Integer streamId : c.getLocalDownstream().keySet()) {
+				// create output queue
+				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(CAPACITY);
+				c.getMicroOperator().registerOutputQueue(streamId, q);
+				// register this queue as input of downstream 
+				c.getLocalDownstream().get(streamId).getMicroOperator().registerInputQueue(streamId, q);
+			}
+		}
+		
+		//TODO: think about better split up of number of threads
+		Map<LocalConnectable, Integer> numberThreadsPerMicroOperator = new HashMap<>();
+		for (LocalConnectable c : this.subOperators) 
+			numberThreadsPerMicroOperator.put(c, new Double(Math.floor((numberOfCoresToUse*1f)/this.subOperators.size())).intValue());
+		
+		/*
+		 * And "go" for the micro operators
+		 */
+		for (LocalConnectable c : this.subOperators) 
+			c.getMicroOperator().execute(this.executorService, numberThreadsPerMicroOperator.get(c), BATCH_SIZE);
 	}
 
 	/** Implementation of ComposedOperator interface **/
@@ -78,7 +128,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, API{
 		return id;
 	}
 	
-	public static MultiOperator synthesizeFrom(Set<SubOperator> subOperators, int multiOpId){
+	public static MultiOperator synthesizeFrom(Set<LocalConnectable> subOperators, int multiOpId){
 		return new MultiOperator(subOperators, multiOpId);
 	}
 	
