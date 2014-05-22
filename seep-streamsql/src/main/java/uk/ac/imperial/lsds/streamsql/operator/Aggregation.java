@@ -197,7 +197,7 @@ public abstract class Aggregation implements StatefulOperator, IStreamSQLOperato
 		case SUM:
 		case AVG:
 			for (String partitionKey : this.state.tupleRef.keySet()) {
-				DataTuple output = this.state.tupleRef.get(partitionKey).setValues(this.state.values.get(partitionKey));
+				DataTuple output = this.state.tupleRef.get(partitionKey).setValues(partitionKey,this.state.values.get(partitionKey));
 				api.send(output);
 			}
 			break;
@@ -218,7 +218,7 @@ public abstract class Aggregation implements StatefulOperator, IStreamSQLOperato
 					value.put(key, newValue);
 			}
 			for (String partitionKey : this.state.tupleRef.keySet()) {
-				DataTuple output = this.state.tupleRef.get(partitionKey).setValues(this.state.values.get(partitionKey));
+				DataTuple output = this.state.tupleRef.get(partitionKey).setValues(partitionKey,this.state.values.get(partitionKey));
 				api.send(output);
 			}
 			break;

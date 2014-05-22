@@ -30,7 +30,6 @@ import uk.ac.imperial.lsds.seep.operator.compose.LocalConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.LocalOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.MicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.MicroOperatorOLD;
 import uk.ac.imperial.lsds.seep.operator.compose.StatefulMicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.StatelessMicroOperator;
 import uk.ac.imperial.lsds.seep.state.CustomState;

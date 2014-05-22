@@ -21,5 +21,5 @@ public interface MicroOperator {
 	public void pushData(DataTuple tuple);
 	
 	public void setParentLocalConnectable(LocalConnectable parent);
-
+	
 }

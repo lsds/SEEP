@@ -18,6 +18,8 @@ public class StatefulMicroOperator implements MicroOperator {
 	
 	private int id;
 	
+	LocalConnectable parent;
+	
 	@Override
 	public int getMicroOperatorId() {
 		return id;

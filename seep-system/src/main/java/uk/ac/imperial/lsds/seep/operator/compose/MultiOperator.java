@@ -20,6 +20,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Callback;
@@ -28,9 +29,8 @@ import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
 public class MultiOperator implements OperatorCode, ComposedOperator, API {
 
-	//TODO: read from properties file
-	public static final int CAPACITY = 10000;
-	public static final int BATCH_SIZE = 1000;
+	private static final int MICRO_OP_QUEUE_CAPACITY = Integer.valueOf(GLOBALS.valueFor("microOpQueueCapacity"));
+	private static final int MICRO_OP_BATCH_SIZE = Integer.valueOf(GLOBALS.valueFor("microOpBatchSize"));
 	
 	private static final long serialVersionUID = 1L;
 
@@ -47,7 +47,6 @@ public class MultiOperator implements OperatorCode, ComposedOperator, API {
 		this.subOperators = subOperators;
 		for (LocalConnectable c : this.subOperators)
 			c.setParentMultiOperator(this);
-		
 	}
 	
 	public void setApi(DistributedApi api){
@@ -103,7 +102,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, API {
 		for (LocalConnectable c : this.subOperators) {
 			for (Integer streamId : c.getLocalDownstream().keySet()) {
 				// create output queue
-				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(CAPACITY);
+				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(MICRO_OP_QUEUE_CAPACITY);
 				c.getMicroOperator().registerOutputQueue(streamId, q);
 				// register this queue as input of downstream 
 				c.getLocalDownstream().get(streamId).getMicroOperator().registerInputQueue(streamId, q);
@@ -119,7 +118,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, API {
 		 * And "go" for the micro operators
 		 */
 		for (LocalConnectable c : this.subOperators) 
-			c.getMicroOperator().execute(this.executorService, numberThreadsPerMicroOperator.get(c), BATCH_SIZE);
+			c.getMicroOperator().execute(this.executorService, numberThreadsPerMicroOperator.get(c), MICRO_OP_BATCH_SIZE);
 	}
 
 	/** Implementation of ComposedOperator interface **/
@@ -134,13 +133,15 @@ public class MultiOperator implements OperatorCode, ComposedOperator, API {
 	
 	@Override
 	public int getNumberOfSubOperators() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.subOperators.size();
 	}
 
 	@Override
 	public boolean isComposedOperatorStateful() {
-		// TODO Auto-generated method stub
+		for (LocalConnectable c : this.subOperators)
+			if (c.getMicroOperator() instanceof StatefulMicroOperator)
+				return true;
+		
 		return false;
 	}
 
