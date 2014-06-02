@@ -11,6 +11,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -53,7 +54,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 	}
 
 	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
+	public void processData(List<DataTuple> dataList) {
 		mostUpstream.processData(dataList);
 	}
 

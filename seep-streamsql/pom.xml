@@ -17,7 +17,12 @@
   	<dependency>
   		<groupId>com.github.jsqlparser</groupId>
   		<artifactId>jsqlparser</artifactId>
-  		<version>0.9-SNAPSHOT</version>
+  		<version>0.9</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>uk.ac.imperial.lsds.seep</groupId>
+  		<artifactId>seep-system</artifactId>
+  		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
   </dependencies>
 </project>

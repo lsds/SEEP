@@ -12,6 +12,7 @@ package uk.ac.imperial.lsds.seep.operator.compose;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -156,7 +157,7 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	}
 
 	@Override
-	public void processData(ArrayList<DataTuple> dataList) {
+	public void processData(List<DataTuple> dataList) {
 		code.processData(dataList);
 	}
 
