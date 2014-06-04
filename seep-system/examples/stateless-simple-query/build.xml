@@ -22,7 +22,7 @@
 		<classpath id="classpath" description="The default classpath.">
   			<pathelement path="${classpath}"/>
   			<fileset dir="${lib}">
-    				<include name="seep-system-0.0.1-SNAPSHOT-jar-with-dependencies.jar"/>
+    				<include name="*.jar"/>
   			</fileset>
   		</classpath>
 	</javac>

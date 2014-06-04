@@ -10,7 +10,7 @@
  ******************************************************************************/
 package operators;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
@@ -40,6 +40,6 @@ public class Sink implements StatelessOperator {
 		}
 	}
 	
-	public void processData(ArrayList<DataTuple> arg0) {
+	public void processData(List<DataTuple> arg0) {
 	}
 }
