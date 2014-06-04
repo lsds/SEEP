@@ -37,7 +37,7 @@ public class Source implements StatelessOperator {
 			
 			DataTuple output = data.newTuple(value1, value2, value3);
 			
-			api.send_toStreamId(output, 5);
+			api.send(output);
 			
 			try {
 				Thread.sleep(1000);
