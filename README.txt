@@ -6,6 +6,10 @@ EPL (Eclipse Public License).
 The SEEP system is under heavy development and should be considered an alpha
 release. This is not considered a "stable" branch.
 
+Further details on SEEP, including papers that explain the underlying model 
+can be found at the project website:
+http://lsds.doc.ic.ac.uk/projects/SEEP
+
 The SEEP system consists of two modules, the runtime system (seep-system) and a
 compiler (java2sdg). Below is some information regarding how to build the
 system and modules.
@@ -48,7 +52,8 @@ Next run the master in the designated node:
 
 java -jar <system.jar> Master <query.jar> <Base-class>
 
-where query.jar is the compiled query
+where query.jar is the compiled query and the last parameter is the name of 
+the base class, not a path.
 
 Finally run as many worker nodes as your query requires:
 
