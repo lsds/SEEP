@@ -126,7 +126,21 @@ Examples: </p>
 
 <p>This tutorial outlines how to run a simple example application in SEEP locally on a single machine, starting from a fresh clone of the source code. Below, we assume that  refers to the name of the directory to which the SEEP code has been cloned and  is the full absolute path to this directory.</p>
 
-<p>1) We configure the system. Use your favorite editor and open /seep-system/src/main/resources/config.properties . Assuming that the system should run locally make sure that the file states:</p>
+<p>1) We inspect the application and configure the system. </p>
+
+<p>To get an overview of the example application, open /seep-system/examples/stateless-simple-query/src/Base.java in your favorite editor and observe the following:</p>
+
+<ul>
+<li>the method <em>compose</em> defines the application and returns a <em>QueryPlan</em>
+</li>
+<li>the application contains three operators, each is a <em>Connectable</em> that is instantiated with a different functionality, which is given as a class in the constructor of <em>Connectable</em>
+</li>
+<li>for each <em>Connectable</em>, the input schema has to be provided as a list of String attributes</li>
+<li>the created <em>Connectable</em> objects are then connected to build the actual data flow graph, which, in this example, is a sequence <em>Source</em> -&gt; <em>Processor</em> -&gt; <em>Sink</em>
+</li>
+<li>the actual operator implementations can be found in the classes <em>Source</em>, <em>Processor</em>, <em>Sink</em> in package <em>operators</em>
+</li>
+</ul><p>For the configuration, use your favorite editor and open /seep-system/src/main/resources/config.properties . Assuming that the system should run locally make sure that the file states:</p>
 
 <pre lang="Shell"><code>mainAddr = 127.0.0.1
 mainPort = 3500
@@ -142,15 +156,15 @@ cd seep-system/examples/stateless-simple-query
 ant
 </code></pre>
 
-<p>3) We start the system locally. Open four terminals to start one Master node and three Worker nodes: </p>
+<p>3) We start the system locally. Open four terminals to start one Master node and three Worker nodes. </p>
 
-<p>The following should bring up a terminal menu:</p>
+<p>The following snippet should start the master node and bring up a terminal menu:</p>
 
 <pre lang="Shell"><code>cd &lt;Path to SEEP Dir&gt;/&lt;SEEP Dir&gt;
 java -jar seep-system/target/seepystem-0.0.1-SNAPSHOT.jar Master &lt;Path to SEEP Dir&gt;/&lt;SEEP Dir&gt;/seep-system/examples/stateless-simple-query/dist/stateless-simple-query.jar Base
 </code></pre>
 
-<p>Now start the three workers:</p>
+<p>Now, we start the three workers (note that each is assigned a different port, given as the last parameter):</p>
 
 <pre lang="Shell"><code>cd &lt;Path to SEEP Dir&gt;/&lt;SEEP Dir&gt;
 java -jar seep-system/target/seepystem-0.0.1-SNAPSHOT.jar Worker 3501
@@ -172,6 +186,8 @@ java -jar seep-system/target/seepystem-0.0.1-SNAPSHOT.jar Worker 3503
 2
 &lt;Enter&gt;
 </code></pre>
+
+<p>Now, one of the terminals running a worker node should print out a statement starting with "SNK" roughly every second. This worker runs the <em>Sink</em> operator and the output indicates the time elapsed (first number, in seconds) and the number of tuples received (second number).</p>
       </section>
     </div>
 
