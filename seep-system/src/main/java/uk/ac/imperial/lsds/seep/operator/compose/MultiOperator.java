@@ -26,6 +26,7 @@ import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.DistributedApi;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose2.Window;
 
 public class MultiOperator implements OperatorCode, ComposedOperator, API {
 
@@ -212,5 +213,6 @@ public class MultiOperator implements OperatorCode, ComposedOperator, API {
 	@Override
 	public void setCallbackObject(Callback c) {
 	}
+
 
 }

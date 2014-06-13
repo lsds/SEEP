@@ -5,10 +5,12 @@ import java.util.List;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.operator.WindowOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose2.Window;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Selection implements StatelessOperator, IStreamSQLOperator {
+public class Selection implements StatelessOperator, IStreamSQLOperator, WindowOperatorCode {
 
 	private static final long serialVersionUID = 1L;
 
@@ -55,6 +57,12 @@ public class Selection implements StatelessOperator, IStreamSQLOperator {
 	@Override
 	public void accept(OperatorVisitor ov) {
 		ov.visit(this);
+	}
+
+	@Override
+	public void processData(Window window, API api) {
+		// TODO Auto-generated method stub
+		
 	}
 
 

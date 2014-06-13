@@ -46,6 +46,7 @@
     
     
     <module>seep-streamsql</module>
+    <module>seep-wrappers</module>
   </modules>
   
   <dependencies>
