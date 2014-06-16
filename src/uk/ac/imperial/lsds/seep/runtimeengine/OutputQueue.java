@@ -53,6 +53,7 @@ public class OutputQueue {
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
+		k.setAsmEnabled(true);
 		return k;
 	}
 	

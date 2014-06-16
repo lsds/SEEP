@@ -59,6 +59,8 @@ public class BackupHandler implements Runnable{
 //	private ArrayList<MappedByteBuffer> lastBackupHandlers = new ArrayList<MappedByteBuffer>();
 //	private ArrayList<MappedByteBuffer> backupLastBackupHandlers = new ArrayList<MappedByteBuffer>();
 	
+	public static ServerSocket backupServerSocket = null;
+	
 	public CoreRE getOwner(){
 		return owner;
 	}
@@ -85,6 +87,16 @@ public class BackupHandler implements Runnable{
 		this.goOn = true;
 		File newFile = new File("backup/");
 		newFile.mkdirs();
+		
+		try{
+			//Establish listening port
+			if (backupServerSocket == null){
+				backupServerSocket = new ServerSocket(connPort);
+				LOG.info("-> BackupHandler listens on port: {} for connections", connPort);
+			} 
+		} catch (IOException ex){
+			ex.printStackTrace();
+		}
 	}
 	
 	public void openSession(int opId, InetAddress remoteAddress){
@@ -145,13 +157,15 @@ public class BackupHandler implements Runnable{
 
 	@Override
 	public void run() {
-		ServerSocket backupServerSocket = null;
+ //		ServerSocket backupServerSocket = null;
 		try{
 			//Establish listening port
-    		backupServerSocket = new ServerSocket(connPort);
-			LOG.info("-> BackupHandler listens on port: {} for connections", connPort);
+ //   		backupServerSocket = new ServerSocket(connPort);
+
+ //			LOG.info("-> BackupHandler listens on port: {} for connections", connPort);
 			//while goOn is active
-			while(goOn){
+			while(goOn && backupServerSocket != null && !backupServerSocket.isClosed()){
+				
 				Socket incomingConn = backupServerSocket.accept();
 				InetAddress incomingAddr = incomingConn.getInetAddress();
 				// If session was previously opened
@@ -171,11 +185,11 @@ public class BackupHandler implements Runnable{
 			backupServerSocket.close();
 		}
 		catch(BindException be){
-			LOG.error("-> BIND EXC IO Error "+be.getMessage());
+			LOG.info("-> BIND EXC IO Error "+be.getMessage());
 			be.printStackTrace();
 		}
 		catch(IOException io){
-			LOG.error("-> BackupHandler. While listening incoming conns "+io.getMessage());
+			LOG.info("-> BackupHandler. While listening incoming conns "+io.getMessage());
 			io.printStackTrace();
 		}
 	}

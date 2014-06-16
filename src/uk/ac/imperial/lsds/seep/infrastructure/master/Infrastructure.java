@@ -920,6 +920,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
+		k.setAsmEnabled(true);
 		try {
 			//OUT
 			FileOutputStream fos = new FileOutputStream(o);
@@ -966,6 +967,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 				//Flush the buffer to the stream
 				output.flush();
 			}
+			output.close();
 			fos.close();
 			br.close();
 		}

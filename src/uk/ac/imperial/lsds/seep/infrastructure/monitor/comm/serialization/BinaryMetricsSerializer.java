@@ -36,6 +36,7 @@ public class BinaryMetricsSerializer implements MetricsSerializer<OutputStream> 
         if(serializer == null) {
             serializer = new Kryo();
             serializer.register(MetricsTuple.class);
+	    serializer.setAsmEnabled(true);
         }
 
         if(output == null) {

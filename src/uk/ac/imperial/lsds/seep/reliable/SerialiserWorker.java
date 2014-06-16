@@ -83,6 +83,7 @@ public class SerialiserWorker implements Runnable{
 		k.register(InitRI.class);
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
+		k.setAsmEnabled(true);
 		return k;
 	}
 	

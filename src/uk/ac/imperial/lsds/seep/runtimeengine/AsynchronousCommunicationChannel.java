@@ -57,6 +57,7 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 //		k.register(BatchTuplePayload.class);
+		k.setAsmEnabled(true);
 		return k;
 	}
 	

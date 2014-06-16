@@ -73,6 +73,7 @@ public class StreamerWorker implements Runnable{
 		k.register(InitRI.class);
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
+		k.setAsmEnabled(true);
 	}
 	
 	public StreamerWorker(Socket s, ArrayBlockingQueue<Object> jobQueue, int opId, int keeperOpId, int currentNumberBatch, int totalNumberChunks){
@@ -119,6 +120,7 @@ public class StreamerWorker implements Runnable{
 			largeOutput.flush();
 			streamedFiles++;
 		}
+		largeOutput.close();
 		System.out.println("##################");
 		System.out.println("##################");
 		System.out.println("I streamed this files: "+streamedFiles);

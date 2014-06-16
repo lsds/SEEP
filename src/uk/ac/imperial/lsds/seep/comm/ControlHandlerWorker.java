@@ -87,6 +87,7 @@ public class ControlHandlerWorker implements Runnable{
 		k.register(InitRI.class);
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
+		k.setAsmEnabled(true);
 		return k;
 	}
 
@@ -114,6 +115,8 @@ public class ControlHandlerWorker implements Runnable{
 			//Close streams and socket
 			LOG.error("-> Closing connection");
 			is.close();
+			i.close();
+			os.close();
 			incomingSocket.close();
 		}
 		catch(IOException io){
