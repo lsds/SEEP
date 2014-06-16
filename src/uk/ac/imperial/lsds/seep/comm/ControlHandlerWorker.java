@@ -102,17 +102,20 @@ public class ControlHandlerWorker implements Runnable{
 			Input i = new Input(is, 100000);
 			//Read the connection to get the data
 			while(goOn){
-				tuple = k.readObject(i, ControlTuple.class);
-				if(tuple != null){
-					InetAddress ip = incomingSocket.getInetAddress();
-					owner.processControlTuple(tuple, os, ip);
-				}
-				else{
-					LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
-					break;
+				if (!i.eof()){
+					tuple = k.readObject(i, ControlTuple.class);
+					if(tuple != null){
+						InetAddress ip = incomingSocket.getInetAddress();
+						owner.processControlTuple(tuple, os, ip);
+					}
+					else{
+						LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
+						break;
+					}
 				}
 			}
 			//Close streams and socket
+			LOG.error("-> Input reaches eof");
 			LOG.error("-> Closing connection");
 			is.close();
 			i.close();

@@ -30,17 +30,17 @@ public class Sink implements StatelessOperator {
 	}
 
 	// time control variables
-	int c = 0;
 	long init = 0;
 	int sec = 0;
 	
 	public void processData(DataTuple dt) {
+		int value1 = dt.getInt("value1");
 		int value2 = dt.getInt("value2");
+		int value3 = dt.getInt("value3");
+
 		// TIME CONTROL
-		c++;
 		if((System.currentTimeMillis() - init) > 1000){
-			LOG.info(">>>>>>>>>>>>>>>>>>>>From Sink: "+sec+" "+c+" ");
-			c = 0;
+			LOG.info(">>>>>>>>>>>>>>>>>>>>From Sink: ("+sec+"): "+value1+" "+value2+" "+ value3);
 			sec++;
 			init = System.currentTimeMillis();
 		}

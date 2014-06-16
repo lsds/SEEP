@@ -113,7 +113,6 @@ public class ControlDispatcher {
 					}
 				}
 			}
-			output.close();
 		}
 		catch(IOException io){
 			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
@@ -241,7 +240,6 @@ public class ControlDispatcher {
 						output.flush();
 					}
 				}
-				output.close();
 			}
 			catch(IOException io){
 				LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
@@ -256,7 +254,6 @@ public class ControlDispatcher {
 			k.writeObject(output, genericAck);
 		}
 		output.flush();
-		output.close();
 	}
 	
 	public void initStateMessage(ControlTuple initStateMsg, OutputStream os){
@@ -265,7 +262,6 @@ public class ControlDispatcher {
 			k.writeObject(output, initStateMsg);
 		}
 		output.flush();
-		output.close();
 	}
 	
 	public Object deepCopy(Object toCopy){

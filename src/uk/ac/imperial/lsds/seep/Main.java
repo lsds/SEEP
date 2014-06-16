@@ -88,6 +88,8 @@ public class Main {
 	}
 	
 	public void deploy2(){
+		mc.deployQueryToNodesStep2();
+
 	}
 	
 	public void start(){

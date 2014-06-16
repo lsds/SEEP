@@ -32,16 +32,19 @@ public class Source implements StatelessOperator {
 	public void processData(DataTuple dt) {
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
+		int value1 = 0;
+		int value2 = 0;
+		int value3 = 0;
+
 		
 		while(true){
-			int value1 = 5;
-			int value2 = 15;
-			int value3 = 2;
+			value1 = value1+1;
+			value2 = value2+2;
+			value3 = value3+3;
 			
 			DataTuple output = data.newTuple(value1, value2, value3);
 			
 			api.send(output);
-			LOG.info(">>>>>>>>>>>>>>>>>>>>Source Sent");
 
 			try {
 				Thread.sleep(1000);

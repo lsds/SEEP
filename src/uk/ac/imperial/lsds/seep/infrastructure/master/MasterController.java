@@ -227,6 +227,11 @@ public class MasterController {
 		LOG.info("-> Configuring and deploying query...DONE");
 	}
 	
+	public void deployQueryToNodesStep2(){
+		inf.deployQueryStep2();
+
+	}
+	
 	private String getUserInput(String msg) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		System.out.println(msg);

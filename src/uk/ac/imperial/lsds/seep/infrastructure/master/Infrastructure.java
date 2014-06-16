@@ -494,16 +494,20 @@ public class Infrastructure {
 			LOG.info("-> Broadcasting state {} to nodes", s);
 		}
 		
+		
+	}
+	
+	public void deployQueryStep2(){
 		//Finally, we tell the nodes to initialize all communications
-		Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
-		for(Operator op : ops){
-			// If we havent communicated to this node yet, we do
-			if (!nodesVisited.containsKey(op.getOperatorId())){
-				initRuntime(op);
-				nodesVisited.put(op.getOperatorId(), true);
-			}
-		}
-		LOG.debug("-> Deploying query...DONE");
+				Map<Integer, Boolean> nodesVisited = new HashMap<Integer, Boolean>();
+				for(Operator op : ops){
+					// If we havent communicated to this node yet, we do
+					if (!nodesVisited.containsKey(op.getOperatorId())){
+						initRuntime(op);
+						nodesVisited.put(op.getOperatorId(), true);
+					}
+				}
+				LOG.debug("-> Deploying query...DONE");
 	}
 
 	public void reDeploy(Node n){
@@ -967,7 +971,6 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 				//Flush the buffer to the stream
 				output.flush();
 			}
-			output.close();
 			fos.close();
 			br.close();
 		}

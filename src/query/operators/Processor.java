@@ -24,12 +24,11 @@ public class Processor implements StatelessOperator{
 		int value1 = data.getInt("value1");
 		int value2 = data.getInt("value2");
 		int value3 = data.getInt("value3");
+		int result1 = value1;
+		int result2 = value1 + value2 + value3;
+		int result3 = value1 * value2 * value3;
 		
-		value1 = value2+value3;
-		value2 = value2/value3;
-		value3 = value3*value3;
-		
-		DataTuple outputTuple = data.setValues(value1, value2, value3);
+		DataTuple outputTuple = data.setValues(result1, result2, result3);
 		api.send(outputTuple);
 	}
 

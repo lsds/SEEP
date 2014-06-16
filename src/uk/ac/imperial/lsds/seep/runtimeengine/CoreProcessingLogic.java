@@ -494,7 +494,6 @@ public class CoreProcessingLogic implements Serializable{
 			ControlTuple endOfStream = new ControlTuple().makeStateChunk(opId, keeperOpId, 0, 0, null, 0);
 			k.writeObject(output, endOfStream);
 			output.flush();
-			output.close();
 			System.out.println("READ: "+timeread);
 			System.out.println("WRITE: "+timewrite);
 		}
@@ -658,10 +657,8 @@ System.out.println("there are: "+filesToStream.size()+" to stream");
 
 			k.writeObject(oldO, endOfStream);
 			oldO.flush();
-			oldO.close();
 			k.writeObject(newO, endOfStream);
 			newO.flush();
-			newO.close();
 			System.out.println("Time read from disk: "+readFromDiskTime);
 			System.out.println("Splitting time: "+splittingTime);
 			System.out.println("time to write to old: "+writeOld);

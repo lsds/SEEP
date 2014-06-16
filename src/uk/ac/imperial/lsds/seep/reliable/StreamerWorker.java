@@ -120,7 +120,6 @@ public class StreamerWorker implements Runnable{
 			largeOutput.flush();
 			streamedFiles++;
 		}
-		largeOutput.close();
 		System.out.println("##################");
 		System.out.println("##################");
 		System.out.println("I streamed this files: "+streamedFiles);

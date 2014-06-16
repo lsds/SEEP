@@ -6,6 +6,7 @@ import android.support.v4.app.Fragment;
 import android.app.Application;
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,6 +28,8 @@ public class MainActivity extends ActionBarActivity {
 	TextView t1,t2,t3,t4,t5;
 	ActionBarActivity self;
 	Main instance;
+    private Handler mHandler = new Handler();
+
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -98,8 +101,14 @@ public class MainActivity extends ActionBarActivity {
 		btn_deploy.setOnClickListener(new OnClickListener(){
 			@Override
 			public void onClick(View arg0){
-				instance.deploy(classname);
-				t3.setText("Deploying done");
+				instance.deploy(classname);			
+				t3.setText("Deploying...");
+				mHandler.postDelayed(new Runnable() {
+		            public void run() {
+		            	instance.deploy2();
+		            	t3.setText("Deploying done");
+		            }
+		        }, 2000);
 			}
 		});
 		

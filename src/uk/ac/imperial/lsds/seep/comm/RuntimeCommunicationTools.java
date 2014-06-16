@@ -61,7 +61,6 @@ public class RuntimeCommunicationTools {
 			k.writeObject(output, ct);
 			/**Critical line in KRYO**/
 			output.flush();	
-			output.close();
 			//wait for application level ack
 			ControlTuple ack = k.readObject(input, ControlTuple.class);
 			//waiting for ack
@@ -93,7 +92,6 @@ public class RuntimeCommunicationTools {
 
 			k.writeObject(output, ct);
 			output.flush();
-			output.close();
 		}
 		catch(IOException io){
 			LOG.error("-> Infrastructure. While sending Msg "+io.getMessage());
