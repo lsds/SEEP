@@ -1663,7 +1663,7 @@ public class OperatorContextTest extends TestCase {
 		fixture.addDownstream(1);
 		int originalOpId = 1;
 
-		int result = fixture.getUpstreamNumberOfType(originalOpId);
+		int result = fixture.getNumberOfUpstreamNodesByOriginalID(originalOpId);
 
 		// add additional test code here
 		assertEquals(0, result);
@@ -1690,7 +1690,7 @@ public class OperatorContextTest extends TestCase {
 		fixture.addDownstream(1);
 		int originalOpId = 1;
 
-		int result = fixture.getUpstreamNumberOfType(originalOpId);
+		int result = fixture.getNumberOfUpstreamNodesByOriginalID(originalOpId);
 
 		// add additional test code here
 		assertEquals(0, result);
@@ -1717,7 +1717,7 @@ public class OperatorContextTest extends TestCase {
 		fixture.addDownstream(1);
 		int originalOpId = 1;
 
-		int result = fixture.getUpstreamNumberOfType(originalOpId);
+		int result = fixture.getNumberOfUpstreamNodesByOriginalID(originalOpId);
 
 		// add additional test code here
 		assertEquals(0, result);

@@ -114,7 +114,7 @@ public class OperatorContext implements Serializable{
 		return -1000;
 	}
 	
-	public int getUpstreamNumberOfType(int originalOpId){
+	public int getNumberOfUpstreamNodesByOriginalID(int originalOpId){
 		int total = 0;
 		for(OperatorStaticInformation op : upstream){
 			if(op.getOriginalOpId() == originalOpId) total++;

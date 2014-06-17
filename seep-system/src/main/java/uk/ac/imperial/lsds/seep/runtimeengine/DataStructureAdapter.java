@@ -72,8 +72,8 @@ public class DataStructureAdapter {
 				}
 				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
-					int originalOperatorOnBarrier = entry.getKey();
-					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+					int originalOpId = entry.getKey();
+					int numberUpstreamsOnBarrier = opContext.getNumberOfUpstreamNodesByOriginalID(originalOpId);
                                         LOG.debug("-> ^^^^^ numberUpstreamsOnBarrier {}", numberUpstreamsOnBarrier);
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					dsoMap.put(entry.getKey(), b);
@@ -92,7 +92,7 @@ public class DataStructureAdapter {
 				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
 					int originalOperatorOnBarrier = entry.getKey();
-					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+					int numberUpstreamsOnBarrier = opContext.getNumberOfUpstreamNodesByOriginalID(originalOperatorOnBarrier);
 //					System.out.println("Num registers on barrier: "+numberUpstreamsOnBarrier);
 					///\fixme{manage this}
 					numberUpstreamsOnBarrier = opContext.upstreams.size();

@@ -660,7 +660,7 @@ public class CoreRE {
 				// This is necessary for cases where there is more than one InputDataIngestionMode
 				int originalOpId = processingUnit.getOriginalUpstreamFromOpId(opId);
 				/// \fixme{Reconfigure this taking into account the inputdataingestion mode}
-				int upstreamSizeForBarrier = processingUnit.getOperator().getOpContext().getUpstreamNumberOfType(originalOpId);
+				int upstreamSizeForBarrier = processingUnit.getOperator().getOpContext().getNumberOfUpstreamNodesByOriginalID(originalOpId);
 				int upstreamSize = processingUnit.getOperator().getOpContext().upstreams.size();
 				reconfigureUpstreamBackupIndex(upstreamSize);
 //				dsa.reconfigureNumUpstream(originalOpId, upstreamSize);
