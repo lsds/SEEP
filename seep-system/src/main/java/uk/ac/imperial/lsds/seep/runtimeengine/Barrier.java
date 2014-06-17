@@ -37,6 +37,7 @@ public class Barrier implements DataStructureI {
         private long cummulatedBarrierTime = 0 ; 
         private long barrierTimeEachPhase;
 	
+        
 	public Barrier(int initialNumberOfThreads){
 		staticBarrier = new Phaser(initialNumberOfThreads){
 			protected boolean onAdvance(int phase, int parties) {
