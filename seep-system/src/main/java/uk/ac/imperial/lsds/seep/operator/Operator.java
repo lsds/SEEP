@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;

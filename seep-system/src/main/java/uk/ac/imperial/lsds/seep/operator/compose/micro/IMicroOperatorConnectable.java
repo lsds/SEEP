@@ -8,23 +8,25 @@
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator.compose;
+package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
 import java.io.Serializable;
 import java.util.Map;
 
-public interface LocalConnectable extends Serializable {
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
 
-	public MicroOperator getMicroOperator();
+public interface IMicroOperatorConnectable extends Serializable {
+
+	public IMicroOperatorCode getMicroOperator();
 	
-	public void setParentMultiOperator(MultiOperator parent); 
-	public MultiOperator getParentMultiOperator();
+	public void setParentSubQuery(SubQuery parent); 
+	public SubQuery getParentSubQuery();
 	
 	public boolean isMostLocalDownstream();
 	public boolean isMostLocalUpstream();
-	public void connectSubOperatorTo(int localStreamId, LocalOperator so);
+	public void connectTo(int localStreamId, IMicroOperatorConnectable so);
 
-	public Map<Integer, LocalOperator> getLocalDownstream();
-	public Map<Integer, LocalOperator> getLocalUpstream();
+	public Map<Integer, IMicroOperatorConnectable > getLocalDownstream();
+	public Map<Integer, IMicroOperatorConnectable > getLocalUpstream();
 	
 }

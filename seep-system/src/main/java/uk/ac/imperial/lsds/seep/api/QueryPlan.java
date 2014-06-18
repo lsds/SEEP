@@ -26,12 +26,14 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.LocalConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.LocalOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.MicroOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.StatefulMicroOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.StatelessMicroOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.MicroOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.MicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryConnectable;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
@@ -164,24 +166,6 @@ public class QueryPlan {
 		return op;
 	}
 	
-	public Connectable newMultiOperator(Set<LocalConnectable> subOperators,
-		int multiOpId, List<String> attributes) {
-		
-		// First create multiOperator
-		MultiOperator mo = MultiOperator.synthesizeFrom(subOperators, multiOpId);
-		// Then compose the multiOperator into a SEEP Operator
-		Operator op = Operator.getStatelessOperator(multiOpId, mo, attributes);
-		this.addOperator(op);
-		try {
-			this.place(op);
-		}
-		catch (NodeAlreadyInUseException e) {
-			LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
-			e.printStackTrace();
-		}
-		return op;
-	}
-	
 	public StateWrapper newCustomState(CustomState s, int ownerId, int checkpointInterval, String keyAttribute){
 		StateWrapper sw = new StateWrapper(ownerId, checkpointInterval, s);
 		if(s instanceof Partitionable){
@@ -266,21 +250,37 @@ public class QueryPlan {
         return policyRules;
     }
 
-	public LocalConnectable newStatelessMicroOperator(OperatorCode op,
-			int opId, List<String> attributes) {
+	public Connectable newMultiOperator(Set<ISubQueryConnectable> subQueries,
+			int multiOpId, List<String> attributes) {
+			
+			// First create multiOperator
+			MultiOperator mo = MultiOperator.synthesizeFrom(subQueries, multiOpId);
+			// Then compose the multiOperator into a SEEP Operator
+			Operator op = Operator.getStatelessOperator(multiOpId, mo, attributes);
+			this.addOperator(op);
+			try {
+				this.place(op);
+			}
+			catch (NodeAlreadyInUseException e) {
+				LOG.error("The instantiation has tried to place an operator in an already used node. Is queryBuilder used by multiple threads?");
+				e.printStackTrace();
+			}
+			return op;
+		}
 
-		MicroOperator m = StatelessMicroOperator.newStatelessMicroOperator(op, opId);
-		LocalConnectable c = new LocalOperator(m);
-		
+	public IMicroOperatorConnectable newMicroOperator(IMicroOperatorCode op,
+			int opId, List<String> attributes) {
+		MicroOperator m = MicroOperator.newMicroOperator(op, opId);
+		IMicroOperatorConnectable c = new MicroOperatorConnectable(m);
 		return c;
 	}
 
-	public LocalConnectable newStatefulMicroOperator(OperatorCode op, int opId,
-			StateWrapper s, List<String> attributes) {
-		
-		MicroOperator m = StatefulMicroOperator.newStatefulMicroOperator(op, opId, s);
-		LocalConnectable c = new LocalOperator(m);
-		
-		return null;
+	public ISubQueryConnectable newSubQuery(
+			Set<IMicroOperatorConnectable> microOperators, int opId,
+			List<String> attributes) {
+		SubQuery s = SubQuery.newSubQuery(microOperators, opId);
+		ISubQueryConnectable c = new SubQueryConnectable(s);
+		return c;
 	}
+    
 }

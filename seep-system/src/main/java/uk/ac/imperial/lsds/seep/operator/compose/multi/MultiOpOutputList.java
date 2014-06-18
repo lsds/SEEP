@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose2;
+package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.util.ArrayList;
 

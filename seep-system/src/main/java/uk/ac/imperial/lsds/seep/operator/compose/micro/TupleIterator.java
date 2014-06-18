@@ -1,20 +1,19 @@
-package uk.ac.imperial.lsds.seep.operator.compose2;
+package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
-public class WindowIterator implements Iterator<DataTuple> {
+public class TupleIterator implements Iterator<DataTuple> {
 
-	private Window w;
+	private IWindowBatch w;
 	
 	int cursor;
-	int lastRet = -1;
 	
-	public WindowIterator(Window w) {
+	public TupleIterator(IWindowBatch w) {
 		this.w = w;
-		this.cursor = 0;
+		this.cursor = this.w.getStart();
 	}
 	
 	@Override
@@ -27,9 +26,8 @@ public class WindowIterator implements Iterator<DataTuple> {
 		if (this.cursor >= this.w.getEnd())
 			throw new NoSuchElementException();
 		
-		lastRet = cursor;
 		cursor++;
-		return this.w.get(lastRet);	
+		return this.w.get(cursor-1);	
 	}
 
 	@Override

@@ -5,12 +5,13 @@ import java.util.List;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-import uk.ac.imperial.lsds.seep.operator.WindowOperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose2.Window;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IWindowBatch;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.WindowAPI;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Selection implements StatelessOperator, IStreamSQLOperator, WindowOperatorCode {
+public class Selection implements StatelessOperator, IStreamSQLOperator, IMicroOperatorCode {
 
 	private static final long serialVersionUID = 1L;
 
@@ -48,11 +49,6 @@ public class Selection implements StatelessOperator, IStreamSQLOperator, WindowO
 		
 	}
 
-	@Override
-	public void processData(List<DataTuple> dataList, API api) {
-		for (DataTuple tuple : dataList)
-			processData(tuple, api);
-	}
 
 	@Override
 	public void accept(OperatorVisitor ov) {
@@ -60,10 +56,17 @@ public class Selection implements StatelessOperator, IStreamSQLOperator, WindowO
 	}
 
 	@Override
-	public void processData(Window window, API api) {
+	public void processData(List<DataTuple> dataList, API api) {
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void processData(IWindowBatch window, WindowAPI api) {
+		
+	}
+
+	
 
 
 }
