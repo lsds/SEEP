@@ -1,5 +1,6 @@
-package uk.ac.imperial.lsds.seep.operator.compose.micro;
+package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RunnableFuture;
@@ -7,17 +8,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
+import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
-public class MicroOperatorTask implements RunnableFuture<List<DataTuple>> {
+public class SubQueryTask implements RunnableFuture<List<DataTuple>> {
 	
-	List<IMicroOperatorCode> operators;
-	IWindowBatch window;
-	
-	public MicroOperatorTask(List<IMicroOperatorCode> operators, IWindowBatch window) {
-		this.operators = operators;
-		this.window = window;
-	}
+//	List<WindowOperatorCode> operators;
+//	IWindowBatch window;
+//	
+//	public MicroOperatorTask(List<WindowOperatorCode> operators, IWindowBatch window) {
+//		this.operators = operators;
+//		this.window = window;
+//	}
 
 	@Override
 	public boolean cancel(boolean mayInterruptIfRunning) {

@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
-import uk.ac.imperial.lsds.seep.operator.compose.multi.WindowAPI;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
+import uk.ac.imperial.lsds.seep.operator.compose.window.WindowAPI;
 
 public interface IMicroOperatorCode {
 

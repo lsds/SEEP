@@ -34,6 +34,7 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.Partitionable;
@@ -277,8 +278,8 @@ public class QueryPlan {
 
 	public ISubQueryConnectable newSubQuery(
 			Set<IMicroOperatorConnectable> microOperators, int opId,
-			List<String> attributes) {
-		SubQuery s = SubQuery.newSubQuery(microOperators, opId);
+			List<String> attributes, Map<Integer, IWindowDefinition> windowDefs) {
+		SubQuery s = SubQuery.newSubQuery(microOperators, opId, windowDefs);
 		ISubQueryConnectable c = new SubQueryConnectable(s);
 		return c;
 	}

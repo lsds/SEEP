@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose.micro;
+package uk.ac.imperial.lsds.seep.operator.compose.window;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -22,7 +22,7 @@ public class TimeBasedWindowIterator implements Iterator<List<DataTuple>> {
 		tsWindowBatchStart = this.w.get(this.w.getStart()).getPayload().timestamp;
 		long tsWindowBatchEnd = this.w.get(this.w.getEnd()).getPayload().timestamp;
 		
-		this.numberOfWindows = (int) Math.floor((1.0*(tsWindowBatchEnd - tsWindowBatchStart - this.w.getSize()))/this.w.getSlide());
+		this.numberOfWindows = (int) Math.floor((1.0*(tsWindowBatchEnd - tsWindowBatchStart - this.w.getWindowDefinition().getSize()))/this.w.getWindowDefinition().getSlide());
 	}
 	
 	@Override
@@ -37,7 +37,7 @@ public class TimeBasedWindowIterator implements Iterator<List<DataTuple>> {
 		
 		List<DataTuple> window = new ArrayList<>();
 		
-		long tsWindowEnd = tsWindowBatchStart + windowCursor * this.w.getSlide() + this.w.getSize();
+		long tsWindowEnd = tsWindowBatchStart + windowCursor * this.w.getWindowDefinition().getSlide() + this.w.getWindowDefinition().getSize();
 		DataTuple currentTuple = (lastRet == -1)? this.w.get(this.w.getStart()) : this.w.get(lastRet);
 		while (currentTuple.getPayload().timestamp <= tsWindowEnd) {
 			window.add(currentTuple);

@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
@@ -12,14 +13,15 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	
 	private Map<Integer, ISubQueryConnectable> localDownstream;
 	private Map<Integer, ISubQueryConnectable> localUpstream;
-	
+
 	private SubQuery sq;
 
 	public SubQueryConnectable(SubQuery sq) {
 		this.sq = sq;
+		this.localDownstream = new HashMap<>();
+		this.localUpstream = new HashMap<>();
 		sq.setParentSubQueryConnectable(this);
 	}
-	
 
 	@Override
 	public boolean isMostLocalDownstream() {
@@ -31,24 +33,16 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		return mostUpstream;
 	}
 
+	@Override
 	public void addLocalDownstream(int localStreamId, ISubQueryConnectable so){
 		this.mostDownstream = false;
-		if(!localDownstream.containsKey(localStreamId)){
-			localDownstream.put(localStreamId, so);
-		}
-		else{
-			// TODO: Throw error overwrite?
-		}
+		this.localDownstream.put(localStreamId, so);
 	}
 	
+	@Override
 	public void addLocalUpstream(int localStreamId, ISubQueryConnectable so){
 		this.mostUpstream = false;
-		if(!localUpstream.containsKey(localStreamId)){
-			localUpstream.put(localStreamId, so);
-		}
-		else{
-			// TODO: Throw error overwrite?
-		}
+		this.localUpstream.put(localStreamId, so);
 	}
 
 	@Override
@@ -80,14 +74,6 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	public void connectTo(int localStreamId, ISubQueryConnectable so) {
 		this.addLocalDownstream(localStreamId, so);
 		so.addLocalUpstream(localStreamId, this);
-	}
-
-
-	@Override
-	public void addLocalUpstream(int localStreamId,
-			SubQueryConnectable subQueryConnectable) {
-		// TODO Auto-generated method stub
-		
 	}
 
 }

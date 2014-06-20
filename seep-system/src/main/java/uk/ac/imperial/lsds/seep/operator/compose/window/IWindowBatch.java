@@ -1,10 +1,9 @@
-package uk.ac.imperial.lsds.seep.operator.compose.micro;
+package uk.ac.imperial.lsds.seep.operator.compose.window;
 
 import java.util.Iterator;
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.micro.WindowBatch.WindowType;
 
 public interface IWindowBatch extends Iterable<DataTuple> {
 	
@@ -13,13 +12,11 @@ public interface IWindowBatch extends Iterable<DataTuple> {
 	 */
 	public int getStart();
 	public int getEnd();
-	public long getSize();
-	public long getSlide();
 
 	/*
-	 * Check method for the type of window
+	 * Get method for the definition of the window
 	 */
-	public WindowType getWindowType();
+	public IWindowDefinition getWindowDefinition();
 	
 	/*
 	 * Methods to access the window content

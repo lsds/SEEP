@@ -12,6 +12,7 @@
 package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
@@ -21,6 +22,7 @@ import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -85,8 +87,8 @@ public class QueryBuilder {
 		return qp.newMicroOperator(op, opId, attributes);
 	}
 
-	public static ISubQueryConnectable newSubQuery(Set<IMicroOperatorConnectable> microOperators, int opId, List<String> attributes){
-		return qp.newSubQuery(microOperators, opId, attributes);
+	public static ISubQueryConnectable newSubQuery(Set<IMicroOperatorConnectable> microOperators, int opId, List<String> attributes, Map<Integer, IWindowDefinition> windowDefs){
+		return qp.newSubQuery(microOperators, opId, attributes, windowDefs);
 	}
 
 }

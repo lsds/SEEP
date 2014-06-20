@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose.micro;
+package uk.ac.imperial.lsds.seep.operator.compose.window;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;

@@ -113,10 +113,6 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.processingUnit = processingUnit;
 		// Configure distApi with own reference
 		distApi.setCallbackObject(this);
-		// Set distributedApi in case we have a multiOperator
-		if(operatorCode instanceof MultiOperator){
-			((MultiOperator)operatorCode).setApi(distApi);
-		}
 		// If we are stateful, then we pass the state reference to opCode
 		if(processingUnit instanceof StatefulProcessingUnit){
 			if(operatorCode instanceof StatefulOperator){

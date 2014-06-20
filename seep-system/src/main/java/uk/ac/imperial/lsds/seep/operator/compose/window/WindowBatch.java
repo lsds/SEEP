@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose.micro;
+package uk.ac.imperial.lsds.seep.operator.compose.window;
 
 import java.util.Iterator;
 import java.util.List;
@@ -8,26 +8,18 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpInputList;
 
 public class WindowBatch implements IWindowBatch {
 
-	public enum WindowType  {
-		ROW_BASED, RANGE_BASED
-	}
-	
 	int start = -1;
 	int end = -1;
-	long size = -1;
-	long slide = -1;
 	
 	MultiOpInputList inputList;
 	
-	WindowType windowType;
+	IWindowDefinition windowDefinition;
 	
-	public WindowBatch(WindowType windowType, MultiOpInputList inputList, int start, int end, long size, long slide) {
+	public WindowBatch(IWindowDefinition windowDefinition, MultiOpInputList inputList, int start, int end) {
 		this.inputList = inputList;
-		this.windowType = windowType;
+		this.windowDefinition = windowDefinition;
 		this.start = start;
 		this.end = end;
-		this.size = size;
-		this.slide = slide;
 	}
 	
 	@Override
@@ -45,15 +37,6 @@ public class WindowBatch implements IWindowBatch {
 		return this.end;
 	}
 
-	@Override
-	public long getSize() {
-		return this.size;
-	}
-
-	@Override
-	public long getSlide() {
-		return this.slide;
-	}
 
 	@Override
 	public List<DataTuple> getAllTuples() {
@@ -67,20 +50,21 @@ public class WindowBatch implements IWindowBatch {
 
 	@Override
 	public Iterator<List<DataTuple>> windowIterator() {
-		switch (this.windowType) {
+		switch (this.windowDefinition.getWindowType()) {
 		case RANGE_BASED:
 			return new TimeBasedWindowIterator(this);
 		case ROW_BASED:
 			return new CountBasedWindowIterator(this);
 
 		default:
-			throw new UnsupportedOperationException("Cannot create window iterator for window of type: " + this.windowType);
+			throw new UnsupportedOperationException("Cannot create window iterator for window of type: " + this.windowDefinition.getWindowType());
 		}
 	}
 
 	@Override
-	public WindowType getWindowType() {
-		return this.windowType;
+	public IWindowDefinition getWindowDefinition() {
+		return this.windowDefinition;
 	}
 
+	
 }

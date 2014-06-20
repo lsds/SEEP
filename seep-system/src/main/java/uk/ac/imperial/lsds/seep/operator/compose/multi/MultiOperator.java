@@ -23,24 +23,29 @@ import java.util.concurrent.Executors;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
-import uk.ac.imperial.lsds.seep.operator.DistributedApi;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
 
 public class MultiOperator implements StatelessOperator {
 
-	private static final int MICRO_OP_QUEUE_CAPACITY = Integer.valueOf(GLOBALS.valueFor("microOpQueueCapacity"));
-	private static final int MICRO_OP_BATCH_SIZE = Integer.valueOf(GLOBALS.valueFor("microOpBatchSize"));
+	private static final int SUB_QUERY_QUEUE_CAPACITY = Integer.valueOf(GLOBALS.valueFor("subQueryQueueCapacity"));
+	private static final int SUB_QUERY_TRIGGER_DELAY = Integer.valueOf(GLOBALS.valueFor("subQueryTriggerDelay"));
+//	private static final int MICRO_OP_BATCH_SIZE = Integer.valueOf(GLOBALS.valueFor("microOpBatchSize"));
 	
 	private static final long serialVersionUID = 1L;
 
 	private final int id;
 	
 	private Set<ISubQueryConnectable> subQueries;
-	private DistributedApi dApi;
+	private API api;
 	private Set<ISubQueryConnectable> mostUpstreamSubQueries;
 
 	private ExecutorService executorService;
+	
+//	private Map<ISubQueryConnectable, Integer> numberThreadsPerSubQuery = new HashMap<>();
+	
+	private int subQueryTriggerCounter = 0;
 	
 	private MultiOperator(Set<ISubQueryConnectable> subQueries, int multiOpId){
 		this.id = multiOpId;
@@ -49,16 +54,13 @@ public class MultiOperator implements StatelessOperator {
 			c.setParentMultiOperator(this);
 	}
 	
-	public void setApi(DistributedApi api){
-		this.dApi = api;
-	}
-	
-	
-
-	/** Implementation of OperatorCode interface **/
-
 	@Override
-	public void processData(DataTuple data, API localApi) {
+	public void processData(DataTuple data, API api) {
+		/*
+		 * Store the api so that it can be later used to forward tuples
+		 */
+		this.api = api;
+		
 		/*
 		 * If there is more than one most upstream operator, default 
 		 * behaviour is that EVERY tuple is pushed to ALL input
@@ -67,7 +69,37 @@ public class MultiOperator implements StatelessOperator {
 		for (ISubQueryConnectable c : mostUpstreamSubQueries) {
 			c.getSubQuery().pushData(data);
 		}
+		
+		/*
+		 * Determine whether the sub query queues should be checked in order
+		 * to instantiate new sub query tasks
+		 */
+		if (this.subQueryTriggerCounter >= SUB_QUERY_TRIGGER_DELAY)
+			checkSubQueryQueuesForTaskInstantiation();
+		
+		this.subQueryTriggerCounter++;
 	}
+	
+	
+	private Map<SubQuery, DataTuple> lastProcessedPointer = new HashMap<>();
+	
+	private void checkSubQueryQueuesForTaskInstantiation() {
+
+		/*
+		 * For each sub query
+		 */
+		for (ISubQueryConnectable c : this.subQueries) {
+			/*
+			 * 
+			 */
+			
+//			c.getSubQuery().execute(this.executorService, numberThreadsPerSubQuery.get(c), MICRO_OP_BATCH_SIZE);
+		}
+
+		
+		
+	}
+	
 	
 	@Override
 	public void processData(List<DataTuple> dataList, API localApi) {
@@ -102,7 +134,7 @@ public class MultiOperator implements StatelessOperator {
 		for (ISubQueryConnectable c : this.subQueries) {
 			for (Integer streamId : c.getLocalDownstream().keySet()) {
 				// create output queue
-				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(MICRO_OP_QUEUE_CAPACITY);
+				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(SUB_QUERY_QUEUE_CAPACITY);
 				c.getSubQuery().registerOutputQueue(streamId, q);
 				// register this queue as input of downstream 
 				c.getLocalDownstream().get(streamId).getSubQuery().registerInputQueue(streamId, q);
@@ -110,15 +142,9 @@ public class MultiOperator implements StatelessOperator {
 		}
 		
 		//TODO: think about better split up of number of threads
-		Map<ISubQueryConnectable, Integer> numberThreadsPerMicroOperator = new HashMap<>();
-		for (ISubQueryConnectable c : this.subQueries) 
-			numberThreadsPerMicroOperator.put(c, new Double(Math.floor((numberOfCoresToUse*1f)/this.subQueries.size())).intValue());
+//		for (ISubQueryConnectable c : this.subQueries) 
+//			numberThreadsPerSubQuery.put(c, new Double(Math.floor((numberOfCoresToUse*1f)/this.subQueries.size())).intValue());
 		
-		/*
-		 * And "go" for the micro operators
-		 */
-		for (ISubQueryConnectable c : this.subQueries) 
-			c.getSubQuery().execute(this.executorService, numberThreadsPerMicroOperator.get(c), MICRO_OP_BATCH_SIZE);
 	}
 
 	/** Implementation of ComposedOperator interface **/

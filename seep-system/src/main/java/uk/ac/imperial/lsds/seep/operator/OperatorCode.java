@@ -14,7 +14,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IWindowBatch;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
 public interface OperatorCode extends Serializable{
 	

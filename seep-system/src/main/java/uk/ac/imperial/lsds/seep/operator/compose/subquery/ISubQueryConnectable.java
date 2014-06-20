@@ -14,6 +14,7 @@ import java.io.Serializable;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public interface ISubQueryConnectable extends Serializable {
 
@@ -29,7 +30,8 @@ public interface ISubQueryConnectable extends Serializable {
 	public Map<Integer, ISubQueryConnectable> getLocalDownstream();
 	public Map<Integer, ISubQueryConnectable> getLocalUpstream();
 
-	public void addLocalUpstream(int localStreamId,
-			SubQueryConnectable subQueryConnectable);
+	public void addLocalUpstream(int localStreamId, ISubQueryConnectable so);
+	public void addLocalDownstream(int localStreamId, ISubQueryConnectable so);
+
 	
 }

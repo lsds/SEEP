@@ -2,60 +2,77 @@ package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
 import java.util.Map;
 
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryConnectable;
 
 public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 
-	public MicroOperatorConnectable(MicroOperator op) {
-		
-	}
+	private boolean mostDownstream;
+	private boolean mostUpstream;
+	private SubQuery parent;
 	
-	@Override
-	public IMicroOperatorCode getMicroOperator() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	private Map<Integer, IMicroOperatorConnectable> localDownstream;
+	private Map<Integer, IMicroOperatorConnectable> localUpstream;
+	
+	private MicroOperator sq;
 
-	@Override
-	public void setParentSubQuery(SubQuery parent) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public SubQuery getParentSubQuery() {
-		// TODO Auto-generated method stub
-		return null;
+	public MicroOperatorConnectable(MicroOperator sq) {
+		this.sq = sq;
+		sq.setParentMicroOperatorConnectable(this);
 	}
 
 	@Override
 	public boolean isMostLocalDownstream() {
-		// TODO Auto-generated method stub
-		return false;
+		return mostDownstream;
 	}
 
 	@Override
 	public boolean isMostLocalUpstream() {
-		// TODO Auto-generated method stub
-		return false;
+		return mostUpstream;
 	}
 
 	@Override
-	public void connectTo(int localStreamId, IMicroOperatorConnectable so) {
-		// TODO Auto-generated method stub
+	public void addLocalDownstream(int localStreamId, IMicroOperatorConnectable so){
+		this.mostDownstream = false;
+		this.localDownstream.put(localStreamId, so);
+	}
+	
+	@Override
+	public void addLocalUpstream(int localStreamId, IMicroOperatorConnectable so){
+		this.mostUpstream = false;
+		this.localUpstream.put(localStreamId, so);
+	}
 
+	@Override
+	public MicroOperator getMicroOperator() {
+		return this.sq;
 	}
 
 	@Override
 	public Map<Integer, IMicroOperatorConnectable> getLocalDownstream() {
-		// TODO Auto-generated method stub
-		return null;
+		return localDownstream;
 	}
 
 	@Override
 	public Map<Integer, IMicroOperatorConnectable> getLocalUpstream() {
-		// TODO Auto-generated method stub
-		return null;
+		return localUpstream;
 	}
 
+	@Override
+	public void setParentSubQuery(SubQuery parent) {
+		this.parent = parent;
+	}
+
+	@Override
+	public SubQuery getParentSubQuery() {
+		return this.parent;
+	}
+
+	@Override
+	public void connectTo(int localStreamId, IMicroOperatorConnectable so) {
+		this.addLocalDownstream(localStreamId, so);
+		so.addLocalUpstream(localStreamId, this);
+	}
 }

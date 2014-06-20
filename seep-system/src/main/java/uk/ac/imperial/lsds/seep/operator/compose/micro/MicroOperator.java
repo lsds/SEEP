@@ -109,5 +109,10 @@ public class MicroOperator {
 //			//TODO: notify microOp and multiOp about failure
 //		}
 //	}
+	public void setParentMicroOperatorConnectable(
+			MicroOperatorConnectable microOperatorConnectable) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

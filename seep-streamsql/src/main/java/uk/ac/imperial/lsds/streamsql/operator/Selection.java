@@ -6,8 +6,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IWindowBatch;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.WindowAPI;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
+import uk.ac.imperial.lsds.seep.operator.compose.window.WindowAPI;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 

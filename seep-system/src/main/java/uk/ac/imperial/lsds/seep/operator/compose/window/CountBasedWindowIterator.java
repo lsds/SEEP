@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose.micro;
+package uk.ac.imperial.lsds.seep.operator.compose.window;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -17,7 +17,7 @@ public class CountBasedWindowIterator implements Iterator<List<DataTuple>> {
 	public CountBasedWindowIterator(IWindowBatch w) {
 		this.w = w;
 		this.windowCursor = 0;
-		this.numberOfWindows = (int) Math.floor((1.0*(this.w.getEnd() - this.w.getStart() - this.w.getSize() + 1))/this.w.getSlide());
+		this.numberOfWindows = (int) Math.floor((1.0*(this.w.getEnd() - this.w.getStart() - this.w.getWindowDefinition().getSize() + 1))/this.w.getWindowDefinition().getSlide());
 	}
 	
 	@Override
@@ -31,8 +31,8 @@ public class CountBasedWindowIterator implements Iterator<List<DataTuple>> {
 			throw new NoSuchElementException();
 		
 		List<DataTuple> window = new ArrayList<>();
-		int start = new Long(this.w.getStart() + windowCursor * this.w.getSlide()).intValue();
-		for (int i = start; i <= start + this.w.getSize(); i++)
+		int start = new Long(this.w.getStart() + windowCursor * this.w.getWindowDefinition().getSlide()).intValue();
+		for (int i = start; i <= start + this.w.getWindowDefinition().getSize(); i++)
 			window.add(this.w.get(i));
 		
 		windowCursor++;

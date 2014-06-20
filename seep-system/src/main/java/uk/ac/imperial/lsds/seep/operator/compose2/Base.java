@@ -12,7 +12,9 @@
 package uk.ac.imperial.lsds.seep.operator.compose2;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
@@ -21,6 +23,9 @@ import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
+import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
+import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowType;
 
 public class Base implements QueryComposer{
 
@@ -40,25 +45,29 @@ public class Base implements QueryComposer{
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 
 		// Micro ops for first subquery
-		IMicroOperatorConnectable mOp1 = QueryBuilder.newMicroOperator(null, 1, null);
-		IMicroOperatorConnectable mOp2 = QueryBuilder.newMicroOperator(null, 1, null);
+		IMicroOperatorConnectable mOp1 = QueryBuilder.newMicroOperator(null, 1, srcFields);
+		IMicroOperatorConnectable mOp2 = QueryBuilder.newMicroOperator(null, 1, srcFields);
 		mOp1.connectTo(1, mOp2);
 		
 		// Micro ops for second subquery
-		IMicroOperatorConnectable mOp3 = QueryBuilder.newMicroOperator(null, 1, null);
-		IMicroOperatorConnectable mOp4 = QueryBuilder.newMicroOperator(null, 1, null);
+		IMicroOperatorConnectable mOp3 = QueryBuilder.newMicroOperator(null, 1, srcFields);
+		IMicroOperatorConnectable mOp4 = QueryBuilder.newMicroOperator(null, 1, srcFields);
 		mOp3.connectTo(1, mOp4);
 		
 		// Create subqueries
 		Set<IMicroOperatorConnectable> microOpConnectables1 = new HashSet<>();
 		microOpConnectables1.add(mOp1);
-		microOpConnectables1.add(mOp2);		
-		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(microOpConnectables1, 1, srcFields);
+		microOpConnectables1.add(mOp2);
+		Map<Integer, IWindowDefinition> windowDefs = new HashMap<>();
+		windowDefs.put(1, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
+		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(microOpConnectables1, 1, srcFields, windowDefs);
 
 		Set<IMicroOperatorConnectable> microOpConnectables2 = new HashSet<>();
 		microOpConnectables2.add(mOp1);
 		microOpConnectables2.add(mOp2);		
-		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(microOpConnectables2, 1, srcFields);
+		windowDefs = new HashMap<>();
+		windowDefs.put(1, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
+		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(microOpConnectables2, 1, srcFields, windowDefs);
 
 		// Connect subqueries
 		sq1.connectTo(1, sq2);
