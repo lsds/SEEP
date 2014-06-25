@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -8,7 +9,6 @@ import java.util.concurrent.ExecutorService;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public class SubQuery {
@@ -25,8 +25,8 @@ public class SubQuery {
 	
 	private SubQuery(Set<IMicroOperatorConnectable> microOperators, int id, Map<Integer, IWindowDefinition>  inputWindowDefinitions) {
 		this.id = id;
-		this.inputQueues = new HashMap<Integer, BlockingQueue<DataTuple>>();
-		this.outputQueues = new HashMap<Integer, BlockingQueue<DataTuple>>();
+		this.inputQueues = new HashMap<>();
+		this.outputQueues = new HashMap<>();
 		this.inputWindowDefinitions = inputWindowDefinitions;
 	}
 	
@@ -39,19 +39,24 @@ public class SubQuery {
 		return id;
 	}
 
-	public void registerInputQueue(Integer streamId,
+	public void registerInputQueue(Integer upstreamOpId,
 			BlockingQueue<DataTuple> queue) {
-		this.inputQueues.put(streamId, queue);
+		this.inputQueues.put(upstreamOpId, queue);
 	}
 
-	public void registerOutputQueue(Integer streamId,
+	public void registerOutputQueue(Integer downstreamOpId,
 			BlockingQueue<DataTuple> queue) {
-		this.outputQueues.put(streamId, queue);
+		this.outputQueues.put(downstreamOpId, queue);
 	}
 
-	public void pushData(DataTuple tuple) {
+	public void pushData(List<DataTuple> tuples, int streamID) {
+		for (DataTuple tuple : tuples)
+			pushData(tuple, streamID);
+	}
+
+	public void pushData(DataTuple tuple, int streamID) {
 		try {
-			this.inputQueues.get(tuple.getPayload().emittingOperatorId).put(tuple);
+			this.inputQueues.get(streamID).put(tuple);
 		} catch (InterruptedException e) {
 			//TODO: notify microOp and multiOp about failure
 		}
@@ -65,6 +70,11 @@ public class SubQuery {
 	public void setParentSubQueryConnectable(
 			ISubQueryConnectable subQueryConnectable) {
 		this.parent = subQueryConnectable;
+	}
+
+	public void pushDataToAllStreams(DataTuple data) {
+		for (Integer streamID : this.inputQueues.keySet())
+			pushData(data, streamID);
 	};
 
 	

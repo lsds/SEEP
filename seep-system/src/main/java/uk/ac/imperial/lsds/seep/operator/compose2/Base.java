@@ -70,7 +70,7 @@ public class Base implements QueryComposer{
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(microOpConnectables2, 1, srcFields, windowDefs);
 
 		// Connect subqueries
-		sq1.connectTo(1, sq2);
+		sq1.connectTo(sq2, 1);
 
 		Set<ISubQueryConnectable> subQueries = new HashSet<>();
 		subQueries.add(sq1);

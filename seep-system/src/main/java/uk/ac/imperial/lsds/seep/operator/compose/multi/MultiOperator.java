@@ -12,20 +12,26 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RunnableFuture;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTask;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
 
 public class MultiOperator implements StatelessOperator {
 
@@ -67,37 +73,80 @@ public class MultiOperator implements StatelessOperator {
 		 * queues of these most upstream operators
 		 */
 		for (ISubQueryConnectable c : mostUpstreamSubQueries) {
-			c.getSubQuery().pushData(data);
+			c.getSubQuery().pushDataToAllStreams(data);
 		}
 		
 		/*
 		 * Determine whether the sub query queues should be checked in order
 		 * to instantiate new sub query tasks
 		 */
-		if (this.subQueryTriggerCounter >= SUB_QUERY_TRIGGER_DELAY)
-			checkSubQueryQueuesForTaskInstantiation();
+		if (this.subQueryTriggerCounter >= SUB_QUERY_TRIGGER_DELAY) {
+			checkForSubQueryTaskInstantiationAndTermination();
+			this.subQueryTriggerCounter = 0;
+		}
 		
 		this.subQueryTriggerCounter++;
 	}
 	
 	
-	private Map<SubQuery, DataTuple> lastProcessedPointer = new HashMap<>();
+	private Map<ISubQueryConnectable, DataTuple> lastStartedPointer = new HashMap<>();
+	private Map<ISubQueryConnectable, Integer> lastFinishedOrderID = new HashMap<>();
 	
-	private void checkSubQueryQueuesForTaskInstantiation() {
+	private SubQueryTaskCreationScheme creationScheme = new WindowBatchTaskCreationScheme();
+	
+	private Map<ISubQueryConnectable, List<SubQueryTask>> runningSubQueryTasks = new HashMap<>();
+	
+	private void checkForSubQueryTaskInstantiationAndTermination() {
 
+		for (ISubQueryConnectable c : this.subQueries) {
+			/*
+			 * For each running task, check whether it has terminated
+			 */
+			Iterator<SubQueryTask> taskIter = runningSubQueryTasks.get(c).iterator();
+			while (taskIter.hasNext()) {
+				SubQueryTask task = taskIter.next();
+				/*
+				 * If computation is done
+				 */
+				if (task.isDone() && 
+						(lastFinishedOrderID.get(task.getSubQueryConnectable()) == task.getLogicalOrderID() - 1)) {
+					// Remove from running tasks
+					taskIter.remove();
+					// Get result
+					try {
+						List<DataTuple> result = task.get();
+						// Update the respective queues with the result
+						for (Entry<Integer, ISubQueryConnectable> downstreamEntry : task.getSubQueryConnectable().getLocalDownstream().entrySet()) {
+							downstreamEntry.getValue().getSubQuery().pushData(result, downstreamEntry.getKey());
+						}
+						// Record progress by updating the last finished pointer
+						lastFinishedOrderID.put(task.getSubQueryConnectable(), task.getLogicalOrderID());
+					} catch (Exception e) {
+						// TODO: handle exception
+					}
+					
+				}
+			}
+		}
+		
 		/*
-		 * For each sub query
+		 * For each sub query, check whether a task should be instantiated
 		 */
 		for (ISubQueryConnectable c : this.subQueries) {
 			/*
-			 * 
+			 * Create tasks if there is enough data for starting the computation 
 			 */
-			
-//			c.getSubQuery().execute(this.executorService, numberThreadsPerSubQuery.get(c), MICRO_OP_BATCH_SIZE);
+			creationScheme.init(c, lastStartedPointer.get(c));
+			while (creationScheme.hasNext()) {
+				SubQueryTask task = creationScheme.next();
+				/*
+				 * Submit the tasks
+				 */
+				executorService.execute(task);
+				runningSubQueryTasks.get(c).add(task);
+				lastStartedPointer.put(c, task.getLastProcessed());
+			}
 		}
-
-		
-		
 	}
 	
 	
@@ -129,21 +178,23 @@ public class MultiOperator implements StatelessOperator {
 		}
 		
 		/*
-		 * Create graph of queues starting with most upstream
+		 * Create graph of queues
 		 */
 		for (ISubQueryConnectable c : this.subQueries) {
-			for (Integer streamId : c.getLocalDownstream().keySet()) {
+			for (ISubQueryConnectable down : c.getLocalDownstream().values()) {
 				// create output queue
 				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(SUB_QUERY_QUEUE_CAPACITY);
-				c.getSubQuery().registerOutputQueue(streamId, q);
+				c.getSubQuery().registerOutputQueue(down.getSubQuery().getId(), q);
 				// register this queue as input of downstream 
-				c.getLocalDownstream().get(streamId).getSubQuery().registerInputQueue(streamId, q);
+				down.getSubQuery().registerInputQueue(c.getSubQuery().getId(), q);
 			}
 		}
 		
-		//TODO: think about better split up of number of threads
-//		for (ISubQueryConnectable c : this.subQueries) 
-//			numberThreadsPerSubQuery.put(c, new Double(Math.floor((numberOfCoresToUse*1f)/this.subQueries.size())).intValue());
+		/*
+		 *  Init map for subquery tasks
+		 */
+		for (ISubQueryConnectable c : this.subQueries)
+			runningSubQueryTasks.put(c, new LinkedList<SubQueryTask>());
 		
 	}
 

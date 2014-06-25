@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 
@@ -34,15 +35,15 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	}
 
 	@Override
-	public void addLocalDownstream(int localStreamId, ISubQueryConnectable so){
+	public void addLocalDownstream(ISubQueryConnectable so, int streamID){
 		this.mostDownstream = false;
-		this.localDownstream.put(localStreamId, so);
+		this.localDownstream.put(streamID,so);
 	}
 	
 	@Override
-	public void addLocalUpstream(int localStreamId, ISubQueryConnectable so){
+	public void addLocalUpstream(ISubQueryConnectable so, int streamID){
 		this.mostUpstream = false;
-		this.localUpstream.put(localStreamId, so);
+		this.localUpstream.put(streamID, so);
 	}
 
 	@Override
@@ -71,9 +72,9 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	}
 
 	@Override
-	public void connectTo(int localStreamId, ISubQueryConnectable so) {
-		this.addLocalDownstream(localStreamId, so);
-		so.addLocalUpstream(localStreamId, this);
+	public void connectTo(ISubQueryConnectable so, int streamID) {
+		this.addLocalDownstream(so, streamID);
+		so.addLocalUpstream(this, streamID);
 	}
 
 }

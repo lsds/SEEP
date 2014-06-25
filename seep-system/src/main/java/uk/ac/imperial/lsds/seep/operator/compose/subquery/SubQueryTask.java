@@ -20,6 +20,25 @@ public class SubQueryTask implements RunnableFuture<List<DataTuple>> {
 //		this.window = window;
 //	}
 
+	private DataTuple lastProcessed;
+	
+	private ISubQueryConnectable subQueryConnectable;
+	
+	private int logicalOrderID;
+
+	public int getLogicalOrderID() {
+		return this.logicalOrderID;
+	}
+	
+	
+	public DataTuple getLastProcessed() {
+		return this.lastProcessed;
+	}
+	
+	public ISubQueryConnectable getSubQueryConnectable() {
+		return this.subQueryConnectable;
+	}
+	
 	@Override
 	public boolean cancel(boolean mayInterruptIfRunning) {
 		// TODO Auto-generated method stub

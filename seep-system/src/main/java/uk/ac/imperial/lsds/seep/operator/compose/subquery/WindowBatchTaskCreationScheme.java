@@ -1,0 +1,42 @@
+package uk.ac.imperial.lsds.seep.operator.compose.subquery;
+
+import uk.ac.imperial.lsds.seep.GLOBALS;
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+
+public class WindowBatchTaskCreationScheme implements
+		SubQueryTaskCreationScheme {
+
+	private static final int SUB_QUERY_WINDOW_BATCH_COUNT = Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"));
+
+	private ISubQueryConnectable subQueryConnectable;
+	
+	private DataTuple lastProcessed;
+	
+	public WindowBatchTaskCreationScheme(){
+		
+	}
+	
+	@Override
+	public boolean hasNext() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public SubQueryTask next() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void remove() {
+		throw new IllegalArgumentException("");
+	}
+	@Override
+	public void init(ISubQueryConnectable subQueryConnectable,
+			DataTuple lastProcessed) {
+		this.subQueryConnectable = subQueryConnectable;
+		this.lastProcessed = lastProcessed;
+	}
+
+}
