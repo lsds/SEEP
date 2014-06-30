@@ -37,10 +37,8 @@ public class WindowBatchTaskCreationScheme implements
 	}
 	@Override
 	public void init(ISubQueryConnectable subQueryConnectable,
-			SubQueryBuffer input,
 			DataTuple lastProcessed) {
 		this.subQueryConnectable = subQueryConnectable;
-		this.input = input;
 		this.lastProcessed = lastProcessed;
 	}
 

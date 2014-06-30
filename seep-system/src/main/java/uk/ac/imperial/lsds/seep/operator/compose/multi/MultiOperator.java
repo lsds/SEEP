@@ -188,7 +188,7 @@ public class MultiOperator implements StatelessOperator {
 		for (ISubQueryConnectable c : this.subQueries) {
 			for (ISubQueryConnectable down : c.getLocalDownstream().values()) {
 				// create output queue
-				BlockingDeque<DataTuple> q = new SubQueryBuffer<DataTuple>(SUB_QUERY_QUEUE_CAPACITY);
+				SubQueryBuffer q = new SubQueryBuffer(SUB_QUERY_QUEUE_CAPACITY);
 				c.getSubQuery().registerOutputQueue(down.getSubQuery().getId(), q);
 				// register this queue as input of downstream 
 				down.getSubQuery().registerInputQueue(c.getSubQuery().getId(), q);

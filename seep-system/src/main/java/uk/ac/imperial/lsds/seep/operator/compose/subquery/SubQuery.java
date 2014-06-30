@@ -4,11 +4,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public class SubQuery {
@@ -18,8 +18,8 @@ public class SubQuery {
 	private ISubQueryConnectable parent;
 	private Set<IMicroOperatorConnectable> microOperators;
 	
-	private Map<Integer, BlockingQueue<DataTuple>> inputQueues;
-	private Map<Integer, BlockingQueue<DataTuple>> outputQueues;
+	private Map<Integer, SubQueryBuffer> inputQueues;
+	private Map<Integer, SubQueryBuffer> outputQueues;
 	
 	private Map<Integer, IWindowDefinition>  inputWindowDefinitions;
 	
@@ -40,12 +40,12 @@ public class SubQuery {
 	}
 
 	public void registerInputQueue(Integer upstreamOpId,
-			BlockingQueue<DataTuple> queue) {
+			SubQueryBuffer queue) {
 		this.inputQueues.put(upstreamOpId, queue);
 	}
 
 	public void registerOutputQueue(Integer downstreamOpId,
-			BlockingQueue<DataTuple> queue) {
+			SubQueryBuffer queue) {
 		this.outputQueues.put(downstreamOpId, queue);
 	}
 
@@ -55,11 +55,7 @@ public class SubQuery {
 	}
 
 	public void pushData(DataTuple tuple, int streamID) {
-		try {
-			this.inputQueues.get(streamID).put(tuple);
-		} catch (InterruptedException e) {
-			//TODO: notify microOp and multiOp about failure
-		}
+		this.inputQueues.get(streamID).add(tuple);
 	}
 	public static SubQuery newSubQuery (
 			Set<IMicroOperatorConnectable> microOperators, int opId, Map<Integer, IWindowDefinition>  inputWindowDefinitions) {
