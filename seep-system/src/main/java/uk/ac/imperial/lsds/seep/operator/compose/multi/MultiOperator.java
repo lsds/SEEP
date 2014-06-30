@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,6 +47,7 @@ public class MultiOperator implements StatelessOperator {
 	private Set<ISubQueryConnectable> subQueries;
 	private API api;
 	private Set<ISubQueryConnectable> mostUpstreamSubQueries;
+	private Set<ISubQueryConnectable> mostDownStreamSubQueries;
 
 	private ExecutorService executorService;
 	
@@ -172,9 +174,12 @@ public class MultiOperator implements StatelessOperator {
 		 * Identify most upstream and most downstream local operators
 		 */
 		this.mostUpstreamSubQueries = new HashSet<>();
+		this.mostDownStreamSubQueries = new HashSet<>();
 		for (ISubQueryConnectable connectable : subQueries){
 			if (connectable.isMostLocalUpstream())
 				this.mostUpstreamSubQueries.add(connectable);
+			if (connectable.isMostLocalDownstream())
+				this.mostDownStreamSubQueries.add(connectable);
 		}
 		
 		/*
@@ -183,7 +188,7 @@ public class MultiOperator implements StatelessOperator {
 		for (ISubQueryConnectable c : this.subQueries) {
 			for (ISubQueryConnectable down : c.getLocalDownstream().values()) {
 				// create output queue
-				BlockingQueue<DataTuple> q = new ArrayBlockingQueue<DataTuple>(SUB_QUERY_QUEUE_CAPACITY);
+				BlockingDeque<DataTuple> q = new SubQueryBuffer<DataTuple>(SUB_QUERY_QUEUE_CAPACITY);
 				c.getSubQuery().registerOutputQueue(down.getSubQuery().getId(), q);
 				// register this queue as input of downstream 
 				down.getSubQuery().registerInputQueue(c.getSubQuery().getId(), q);
