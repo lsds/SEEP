@@ -17,7 +17,7 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
 
 public interface IMicroOperatorConnectable extends Serializable {
 
-	public MicroOperator getMicroOperator();
+	public IMicroOperatorCode getMicroOperator();
 	
 	public void setParentSubQuery(SubQuery parent); 
 	public SubQuery getParentSubQuery();

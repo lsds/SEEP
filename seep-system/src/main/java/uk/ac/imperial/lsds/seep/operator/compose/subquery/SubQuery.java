@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
@@ -17,7 +16,9 @@ public class SubQuery {
 	
 	private ISubQueryConnectable parent;
 	private Set<IMicroOperatorConnectable> microOperators;
-	
+	private Set<IMicroOperatorConnectable> mostUpstreamMicroOperators;
+	private IMicroOperatorConnectable mostDownstreamMicroOperator;
+
 	private Map<Integer, SubQueryBuffer> inputQueues;
 	private Map<Integer, SubQueryBuffer> outputQueues;
 	
@@ -28,13 +29,15 @@ public class SubQuery {
 		this.inputQueues = new HashMap<>();
 		this.outputQueues = new HashMap<>();
 		this.inputWindowDefinitions = inputWindowDefinitions;
+		this.microOperators = microOperators;
+		
+		for (IMicroOperatorConnectable microOperatorConnectable : this.microOperators)
+			if (microOperatorConnectable.isMostLocalUpstream())
+				mostUpstreamMicroOperators.add(microOperatorConnectable);
+			else if (microOperatorConnectable.isMostLocalDownstream())
+				mostDownstreamMicroOperator = microOperatorConnectable;
 	}
 	
-	public void execute(ExecutorService executorService, int numberThreads, int batchSize) {
-		for (int i = 0; i < numberThreads; i++)
-			executorService.execute(new SubQueryTask());
-	}
-
 	public int getId() {
 		return id;
 	}
@@ -73,5 +76,16 @@ public class SubQuery {
 			pushData(data, streamID);
 	};
 
+	public Set<IMicroOperatorConnectable> getMicroOperators() {
+		return this.microOperators;
+	}
+	
+	public Set<IMicroOperatorConnectable> getMostUpstreamMicroOperators() {
+		return this.mostUpstreamMicroOperators;
+	}
+	
+	public IMicroOperatorConnectable getMostDownstreamMicroOperators() {
+		return this.mostDownstreamMicroOperator;
+	}
 	
 }

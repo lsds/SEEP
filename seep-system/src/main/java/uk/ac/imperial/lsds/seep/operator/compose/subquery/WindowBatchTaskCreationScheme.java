@@ -1,7 +1,6 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
 public class WindowBatchTaskCreationScheme implements
@@ -11,7 +10,7 @@ public class WindowBatchTaskCreationScheme implements
 
 	private ISubQueryConnectable subQueryConnectable;
 	
-	private DataTuple lastProcessed;
+	private int lastProcessed;
 	
 	private SubQueryBuffer input;
 	
@@ -37,7 +36,7 @@ public class WindowBatchTaskCreationScheme implements
 	}
 	@Override
 	public void init(ISubQueryConnectable subQueryConnectable,
-			DataTuple lastProcessed) {
+			int lastProcessed) {
 		this.subQueryConnectable = subQueryConnectable;
 		this.lastProcessed = lastProcessed;
 	}

@@ -9,14 +9,14 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class TimeBasedWindowIterator implements Iterator<List<DataTuple>> {
 
-	private IWindowBatch w;
+	private IPeriodicWindowBatch w;
 	
 	int windowCursor;
 	int numberOfWindows;
 	int lastRet = -1;
 	long tsWindowBatchStart;
 	
-	public TimeBasedWindowIterator(IWindowBatch w) {
+	public TimeBasedWindowIterator(IPeriodicWindowBatch w) {
 		this.w = w;
 		this.windowCursor = 0;
 		tsWindowBatchStart = this.w.get(this.w.getStart()).getPayload().timestamp;

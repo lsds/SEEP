@@ -7,7 +7,7 @@ import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.seep.operator.compose.window.WindowAPI;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
@@ -62,7 +62,7 @@ public class Selection implements StatelessOperator, IStreamSQLOperator, IMicroO
 	}
 
 	@Override
-	public void processData(IWindowBatch window, WindowAPI api) {
+	public void processData(IWindowBatch window, IWindowAPI api) {
 		
 	}
 

@@ -4,18 +4,17 @@ import java.util.Iterator;
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
-public class WindowBatch implements IWindowBatch {
+public class PeriodicWindowBatch implements IPeriodicWindowBatch {
 
 	int start = -1;
 	int end = -1;
 	
-	SubQueryBuffer inputList;
+	List<DataTuple> inputList;
 	
 	IWindowDefinition windowDefinition;
 	
-	public WindowBatch(IWindowDefinition windowDefinition, SubQueryBuffer inputList, int start, int end) {
+	public PeriodicWindowBatch(IWindowDefinition windowDefinition, List<DataTuple> inputList, int start, int end) {
 		this.inputList = inputList;
 		this.windowDefinition = windowDefinition;
 		this.start = start;
@@ -40,7 +39,7 @@ public class WindowBatch implements IWindowBatch {
 
 	@Override
 	public List<DataTuple> getAllTuples() {
-		return this.inputList.toList();
+		return this.inputList;
 	}
 
 	@Override
@@ -66,5 +65,19 @@ public class WindowBatch implements IWindowBatch {
 		return this.windowDefinition;
 	}
 
+	@Override
+	public void setWindowDefinition(IWindowDefinition windowDefinition) {
+		this.windowDefinition = windowDefinition;
+	}
+
+	@Override
+	public void setStart(int start) {
+		this.start = start;
+	}
+
+	@Override
+	public void setEnd(int end) {
+		this.end = end;
+	}
 	
 }

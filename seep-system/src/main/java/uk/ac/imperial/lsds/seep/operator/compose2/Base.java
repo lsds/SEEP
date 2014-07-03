@@ -59,18 +59,18 @@ public class Base implements QueryComposer{
 		microOpConnectables1.add(mOp1);
 		microOpConnectables1.add(mOp2);
 		Map<Integer, IWindowDefinition> windowDefs = new HashMap<>();
-		windowDefs.put(1, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
+		windowDefs.put(11, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
 		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(microOpConnectables1, 1, srcFields, windowDefs);
 
 		Set<IMicroOperatorConnectable> microOpConnectables2 = new HashSet<>();
 		microOpConnectables2.add(mOp1);
 		microOpConnectables2.add(mOp2);		
 		windowDefs = new HashMap<>();
-		windowDefs.put(1, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
+		windowDefs.put(101, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(microOpConnectables2, 1, srcFields, windowDefs);
 
 		// Connect subqueries
-		sq1.connectTo(sq2, 1);
+		sq1.connectTo(sq2, 101);
 
 		Set<ISubQueryConnectable> subQueries = new HashSet<>();
 		subQueries.add(sq1);
@@ -79,7 +79,7 @@ public class Base implements QueryComposer{
 		Connectable multiOp = QueryBuilder.newMultiOperator(subQueries, 1, srcFields);
 
 		/** Connect operators **/
-		src.connectTo(multiOp, true, 0);
+		src.connectTo(multiOp, true, 11);
 		multiOp.connectTo(snk, true, 0);
 		
 		return QueryBuilder.build();

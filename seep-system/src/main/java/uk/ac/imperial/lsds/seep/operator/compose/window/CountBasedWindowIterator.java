@@ -9,12 +9,12 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class CountBasedWindowIterator implements Iterator<List<DataTuple>> {
 
-	private IWindowBatch w;
+	private IPeriodicWindowBatch w;
 	
 	int windowCursor;
 	int numberOfWindows;
 	
-	public CountBasedWindowIterator(IWindowBatch w) {
+	public CountBasedWindowIterator(IPeriodicWindowBatch w) {
 		this.w = w;
 		this.windowCursor = 0;
 		this.numberOfWindows = (int) Math.floor((1.0*(this.w.getEnd() - this.w.getStart() - this.w.getWindowDefinition().getSize() + 1))/this.w.getWindowDefinition().getSlide());

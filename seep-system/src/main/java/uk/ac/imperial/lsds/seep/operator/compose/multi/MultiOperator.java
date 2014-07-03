@@ -10,6 +10,8 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -18,12 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.RunnableFuture;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -91,10 +89,10 @@ public class MultiOperator implements StatelessOperator {
 	}
 	
 	
-	private Map<ISubQueryConnectable, DataTuple> lastStartedPointer = new HashMap<>();
+	private Map<ISubQueryConnectable, Integer> lastStartedPointer = new HashMap<>();
 	private Map<ISubQueryConnectable, Integer> lastFinishedOrderID = new HashMap<>();
 	
-	private SubQueryTaskCreationScheme creationScheme = new WindowBatchTaskCreationScheme();
+	private Map<ISubQueryConnectable, SubQueryTaskCreationScheme> creationSchemes = new HashMap<>();
 	
 	private Map<ISubQueryConnectable, List<SubQueryTask>> runningSubQueryTasks = new HashMap<>();
 	
@@ -105,15 +103,26 @@ public class MultiOperator implements StatelessOperator {
 			 * For each running task, check whether it has terminated
 			 */
 			Iterator<SubQueryTask> taskIter = runningSubQueryTasks.get(c).iterator();
+			/*
+			 * Collect all that have finished
+			 */
+			Map<Integer, SubQueryTask> finished = new HashMap<>();
 			while (taskIter.hasNext()) {
 				SubQueryTask task = taskIter.next();
-				/*
-				 * If computation is done
-				 */
-				if (task.isDone() && 
-						(lastFinishedOrderID.get(task.getSubQueryConnectable()) == task.getLogicalOrderID() - 1)) {
+				if (task.isDone())
+					finished.put(task.getLogicalOrderID(), task);
+			}
+			/*
+			 * Process all tasks that are finished and have consecutive logical order ids,
+			 * starting from the last known one
+			 */
+			List<Integer> lIds = new ArrayList<>(finished.keySet());
+			Collections.sort(lIds);
+			for (int lId : lIds) {
+				SubQueryTask task = finished.get(lId);
+				if (lastFinishedOrderID.get(task.getSubQueryConnectable()) == lId - 1) {
 					// Remove from running tasks
-					taskIter.remove();
+					runningSubQueryTasks.get(task.getSubQueryConnectable()).remove(task);
 					// Get result
 					try {
 						List<DataTuple> result = task.get();
@@ -126,8 +135,13 @@ public class MultiOperator implements StatelessOperator {
 					} catch (Exception e) {
 						// TODO: handle exception
 					}
-					
 				}
+				else
+					/*
+					 * We are missing the result of the task with the next logical order id,
+					 * so we cannot further process the finished tasks
+					 */
+					break;
 			}
 		}
 		
@@ -138,6 +152,7 @@ public class MultiOperator implements StatelessOperator {
 			/*
 			 * Create tasks if there is enough data for starting the computation 
 			 */
+			SubQueryTaskCreationScheme creationScheme = creationSchemes.get(c);
 			creationScheme.init(c, lastStartedPointer.get(c));
 			while (creationScheme.hasNext()) {
 				SubQueryTask task = creationScheme.next();
@@ -196,10 +211,13 @@ public class MultiOperator implements StatelessOperator {
 		}
 		
 		/*
-		 *  Init map for subquery tasks
+		 *  Initialisation per subquery 
 		 */
-		for (ISubQueryConnectable c : this.subQueries)
+		for (ISubQueryConnectable c : this.subQueries) {
 			runningSubQueryTasks.put(c, new LinkedList<SubQueryTask>());
+			creationSchemes.put(c , new WindowBatchTaskCreationScheme());
+		}
+		
 		
 	}
 

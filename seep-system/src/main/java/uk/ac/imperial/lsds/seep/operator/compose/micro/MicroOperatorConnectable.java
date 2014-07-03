@@ -16,11 +16,10 @@ public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 	private Map<Integer, IMicroOperatorConnectable> localDownstream;
 	private Map<Integer, IMicroOperatorConnectable> localUpstream;
 	
-	private MicroOperator sq;
+	private IMicroOperatorCode sq;
 
-	public MicroOperatorConnectable(MicroOperator sq) {
+	public MicroOperatorConnectable(IMicroOperatorCode sq) {
 		this.sq = sq;
-		sq.setParentMicroOperatorConnectable(this);
 	}
 
 	@Override
@@ -46,7 +45,7 @@ public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 	}
 
 	@Override
-	public MicroOperator getMicroOperator() {
+	public IMicroOperatorCode getMicroOperator() {
 		return this.sq;
 	}
 

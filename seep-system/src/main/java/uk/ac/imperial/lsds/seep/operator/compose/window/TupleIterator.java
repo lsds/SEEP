@@ -7,11 +7,11 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class TupleIterator implements Iterator<DataTuple> {
 
-	private IWindowBatch w;
+	private IPeriodicWindowBatch w;
 	
 	int cursor;
 	
-	public TupleIterator(IWindowBatch w) {
+	public TupleIterator(IPeriodicWindowBatch w) {
 		this.w = w;
 		this.cursor = this.w.getStart();
 	}
