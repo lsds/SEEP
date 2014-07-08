@@ -2,7 +2,6 @@ package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 

@@ -221,8 +221,6 @@ public class MultiOperator implements StatelessOperator {
 		
 	}
 
-	/** Implementation of ComposedOperator interface **/
-
 	public int getMultiOpId(){
 		return id;
 	}

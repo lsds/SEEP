@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,11 +32,14 @@ public class SubQuery {
 		this.inputWindowDefinitions = inputWindowDefinitions;
 		this.microOperators = microOperators;
 		
-		for (IMicroOperatorConnectable microOperatorConnectable : this.microOperators)
+		this.mostUpstreamMicroOperators = new HashSet<>();
+		
+		for (IMicroOperatorConnectable microOperatorConnectable : this.microOperators) {
 			if (microOperatorConnectable.isMostLocalUpstream())
 				mostUpstreamMicroOperators.add(microOperatorConnectable);
-			else if (microOperatorConnectable.isMostLocalDownstream())
+			if (microOperatorConnectable.isMostLocalDownstream())
 				mostDownstreamMicroOperator = microOperatorConnectable;
+		}
 	}
 	
 	public int getId() {
@@ -84,7 +88,7 @@ public class SubQuery {
 		return this.mostUpstreamMicroOperators;
 	}
 	
-	public IMicroOperatorConnectable getMostDownstreamMicroOperators() {
+	public IMicroOperatorConnectable getMostDownstreamMicroOperator() {
 		return this.mostDownstreamMicroOperator;
 	}
 	

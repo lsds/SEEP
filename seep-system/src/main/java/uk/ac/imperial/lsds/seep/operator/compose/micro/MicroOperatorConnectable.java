@@ -2,10 +2,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryConnectable;
 
 public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 
@@ -16,9 +13,9 @@ public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 	private Map<Integer, IMicroOperatorConnectable> localDownstream;
 	private Map<Integer, IMicroOperatorConnectable> localUpstream;
 	
-	private IMicroOperatorCode sq;
+	private MicroOperator sq;
 
-	public MicroOperatorConnectable(IMicroOperatorCode sq) {
+	public MicroOperatorConnectable(MicroOperator sq) {
 		this.sq = sq;
 	}
 
@@ -45,7 +42,7 @@ public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 	}
 
 	@Override
-	public IMicroOperatorCode getMicroOperator() {
+	public MicroOperator getMicroOperator() {
 		return this.sq;
 	}
 
