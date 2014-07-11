@@ -68,8 +68,10 @@ public class SubQueryTask implements RunnableFuture<List<DataTuple>>, IWindowAPI
 		
 		/*
 		 * Block if not yet ready
+		 * (not threadsafe)
 		 */
-		this.finalWindowBatchResult.wait();
+		while (!isDone())
+			this.finalWindowBatchResult.wait();
 		
 		return this.finalWindowBatchResult.getAllTuples();
 	}
@@ -79,8 +81,10 @@ public class SubQueryTask implements RunnableFuture<List<DataTuple>>, IWindowAPI
 			throws InterruptedException, ExecutionException, TimeoutException {
 		/*
 		 * Block if not yet ready
+		 * (not threadsafe)
 		 */
-		this.finalWindowBatchResult.wait(unit.toMillis(timeout));
+		while (!isDone())
+			this.finalWindowBatchResult.wait(unit.toMillis(timeout));
 		
 		return this.finalWindowBatchResult.getAllTuples();
 	}

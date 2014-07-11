@@ -2,8 +2,10 @@ package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferHandler;
 
 public class SubQueryConnectable implements ISubQueryConnectable {
 
@@ -16,6 +18,10 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 
 	private SubQuery sq;
 
+	private  Set<SubQueryBufferHandler> downstreamBuffers;
+	private  Set<SubQueryBufferHandler> upstreamBuffers;
+	
+	
 	public SubQueryConnectable(SubQuery sq) {
 		this.sq = sq;
 		this.localDownstream = new HashMap<>();
@@ -74,6 +80,23 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	public void connectTo(ISubQueryConnectable so, int streamID) {
 		this.addLocalDownstream(so, streamID);
 		so.addLocalUpstream(this, streamID);
+		
+		/*
+		 * Make sure that only one buffer is created for each downstream 
+		 * sub query, even if multiple logical streams are defined
+		 */
+		if (!this.localDownstream.values().contains(so))
+			this.downstreamBuffers.add(new SubQueryBufferHandler(this, so));
+	}
+
+	@Override
+	public Set<SubQueryBufferHandler> getLocalDownstreamBufferHandlers() {
+		return this.downstreamBuffers;
+	}
+
+	@Override
+	public Set<SubQueryBufferHandler> getLocalUpstreamBufferHandlers() {
+		return this.upstreamBuffers;
 	}
 
 }

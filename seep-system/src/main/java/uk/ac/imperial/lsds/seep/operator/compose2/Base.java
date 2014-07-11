@@ -67,10 +67,12 @@ public class Base implements QueryComposer{
 		microOpConnectables2.add(mOp2);		
 		windowDefs = new HashMap<>();
 		windowDefs.put(101, new WindowDefinition(WindowType.ROW_BASED, 100, 5));
+		windowDefs.put(102, new WindowDefinition(WindowType.ROW_BASED, 10, 2));
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(microOpConnectables2, 1, srcFields, windowDefs);
 
 		// Connect subqueries
 		sq1.connectTo(sq2, 101);
+		sq1.connectTo(sq2, 102);
 
 		Set<ISubQueryConnectable> subQueries = new HashSet<>();
 		subQueries.add(sq1);

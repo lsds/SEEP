@@ -24,12 +24,12 @@ public interface IMicroOperatorConnectable extends Serializable {
 	
 	public boolean isMostLocalDownstream();
 	public boolean isMostLocalUpstream();
-	public void connectTo(int localStreamId, IMicroOperatorConnectable so);
+	public void connectTo(int streamID, IMicroOperatorConnectable so);
 
-	public Map<Integer, IMicroOperatorConnectable> getLocalDownstream();
-	public Map<Integer, IMicroOperatorConnectable> getLocalUpstream();
+	public Map<Integer,IMicroOperatorConnectable> getLocalDownstream();
+	public Map<Integer,IMicroOperatorConnectable> getLocalUpstream();
 
-	public void addLocalUpstream(int localStreamId, IMicroOperatorConnectable so);
-	public void addLocalDownstream(int localStreamId, IMicroOperatorConnectable so);
+	public void addLocalUpstream(int streamID, IMicroOperatorConnectable so);
+	public void addLocalDownstream(int streamID, IMicroOperatorConnectable so);
 	
 }
