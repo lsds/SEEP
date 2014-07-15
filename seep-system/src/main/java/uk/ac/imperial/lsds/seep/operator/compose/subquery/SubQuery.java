@@ -16,11 +16,11 @@ public class SubQuery {
 	private Set<IMicroOperatorConnectable> mostUpstreamMicroOperators;
 	private IMicroOperatorConnectable mostDownstreamMicroOperator;
 
-	private Map<Integer, IWindowDefinition>  inputWindowDefinitions;
+	private Map<Integer, IWindowDefinition>  windowDefinitions;
 	
 	private SubQuery(Set<IMicroOperatorConnectable> microOperators, int id, Map<Integer, IWindowDefinition>  inputWindowDefinitions) {
 		this.id = id;
-		this.inputWindowDefinitions = inputWindowDefinitions;
+		this.windowDefinitions = inputWindowDefinitions;
 		this.microOperators = microOperators;
 		
 		this.mostUpstreamMicroOperators = new HashSet<>();
@@ -58,6 +58,10 @@ public class SubQuery {
 	
 	public IMicroOperatorConnectable getMostDownstreamMicroOperator() {
 		return this.mostDownstreamMicroOperator;
+	}
+
+	public Map<Integer, IWindowDefinition> getWindowDefinitions() {
+		return windowDefinitions;
 	}
 	
 }

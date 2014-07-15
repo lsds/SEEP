@@ -4,37 +4,26 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTask;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
 
-public class SubQueryBufferHandler implements IUpstreamSubQueryBufferHandler {
+public class DownstreamSubQueryBufferHandler implements ISubQueryBufferHandler {
 
 	private SubQueryBuffer buffer;
-	
-	private int lastStartedPointer = 0;
-	private int lastFinishedOrderID = 0;
-	private SubQueryTaskCreationScheme creationScheme;
-	private List<SubQueryTask> runningSubQueryTasks = new LinkedList<SubQueryTask>();
 
-	private ISubQueryConnectable upstreamSubQuery;
-	private ISubQueryConnectable downstreamSubQuery;
+	private int lastFinishedOrderID = 0;
 	
-	public SubQueryBufferHandler(ISubQueryConnectable upstreamSubQuery, ISubQueryConnectable downstreamSubQuery) {
+	private ISubQueryConnectable upstreamSubQuery;
+	
+	public DownstreamSubQueryBufferHandler(ISubQueryConnectable upstreamSubQuery) {
 		this.upstreamSubQuery = upstreamSubQuery;
-		this.downstreamSubQuery = downstreamSubQuery;
 		this.buffer = new SubQueryBuffer(SubQueryBuffer.SUB_QUERY_BUFFER_CAPACITY);
-		//TODO: select creation scheme based on query semantics
-		this.creationScheme = new WindowBatchTaskCreationScheme();
 	}
 
-	
 	@Override
 	public void run() {
 		
@@ -74,21 +63,14 @@ public class SubQueryBufferHandler implements IUpstreamSubQueryBufferHandler {
 					if (this.lastFinishedOrderID == lId - 1) {
 						// Remove from running tasks
 						upHandler.getRunningSubQueryTasks().remove(task);
-						// Get result
 						try {
-							List<DataTuple> result = task.get();
-							// Update the respective queues with the result
-							for (ISubQueryBufferHandler handler : task.getSubQueryConnectable().getLocalDownstreamBufferHandlers()) {
-								List<DataTuple> notAdded = handler.getBuffer().add(result);
-								while (!notAdded.isEmpty()) {
-									try {
-										handler.getBuffer().wait();
-										notAdded = handler.getBuffer().add(notAdded);
-									} catch (InterruptedException e) {
-										e.printStackTrace();
-									}
-								}
+							/*
+							 *  Send the result using the API of the parent MultiOperator
+							 */
+							for (DataTuple tuple : task.get()) {
+								this.upstreamSubQuery.getParentMultiOperator().getAPI().send(tuple);
 							}
+							
 							// Record progress by updating the last finished pointer
 							this.lastFinishedOrderID = task.getLogicalOrderID();
 						} catch (Exception e) {
@@ -104,31 +86,8 @@ public class SubQueryBufferHandler implements IUpstreamSubQueryBufferHandler {
 				}
 			}
 			
-			/*
-			 * Check whether a task should be instantiated
-			 */
-			this.creationScheme.init(this.buffer, lastStartedPointer, this.downstreamSubQuery);
-			while (creationScheme.hasNext()) {
-				SubQueryTask task = creationScheme.next();
-				/*
-				 * Submit the tasks
-				 */
-				this.upstreamSubQuery.getParentMultiOperator().getExecutorService().execute(task);
-				runningSubQueryTasks.add(task);
-				lastStartedPointer = task.getLastProcessed();
-			}
-
-			
 		}
 		
-	}
-
-	/* (non-Javadoc)
-	 * @see uk.ac.imperial.lsds.seep.operator.compose.multi.IBufferHandler#getRunningSubQueryTasks()
-	 */
-	@Override
-	public List<SubQueryTask> getRunningSubQueryTasks() {
-		return runningSubQueryTasks;
 	}
 
 	/* (non-Javadoc)
@@ -138,5 +97,6 @@ public class SubQueryBufferHandler implements IUpstreamSubQueryBufferHandler {
 	public SubQueryBuffer getBuffer() {
 		return buffer;
 	}
+
 
 }

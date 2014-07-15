@@ -13,12 +13,12 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 
-import uk.ac.imperial.lsds.seep.GLOBALS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
@@ -26,7 +26,9 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 
 public class MultiOperator implements StatelessOperator {
 
-	private static final int SUB_QUERY_TRIGGER_DELAY = Integer.valueOf(GLOBALS.valueFor("subQueryTriggerDelay"));
+	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
+	
+//	private static final int SUB_QUERY_TRIGGER_DELAY = Integer.valueOf(GLOBALS.valueFor("subQueryTriggerDelay"));
 //	private static final int MICRO_OP_BATCH_SIZE = Integer.valueOf(GLOBALS.valueFor("microOpBatchSize"));
 	
 	private static final long serialVersionUID = 1L;
@@ -36,15 +38,11 @@ public class MultiOperator implements StatelessOperator {
 	private Set<ISubQueryConnectable> subQueries;
 	private API api;
 	private Set<ISubQueryConnectable> mostUpstreamSubQueries;
-	private Set<ISubQueryConnectable> mostDownStreamSubQueries;
+	private Set<ISubQueryConnectable> mostDownstreamSubQueries;
 	
-	private BlockingQueue<DataTuple> incomingTuples = new LinkedBlockingQueue<>(SubQueryBufferHandler.SUB_QUERY_QUEUE_CAPACITY);
-
 	private ExecutorService executorService;
 	
 //	private Map<ISubQueryConnectable, Integer> numberThreadsPerSubQuery = new HashMap<>();
-	
-	private int subQueryTriggerCounter = 0;
  	
 	private MultiOperator(Set<ISubQueryConnectable> subQueries, int multiOpId){
 		this.id = multiOpId;
@@ -66,34 +64,22 @@ public class MultiOperator implements StatelessOperator {
 		this.api = api;
 		
 		/*
-		 * Try to push to incoming queue from which the data items will
-		 * be forwarded to the input buffers of the most upstream queries
+		 * Try to push to all input buffers of the most upstream sub queries
 		 */
-		try {
-			this.incomingTuples.put(data);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
+			for (ISubQueryBufferHandler handler : q.getLocalUpstreamBufferHandlers()) {
+				// this code is accessed by a single thread only
+//				synchronized (handler.getBuffer()) {
+				while (!handler.getBuffer().add(data)) {
+					try {
+						handler.getBuffer().wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
 		}
 		
-//		/*
-//		 * If there is more than one most upstream operator, default 
-//		 * behaviour is that EVERY tuple is pushed to ALL input
-//		 * queues of these most upstream operators
-//		 */
-//		for (ISubQueryConnectable c : mostUpstreamSubQueries) {
-//			c.getSubQuery().pushDataToAllStreams(data);
-//		}
-//		
-//		/*
-//		 * Determine whether the sub query queues should be checked in order
-//		 * to instantiate new sub query tasks
-//		 */
-//		if (this.subQueryTriggerCounter >= SUB_QUERY_TRIGGER_DELAY) {
-//			checkForSubQueryTaskInstantiationAndTermination();
-//			this.subQueryTriggerCounter = 0;
-//		}
-//		
-//		this.subQueryTriggerCounter++;
 	}
 	
 	@Override
@@ -116,61 +102,56 @@ public class MultiOperator implements StatelessOperator {
 
 		/*
 		 * Identify most upstream and most downstream local operators
+		 * and create input/output buffers for them
 		 */
 		this.mostUpstreamSubQueries = new HashSet<>();
-		this.mostDownStreamSubQueries = new HashSet<>();
+		this.mostDownstreamSubQueries = new HashSet<>();
 		for (ISubQueryConnectable connectable : subQueries){
-			if (connectable.isMostLocalUpstream())
+			if (connectable.isMostLocalUpstream()) {
 				this.mostUpstreamSubQueries.add(connectable);
-			if (connectable.isMostLocalDownstream())
-				this.mostDownStreamSubQueries.add(connectable);
+				
+				UpstreamSubQueryBufferHandler upstreamHandler = new UpstreamSubQueryBufferHandler(connectable);
+				connectable.addLocalUpstreamBufferHandler(upstreamHandler);
+			}
+			if (connectable.isMostLocalDownstream()) {
+				this.mostDownstreamSubQueries.add(connectable);
+				
+				DownstreamSubQueryBufferHandler downstreamHandler = new DownstreamSubQueryBufferHandler(connectable);
+				connectable.addLocalDownstreamBufferHandler(downstreamHandler);
+			}
 		}
 		
-//		/*
-//		 * Create graph of buffers and initialise buffer handlers.
-//		 * Note that we create one buffer per pair of connected 
-//		 * sub-queries. However, there may be multiple logical streams
-//		 * defined between these subqueries, which will lead to 
-//		 * different window batch definitions over the same buffer
-//		 */
-//		Set<Runnable> handlers = new HashSet<>();
-//		/*
-//		 *  for each sub query 
-//		 */
-//		for (ISubQueryConnectable c : this.subQueries) {
-//			/*
-//			 *  map that holds buffer for downstream query to avoid creating 
-//			 *  multiple buffers in case of multiple logical streams between 
-//			 *  the subqueries
-//			 */
-//			Map<ISubQueryConnectable, SubQueryBuffer> tmpDownstreamBuffers = new HashMap<>();
-//			for (Integer downStreamId : c.getLocalDownstream().keySet()) {
-//				ISubQueryConnectable down = c.getLocalDownstream().get(downStreamId);
-//				// create buffer if not yet done
-//				if (!tmpDownstreamBuffers.containsKey(down)) {
-//					SubQueryBuffer q = new SubQueryBuffer(c, down, SUB_QUERY_QUEUE_CAPACITY);
-//					
-//					tmpDownstreamBuffers.put(down, q);
-//					handlers.add(new SubQueryBufferHandler(this, q));
-//				}
-//				SubQueryBuffer q =  tmpDownstreamBuffers.get(down);
-//				// register the buffer as output for the upstream
-//				c.getSubQuery().registerOutputQueue(downStreamId, q);
-//				// register this buffer as input of downstream 
-//				down.getSubQuery().registerInputQueue(downStreamId, q);
-//			}
-//		}
-		
 		/*
-		 * Start buffer handlers
+		 * Start handlers for buffers between subqueries
 		 */
 		for (ISubQueryConnectable c : this.subQueries) {
 			for (Runnable r : c.getLocalDownstreamBufferHandlers())
 				 (new Thread(r)).start();
 		}
+
+		/*
+		 * Start handlers for input buffers of most upstream sub queries
+		 */
+		for (ISubQueryConnectable c : this.mostUpstreamSubQueries) {
+			for (Runnable r : c.getLocalUpstreamBufferHandlers())
+				 (new Thread(r)).start();
+		}
+		
+		/*
+		 * Start handlers for output buffers of most downstream sub queries
+		 */
+		for (ISubQueryConnectable c : this.mostDownstreamSubQueries) {
+			for (Runnable r : c.getLocalDownstreamBufferHandlers())
+				 (new Thread(r)).start();
+		}
+
 		
 	}
 
+	public API getAPI() {
+		return this.api;
+	}
+	
 	public int getMultiOpId(){
 		return id;
 	}

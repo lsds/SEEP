@@ -1,18 +1,23 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
+import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
 
 public class WindowBatchTaskCreationScheme implements
 		SubQueryTaskCreationScheme {
 
 	private static final int SUB_QUERY_WINDOW_BATCH_COUNT = Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"));
 
-	private ISubQueryConnectable subQueryConnectable;
-	
 	private int lastProcessed;
 	
 	private SubQueryBuffer input;
+	
+	private Iterator<SubQueryTask> iter;
 	
 	public WindowBatchTaskCreationScheme(){
 		
@@ -20,14 +25,12 @@ public class WindowBatchTaskCreationScheme implements
 	
 	@Override
 	public boolean hasNext() {
-		// TODO Auto-generated method stub
-		return false;
+		return iter.hasNext();
 	}
 
 	@Override
 	public SubQueryTask next() {
-		// TODO Auto-generated method stub
-		return null;
+		return iter.next();
 	}
 
 	@Override
@@ -35,10 +38,12 @@ public class WindowBatchTaskCreationScheme implements
 		throw new IllegalArgumentException("");
 	}
 	@Override
-	public void init(ISubQueryConnectable subQueryConnectable,
-			int lastProcessed) {
-		this.subQueryConnectable = subQueryConnectable;
-		this.lastProcessed = lastProcessed;
+	public void init(SubQueryBuffer buffer, int lastProcessed, ISubQueryConnectable subQueryConnectable) {
+////		WindowDefinition winDef = subQueryConnectable.getSubQuery().getWindowDefinitions()
+////		
+////		this.subQueryConnectable = subQueryConnectable;
+//		this.lastProcessed = lastProcessed;
+		
 	}
 
 }

@@ -1,11 +1,15 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.security.InvalidParameterException;
+import java.util.Iterator;
 import java.util.List;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class SubQueryBuffer {
+
+	public static final int SUB_QUERY_BUFFER_CAPACITY = Integer.valueOf(GLOBALS.valueFor("subQueryBufferCapacity"));
 
 	private DataTuple [] elements;
 	
@@ -19,21 +23,15 @@ public class SubQueryBuffer {
 		this(1024);
 	}
 
-	public void pushData(List<DataTuple> tuples, int streamID) {
-		for (DataTuple tuple : tuples)
-			pushData(tuple, streamID);
+	public List<DataTuple> add(List<DataTuple> tuples) {
+		Iterator<DataTuple> iter = tuples.iterator();
+		while (iter.hasNext()) {
+			if (add(iter.next()))
+				iter.remove();
+		}
+		return tuples;
 	}
 
-	public void pushData(DataTuple tuple, int streamID) {
-		this.inputQueues.get(streamID).add(tuple);
-	}
-	
-	public void pushDataToAllStreams(DataTuple data) {
-		for (Integer streamID : this.inputQueues.keySet())
-			pushData(data, streamID);
-	};
-
-	
 	public SubQueryBuffer(int size) {
 		if (size <= 0)
 			throw new IllegalArgumentException
@@ -56,22 +54,22 @@ public class SubQueryBuffer {
 		return nEnd;
 	}
 
-//	private int size () {
-//		int size = 0;
-//		if (end  < start) 
-//			size = elements.length - start + end;
-//		else if (end == start) 
-//			size = (full ? elements.length : 0);
-//		else 
-//			size = end - start;
-//		
-//		return size;
-//	}
+	public int size () {
+		int size = 0;
+		if (end  < start) 
+			size = elements.length - start + end;
+		else if (end == start) 
+			size = (full ? elements.length : 0);
+		else 
+			size = end - start;
+		
+		return size;
+	}
 	
 	private boolean insertElement(DataTuple element) {
-		end = normIndex(end++);
-
-		elements[end] = element;
+		elements[normIndex(end++)] = element;
+		
+		end = normIndex(end);
 		
 		if (end == start)
 			full = true;
@@ -79,9 +77,9 @@ public class SubQueryBuffer {
 		return true;			
 	}
 	
-	public boolean add(DataTuple element) throws InterruptedException {
-		while (full)
-			wait();
+	public boolean add(DataTuple element) {
+		if (full)
+			return false;
 		
 		return insertElement(element);
 	}
@@ -92,13 +90,13 @@ public class SubQueryBuffer {
 			throw new InvalidParameterException();
 		
 		elements[nI] = null;
-		while(elements[normIndex(start)] == null)
+		while((elements[normIndex(start)] == null) && (normIndex(start) != end))
 			start++;
 		
 		start = normIndex(start);
 		if (end != start)
 			full = false;
-		notify();
+		this.notifyAll();
 	}
 
 	public synchronized void freeElements(int i, int numberOfElements) {
@@ -135,6 +133,14 @@ public class SubQueryBuffer {
 		if (!validIndex(nI))
 			throw new InvalidParameterException();
 		return elements[nI];
+	}
+	
+	public int getStartIndex() {
+		return this.start;
+	}
+	
+	public int getEndIndex() {
+		return this.end;
 	}
 
 }

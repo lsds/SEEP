@@ -14,8 +14,9 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryBufferHandler;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.IUpstreamSubQueryBufferHandler;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferHandler;
 
 public interface ISubQueryConnectable extends Serializable {
 
@@ -31,8 +32,11 @@ public interface ISubQueryConnectable extends Serializable {
 	public Map<Integer, ISubQueryConnectable> getLocalDownstream();
 	public Map<Integer, ISubQueryConnectable> getLocalUpstream();
 	
-	public Set<SubQueryBufferHandler> getLocalDownstreamBufferHandlers();
-	public Set<SubQueryBufferHandler> getLocalUpstreamBufferHandlers();
+	public Set<ISubQueryBufferHandler> getLocalDownstreamBufferHandlers();
+	public Set<IUpstreamSubQueryBufferHandler> getLocalUpstreamBufferHandlers();
+	
+	public void addLocalUpstreamBufferHandler(IUpstreamSubQueryBufferHandler handler);
+	public void addLocalDownstreamBufferHandler(ISubQueryBufferHandler handler);
 
 	public void addLocalUpstream(ISubQueryConnectable so, int streamID);
 	public void addLocalDownstream(ISubQueryConnectable so, int streamID);
