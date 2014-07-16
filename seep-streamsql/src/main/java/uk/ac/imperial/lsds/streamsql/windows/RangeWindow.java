@@ -5,7 +5,7 @@ import java.util.Queue;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.streamsql.expressions.Constants;
-import uk.ac.imperial.lsds.streamsql.operator.WindowOperator;
+import uk.ac.imperial.lsds.streamsql.op.WindowOperator;
 
 public class RangeWindow extends Window {
 

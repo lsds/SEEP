@@ -8,7 +8,7 @@ import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
-import uk.ac.imperial.lsds.streamsql.operator.WindowOperator;
+import uk.ac.imperial.lsds.streamsql.op.WindowOperator;
 
 public abstract class Window implements IWindow {
 
