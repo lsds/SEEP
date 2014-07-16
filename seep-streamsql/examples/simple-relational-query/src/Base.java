@@ -8,19 +8,23 @@
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
-
-package uk.ac.imperial.lsds.seep.operator.compose2;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import operators.Processor;
+import operators.Sink;
+import operators.Source;
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
 import uk.ac.imperial.lsds.seep.api.QueryComposer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
+import uk.ac.imperial.lsds.seep.operator.compose.LocalConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.MicroOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.StatelessMicroOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
@@ -28,7 +32,6 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowType;
 
 public class Base implements QueryComposer{
-
 	public QueryPlan compose() {
 		
 		// Declare Source

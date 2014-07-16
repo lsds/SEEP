@@ -1,18 +1,23 @@
-package uk.ac.imperial.lsds.streamsql.operator;
+package uk.ac.imperial.lsds.streamsql.op.stateless;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.streamsql.conversion.StringConversion;
 import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.Constants;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Projection implements StatelessOperator, IStreamSQLOperator {
+public class Projection implements StatelessOperator, IStreamSQLOperator, IMicroOperatorCode {
 
 	/*
 	 * Expressions for the extended projection
@@ -38,29 +43,25 @@ public class Projection implements StatelessOperator, IStreamSQLOperator {
 	public void setUp() {
 	}
 
-
-	@Override
-	public void processData(DataTuple data, API api) {
+	private DataTuple process(DataTuple data) {
 		
 		List<Object> projectedValues = new ArrayList<>();
 
-		/*
-		 * Add timestamp attribute
-		 */
-		projectedValues.add(data.getValue(Constants.TIMESTAMP));
-		
 		/*
 		 * Add all the content as defined by the projection expressions
 		 */
 		for (IValueExpression expression : expressions) 
 			projectedValues.add(expression.eval(data));
-
 		
 		/*
-		 * Send the projected tuple
+		 * Return the projected tuple
 		 */
-		DataTuple output = data.setValues(projectedValues);
-		api.send(output);
+		return data.setValues(projectedValues);
+	}
+	
+	@Override
+	public void processData(DataTuple data, API api) {
+		api.send(process(data));
 	}
 
 
@@ -83,6 +84,20 @@ public class Projection implements StatelessOperator, IStreamSQLOperator {
 	@Override
 	public void accept(OperatorVisitor ov) {
 		ov.visit(this);		
+	}
+
+	@Override
+	public void processData(Map<Integer, IWindowBatch> windowBatches,
+			IWindowAPI api) {
+		for (Integer streamID : windowBatches.keySet()) {
+			Iterator<List<DataTuple>> iter = windowBatches.get(streamID).windowIterator();
+			while (iter.hasNext()) {
+				List<DataTuple> windowResult = new ArrayList<>();
+				for (DataTuple tuple : iter.next()) 
+					windowResult.add(process(tuple));
+				api.outputWindowResult(streamID, windowResult);
+			}
+		}
 	}
 
 }

@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.operator;
+package uk.ac.imperial.lsds.streamsql.op;
 
 import java.util.Queue;
 

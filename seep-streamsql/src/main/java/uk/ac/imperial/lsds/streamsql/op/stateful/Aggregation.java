@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.operator;
+package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +13,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.state.State;
+import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
+import uk.ac.imperial.lsds.streamsql.op.WindowOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.windows.Window;
 

@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.operator;
+package uk.ac.imperial.lsds.streamsql;
 
 import uk.ac.imperial.lsds.streamsql.visitors.SeepSQLVisitor;
 import net.sf.jsqlparser.JSQLParserException;
@@ -6,7 +6,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 
 
-public class App {
+public class ParserRunner {
     
 	public static void main(String[] args) {
 		System.out.println( "Test runner..." );
