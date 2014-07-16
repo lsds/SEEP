@@ -12,6 +12,7 @@ import java.util.concurrent.TimeoutException;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IStaticWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
@@ -19,30 +20,30 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.StaticWindowBatch;
 
 public class SubQueryTask implements RunnableFuture<List<DataTuple>>, IWindowAPI {
 	
-	private int lastProcessed;
+	private Map<SubQueryBuffer, Integer> freeUpToIndices;
 	
 	private ISubQueryConnectable subQueryConnectable;
 	
-	private int logicalOrderID;
+	private long logicalOrderID;
 
 	private Map<Integer, IWindowBatch> windowBatches;
 	
 	private boolean cancelled = false;
 	
-	public SubQueryTask(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, int lastProcessed) {
+	public SubQueryTask(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, long logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
 		this.subQueryConnectable = subQueryConnectable;
 		this.logicalOrderID = logicalOrderID;
-		this.lastProcessed = lastProcessed;
 		this.windowBatches = windowBatches;
 	}
 	
-	public int getLogicalOrderID() {
+	public long getLogicalOrderID() {
 		return this.logicalOrderID;
 	}
 	
 	
-	public int getLastProcessed() {
-		return this.lastProcessed;
+	public void freeIndicesInBuffers() {
+		for (SubQueryBuffer b : this.freeUpToIndices.keySet())
+			b.freeUpToIndex(b.normIndex(this.freeUpToIndices.get(b)));
 	}
 	
 	public ISubQueryConnectable getSubQueryConnectable() {

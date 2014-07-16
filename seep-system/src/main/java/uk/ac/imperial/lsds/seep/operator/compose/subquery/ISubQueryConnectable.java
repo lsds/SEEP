@@ -12,11 +12,9 @@ package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.io.Serializable;
 import java.util.Map;
-import java.util.Set;
 
-import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryBufferHandler;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.IUpstreamSubQueryBufferHandler;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
 public interface ISubQueryConnectable extends Serializable {
 
@@ -31,14 +29,14 @@ public interface ISubQueryConnectable extends Serializable {
 
 	public Map<Integer, ISubQueryConnectable> getLocalDownstream();
 	public Map<Integer, ISubQueryConnectable> getLocalUpstream();
-	
-	public Set<ISubQueryBufferHandler> getLocalDownstreamBufferHandlers();
-	public Set<IUpstreamSubQueryBufferHandler> getLocalUpstreamBufferHandlers();
-	
-	public void addLocalUpstreamBufferHandler(IUpstreamSubQueryBufferHandler handler);
-	public void addLocalDownstreamBufferHandler(ISubQueryBufferHandler handler);
+
+	public Map<Integer, SubQueryBuffer> getLocalDownstreamBuffers();
+	public Map<Integer, SubQueryBuffer> getLocalUpstreamBuffers();
 
 	public void addLocalUpstream(ISubQueryConnectable so, int streamID);
 	public void addLocalDownstream(ISubQueryConnectable so, int streamID);
-	
+
+	public void registerLocalUpstreamBuffer(SubQueryBuffer so, int streamID);
+	public void registerLocalDownstreamBuffer(SubQueryBuffer so, int streamID);
+
 }

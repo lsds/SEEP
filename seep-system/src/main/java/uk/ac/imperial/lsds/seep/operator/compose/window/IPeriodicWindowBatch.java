@@ -7,8 +7,6 @@ public interface IPeriodicWindowBatch extends IWindowBatch {
 	 */
 	public int getStart();
 	public int getEnd();
-	public void setStart(int start);
-	public void setEnd(int end);
 
 	/*
 	 * Getter and setter method for the definition of the window

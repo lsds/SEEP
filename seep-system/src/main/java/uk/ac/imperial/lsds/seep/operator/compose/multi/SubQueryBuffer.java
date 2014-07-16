@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public class SubQueryBuffer {
 	private boolean full = false;
 
 	public SubQueryBuffer () {
-		this(1024);
+		this(SUB_QUERY_BUFFER_CAPACITY);
 	}
 
 	public List<DataTuple> add(List<DataTuple> tuples) {
@@ -41,17 +42,6 @@ public class SubQueryBuffer {
 	
 	public int normIndex(int i) {
 		return (i%elements.length);
-	}
-
-	public int normEndOfRange(int start, int end) {
-		if (start >= end)
-			return end;
-
-		int nEnd = end%elements.length;
-		while (nEnd < start)
-			nEnd += elements.length;
-		
-		return nEnd;
 	}
 
 	public int size () {
@@ -84,7 +74,7 @@ public class SubQueryBuffer {
 		return insertElement(element);
 	}
 
-	public void freeElement(int i) {
+	public void freeIndex(int i) {
 		int nI = normIndex(i); 
 		if (!validIndex(nI))
 			throw new InvalidParameterException();
@@ -99,9 +89,10 @@ public class SubQueryBuffer {
 		this.notifyAll();
 	}
 
-	public synchronized void freeElements(int i, int numberOfElements) {
-		for (int j = 0; j < numberOfElements; j++) 
-			freeElement(i+j);
+	public void freeUpToIndex(int i) {
+		int nI = normIndex(i); 
+		for (int j = start; normIndex(j) < nI; j++) 
+			freeIndex(j);
 	}
 
 	private boolean validIndex(int i) {
@@ -143,4 +134,15 @@ public class SubQueryBuffer {
 		return this.end;
 	}
 
+	public int capacity() {
+		return this.elements.length;
+	}
+
+	public List<DataTuple> getAsList() {
+		List<DataTuple> result = new ArrayList<>();
+		for (int i = start; normIndex(i) < end; i++)
+			result.add(this.get(i));
+		return result;
+	}
+	
 }

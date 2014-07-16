@@ -21,8 +21,10 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
+import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
 
 public class MultiOperator implements StatelessOperator {
 
@@ -40,6 +42,8 @@ public class MultiOperator implements StatelessOperator {
 	private Set<ISubQueryConnectable> mostUpstreamSubQueries;
 	private Set<ISubQueryConnectable> mostDownstreamSubQueries;
 	
+	private Connectable parentConnectable; 
+	
 	private ExecutorService executorService;
 	
 //	private Map<ISubQueryConnectable, Integer> numberThreadsPerSubQuery = new HashMap<>();
@@ -49,6 +53,10 @@ public class MultiOperator implements StatelessOperator {
 		this.subQueries = subQueries;
 		for (ISubQueryConnectable c : this.subQueries)
 			c.setParentMultiOperator(this);
+	}
+	
+	public void setParentConnectable(Connectable parentConnectable) {
+		this.parentConnectable = parentConnectable;
 	}
 	
 	/**
@@ -67,12 +75,12 @@ public class MultiOperator implements StatelessOperator {
 		 * Try to push to all input buffers of the most upstream sub queries
 		 */
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
-			for (ISubQueryBufferHandler handler : q.getLocalUpstreamBufferHandlers()) {
+			for (SubQueryBuffer b : q.getLocalUpstreamBuffers().values()) {
 				// this code is accessed by a single thread only
 //				synchronized (handler.getBuffer()) {
-				while (!handler.getBuffer().add(data)) {
+				while (!b.add(data)) {
 					try {
-						handler.getBuffer().wait();
+						b.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -109,42 +117,37 @@ public class MultiOperator implements StatelessOperator {
 		for (ISubQueryConnectable connectable : subQueries){
 			if (connectable.isMostLocalUpstream()) {
 				this.mostUpstreamSubQueries.add(connectable);
-				
-				UpstreamSubQueryBufferHandler upstreamHandler = new UpstreamSubQueryBufferHandler(connectable);
-				connectable.addLocalUpstreamBufferHandler(upstreamHandler);
+				SubQueryBuffer b = new SubQueryBuffer();
+				for (Integer streamID : connectable.getSubQuery().getWindowDefinitions().keySet())
+					connectable.registerLocalUpstreamBuffer(b, streamID);
 			}
 			if (connectable.isMostLocalDownstream()) {
 				this.mostDownstreamSubQueries.add(connectable);
 				
-				DownstreamSubQueryBufferHandler downstreamHandler = new DownstreamSubQueryBufferHandler(connectable);
-				connectable.addLocalDownstreamBufferHandler(downstreamHandler);
+				SubQueryBuffer b = new SubQueryBuffer();
+				for (Integer streamID : parentConnectable.getOpContext().routeInfo.keySet())
+					connectable.registerLocalDownstreamBuffer(b, streamID);
 			}
 		}
 		
 		/*
-		 * Start handlers for buffers between subqueries
+		 * Start handlers for sub queries
 		 */
 		for (ISubQueryConnectable c : this.subQueries) {
-			for (Runnable r : c.getLocalDownstreamBufferHandlers())
-				 (new Thread(r)).start();
+			/* 
+			 * Select appropriate forwarding mechanism:
+			 *  - default is writing to downstream sub query buffer 
+			 *  - if subquery is most downstream, forwarding to distributed nodes via API is enabled
+			 */
+			ISubQueryTaskResultForwarder resultForwarder = 
+				(c.isMostLocalDownstream())? 
+					new SubQueryTaskResultAPIForwarder(c)
+					: new SubQueryTaskResultBufferForwarder(c);
+			
+			//TODO: select task creation scheme
+			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(), resultForwarder);
+			(new Thread(r)).start();
 		}
-
-		/*
-		 * Start handlers for input buffers of most upstream sub queries
-		 */
-		for (ISubQueryConnectable c : this.mostUpstreamSubQueries) {
-			for (Runnable r : c.getLocalUpstreamBufferHandlers())
-				 (new Thread(r)).start();
-		}
-		
-		/*
-		 * Start handlers for output buffers of most downstream sub queries
-		 */
-		for (ISubQueryConnectable c : this.mostDownstreamSubQueries) {
-			for (Runnable r : c.getLocalDownstreamBufferHandlers())
-				 (new Thread(r)).start();
-		}
-
 		
 	}
 

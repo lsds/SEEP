@@ -258,6 +258,7 @@ public class QueryPlan {
 			MultiOperator mo = MultiOperator.synthesizeFrom(subQueries, multiOpId);
 			// Then compose the multiOperator into a SEEP Operator
 			Operator op = Operator.getStatelessOperator(multiOpId, mo, attributes);
+			mo.setParentConnectable(op);
 			this.addOperator(op);
 			try {
 				this.place(op);

@@ -1,14 +1,10 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
-import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryBufferHandler;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.IUpstreamSubQueryBufferHandler;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferHandler;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
 public class SubQueryConnectable implements ISubQueryConnectable {
 
@@ -21,15 +17,14 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 
 	private SubQuery sq;
 
-	private  Set<ISubQueryBufferHandler> downstreamBuffers;
-	private  Set<IUpstreamSubQueryBufferHandler> upstreamBuffers;
+	private Map<Integer, SubQueryBuffer> localDownstreamBuffers;
+	private Map<Integer, SubQueryBuffer> localUpstreamBuffers;
 	
-
 	public SubQueryConnectable() {
 		this.localDownstream = new HashMap<>();
 		this.localUpstream = new HashMap<>();
-		this.downstreamBuffers = new HashSet<>();
-		this.upstreamBuffers = new HashSet<>();
+		this.localDownstreamBuffers = new HashMap<>();
+		this.localUpstreamBuffers = new HashMap<>();
 	}
 
 	public SubQueryConnectable(SubQuery sq) {
@@ -95,31 +90,30 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		 * sub query, even if multiple logical streams are defined
 		 */
 		if (!this.localDownstream.values().contains(so)) {
-			IUpstreamSubQueryBufferHandler handler = new SubQueryBufferHandler(this, so);
-			this.addLocalDownstreamBufferHandler(handler);
-			so.addLocalUpstreamBufferHandler(handler);
+			SubQueryBuffer b = new SubQueryBuffer();
+			this.localDownstreamBuffers.put(streamID, b);
+			so.registerLocalUpstreamBuffer(b, streamID);
 		}
 	}
 
 	@Override
-	public Set<ISubQueryBufferHandler> getLocalDownstreamBufferHandlers() {
-		return this.downstreamBuffers;
+	public Map<Integer, SubQueryBuffer> getLocalDownstreamBuffers() {
+		return this.localDownstreamBuffers;
 	}
 
 	@Override
-	public Set<IUpstreamSubQueryBufferHandler> getLocalUpstreamBufferHandlers() {
-		return this.upstreamBuffers;
+	public Map<Integer, SubQueryBuffer> getLocalUpstreamBuffers() {
+		return this.localUpstreamBuffers;
 	}
 
 	@Override
-	public void addLocalUpstreamBufferHandler(
-			IUpstreamSubQueryBufferHandler handler) {
-		this.upstreamBuffers.add(handler);
+	public void registerLocalUpstreamBuffer(SubQueryBuffer so, int streamID) {
+		this.localUpstreamBuffers.put(streamID, so);
 	}
 
 	@Override
-	public void addLocalDownstreamBufferHandler(ISubQueryBufferHandler handler) {
-		this.downstreamBuffers.add(handler);
+	public void registerLocalDownstreamBuffer(SubQueryBuffer so, int streamID) {
+		this.localDownstreamBuffers.put(streamID, so);
 	}
 
 

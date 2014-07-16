@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.window;
 public class WindowDefinition implements IWindowDefinition {
 
 	public enum WindowType  {
-		ROW_BASED, RANGE_BASED
+		ROW_BASED , RANGE_BASED 
 	}
 	
 	private long size = -1;
