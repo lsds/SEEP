@@ -69,20 +69,19 @@ public class Selection implements StatelessOperator, IStreamSQLOperator, IMicroO
 	public void processData(Map<Integer, IWindowBatch> windowBatches,
 			IWindowAPI api) {
 		
-		for (Integer streamID : windowBatches.keySet()) {
-			Iterator<List<DataTuple>> iter = windowBatches.get(streamID).windowIterator();
-			while (iter.hasNext()) {
-				List<DataTuple> windowResult = new ArrayList<>();
-				for (DataTuple tuple : iter.next())
-					/*
-					 * Check whether predicate is satisfied for tuple 
-					 */
-					if (this.predicate.satisfied(tuple)) 
-						windowResult.add(tuple);
-				api.outputWindowResult(streamID, windowResult);
-			}
-		}
+		assert(windowBatches.keySet().size() == 1);
 		
+		Iterator<List<DataTuple>> iter = windowBatches.values().iterator().next().windowIterator();
+		while (iter.hasNext()) {
+			List<DataTuple> windowResult = new ArrayList<>();
+			for (DataTuple tuple : iter.next())
+				/*
+				 * Check whether predicate is satisfied for tuple 
+				 */
+				if (this.predicate.satisfied(tuple)) 
+					windowResult.add(tuple);
+			api.outputWindowResult(windowResult);
+		}
 	}
 
 }

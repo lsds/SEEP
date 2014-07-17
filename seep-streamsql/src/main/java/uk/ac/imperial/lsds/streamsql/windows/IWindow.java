@@ -6,7 +6,7 @@ import java.util.Queue;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.state.State;
-import uk.ac.imperial.lsds.streamsql.op.WindowOperator;
+import uk.ac.imperial.lsds.streamsql.op.stateful.WindowOperator;
 
 public interface IWindow extends State {
 

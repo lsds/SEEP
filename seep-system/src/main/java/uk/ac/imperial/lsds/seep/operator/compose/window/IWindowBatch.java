@@ -17,5 +17,7 @@ public interface IWindowBatch extends Iterable<DataTuple> {
 	public List<DataTuple> getAllTuples();
 	public DataTuple get(int index);
 	public Iterator<List<DataTuple>> windowIterator();
+	
+	public void performIncrementalComputation(IMicroIncrementalComputation incrementalComputation, IWindowAPI api);
 
 }

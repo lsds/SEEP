@@ -17,7 +17,7 @@ public class CountBasedWindowIterator implements Iterator<List<DataTuple>> {
 	public CountBasedWindowIterator(IPeriodicWindowBatch w) {
 		this.w = w;
 		this.windowCursor = 0;
-		this.numberOfWindows = (int) Math.floor((1.0*(this.w.getEnd() - this.w.getStart() - this.w.getWindowDefinition().getSize() + 1))/this.w.getWindowDefinition().getSlide());
+		this.numberOfWindows = (int) Math.floor((1.0*(this.w.getEndIndex() - this.w.getStartIndex() - this.w.getWindowDefinition().getSize() + 1))/this.w.getWindowDefinition().getSlide());
 	}
 	
 	@Override
@@ -31,7 +31,7 @@ public class CountBasedWindowIterator implements Iterator<List<DataTuple>> {
 			throw new NoSuchElementException();
 		
 		List<DataTuple> window = new ArrayList<>();
-		int start = new Long(this.w.getStart() + windowCursor * this.w.getWindowDefinition().getSlide()).intValue();
+		int start = new Long(this.w.getStartIndex() + windowCursor * this.w.getWindowDefinition().getSlide()).intValue();
 		for (int i = start; i <= start + this.w.getWindowDefinition().getSize(); i++)
 			window.add(this.w.get(i));
 		

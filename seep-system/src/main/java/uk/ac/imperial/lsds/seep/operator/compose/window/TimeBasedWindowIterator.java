@@ -19,8 +19,8 @@ public class TimeBasedWindowIterator implements Iterator<List<DataTuple>> {
 	public TimeBasedWindowIterator(IPeriodicWindowBatch w) {
 		this.w = w;
 		this.windowCursor = 0;
-		tsWindowBatchStart = this.w.get(this.w.getStart()).getPayload().timestamp;
-		long tsWindowBatchEnd = this.w.get(this.w.getEnd()).getPayload().timestamp;
+		tsWindowBatchStart = this.w.getStartTimestamp();
+		long tsWindowBatchEnd = this.w.getEndTimestamp();
 		
 		this.numberOfWindows = (int) Math.floor((1.0*(tsWindowBatchEnd - tsWindowBatchStart - this.w.getWindowDefinition().getSize()))/this.w.getWindowDefinition().getSlide());
 	}
@@ -38,7 +38,7 @@ public class TimeBasedWindowIterator implements Iterator<List<DataTuple>> {
 		List<DataTuple> window = new ArrayList<>();
 		
 		long tsWindowEnd = tsWindowBatchStart + windowCursor * this.w.getWindowDefinition().getSlide() + this.w.getWindowDefinition().getSize();
-		DataTuple currentTuple = (lastRet == -1)? this.w.get(this.w.getStart()) : this.w.get(lastRet);
+		DataTuple currentTuple = (lastRet == -1)? this.w.get(this.w.getStartIndex()) : this.w.get(lastRet);
 		while (currentTuple.getPayload().timestamp <= tsWindowEnd) {
 			window.add(currentTuple);
 			currentTuple = this.w.get(lastRet++);

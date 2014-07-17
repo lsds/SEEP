@@ -11,7 +11,6 @@ import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.state.State;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.WindowOperator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.windows.Window;

@@ -98,10 +98,11 @@ public class WindowBatchTaskCreationScheme implements
 					if (nextToProcessPointer == -1)
 						nextToProcessPointer = buffer.get(buffer.getStartIndex()).getPayload().timestamp;
 					
-					long endTimeForWindowBatch = nextToProcessPointer + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
+					long startTimeForWindowBatch = nextToProcessPointer;
+					long endTimeForWindowBatch = startTimeForWindowBatch + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
 					// determine first index larger or equal than start timestamp
 					start = buffer.getStartIndex();
-					while (buffer.get(start).getPayload().timestamp < nextToProcessPointer)
+					while (buffer.get(start).getPayload().timestamp < startTimeForWindowBatch)
 						start++;
 					
 					// determine last index smaller or equal than end timestamp
@@ -110,13 +111,13 @@ public class WindowBatchTaskCreationScheme implements
 						end++;
 
 					// determine last index smaller or equal than the start for the next window batch 
-					long timestampForNextWindowBatch = nextToProcessPointer + windowDef.getSlide() * SUB_QUERY_WINDOW_BATCH_COUNT;
+					long timestampForNextWindowBatch = startTimeForWindowBatch + windowDef.getSlide() * SUB_QUERY_WINDOW_BATCH_COUNT;
 					int indexForNextWindowBatch = start;
 					while (buffer.get(indexForNextWindowBatch).getPayload().timestamp <= timestampForNextWindowBatch)
 						indexForNextWindowBatch++;
 
 					// define periodic window batch
-					windowBatch = new PeriodicWindowBatch(windowDef, buffer, buffer.normIndex(start), buffer.normIndex(end));
+					windowBatch = new PeriodicWindowBatch(windowDef, buffer, buffer.normIndex(start), buffer.normIndex(end), startTimeForWindowBatch, endTimeForWindowBatch);
 					windowBatches.put(streamID, windowBatch);
 
 					// update progress

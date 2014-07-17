@@ -13,17 +13,17 @@ public class TupleIterator implements Iterator<DataTuple> {
 	
 	public TupleIterator(IPeriodicWindowBatch w) {
 		this.w = w;
-		this.cursor = this.w.getStart();
+		this.cursor = this.w.getStartIndex();
 	}
 	
 	@Override
 	public boolean hasNext() {
-		return this.cursor != this.w.getEnd();
+		return this.cursor != this.w.getEndIndex();
 	}
 
 	@Override
 	public DataTuple next() {
-		if (this.cursor >= this.w.getEnd())
+		if (this.cursor >= this.w.getEndIndex())
 			throw new NoSuchElementException();
 		
 		cursor++;

@@ -61,4 +61,26 @@ public class StaticWindowBatch implements IStaticWindowBatch {
 		return new StaticWindowBatchIterator(this.flatInputList, this.windowStartPointers);
 	}
 
+
+	/**
+	 * Just provided for compatibility reasons. However, the static window definition
+	 * cannot contain overlapping windows, hence, there is no point in incremental 
+	 * computation.
+	 */
+	@Override
+	public void performIncrementalComputation(
+			IMicroIncrementalComputation incrementalComputation, IWindowAPI api) {
+		
+		Iterator<List<DataTuple>> iter = this.windowIterator();
+		
+		while (iter.hasNext()) {
+			List<DataTuple> window = iter.next();
+			for (DataTuple tuple : window )
+				incrementalComputation.enteredWindow(tuple);
+			incrementalComputation.evaluateWindow(api);
+			for (DataTuple tuple : window )
+				incrementalComputation.exitedWindow(tuple);
+		}
+	}
+
 }
