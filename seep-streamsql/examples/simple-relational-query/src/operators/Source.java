@@ -10,11 +10,12 @@
  ******************************************************************************/
 package operators;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 
@@ -26,7 +27,8 @@ public class Source implements StatelessOperator {
 		
 	}
 	
-	public void processData(DataTuple dt) {
+	@Override
+	public void processData(DataTuple dt, API api) {
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
 		
@@ -48,9 +50,7 @@ public class Source implements StatelessOperator {
 			}
 		}
 	}
-	
-	public void processData(ArrayList<DataTuple> arg0) {
-		// TODO Auto-generated method stub
-		
+	@Override
+	public void processData(List<DataTuple> arg0, API api) {
 	}
 }

@@ -1,9 +1,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTask;
@@ -11,7 +9,6 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationSc
 
 public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHandler {
 	
-	private Map<Integer, Long> nextToProcessPointers;
 	private SubQueryTaskCreationScheme creationScheme;
 
 	private ISubQueryConnectable subQuery;
@@ -21,17 +18,14 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 	public SubQueryTaskSubmitter(ISubQueryConnectable subQuery, SubQueryTaskCreationScheme creationScheme) {
 		this.subQuery = subQuery;
 		this.creationScheme = creationScheme;
-		this.nextToProcessPointers = new HashMap<>();
 		this.runningSubQueryTasks = new LinkedList<>();
-		for (Integer streamID : this.subQuery.getLocalUpstreamBuffers().keySet())
-			this.nextToProcessPointers.put(streamID, -1l);
 	}
 	
 	public void run() {
 		/*
 		 * Check whether a task should be instantiated
 		 */
-		this.nextToProcessPointers = this.creationScheme.createTasks(this.subQuery, this.nextToProcessPointers);
+		this.creationScheme.createTasks();
 		while (creationScheme.hasNext()) {
 			SubQueryTask task = creationScheme.next();
 			/*

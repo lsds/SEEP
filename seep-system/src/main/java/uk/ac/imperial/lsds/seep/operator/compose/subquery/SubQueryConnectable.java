@@ -25,6 +25,8 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		this.localUpstream = new HashMap<>();
 		this.localDownstreamBuffers = new HashMap<>();
 		this.localUpstreamBuffers = new HashMap<>();
+		this.mostDownstream = true;
+		this.mostUpstream = true;
 	}
 
 	public SubQueryConnectable(SubQuery sq) {

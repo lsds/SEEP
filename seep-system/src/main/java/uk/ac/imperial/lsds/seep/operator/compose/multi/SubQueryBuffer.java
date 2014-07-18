@@ -2,8 +2,10 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -24,6 +26,10 @@ public class SubQueryBuffer {
 		this(SUB_QUERY_BUFFER_CAPACITY);
 	}
 
+	public boolean isFull() {
+		return this.full;
+	}
+
 	public List<DataTuple> add(List<DataTuple> tuples) {
 		Iterator<DataTuple> iter = tuples.iterator();
 		while (iter.hasNext()) {
@@ -39,6 +45,27 @@ public class SubQueryBuffer {
 			("Buffer size must be greater than 0.");
 		elements = new DataTuple[size];
 	}
+	
+//	public boolean isMoreRecentThan(int first, int second) {
+//		int nFirst = normIndex(first); 
+//		int nSecond = normIndex(second); 
+//		if (!validIndex(nFirst)||!validIndex(nSecond))
+//			throw new InvalidParameterException();
+//		
+//		if (start < end)
+//			return (first < second);
+//		else {
+//			// (end <= start)
+//			if ((first >= start) && (second >= start)) 
+//				return (first < second);
+//			if ((first < end) && (second < end)) 
+//				return (first < second);
+//			if ((first >= start) && (second < end)) 
+//				return false;
+//			// ((second >= start) && (first < end)) 
+//				return true;		
+//		}
+//	}
 	
 	public int normIndex(int i) {
 		return (i%elements.length);
@@ -80,7 +107,8 @@ public class SubQueryBuffer {
 			throw new InvalidParameterException();
 		
 		elements[nI] = null;
-		while((elements[normIndex(start)] == null) && (normIndex(start) != end))
+		
+		while((elements[normIndex(start)] == null) && (normIndex(start) != end)) 
 			start++;
 		
 		start = normIndex(start);
@@ -95,7 +123,7 @@ public class SubQueryBuffer {
 			freeIndex(j);
 	}
 
-	private boolean validIndex(int i) {
+	public boolean validIndex(int i) {
 		if (i < 0) 
 			return false;
 		
@@ -144,5 +172,4 @@ public class SubQueryBuffer {
 			result.add(this.get(i));
 		return result;
 	}
-	
 }

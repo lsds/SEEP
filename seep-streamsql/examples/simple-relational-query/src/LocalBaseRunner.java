@@ -1,13 +1,3 @@
-/*******************************************************************************
- * Copyright (c) 2014 Imperial College London
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * 
- * Contributors:
- *     Raul Castro Fernandez - initial API and implementation
- ******************************************************************************/
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,11 +8,12 @@ import java.util.Set;
 import operators.Sink;
 import operators.Source;
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
-import uk.ac.imperial.lsds.seep.api.QueryComposer;
-import uk.ac.imperial.lsds.seep.api.QueryPlan;
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
@@ -35,18 +26,21 @@ import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.ValueExpression;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 
-public class Base implements QueryComposer{
-	public QueryPlan compose() {
+
+public class LocalBaseRunner {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
 		
-		// Declare Source
 		List<String> posSpeedStr = new ArrayList<String>();
 		posSpeedStr.add("vehicleId");
 		posSpeedStr.add("speed");
 		posSpeedStr.add("xPos");
 		posSpeedStr.add("dir");
 		posSpeedStr.add("hwy");
-		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, posSpeedStr);
-
+		
 		/*
 		 * Query 1
 		 * 
@@ -90,10 +84,6 @@ public class Base implements QueryComposer{
 		IMicroOperatorConnectable proj = QueryBuilder.newMicroOperator(projCode, 1, segSpeedStr);
 		
 		
-		
-		// Declare sink
-		Connectable snk = QueryBuilder.newStatelessSink(new Sink("./myOut.csv"), -2, segSpeedStr);
-
 //		sq1.connectTo(sq2, 101);
 //		sq1.connectTo(sq2, 102);
 
@@ -101,12 +91,30 @@ public class Base implements QueryComposer{
 		subQueries.add(sq1);
 //		subQueries.add(sq2);
 		
-		Connectable multiOp = QueryBuilder.newMultiOperator(subQueries, 100, posSpeedStr);
+//		Connectable multiOp = QueryBuilder.newMultiOperator(subQueries, 100, posSpeedStr);
 
-		/** Connect operators **/
-		src.connectTo(multiOp, true, 11);
-		multiOp.connectTo(snk, true, 0);
+		MultiOperator mo = MultiOperator.synthesizeFrom(subQueries, 100);
+		mo.setUp();
+
+		/*
+		 * Send data
+		 */
+		Map<String, Integer> mapper = new HashMap<>();
+		for (int i = 0; i < posSpeedStr.size(); i++)
+			mapper.put(posSpeedStr.get(i), i);
 		
-		return QueryBuilder.build();
+		DataTuple data = new DataTuple(mapper, new TuplePayload());
+		posSpeedStr.add("vehicleId");
+		posSpeedStr.add("speed");
+		posSpeedStr.add("xPos");
+		posSpeedStr.add("dir");
+		posSpeedStr.add("hwy");
+
+		DataTuple output = data.newTuple(1, 55, 2, -1, 42);
+		mo.processData(output, null);
+		output = data.newTuple(2, 40, 13, 1, 42);
+		mo.processData(output, null);
+		
 	}
+
 }

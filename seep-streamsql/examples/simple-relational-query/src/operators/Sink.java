@@ -10,36 +10,80 @@
  ******************************************************************************/
 package operators;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 public class Sink implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
+
+	public static int BUFFER_SIZE = 1;
 	
+	private String dataPath = "";
+	
+	private List<String> buffer = new ArrayList<>();
+ 	
+	private List<String> fields = new ArrayList<String>();
+
 	public void setUp() {
 
 	}
-
-	// time control variables
-	int c = 0;
-	long init = 0;
-	int sec = 0;
 	
-	public void processData(DataTuple dt) {
-		int value2 = dt.getInt("value2");
-		// TIME CONTROL
-		c++;
-		if((System.currentTimeMillis() - init) > 1000){
-			System.out.println("SNK: "+sec+" "+c+" ");
-			c = 0;
-			sec++;
-			init = System.currentTimeMillis();
+	public Sink(String dataPath) {
+		this.dataPath = dataPath;
+	}
+
+	@Override
+	public void processData(DataTuple dt, API api) {
+
+		/*
+		 * Make sure that the order of fields is consistent
+		 */
+		if (fields.isEmpty())
+			this.fields.addAll(api.getDataMapper().keySet());
+		
+//		System.out.println("SNK: " + dt.toString());
+		
+		StringBuilder sb = new StringBuilder();
+
+		for (String key : fields) {
+			sb.append(dt.getValue(key).toString());
+			sb.append(',');
+		}
+		
+		if (sb.length() >= 1)
+			this.buffer.add(sb.substring(0, sb.length()-1));
+		else
+			this.buffer.add(sb.substring(0, sb.length()));
+
+		if (this.buffer.size() > BUFFER_SIZE) {
+			try {
+				FileWriter fw = new FileWriter(this.dataPath, true);
+				BufferedWriter bw = new BufferedWriter(fw);
+				for (String s : this.buffer)
+					bw.write(s + "\n");
+				bw.close();
+				
+				this.buffer.clear();
+				
+				System.out.println("SNK: wrote results to " + this.dataPath);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
-	public void processData(ArrayList<DataTuple> arg0) {
+	@Override
+	public void processData(List<DataTuple> arg0, API api) {
+		for (DataTuple dt : arg0)
+			processData(dt, api);
 	}
+	
 }

@@ -125,8 +125,10 @@ public class MultiOperator implements StatelessOperator {
 				this.mostDownstreamSubQueries.add(connectable);
 				
 				SubQueryBuffer b = new SubQueryBuffer();
-				for (Integer streamID : parentConnectable.getOpContext().routeInfo.keySet())
-					connectable.registerLocalDownstreamBuffer(b, streamID);
+				// deactivate for local testing
+//				for (Integer streamID : parentConnectable.getOpContext().routeInfo.keySet())
+//					connectable.registerLocalDownstreamBuffer(b, streamID);
+				connectable.registerLocalDownstreamBuffer(b, 0);
 			}
 		}
 		
@@ -145,7 +147,7 @@ public class MultiOperator implements StatelessOperator {
 					: new SubQueryTaskResultBufferForwarder(c);
 			
 			//TODO: select task creation scheme
-			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(), resultForwarder);
+			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(c), resultForwarder);
 			(new Thread(r)).start();
 		}
 		

@@ -5,6 +5,6 @@ import java.util.Map;
 
 public interface SubQueryTaskCreationScheme extends Iterator<SubQueryTask> {
 	
-	public Map<Integer, Long> createTasks(ISubQueryConnectable subQueryConnectable, Map<Integer, Long> nextToProcessPointers);
+	public void createTasks();
 	
 }
