@@ -14,6 +14,7 @@ public class StaticWindowBatch implements IStaticWindowBatch {
 
 	public StaticWindowBatch() {
 		this.flatInputList = new ArrayList<>();
+		this.windowStartPointers = new int[0];
 	}
 
 	
@@ -36,7 +37,7 @@ public class StaticWindowBatch implements IStaticWindowBatch {
 	public void registerWindow(List<DataTuple> window) {
 		int[] newWindowStartPointers = Arrays.copyOf(this.windowStartPointers, this.windowStartPointers.length + 1);
 		
-		newWindowStartPointers[this.windowStartPointers.length + 1] = this.flatInputList.size();
+		newWindowStartPointers[newWindowStartPointers.length - 1] = this.flatInputList.size();
 		this.flatInputList.addAll(window);
 		this.windowStartPointers = newWindowStartPointers;
 	}

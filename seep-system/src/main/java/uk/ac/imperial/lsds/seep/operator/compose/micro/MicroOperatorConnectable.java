@@ -1,13 +1,14 @@
 package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
 
 public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 
-	private boolean mostDownstream;
-	private boolean mostUpstream;
+	private boolean mostDownstream = true;
+	private boolean mostUpstream = true;
 	private SubQuery parent;
 	
 	private Map<Integer, IMicroOperatorConnectable> localDownstream;
@@ -17,6 +18,8 @@ public class MicroOperatorConnectable implements IMicroOperatorConnectable {
 
 	public MicroOperatorConnectable(MicroOperator sq) {
 		this.sq = sq;
+		this.localDownstream = new HashMap<>();
+		this.localUpstream = new HashMap<>();
 	}
 
 	@Override

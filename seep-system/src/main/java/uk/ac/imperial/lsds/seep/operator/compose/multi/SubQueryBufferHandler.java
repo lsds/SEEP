@@ -10,7 +10,7 @@ import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTask;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCallable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
 

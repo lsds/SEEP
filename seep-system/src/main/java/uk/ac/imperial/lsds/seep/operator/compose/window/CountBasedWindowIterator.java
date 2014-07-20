@@ -31,8 +31,8 @@ public class CountBasedWindowIterator implements Iterator<List<DataTuple>> {
 			throw new NoSuchElementException();
 		
 		List<DataTuple> window = new ArrayList<>();
-		int start = new Long(this.w.getStartIndex() + windowCursor * this.w.getWindowDefinition().getSlide()).intValue();
-		for (int i = start; i <= start + this.w.getWindowDefinition().getSize(); i++)
+		int start = this.w.getStartIndex() + windowCursor * (int)this.w.getWindowDefinition().getSlide();
+		for (int i = start; i < start + this.w.getWindowDefinition().getSize(); i++)
 			window.add(this.w.get(i));
 		
 		windowCursor++;

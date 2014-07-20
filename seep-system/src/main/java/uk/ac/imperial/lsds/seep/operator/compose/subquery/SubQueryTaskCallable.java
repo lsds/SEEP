@@ -5,10 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RunnableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.Callable;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
@@ -18,95 +15,34 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.StaticWindowBatch;
 
-public class SubQueryTask implements RunnableFuture<List<DataTuple>>, IWindowAPI {
-	
-	private Map<SubQueryBuffer, Integer> freeUpToIndices;
+public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWindowAPI {
+		
 	
 	private ISubQueryConnectable subQueryConnectable;
-	
-	private long logicalOrderID;
-
 	private Map<Integer, IWindowBatch> windowBatches;
 	
-	private boolean cancelled = false;
-	
-	public SubQueryTask(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, long logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
+	private IMicroOperatorConnectable currentOperator;
+	private Map<Integer, IStaticWindowBatch> currentWindowBatchResults;
+	private IStaticWindowBatch finalWindowBatchResult;
+
+	private SubQueryTaskResult result;
+	public SubQueryTaskCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
 		this.subQueryConnectable = subQueryConnectable;
-		this.logicalOrderID = logicalOrderID;
 		this.windowBatches = windowBatches;
-	}
-	
-	public long getLogicalOrderID() {
-		return this.logicalOrderID;
-	}
-	
-	
-	public void freeIndicesInBuffers() {
-		for (SubQueryBuffer b : this.freeUpToIndices.keySet())
-			b.freeUpToIndex(b.normIndex(this.freeUpToIndices.get(b)));
+		
+		this.result = new SubQueryTaskResult(logicalOrderID, freeUpToIndices);
 	}
 	
 	public ISubQueryConnectable getSubQueryConnectable() {
 		return this.subQueryConnectable;
 	}
-	
-	@Override
-	public boolean cancel(boolean mayInterruptIfRunning) {
-		if (mayInterruptIfRunning) {
-			toProcess.clear();
-			cancelled = true;
-			return true;
-		}
-		if (isDone())
-			return true;
-			
-		return false;
-	}
 
 	@Override
-	public List<DataTuple> get() throws InterruptedException,
-			ExecutionException {
-		
-		/*
-		 * Block if not yet ready
-		 * (not threadsafe)
-		 */
-		while (!isDone())
-			this.finalWindowBatchResult.wait();
-		
-		return this.finalWindowBatchResult.getAllTuples();
-	}
-
-	@Override
-	public List<DataTuple> get(long timeout, TimeUnit unit)
-			throws InterruptedException, ExecutionException, TimeoutException {
-		/*
-		 * Block if not yet ready
-		 * (not threadsafe)
-		 */
-		while (!isDone())
-			this.finalWindowBatchResult.wait(unit.toMillis(timeout));
-		
-		return this.finalWindowBatchResult.getAllTuples();
-	}
-
-	@Override
-	public boolean isCancelled() {
-		return this.cancelled;
-	}
-
-	@Override
-	public boolean isDone() {
-		return this.processed.size() == this.subQueryConnectable.getSubQuery().getMicroOperators().size();
-	}
-
-	@Override
-	public void run() {
+	public SubQueryTaskResult call() throws Exception {
 		
 		this.finalWindowBatchResult = new StaticWindowBatch();
-		this.processed = new HashSet<>();
-		
-		this.toProcess = new HashSet<>();
+		Set<IMicroOperatorConnectable> processed = new HashSet<>();
+		Set<IMicroOperatorConnectable> toProcess = new HashSet<>();
 		Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
 		
 		/*
@@ -160,18 +96,10 @@ public class SubQueryTask implements RunnableFuture<List<DataTuple>>, IWindowAPI
 			}
 		}
 		
-		/*
-		 * Notify blocking threads that result is available
-		 */
-		this.finalWindowBatchResult.notifyAll();
+		this.result.setResultStream(this.finalWindowBatchResult.getAllTuples());
+		return this.result;
 	}
 	
-	private IMicroOperatorConnectable currentOperator;
-	private Map<Integer, IStaticWindowBatch> currentWindowBatchResults;
-	private IStaticWindowBatch finalWindowBatchResult;
-
-	private Set<IMicroOperatorConnectable> processed;
-	private Set<IMicroOperatorConnectable> toProcess;
 	
 	@Override
 	public void outputWindowResult(List<DataTuple> windowResult) {
@@ -223,5 +151,6 @@ public class SubQueryTask implements RunnableFuture<List<DataTuple>>, IWindowAPI
 			outputWindowResult(streamID,windowResult);
 		
 	}
+
 	
 }

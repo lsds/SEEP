@@ -32,7 +32,6 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	public SubQueryConnectable(SubQuery sq) {
 		this();
 		this.sq = sq;
-		sq.setParentSubQueryConnectable(this);
 	}
 
 	@Override

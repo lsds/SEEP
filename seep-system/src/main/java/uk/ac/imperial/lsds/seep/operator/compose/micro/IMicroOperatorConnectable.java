@@ -10,12 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose.micro;
 
-import java.io.Serializable;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
 
-public interface IMicroOperatorConnectable extends Serializable {
+public interface IMicroOperatorConnectable {
 
 	public MicroOperator getMicroOperator();
 	

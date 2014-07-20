@@ -2,10 +2,8 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -21,6 +19,12 @@ public class SubQueryBuffer {
 	private int end = 0;
 	
 	private boolean full = false;
+	
+	private Object lock = new Object();
+	
+	public synchronized Object getLock() {
+		return lock;
+	}
 
 	public SubQueryBuffer () {
 		this(SUB_QUERY_BUFFER_CAPACITY);
@@ -45,27 +49,33 @@ public class SubQueryBuffer {
 			("Buffer size must be greater than 0.");
 		elements = new DataTuple[size];
 	}
-	
-//	public boolean isMoreRecentThan(int first, int second) {
-//		int nFirst = normIndex(first); 
-//		int nSecond = normIndex(second); 
-//		if (!validIndex(nFirst)||!validIndex(nSecond))
-//			throw new InvalidParameterException();
-//		
-//		if (start < end)
-//			return (first < second);
-//		else {
-//			// (end <= start)
-//			if ((first >= start) && (second >= start)) 
-//				return (first < second);
-//			if ((first < end) && (second < end)) 
-//				return (first < second);
-//			if ((first >= start) && (second < end)) 
-//				return false;
-//			// ((second >= start) && (first < end)) 
-//				return true;		
-//		}
-//	}
+
+	public int getMoreRecent(int i, int j) {
+		if (isMoreRecentThan(i, j))
+			return i;
+		return j;
+	}
+
+	public boolean isMoreRecentThan(int first, int second) {
+		int nFirst = normIndex(first); 
+		int nSecond = normIndex(second); 
+		if (!validIndex(nFirst)||!validIndex(nSecond))
+			throw new InvalidParameterException();
+		
+		if (start < end)
+			return (first < second);
+		else {
+			// (end <= start)
+			if ((first >= start) && (second >= start)) 
+				return (first < second);
+			if ((first < end) && (second < end)) 
+				return (first < second);
+			if ((first >= start) && (second < end)) 
+				return false;
+			// ((second >= start) && (first < end)) 
+				return true;		
+		}
+	}
 	
 	public int normIndex(int i) {
 		return (i%elements.length);
@@ -108,19 +118,26 @@ public class SubQueryBuffer {
 		
 		elements[nI] = null;
 		
-		while((elements[normIndex(start)] == null) && (normIndex(start) != end)) 
-			start++;
+		while((elements[normIndex(start)] == null) && (start != end)) 
+			start = normIndex(start+1);
 		
-		start = normIndex(start);
-		if (end != start)
+		if ((end != start) || (end == start && start == nI))
 			full = false;
-		this.notifyAll();
+		
+		synchronized (getLock()) {
+//			System.out.println("notify from buffer");
+			this.getLock().notifyAll();
+		}
 	}
 
 	public void freeUpToIndex(int i) {
 		int nI = normIndex(i); 
-		for (int j = start; normIndex(j) < nI; j++) 
-			freeIndex(j);
+		int toFree = start;
+		do {
+			freeIndex(toFree);
+			toFree = normIndex(toFree + 1);
+		}
+		while (toFree != nI);
 	}
 
 	public boolean validIndex(int i) {
@@ -133,9 +150,6 @@ public class SubQueryBuffer {
 		if ((start < end) && ((i > end) || (i < start))) 
 			return false;
 
-		if (end == start && !full)
-			return false;
-		
 		return true;
 	}
 	

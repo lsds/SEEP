@@ -45,18 +45,18 @@ public class Projection implements StatelessOperator, IStreamSQLOperator, IMicro
 
 	private DataTuple process(DataTuple data) {
 		
-		List<Object> projectedValues = new ArrayList<>();
+		Object[] projectedValues = new Object[expressions.size()];
 
 		/*
 		 * Add all the content as defined by the projection expressions
 		 */
-		for (IValueExpression expression : expressions) 
-			projectedValues.add(expression.eval(data));
+		for (int i = 0; i < expressions.size(); i++) 
+			projectedValues[i] = expressions.get(i).eval(data);
 		
 		/*
 		 * Return the projected tuple
 		 */
-		return data.setValues(projectedValues);
+		return data.newTuple(projectedValues);
 	}
 	
 	@Override

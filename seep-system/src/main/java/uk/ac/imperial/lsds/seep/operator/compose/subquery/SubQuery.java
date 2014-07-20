@@ -11,7 +11,6 @@ public class SubQuery {
 	
 	private int id;
 	
-	private ISubQueryConnectable parent;
 	private Set<IMicroOperatorConnectable> microOperators;
 	private Set<IMicroOperatorConnectable> mostUpstreamMicroOperators;
 	private IMicroOperatorConnectable mostDownstreamMicroOperator;
@@ -40,12 +39,6 @@ public class SubQuery {
 	public static SubQuery newSubQuery (
 			Set<IMicroOperatorConnectable> microOperators, int opId, Map<Integer, IWindowDefinition>  inputWindowDefinitions) {
 		return new SubQuery(microOperators, opId, inputWindowDefinitions);
-	}
-
-
-	public void setParentSubQueryConnectable(
-			ISubQueryConnectable subQueryConnectable) {
-		this.parent = subQueryConnectable;
 	}
 
 	public Set<IMicroOperatorConnectable> getMicroOperators() {

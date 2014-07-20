@@ -2,10 +2,12 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTask;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCallable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskResult;
 
 public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHandler {
 	
@@ -13,7 +15,7 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 
 	private ISubQueryConnectable subQuery;
 
-	private List<SubQueryTask> runningSubQueryTasks;
+	private List<Future<SubQueryTaskResult>> runningSubQueryTasks;
 
 	public SubQueryTaskSubmitter(ISubQueryConnectable subQuery, SubQueryTaskCreationScheme creationScheme) {
 		this.subQuery = subQuery;
@@ -27,17 +29,17 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 		 */
 		this.creationScheme.createTasks();
 		while (creationScheme.hasNext()) {
-			SubQueryTask task = creationScheme.next();
+			SubQueryTaskCallable task = creationScheme.next();
 			/*
 			 * Submit the tasks
 			 */
-			this.subQuery.getParentMultiOperator().getExecutorService().execute(task);
-			runningSubQueryTasks.add(task);
+			Future<SubQueryTaskResult> future = this.subQuery.getParentMultiOperator().getExecutorService().submit(task);
+			runningSubQueryTasks.add(future);
 		}
 	}
 
 	@Override
-	public List<SubQueryTask> getRunningSubQueryTasks() {
+	public List<Future<SubQueryTaskResult>> getRunningSubQueryTasks() {
 		return this.runningSubQueryTasks;
 	}
 

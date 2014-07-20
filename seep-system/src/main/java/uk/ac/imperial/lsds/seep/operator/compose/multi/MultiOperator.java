@@ -77,13 +77,16 @@ public class MultiOperator implements StatelessOperator {
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
 			for (SubQueryBuffer b : q.getLocalUpstreamBuffers().values()) {
 				// this code is accessed by a single thread only
-//				synchronized (handler.getBuffer()) {
-				while (!b.add(data)) {
-					try {
-						b.wait();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+					while (!b.add(data)) {
+						try {
+							synchronized (b.getLock()) {
+//								System.out.println("wait for buffer");
+								b.getLock().wait();
+//								System.out.println("woken up");
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 				}
 			}
 		}

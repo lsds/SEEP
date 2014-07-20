@@ -15,6 +15,7 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.IMicroIncrementalComputa
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
+import uk.ac.imperial.lsds.streamsql.op.stateful.Aggregation.AggregationType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation {
@@ -25,7 +26,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	private static final long serialVersionUID = 1L;
 
-	private List<String> groupByAttributes;
+	private String[] groupByAttributes;
 	private String aggregationAttribute;
 			
 	private AggregationType aggregationType;
@@ -43,15 +44,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	}
 
 	public MicroAggregation(AggregationType aggregationType, String aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, new ArrayList<String>());
+		this(aggregationType, aggregationAttribute, new String[0]);
 	}
 
-	public MicroAggregation(AggregationType aggregationType, String aggregationAttribute, List<String> groupByAttributes) {
+	public MicroAggregation(AggregationType aggregationType, String aggregationAttribute, String[] groupByAttributes) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
 	}
-	
+
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
@@ -127,7 +128,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 					values.put(key, newValue);
 			}
 			for (String partitionKey : tupleRef.keySet()) {
-				DataTuple output = tupleRef.get(partitionKey).setValues(partitionKey,values.get(partitionKey));
+				DataTuple output = tupleRef.get(partitionKey).newTuple(partitionKey,values.get(partitionKey));
 				windowResult.add(output);
 			}				
 			api.outputWindowResult(windowResult);
