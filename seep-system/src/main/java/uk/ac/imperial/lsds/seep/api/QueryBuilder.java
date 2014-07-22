@@ -83,12 +83,12 @@ public class QueryBuilder {
 		return qp.newMultiOperator(subOperators, opId, attributes);
 	}
 
-	public static IMicroOperatorConnectable newMicroOperator(IMicroOperatorCode op, int opId, List<String> attributes){
-		return qp.newMicroOperator(op, opId, attributes);
+	public static IMicroOperatorConnectable newMicroOperator(IMicroOperatorCode op, int opId){
+		return qp.newMicroOperator(op, opId);
 	}
 
-	public static ISubQueryConnectable newSubQuery(Set<IMicroOperatorConnectable> microOperators, int opId, List<String> attributes, Map<Integer, IWindowDefinition> windowDefs){
-		return qp.newSubQuery(microOperators, opId, attributes, windowDefs);
+	public static ISubQueryConnectable newSubQuery(Set<IMicroOperatorConnectable> microOperators, int opId, Map<Integer, IWindowDefinition> windowDefs){
+		return qp.newSubQuery(microOperators, opId, windowDefs);
 	}
 
 }

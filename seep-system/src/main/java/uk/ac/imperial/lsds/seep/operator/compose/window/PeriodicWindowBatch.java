@@ -55,7 +55,7 @@ public class PeriodicWindowBatch implements IPeriodicWindowBatch {
 
 	@Override
 	public List<DataTuple> getAllTuples() {
-		return this.buffer.getAsList();
+		return this.buffer.getSublistUpToIndex(this.startIndex, this.buffer.normIndex(this.endIndex + 1));
 	}
 
 	@Override
@@ -93,32 +93,40 @@ public class PeriodicWindowBatch implements IPeriodicWindowBatch {
 		switch (this.windowDefinition.getWindowType()) {
 		case RANGE_BASED:
 			
-			long currentTime = startTimestamp;
-			
-			for (int i = startIndex; i <= endIndex; i++) {
-
-				DataTuple tuple = this.get(i);
-				long nextTime = tuple.getPayload().timestamp;
-				
-				/* 
-				 * check whether the tuple is in the current window or 
-				 * whether we need to advance time before adding this tuple
-				 */
-				while (nextTime > currentTime + this.windowDefinition.getSize()) {
+			// is the window batch empty?
+			if (startIndex == -1 || endIndex == -1) {
+				int numberOfWindows = (int) Math.floor((1.0*(this.endTimestamp - this.startTimestamp - this.windowDefinition.getSize()))/this.windowDefinition.getSlide());
+				while (numberOfWindows > 0) {
 					incrementalComputation.evaluateWindow(api);
-					currentTime += this.windowDefinition.getSlide();
-					/*
-					 * We advanced the current time, so we need to remove
-					 * tuples that are no longer in the window
-					 */
-					for (int j = i; j >= startIndex; j--) {
-						DataTuple old = this.get(j);
-						if (currentTime > old.getPayload().timestamp)
-							incrementalComputation.enteredWindow(old);
+					numberOfWindows--;
+				}
+			}
+			else {
+			
+				long currentStartTime = startTimestamp;
+				long currentEndTime = currentStartTime + this.windowDefinition.getSize();
+				
+				int currentEnterIndex = startIndex;
+				int currentExitIndex = startIndex;
+				
+				while (currentEndTime <= endTimestamp) {
+
+					while (this.get(currentEnterIndex).getPayload().timestamp <= currentEndTime) {
+						incrementalComputation.enteredWindow(this.get(currentEnterIndex));
+						currentEnterIndex++;
 					}
 					
+					while (this.get(currentExitIndex).getPayload().timestamp < currentStartTime) {
+						incrementalComputation.exitedWindow(this.get(currentExitIndex));
+						currentExitIndex++;
+					}
+					
+					// close window
+					incrementalComputation.evaluateWindow(api);
+					// advance time
+					currentStartTime += this.windowDefinition.getSlide();
+					currentEndTime += this.windowDefinition.getSlide();
 				}
-				incrementalComputation.enteredWindow(tuple);
 			}
 			break;
 		case ROW_BASED:
@@ -143,8 +151,6 @@ public class PeriodicWindowBatch implements IPeriodicWindowBatch {
 		default:
 			throw new UnsupportedOperationException("Cannot do incremental computation for window of type: " + this.windowDefinition.getWindowType());
 		}
-
-		
 	}
 
 	@Override

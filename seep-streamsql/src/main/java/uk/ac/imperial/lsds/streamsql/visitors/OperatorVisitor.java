@@ -16,7 +16,7 @@ public interface OperatorVisitor {
 	public void visit(Distinct distinct);
 
 	public void visit(Projection projection);
-
+	
 	public void visit(Selection selection);
 
 	public void visit(Aggregation aggregation);

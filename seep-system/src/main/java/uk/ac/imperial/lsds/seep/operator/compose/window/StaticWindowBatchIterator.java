@@ -1,8 +1,8 @@
 package uk.ac.imperial.lsds.seep.operator.compose.window;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
@@ -26,9 +26,11 @@ public class StaticWindowBatchIterator implements Iterator<List<DataTuple>> {
 
 	@Override
 	public List<DataTuple> next() {
-		int end = (this.windowCursor != this.windowStartPointers.length)? windowStartPointers[this.windowCursor+1] : this.windowStartPointers.length;
-		end--;
-		return new ArrayList<>(this.flatInputList.subList(windowStartPointers[this.windowCursor], end));
+		if (this.windowCursor >= this.windowStartPointers.length)
+			throw new NoSuchElementException();
+
+		int end = (this.windowCursor < this.windowStartPointers.length-1)? windowStartPointers[this.windowCursor+1] : this.flatInputList.size();
+		return this.flatInputList.subList(windowStartPointers[this.windowCursor++], end);
 	}
 
 	@Override

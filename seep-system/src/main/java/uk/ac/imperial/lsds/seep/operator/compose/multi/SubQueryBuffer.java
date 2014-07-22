@@ -94,9 +94,9 @@ public class SubQueryBuffer {
 	}
 	
 	private boolean insertElement(DataTuple element) {
-		elements[normIndex(end++)] = element;
+		elements[normIndex(end)] = element;
 		
-		end = normIndex(end);
+		end = normIndex(end++);
 		
 		if (end == start)
 			full = true;
@@ -147,7 +147,7 @@ public class SubQueryBuffer {
 		if ((end < start) && (i > end) && (i < start)) 
 			return false;
 			
-		if ((start < end) && ((i > end) || (i < start))) 
+		if ((start < end) && ((i >= end) || (i < start))) 
 			return false;
 
 		return true;
@@ -155,8 +155,7 @@ public class SubQueryBuffer {
 	
 	/**
 	 * Non-synchronised access of the i-th element in the
-	 * array. The given index is the actual index, not a Assumes that the given index is a position 
-	 * that 
+	 * array. The given index is the actual index
 	 * 
 	 * @param i
 	 * @return
@@ -171,6 +170,13 @@ public class SubQueryBuffer {
 	public int getStartIndex() {
 		return this.start;
 	}
+
+	public int getIndexBefore(int i) {
+		if (i > 0)
+			return i-1;
+		else 
+			return this.elements.length - 1;
+	}
 	
 	public int getEndIndex() {
 		return this.end;
@@ -181,8 +187,12 @@ public class SubQueryBuffer {
 	}
 
 	public List<DataTuple> getAsList() {
+		return getSublistUpToIndex(this.start, this.end);
+	}
+
+	public List<DataTuple> getSublistUpToIndex(int startIndex, int endIndex) {
 		List<DataTuple> result = new ArrayList<>();
-		for (int i = start; normIndex(i) < end; i++)
+		for (int i = startIndex; normIndex(i) < endIndex; i++)
 			result.add(this.get(i));
 		return result;
 	}

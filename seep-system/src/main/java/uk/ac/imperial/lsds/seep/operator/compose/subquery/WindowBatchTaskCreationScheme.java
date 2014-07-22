@@ -91,8 +91,7 @@ public class WindowBatchTaskCreationScheme implements
 		List<SubQueryTaskCallable> tasks = new ArrayList<SubQueryTaskCallable>();
 
 		// if we have data, create the tasks
-		boolean sufficientData = sufficientDataForWindowBatch();
-		while (sufficientData) {
+		while (sufficientDataForWindowBatch()) {
 			Map<Integer, IWindowBatch> windowBatches = new HashMap<>();
 			Map<SubQueryBuffer, Integer> freeUpToIndices = new HashMap<>();
 			for (Integer streamID : subQueryConnectable.getLocalUpstreamBuffers().keySet()) {
@@ -138,20 +137,31 @@ public class WindowBatchTaskCreationScheme implements
 					// the following loop terminates since we checked that there is a tuple with timestamp larger than the end time of the window batch in the buffer
 					while (buffer.get(start).getPayload().timestamp < startTimeForWindowBatch)
 						start = buffer.normIndex(start + 1);
+
+					// determine last index smaller or equal than the start for the next window batch 
+					long timestampForNextWindowBatch = startTimeForWindowBatch + windowDef.getSlide() * SUB_QUERY_WINDOW_BATCH_COUNT;
+					int indexBeforeNextWindowBatch = start;
+					while (buffer.get(indexBeforeNextWindowBatch).getPayload().timestamp < timestampForNextWindowBatch)
+						indexBeforeNextWindowBatch = buffer.normIndex(indexBeforeNextWindowBatch + 1);
 					
+					indexBeforeNextWindowBatch = buffer.getIndexBefore(indexBeforeNextWindowBatch);
+
 					// determine last index smaller or equal than end timestamp (note that "end" does not store the index to ensure that it is large than the start)
 					end = start;
 					// the following loop terminates since we checked that there is a tuple with timestamp larger than the end time of the window batch in the buffer
 					while (buffer.get(buffer.normIndex(end)).getPayload().timestamp <= endTimeForWindowBatch)
 						end++;
-
-					// determine last index smaller or equal than the start for the next window batch 
-					long timestampForNextWindowBatch = startTimeForWindowBatch + windowDef.getSlide() * SUB_QUERY_WINDOW_BATCH_COUNT;
-					int indexBeforNextWindowBatch = start;
-					while (buffer.get(indexBeforNextWindowBatch).getPayload().timestamp < timestampForNextWindowBatch)
-						indexBeforNextWindowBatch = buffer.normIndex(indexBeforNextWindowBatch + 1);
+					
+					// check whether the window is actually empty
+					if (start == end) {
+						end = -1;
+						start = -1;
+					}
+					else 
+						end = buffer.getIndexBefore(end);
 
 					// define periodic window batch
+					System.out.println("batch:\t" + start + ",\t" + end + ",\t" +  startTimeForWindowBatch + ",\t" +  endTimeForWindowBatch);
 					windowBatch = new PeriodicWindowBatch(windowDef, buffer, start, end, startTimeForWindowBatch, endTimeForWindowBatch);
 					windowBatches.put(streamID, windowBatch);
 
@@ -159,10 +169,10 @@ public class WindowBatchTaskCreationScheme implements
 					nextToProcessPointers.put(streamID, timestampForNextWindowBatch);
 
 					if (!freeUpToIndices.containsKey(buffer))
-						freeUpToIndices.put(buffer, indexBeforNextWindowBatch);
+						freeUpToIndices.put(buffer, indexBeforeNextWindowBatch);
 					else 
-						if (buffer.isMoreRecentThan(freeUpToIndices.get(buffer), indexBeforNextWindowBatch))
-							freeUpToIndices.put(buffer, indexBeforNextWindowBatch);
+						if (buffer.isMoreRecentThan(freeUpToIndices.get(buffer), indexBeforeNextWindowBatch))
+							freeUpToIndices.put(buffer, indexBeforeNextWindowBatch);
 
 					break;
 	
@@ -173,7 +183,6 @@ public class WindowBatchTaskCreationScheme implements
 			}
 			SubQueryTaskCallable task = new SubQueryTaskCallable(subQueryConnectable, windowBatches, freshLogicalOrderID(), freeUpToIndices);
 			tasks.add(task);
-			sufficientData = sufficientDataForWindowBatch();
 		}
 				
 		this.iter = tasks.iterator();
@@ -201,7 +210,12 @@ public class WindowBatchTaskCreationScheme implements
 
 	private boolean sufficientDataForStream(Integer streamID, SubQueryBuffer buffer){
 
-		
+		/*
+		 * If the buffer is empty, return false
+		 */
+		if (buffer.size() == 0)
+			return false;
+
 		/*
 		 * Note that nextToProcessPointer may refer to an index in the 
 		 * buffer (row based window) or a timestamp (range based window)
@@ -213,10 +227,6 @@ public class WindowBatchTaskCreationScheme implements
 		case ROW_BASED:
 			// if we have not yet processed any tuple, we take the first in the buffer
 			if (nextToProcessPointer == -1) {
-				if (buffer.size() == 0) {
-					sufficientData = false;
-					break;
-				}
 				nextToProcessPointer = buffer.getStartIndex();
 				nextToProcessPointers.put(streamID, nextToProcessPointer);
 			}
@@ -241,16 +251,29 @@ public class WindowBatchTaskCreationScheme implements
 		case RANGE_BASED:
 			// if we have not yet processed any tuple, we take the first in the buffer
 			if (nextToProcessPointer == -1) {
-				if (buffer.size() == 0) {
-					sufficientData = false;
-					break;
-				}
 				nextToProcessPointer = buffer.get(buffer.getStartIndex()).getPayload().timestamp;
 				nextToProcessPointers.put(streamID, nextToProcessPointer);
 			}
 			long endTimeForWindowBatch = nextToProcessPointer + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
 			// check whether end time for window batch has passed already
-			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getEndIndex()).getPayload().timestamp);
+			
+			try {
+				int size = buffer.size();
+				int end = buffer.getEndIndex();
+				int before = buffer.getIndexBefore(end);
+				
+				if (buffer.get(buffer.getIndexBefore(buffer.getEndIndex())) == null)
+					System.out.println("ERROR " + buffer.getEndIndex() + " " + buffer.size());
+				
+				if (buffer.get(buffer.getIndexBefore(buffer.getEndIndex())).getPayload() == null)
+					System.out.println("ERROR PAYLOAD" + buffer.getEndIndex() + " " + buffer.size());
+				
+				sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex())).getPayload().timestamp);
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
 			break;
 
 		default:

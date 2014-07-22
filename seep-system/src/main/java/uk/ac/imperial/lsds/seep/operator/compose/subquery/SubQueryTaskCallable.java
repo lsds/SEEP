@@ -60,6 +60,7 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 			currentOperator = toProcess.iterator().next();
 			currentWindowBatchResults = new HashMap<>();
 			toProcess.remove(currentOperator);
+			processed.add(currentOperator);
 			
 			/*
 			 * Execute

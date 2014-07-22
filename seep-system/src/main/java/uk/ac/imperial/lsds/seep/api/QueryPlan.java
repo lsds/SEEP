@@ -271,15 +271,14 @@ public class QueryPlan {
 		}
 
 	public IMicroOperatorConnectable newMicroOperator(IMicroOperatorCode op,
-			int opId, List<String> attributes) {
+			int opId) {
 		MicroOperator m = MicroOperator.newMicroOperator(op, opId);
 		IMicroOperatorConnectable c = new MicroOperatorConnectable(m);
 		return c;
 	}
 
 	public ISubQueryConnectable newSubQuery(
-			Set<IMicroOperatorConnectable> microOperators, int opId,
-			List<String> attributes, Map<Integer, IWindowDefinition> windowDefs) {
+			Set<IMicroOperatorConnectable> microOperators, int opId, Map<Integer, IWindowDefinition> windowDefs) {
 		SubQuery s = SubQuery.newSubQuery(microOperators, opId, windowDefs);
 		ISubQueryConnectable c = new SubQueryConnectable(s);
 		return c;

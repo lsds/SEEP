@@ -19,7 +19,7 @@ public class Payload extends ArrayList<Object>{
 	public Payload(){
 		
 	}
-
+	
 	public Payload(Object... attrValues){
 		super(attrValues.length);
 		for(Object o : attrValues){

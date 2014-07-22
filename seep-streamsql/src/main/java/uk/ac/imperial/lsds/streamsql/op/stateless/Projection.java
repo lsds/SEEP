@@ -1,11 +1,13 @@
 package uk.ac.imperial.lsds.streamsql.op.stateless;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
@@ -19,13 +21,24 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class Projection implements StatelessOperator, IStreamSQLOperator, IMicroOperatorCode {
 
+	private static final long serialVersionUID = 1L;
+
 	/*
 	 * Expressions for the extended projection
 	 */
-	List<IValueExpression> expressions;
+	private List<IValueExpression> expressions;
+	
+	private  Map<String, Integer> idxMapper = null;
 
-	public Projection(List<IValueExpression> expression) {
-		this.expressions = expression;
+	public Projection(List<IValueExpression> expressions, List<String> formatForOutput) {
+		this(expressions);
+		this.idxMapper = new HashMap<>();
+		for (int i = 0 ; i < formatForOutput.size(); i++)
+			this.idxMapper.put(formatForOutput.get(i),i);
+	}
+
+	public Projection(List<IValueExpression> expressions) {
+		this.expressions = expressions;
 	}
 
 	public Projection(String attribute) {
@@ -36,14 +49,14 @@ public class Projection implements StatelessOperator, IStreamSQLOperator, IMicro
 	public Projection(String[] attributes) {
 		this.expressions = new ArrayList<IValueExpression>();
 		for (String attribute : attributes)
-		this.expressions.add(new ColumnReference(new StringConversion(), attribute));
+			this.expressions.add(new ColumnReference(new StringConversion(), attribute));
 	}
 
 	@Override
 	public void setUp() {
 	}
 
-	private DataTuple process(DataTuple data) {
+	private Object[] process(DataTuple data) {
 		
 		Object[] projectedValues = new Object[expressions.size()];
 
@@ -54,14 +67,14 @@ public class Projection implements StatelessOperator, IStreamSQLOperator, IMicro
 			projectedValues[i] = expressions.get(i).eval(data);
 		
 		/*
-		 * Return the projected tuple
+		 * Return the projected values
 		 */
-		return data.newTuple(projectedValues);
+		return projectedValues;
 	}
 	
 	@Override
 	public void processData(DataTuple data, API api) {
-		api.send(process(data));
+		api.send(data.newTuple(process(data)));
 	}
 
 
@@ -91,12 +104,18 @@ public class Projection implements StatelessOperator, IStreamSQLOperator, IMicro
 			IWindowAPI api) {
 		
 		assert(windowBatches.keySet().size() == 1);
+
+		if (this.idxMapper == null) {
+			this.idxMapper = new HashMap<>();
+			for (int i = 0 ; i < expressions.size(); i++)
+				this.idxMapper.put(expressions.get(i).toString(),i);
+		}
 		
 		Iterator<List<DataTuple>> iter = windowBatches.values().iterator().next().windowIterator();
 		while (iter.hasNext()) {
 			List<DataTuple> windowResult = new ArrayList<>();
 			for (DataTuple tuple : iter.next()) 
-				windowResult.add(process(tuple));
+				windowResult.add(new DataTuple(this.idxMapper, new Payload(process(tuple))));
 			api.outputWindowResult(windowResult);
 		}
 	}

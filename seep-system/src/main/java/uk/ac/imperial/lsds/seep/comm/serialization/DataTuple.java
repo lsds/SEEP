@@ -29,6 +29,16 @@ public class DataTuple implements DataTupleI, Serializable{
 		this.idxMapper = idxMapper;
 	}
 	
+	public DataTuple(Map<String, Integer> idxMapper, Payload payload){
+		this.idxMapper = idxMapper;
+		TuplePayload tp = new TuplePayload();
+		tp.attrValues = payload;
+		tp.timestamp = System.currentTimeMillis();
+		tp.instrumentation_ts =  tp.timestamp;
+		this.payload = tp;
+	}
+
+	
 	/** DEBUG METHODS */
 	
 	public HashMap<String, Integer> getMap(){
@@ -91,7 +101,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}
-	
+
 	// to be used by java2sdg
 	@Deprecated
 	public DataTuple _newTuple(Object[] objects){

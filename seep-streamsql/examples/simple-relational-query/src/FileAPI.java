@@ -17,10 +17,14 @@ public class FileAPI implements API {
 	private List<String> fields = new ArrayList<String>();
 	
 	private List<String> buffer = new ArrayList<>();
- 	
+
+	public FileAPI(String dataPath) {
+		this.dataPath = dataPath;
+	}
+
 
 	public FileAPI(String dataPath, List<String> fields) {
-		this.dataPath = dataPath;
+		this(dataPath);
 		this.fields = fields;
 	}
 
@@ -30,7 +34,7 @@ public class FileAPI implements API {
 		
 		StringBuilder sb = new StringBuilder();
 
-		for (String key : fields) {
+		for (String key : dt.getMap().keySet()) {
 			sb.append(dt.getValue(key).toString());
 			sb.append(',');
 		}

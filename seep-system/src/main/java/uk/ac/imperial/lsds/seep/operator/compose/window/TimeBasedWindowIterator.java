@@ -36,12 +36,15 @@ public class TimeBasedWindowIterator implements Iterator<List<DataTuple>> {
 			throw new NoSuchElementException();
 		
 		List<DataTuple> window = new ArrayList<>();
-		
-		long tsWindowEnd = tsWindowBatchStart + windowCursor * this.w.getWindowDefinition().getSlide() + this.w.getWindowDefinition().getSize();
-		DataTuple currentTuple = (lastRet == -1)? this.w.get(this.w.getStartIndex()) : this.w.get(lastRet);
-		while (currentTuple.getPayload().timestamp <= tsWindowEnd) {
-			window.add(currentTuple);
-			currentTuple = this.w.get(lastRet++);
+
+		// select tuples to window - but only if window batch is not empty
+		if (w.getStartIndex() != -1 && w.getEndIndex() != -1 ) {
+			long tsWindowEnd = tsWindowBatchStart + windowCursor * this.w.getWindowDefinition().getSlide() + this.w.getWindowDefinition().getSize();
+			DataTuple currentTuple = (lastRet == -1)? this.w.get(this.w.getStartIndex()) : this.w.get(lastRet);
+			while (currentTuple.getPayload().timestamp <= tsWindowEnd) {
+				window.add(currentTuple);
+				currentTuple = this.w.get(lastRet++);
+			}
 		}
 		
 		windowCursor++;

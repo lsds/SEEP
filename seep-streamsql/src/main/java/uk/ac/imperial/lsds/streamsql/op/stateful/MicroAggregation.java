@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -10,12 +11,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IMicroIncrementalComputation;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.stateful.Aggregation.AggregationType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation {
@@ -31,16 +32,20 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			
 	private AggregationType aggregationType;
 	
+	private  Map<String, Integer> idxMapper = null;
+	
 	/*
 	 * State used for incremental computation
 	 */
-	private Map<String, Double> values = new HashMap<>();;
-	private Map<String, Integer> countInPartition = new HashMap<>();;
-	private Map<String, DataTuple> tupleRef = new HashMap<>();
-
+	private Map<String, Double> values = new HashMap<>();
+	private Map<String, Integer> countInPartition = new HashMap<>();
 	
 	public enum AggregationType {
-		MAX, MIN, COUNT, SUM, AVG
+		MAX, MIN, COUNT, SUM, AVG;
+		
+		public String asString(String s) {
+			return this.toString() + "(" + s + ")";
+		}
 	}
 
 	public MicroAggregation(AggregationType aggregationType, String aggregationAttribute) {
@@ -91,7 +96,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		case AVG:
 			values = new HashMap<>();;
 			countInPartition = new HashMap<>();;
-			tupleRef = new HashMap<>();
 			windowBatches.values().iterator().next().performIncrementalComputation(this, api);
 			break;
 		case MAX:
@@ -128,8 +132,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 					values.put(key, newValue);
 			}
 			for (String partitionKey : tupleRef.keySet()) {
-				DataTuple output = tupleRef.get(partitionKey).newTuple(partitionKey,values.get(partitionKey));
-				windowResult.add(output);
+				windowResult.add(prepareOutputTuple(partitionKey, values.get(partitionKey)));
 			}				
 			api.outputWindowResult(windowResult);
 		}
@@ -178,7 +181,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			break;
 		}
 		
-		tupleRef.put(key, tuple);
 		if (countInPartition.containsKey(key))
 			countInPartition.put(key,countInPartition.get(key) + 1);
 		else
@@ -201,8 +203,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		case COUNT:
 			if (values.containsKey(key)) {
 				values.put(key,values.get(key) - 1d);
-				if (values.get(key) <= 0) 
-					values.remove(key);
 			}
 			
 			break;
@@ -210,20 +210,17 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			newValue = toDouble(tuple.getValue(this.aggregationAttribute));
 			if (values.containsKey(key)) {
 				values.put(key,values.get(key) - newValue);
-				if (values.get(key) <= 0)
-					values.remove(key);
 			}			
 			break;
 		case AVG:
 			newValue = toDouble(tuple.getValue(this.aggregationAttribute));
 			if (countInPartition.containsKey(key)) {
 				int currentCount = countInPartition.get(key);
-				double newAvg = (currentCount/(currentCount-1d))*
-						values.get(key) - (1d/(currentCount))*newValue;
-				values.put(key,newAvg);
-				
-				if (countInPartition.get(key) <= 0) 
-					values.remove(key);
+				if (currentCount > 1) {
+					double newAvg = (currentCount/(currentCount-1d))*
+							values.get(key) - (1d/(currentCount))*newValue;
+					values.put(key,newAvg);
+				}
 			}
 			break;
 
@@ -235,18 +232,33 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			countInPartition.put(key,countInPartition.get(key) - 1);
 			if (countInPartition.get(key) <= 0) {
 				countInPartition.remove(key);
-				tupleRef.remove(key);
+				values.remove(key);
 			}
 		}
 	}
 
+	private DataTuple prepareOutputTuple(String partitionKey, Double partitionValue) {
+		if (this.idxMapper == null) {
+			this.idxMapper = new HashMap<>();
+			for (int i = 0 ; i < groupByAttributes.length; i++)
+				this.idxMapper.put(groupByAttributes[i],i);
+			this.idxMapper.put(aggregationType.asString(aggregationAttribute),groupByAttributes.length);
+		}
+		String[] partitionKeys = partitionKey.split(";");
+		Object[] objects = new Object[partitionKeys.length + 1];
+		for (int i = 0; i < partitionKeys.length; i++)
+			objects[i] = partitionKeys[i];
+		
+		objects[objects.length-1] = (Object)partitionValue;
+		return new DataTuple(this.idxMapper, new Payload(objects));
+	}
+	
 	@Override
 	public void evaluateWindow(IWindowAPI api) {
 		List<DataTuple> windowResult = new ArrayList<>();
 
-		for (String partitionKey : tupleRef.keySet()) {
-			DataTuple output = tupleRef.get(partitionKey).setValues(partitionKey,values.get(partitionKey));
-			windowResult.add(output);
+		for (String partitionKey : values.keySet()) {
+			windowResult.add(prepareOutputTuple(partitionKey, values.get(partitionKey)));
 		}
 
 		api.outputWindowResult(windowResult);
