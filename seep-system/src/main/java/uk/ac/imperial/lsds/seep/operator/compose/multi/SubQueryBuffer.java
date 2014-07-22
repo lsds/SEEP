@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -12,7 +13,8 @@ public class SubQueryBuffer {
 
 	public static final int SUB_QUERY_BUFFER_CAPACITY = Integer.valueOf(GLOBALS.valueFor("subQueryBufferCapacity"));
 
-	private DataTuple [] elements;
+	private DataTuple[] elements;	
+	private boolean[] freeElements;	
 	
 	private int start = 0;
 	
@@ -48,12 +50,8 @@ public class SubQueryBuffer {
 			throw new IllegalArgumentException
 			("Buffer size must be greater than 0.");
 		elements = new DataTuple[size];
-	}
-
-	public int getMoreRecent(int i, int j) {
-		if (isMoreRecentThan(i, j))
-			return i;
-		return j;
+		freeElements = new boolean[size];
+		Arrays.fill(freeElements, false);
 	}
 
 	public boolean isMoreRecentThan(int first, int second) {
@@ -95,8 +93,7 @@ public class SubQueryBuffer {
 	
 	private boolean insertElement(DataTuple element) {
 		elements[normIndex(end)] = element;
-		
-		end = normIndex(end++);
+		end = normIndex(end + 1);
 		
 		if (end == start)
 			full = true;
@@ -116,10 +113,16 @@ public class SubQueryBuffer {
 		if (!validIndex(nI))
 			throw new InvalidParameterException();
 		
-		elements[nI] = null;
+		freeElements[nI] = true;
 		
-		while((elements[normIndex(start)] == null) && (start != end)) 
+		while((freeElements[start]) && (start != end)) {
+			int free = start;
+			// first, move pointer
 			start = normIndex(start+1);
+			// second, free the space
+			elements[free] = null;
+			freeElements[free] = false;
+		}
 		
 		if ((end != start) || (end == start && start == nI))
 			full = false;
@@ -164,6 +167,7 @@ public class SubQueryBuffer {
 		int nI = normIndex(i); 
 		if (!validIndex(nI))
 			throw new InvalidParameterException();
+		
 		return elements[nI];
 	}
 	
@@ -172,10 +176,8 @@ public class SubQueryBuffer {
 	}
 
 	public int getIndexBefore(int i) {
-		if (i > 0)
-			return i-1;
-		else 
-			return this.elements.length - 1;
+		i--;
+		return normIndex(i + this.elements.length);
 	}
 	
 	public int getEndIndex() {

@@ -256,24 +256,7 @@ public class WindowBatchTaskCreationScheme implements
 			}
 			long endTimeForWindowBatch = nextToProcessPointer + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
 			// check whether end time for window batch has passed already
-			
-			try {
-				int size = buffer.size();
-				int end = buffer.getEndIndex();
-				int before = buffer.getIndexBefore(end);
-				
-				if (buffer.get(buffer.getIndexBefore(buffer.getEndIndex())) == null)
-					System.out.println("ERROR " + buffer.getEndIndex() + " " + buffer.size());
-				
-				if (buffer.get(buffer.getIndexBefore(buffer.getEndIndex())).getPayload() == null)
-					System.out.println("ERROR PAYLOAD" + buffer.getEndIndex() + " " + buffer.size());
-				
-				sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex())).getPayload().timestamp);
-				
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			
+			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex())).getPayload().timestamp);
 			break;
 
 		default:

@@ -1,7 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -13,13 +12,14 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IStatefulMicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IMicroIncrementalComputation;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation {
+public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation, IStatefulMicroOperator {
 
 	public static String HASH_DELIMITER = ";";
 	
@@ -61,7 +61,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
-		sb.append("Distinct");
+		sb.append(aggregationType.asString(aggregationAttribute) + " ");
 		return sb.toString();
 	}
 	
@@ -262,6 +262,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		}
 
 		api.outputWindowResult(windowResult);
+	}
+
+	@Override
+	public IMicroOperatorCode getNewInstance() {
+		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes);
 	}
 
 }

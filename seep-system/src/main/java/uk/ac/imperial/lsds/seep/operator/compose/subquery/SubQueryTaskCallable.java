@@ -8,7 +8,9 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.micro.IStatefulMicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IStaticWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
@@ -64,8 +66,14 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 			
 			/*
 			 * Execute
+			 * If the actual code is stateful, we need to obtain a new instance
 			 */
-			currentOperator.getMicroOperator().getOp().processData(windowBatchesForProcessing.get(currentOperator), this);
+			IMicroOperatorCode operatorCode = currentOperator.getMicroOperator().getOp();
+			
+			if (operatorCode instanceof IStatefulMicroOperator) {
+				operatorCode = ((IStatefulMicroOperator) operatorCode).getNewInstance();
+			}
+			operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
 			
 			/*
 			 * We got the complete window batch result for the operator. So,

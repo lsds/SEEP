@@ -15,8 +15,7 @@ public class NullAPI implements API {
 
 	@Override
 	public void send(DataTuple dt) {
-		// TODO Auto-generated method stub
-
+//		System.out.println("SNK: " + dt.toString());
 	}
 
 	@Override
