@@ -2,10 +2,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -23,35 +20,21 @@ public class SubQueryTaskResultFetcher implements Runnable {
 		this.runningSubQueryTaskHandler = runningSubQueryTaskHandler;
 		this.resultForwarder = resultForwarder;
 	}
-	
+
 	@Override
 	public void run() {
-		
-		/*
-		 * For each running task, check whether it has terminated and collect
-		 * those that have finished
-		 */
-		Map<Integer, Future<SubQueryTaskResult>> finished = new HashMap<>();
-		for (Future<SubQueryTaskResult> future : runningSubQueryTaskHandler.getRunningSubQueryTasks())
-			if (future.isDone())
-				try {
-					finished.put(future.get().getLogicalOrderID(), future);
-				} catch (InterruptedException | ExecutionException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
 		
 		/*
 		 * Process all tasks that are finished and have consecutive logical order ids,
 		 * starting from the last known one
 		 */
-		List<Integer> lIds = new ArrayList<>(finished.keySet());
+		List<Integer> lIds = new ArrayList<>(runningSubQueryTaskHandler.getCompletedSubQueryTasks().keySet());
 		Collections.sort(lIds);
 		for (int lId : lIds) {
-			Future<SubQueryTaskResult> future = finished.get(lId);
+			Future<SubQueryTaskResult> future = runningSubQueryTaskHandler.getCompletedSubQueryTasks().get(lId);
 			if (this.lastFinishedOrderID == lId - 1) {
 				// Remove from running tasks
-				runningSubQueryTaskHandler.getRunningSubQueryTasks().remove(future);
+				runningSubQueryTaskHandler.getCompletedSubQueryTasks().remove(lId);
 				// Get result
 				try {
 					SubQueryTaskResult result = future.get();

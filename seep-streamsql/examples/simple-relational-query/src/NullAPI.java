@@ -7,14 +7,15 @@ import uk.ac.imperial.lsds.seep.operator.Callback;
 
 public class NullAPI implements API {
 
+	public long lastObservedInsTimestamp;
+	
 	@Override
 	public void setCallbackObject(Callback c) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void send(DataTuple dt) {
+		lastObservedInsTimestamp = dt.getPayload().instrumentation_ts;
 //		System.out.println("SNK: " + dt.toString());
 	}
 

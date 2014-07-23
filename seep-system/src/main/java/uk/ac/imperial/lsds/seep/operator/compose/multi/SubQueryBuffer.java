@@ -115,7 +115,7 @@ public class SubQueryBuffer {
 		
 		freeElements[nI] = true;
 		
-		while((freeElements[start]) && (start != end)) {
+		while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
 			int free = start;
 			// first, move pointer
 			start = normIndex(start+1);
@@ -168,6 +168,12 @@ public class SubQueryBuffer {
 		if (!validIndex(nI))
 			throw new InvalidParameterException();
 		
+		DataTuple result = elements[nI];
+		boolean free = freeElements[nI];
+		if (result == null) {
+			System.out.println("ERROR : " + nI + " " + end + "  " + free);
+		}
+		
 		return elements[nI];
 	}
 	
@@ -175,8 +181,8 @@ public class SubQueryBuffer {
 		return this.start;
 	}
 
-	public int getIndexBefore(int i) {
-		i--;
+	public int getIndexBefore(int i, int diff) {
+		i -= diff;
 		return normIndex(i + this.elements.length);
 	}
 	

@@ -250,7 +250,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			objects[i] = partitionKeys[i];
 		
 		objects[objects.length-1] = (Object)partitionValue;
-		return new DataTuple(this.idxMapper, new Payload(objects));
+		
+		DataTuple t = new DataTuple(this.idxMapper, new Payload(objects));
+//		t.getPayload().timestamp = tuple.getPayload().timestamp;
+//		t.getPayload().instrumentation_ts = tuple.getPayload().instrumentation_ts;
+		return t;
 	}
 	
 	@Override

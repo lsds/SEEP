@@ -17,7 +17,7 @@ import java.util.Map;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 
-public class DataTuple implements DataTupleI, Serializable{
+public class DataTuple implements DataTupleI, Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private TuplePayload payload;

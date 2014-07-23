@@ -105,7 +105,8 @@ public class LBRQ4 {
 		q2MicroOps.add(q2Sel);
 
 		windowDefs = new HashMap<>();
-		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 10, 1));
+		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
+//		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 5, windowDefs);
 
 //		sq1.connectTo(sq2, 101);

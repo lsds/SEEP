@@ -144,7 +144,7 @@ public class WindowBatchTaskCreationScheme implements
 					while (buffer.get(indexBeforeNextWindowBatch).getPayload().timestamp < timestampForNextWindowBatch)
 						indexBeforeNextWindowBatch = buffer.normIndex(indexBeforeNextWindowBatch + 1);
 					
-					indexBeforeNextWindowBatch = buffer.getIndexBefore(indexBeforeNextWindowBatch);
+					indexBeforeNextWindowBatch = buffer.getIndexBefore(indexBeforeNextWindowBatch, 1);
 
 					// determine last index smaller or equal than end timestamp (note that "end" does not store the index to ensure that it is large than the start)
 					end = start;
@@ -158,10 +158,10 @@ public class WindowBatchTaskCreationScheme implements
 						start = -1;
 					}
 					else 
-						end = buffer.getIndexBefore(end);
+						end = buffer.getIndexBefore(end, 1);
 
 					// define periodic window batch
-					System.out.println("batch:\t" + start + ",\t" + end + ",\t" +  startTimeForWindowBatch + ",\t" +  endTimeForWindowBatch);
+					System.out.println("BATCH:\t buffer view:\t" + start + "-" + end + "\t time:\t" +  startTimeForWindowBatch + "-" +  endTimeForWindowBatch);
 					windowBatch = new PeriodicWindowBatch(windowDef, buffer, start, end, startTimeForWindowBatch, endTimeForWindowBatch);
 					windowBatches.put(streamID, windowBatch);
 
@@ -256,7 +256,7 @@ public class WindowBatchTaskCreationScheme implements
 			}
 			long endTimeForWindowBatch = nextToProcessPointer + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
 			// check whether end time for window batch has passed already
-			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex())).getPayload().timestamp);
+			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex(),2)).getPayload().timestamp);
 			break;
 
 		default:

@@ -10,9 +10,10 @@ import java.util.Map;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.operator.API;
+import uk.ac.imperial.lsds.seep.operator.Callback;
 
 
-public class LRBRunner {
+public class LRBRunner implements Callback {
 
 	
 //	type         = Integer.parseInt(s[ 0]);
@@ -59,21 +60,27 @@ public class LRBRunner {
 		"endSegment:Integer",
 		"weekday:Integer",
 		"minute:Integer",
-		"day:Integer"};
+		"day:Integer"
+		};
+	
+	private static int[] includeAttributes = {
+		1,2,3,4,6,8
+	};
+
 	
 	private static Map<String, Integer> idxMapper = new HashMap<>();
 	
 	static {
-		for (int i = 0; i < attributes.length; i++)
-			idxMapper.put(attributes[i].split(":")[0], i);
+		for (int i = 0; i < includeAttributes.length; i++)
+			idxMapper.put(attributes[includeAttributes[i]].split(":")[0], i);
 	}
 	
 	
 	private static DataTuple parseLine(String line) {
 		String [] s = line.split(",");
-		Object[] objects = new Object[attributes.length];
-		for (int i = 0; i < attributes.length; i++)
-			objects[i] = hardCodedCast(i,s[i]);
+		Object[] objects = new Object[includeAttributes.length];
+		for (int i = 0; i < includeAttributes.length; i++)
+			objects[i] = hardCodedCast(includeAttributes[i],s[includeAttributes[i]]);
 		DataTuple result = new DataTuple(idxMapper, new Payload(objects));
 		result.getPayload().timestamp = (long) result.getValue("timestamp");
 		return result;
@@ -111,9 +118,6 @@ public class LRBRunner {
 			api = new FileAPI(args[1]);
 		}
 		
-		LBRQ4 query = new LBRQ4();
-		query.setup(api);
-
 		try {
 			f = new FileInputStream(args[0]);
 			d = new DataInputStream(f);
@@ -121,16 +125,27 @@ public class LRBRunner {
 			
 			System.out.println("Loading file...");
 			start = System.currentTimeMillis();
+			long lastTupleTimestamp = 0;
 			while ((line = b.readLine()) != null) {
 				lines += 1;
 				bytes += line.length() +1; /* +1 for '\n' */
-				DataTuple t = parseLine(line);
-				if (t.getInt("position") < 0) {
+
+				if (Integer.valueOf(line.split(",")[8]) < 0){
 					wrongtuples += 1;
 					continue;
 				}
-				if (t.getInt("type") == 0) /* Filter position reports */
-					data.add(t);
+
+				if (Integer.valueOf(line.split(",")[0]) != 0){
+					continue;
+				}
+
+				DataTuple t = parseLine(line);
+				data.add(t);
+				lastTupleTimestamp = t.getPayload().timestamp;
+				
+				if (lines%1000000 == 0)
+					System.out.println(String.format("%10d - %10d", System.currentTimeMillis(), lines));
+				
 			}
 			dt = (double ) (System.currentTimeMillis() - start) / 1000.;
 			d.close();
@@ -143,15 +158,16 @@ public class LRBRunner {
 			System.out.println(String.format("%10d bytes read", bytes));
 			System.out.println(String.format("%10d tuples in deque", totalTuples));
 			System.out.println();
-			System.out.println(String.format("%10.1f seconds", ((double) dt / 1000.)));
+			System.out.println(String.format("%10.1f seconds", (double) dt));
 			System.out.println(String.format("%10.1f tuples/s", rate));
 			System.out.println(String.format("%10.1f MB/s", MBps));
 			System.out.println(String.format("%10d tuples ignored", wrongtuples));
 			
-			/* In-memory computations */
+			LBRQ4 query = new LBRQ4();
+			query.setup(api);
 			
 			/* Q4 */
-			System.out.println("Q4 computations");
+			System.out.println("Q4 computations " + System.currentTimeMillis());
 			start = System.currentTimeMillis(); /* End-to-end measurement */
 			for (DataTuple t: data) {
 				query.process(t);

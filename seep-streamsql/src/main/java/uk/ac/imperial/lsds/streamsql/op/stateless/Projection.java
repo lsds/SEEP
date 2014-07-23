@@ -114,8 +114,12 @@ public class Projection implements StatelessOperator, IStreamSQLOperator, IMicro
 		Iterator<List<DataTuple>> iter = windowBatches.values().iterator().next().windowIterator();
 		while (iter.hasNext()) {
 			List<DataTuple> windowResult = new ArrayList<>();
-			for (DataTuple tuple : iter.next()) 
-				windowResult.add(new DataTuple(this.idxMapper, new Payload(process(tuple))));
+			for (DataTuple tuple : iter.next()) {
+				DataTuple t = new DataTuple(this.idxMapper, new Payload(process(tuple)));
+				t.getPayload().timestamp = tuple.getPayload().timestamp;
+				t.getPayload().instrumentation_ts = tuple.getPayload().instrumentation_ts;
+				windowResult.add(t);
+			}
 			api.outputWindowResult(windowResult);
 		}
 	}
