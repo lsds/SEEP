@@ -163,7 +163,7 @@ public class LRBRunner implements Callback {
 			System.out.println(String.format("%10.1f MB/s", MBps));
 			System.out.println(String.format("%10d tuples ignored", wrongtuples));
 			
-			LBRQ4 query = new LBRQ4();
+			LRBQ4 query = new LRBQ4();
 			query.setup(api);
 			
 			/* Q4 */
