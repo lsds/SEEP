@@ -1,9 +1,8 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
-import java.util.List;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
 public class SubQueryTaskResult {
@@ -12,17 +11,18 @@ public class SubQueryTaskResult {
 		
 	private int logicalOrderID;
 	
-	private List<DataTuple> resultStream;
+	private MultiOpTuple[] resultStream;
 
 	public SubQueryTaskResult(int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
 		this.logicalOrderID = logicalOrderID;
 		this.freeUpToIndices = freeUpToIndices;
 	}
 
-	public SubQueryTaskResult(List<DataTuple> resultStream, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
-		this(logicalOrderID, freeUpToIndices);
-		this.resultStream = resultStream;
-	}
+//	public SubQueryTaskResult(List<MultiOpTuple> resultStream, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
+//		this(logicalOrderID, freeUpToIndices);
+//		this.resultStream = resultStream;
+//	}
+	
 	
 	public void freeIndicesInBuffers() {
 		for (SubQueryBuffer b : this.freeUpToIndices.keySet())
@@ -37,14 +37,12 @@ public class SubQueryTaskResult {
 		return logicalOrderID;
 	}
 
-	public List<DataTuple> getResultStream() {
+	public MultiOpTuple[] getResultStream() {
 		return resultStream;
 	}
 
-	public void setResultStream(List<DataTuple> resultStream) {
+	public void setResultStream(MultiOpTuple[] resultStream) {
 		this.resultStream = resultStream;
 	}
 	
-
-
 }

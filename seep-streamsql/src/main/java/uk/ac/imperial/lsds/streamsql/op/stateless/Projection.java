@@ -1,94 +1,52 @@
 package uk.ac.imperial.lsds.streamsql.op.stateless;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
-import uk.ac.imperial.lsds.seep.operator.API;
-import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.streamsql.conversion.StringConversion;
 import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
+import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Projection implements StatelessOperator, IStreamSQLOperator, IMicroOperatorCode {
-
-	private static final long serialVersionUID = 1L;
+public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 
 	/*
 	 * Expressions for the extended projection
 	 */
-	private List<IValueExpression> expressions;
-	
-	private  Map<String, Integer> idxMapper = null;
+	private IValueExpression<IntegerType>[] expressions;
 
-	public Projection(List<IValueExpression> expressions, List<String> formatForOutput) {
-		this(expressions);
-		this.idxMapper = new HashMap<>();
-		for (int i = 0 ; i < formatForOutput.size(); i++)
-			this.idxMapper.put(formatForOutput.get(i),i);
-	}
-
-	public Projection(List<IValueExpression> expressions) {
-		this.expressions = expressions;
-	}
-
-	public Projection(String attribute) {
-		this.expressions = new ArrayList<IValueExpression>();
-		this.expressions.add(new ColumnReference(new StringConversion(), attribute));
+	public Projection(int attribute) {
+		this.expressions = new IValueExpression[] {new ColumnReference<IntegerType>(attribute)};
 	}
 	
-	public Projection(String[] attributes) {
-		this.expressions = new ArrayList<IValueExpression>();
-		for (String attribute : attributes)
-			this.expressions.add(new ColumnReference(new StringConversion(), attribute));
+	public Projection(int[] attributes) {
+		this.expressions = new IValueExpression[attributes.length];
+		for (int i = 0; i < attributes.length; i++)
+			this.expressions[i] = new ColumnReference<IntegerType>(attributes[i]);
 	}
 
-	@Override
-	public void setUp() {
-	}
-
-	private Object[] process(DataTuple data) {
-		
-		Object[] projectedValues = new Object[expressions.size()];
+	private MultiOpTuple copyProject(MultiOpTuple data) {
+		MultiOpTuple t = MultiOpTuple.newInstance();
+		t.values = new String[expressions.length];
 
 		/*
 		 * Add all the content as defined by the projection expressions
 		 */
-		for (int i = 0; i < expressions.size(); i++) 
-			projectedValues[i] = expressions.get(i).eval(data);
+		for (int i = 0; i < expressions.length; i++) 
+			t.values[i] = expressions[i].eval(data).toString();
 		
-		/*
-		 * Return the projected values
-		 */
-		return projectedValues;
+		return t;
 	}
-	
-	@Override
-	public void processData(DataTuple data, API api) {
-		api.send(data.newTuple(process(data)));
-	}
-
-
-	@Override
-	public void processData(List<DataTuple> dataList, API api) {
-		for (DataTuple tuple : dataList)
-			processData(tuple, api);
-	}
-	
+		
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Projection (");
-		for (IValueExpression att : expressions)
+		for (IValueExpression<IntegerType> att : expressions)
 			sb.append(att.toString() + " ");
 		sb.append(")");
 		return sb.toString();
@@ -104,24 +62,29 @@ public class Projection implements StatelessOperator, IStreamSQLOperator, IMicro
 			IWindowAPI api) {
 		
 		assert(windowBatches.keySet().size() == 1);
-
-		if (this.idxMapper == null) {
-			this.idxMapper = new HashMap<>();
-			for (int i = 0 ; i < expressions.size(); i++)
-				this.idxMapper.put(expressions.get(i).toString(),i);
-		}
 		
-		Iterator<List<DataTuple>> iter = windowBatches.values().iterator().next().windowIterator();
-		while (iter.hasNext()) {
-			List<DataTuple> windowResult = new ArrayList<>();
-			for (DataTuple tuple : iter.next()) {
-				DataTuple t = new DataTuple(this.idxMapper, new Payload(process(tuple)));
-				t.getPayload().timestamp = tuple.getPayload().timestamp;
-				t.getPayload().instrumentation_ts = tuple.getPayload().instrumentation_ts;
-				windowResult.add(t);
+		IWindowBatch batch = windowBatches.values().iterator().next();
+		
+		int[] startPointers = batch.getWindowStartPointers();
+		int[] endPointers = batch.getWindowEndPointers();
+		
+		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+			int windowStart = startPointers[currentWindow];
+			int windowEnd = endPointers[currentWindow];
+			
+			// empty window?
+			if (windowStart == -1) {
+				api.outputWindowResult(new MultiOpTuple[0]);
 			}
-			api.outputWindowResult(windowResult);
+			else {
+				
+				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
+				
+				for (int i = 0; i < windowEnd-windowStart+1; i++) 
+					windowResult[i] = copyProject(batch.get(windowStart + i));
+				
+				api.outputWindowResult(windowResult);
+			}
 		}
 	}
-
 }

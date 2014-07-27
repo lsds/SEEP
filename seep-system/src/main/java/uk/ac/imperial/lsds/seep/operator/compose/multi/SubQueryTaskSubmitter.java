@@ -58,9 +58,7 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 		/*
 		 * Check whether a task should be instantiated
 		 */
-		this.creationScheme.createTasks();
-		while (creationScheme.hasNext()) {
-			SubQueryTaskCallable task = creationScheme.next();
+		for (SubQueryTaskCallable task : this.creationScheme.createTasks()) {
 			/*
 			 * Submit the tasks
 			 */

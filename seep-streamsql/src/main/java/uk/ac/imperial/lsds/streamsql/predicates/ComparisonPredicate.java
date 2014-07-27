@@ -1,13 +1,11 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
-public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate {
+public class ComparisonPredicate<T extends PrimitiveType> implements IPredicate {
 
 	/*
 	 * Values compared by this predicate
@@ -69,7 +67,7 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 	}
 
 	@Override
-	public boolean satisfied(DataTuple tuple) {
+	public boolean satisfied(MultiOpTuple tuple) {
 		Comparable val1 = v1.eval(tuple);
 		Comparable val2 = v2.eval(tuple);
 
@@ -109,7 +107,7 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 	}
 
 	@Override
-	public boolean satisfied(DataTuple firstTuple, DataTuple secondTuple) {
+	public boolean satisfied(MultiOpTuple firstTuple, MultiOpTuple secondTuple) {
 		final Comparable val1 = v1.eval(firstTuple);
 		final Comparable val2 = v2.eval(secondTuple);
 		final int compared = val1.compareTo(val2);
@@ -210,7 +208,7 @@ public class ComparisonPredicate<T extends Comparable<T>> implements IPredicate 
 	}
 
 	@Override
-	public List<IPredicate> getInnerPredicates() {
-		return new ArrayList<IPredicate>();
+	public IPredicate[] getInnerPredicates() {
+		return new IPredicate[0];
 	}
 }

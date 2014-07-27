@@ -2,31 +2,30 @@ package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IStatefulMicroOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.Monitor;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IStaticWindowBatch;
+import uk.ac.imperial.lsds.seep.operator.compose.window.ArrayWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.seep.operator.compose.window.StaticWindowBatch;
 
 public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWindowAPI {
 		
-	
 	private ISubQueryConnectable subQueryConnectable;
 	private Map<Integer, IWindowBatch> windowBatches;
 	
 	private IMicroOperatorConnectable currentOperator;
-	private Map<Integer, IStaticWindowBatch> currentWindowBatchResults;
-	private IStaticWindowBatch finalWindowBatchResult;
+	private Map<Integer, IWindowBatch> currentWindowBatchResults;
+	private IWindowBatch finalWindowBatchResult;
 
 	private SubQueryTaskResult result;
 	public SubQueryTaskCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
@@ -46,9 +45,9 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 	public SubQueryTaskResult call() throws Exception {
 		try {
 			
-			this.finalWindowBatchResult = new StaticWindowBatch();
+			this.finalWindowBatchResult = new ArrayWindowBatch();
 			Set<IMicroOperatorConnectable> processed = new HashSet<>();
-			Set<IMicroOperatorConnectable> toProcess = new HashSet<>();
+			Queue<IMicroOperatorConnectable> toProcess = new LinkedList<>();
 			Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
 			
 			/*
@@ -63,7 +62,7 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 				/*
 				 * Select a micro operator to execute
 				 */
-				currentOperator = toProcess.iterator().next();
+				currentOperator = toProcess.poll();
 				currentWindowBatchResults = new HashMap<>();
 				toProcess.remove(currentOperator);
 				processed.add(currentOperator);
@@ -80,7 +79,7 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 				operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
 				
 				if (this.currentWindowBatchResults.values().size() > 0)
-					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getAllTuples().size());
+					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
 				
 				/*
 				 * We got the complete window batch result for the operator. So,
@@ -112,7 +111,7 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 				}
 			}
 			
-			this.result.setResultStream(this.finalWindowBatchResult.getAllTuples());
+			this.result.setResultStream(this.finalWindowBatchResult.getArrayContent());
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -123,7 +122,7 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 	
 	
 	@Override
-	public void outputWindowResult(List<DataTuple> windowResult) {
+	public void outputWindowResult(MultiOpTuple[] windowResult) {
 		if (this.subQueryConnectable.getSubQuery().getMostDownstreamMicroOperator().equals(this.currentOperator)) {
 			/*
 			 * the given stream id (-1) will be ignore when calling the following
@@ -138,13 +137,13 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 	}
 
 	@Override
-	public void outputWindowBatchResult(List<List<DataTuple>> windowBatchResult) {
-		for (List<DataTuple> windowResult : windowBatchResult)
+	public void outputWindowBatchResult(MultiOpTuple[][] windowBatchResult) {
+		for (MultiOpTuple[] windowResult : windowBatchResult)
 			outputWindowResult(windowResult);
 	}
 
 	@Override
-	public void outputWindowResult(int streamID, List<DataTuple> windowResult) {
+	public void outputWindowResult(int streamID, MultiOpTuple[] windowResult) {
 		/*
 		 * Is the current operator one of the most downstream operators?
 		 */
@@ -152,24 +151,24 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 			/*
 			 * Yes, so we keep the window batch results as parts of the subquery result
 			 */
-			this.finalWindowBatchResult.registerWindow(windowResult);
+			this.finalWindowBatchResult.addWindow(windowResult);
 		}
 		else {
 			/*
 			 * No, so we keep the window batch results only in a temporary data structure for the downstream operators
 			 */
 			if (!currentWindowBatchResults.containsKey(streamID))
-				currentWindowBatchResults.put(streamID, new StaticWindowBatch());
+				currentWindowBatchResults.put(streamID, new ArrayWindowBatch());
 
-			currentWindowBatchResults.get(streamID).registerWindow(windowResult);
+			currentWindowBatchResults.get(streamID).addWindow(windowResult);
 		}		
 	}
 
 	@Override
 	public void outputWindowBatchResult(int streamID,
-			List<List<DataTuple>> windowBatchResult) {
-		for (List<DataTuple> windowResult : windowBatchResult)
-			outputWindowResult(streamID,windowResult);
+			MultiOpTuple[][] windowBatchResult) {
+		for (MultiOpTuple[] windowResult : windowBatchResult)
+			outputWindowResult(streamID, windowResult);
 		
 	}
 

@@ -1,19 +1,15 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class SubQueryBuffer {
 
 	public static final int SUB_QUERY_BUFFER_CAPACITY = Integer.valueOf(GLOBALS.valueFor("subQueryBufferCapacity"));
 
-	private DataTuple[] elements;	
+	private MultiOpTuple[] elements;	
 	private boolean[] freeElements;	
 	
 	private int start = 0;
@@ -36,20 +32,22 @@ public class SubQueryBuffer {
 		return this.full;
 	}
 
-	public List<DataTuple> add(List<DataTuple> tuples) {
-		Iterator<DataTuple> iter = tuples.iterator();
-		while (iter.hasNext()) {
-			if (add(iter.next()))
-				iter.remove();
+	public MultiOpTuple[] add(MultiOpTuple[] tuples) {
+		for (int i = 0; i < tuples.length; i++) {
+			if (!add(tuples[i])) {
+				MultiOpTuple[] remaining = new MultiOpTuple[tuples.length - i];
+				System.arraycopy(tuples, i, remaining, 0, tuples.length - i);
+				return remaining;
+			}
 		}
-		return tuples;
+		return new MultiOpTuple[0];
 	}
 
 	public SubQueryBuffer(int size) {
 		if (size <= 0)
 			throw new IllegalArgumentException
 			("Buffer size must be greater than 0.");
-		elements = new DataTuple[size];
+		elements = new MultiOpTuple[size];
 		freeElements = new boolean[size];
 		Arrays.fill(freeElements, false);
 	}
@@ -91,8 +89,8 @@ public class SubQueryBuffer {
 		return size;
 	}
 	
-	private boolean insertElement(DataTuple element) {
-		elements[normIndex(end)] = element;
+	private boolean insertElement(MultiOpTuple element) {
+		elements[end] = element;
 		end = normIndex(end + 1);
 		
 		if (end == start)
@@ -101,7 +99,7 @@ public class SubQueryBuffer {
 		return true;			
 	}
 	
-	public boolean add(DataTuple element) {
+	public boolean add(MultiOpTuple element) {
 		if (full)
 			return false;
 		
@@ -119,7 +117,9 @@ public class SubQueryBuffer {
 			int free = start;
 			// first, move pointer
 			start = normIndex(start+1);
-			// second, free the space
+			// second, return the tuple to the pool
+			elements[free].free();
+			// third, reset the buffer
 			elements[free] = null;
 			freeElements[free] = false;
 		}
@@ -163,16 +163,10 @@ public class SubQueryBuffer {
 	 * @param i
 	 * @return
 	 */
-	public DataTuple get(int i) {
+	public MultiOpTuple get(int i) {
 		int nI = normIndex(i); 
 		if (!validIndex(nI))
 			throw new InvalidParameterException();
-		
-		DataTuple result = elements[nI];
-		boolean free = freeElements[nI];
-		if (result == null) {
-			System.out.println("ERROR : " + nI + " " + end + "  " + free);
-		}
 		
 		return elements[nI];
 	}
@@ -194,14 +188,28 @@ public class SubQueryBuffer {
 		return this.elements.length;
 	}
 
-	public List<DataTuple> getAsList() {
-		return getSublistUpToIndex(this.start, this.end);
+	public MultiOpTuple[] getArray() {
+		return getArray(this.start, getIndexBefore(this.end,1));
 	}
 
-	public List<DataTuple> getSublistUpToIndex(int startIndex, int endIndex) {
-		List<DataTuple> result = new ArrayList<>();
-		for (int i = startIndex; normIndex(i) < endIndex; i++)
-			result.add(this.get(i));
-		return result;
+	public MultiOpTuple[] getArray(int startIndex, int endIndex) {
+		int nStartIndex = normIndex(startIndex);
+		int nEndIndex = normIndex(endIndex);
+		if (nEndIndex > nStartIndex) { 
+			/* Normal mode */
+			int length = nEndIndex - nStartIndex + 1;
+			MultiOpTuple[] copy = new MultiOpTuple[length];
+			System.arraycopy(elements, nStartIndex, copy, nStartIndex, length);
+			return copy;
+		} else {
+			/* Copy in two parts */
+			int lengthFirst = this.elements.length - nStartIndex;
+			int lengthSecond = nEndIndex + 1;
+			MultiOpTuple[] copy = new MultiOpTuple[lengthFirst + lengthSecond];
+			System.arraycopy(elements, nStartIndex, copy, 0, lengthFirst);
+			System.arraycopy(elements, 0, copy, lengthFirst-1, lengthSecond);
+			return copy;
+		}
 	}
+	
 }

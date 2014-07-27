@@ -1,0 +1,10 @@
+package uk.ac.imperial.lsds.streamsql.types;
+
+public interface PrimitiveType extends Comparable<PrimitiveType> {
+	
+	public PrimitiveType add(PrimitiveType toAdd);
+	public PrimitiveType sub(PrimitiveType toAdd);
+	public PrimitiveType mul(PrimitiveType toAdd);
+	public PrimitiveType div(PrimitiveType toAdd);
+	
+}

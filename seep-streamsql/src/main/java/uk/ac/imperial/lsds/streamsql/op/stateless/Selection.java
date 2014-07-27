@@ -1,41 +1,22 @@
 package uk.ac.imperial.lsds.streamsql.op.stateless;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.API;
-import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class Selection implements StatelessOperator, IStreamSQLOperator, IMicroOperatorCode {
-
-	private static final long serialVersionUID = 1L;
+public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private IPredicate predicate;
 
 	public Selection(IPredicate predicate) {
 		this.predicate = predicate;
-	}
-
-	@Override
-	public void processData(DataTuple data, API api) {
-
-		/*
-		 * Check whether predicate is satisfied for tuple 
-		 */
-		if (this.predicate.satisfied(data)) 
-			/*
-			 * Send the selected tuple
-			 */
-			api.send(data);
 	}
 	
 	@Override
@@ -48,22 +29,10 @@ public class Selection implements StatelessOperator, IStreamSQLOperator, IMicroO
 	}
 
 	@Override
-	public void setUp() {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	@Override
 	public void accept(OperatorVisitor ov) {
 		ov.visit(this);
 	}
 
-	@Override
-	public void processData(List<DataTuple> dataList, API api) {
-		for (DataTuple tuple : dataList)
-			processData(tuple, api);
-	}
 
 	@Override
 	public void processData(Map<Integer, IWindowBatch> windowBatches,
@@ -71,19 +40,37 @@ public class Selection implements StatelessOperator, IStreamSQLOperator, IMicroO
 		
 		assert(windowBatches.keySet().size() == 1);
 		
-		Iterator<List<DataTuple>> iter = windowBatches.values().iterator().next().windowIterator();
-		while (iter.hasNext()) {
-			List<DataTuple> windowResult = new ArrayList<>();
-			List<DataTuple> windowContent = iter.next();
-			for (DataTuple tuple : windowContent) {
-				/*
-				 * Check whether predicate is satisfied for tuple 
-				 */
-				if (this.predicate.satisfied(tuple)) 
-					windowResult.add(tuple);
+		IWindowBatch batch = windowBatches.values().iterator().next();
+		
+		int[] startPointers = batch.getWindowStartPointers();
+		int[] endPointers = batch.getWindowEndPointers();
+		
+		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+			int windowStart = startPointers[currentWindow];
+			int windowEnd = endPointers[currentWindow];
+			
+			// empty window?
+			if (windowStart == -1) {
+				api.outputWindowResult(new MultiOpTuple[0]);
 			}
-			api.outputWindowResult(windowResult);
+			else {
+			
+				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
+				
+				int count = 0;
+				while (windowStart <= windowEnd) {
+					/*
+					 * Check whether predicate is satisfied for tuple 
+					 */
+					MultiOpTuple tuple = batch.get(windowStart);
+					if (this.predicate.satisfied(tuple)) 
+						windowResult[count++] = tuple;
+					
+					windowStart++;
+				}
+				// make sure to shrink the array to the actual number of selected tuples
+				api.outputWindowResult(Arrays.copyOf(windowResult, count));
+			}
 		}
 	}
-
 }

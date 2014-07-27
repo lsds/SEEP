@@ -1,23 +1,23 @@
 package uk.ac.imperial.lsds.seep.operator.compose.window;
 
-import java.util.Iterator;
-import java.util.List;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+public interface IWindowBatch {
 
-public interface IWindowBatch extends Iterable<DataTuple> {
+	public long getStartTimestamp();
+	public long getEndTimestamp();
+
+	public int[] getWindowStartPointers();
+	public int[] getWindowEndPointers();
 	
-	/*
-	 * Methods to access the window content
-	 * 
-	 * Mimic iterator on the window level. Iterator
-	 * on the element level is given by implementing
-	 * Iterable<DataTuple> 
-	 */
-	public List<DataTuple> getAllTuples();
-	public DataTuple get(int index);
-	public Iterator<List<DataTuple>> windowIterator();
+	public SubQueryBuffer getBufferContent();
+	public MultiOpTuple[] getArrayContent();
+
+	public MultiOpTuple get(int index);
 	
 	public void performIncrementalComputation(IMicroIncrementalComputation incrementalComputation, IWindowAPI api);
+
+	public void addWindow(MultiOpTuple[] window);
 
 }

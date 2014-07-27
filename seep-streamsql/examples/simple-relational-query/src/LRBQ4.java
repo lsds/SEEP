@@ -1,55 +1,36 @@
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.API;
+import uk.ac.imperial.lsds.seep.operator.MultiAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowType;
-import uk.ac.imperial.lsds.streamsql.conversion.DoubleConversion;
 import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.ValueExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.Constant;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ComparisonPredicate;
+import uk.ac.imperial.lsds.streamsql.types.FloatType;
 
 
 public class LRBQ4 {
 
 	private MultiOperator mo;
 	
-	private API api;
+	private MultiAPI api;
 	
-	public void setup(API api) {
+	public void setup(MultiAPI api) {
 		this.api = api;
 		
-		/*
-		 * Definition of schemas for streams 
-		 */
-		List<String> posSpeedStr = new ArrayList<String>();
-		posSpeedStr.add("vehicleId");
-		posSpeedStr.add("speed");
-		posSpeedStr.add("xPos");
-		posSpeedStr.add("dir");
-		posSpeedStr.add("hwy");
-		
-		List<String> segSpeedStr = new ArrayList<String>();
-		segSpeedStr.add("vehicleId");
-		segSpeedStr.add("speed");
-		segSpeedStr.add("segNo");
-		segSpeedStr.add("dir");
-		segSpeedStr.add("hwy");
-
 		/*
 		 * Query 1
 		 * 
@@ -74,7 +55,9 @@ public class LRBQ4 {
 //		windowDefs.put(11, new WindowDefinition(WindowType.ROW_BASED, 1, 1));
 //		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(q1MicroOps, 2, windowDefs);
 
-		
+
+		// INPUT STREAM vehicleID, speed, highway, direction, position
+
 		/*
 		 * Query 4
 		 * 
@@ -83,16 +66,17 @@ public class LRBQ4 {
 		 * Group By segNo, dir, hwy
 		 * Having Avg(speed) < 40
 		 */
-		IMicroOperatorCode q2AggCode = new MicroAggregation(MicroAggregation.AggregationType.AVG, "speed", new String[] {"position", "direction", "highway"});
+		IMicroOperatorCode q2AggCode = new MicroAggregation(MicroAggregation.AggregationType.AVG, 1, new int[] {2, 3, 4});
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
 
-		IMicroOperatorCode q2SelCode = new Selection(new ComparisonPredicate(
-				ComparisonPredicate.LESS_OP, 
-				new ColumnReference<>(new DoubleConversion(), "AVG(speed)"), 
-				new ValueExpression<>(new DoubleConversion(), 40.0)));
+		IMicroOperatorCode q2SelCode = new Selection(
+				new ComparisonPredicate<FloatType>(
+						ComparisonPredicate.LESS_OP, 
+						new ColumnReference<FloatType>(5), 
+						new Constant<FloatType>(new FloatType(40f))));
 		IMicroOperatorConnectable q2Sel = QueryBuilder.newMicroOperator(q2SelCode, 4);
 
-		IMicroOperatorCode q2ProjCode = new Projection(new String[] {"position", "direction", "highway"});
+		IMicroOperatorCode q2ProjCode = new Projection(new int[] {2, 3, 4});
 		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 2);
 
 		
@@ -122,7 +106,7 @@ public class LRBQ4 {
 
 	}
 	
-	public void process(DataTuple tuple) {
+	public void process(MultiOpTuple tuple) {
 		this.mo.processData(tuple, this.api);
 	}
 	

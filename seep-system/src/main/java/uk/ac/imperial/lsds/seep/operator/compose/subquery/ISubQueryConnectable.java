@@ -10,13 +10,12 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
-import java.io.Serializable;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
-public interface ISubQueryConnectable extends Serializable {
+public interface ISubQueryConnectable {
 
 	public SubQuery getSubQuery();
 	

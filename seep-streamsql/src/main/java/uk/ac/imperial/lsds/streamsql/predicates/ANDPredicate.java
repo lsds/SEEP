@@ -1,24 +1,18 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
 public class ANDPredicate implements IPredicate {
 	
-	List<IPredicate> predicates = new ArrayList<IPredicate>();
+	IPredicate[] predicates;
 
-	public ANDPredicate(IPredicate pred1, IPredicate pred2, IPredicate... predicates) {
-		this.predicates.add(pred1);
-		this.predicates.add(pred2);
-		this.predicates.addAll(Arrays.asList(predicates));
+	public ANDPredicate(IPredicate... predicates) {
+		this.predicates = predicates;
 	}
 
 	@Override
-	public boolean satisfied(DataTuple tuple) {
+	public boolean satisfied(MultiOpTuple tuple) {
 		for (IPredicate pred : predicates)
 			if (!pred.satisfied(tuple))
 				return false;
@@ -26,7 +20,7 @@ public class ANDPredicate implements IPredicate {
 	}
 
 	@Override
-	public boolean satisfied(DataTuple firstTuple, DataTuple secondTuple) {
+	public boolean satisfied(MultiOpTuple firstTuple, MultiOpTuple secondTuple) {
 		for (IPredicate pred : predicates)
 			if (!pred.satisfied(firstTuple,secondTuple))
 				return false;
@@ -36,9 +30,9 @@ public class ANDPredicate implements IPredicate {
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < this.predicates.size(); i++) {
-			sb.append("(").append(predicates.get(i)).append(")");
-			if (i != predicates.size() - 1)
+		for (int i = 0; i < this.predicates.length; i++) {
+			sb.append("(").append(predicates[i]).append(")");
+			if (i != predicates.length - 1)
 				sb.append(" AND ");
 		}
 		return sb.toString();
@@ -50,7 +44,7 @@ public class ANDPredicate implements IPredicate {
 	}
 
 	@Override
-	public List<IPredicate> getInnerPredicates() {
+	public IPredicate[] getInnerPredicates() {
 		return predicates;
 	}
 

@@ -3,14 +3,12 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
-import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Callback;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.streamsql.types.FloatType;
+import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 
 
 public class LRBRunner implements Callback {
@@ -35,11 +33,9 @@ public class LRBRunner implements Callback {
 	private static Object hardCodedCast(int i, String value) {
 		switch (attributes[i].split(":")[1]) {
 		case "Integer":
-			return new Integer(value);
-		case "Long":
-			return new Long(value);
+			return new IntegerType(Integer.valueOf(value));
 		case "Float":
-			return new Float(value);
+			return new FloatType(Float.valueOf(value));
 		default:
 			return value;
 		}
@@ -47,7 +43,7 @@ public class LRBRunner implements Callback {
 
 	private static String[] attributes = {
 		"type:Integer",
-		"timestamp:Long",
+		"timestamp:Integer",
 		"vehicleId:Integer",
 		"speed:Integer" ,
 		"highway:Integer",
@@ -63,33 +59,25 @@ public class LRBRunner implements Callback {
 		"day:Integer"
 		};
 	
+	// INPUT STREAM vehicleID, speed, highway, direction, position
 	private static int[] includeAttributes = {
-		1,2,3,4,6,8
+		2,3,4,6,8
 	};
-
 	
-	private static Map<String, Integer> idxMapper = new HashMap<>();
-	
-	static {
-		for (int i = 0; i < includeAttributes.length; i++)
-			idxMapper.put(attributes[includeAttributes[i]].split(":")[0], i);
-	}
-	
-	
-	private static DataTuple parseLine(String line) {
+	private static MultiOpTuple parseLine(String line) {
 		String [] s = line.split(",");
 		Object[] objects = new Object[includeAttributes.length];
 		for (int i = 0; i < includeAttributes.length; i++)
 			objects[i] = hardCodedCast(includeAttributes[i],s[includeAttributes[i]]);
-		DataTuple result = new DataTuple(idxMapper, new Payload(objects));
-		result.getPayload().timestamp = (long) result.getValue("timestamp");
-		return result;
+		
+		long timestamp = Long.valueOf(s[1]);
+		return MultiOpTuple.newInstance(objects, timestamp, timestamp);
 	}
 	
 	public static void main (String [] args) {
 		
 		if (args.length != 1) {
-			System.err.println("usage: java LRBRunner [input filename] ([output filename])");
+			System.err.println("usage: java LRBRunner [input filename]");
 			System.exit(1);
 		}
 		
@@ -100,7 +88,7 @@ public class LRBRunner implements Callback {
 		String line = null;
 		long lines = 0;
 		
-		Deque<DataTuple> data = new LinkedList<>();
+		Deque<MultiOpTuple> data = new LinkedList<>();
 		
 		/* Time measurements */
 		long start = 0L;
@@ -113,11 +101,6 @@ public class LRBRunner implements Callback {
 		
 		long wrongtuples = 0L;
 
-		API api = new NullAPI();
-		if (args.length == 2) {
-			api = new FileAPI(args[1]);
-		}
-		
 		try {
 			f = new FileInputStream(args[0]);
 			d = new DataInputStream(f);
@@ -139,9 +122,9 @@ public class LRBRunner implements Callback {
 					continue;
 				}
 
-				DataTuple t = parseLine(line);
+				MultiOpTuple t = parseLine(line);
 				data.add(t);
-				lastTupleTimestamp = t.getPayload().timestamp;
+				lastTupleTimestamp = t.timestamp;
 				
 				if (lines%1000000 == 0)
 					System.out.println(String.format("%10d - %10d", System.currentTimeMillis(), lines));
@@ -163,21 +146,19 @@ public class LRBRunner implements Callback {
 			System.out.println(String.format("%10.1f MB/s", MBps));
 			System.out.println(String.format("%10d tuples ignored", wrongtuples));
 			
+			NullAPI api = new NullAPI();
+			api.waitForInstrumentationTimestamp = lastTupleTimestamp;
+			api.totalTuples = totalTuples;
+			
 			LRBQ4 query = new LRBQ4();
 			query.setup(api);
 			
 			/* Q4 */
 			System.out.println("Q4 computations " + System.currentTimeMillis());
-			start = System.currentTimeMillis(); /* End-to-end measurement */
-			for (DataTuple t: data) {
+			api.startTimestamp = System.currentTimeMillis(); /* End-to-end measurement */
+			for (MultiOpTuple t: data) {
 				query.process(t);
 			}
-			dt = (double) (System.currentTimeMillis() - start) / 1000.;
-			/* Stats */
-			rate =  (double) (totalTuples) / dt;
-			System.out.println(String.format("%10.1f seconds", dt));
-			System.out.println(String.format("%10.1f tuples/s", rate));
-			/* q4.stats(); */
 			
 		} catch (Exception e) { System.err.println(e.getMessage()); }
 		

@@ -1,9 +1,10 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
-import java.util.Iterator;
+import java.util.List;
 
-public interface SubQueryTaskCreationScheme extends Iterator<SubQueryTaskCallable> {
+
+public interface SubQueryTaskCreationScheme  {
 	
-	public void createTasks();
+	public List<SubQueryTaskCallable> createTasks();
 	
 }

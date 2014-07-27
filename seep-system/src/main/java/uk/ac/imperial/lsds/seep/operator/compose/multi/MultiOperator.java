@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
+import uk.ac.imperial.lsds.seep.operator.MultiAPI;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
@@ -30,15 +31,12 @@ public class MultiOperator implements StatelessOperator {
 
 	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
 	
-//	private static final int SUB_QUERY_TRIGGER_DELAY = Integer.valueOf(GLOBALS.valueFor("subQueryTriggerDelay"));
-//	private static final int MICRO_OP_BATCH_SIZE = Integer.valueOf(GLOBALS.valueFor("microOpBatchSize"));
-	
 	private static final long serialVersionUID = 1L;
 
 	private final int id;
 	
 	private Set<ISubQueryConnectable> subQueries;
-	private API api;
+	private MultiAPI api;
 	private Set<ISubQueryConnectable> mostUpstreamSubQueries;
 	private Set<ISubQueryConnectable> mostDownstreamSubQueries;
 	
@@ -46,8 +44,6 @@ public class MultiOperator implements StatelessOperator {
 	
 	private ExecutorService executorService;
 	
-//	private Map<ISubQueryConnectable, Integer> numberThreadsPerSubQuery = new HashMap<>();
- 	
 	private MultiOperator(Set<ISubQueryConnectable> subQueries, int multiOpId){
 		this.id = multiOpId;
 		this.subQueries = subQueries;
@@ -64,8 +60,7 @@ public class MultiOperator implements StatelessOperator {
 	 * operators is not threadsafe. We assume a single thread to call 
 	 * processData.
 	 */
-	@Override
-	public void processData(DataTuple data, API api) {
+	public void processData(MultiOpTuple data, MultiAPI api) {
 		/*
 		 * Store the api so that it can be later used to forward tuples
 		 */
@@ -90,13 +85,24 @@ public class MultiOperator implements StatelessOperator {
 				}
 			}
 		}
-		
+	}
+
+	
+	@Override
+	public void processData(DataTuple data, API api) {
+		/*
+		 * Deactivated for local testing
+		 */
+//		processData(MultiOpTuple.newInstance(data), api);
 	}
 	
 	@Override
 	public void processData(List<DataTuple> dataList, API localApi) {
-		for (DataTuple tuple : dataList)
-			this.processData(tuple, localApi);
+		/*
+		 * Deactivated for local testing
+		 */
+//		for (DataTuple tuple : dataList)
+//			this.processData(tuple, localApi);
 	}
 
 	@Override
@@ -153,10 +159,9 @@ public class MultiOperator implements StatelessOperator {
 			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(c), resultForwarder);
 			(new Thread(r)).start();
 		}
-		
 	}
 
-	public API getAPI() {
+	public MultiAPI getAPI() {
 		return this.api;
 	}
 	

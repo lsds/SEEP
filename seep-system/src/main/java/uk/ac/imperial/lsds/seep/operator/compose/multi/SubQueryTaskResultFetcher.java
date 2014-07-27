@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskResult;
 
 public class SubQueryTaskResultFetcher implements Runnable {
@@ -38,14 +37,13 @@ public class SubQueryTaskResultFetcher implements Runnable {
 				// Get result
 				try {
 					SubQueryTaskResult result = future.get();
-					List<DataTuple> resultStream = result.getResultStream();
 					/*
 					 * Forward the result using the appropriate mechanism,
 					 * either writing to the downstream sub query buffer or
 					 * by sending to distributed nodes via the API of the 
 					 * MultiOperator
 					 */
-					this.resultForwarder.forwardResult(resultStream);
+					this.resultForwarder.forwardResult( result.getResultStream());
 					
 					// Record progress by updating the last finished pointer
 					this.lastFinishedOrderID = result.getLogicalOrderID();

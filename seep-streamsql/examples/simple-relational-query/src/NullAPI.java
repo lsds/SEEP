@@ -1,13 +1,16 @@
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Callback;
+import uk.ac.imperial.lsds.seep.operator.MultiAPI;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 
 
-public class NullAPI implements API {
+public class NullAPI implements MultiAPI {
 
-	public long lastObservedInsTimestamp;
+	public int totalTuples;
+	public long startTimestamp;
+	public long waitForInstrumentationTimestamp;
 	
 	@Override
 	public void setCallbackObject(Callback c) {
@@ -15,7 +18,6 @@ public class NullAPI implements API {
 
 	@Override
 	public void send(DataTuple dt) {
-		lastObservedInsTimestamp = dt.getPayload().instrumentation_ts;
 //		System.out.println("SNK: " + dt.toString());
 	}
 
@@ -89,6 +91,16 @@ public class NullAPI implements API {
 	public Map<String, Integer> getDataMapper() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void send(MultiOpTuple tuple) {
+		if (waitForInstrumentationTimestamp <= tuple.instrumentation_ts) {
+			double dt = (double) (System.currentTimeMillis() - startTimestamp) / 1000.;
+			double rate =  (double) (totalTuples) / dt;
+			System.out.println(String.format("%10.1f seconds", dt));
+			System.out.println(String.format("%10.1f tuples/s", rate));
+		}
 	}
 
 }

@@ -1,8 +1,5 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
-import java.util.List;
-
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 
 public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultForwarder {
@@ -14,11 +11,11 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 	}
 
 	@Override
-	public void forwardResult(List<DataTuple> result) {
+	public void forwardResult(MultiOpTuple[] result) {
 		// Update the buffer with the result
 		for (SubQueryBuffer b : subQueryConnectable.getLocalDownstreamBuffers().values()) {
-			List<DataTuple> notAdded = b.add(result);
-			while (!notAdded.isEmpty()) {
+			MultiOpTuple[] notAdded = b.add(result);
+			while (notAdded.length == 0) {
 				try {
 					b.wait();
 					notAdded = b.add(notAdded);

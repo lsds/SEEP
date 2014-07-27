@@ -1,31 +1,19 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.streamsql.expressions.ValueExpression;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.streamsql.expressions.Constant;
+import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
-import uk.ac.imperial.lsds.streamsql.visitors.SeepSQLVisitor;
 
 
 /* This class is syntactic sugar for complex AndPredicate
  */
-public class BetweenPredicate<T extends Comparable<T>> implements IPredicate {
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
-	private static Logger LOG = LoggerFactory.getLogger(SeepSQLVisitor.class);
+public class BetweenPredicate<T extends PrimitiveType> implements IPredicate {
 
 	private final IPredicate _and;
 
-	public BetweenPredicate(ValueExpression<T> ve, boolean includeLower,
-			ValueExpression<T> veLower, boolean includeUpper, ValueExpression<T> veUpper) {
+	public BetweenPredicate(Constant<T> ve, boolean includeLower,
+			Constant<T> veLower, boolean includeUpper, Constant<T> veUpper) {
 
 		// set up boundaries correctly
 		int opLower = ComparisonPredicate.GREATER_OP;
@@ -47,19 +35,17 @@ public class BetweenPredicate<T extends Comparable<T>> implements IPredicate {
 	}
 
 	@Override
-	public List<IPredicate> getInnerPredicates() {
-		final List<IPredicate> result = new ArrayList<IPredicate>();
-		result.add(_and);
-		return result;
+	public IPredicate[] getInnerPredicates() {
+		return new IPredicate[] {_and};
 	}
 
 	@Override
-	public boolean satisfied(DataTuple tupleValues) {
+	public boolean satisfied(MultiOpTuple tupleValues) {
 		return _and.satisfied(tupleValues);
 	}
 
 	@Override
-	public boolean satisfied(DataTuple firstTupleValues, DataTuple secondTupleValues) {
+	public boolean satisfied(MultiOpTuple firstTupleValues, MultiOpTuple secondTupleValues) {
 		return _and.satisfied(firstTupleValues, secondTupleValues);
 	}
 
