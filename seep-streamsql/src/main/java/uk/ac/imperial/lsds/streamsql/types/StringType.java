@@ -42,6 +42,15 @@ public class StringType implements PrimitiveType {
 	public boolean contains(StringType string) {
 		return value.contains(((StringType)string).value);
 	}
-	
 
+	@Override
+	public void setFromString(String s) {
+		value = s;
+	}
+
+	@Override
+	public PrimitiveType parseFromString(String s) {
+		return new StringType(s);
+	}
+	
 }

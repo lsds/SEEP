@@ -146,6 +146,7 @@ public class LRBRunner implements Callback {
 			System.out.println(String.format("%10.1f MB/s", MBps));
 			System.out.println(String.format("%10d tuples ignored", wrongtuples));
 			
+			lastTupleTimestamp--;
 			NullAPI api = new NullAPI();
 			api.waitForInstrumentationTimestamp = lastTupleTimestamp;
 			api.totalTuples = totalTuples;
@@ -155,6 +156,7 @@ public class LRBRunner implements Callback {
 			
 			/* Q4 */
 			System.out.println("Q4 computations " + System.currentTimeMillis());
+			System.out.println("will be done when receiving tuple with timestamp " + lastTupleTimestamp);
 			api.startTimestamp = System.currentTimeMillis(); /* End-to-end measurement */
 			for (MultiOpTuple t: data) {
 				query.process(t);

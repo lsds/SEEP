@@ -48,4 +48,15 @@ public class FloatType implements PrimitiveType {
 		return ""+value;
 	}
 
+	@Override
+	public void setFromString(String s) {
+		value = Float.parseFloat(s);
+	}
+
+	@Override
+	public PrimitiveType parseFromString(String s) {
+		float newValue = Float.parseFloat(s);
+		return new FloatType(newValue);
+	}
+
 }

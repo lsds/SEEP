@@ -47,5 +47,17 @@ public class IntegerType implements PrimitiveType {
 	public String toString() {
 		return ""+value;
 	}
+	
+	@Override
+	public void setFromString(String s) {
+		value = Integer.parseInt(s);
+	}
+
+	@Override
+	public PrimitiveType parseFromString(String s) {
+		int newValue = Integer.parseInt(s);
+		return new IntegerType(newValue);
+	}
+
 
 }

@@ -20,6 +20,8 @@ import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ComparisonPredicate;
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
+import uk.ac.imperial.lsds.streamsql.types.IntegerType;
+import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 
 
 public class LRBQ4 {
@@ -66,7 +68,12 @@ public class LRBQ4 {
 		 * Group By segNo, dir, hwy
 		 * Having Avg(speed) < 40
 		 */
-		IMicroOperatorCode q2AggCode = new MicroAggregation(MicroAggregation.AggregationType.AVG, 1, new int[] {2, 3, 4});
+		IMicroOperatorCode q2AggCode = new MicroAggregation(
+				MicroAggregation.AggregationType.AVG, 
+				1, 
+				new int[] {2, 3, 4}, 
+				new PrimitiveType[] {new IntegerType(0),  new FloatType(0f), new IntegerType(0)} );
+		
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
 
 		IMicroOperatorCode q2SelCode = new Selection(
@@ -89,8 +96,8 @@ public class LRBQ4 {
 		q2MicroOps.add(q2Sel);
 
 		windowDefs = new HashMap<>();
-//		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
-		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
+		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
+//		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 5, windowDefs);
 
 //		sq1.connectTo(sq2, 101);

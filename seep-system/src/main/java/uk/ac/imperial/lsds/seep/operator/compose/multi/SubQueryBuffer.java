@@ -123,9 +123,7 @@ public class SubQueryBuffer {
 			int free = start;
 			// first, move pointer
 			start = normIndex(start+1);
-			// second, return the tuple to the pool
-			elements[free].free();
-			// third, reset the buffer
+			// second, reset the buffer
 			elements[free] = null;
 			freeElements[free] = false;
 		}

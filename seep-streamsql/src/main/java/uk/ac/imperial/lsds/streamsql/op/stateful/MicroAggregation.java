@@ -19,6 +19,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	public static String HASH_DELIMITER = "@";
 	
 	private int[] groupByAttributes;
+	private PrimitiveType[] typesGroupByAttributes = null;
+
 	private int aggregationAttribute;
 			
 	private AggregationType aggregationType;
@@ -39,14 +41,16 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		}
 	}
 
+	
 	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, new int[0]);
+		this(aggregationType, aggregationAttribute, new int[0], new PrimitiveType[0]);
 	}
 
-	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes) {
+	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes, PrimitiveType[] typesGroupByAttributes) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
+		this.typesGroupByAttributes = typesGroupByAttributes;
 	}
 
 	@Override
@@ -260,8 +264,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 		String[] partitionKeys = partitionKey.split(HASH_DELIMITER);
 		Object[] values = new Object[partitionKeys.length + 1];
-		for (int i = 0; i < partitionKeys.length; i++)
-			values[i] = partitionKeys[i];
+		for (int i = 0; i < partitionKeys.length; i++) {
+			values[i] = typesGroupByAttributes[i].parseFromString(partitionKeys[i]); 
+		}
 		
 		values[partitionKeys.length] = partitionValue;
 		
@@ -281,7 +286,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	@Override
 	public IMicroOperatorCode getNewInstance() {
-		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes);
+		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes, this.typesGroupByAttributes);
 	}
 
 }

@@ -43,6 +43,16 @@ public abstract class WindowBatch implements IWindowBatch {
 			if (windowStart == -1) {
 				incrementalComputation.evaluateWindow(api);
 			}
+			// first window?
+			else if (currentWindow == 0) {
+				for (int i = windowStart; i <= windowEnd; i++) 
+					incrementalComputation.enteredWindow(this.get(i));
+
+				incrementalComputation.evaluateWindow(api);
+			
+				prevWindowStart = windowStart;
+				prevWindowEnd = windowEnd;
+			}
 			else {
 				/*
 				 * Tuples in current window that have not been in the previous window

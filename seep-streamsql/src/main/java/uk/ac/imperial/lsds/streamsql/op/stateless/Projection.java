@@ -31,13 +31,16 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private MultiOpTuple copyProject(MultiOpTuple data) {
 		MultiOpTuple t = MultiOpTuple.newInstance();
-		t.values = new String[expressions.length];
+		t.values = new Object[expressions.length];
 
 		/*
 		 * Add all the content as defined by the projection expressions
 		 */
 		for (int i = 0; i < expressions.length; i++) 
-			t.values[i] = expressions[i].eval(data).toString();
+			t.values[i] = expressions[i].eval(data);
+		
+		t.timestamp = data.timestamp;
+		t.instrumentation_ts = data.instrumentation_ts;
 		
 		return t;
 	}
