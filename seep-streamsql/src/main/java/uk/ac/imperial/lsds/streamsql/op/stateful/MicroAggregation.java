@@ -16,7 +16,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation, IStatefulMicroOperator {
 
-	public static String HASH_DELIMITER = ";";
+	public static String HASH_DELIMITER = "@";
 	
 	private int[] groupByAttributes;
 	private int aggregationAttribute;
@@ -57,7 +57,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	}
 	
 	private String getGroupByKey(MultiOpTuple tuple) {
-		return tuple.values.toString();
+		String result = "";
+		for (int i = 0; i < this.groupByAttributes.length; i++)
+			result += tuple.values[i].toString() + HASH_DELIMITER;
+		
+		return result;
 	}
 	
 	@Override
@@ -254,8 +258,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	private MultiOpTuple prepareOutputTuple(String partitionKey, PrimitiveType partitionValue, long timestamp, long instrumentation_ts) {
 
-		String[] partitionKeys = partitionKey.split(";");
-		Object[] values = new String[partitionKeys.length + 1];
+		String[] partitionKeys = partitionKey.split(HASH_DELIMITER);
+		Object[] values = new Object[partitionKeys.length + 1];
 		for (int i = 0; i < partitionKeys.length; i++)
 			values[i] = partitionKeys[i];
 		

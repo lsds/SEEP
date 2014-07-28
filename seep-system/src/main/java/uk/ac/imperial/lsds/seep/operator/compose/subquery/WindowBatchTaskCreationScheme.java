@@ -61,7 +61,7 @@ public class WindowBatchTaskCreationScheme implements
 	}
 	
 	@Override
-	public List<SubQueryTaskCallable> createTasks() {
+	public List<ISubQueryTaskCallable> createTasks() {
 		
 		checkClearance();
 		
@@ -69,7 +69,7 @@ public class WindowBatchTaskCreationScheme implements
 		
 		assert(SUB_QUERY_WINDOW_BATCH_COUNT > 0);
 		
-		List<SubQueryTaskCallable> tasks = new ArrayList<SubQueryTaskCallable>();
+		List<ISubQueryTaskCallable> tasks = new ArrayList<>();
 
 		// if we have data, create the tasks
 		while (sufficientDataForWindowBatch()) {
@@ -206,7 +206,7 @@ public class WindowBatchTaskCreationScheme implements
 					break;
 				}
 			}
-			SubQueryTaskCallable task = new SubQueryTaskCallable(subQueryConnectable, windowBatches, freshLogicalOrderID(), freeUpToIndices);
+			ISubQueryTaskCallable task = new SubQueryTaskCPUCallable(subQueryConnectable, windowBatches, freshLogicalOrderID(), freeUpToIndices);
 			tasks.add(task);
 		}
 				
@@ -281,7 +281,8 @@ public class WindowBatchTaskCreationScheme implements
 			}
 			long endTimeForWindowBatch = nextToProcessPointer + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
 			// check whether end time for window batch has passed already
-			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex(),2)).timestamp);
+			sufficientData &= (endTimeForWindowBatch < buffer.getMostRecent().timestamp);
+//			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex(),1)).timestamp);
 			break;
 
 		default:

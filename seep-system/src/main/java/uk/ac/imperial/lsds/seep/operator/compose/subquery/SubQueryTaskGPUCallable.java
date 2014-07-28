@@ -1,13 +1,12 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskGPUCallable implements Callable<SubQueryTaskResult> {
+public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
 
 	/*
 	 * Window batches per streamID

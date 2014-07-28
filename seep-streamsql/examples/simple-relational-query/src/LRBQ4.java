@@ -72,12 +72,12 @@ public class LRBQ4 {
 		IMicroOperatorCode q2SelCode = new Selection(
 				new ComparisonPredicate<FloatType>(
 						ComparisonPredicate.LESS_OP, 
-						new ColumnReference<FloatType>(5), 
+						new ColumnReference<FloatType>(3), 
 						new Constant<FloatType>(new FloatType(40f))));
 		IMicroOperatorConnectable q2Sel = QueryBuilder.newMicroOperator(q2SelCode, 4);
 
-		IMicroOperatorCode q2ProjCode = new Projection(new int[] {2, 3, 4});
-		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 2);
+		IMicroOperatorCode q2ProjCode = new Projection(new int[] {0, 1, 2});
+		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 5);
 
 		
 		q2Agg.connectTo(1, q2Sel);
@@ -89,8 +89,8 @@ public class LRBQ4 {
 		q2MicroOps.add(q2Sel);
 
 		windowDefs = new HashMap<>();
-		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
-//		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
+//		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
+		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 5, windowDefs);
 
 //		sq1.connectTo(sq2, 101);

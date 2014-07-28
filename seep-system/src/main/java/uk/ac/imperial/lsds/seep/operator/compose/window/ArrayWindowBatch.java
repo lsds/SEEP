@@ -53,7 +53,7 @@ public class ArrayWindowBatch extends WindowBatch implements IWindowBatch {
 		int[] newWindowEndPointers = Arrays.copyOf(this.windowEndPointers, this.windowEndPointers.length + 1);
 		
 		newWindowStartPointers[newWindowStartPointers.length - 1] = this.array.length;
-		newWindowEndPointers[newWindowEndPointers.length - 1] = this.array.length + window.length;
+		newWindowEndPointers[newWindowEndPointers.length - 1] = this.array.length + window.length - 1;
 		
 		MultiOpTuple[] newflatInputList = Arrays.copyOf(this.array, this.array.length + window.length);
 		for (int i = 0; i < window.length; i++)

@@ -6,7 +6,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
@@ -18,7 +17,7 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.ArrayWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWindowAPI {
+public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowAPI {
 		
 	private ISubQueryConnectable subQueryConnectable;
 	private Map<Integer, IWindowBatch> windowBatches;
@@ -28,7 +27,7 @@ public class SubQueryTaskCallable implements Callable<SubQueryTaskResult>, IWind
 	private IWindowBatch finalWindowBatchResult;
 
 	private SubQueryTaskResult result;
-	public SubQueryTaskCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
+	public SubQueryTaskCPUCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
 		this.subQueryConnectable = subQueryConnectable;
 		this.windowBatches = windowBatches;
 		

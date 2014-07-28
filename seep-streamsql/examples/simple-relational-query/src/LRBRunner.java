@@ -45,7 +45,7 @@ public class LRBRunner implements Callback {
 		"type:Integer",
 		"timestamp:Integer",
 		"vehicleId:Integer",
-		"speed:Integer" ,
+		"speed:Float" ,
 		"highway:Integer",
 		"lane:Integer",
 		"direction:Integer",

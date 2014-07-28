@@ -68,16 +68,9 @@ public class ComparisonPredicate<T extends PrimitiveType> implements IPredicate 
 
 	@Override
 	public boolean satisfied(MultiOpTuple tuple) {
-		Comparable val1 = v1.eval(tuple);
-		Comparable val2 = v2.eval(tuple);
+		T val1 = v1.eval(tuple);
+		T val2 = v2.eval(tuple);
 
-		// All the Numeric types are converted to double,
-		// because different types cannot be compared
-		if (val1 instanceof Long)
-			val1 = (((Long) val1).doubleValue());
-		if (val2 instanceof Long)
-			val2 = (((Long) val2).doubleValue());
-		
 		final int compared = val1.compareTo(val2);
 
 		boolean result = false;
@@ -108,8 +101,8 @@ public class ComparisonPredicate<T extends PrimitiveType> implements IPredicate 
 
 	@Override
 	public boolean satisfied(MultiOpTuple firstTuple, MultiOpTuple secondTuple) {
-		final Comparable val1 = v1.eval(firstTuple);
-		final Comparable val2 = v2.eval(secondTuple);
+		final T val1 = v1.eval(firstTuple);
+		final T val2 = v2.eval(secondTuple);
 		final int compared = val1.compareTo(val2);
 
 		boolean result = false;

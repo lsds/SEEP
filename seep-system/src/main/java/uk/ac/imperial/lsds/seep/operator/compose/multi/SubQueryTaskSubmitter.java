@@ -9,7 +9,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCallable;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryTaskCallable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskResult;
 
@@ -58,7 +58,7 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 		/*
 		 * Check whether a task should be instantiated
 		 */
-		for (SubQueryTaskCallable task : this.creationScheme.createTasks()) {
+		for (ISubQueryTaskCallable task : this.creationScheme.createTasks()) {
 			/*
 			 * Submit the tasks
 			 */

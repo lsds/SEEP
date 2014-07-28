@@ -89,6 +89,12 @@ public class SubQueryBuffer {
 		return size;
 	}
 	
+	public MultiOpTuple getMostRecent() {
+		if (size() == 0)
+			return null;
+		return this.elements[normIndex(end + this.elements.length - 1)];
+	}
+	
 	private boolean insertElement(MultiOpTuple element) {
 		elements[end] = element;
 		end = normIndex(end + 1);

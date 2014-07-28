@@ -5,6 +5,6 @@ import java.util.List;
 
 public interface SubQueryTaskCreationScheme  {
 	
-	public List<SubQueryTaskCallable> createTasks();
+	public List<ISubQueryTaskCallable> createTasks();
 	
 }

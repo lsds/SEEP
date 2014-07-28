@@ -47,7 +47,7 @@ public abstract class WindowBatch implements IWindowBatch {
 				/*
 				 * Tuples in current window that have not been in the previous window
 				 */
-				for (int i = prevWindowEnd; i < windowEnd; i++) 
+				for (int i = prevWindowEnd; i <= windowEnd; i++) 
 					incrementalComputation.enteredWindow(this.get(i));
 			
 				/*
