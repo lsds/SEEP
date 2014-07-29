@@ -19,7 +19,9 @@ public class SubQueryBuffer {
 	private boolean full = false;
 	
 	private Object lock = new Object();
-	
+
+	private Object internalLock = new Object();
+
 	public synchronized Object getLock() {
 		return lock;
 	}
@@ -89,18 +91,21 @@ public class SubQueryBuffer {
 		return size;
 	}
 	
-	public MultiOpTuple getMostRecent() {
-		if (size() == 0)
-			return null;
-		return this.elements[normIndex(end + this.elements.length - 1)];
-	}
+//	public MultiOpTuple getMostRecent() {
+//		if (size() == 0)
+//			return null;
+//		return this.elements[normIndex(end + this.elements.length - 1)];
+//	}
 	
 	private boolean insertElement(MultiOpTuple element) {
-		elements[end] = element;
-		end = normIndex(end + 1);
 		
-		if (end == start)
-			full = true;
+		synchronized (internalLock) {
+			elements[end] = element;
+			end = normIndex(end + 1);
+			
+			if (end == start)
+				full = true;
+		}
 		
 		return true;			
 	}
@@ -118,18 +123,21 @@ public class SubQueryBuffer {
 			throw new InvalidParameterException();
 		
 		freeElements[nI] = true;
-		
-		while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
-			int free = start;
-			// first, move pointer
-			start = normIndex(start+1);
-			// second, reset the buffer
-			elements[free] = null;
-			freeElements[free] = false;
+
+		synchronized (internalLock) {
+	
+			while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
+				int free = start;
+				// first, move pointer
+				start = normIndex(start+1);
+				// second, reset the buffer
+				elements[free] = null;
+				freeElements[free] = false;
+			}
+			
+			if ((end != start) || (end == start && start == nI))
+				full = false;
 		}
-		
-		if ((end != start) || (end == start && start == nI))
-			full = false;
 		
 		synchronized (getLock()) {
 //			System.out.println("notify from buffer");
