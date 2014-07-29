@@ -147,7 +147,7 @@ public class WindowBatchTaskCreationScheme implements
 						 */
 						// The following loop terminates since we checked that there is a tuple with timestamp larger than the end time of the window batch in the buffer
 						while (buffer.get(currentWindowStart).timestamp < startTimeForWindowBatch +  windowDef.getSlide() * w)
-							currentWindowStart = buffer.normIndex(currentWindowStart + 1);
+							currentWindowStart++;
 						
 						windowStartPointers[w] = currentWindowStart;
 						
@@ -172,7 +172,6 @@ public class WindowBatchTaskCreationScheme implements
 							// Make sure to store the last one inside the window
 							windowEndPointers[w] = currentWindowEnd - 1;
 						}
-
 					}
 
 					/*
@@ -186,7 +185,7 @@ public class WindowBatchTaskCreationScheme implements
 					indexBeforeNextWindowBatch = buffer.getIndexBefore(indexBeforeNextWindowBatch, 1);
 
 					// define periodic window batch
-					System.out.println("RANGE BATCH:\t buffer view:\t" + windowStartPointers[0] + "-" + windowEndPointers[windowEndPointers.length - 1]+ "\t time:\t" +  startTimeForWindowBatch + "-" +  endTimeForWindowBatch);
+					//System.out.println("RANGE BATCH:\t buffer view:\t" + windowStartPointers[0] + "-" + windowEndPointers[windowEndPointers.length - 1]+ "\t time:\t" +  startTimeForWindowBatch + "-" +  endTimeForWindowBatch);
 					windowBatch = new BufferWindowBatch(buffer, windowStartPointers, windowEndPointers, startTimeForWindowBatch, endTimeForWindowBatch);
 					windowBatches.put(streamID, windowBatch);
 
@@ -281,8 +280,8 @@ public class WindowBatchTaskCreationScheme implements
 			}
 			long endTimeForWindowBatch = nextToProcessPointer + windowDef.getSlide() * (SUB_QUERY_WINDOW_BATCH_COUNT-1) + windowDef.getSize();
 			// check whether end time for window batch has passed already
-			sufficientData &= (endTimeForWindowBatch < buffer.getMostRecent().timestamp);
-//			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex(),1)).timestamp);
+//			sufficientData &= (endTimeForWindowBatch < buffer.getMostRecent().timestamp);
+			sufficientData &= (endTimeForWindowBatch < buffer.get(buffer.getIndexBefore(buffer.getEndIndex(),1)).timestamp);
 			break;
 
 		default:
