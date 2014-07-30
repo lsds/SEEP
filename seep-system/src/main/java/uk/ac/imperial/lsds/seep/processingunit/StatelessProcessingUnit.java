@@ -53,7 +53,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	private Operator runningOp = null;
 	
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
-	private OutputQueue outputQueue = null;
+	private ArrayList<OutputQueue> outputQList;
         
         private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors()-1 );
 	
@@ -251,17 +251,20 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		for(int i = 0; i<targets.size(); i++){
 			int target = targets.get(i);
 			try{
-//System.out.println("SEND TO: "+target+" SIZE: "+ctx.getDownstreamTypeConnection().size()+" targetSize: "+targets.size());
+                                //System.out.println("SEND TO: "+target+" SIZE: "+ctx.getDownstreamTypeConnection().size()+" targetSize: "+targets.size());
 				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){
 					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
 				}
+                                
 				// REMOTE SYNC
 				else if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
-					outputQueue.sendToDownstream(dt, dest);
-//System.out.println("Send to: "+dest.toString());
+					OutputQueue outputQForThisOpId = outputQList.get(target);
+                                        outputQForThisOpId.sendToDownstream(dt, dest);
+                                        
+                                        //System.out.println("Send to: "+dest.toString());
 				}
 				// LOCAL
 				else if(dest instanceof Operator){
@@ -310,7 +313,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                         
                         else if (dest instanceof SynchronousCommunicationChannel) {
                             ///\fixme{do some proper thing with var now}
-                            outputQueue.sendToDownstream(dtCopy, dest);
+                            outputQList.get(target).sendToDownstream(dtCopy, dest);
                             //System.out.println("Send to: "+dest.toString());
                         } // LOCAL
                         
@@ -360,7 +363,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                         
                         else if (dest instanceof SynchronousCommunicationChannel) {
                             ///\fixme{do some proper thing with var now}
-                            outputQueue.sendToDownstream(dtCopy, dest);
+                            outputQList.get(target).sendToDownstream(dtCopy, dest);
                             //System.out.println("Send to: "+dest.toString());
                         } // LOCAL
                         
@@ -390,7 +393,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public void setOutputQueue(OutputQueue outputQueue) {
-		this.outputQueue = outputQueue;
+		//this.outputQueue = outputQueue;
 	}
 
 	@Override
@@ -417,8 +420,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void stopConnection(int opId) {
 		//Stop incoming data, a new thread is replaying
 		LOG.info("Stopping connection to OP: {}", opId);
-		outputQueue.stop();
+                
+		OutputQueue outputQForThisOpId = outputQList.get(opId);
+                outputQForThisOpId.stop();
 		ctx.getCCIfromOpId(opId, "d").getStop().set(true);
+		
 	}
 
 	@Override
@@ -468,5 +474,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public int getOpIdFromUpstreamIp(InetAddress ip) {
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
 	}
+        
+        @Override
+        public void setOutputQList(ArrayList<OutputQueue> outputQList){
+            //{QMO}
+            this.outputQList = outputQList ;
+            System.out.println("There are " + outputQList.size() + " outputQ here in this op");
+        }
 
 }

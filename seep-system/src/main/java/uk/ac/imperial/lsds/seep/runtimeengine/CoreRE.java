@@ -76,7 +76,11 @@ public class CoreRE {
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
 	private ControlDispatcher controlDispatcher;
-	private OutputQueue outputQueue;
+	
+        //private OutputQueue outputQueue;
+        private ArrayList<OutputQueue> outputQueueList ;
+        
+        
 	private OutgoingDataHandlerWorker odhw = null;
 	
 	private Thread controlH = null;
@@ -155,7 +159,12 @@ public class CoreRE {
 	}
 	
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
-		outputQueue = new OutputQueue(this);
+		
+                int numDownstreamOps = processingUnit.getOperator().getOpContext().getDownstreamOpIdList().size();
+                outputQueueList = new ArrayList<>(numDownstreamOps);
+                for(int i = 0 ; i < numDownstreamOps ; i++){
+                    outputQueueList.add(new OutputQueue(this));
+                }
 
 		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
@@ -198,7 +207,7 @@ public class CoreRE {
 		
 		// Set up output communication module
 		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
-			processingUnit.setOutputQueue(outputQueue);
+			processingUnit.setOutputQList(outputQueueList);
 			LOG.debug("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
 		}
 		else{
@@ -449,7 +458,12 @@ public class CoreRE {
 			LOG.info("-> Received STATE_ACK from Op: {}", opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-			outputQueue.replayTuples(cci);
+                        
+			ArrayList<Integer> downstreaOpIdList = processingUnit.getOperator().getOpContext().getDownstreamOpIdList();
+                        int indexOfThisOpId = downstreaOpIdList.indexOf(opId);
+                        //Get the right outputQueue according to operator index (not opid)
+                        outputQueueList.get(indexOfThisOpId).replayTuples(cci);
+                        
 			// In case of failure, the thread may have died, in such case we make it runnable again.
 //			if(dConsumerH.getState() != Thread.State.TERMINATED){
 //				dConsumerH = new Thread(dataConsumer);
@@ -696,7 +710,11 @@ public class CoreRE {
 			/// \todo{avoid this deprecated function}
 			//opCommonProcessLogic.startReplayer(opID);
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-			outputQueue.replayTuples(cci);
+                        
+			ArrayList<Integer> downstreaOpIdList = processingUnit.getOperator().getOpContext().getDownstreamOpIdList();
+                        int indexOfThisOpId = downstreaOpIdList.indexOf(opId);
+                        //Get the right outputQueue according to operator index (not opid)
+                        outputQueueList.get(indexOfThisOpId).replayTuples(cci);
 		}
 		/** NOT RECOGNIZED message **/
 		else{

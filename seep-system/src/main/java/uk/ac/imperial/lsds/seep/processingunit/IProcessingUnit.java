@@ -107,4 +107,6 @@ public interface IProcessingUnit {
 	public int getOriginalUpstreamFromOpId(int opId);
 	
 	public int getOpIdFromUpstreamIp(InetAddress ip);
+        
+        public void setOutputQList(ArrayList<OutputQueue> downOpId_outputQ_map);
 }

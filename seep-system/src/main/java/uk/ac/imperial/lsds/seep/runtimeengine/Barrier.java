@@ -57,9 +57,8 @@ public class Barrier implements DataStructureI {
 						cummulatedTime = 0;
 					}
                                         
-                                        if(repetitionsANN == 9500){
-                                                System.out.println("Accum barrier time: "+((double)(cummulatedBarrierTime/1000000000.0))+" s");
-                                                System.out.println("repetitions = " + repetitionsANN);
+                                        if(repetitionsANN == 10000){
+                                                System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: "+((double)(cummulatedBarrierTime/1000000000.0))+" s");
 						repetitionsANN = 0 ; 
                                                 cummulatedBarrierTime = 0 ;
 					}
