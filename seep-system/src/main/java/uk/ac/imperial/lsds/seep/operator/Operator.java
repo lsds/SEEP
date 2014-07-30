@@ -108,20 +108,20 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	/** Methods used by the developers to send data **/
 	
 	// Send downstream in round robin fashion
-	public synchronized void send(DataTuple dt){
+	public  void send(DataTuple dt){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt);
         processingUnit.sendData(dt, targets);
 	}
 	
 	// Send to a particular downstream index
-	public synchronized void send_toIndex(DataTuple dt, int idx){
+	public  void send_toIndex(DataTuple dt, int idx){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		targets.add(idx);
 		processingUnit.sendData(dt, targets);
 	}
         
-        public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
+        public  void send_toIndices(DataTuple[] dts, int[] idxs){
                 ArrayList<Integer> targets = new ArrayList<>();
                 for(int idx : idxs){
                     targets.add(idx);
@@ -130,26 +130,26 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
         }
 	
 	// Send downstream to stateful partitionable operator
-	public synchronized void send_splitKey(DataTuple dt, int key){
+	public  void send_splitKey(DataTuple dt, int key){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward_splitKey(dt, key);
 		processingUnit.sendData(dt, targets);
 	}
 	
 	// Send to specific streamId in round robin
-	public synchronized void send_toStreamId(DataTuple dt, int streamId){
+	public  void send_toStreamId(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forward_toOp(dt, streamId);
 		processingUnit.sendData(dt, targets);
 	}
 	
 	// Send to stateful partition of a given streamId
-	public synchronized void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
+	public  void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
 		ArrayList<Integer> targets = router.forward_toOp_splitKey(dt, streamId, key);
 		processingUnit.sendData(dt, targets);
 	}
 	
 	// Send to all instances of a specific streamId
-	public synchronized void send_toStreamId_toAll(DataTuple dt, int streamId){
+	public  void send_toStreamId_toAll(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
 		processingUnit.sendData(dt, targets);
 	}
@@ -162,7 +162,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	}
         
         
-	public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
+	public  void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
                 processingUnit.sendDataByThreadPool(dt, targets);
 	}

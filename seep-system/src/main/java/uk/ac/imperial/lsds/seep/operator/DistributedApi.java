@@ -36,32 +36,32 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 	// Communication primitives
 	
 	@Override
-	public synchronized void send(DataTuple dt){
+	public  void send(DataTuple dt){
 		op.send(dt);
 	}
 	
 	@Override
-	public synchronized void send_toIndex(DataTuple dt, int idx){
+	public  void send_toIndex(DataTuple dt, int idx){
 		op.send_toIndex(dt, idx);
 	}
 	
 	@Override
-	public synchronized void send_splitKey(DataTuple dt, int key){
+	public  void send_splitKey(DataTuple dt, int key){
 		op.send_splitKey(dt, key);
 	}
 	
 	@Override
-	public synchronized void send_toStreamId(DataTuple dt, int streamId){
+	public  void send_toStreamId(DataTuple dt, int streamId){
 		op.send_toStreamId(dt, streamId);
 	}
 	
 	@Override
-	public synchronized void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
+	public  void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
 		op.send_toStreamId_splitKey(dt, streamId, key);
 	}
 	
 	@Override
-	public synchronized void send_toStreamId_toAll(DataTuple dt, int streamId){
+	public  void send_toStreamId_toAll(DataTuple dt, int streamId){
 		op.send_toStreamId_toAll(dt, streamId);
 	}
 	
@@ -71,23 +71,23 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 	}
         
         @Override
-        public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
+        public  void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
                 op.send_toStreamId_toAll_threadPool(dt, streamId);
         }
         
         @Override
-        public synchronized void send_all_threadPool(DataTuple dt){
+        public  void send_all_threadPool(DataTuple dt){
                 op.send_all_threadPool(dt);
         }
         
         @Override
-	public synchronized void send_to_OpId(DataTuple dt, int opId){
+	public  void send_to_OpId(DataTuple dt, int opId){
                 int opIndex = op.getOpContext().findOpIndexFromDownstream(opId);
                 this.send_toIndex(dt, opIndex);
         }
         
         @Override
-        public synchronized void send_to_OpIds(DataTuple[] dt, int[] opId){
+        public  void send_to_OpIds(DataTuple[] dt, int[] opId){
             int[] indices = new int[opId.length];
             int opIndex;
             for(int i = 0 ; i < opId.length ; i++){
@@ -97,7 +97,7 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
         }
         
         @Override
-        public synchronized void send_toIndices(DataTuple[] dts, int[] indices){
+        public  void send_toIndices(DataTuple[] dts, int[] indices){
             op.send_toIndices(dts, indices);
         }
         
