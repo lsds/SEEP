@@ -14,6 +14,8 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.BufferWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
+import uk.ac.imperial.lsds.seep.gpu.GPUExecutionContext;
+
 public class WindowBatchTaskCreationScheme implements
 		SubQueryTaskCreationScheme {
 
@@ -22,6 +24,9 @@ public class WindowBatchTaskCreationScheme implements
 	private static final int SUB_QUERY_WINDOW_BATCH_COUNT = Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"));
 
 	private int logicalOrderID = -1;
+	
+	private boolean GPU;
+	private GPUExecutionContext gpu;
 
 	private ISubQueryConnectable subQueryConnectable;
 
@@ -36,6 +41,9 @@ public class WindowBatchTaskCreationScheme implements
 		this.clearanceLastTimestamp = new HashMap<>();
 		for (Integer streamID : this.subQueryConnectable.getLocalUpstreamBuffers().keySet()) 
 			this.nextToProcessPointers.put(streamID, -1l);
+		
+		GPU = subQueryConnectable.getParentMultiOperator().isGPUEnabled();
+		gpu = subQueryConnectable.getParentMultiOperator().getGPUContext();
 	}
 	
 	private void checkClearance() {
@@ -205,7 +213,11 @@ public class WindowBatchTaskCreationScheme implements
 					break;
 				}
 			}
-			ISubQueryTaskCallable task = new SubQueryTaskCPUCallable(subQueryConnectable, windowBatches, freshLogicalOrderID(), freeUpToIndices);
+			ISubQueryTaskCallable task;
+			if (GPU)
+				task = new SubQueryTaskGPUCallable(windowBatches, freshLogicalOrderID(), freeUpToIndices, gpu);
+			else
+				task = new SubQueryTaskCPUCallable(subQueryConnectable, windowBatches, freshLogicalOrderID(), freeUpToIndices);
 			tasks.add(task);
 		}
 				

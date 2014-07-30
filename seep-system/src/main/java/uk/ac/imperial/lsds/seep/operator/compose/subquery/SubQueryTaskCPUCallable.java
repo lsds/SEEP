@@ -38,10 +38,11 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 		return this.subQueryConnectable;
 	}
 
-	private Monitor monitor = new Monitor();
+//	private Monitor monitor = new Monitor();
 	
 	@Override
 	public SubQueryTaskResult call() throws Exception {
+		
 		try {
 			
 			this.finalWindowBatchResult = new ArrayWindowBatch();
@@ -65,7 +66,11 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 				currentWindowBatchResults = new HashMap<>();
 				toProcess.remove(currentOperator);
 				processed.add(currentOperator);
-				
+
+//				monitor.monitor("Input size of micro operator: " 
+//			+ (windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers()[windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers().length - 1]
+//					- windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowStartPointers()[0]));
+
 				/*
 				 * Execute
 				 * If the actual code is stateful, we need to obtain a new instance
@@ -77,8 +82,9 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 				}
 				operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
 				
-				if (this.currentWindowBatchResults.values().size() > 0)
-					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
+//				if (this.currentWindowBatchResults.values().size() > 0) {
+//					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
+//				}
 				
 				/*
 				 * We got the complete window batch result for the operator. So,
@@ -98,8 +104,6 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 				 * we have the window batch results for all their incoming streams
 				 */
 				for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMicroOperators()) {
-					if (c.equals(this.currentOperator))
-						continue;
 					if (processed.contains(c))
 						continue;
 					if (!windowBatchesForProcessing.containsKey(c))
@@ -115,7 +119,7 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
+//		this.result.setResultStream(new MultiOpTuple[0]);
 		return this.result;
 	}
 	

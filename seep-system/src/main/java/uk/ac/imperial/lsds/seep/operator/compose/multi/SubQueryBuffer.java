@@ -13,13 +13,11 @@ public class SubQueryBuffer {
 	private boolean[] freeElements;	
 	
 	private int start = 0;
-	
 	private int end = 0;
 	
 	private boolean full = false;
 	
 	private Object lock = new Object();
-
 	private Object internalLock = new Object();
 
 	public synchronized Object getLock() {
@@ -90,12 +88,6 @@ public class SubQueryBuffer {
 		
 		return size;
 	}
-	
-//	public MultiOpTuple getMostRecent() {
-//		if (size() == 0)
-//			return null;
-//		return this.elements[normIndex(end + this.elements.length - 1)];
-//	}
 	
 	private boolean insertElement(MultiOpTuple element) {
 		

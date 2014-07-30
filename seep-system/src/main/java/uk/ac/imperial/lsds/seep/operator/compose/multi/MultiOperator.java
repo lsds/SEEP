@@ -19,7 +19,10 @@ import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.gpu.GPUExecutionContext;
+import uk.ac.imperial.lsds.seep.gpu.GPUExecutorService;
 import uk.ac.imperial.lsds.seep.operator.API;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.MultiAPI;
@@ -28,6 +31,16 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
 
 public class MultiOperator implements StatelessOperator {
+	
+	/* Simple flag to switch to the GPU executor service. */
+	private final boolean GPU = false;
+	private GPUExecutionContext gpu = null;
+	
+	/* Print statistics */
+	long target = 0L;
+	long tuples = 0L;
+	long start = 0L;
+	double dt, rate;
 
 	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
 	
@@ -55,6 +68,18 @@ public class MultiOperator implements StatelessOperator {
 		this.parentConnectable = parentConnectable;
 	}
 	
+	public GPUExecutionContext getGPUContext() { return gpu; }
+	public boolean isGPUEnabled() { return GPU; }
+	public long getTarget() { return target; }
+	public void targetReached() {
+		dt = (double) (System.currentTimeMillis() - start) / 1000.;
+		/* Stats */
+		rate =  (double) (tuples) / dt;
+		System.out.println(String.format("%10d tuples processed", tuples));
+		System.out.println(String.format("%10.1f seconds", (double) dt));
+		System.out.println(String.format("%10.1f tuples/s", rate));
+	}
+	
 	/**
 	 * Note that pushing the data to the buffers of the most upstream 
 	 * operators is not threadsafe. We assume a single thread to call 
@@ -66,6 +91,8 @@ public class MultiOperator implements StatelessOperator {
 		 */
 		this.api = api;
 		
+		if (tuples == 0)
+			start = System.currentTimeMillis();
 		/*
 		 * Try to push to all input buffers of the most upstream sub queries
 		 */
@@ -83,6 +110,7 @@ public class MultiOperator implements StatelessOperator {
 							e.printStackTrace();
 						}
 				}
+				tuples ++;
 			}
 		}
 	}
@@ -114,9 +142,19 @@ public class MultiOperator implements StatelessOperator {
 		int numberOfCores = Runtime.getRuntime().availableProcessors();
 		//TODO: think about tuning this selection
 		int numberOfCoresToUse = Math.max(numberOfCores, subQueries.size());
-		
-		this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
+		System.out.println(numberOfCoresToUse + " available processors");
+		if (GPU) {
+			gpu = new GPUExecutionContext();
+		 	this.executorService = new GPUExecutorService(1000);
+		} else {
+			this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
+			// this.executorService = Executors.newFixedThreadPool(1);
+		}
 
+		target = (long)Math.floor(10499d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
+//		target = 34;
+		// start = System.currentTimeMillis();
+		
 		/*
 		 * Identify most upstream and most downstream local operators
 		 * and create input/output buffers for them

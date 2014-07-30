@@ -11,7 +11,7 @@ public class Monitor {
 	private long lastPrint = 0;
 
 	public void monitor(String s) {
-		if (System.currentTimeMillis() - lastPrint > 1000) {
+		if (System.currentTimeMillis() - lastPrint > 10000) {
 				System.out.println(System.currentTimeMillis() + " - " + s);
 				lastPrint = System.currentTimeMillis();
 			} 

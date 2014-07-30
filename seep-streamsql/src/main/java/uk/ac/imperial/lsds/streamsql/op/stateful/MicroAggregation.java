@@ -63,7 +63,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	private String getGroupByKey(MultiOpTuple tuple) {
 		String result = "";
 		for (int i = 0; i < this.groupByAttributes.length; i++)
-			result += tuple.values[i].toString() + HASH_DELIMITER;
+			result += tuple.values[this.groupByAttributes[i]].toString() + HASH_DELIMITER;
 		
 		return result;
 	}
@@ -173,6 +173,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			 */
 			break;
 		case SUM:
+		case AVG:
 			newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
 			if (values.containsKey(key))
 				values.put(key,values.get(key).add(newValue));
@@ -180,23 +181,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				values.put(key,newValue);
 			
 			break;
-		case AVG:
-			newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
-			if (countInPartition.containsKey(key)) {
-				int currentCount = countInPartition.get(key);
-				
-				PrimitiveType r1 = new FloatType(currentCount*1f/(currentCount+1));
-				PrimitiveType r2 = new FloatType(1f/(currentCount+1));
-				PrimitiveType newAvg = 
-					r1.mul(values.get(key)).add(r2.mul(newValue));				
-//				double newAvg = (currentCount/(currentCount+1d))*
-//						values.get(key) + (1d/(currentCount+1d))*newValue;
-				values.put(key,newAvg);
-			}
-			else 
-				values.put(key,newValue);
-			break;
-
+			
 		default:
 			break;
 		}
@@ -224,29 +209,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			 * Nothing to do here, since we get the value directly from the countInPartition map
 			 */
 			break;
+		case AVG:
 		case SUM:
 			newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
 			if (values.containsKey(key)) {
 				values.put(key,values.get(key).sub(newValue));
 			}			
 			break;
-		case AVG:
-			newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
-			if (countInPartition.containsKey(key)) {
-				int currentCount = countInPartition.get(key);
-				
-				if (currentCount > 1) {
-					PrimitiveType r1 = new FloatType(currentCount*1f/(currentCount-1));
-					PrimitiveType r2 = new FloatType(1f/(currentCount));
-					PrimitiveType newAvg = 
-						r1.mul(values.get(key)).sub(r2.mul(newValue));
-//					double newAvg = (currentCount/(currentCount-1d))*
-//							values.get(key) - (1d/(currentCount))*newValue;
-					values.put(key,newAvg);
-				}
-			}
-			break;
-
 		default:
 			break;
 		}
@@ -275,13 +244,33 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	
 	@Override
 	public void evaluateWindow(IWindowAPI api) {
+
+		assert(this.aggregationType.equals(AggregationType.COUNT)
+				||this.aggregationType.equals(AggregationType.SUM)
+				||this.aggregationType.equals(AggregationType.AVG));
+
 		MultiOpTuple[] windowResult = new MultiOpTuple[values.keySet().size()];
 
-		int keyCount = 0;
-		for (String partitionKey : values.keySet()) 
-			windowResult[keyCount++] = prepareOutputTuple(partitionKey, this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
-
-		api.outputWindowResult(windowResult);
+		switch (aggregationType) {
+		case AVG:
+			int keyCount = 0;
+			for (String partitionKey : values.keySet()) {
+				PrimitiveType partitionValue = this.values.get(partitionKey).div(new FloatType(countInPartition.get(partitionKey)));
+				windowResult[keyCount++] = prepareOutputTuple(partitionKey, partitionValue, this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+			}
+			api.outputWindowResult(windowResult);
+			break;
+		case COUNT:
+		case SUM:
+			keyCount = 0;
+			for (String partitionKey : values.keySet()) 
+				windowResult[keyCount++] = prepareOutputTuple(partitionKey, this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+			
+			api.outputWindowResult(windowResult);
+			break;
+		default:
+			break;
+		}
 	}
 
 	@Override

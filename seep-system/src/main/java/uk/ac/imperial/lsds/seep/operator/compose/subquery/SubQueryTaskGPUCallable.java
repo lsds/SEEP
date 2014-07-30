@@ -6,6 +6,9 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
+import uk.ac.imperial.lsds.seep.gpu.GPUExecutionContext;
+import uk.ac.imperial.lsds.seep.gpu.GPUUtils;
+
 public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
 
 	/*
@@ -19,9 +22,17 @@ public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
 	 */
 	private SubQueryTaskResult result;
 	
-	public SubQueryTaskGPUCallable(Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
+	private GPUExecutionContext gpu;
+	
+	private static final int capacity = 2000000;
+	
+	public SubQueryTaskGPUCallable(Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices,
+		GPUExecutionContext gpu) {
+		
 		this.windowBatches = windowBatches;
 		this.result = new SubQueryTaskResult(logicalOrderID, freeUpToIndices);
+		
+		this.gpu = gpu;
 	}
 	
 	@Override
@@ -33,61 +44,32 @@ public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
 		 */
 		IWindowBatch batch = this.windowBatches.values().iterator().next();
 		
-		/*
-		 * Definitions of the windows 
-		 */
-		int[] startPointers = batch.getWindowStartPointers();
-		int[] endPointers = batch.getWindowEndPointers();
+		/* Transform data */
+		int [] startIndex = batch.getWindowStartPointers();
+		int []   endIndex = batch.getWindowEndPointers();
 		
-		/*
-		 * Assuming that the window batch is defined over an input buffer, 
-		 * we get a buffer reference to access the content
-		 */
-		SubQueryBuffer buffer = batch.getBufferContent();
+		int batchSize = startIndex.length;
+		int start = startIndex[0];
+		int end =     endIndex[batchSize - 1];
+		int totalTuples = end - start + 1;
 		
-		/*
-		 * Do some incremental computation per window
-		 */
-		int prevWindowStart = 0;
-		int prevWindowEnd = 0;
-		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			int windowStart = startPointers[currentWindow];
-			int windowEnd = endPointers[currentWindow];
-			
-			/*
-			 * Tuples in current window that have not been in the previous window
-			 */
-			for (int i = prevWindowEnd; i < windowEnd; i++) {
-				MultiOpTuple tuple = buffer.get(i);
-				// do incremental computation with new tuple
-			}
-
-			/*
-			 * Tuples in previous window that are not in current window
-			 */
-			for (int i = prevWindowStart; i < windowStart; i++) {
-				MultiOpTuple tuple = buffer.get(i);
-				// do incremental computation with outdated tuple
-			}
-
-			/*
-			 *  compute value for current window
-			 */
-			
-			
-		}
-
+		
+		
+		int taskid = gpu.aggregate();
+		
+		String dbg = String.format(
+		"task %3d %3d windows start @%6d end @%6d %8d %8d total %8d", 
+		taskid, batch.getWindowStartPointers().length, batch.getStartTimestamp(), batch.getEndTimestamp(), start, end, totalTuples
+		);
+		GPUUtils.out(dbg);
+		
 		/*
 		 * Store the results of the computation
 		 */
-		MultiOpTuple[] resultsForWindowBatch = new MultiOpTuple[0];
+		MultiOpTuple [] resultsForWindowBatch = new MultiOpTuple[0];
 		
 		this.result.setResultStream(resultsForWindowBatch);
 		
 		return this.result;
 	}
-	
-	
-
-	
 }

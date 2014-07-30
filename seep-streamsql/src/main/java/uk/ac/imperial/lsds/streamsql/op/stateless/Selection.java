@@ -64,7 +64,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 					 */
 					MultiOpTuple tuple = batch.get(windowStart);
 					if (this.predicate.satisfied(tuple)) 
-						windowResult[count++] = tuple;
+						windowResult[count++] = MultiOpTuple.newInstance(tuple);
 					
 					windowStart++;
 				}

@@ -22,19 +22,26 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 	private List<Future<SubQueryTaskResult>> runningSubQueryTasks;
 	
 	private Map<Integer, Future<SubQueryTaskResult>> completedSubQueryTasks;
+	
+	long submitted = 0L;
+	long finished  = 0L;
+	long target    = 0L;
 
 	public SubQueryTaskSubmitter(ISubQueryConnectable subQuery, SubQueryTaskCreationScheme creationScheme) {
 		this.subQuery = subQuery;
 		this.creationScheme = creationScheme;
 		this.runningSubQueryTasks = new LinkedList<>();
 		this.completedSubQueryTasks = new HashMap<>();
+		
+		this.target = this.subQuery.getParentMultiOperator().getTarget();
+		System.out.println(String.format("Target is %d tasks", target));
 	}
 
-	private Monitor monitor = new Monitor();
+//	private Monitor monitor = new Monitor();
 	
 	public void run() {
 		
-		monitor.monitor("Submitted and not completed: " + runningSubQueryTasks.size() + "\t Completed: " + completedSubQueryTasks.keySet().size());
+//		monitor.monitor("Submitted and not completed: " + runningSubQueryTasks.size() + "\t Completed: " + completedSubQueryTasks.keySet().size());
 
 		/*
 		 * For each running task, check whether it has terminated and collect
@@ -47,9 +54,17 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 				try {
 					completedSubQueryTasks.put(future.get().getLogicalOrderID(), future);
 					runningIter.remove();
+					// if (finished == target) {
+					//	this.subQuery.getParentMultiOperator().targetReached();	
+					// }
 				} catch (InterruptedException | ExecutionException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
+				}
+				finished ++;
+				if (finished == target) {
+					System.out.println("Done.");
+					this.subQuery.getParentMultiOperator().targetReached();
 				}
 			}
 			
@@ -62,6 +77,7 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 			/*
 			 * Submit the tasks
 			 */
+			// submitted ++;
 			Future<SubQueryTaskResult> future = this.subQuery.getParentMultiOperator().getExecutorService().submit(task);
 			runningSubQueryTasks.add(future);
 		}

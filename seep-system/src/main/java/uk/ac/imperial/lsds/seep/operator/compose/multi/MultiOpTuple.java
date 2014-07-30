@@ -35,7 +35,18 @@ public class MultiOpTuple {
 		instance.values = values;
 		return instance;
 	}
-	
+
+	public static MultiOpTuple newInstance(MultiOpTuple tuple) {
+		MultiOpTuple instance = pool.poll();
+		if (instance == null) 
+			return new MultiOpTuple(tuple);
+		
+		instance.timestamp = tuple.timestamp;
+		instance.instrumentation_ts = tuple.instrumentation_ts;
+		instance.values = tuple.values;
+		return instance;
+	}
+
 	public static MultiOpTuple newInstance(DataTuple tuple) {
 		MultiOpTuple instance = pool.poll();
 		if (instance == null) 
@@ -62,6 +73,12 @@ public class MultiOpTuple {
 	
 	private MultiOpTuple() {
 		
+	}
+
+	private MultiOpTuple(MultiOpTuple tuple) {
+		this.timestamp = tuple.timestamp;
+		this.instrumentation_ts = tuple.instrumentation_ts;
+		this.values = tuple.values;
 	}
 
 	private MultiOpTuple(Object[] values, long timestamp, long instrumentation_ts) {
