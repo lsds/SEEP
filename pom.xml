@@ -75,7 +75,13 @@
 		<artifactId>soot-framework</artifactId>
 		<version>2.5.0</version>
 	</dependency>
-
+	<!-- Dependency for OpenCL/Aparapi -->
+	<dependency>
+		<groupId>aparapi</groupId>
+		<artifactId>aparapi-framework</artifactId>
+		<version>0.0.1</version>
+	</dependency>
+	
     <!-- Dependencies for tests -->
     
     <dependency>
