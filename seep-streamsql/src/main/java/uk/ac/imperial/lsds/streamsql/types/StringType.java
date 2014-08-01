@@ -53,4 +53,9 @@ public class StringType implements PrimitiveType {
 		return new StringType(s);
 	}
 	
+	@Override
+	public int hashCode() {
+		return value.hashCode();
+	}
+	
 }

@@ -58,5 +58,10 @@ public class FloatType implements PrimitiveType {
 		float newValue = Float.parseFloat(s);
 		return new FloatType(newValue);
 	}
+	
+	@Override
+	public int hashCode(){
+		return Float.floatToIntBits(value);
+	}
 
 }

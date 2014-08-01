@@ -50,6 +50,7 @@ public class MultiOperator implements StatelessOperator {
 	
 	private Set<ISubQueryConnectable> subQueries;
 	private MultiAPI api;
+	private boolean singleUpstreamBuffer;
 	private Set<ISubQueryConnectable> mostUpstreamSubQueries;
 	private Set<ISubQueryConnectable> mostDownstreamSubQueries;
 	
@@ -98,17 +99,20 @@ public class MultiOperator implements StatelessOperator {
 		 */
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
 			for (SubQueryBuffer b : q.getLocalUpstreamBuffers().values()) {
-				// this code is accessed by a single thread only
-					while (!b.add(data)) {
-						try {
-							synchronized (b.getLock()) {
+				// Make sure to copy if there is more than one most upstream buffer
+				if (!singleUpstreamBuffer)
+					data = MultiOpTuple.newInstance(data);
+				// This code is accessed by a single thread only
+				while (!b.add(data)) {
+					try {
+						synchronized (b.getLock()) {
 //								System.out.println("wait for buffer");
-								b.getLock().wait();
+							b.getLock().wait();
 //								System.out.println("woken up");
-							}
-						} catch (InterruptedException e) {
-							e.printStackTrace();
 						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 				tuples ++;
 			}
@@ -178,6 +182,8 @@ public class MultiOperator implements StatelessOperator {
 				connectable.registerLocalDownstreamBuffer(b, 0);
 			}
 		}
+		
+		this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.size() == 1);
 		
 		/*
 		 * Start handlers for sub queries

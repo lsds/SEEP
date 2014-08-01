@@ -87,6 +87,8 @@ public class LRBRunner implements Callback {
 		
 		String line = null;
 		long lines = 0;
+		long MAX_LINES = 12048577L;
+        long percent_ = 0L, _percent = 0L;
 		
 		Deque<MultiOpTuple> data = new LinkedList<>();
 		
@@ -100,18 +102,25 @@ public class LRBRunner implements Callback {
 		int totalTuples;
 		
 		long wrongtuples = 0L;
-
+		
 		try {
+			
 			f = new FileInputStream(args[0]);
 			d = new DataInputStream(f);
 			b = new BufferedReader(new InputStreamReader(d));
 			
-			System.out.println("Loading file...");
 			start = System.currentTimeMillis();
 			long lastTupleTimestamp = 0;
-			while ((line = b.readLine()) != null) {
+			
+			while ((line = b.readLine()) != null && lastTupleTimestamp < 10500) {
 				lines += 1;
-				bytes += line.length() +1; /* +1 for '\n' */
+				bytes += line.length() +1; // +1 for '\n'
+				
+				percent_ = (lines * 100) / MAX_LINES;
+				if (percent_ == (_percent + 1)) {
+					System.out.print(String.format("Loading file...%3d%%\r", percent_));
+					_percent = percent_;
+				}
 
 				if (Integer.valueOf(line.split(",")[8]) < 0){
 					wrongtuples += 1;
@@ -123,16 +132,15 @@ public class LRBRunner implements Callback {
 				}
 
 				MultiOpTuple t = parseLine(line);
+				// pos to segment translation
+				t.values[4] = new IntegerType((int)Math.floor(((IntegerType)t.values[4]).value / 5280));
+				
 				data.add(t);
 				lastTupleTimestamp = t.timestamp;
-				
-				if (lines%1000000 == 0)
-					System.out.println(String.format("%10d - %10d", System.currentTimeMillis(), lines));
-				
 			}
 			dt = (double ) (System.currentTimeMillis() - start) / 1000.;
 			d.close();
-			/* Stats */
+			// Stats
 			rate =  (double) (lines) / dt;
 			MBps = ((double) bytes / _1MB) / dt;
 			totalTuples = data.size();
@@ -145,6 +153,7 @@ public class LRBRunner implements Callback {
 			System.out.println(String.format("%10.1f tuples/s", rate));
 			System.out.println(String.format("%10.1f MB/s", MBps));
 			System.out.println(String.format("%10d tuples ignored", wrongtuples));
+			System.out.println();
 			
 			lastTupleTimestamp--;
 			NullAPI api = new NullAPI();
@@ -155,15 +164,14 @@ public class LRBRunner implements Callback {
 			query.setup(api);
 			
 			/* Q4 */
-			System.out.println("Q4 computations " + System.currentTimeMillis());
-			System.out.println("will be done when receiving tuple with timestamp " + lastTupleTimestamp);
+			System.out.println("Q4 computations "); // + System.currentTimeMillis());
+			// System.out.println("will be done when receiving tuple with timestamp " + lastTupleTimestamp);
 			api.startTimestamp = System.currentTimeMillis(); /* End-to-end measurement */
 			for (MultiOpTuple t: data) {
 				query.process(t);
 			}
 			
 		} catch (Exception e) { System.err.println(e.getMessage()); }
-		
 	}
 	
 }

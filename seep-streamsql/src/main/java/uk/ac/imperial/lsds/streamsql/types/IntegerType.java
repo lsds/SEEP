@@ -59,5 +59,9 @@ public class IntegerType implements PrimitiveType {
 		return new IntegerType(newValue);
 	}
 
+	@Override
+	public int hashCode() {
+		return value;
+	}
 
 }

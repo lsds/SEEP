@@ -10,14 +10,14 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.IMicroIncrementalComputa
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation.AggregationType;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation, IStatefulMicroOperator {
 
-	public static String HASH_DELIMITER = "@";
-	
 	private int[] groupByAttributes;
 	private PrimitiveType[] typesGroupByAttributes = null;
 
@@ -25,11 +25,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			
 	private AggregationType aggregationType;
 	
+	private Selection havingSel;
+	
 	/*
 	 * State used for incremental computation
 	 */
-	private Map<String, PrimitiveType> values = new HashMap<>();
-	private Map<String, Integer> countInPartition = new HashMap<>();
+	private Map<Integer, PrimitiveType> values = new HashMap<>();
+	private Map<Integer, Integer> countInPartition = new HashMap<>();
+	private Map<Integer, MultiOpTuple> objectStore = new HashMap<>();
+	
 	private long lastTimestampInWindow = 0;
 	private long lastInstrumentationTimestampInWindow = 0;
 	
@@ -43,14 +47,20 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	
 	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, new int[0], new PrimitiveType[0]);
+		this(aggregationType, aggregationAttribute, new int[0], new PrimitiveType[0], null);
 	}
 
-	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes, PrimitiveType[] typesGroupByAttributes) {
+	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes, PrimitiveType[] typesGroupByAttributes, Selection havingSel) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
 		this.typesGroupByAttributes = typesGroupByAttributes;
+		this.havingSel = havingSel;
+	}
+
+	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes,
+			PrimitiveType[] typesGroupByAttributes) {
+		this(aggregationType, aggregationAttribute, groupByAttributes, typesGroupByAttributes, null);
 	}
 
 	@Override
@@ -60,10 +70,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		return sb.toString();
 	}
 	
-	private String getGroupByKey(MultiOpTuple tuple) {
-		String result = "";
+	private int getGroupByKey(MultiOpTuple tuple) {
+		int result = 0;
 		for (int i = 0; i < this.groupByAttributes.length; i++)
-			result += tuple.values[this.groupByAttributes[i]].toString() + HASH_DELIMITER;
+			result = 37 * result + tuple.values[this.groupByAttributes[i]].hashCode();
 		
 		return result;
 	}
@@ -119,14 +129,16 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			}
 			else {
 
-				Map<String, PrimitiveType> values = new HashMap<>();
+				Map<Integer, PrimitiveType> values = new HashMap<>();
+				Map<Integer, MultiOpTuple> objects = new HashMap<>();
 	
 				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
 				
 				for (int i = 0; i < windowEnd-windowStart+1; i++) {
 					
 					MultiOpTuple tuple = batch.get(windowStart + i);
-					String key = getGroupByKey(tuple);
+					int key = getGroupByKey(tuple);
+					objects.put(key, tuple);
 					
 					PrimitiveType newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
 					
@@ -144,9 +156,16 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				}
 	
 				int keyCount = 0;
-				for (String partitionKey : values.keySet()) 
-					windowResult[keyCount++] = prepareOutputTuple(partitionKey, values.get(partitionKey), lastTimestampInWindow, lastInstrumentationTimestampInWindow);
-	
+				for (int partitionKey : values.keySet()) {
+					MultiOpTuple tuple = prepareOutputTuple(objects.get(partitionKey), values.get(partitionKey), lastTimestampInWindow, lastInstrumentationTimestampInWindow);
+					if (havingSel != null) {
+						if (havingSel.getPredicate().satisfied(tuple))
+							windowResult[keyCount++] = tuple;
+					}
+					else {
+						windowResult[keyCount++] = tuple;
+					}
+				}
 				api.outputWindowResult(windowResult);
 			}			
 		}
@@ -159,7 +178,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				||this.aggregationType.equals(AggregationType.SUM)
 				||this.aggregationType.equals(AggregationType.AVG));
 
-		String key = getGroupByKey(tuple);
+		int key = getGroupByKey(tuple);
 
 		lastTimestampInWindow = tuple.timestamp;
 		lastInstrumentationTimestampInWindow = tuple.instrumentation_ts;
@@ -188,8 +207,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		
 		if (countInPartition.containsKey(key))
 			countInPartition.put(key,countInPartition.get(key) + 1);
-		else
+		else {
 			countInPartition.put(key,1);
+			objectStore.put(key, tuple);
+		}
 	}
 
 	@Override
@@ -199,7 +220,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				||this.aggregationType.equals(AggregationType.SUM)
 				||this.aggregationType.equals(AggregationType.AVG));
 		
-		String key = getGroupByKey(tuple);
+		int key = getGroupByKey(tuple);
 		
 		PrimitiveType newValue;
 		
@@ -225,19 +246,18 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			if (countInPartition.get(key) <= 0) {
 				countInPartition.remove(key);
 				values.remove(key);
+				objectStore.remove(key);
 			}
 		}
 	}
 
-	private MultiOpTuple prepareOutputTuple(String partitionKey, PrimitiveType partitionValue, long timestamp, long instrumentation_ts) {
+	private MultiOpTuple prepareOutputTuple(MultiOpTuple object, PrimitiveType partitionValue, long timestamp, long instrumentation_ts) {
 
-		String[] partitionKeys = partitionKey.split(HASH_DELIMITER);
-		Object[] values = new Object[partitionKeys.length + 1];
-		for (int i = 0; i < partitionKeys.length; i++) {
-			values[i] = typesGroupByAttributes[i].parseFromString(partitionKeys[i]); 
-		}
+		Object[] values = new Object[this.groupByAttributes.length + 1];
+		for (int i = 0; i < this.groupByAttributes.length; i++)
+			values[i] = object.values[this.groupByAttributes[i]];
 		
-		values[partitionKeys.length] = partitionValue;
+		values[values.length - 1] = partitionValue;
 		
 		return MultiOpTuple.newInstance(values, timestamp, instrumentation_ts);
 	}
@@ -254,17 +274,17 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		switch (aggregationType) {
 		case AVG:
 			int keyCount = 0;
-			for (String partitionKey : values.keySet()) {
+			for (int partitionKey : values.keySet()) {
 				PrimitiveType partitionValue = this.values.get(partitionKey).div(new FloatType(countInPartition.get(partitionKey)));
-				windowResult[keyCount++] = prepareOutputTuple(partitionKey, partitionValue, this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), partitionValue, this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
 			}
 			api.outputWindowResult(windowResult);
 			break;
 		case COUNT:
 		case SUM:
 			keyCount = 0;
-			for (String partitionKey : values.keySet()) 
-				windowResult[keyCount++] = prepareOutputTuple(partitionKey, this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+			for (int partitionKey : values.keySet()) 
+				windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
 			
 			api.outputWindowResult(windowResult);
 			break;
@@ -275,7 +295,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	@Override
 	public IMicroOperatorCode getNewInstance() {
-		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes, this.typesGroupByAttributes);
+		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes, this.typesGroupByAttributes, this.havingSel);
 	}
 
 }

@@ -33,7 +33,10 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		ov.visit(this);
 	}
 
-
+	public IPredicate getPredicate() {
+		return this.predicate;
+	}
+	
 	@Override
 	public void processData(Map<Integer, IWindowBatch> windowBatches,
 			IWindowAPI api) {

@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
-import java.security.InvalidParameterException;
 import java.util.Arrays;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
@@ -55,18 +54,17 @@ public class SubQueryBuffer {
 	public boolean isMoreRecentThan(int first, int second) {
 		int nFirst = normIndex(first); 
 		int nSecond = normIndex(second); 
-		if (!validIndex(nFirst)||!validIndex(nSecond))
-			throw new InvalidParameterException();
-		
+//		if (!validIndex(nFirst)||!validIndex(nSecond))
+//			throw new IllegalArgumentException();
 		if (start < end)
-			return (first < second);
+			return (nFirst < nSecond);
 		else {
 			// (end <= start)
-			if ((first >= start) && (second >= start)) 
-				return (first < second);
-			if ((first < end) && (second < end)) 
-				return (first < second);
-			if ((first >= start) && (second < end)) 
+			if ((nFirst >= start) && (nSecond >= start)) 
+				return (nFirst < nSecond);
+			if ((nFirst < end) && (nSecond < end)) 
+				return (nFirst < nSecond);
+			if ((nFirst >= start) && (nSecond < end)) 
 				return false;
 			// ((second >= start) && (first < end)) 
 				return true;		
@@ -79,6 +77,7 @@ public class SubQueryBuffer {
 
 	public int size () {
 		int size = 0;
+		
 		if (end  < start) 
 			size = elements.length - start + end;
 		else if (end == start) 
@@ -90,34 +89,31 @@ public class SubQueryBuffer {
 	}
 	
 	private boolean insertElement(MultiOpTuple element) {
-		
-		synchronized (internalLock) {
 			elements[end] = element;
 			end = normIndex(end + 1);
 			
 			if (end == start)
 				full = true;
-		}
-		
+			
 		return true;			
 	}
 	
 	public boolean add(MultiOpTuple element) {
-		if (full)
-			return false;
-		
-		return insertElement(element);
+		synchronized (internalLock) {
+			if (full)
+				return false;
+			
+			return insertElement(element);
+		}
 	}
 
-	public void freeIndex(int i) {
+	private void freeIndex(int i) {
 		int nI = normIndex(i); 
 		if (!validIndex(nI))
-			throw new InvalidParameterException();
+			throw new IllegalArgumentException();
 		
 		freeElements[nI] = true;
 
-		synchronized (internalLock) {
-	
 			while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
 				int free = start;
 				// first, move pointer
@@ -129,34 +125,41 @@ public class SubQueryBuffer {
 			
 			if ((end != start) || (end == start && start == nI))
 				full = false;
-		}
+	}
+
+	public void freeUpToIndex(int i) {
+		int nI = normIndex(i); 
 		
+		synchronized (internalLock) {
+	
+			int toFree = start;
+			do {
+				freeIndex(toFree);
+				toFree = normIndex(toFree + 1);
+			}
+			while (toFree != nI);
+		}
 		synchronized (getLock()) {
 //			System.out.println("notify from buffer");
 			this.getLock().notifyAll();
 		}
 	}
 
-	public void freeUpToIndex(int i) {
-		int nI = normIndex(i); 
-		int toFree = start;
-		do {
-			freeIndex(toFree);
-			toFree = normIndex(toFree + 1);
-		}
-		while (toFree != nI);
-	}
-
 	public boolean validIndex(int i) {
-		if (i < 0) 
+		if (i < 0) {
+			System.out.println("ERROR smaller zero: " + i);
 			return false;
+		}
 		
-		if ((end < start) && (i > end) && (i < start)) 
+		if ((end < start) && (i > end) && (i < start)) {
+			System.out.println("ERROR 1: " + i + " " + start + " " + end);
 			return false;
-			
-		if ((start < end) && ((i >= end) || (i < start))) 
+		}			
+		
+		if ((start < end) && ((i >= end) || (i < start))) {
+			System.out.println("ERROR 2: " + i + " " + start + " " + end);
 			return false;
-
+		}
 		return true;
 	}
 	
@@ -169,8 +172,9 @@ public class SubQueryBuffer {
 	 */
 	public MultiOpTuple get(int i) {
 		int nI = normIndex(i); 
+		// Checking would require synchronisation
 		if (!validIndex(nI))
-			throw new InvalidParameterException();
+			throw new IllegalArgumentException();
 		
 		return elements[nI];
 	}

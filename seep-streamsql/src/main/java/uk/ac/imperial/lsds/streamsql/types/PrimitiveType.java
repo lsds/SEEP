@@ -9,6 +9,4 @@ public interface PrimitiveType extends Comparable<PrimitiveType> {
 	
 	public void setFromString(String s);
 	public PrimitiveType parseFromString(String s);
-	
-	
 }
