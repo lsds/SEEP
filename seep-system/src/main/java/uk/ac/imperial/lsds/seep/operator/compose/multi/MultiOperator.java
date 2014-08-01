@@ -41,6 +41,12 @@ public class MultiOperator implements StatelessOperator {
 	long tuples = 0L;
 	long start = 0L;
 	double dt, rate;
+	
+	/* GPU context static configuration */
+	int panes = 600;
+	int max_keys = 200;
+	int panes_per_window = 300;
+	int max_tuples_per_pane = 2000;
 
 	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
 	
@@ -79,6 +85,7 @@ public class MultiOperator implements StatelessOperator {
 		System.out.println(String.format("%10d tuples processed", tuples));
 		System.out.println(String.format("%10.1f seconds", (double) dt));
 		System.out.println(String.format("%10.1f tuples/s", rate));
+		if (GPU) gpu.stats();
 	}
 	
 	/**
@@ -148,7 +155,7 @@ public class MultiOperator implements StatelessOperator {
 		int numberOfCoresToUse = Math.max(numberOfCores, subQueries.size());
 		System.out.println(numberOfCoresToUse + " available processors");
 		if (GPU) {
-			gpu = new GPUExecutionContext();
+			gpu = new GPUExecutionContext(panes, max_keys, panes_per_window, max_tuples_per_pane);
 		 	this.executorService = new GPUExecutorService(1000);
 		} else {
 			this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
