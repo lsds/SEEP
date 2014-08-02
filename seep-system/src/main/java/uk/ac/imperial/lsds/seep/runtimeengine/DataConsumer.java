@@ -69,6 +69,14 @@ public class DataConsumer implements Runnable {
 					}
 				}
 			}
+                        else if(dso instanceof BufferedBarrier){
+				while(doWork){
+					ArrayList<DataTuple> ldata = dso.pull_from_barrier();
+					if(owner.checkSystemStatus()){
+						owner.forwardData(ldata);
+					}
+				}
+			}
 		}
 	}
 	
@@ -96,7 +104,15 @@ public class DataConsumer implements Runnable {
 						owner.forwardData(ldata);
 					}
 				}
-			}	
+			}
+                        else if(dsi instanceof BufferedBarrier){
+				while(doWork){
+					ArrayList<DataTuple> ldata = dsi.pull_from_barrier();
+					if(owner.checkSystemStatus()){
+						owner.forwardData(ldata);
+					}
+				}
+			}
 		}
 	}
 }

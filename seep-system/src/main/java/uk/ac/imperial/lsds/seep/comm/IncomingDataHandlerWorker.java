@@ -132,7 +132,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
 						
-						dso.push(reg);
+						dso.push(reg, opId);
 					}
 					else{
 						///\todo{check for garbage in the tcp buffers}

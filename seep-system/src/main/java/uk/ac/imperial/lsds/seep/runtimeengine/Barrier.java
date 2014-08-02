@@ -51,8 +51,8 @@ public class Barrier implements DataStructureI {
 					repetitions++;
                                         repetitionsANN++;
 					
-                                        if(repetitions == 5000){
-						System.out.println("AVG barrier time: "+(cummulatedTime)+" ms");
+                                        if(repetitions == 1000){
+						System.out.println("Repetitions = " + repetitions + "Accum barrier time: "+(cummulatedTime)+" ms");
 						repetitions = 0;
 						cummulatedTime = 0;
 					}
@@ -106,7 +106,7 @@ public class Barrier implements DataStructureI {
 	}
 
 	@Override
-	public void push(DataTuple dt) {
+	public void push(DataTuple dt, int opId) {
 		// We put the data
 		synchronized(data){
 			data.add(dt);
@@ -125,4 +125,6 @@ public class Barrier implements DataStructureI {
 			staticBarrier.arriveAndAwaitAdvance();
 		}
 	}
+        
+        
 }

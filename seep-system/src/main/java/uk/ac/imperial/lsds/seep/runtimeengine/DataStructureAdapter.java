@@ -10,6 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -75,8 +76,18 @@ public class DataStructureAdapter {
 					int originalOperatorOnBarrier = entry.getKey();
 					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
                                         LOG.debug("-> ^^^^^ numberUpstreamsOnBarrier {}", numberUpstreamsOnBarrier);
-					Barrier b = new Barrier(numberUpstreamsOnBarrier);
-					dsoMap.put(entry.getKey(), b);
+					//Barrier b = new Barrier(numberUpstreamsOnBarrier);
+                                        
+                                        ArrayList<Integer> upstreamOpIdList = opContext.getUptreamOpIdListFromThisOriginalOpID(originalOperatorOnBarrier);
+                                        String s = "upstream opId list :";
+                                        for(int opId : upstreamOpIdList){
+                                            s += opId ;
+                                            s += "," ;
+                                        }
+                                        System.out.println(s);
+                                        BufferedBarrier b = new BufferedBarrier(upstreamOpIdList);
+					
+                                        dsoMap.put(entry.getKey(), b);
 					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
 				}
 			}
@@ -96,8 +107,18 @@ public class DataStructureAdapter {
 //					System.out.println("Num registers on barrier: "+numberUpstreamsOnBarrier);
 					///\fixme{manage this}
 					numberUpstreamsOnBarrier = opContext.upstreams.size();
-					Barrier b = new Barrier(numberUpstreamsOnBarrier);
-					uniqueDso = b;
+					
+                                        //Barrier b = new Barrier(numberUpstreamsOnBarrier);
+                                        ArrayList<Integer> upstreamOpIdList = opContext.getUptreamOpIdListFromThisOriginalOpID(originalOperatorOnBarrier);
+                                        String s = "upstream opId list :";
+                                        for(int opId : upstreamOpIdList){
+                                            s += opId ;
+                                            s += "," ;
+                                        }
+                                        System.out.println(s);
+                                        BufferedBarrier b = new BufferedBarrier(upstreamOpIdList);
+					
+                                        uniqueDso = b;
 					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
 				}
 			}

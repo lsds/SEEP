@@ -1,3 +1,5 @@
+
+
 /*******************************************************************************
  * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
@@ -22,8 +24,17 @@ public class BufferedBarrier implements DataStructureI{
 
 	private List<ArrayBlockingQueue<DataTuple>> buffers = new ArrayList<ArrayBlockingQueue<DataTuple>>();
 	private Map<Long, Integer> thread_mapper = new HashMap<Long, Integer>();
+        private Map<Integer, Integer> upstreamOpId_mapper = new HashMap<Integer, Integer>();
+        
+        private int repetitionsANN = 0 ;
+        private long cummulatedBarrierTime = 0 ; 
+        private long barrierTimeEachPhase;
 	
-	@Override
+	public BufferedBarrier(ArrayList<Integer> upstreamOpIdList){
+            _register(upstreamOpIdList);
+        }
+        
+        @Override
 	public DataTuple pull() {
 		// TODO Auto-generated method stub
 		return null;
@@ -31,8 +42,13 @@ public class BufferedBarrier implements DataStructureI{
 
 	@Override
 	public ArrayList<DataTuple> pull_from_barrier() {
+                
 		ArrayList<DataTuple> toReturn = new ArrayList<DataTuple>();
-		for(ArrayBlockingQueue<DataTuple> buffer : buffers){
+                
+                repetitionsANN++;
+		barrierTimeEachPhase = System.nanoTime();
+                
+                for(ArrayBlockingQueue<DataTuple> buffer : buffers){
 			try {
 				toReturn.add(buffer.take());
 			} 
@@ -41,21 +57,37 @@ public class BufferedBarrier implements DataStructureI{
 				e.printStackTrace();
 			}
 		}
-		return toReturn;
+                
+                cummulatedBarrierTime += System.nanoTime() - barrierTimeEachPhase;
+                if (repetitionsANN == 10000) {
+                    System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: " + ((double) (cummulatedBarrierTime / 1000000000.0)) + " s");
+                    repetitionsANN = 0;
+                    cummulatedBarrierTime = 0;
+                }
+
+                return toReturn;
 	} 
 
 	@Override
-	public void push(DataTuple dt) {
-		long threadId = Thread.currentThread().getId();
-		int idx = -1;
-		// If already exists
-		if(thread_mapper.containsKey(threadId)){
-			idx = thread_mapper.get(threadId);
-		}
-		// Otherwise we register the thread
-		else{
-			idx = register();
-		}
+	public void push(DataTuple dt, int upstreamOpId) {
+//		long threadId = Thread.currentThread().getId();
+//		int idx = -1;
+//		// If already exists
+//		if(thread_mapper.containsKey(threadId)){
+//			idx = thread_mapper.get(threadId);
+//		}
+//		// Otherwise we register the thread
+//		else{
+//			idx = register();
+//		}
+//		try {
+//			buffers.get(idx).put(dt);
+//		}
+//		catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+                int idx = upstreamOpId_mapper.get(upstreamOpId);
 		try {
 			buffers.get(idx).put(dt);
 		}
@@ -67,11 +99,22 @@ public class BufferedBarrier implements DataStructureI{
 	
 	public int register(){
 		long id = Thread.currentThread().getId();
-		ArrayBlockingQueue<DataTuple> buffer = new ArrayBlockingQueue<DataTuple>(1000);
+		ArrayBlockingQueue<DataTuple> buffer = new ArrayBlockingQueue<DataTuple>(10);
 		buffers.add(buffer);
 		int idx = buffers.size()-1;
 		thread_mapper.put(id, idx);
 		return idx;
 	}
+        
+        public void _register(ArrayList<Integer> upstreamOpIdList){
+		for(int opID : upstreamOpIdList){
+                    ArrayBlockingQueue<DataTuple> buffer = new ArrayBlockingQueue<DataTuple>(10);
+                    buffers.add(buffer);
+                    int idx = buffers.size()-1;
+                    upstreamOpId_mapper.put(opID, idx);
+                }
+                System.out.println("Register with " + buffers.size() + " buffers.");
+	}
 
 }
+

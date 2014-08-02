@@ -250,6 +250,16 @@ public class OperatorContext implements Serializable{
         public ArrayList<Integer> getDownstreamOpIdList(){
             return connectionsD;
         }
+        
+        public ArrayList<Integer> getUptreamOpIdListFromThisOriginalOpID(int originalOpId){
+            ArrayList<Integer> upstreamOpIdList = new ArrayList<>();
+            for(OperatorStaticInformation op : upstream){
+			if(op.getOriginalOpId() == originalOpId) {
+                            upstreamOpIdList.add(op.getOpId());
+                        }
+		}
+            return upstreamOpIdList;
+        }
 	
 	/** Methods called by QuerySpecificationI **/
 	

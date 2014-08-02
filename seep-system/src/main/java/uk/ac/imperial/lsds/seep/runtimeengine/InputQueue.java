@@ -34,7 +34,7 @@ public class InputQueue implements DataStructureI{
 		inputQueue = new ArrayBlockingQueue<DataTuple>(size);
 	}
 	
-	public synchronized void push(DataTuple data){
+	public synchronized void push(DataTuple data, int opid){
 		try {
 			inputQueue.put(data);
             
@@ -112,4 +112,6 @@ public class InputQueue implements DataStructureI{
 		// TODO Auto-generated method stub
 		return null;
 	}
+        
+        
 }

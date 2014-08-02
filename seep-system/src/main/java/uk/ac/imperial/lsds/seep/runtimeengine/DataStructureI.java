@@ -16,7 +16,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public interface DataStructureI {
 
-	public void push(DataTuple dt);
+	//public void push(DataTuple dt);
+        public void push(DataTuple dt, int upstreamOpId);
 	public DataTuple pull();
 	public ArrayList<DataTuple> pull_from_barrier();
 	
