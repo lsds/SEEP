@@ -55,7 +55,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	private ArrayList<OutputQueue> outputQList;
         
-        private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors()-1 );
+        private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors() );
 	
 	//Multi-core support
 	private Executor pool;

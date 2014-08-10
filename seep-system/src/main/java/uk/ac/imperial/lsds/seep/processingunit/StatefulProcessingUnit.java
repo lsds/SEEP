@@ -146,7 +146,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	private boolean isCheckpointEnabled = true;
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
         
-        protected ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors()-1 );
+        protected ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors());
 	
 	//Multi-core support
 	private Executor pool;
