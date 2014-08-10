@@ -41,7 +41,7 @@ public class Barrier implements DataStructureI {
 		staticBarrier = new Phaser(initialNumberOfThreads){
 			protected boolean onAdvance(int phase, int parties) {
 				
-                                cummulatedBarrierTime += (System.nanoTime() - barrierTimeEachPhase);
+                                
                                 long now = System.currentTimeMillis();
                                 
 				if(lastTimestamp != 0){
@@ -49,18 +49,12 @@ public class Barrier implements DataStructureI {
 					cummulatedTime += (now-lastTimestamp);
 					lastTimestamp = now;
 					repetitions++;
-                                        repetitionsANN++;
+                                        
 					
                                         if(repetitions == 1000){
 						System.out.println("Repetitions = " + repetitions + "Accum barrier time: "+(cummulatedTime)+" ms");
 						repetitions = 0;
 						cummulatedTime = 0;
-					}
-                                        
-                                        if(repetitionsANN == 10000){
-                                                System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: "+((double)(cummulatedBarrierTime/1000000000.0))+" s");
-						repetitionsANN = 0 ; 
-                                                cummulatedBarrierTime = 0 ;
 					}
 				}
 				else{
@@ -96,13 +90,26 @@ public class Barrier implements DataStructureI {
 
 	public ArrayList<DataTuple> pull_from_barrier(){
 		ArrayList<DataTuple> toRet = null;
+                
+                repetitionsANN++;
+                barrierTimeEachPhase = System.nanoTime();
+                
 		try {
 			toRet =  sbq.take();
 		} 
 		catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		return toRet;
+                
+                cummulatedBarrierTime += (System.nanoTime() - barrierTimeEachPhase);
+                
+                if (repetitionsANN == 10000) {
+                    System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: " + ((double) (cummulatedBarrierTime / 1000000000.0)) + " s");
+                    repetitionsANN = 0;
+                    cummulatedBarrierTime = 0;
+                }
+                
+            return toRet;
 	}
 
 	@Override
@@ -111,9 +118,9 @@ public class Barrier implements DataStructureI {
 		synchronized(data){
 			data.add(dt);
                         
-                        if( (data.size() == 1) ){
-                            barrierTimeEachPhase = System.nanoTime();
-                        }
+//                        if( (data.size() == 1) ){
+//                            barrierTimeEachPhase = System.nanoTime();
+//                        }
 		}
 		try{
 			// And wait on the barrier

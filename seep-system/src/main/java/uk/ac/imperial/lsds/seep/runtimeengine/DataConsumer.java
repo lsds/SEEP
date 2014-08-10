@@ -70,6 +70,7 @@ public class DataConsumer implements Runnable {
 				}
 			}
                         else if(dso instanceof BufferedBarrier){
+                                System.out.println("There is only one dataConsumer as BufferedBarrier");
 				while(doWork){
 					ArrayList<DataTuple> ldata = dso.pull_from_barrier();
 					if(owner.checkSystemStatus()){

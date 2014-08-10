@@ -128,7 +128,7 @@ public class Router implements Serializable{
 	public ArrayList<Integer> forwardToAllDownstream(DataTuple dt){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		if(requiresLogicalRouting){
-			ArrayList<Integer> logicalTargets = logicalRouting(dt, -1);
+			ArrayList<Integer> logicalTargets = logicalRouting(-1);
 			targets = routeToAll(logicalTargets);
 		}
 		else{
@@ -139,7 +139,7 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forwardToAllOpsInStreamId(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
+		ArrayList<Integer> logicalTargets = logicalRouting(streamId);
 		targets = routeToAll(logicalTargets);
 		return targets;
 	}
@@ -162,7 +162,7 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
+		ArrayList<Integer> logicalTargets = logicalRouting(streamId);
 		targets = physicalRouting(logicalTargets, streamId);
 		return targets;
 	}
@@ -173,12 +173,12 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forward_toOp_splitKey(DataTuple dt, int streamId, int key){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
+		ArrayList<Integer> logicalTargets = logicalRouting(streamId);
 		targets = physicalRouting(logicalTargets, key);
 		return targets;
 	}
 	
-	private ArrayList<Integer> logicalRouting(DataTuple dt, int streamId){
+	private ArrayList<Integer> logicalRouting(int streamId){
 		return routeInfo.get(streamId);
 	}
 	

@@ -59,6 +59,9 @@ public class BufferedBarrier implements DataStructureI{
 		}
                 
                 cummulatedBarrierTime += System.nanoTime() - barrierTimeEachPhase;
+                if (repetitionsANN % 100 == 0) {
+                    System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: " + ((double) (cummulatedBarrierTime / 1000000000.0)) + " s");
+                }
                 if (repetitionsANN == 10000) {
                     System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: " + ((double) (cummulatedBarrierTime / 1000000000.0)) + " s");
                     repetitionsANN = 0;
@@ -107,6 +110,7 @@ public class BufferedBarrier implements DataStructureI{
 	}
         
         public void _register(ArrayList<Integer> upstreamOpIdList){
+                //Use info about upstream opids to map these buffers
 		for(int opID : upstreamOpIdList){
                     ArrayBlockingQueue<DataTuple> buffer = new ArrayBlockingQueue<DataTuple>(10);
                     buffers.add(buffer);
