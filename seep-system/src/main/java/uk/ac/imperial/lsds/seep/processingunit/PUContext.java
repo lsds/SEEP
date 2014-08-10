@@ -243,6 +243,7 @@ public class PUContext {
 		try{
 			if(type.equals("down")){
 				LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
+                                System.out.println("ip = " + ip.toString() + "port = " + portD);
 				socketD = new Socket(ip, portD);
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
