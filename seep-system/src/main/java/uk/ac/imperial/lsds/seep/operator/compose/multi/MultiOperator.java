@@ -28,7 +28,6 @@ import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.MultiAPI;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.WindowBatchTaskCreationScheme;
 
 public class MultiOperator implements StatelessOperator {
 	
@@ -105,17 +104,15 @@ public class MultiOperator implements StatelessOperator {
 		 * Try to push to all input buffers of the most upstream sub queries
 		 */
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
-			for (SubQueryBuffer b : q.getLocalUpstreamBuffers().values()) {
+			for (SubQueryBufferWrapper bw : q.getLocalUpstreamBuffers().values()) {
 				// Make sure to copy if there is more than one most upstream buffer
 				if (!singleUpstreamBuffer)
 					data = MultiOpTuple.newInstance(data);
 				// This code is accessed by a single thread only
-				while (!b.add(data)) {
+				while (!bw.add(data)) {
 					try {
-						synchronized (b.getLock()) {
-//								System.out.println("wait for buffer");
-							b.getLock().wait();
-//								System.out.println("woken up");
+						synchronized (bw.getBuffer().getExternalLock()) {
+							bw.getBuffer().getExternalLock().wait();
 						}
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -163,7 +160,7 @@ public class MultiOperator implements StatelessOperator {
 		}
 
 		target = (long)Math.floor(10499d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
-//		target = 34;
+//		target = 1;
 		// start = System.currentTimeMillis();
 		
 		/*
@@ -172,44 +169,44 @@ public class MultiOperator implements StatelessOperator {
 		 */
 		this.mostUpstreamSubQueries = new HashSet<>();
 		this.mostDownstreamSubQueries = new HashSet<>();
-		for (ISubQueryConnectable connectable : subQueries){
-			if (connectable.isMostLocalUpstream()) {
-				this.mostUpstreamSubQueries.add(connectable);
-				SubQueryBuffer b = new SubQueryBuffer();
-				for (Integer streamID : connectable.getSubQuery().getWindowDefinitions().keySet())
-					connectable.registerLocalUpstreamBuffer(b, streamID);
-			}
-			if (connectable.isMostLocalDownstream()) {
-				this.mostDownstreamSubQueries.add(connectable);
-				
-				SubQueryBuffer b = new SubQueryBuffer();
-				// deactivate for local testing
-//				for (Integer streamID : parentConnectable.getOpContext().routeInfo.keySet())
-//					connectable.registerLocalDownstreamBuffer(b, streamID);
-				connectable.registerLocalDownstreamBuffer(b, 0);
-			}
-		}
-		
-		this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.size() == 1);
-		
-		/*
-		 * Start handlers for sub queries
-		 */
-		for (ISubQueryConnectable c : this.subQueries) {
-			/* 
-			 * Select appropriate forwarding mechanism:
-			 *  - default is writing to downstream sub query buffer 
-			 *  - if subquery is most downstream, forwarding to distributed nodes via API is enabled
-			 */
-			ISubQueryTaskResultForwarder resultForwarder = 
-				(c.isMostLocalDownstream())? 
-					new SubQueryTaskResultAPIForwarder(c)
-					: new SubQueryTaskResultBufferForwarder(c);
-			
-			//TODO: select task creation scheme
-			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(c), resultForwarder);
-			(new Thread(r)).start();
-		}
+//		for (ISubQueryConnectable connectable : subQueries){
+//			if (connectable.isMostLocalUpstream()) {
+//				this.mostUpstreamSubQueries.add(connectable);
+//				SubQueryBuffer b = new SubQueryBuffer();
+//				for (Integer streamID : connectable.getSubQuery().getWindowDefinitions().keySet())
+//					connectable.registerLocalUpstreamBuffer(b, streamID);
+//			}
+//			if (connectable.isMostLocalDownstream()) {
+//				this.mostDownstreamSubQueries.add(connectable);
+//				
+//				SubQueryBuffer b = new SubQueryBuffer();
+//				// deactivate for local testing
+////				for (Integer streamID : parentConnectable.getOpContext().routeInfo.keySet())
+////					connectable.registerLocalDownstreamBuffer(b, streamID);
+//				connectable.registerLocalDownstreamBuffer(b, 0);
+//			}
+//		}
+//		
+//		this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.size() == 1);
+//		
+//		/*
+//		 * Start handlers for sub queries
+//		 */
+//		for (ISubQueryConnectable c : this.subQueries) {
+//			/* 
+//			 * Select appropriate forwarding mechanism:
+//			 *  - default is writing to downstream sub query buffer 
+//			 *  - if subquery is most downstream, forwarding to distributed nodes via API is enabled
+//			 */
+//			ISubQueryTaskResultForwarder resultForwarder = 
+//				(c.isMostLocalDownstream())? 
+//					new SubQueryTaskResultAPIForwarder(c)
+//					: new SubQueryTaskResultBufferForwarder(c);
+//			
+//			//TODO: select task creation scheme
+//			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(c), resultForwarder);
+//			(new Thread(r)).start();
+//		}
 	}
 
 	public MultiAPI getAPI() {

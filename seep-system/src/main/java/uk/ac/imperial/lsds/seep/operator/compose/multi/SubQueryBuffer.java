@@ -16,32 +16,18 @@ public class SubQueryBuffer {
 	
 	private boolean full = false;
 	
-	private Object lock = new Object();
+	private Object externalLock = new Object();
 	private Object internalLock = new Object();
 
-	public synchronized Object getLock() {
-		return lock;
-	}
-
+	/*
+	 * ###############################################
+	 * Constructors
+	 * ###############################################
+	 */
 	public SubQueryBuffer () {
 		this(SUB_QUERY_BUFFER_CAPACITY);
 	}
-
-	public boolean isFull() {
-		return this.full;
-	}
-
-	public MultiOpTuple[] add(MultiOpTuple[] tuples) {
-		for (int i = 0; i < tuples.length; i++) {
-			if (!add(tuples[i])) {
-				MultiOpTuple[] remaining = new MultiOpTuple[tuples.length - i];
-				System.arraycopy(tuples, i, remaining, 0, tuples.length - i);
-				return remaining;
-			}
-		}
-		return new MultiOpTuple[0];
-	}
-
+	
 	public SubQueryBuffer(int size) {
 		if (size <= 0)
 			throw new IllegalArgumentException
@@ -51,26 +37,15 @@ public class SubQueryBuffer {
 		Arrays.fill(freeElements, false);
 	}
 
-	public boolean isMoreRecentThan(int first, int second) {
-		int nFirst = normIndex(first); 
-		int nSecond = normIndex(second); 
-//		if (!validIndex(nFirst)||!validIndex(nSecond))
-//			throw new IllegalArgumentException();
-		if (start < end)
-			return (nFirst < nSecond);
-		else {
-			// (end <= start)
-			if ((nFirst >= start) && (nSecond >= start)) 
-				return (nFirst < nSecond);
-			if ((nFirst < end) && (nSecond < end)) 
-				return (nFirst < nSecond);
-			if ((nFirst >= start) && (nSecond < end)) 
-				return false;
-			// ((second >= start) && (first < end)) 
-				return true;		
-		}
+	/*
+	 * ###############################################
+	 * Read access methods
+	 * ###############################################
+	 */
+	public boolean isFull() {
+		return this.full;
 	}
-	
+
 	public int normIndex(int i) {
 		return (i%elements.length);
 	}
@@ -87,77 +62,37 @@ public class SubQueryBuffer {
 		
 		return size;
 	}
-	
-	private boolean insertElement(MultiOpTuple element) {
-			elements[end] = element;
-			end = normIndex(end + 1);
-			
-			if (end == start)
-				full = true;
-			
-		return true;			
-	}
-	
-	public boolean add(MultiOpTuple element) {
-		synchronized (internalLock) {
-			if (full)
+	public boolean isMoreRecentThan(int first, int second) {
+		int nFirst = normIndex(first); 
+		int nSecond = normIndex(second); 
+		if (start < end)
+			return (nFirst < nSecond);
+		else {
+			// (end <= start)
+			if ((nFirst >= start) && (nSecond >= start)) 
+				return (nFirst < nSecond);
+			if ((nFirst < end) && (nSecond < end)) 
+				return (nFirst < nSecond);
+			if ((nFirst >= start) && (nSecond < end)) 
 				return false;
-			
-			return insertElement(element);
+			// ((second >= start) && (first < end)) 
+				return true;		
 		}
 	}
-
-	private void freeIndex(int i) {
-		int nI = normIndex(i); 
-		if (!validIndex(nI))
-			throw new IllegalArgumentException();
-		
-		freeElements[nI] = true;
-
-			while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
-				int free = start;
-				// first, move pointer
-				start = normIndex(start+1);
-				// second, reset the buffer
-				elements[free] = null;
-				freeElements[free] = false;
-			}
-			
-			if ((end != start) || (end == start && start == nI))
-				full = false;
-	}
-
-	public void freeUpToIndex(int i) {
-		int nI = normIndex(i); 
-		
-		synchronized (internalLock) {
 	
-			int toFree = start;
-			do {
-				freeIndex(toFree);
-				toFree = normIndex(toFree + 1);
-			}
-			while (toFree != nI);
-		}
-		synchronized (getLock()) {
-//			System.out.println("notify from buffer");
-			this.getLock().notifyAll();
-		}
-	}
-
 	public boolean validIndex(int i) {
 		if (i < 0) {
-			System.out.println("ERROR smaller zero: " + i);
+//			System.out.println("ERROR smaller zero: " + i);
 			return false;
 		}
 		
 		if ((end < start) && (i > end) && (i < start)) {
-			System.out.println("ERROR 1: " + i + " " + start + " " + end);
+//			System.out.println("ERROR 1: " + i + " " + start + " " + end);
 			return false;
 		}			
 		
 		if ((start < end) && ((i >= end) || (i < start))) {
-			System.out.println("ERROR 2: " + i + " " + start + " " + end);
+//			System.out.println("ERROR 2: " + i + " " + start + " " + end);
 			return false;
 		}
 		return true;
@@ -218,6 +153,88 @@ public class SubQueryBuffer {
 			System.arraycopy(elements, 0, copy, lengthFirst-1, lengthSecond);
 			return copy;
 		}
+	}
+
+	/*
+	 * ###############################################
+	 * Update methods
+	 * ###############################################
+	 */
+	public MultiOpTuple[] add(MultiOpTuple[] tuples) {
+		for (int i = 0; i < tuples.length; i++) {
+			if (!add(tuples[i])) {
+				MultiOpTuple[] remaining = new MultiOpTuple[tuples.length - i];
+				System.arraycopy(tuples, i, remaining, 0, tuples.length - i);
+				return remaining;
+			}
+		}
+		return new MultiOpTuple[0];
+	}
+
+	public boolean add(MultiOpTuple element) {
+		synchronized (internalLock) {
+			if (full)
+				return false;
+			
+			return insertElement(element);
+		}
+	}
+	
+	public void freeUpToIndex(int i) {
+		int nI = normIndex(i); 
+		
+		synchronized (internalLock) {
+	
+			int toFree = start;
+			do {
+				freeIndex(toFree);
+				toFree = normIndex(toFree + 1);
+			}
+			while (toFree != nI);
+		}
+		
+		synchronized (getExternalLock()) {
+			this.getExternalLock().notifyAll();
+		}
+	}
+
+	public synchronized Object getExternalLock() {
+		return externalLock;
+	}
+
+	/*
+	 * ###############################################
+	 * Private helper methods
+	 * ###############################################
+	 */
+	private boolean insertElement(MultiOpTuple element) {
+			elements[end] = element;
+			end = normIndex(end + 1);
+			
+			if (end == start)
+				full = true;
+			
+		return true;			
+	}
+	
+	private void freeIndex(int i) {
+		int nI = normIndex(i); 
+		if (!validIndex(nI))
+			throw new IllegalArgumentException();
+		
+		freeElements[nI] = true;
+
+			while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
+				int free = start;
+				// first, move pointer
+				start = normIndex(start+1);
+				// second, reset the buffer
+				elements[free] = null;
+				freeElements[free] = false;
+			}
+			
+			if ((end != start) || (end == start && start == nI))
+				full = false;
 	}
 	
 }

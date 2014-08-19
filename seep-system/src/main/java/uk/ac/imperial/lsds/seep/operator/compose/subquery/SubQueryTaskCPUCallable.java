@@ -80,7 +80,18 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 				if (operatorCode instanceof IStatefulMicroOperator) {
 					operatorCode = ((IStatefulMicroOperator) operatorCode).getNewInstance();
 				}
+				
+				long start = System.currentTimeMillis();
+
 				operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
+				
+				long end = System.currentTimeMillis();
+				
+				long time = end - start;
+				
+				if (currentOperator.getMicroOperator().getOpID() == 3)
+					this.result.setComputationTime(time);
+
 				
 //				if (this.currentWindowBatchResults.values().size() > 0) {
 //					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);

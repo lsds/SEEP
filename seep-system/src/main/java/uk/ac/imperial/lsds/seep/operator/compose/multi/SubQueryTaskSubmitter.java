@@ -23,9 +23,10 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 	
 	private Map<Integer, Future<SubQueryTaskResult>> completedSubQueryTasks;
 	
-	long submitted = 0L;
 	long finished  = 0L;
 	long target    = 0L;
+	
+	long accTime = 0;
 
 	public SubQueryTaskSubmitter(ISubQueryConnectable subQuery, SubQueryTaskCreationScheme creationScheme) {
 		this.subQuery = subQuery;
@@ -41,7 +42,7 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 	
 	public void run() {
 		
-//		monitor.monitor("Submitted and not completed: " + runningSubQueryTasks.size() + "\t Completed: " + completedSubQueryTasks.keySet().size());
+//		monitor.monitor("Submitted and not completed: " + runningSubQueryTasks.size() + "\t Completed and not forwarded: " + completedSubQueryTasks.keySet().size());
 
 		/*
 		 * For each running task, check whether it has terminated and collect
@@ -53,21 +54,19 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 			if (future.isDone()) {
 				try {
 					completedSubQueryTasks.put(future.get().getLogicalOrderID(), future);
+					accTime += future.get().getComputationTime();
 					runningIter.remove();
-					// if (finished == target) {
-					//	this.subQuery.getParentMultiOperator().targetReached();	
-					// }
 				} catch (InterruptedException | ExecutionException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
-				finished ++;
+				finished++;
 				if (finished == target) {
 					System.out.println("Done.");
+					System.out.println(String.format("%10.1f seconds", (double) accTime / 1000.));
 					this.subQuery.getParentMultiOperator().targetReached();
 				}
 			}
-			
 		}
 		
 		/*
@@ -77,7 +76,6 @@ public class SubQueryTaskSubmitter implements Runnable, IRunningSubQueryTaskHand
 			/*
 			 * Submit the tasks
 			 */
-			// submitted ++;
 			Future<SubQueryTaskResult> future = this.subQuery.getParentMultiOperator().getExecutorService().submit(task);
 			runningSubQueryTasks.add(future);
 		}

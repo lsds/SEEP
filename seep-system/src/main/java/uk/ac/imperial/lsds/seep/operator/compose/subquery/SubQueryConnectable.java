@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWrapper;
 
 public class SubQueryConnectable implements ISubQueryConnectable {
 
@@ -17,8 +17,8 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 
 	private SubQuery sq;
 
-	private Map<Integer, SubQueryBuffer> localDownstreamBuffers;
-	private Map<Integer, SubQueryBuffer> localUpstreamBuffers;
+	private Map<Integer, SubQueryBufferWrapper> localDownstreamBuffers;
+	private Map<Integer, SubQueryBufferWrapper> localUpstreamBuffers;
 	
 	public SubQueryConnectable() {
 		this.localDownstream = new HashMap<>();
@@ -91,29 +91,29 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		 * sub query, even if multiple logical streams are defined
 		 */
 		if (!this.localDownstream.values().contains(so)) {
-			SubQueryBuffer b = new SubQueryBuffer();
+			SubQueryBufferWrapper b = new SubQueryBufferWrapper(this.sq.getWindowDefinitions(), this.parent);
 			this.localDownstreamBuffers.put(streamID, b);
 			so.registerLocalUpstreamBuffer(b, streamID);
 		}
 	}
 
 	@Override
-	public Map<Integer, SubQueryBuffer> getLocalDownstreamBuffers() {
+	public Map<Integer, SubQueryBufferWrapper> getLocalDownstreamBuffers() {
 		return this.localDownstreamBuffers;
 	}
 
 	@Override
-	public Map<Integer, SubQueryBuffer> getLocalUpstreamBuffers() {
+	public Map<Integer, SubQueryBufferWrapper> getLocalUpstreamBuffers() {
 		return this.localUpstreamBuffers;
 	}
 
 	@Override
-	public void registerLocalUpstreamBuffer(SubQueryBuffer so, int streamID) {
+	public void registerLocalUpstreamBuffer(SubQueryBufferWrapper so, int streamID) {
 		this.localUpstreamBuffers.put(streamID, so);
 	}
 
 	@Override
-	public void registerLocalDownstreamBuffer(SubQueryBuffer so, int streamID) {
+	public void registerLocalDownstreamBuffer(SubQueryBufferWrapper so, int streamID) {
 		this.localDownstreamBuffers.put(streamID, so);
 	}
 

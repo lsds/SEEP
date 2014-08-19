@@ -13,6 +13,8 @@ public class SubQueryTaskResult {
 	
 	private MultiOpTuple[] resultStream;
 
+	private long computationTime;
+	
 	public SubQueryTaskResult(int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
 		this.logicalOrderID = logicalOrderID;
 		this.freeUpToIndices = freeUpToIndices;
@@ -29,6 +31,14 @@ public class SubQueryTaskResult {
 			b.freeUpToIndex(b.normIndex(this.freeUpToIndices.get(b)));
 	}
 	
+	public long getComputationTime() {
+		return computationTime;
+	}
+
+	public void setComputationTime(long computationTime) {
+		this.computationTime = computationTime;
+	}
+
 	public Map<SubQueryBuffer, Integer> getFreeUpToIndices() {
 		return freeUpToIndices;
 	}

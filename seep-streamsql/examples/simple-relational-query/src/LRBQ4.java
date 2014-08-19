@@ -78,31 +78,27 @@ public class LRBQ4 {
 				MicroAggregation.AggregationType.AVG, 
 				1, 
 				new int[] {2, 3, 4}, 
-				new PrimitiveType[] {new IntegerType(0),  new FloatType(0f), new IntegerType(0)},
-				having
+				new PrimitiveType[] {new IntegerType(0),  new FloatType(0f), new IntegerType(0)}
+//				having
 				);
 		
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
 
-//		IMicroOperatorCode q2SelCode = new Selection(
-//				new ComparisonPredicate<FloatType>(
-//						ComparisonPredicate.LESS_OP, 
-//						new ColumnReference<FloatType>(3), 
-//						new Constant<FloatType>(new FloatType(40f))));
-//		IMicroOperatorConnectable q2Sel = QueryBuilder.newMicroOperator(q2SelCode, 4);
+		IMicroOperatorCode q2SelCode = having;
+		IMicroOperatorConnectable q2Sel = QueryBuilder.newMicroOperator(q2SelCode, 4);
 
 		IMicroOperatorCode q2ProjCode = new Projection(new int[] {0, 1, 2});
 		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 5);
 
-		q2Agg.connectTo(1, q2Proj);
+//		q2Agg.connectTo(1, q2Proj);
 		
-//		q2Agg.connectTo(1, q2Sel);
-//		q2Sel.connectTo(2, q2Proj);
+		q2Agg.connectTo(1, q2Sel);
+		q2Sel.connectTo(2, q2Proj);
 
 		Set<IMicroOperatorConnectable> q2MicroOps = new HashSet<>();
 		q2MicroOps.add(q2Proj);
 		q2MicroOps.add(q2Agg);
-//		q2MicroOps.add(q2Sel);
+		q2MicroOps.add(q2Sel);
 
 		windowDefs = new HashMap<>();
 		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));

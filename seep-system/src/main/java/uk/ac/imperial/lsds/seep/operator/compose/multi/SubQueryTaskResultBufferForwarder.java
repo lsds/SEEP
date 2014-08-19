@@ -16,7 +16,7 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 	@Override
 	public void forwardResult(MultiOpTuple[] result) {
 		// Update the buffer with the result
-		for (SubQueryBuffer b : subQueryConnectable.getLocalDownstreamBuffers().values()) {
+		for (SubQueryBufferWrapper bw : subQueryConnectable.getLocalDownstreamBuffers().values()) {
 			// Make sure to copy elements if there is more than one downstream buffer
 			if (!singleDownstreamBuffer) {
 				MultiOpTuple[] copy = new MultiOpTuple[result.length];
@@ -25,11 +25,11 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 				result = copy;
 			}
 			
-			MultiOpTuple[] notAdded = b.add(result);
+			MultiOpTuple[] notAdded = bw.add(result);
 			while (notAdded.length == 0) {
 				try {
-					b.wait();
-					notAdded = b.add(notAdded);
+					bw.getBuffer().wait();
+					notAdded = bw.add(notAdded);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
