@@ -1,11 +1,17 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryTaskResultForwarder;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskDispatcher;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskResultBufferForwarder;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public class SubQueryConnectable implements ISubQueryConnectable {
 
@@ -13,27 +19,30 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	private boolean mostUpstream;
 	private MultiOperator parent;
 	
-	private Map<Integer, ISubQueryConnectable> localDownstream;
-	private Map<Integer, ISubQueryConnectable> localUpstream;
-
 	private SubQuery sq;
-
-	private Map<Integer, SubQueryBuffer> localDownstreamBuffers;
-	private Map<Integer, SubQueryBuffer> localUpstreamBuffers;
+	private Map<Integer, IWindowDefinition>  windowDefinitions;
+	private SubQueryTaskDispatcher taskDispatcher;
+	private Set<ISubQueryTaskResultForwarder> resultForwarders;
+	
+	private Map<Integer, SubQueryBufferWindowWrapper> localDownstreamBuffers;
+	private Map<Integer, SubQueryBufferWindowWrapper> localUpstreamBuffers;
 	
 	public SubQueryConnectable() {
-		this.localDownstream = new HashMap<>();
-		this.localUpstream = new HashMap<>();
 		this.localDownstreamBuffers = new HashMap<>();
 		this.localUpstreamBuffers = new HashMap<>();
 		this.mostDownstream = true;
 		this.mostUpstream = true;
+		
+		this.resultForwarders = new HashSet<>();
+		this.taskDispatcher = new SubQueryTaskDispatcher(this);
+
 	}
 
-	public SubQueryConnectable(SubQuery sq) {
+	public SubQueryConnectable(SubQuery sq, Map<Integer, IWindowDefinition> windowDefs) {
 		this();
 		this.sq = sq;
 		sq.setParent(this);
+		this.windowDefinitions = windowDefs;
 	}
 
 	@Override
@@ -47,30 +56,8 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	}
 
 	@Override
-	public void addLocalDownstream(ISubQueryConnectable so, int streamID){
-		this.mostDownstream = false;
-		this.localDownstream.put(streamID,so);
-	}
-	
-	@Override
-	public void addLocalUpstream(ISubQueryConnectable so, int streamID){
-		this.mostUpstream = false;
-		this.localUpstream.put(streamID, so);
-	}
-
-	@Override
 	public SubQuery getSubQuery() {
 		return this.sq;
-	}
-
-	@Override
-	public Map<Integer, ISubQueryConnectable> getLocalDownstream() {
-		return localDownstream;
-	}
-
-	@Override
-	public Map<Integer, ISubQueryConnectable> getLocalUpstream() {
-		return localUpstream;
 	}
 
 	@Override
@@ -85,54 +72,68 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 
 	@Override
 	public void connectTo(ISubQueryConnectable so, int streamID) {
-		this.addLocalDownstream(so, streamID);
-		so.addLocalUpstream(this, streamID);
-		
-		/*
-		 * Make sure that only one buffer is created for each downstream 
-		 * sub query, even if multiple logical streams are defined
-		 */
-		if (!this.localDownstream.values().contains(so)) {
-			SubQueryBuffer b = new SubQueryBuffer();
-			this.localDownstreamBuffers.put(streamID, b);
-			so.registerLocalUpstreamBuffer(b, streamID);
-		}
+		SubQueryBufferWindowWrapper bw = new SubQueryBufferWindowWrapper(this, streamID);
+		this.resultForwarders.add(new SubQueryTaskResultBufferForwarder(so));
+		this.registerLocalDownstreamBuffer(bw, streamID);
+		so.registerLocalUpstreamBuffer(bw, streamID);
+	}
+	
+	@Override
+	public Set<ISubQueryTaskResultForwarder> getResultForwarders() {
+		return resultForwarders;
 	}
 
 	@Override
-	public Map<Integer, SubQueryBuffer> getLocalDownstreamBuffers() {
+	public void addResultForwarder(ISubQueryTaskResultForwarder forwarder) {
+		this.resultForwarders.add(forwarder);
+	}
+
+	@Override
+	public Map<Integer, SubQueryBufferWindowWrapper> getLocalDownstreamBuffers() {
 		return this.localDownstreamBuffers;
 	}
 
 	@Override
-	public Map<Integer, SubQueryBuffer> getLocalUpstreamBuffers() {
+	public Map<Integer, SubQueryBufferWindowWrapper> getLocalUpstreamBuffers() {
 		return this.localUpstreamBuffers;
 	}
 
 	@Override
-	public void registerLocalUpstreamBuffer(SubQueryBuffer so, int streamID) {
+	public void registerLocalUpstreamBuffer(SubQueryBufferWindowWrapper so, int streamID) {
+		this.mostUpstream = false;
 		this.localUpstreamBuffers.put(streamID, so);
 	}
 
 	@Override
-	public void registerLocalDownstreamBuffer(SubQueryBuffer so, int streamID) {
+	public void registerLocalDownstreamBuffer(SubQueryBufferWindowWrapper so, int streamID) {
+		this.mostDownstream = false;
 		this.localDownstreamBuffers.put(streamID, so);
 	}
 
 	@Override
 	public void processData(MultiOpTuple tuple) {
-		for (SubQueryBuffer b : this.localUpstreamBuffers.values()) {
-			while (!b.add(tuple)) {
+		for (SubQueryBufferWindowWrapper bw : this.localUpstreamBuffers.values()) {
+			while (!bw.addToBuffer(tuple)) {
 				try {
-					synchronized (b.getExternalLock()) {
-						b.getExternalLock().wait();
+					synchronized (bw.getExternalBufferLock()) {
+						bw.getExternalBufferLock().wait();
 					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			this.sq.updateWindowsOnInputBuffer(b, tuple);
 		}
 	}
 
+	@Override
+	public Map<Integer, IWindowDefinition> getWindowDefinitions() {
+		return windowDefinitions;
+	}
+
+	@Override
+	public SubQueryTaskDispatcher getTaskDispatcher() {
+		return taskDispatcher;
+	}
+
+	
 }

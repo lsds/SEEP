@@ -149,7 +149,6 @@ public class MultiOperator implements StatelessOperator {
 
 		target = (long)Math.floor(10499d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
 //		target = 1;
-		// start = System.currentTimeMillis();
 		
 		/*
 		 * Identify most upstream and most downstream local operators
@@ -157,44 +156,20 @@ public class MultiOperator implements StatelessOperator {
 		 */
 		this.mostUpstreamSubQueries = new HashSet<>();
 		this.mostDownstreamSubQueries = new HashSet<>();
-//		for (ISubQueryConnectable connectable : subQueries){
-//			if (connectable.isMostLocalUpstream()) {
-//				this.mostUpstreamSubQueries.add(connectable);
-//				SubQueryBuffer b = new SubQueryBuffer();
-//				for (Integer streamID : connectable.getSubQuery().getWindowDefinitions().keySet())
-//					connectable.registerLocalUpstreamBuffer(b, streamID);
-//			}
-//			if (connectable.isMostLocalDownstream()) {
-//				this.mostDownstreamSubQueries.add(connectable);
-//				
-//				SubQueryBuffer b = new SubQueryBuffer();
-//				// deactivate for local testing
-////				for (Integer streamID : parentConnectable.getOpContext().routeInfo.keySet())
-////					connectable.registerLocalDownstreamBuffer(b, streamID);
-//				connectable.registerLocalDownstreamBuffer(b, 0);
-//			}
-//		}
-//		
-//		this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.size() == 1);
-//		
-//		/*
-//		 * Start handlers for sub queries
-//		 */
-//		for (ISubQueryConnectable c : this.subQueries) {
-//			/* 
-//			 * Select appropriate forwarding mechanism:
-//			 *  - default is writing to downstream sub query buffer 
-//			 *  - if subquery is most downstream, forwarding to distributed nodes via API is enabled
-//			 */
-//			ISubQueryTaskResultForwarder resultForwarder = 
-//				(c.isMostLocalDownstream())? 
-//					new SubQueryTaskResultAPIForwarder(c)
-//					: new SubQueryTaskResultBufferForwarder(c);
-//			
-//			//TODO: select task creation scheme
-//			SubQueryHandler r = new SubQueryHandler(c, new WindowBatchTaskCreationScheme(c), resultForwarder);
-//			(new Thread(r)).start();
-//		}
+		for (ISubQueryConnectable connectable : subQueries){
+			if (connectable.isMostLocalUpstream()) {
+				this.mostUpstreamSubQueries.add(connectable);
+
+				for (Integer streamID : connectable.getWindowDefinitions().keySet()) 
+					connectable.registerLocalUpstreamBuffer(new SubQueryBufferWindowWrapper(connectable, streamID), streamID);
+			}
+			if (connectable.isMostLocalDownstream()) {
+				this.mostDownstreamSubQueries.add(connectable);
+				connectable.addResultForwarder(new SubQueryTaskResultAPIForwarder(this.api));
+			}
+		}
+		
+		this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.size() == 1);
 	}
 
 	public MultiAPI getAPI() {

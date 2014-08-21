@@ -279,8 +279,8 @@ public class QueryPlan {
 
 	public ISubQueryConnectable newSubQuery(
 			Set<IMicroOperatorConnectable> microOperators, int opId, Map<Integer, IWindowDefinition> windowDefs) {
-		SubQuery s = SubQuery.newSubQuery(microOperators, opId, windowDefs);
-		ISubQueryConnectable c = new SubQueryConnectable(s);
+		SubQuery s = SubQuery.newSubQuery(microOperators, opId);
+		ISubQueryConnectable c = new SubQueryConnectable(s, windowDefs);
 		return c;
 	}
     

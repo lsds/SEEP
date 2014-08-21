@@ -10,128 +10,100 @@ import java.util.Set;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IStatefulMicroOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.Monitor;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
 import uk.ac.imperial.lsds.seep.operator.compose.window.ArrayWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowAPI {
+public class SubQueryTaskCPUCallable extends AbstractSubQueryTask implements ISubQueryTask, IWindowAPI {
 		
-	private ISubQueryConnectable subQueryConnectable;
-	private Map<Integer, IWindowBatch> windowBatches;
-	
 	private IMicroOperatorConnectable currentOperator;
 	private Map<Integer, IWindowBatch> currentWindowBatchResults;
-	private IWindowBatch finalWindowBatchResult;
-
-	private SubQueryTaskResult result;
-	public SubQueryTaskCPUCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
-		this.subQueryConnectable = subQueryConnectable;
-		this.windowBatches = windowBatches;
-		
-		this.result = new SubQueryTaskResult(logicalOrderID, freeUpToIndices);
-	}
 	
-	public ISubQueryConnectable getSubQueryConnectable() {
-		return this.subQueryConnectable;
+	private IWindowBatch finalWindowBatchResult;
+	
+	public SubQueryTaskCPUCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices) {
+		super(subQueryConnectable, windowBatches, logicalOrderID, freeUpToIndices);
 	}
-
-//	private Monitor monitor = new Monitor();
 	
 	@Override
-	public SubQueryTaskResult call() throws Exception {
+	public void run() {
 		
-		try {
-			
-			this.finalWindowBatchResult = new ArrayWindowBatch();
-			Set<IMicroOperatorConnectable> processed = new HashSet<>();
-			Queue<IMicroOperatorConnectable> toProcess = new LinkedList<>();
-			Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
-			
+		this.finalWindowBatchResult = new ArrayWindowBatch();
+		Set<IMicroOperatorConnectable> processed = new HashSet<>();
+		Queue<IMicroOperatorConnectable> toProcess = new LinkedList<>();
+		Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
+		
+		/*
+		 * Init for most upstream micro operators
+		 */
+		for (IMicroOperatorConnectable c : super.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
+			toProcess.add(c);
+			windowBatchesForProcessing.put(c,super.windowBatches);
+		}
+		
+		while (!toProcess.isEmpty()) {
 			/*
-			 * Init for most upstream micro operators
+			 * Select a micro operator to execute
 			 */
-			for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
-				toProcess.add(c);
-				windowBatchesForProcessing.put(c,this.windowBatches);
-			}
-			
-			while (!toProcess.isEmpty()) {
-				/*
-				 * Select a micro operator to execute
-				 */
-				currentOperator = toProcess.poll();
-				currentWindowBatchResults = new HashMap<>();
-				toProcess.remove(currentOperator);
-				processed.add(currentOperator);
+			currentOperator = toProcess.poll();
+			currentWindowBatchResults = new HashMap<>();
+			toProcess.remove(currentOperator);
+			processed.add(currentOperator);
 
 //				monitor.monitor("Input size of micro operator: " 
 //			+ (windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers()[windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers().length - 1]
 //					- windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowStartPointers()[0]));
 
-				/*
-				 * Execute
-				 * If the actual code is stateful, we need to obtain a new instance
-				 */
-				IMicroOperatorCode operatorCode = currentOperator.getMicroOperator().getOp();
-				
-				if (operatorCode instanceof IStatefulMicroOperator) {
-					operatorCode = ((IStatefulMicroOperator) operatorCode).getNewInstance();
-				}
-				
-				long start = System.currentTimeMillis();
+			/*
+			 * Execute
+			 * If the actual code is stateful, we need to obtain a new instance
+			 */
+			IMicroOperatorCode operatorCode = currentOperator.getMicroOperator().getOp();
+			
+			if (operatorCode instanceof IStatefulMicroOperator) {
+				operatorCode = ((IStatefulMicroOperator) operatorCode).getNewInstance();
+			}
+			
 
-				operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
-				
-				long end = System.currentTimeMillis();
-				
-				long time = end - start;
-				
-				if (currentOperator.getMicroOperator().getOpID() == 3)
-					this.result.setComputationTime(time);
-
-				
+			operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
+			
 //				if (this.currentWindowBatchResults.values().size() > 0) {
 //					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
 //				}
+			
+			/*
+			 * We got the complete window batch result for the operator. So,
+			 * we need to store the window batches for the subsequent operators 
+			 * (if there are any)
+			 */
+			for (Integer streamId : this.currentOperator.getLocalDownstream().keySet()) {
+				IMicroOperatorConnectable c = this.currentOperator.getLocalDownstream().get(streamId);
+				if (!windowBatchesForProcessing.containsKey(c))
+					windowBatchesForProcessing.put(c, new HashMap<Integer, IWindowBatch>());
 				
-				/*
-				 * We got the complete window batch result for the operator. So,
-				 * we need to store the window batches for the subsequent operators 
-				 * (if there are any)
-				 */
-				for (Integer streamId : this.currentOperator.getLocalDownstream().keySet()) {
-					IMicroOperatorConnectable c = this.currentOperator.getLocalDownstream().get(streamId);
-					if (!windowBatchesForProcessing.containsKey(c))
-						windowBatchesForProcessing.put(c, new HashMap<Integer, IWindowBatch>());
-					
-					windowBatchesForProcessing.get(c).put(streamId, this.currentWindowBatchResults.get(streamId));
-				}
-				
-				/*
-				 * Check for further operators that are ready to be executed, i.e., 
-				 * we have the window batch results for all their incoming streams
-				 */
-				for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMicroOperators()) {
-					if (processed.contains(c))
-						continue;
-					if (!windowBatchesForProcessing.containsKey(c))
-						continue;
-					
-					if (windowBatchesForProcessing.get(c).keySet().containsAll(c.getLocalUpstream().keySet())) 
-						toProcess.add(c);
-				}
+				windowBatchesForProcessing.get(c).put(streamId, this.currentWindowBatchResults.get(streamId));
 			}
 			
-			this.result.setResultStream(this.finalWindowBatchResult.getArrayContent());
-
-		} catch (Exception e) {
-			e.printStackTrace();
+			/*
+			 * Check for further operators that are ready to be executed, i.e., 
+			 * we have the window batch results for all their incoming streams
+			 */
+			for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMicroOperators()) {
+				if (processed.contains(c))
+					continue;
+				if (!windowBatchesForProcessing.containsKey(c))
+					continue;
+				
+				if (windowBatchesForProcessing.get(c).keySet().containsAll(c.getLocalUpstream().keySet())) 
+					toProcess.add(c);
+			}
 		}
-//		this.result.setResultStream(new MultiOpTuple[0]);
-		return this.result;
+		
+		this.resultStream = this.finalWindowBatchResult.getArrayContent();
+		
+		super.pushResults();
 	}
 	
 	
@@ -185,6 +157,4 @@ public class SubQueryTaskCPUCallable implements ISubQueryTaskCallable,  IWindowA
 			outputWindowResult(streamID, windowResult);
 		
 	}
-
-	
 }

@@ -1,30 +1,18 @@
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
-import java.util.Map;
 import java.util.Arrays;
-
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
+import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.gpu.GPUExecutionContext;
 import uk.ac.imperial.lsds.seep.gpu.GPUUtils;
+import uk.ac.imperial.lsds.seep.gpu.types.FloatType;
+import uk.ac.imperial.lsds.seep.gpu.types.IntegerType;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-import uk.ac.imperial.lsds.seep.gpu.types.*;
+public class SubQueryTaskGPUCallable extends AbstractSubQueryTask implements ISubQueryTask {
 
-public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
-
-	/*
-	 * Window batches per streamID
-	 */
-	private Map<Integer, IWindowBatch> windowBatches;
-	
-	
-	/*
-	 * Result of the query for the given window batch
-	 */
-	private SubQueryTaskResult result;
-	
 	private GPUExecutionContext gpu;
 	
 	private long startTime = 0L;
@@ -48,17 +36,19 @@ public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
 		return (key - (MAX_SEGMENTS * getDirection(key)));
 	}
 	
-	public SubQueryTaskGPUCallable(Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices,
-		GPUExecutionContext gpu) {
+	public SubQueryTaskGPUCallable(
+			ISubQueryConnectable subQueryConnectable, 
+			Map<Integer, IWindowBatch> windowBatches, 
+			int logicalOrderID, 
+			Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices,
+			GPUExecutionContext gpu) {
 		
-		this.windowBatches = windowBatches;
-		this.result = new SubQueryTaskResult(logicalOrderID, freeUpToIndices);
-		
+		super(subQueryConnectable, windowBatches, logicalOrderID, freeUpToIndices);
 		this.gpu = gpu;
 	}
 	
 	@Override
-	public SubQueryTaskResult call() throws Exception {
+	public void run() {
 		
 		/*
 		 * For the LRB query, we know that there is only a single
@@ -154,8 +144,7 @@ public class SubQueryTaskGPUCallable implements ISubQueryTaskCallable {
 		
 		MultiOpTuple [] resultsForWindowBatch = new MultiOpTuple[0];
 		
-		this.result.setResultStream(resultsForWindowBatch);
-		
-		return this.result;
+		this.resultStream = resultsForWindowBatch;
 	}
+
 }

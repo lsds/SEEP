@@ -37,9 +37,6 @@ public class Runner {
 		
 		MultiOpTuple[] l = new MultiOpTuple[] {t3, t4};
 		
-		MultiOpTuple[] l2 = b.add(l);
-		
-		System.out.println(l2);
 		
 	}
 

@@ -1,6 +1,7 @@
-package uk.ac.imperial.lsds.seep.operator.compose.subquery;
+package uk.ac.imperial.lsds.seep.operator.compose.OLD;
 
 import java.util.List;
+
 
 
 public interface SubQueryTaskCreationScheme  {

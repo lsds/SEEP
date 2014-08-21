@@ -1,7 +1,6 @@
-package uk.ac.imperial.lsds.seep.operator.compose.multi;
+package uk.ac.imperial.lsds.seep.operator.compose.OLD;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
 
 public class SubQueryHandlerOLD implements Runnable {
 

@@ -1,32 +1,32 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.MultiAPI;
 
 public class SubQueryTaskResultAPIForwarder implements ISubQueryTaskResultForwarder {
 
-	private ISubQueryConnectable subQueryConnectable;
-//	private Map<String, Integer> idxMapper;
+	private MultiAPI api;
+	
+	private ResultHandler resultHandler;
 
-	public SubQueryTaskResultAPIForwarder(ISubQueryConnectable subQueryConnectable) {
-		this.subQueryConnectable = subQueryConnectable;
+	public SubQueryTaskResultAPIForwarder(MultiAPI api) {
+		this.api = api;
+		this.resultHandler = new ResultHandler();
 	}
 
-//	public SubQueryTaskResultAPIForwarder(ISubQueryConnectable subQueryConnectable, Map<String, Integer> idxMapper) {
-//		this.subQueryConnectable = subQueryConnectable;
-//		this.idxMapper = idxMapper;
-//	}
-	
 	@Override
 	public void forwardResult(MultiOpTuple[] result) {
-		
 		
 		/*
 		 *  Send the result using the API of the parent MultiOperator
 		 */
 		for (MultiOpTuple tuple : result) {
-			this.subQueryConnectable.getParentMultiOperator().getAPI().send(tuple);
-//			this.subQueryConnectable.getParentMultiOperator().getAPI().send(tuple.toDataTuple(idxMapper));
+			this.api.send(tuple);
 		}
+	}
+
+	@Override
+	public ResultHandler getResultHandler() {
+		return this.resultHandler;
 	}
 
 }

@@ -5,7 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskResult;
+import uk.ac.imperial.lsds.seep.operator.compose.OLD.IRunningSubQueryTaskHandler;
+import uk.ac.imperial.lsds.seep.operator.compose.OLD.SubQueryTaskResultOLD;
 
 public class SubQueryTaskResultFetcher implements Runnable {
 	
@@ -30,13 +31,13 @@ public class SubQueryTaskResultFetcher implements Runnable {
 		List<Integer> lIds = new ArrayList<>(runningSubQueryTaskHandler.getCompletedSubQueryTasks().keySet());
 		Collections.sort(lIds);
 		for (int lId : lIds) {
-			Future<SubQueryTaskResult> future = runningSubQueryTaskHandler.getCompletedSubQueryTasks().get(lId);
+			Future<SubQueryTaskResultOLD> future = runningSubQueryTaskHandler.getCompletedSubQueryTasks().get(lId);
 			if (this.lastFinishedOrderID == lId - 1) {
 				// Remove from running tasks
 				runningSubQueryTaskHandler.getCompletedSubQueryTasks().remove(lId);
 				// Get result
 				try {
-					SubQueryTaskResult result = future.get();
+					SubQueryTaskResultOLD result = future.get();
 					/*
 					 * Forward the result using the appropriate mechanism,
 					 * either writing to the downstream sub query buffer or

@@ -8,9 +8,12 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 	
 	private boolean singleDownstreamBuffer;
 	
+	private ResultHandler resultHandler;
+
 	public SubQueryTaskResultBufferForwarder(ISubQueryConnectable subQueryConnectable) {
 		this.subQueryConnectable = subQueryConnectable;
 		singleDownstreamBuffer = (subQueryConnectable.getLocalDownstreamBuffers().size() == 1);
+		this.resultHandler = new ResultHandler();
 	}
 
 	@Override
@@ -24,6 +27,11 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 		}
 		for (MultiOpTuple t : result) 
 			subQueryConnectable.processData(t);
+	}
+
+	@Override
+	public ResultHandler getResultHandler() {
+		return this.resultHandler;
 	}
 
 }

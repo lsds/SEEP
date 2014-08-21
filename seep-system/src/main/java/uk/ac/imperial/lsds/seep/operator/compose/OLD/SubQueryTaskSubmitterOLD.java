@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose.multi;
+package uk.ac.imperial.lsds.seep.operator.compose.OLD;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -9,9 +9,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryTaskCallable;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskCreationScheme;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskResult;
 
 public class SubQueryTaskSubmitterOLD implements Runnable, IRunningSubQueryTaskHandler {
 	
@@ -19,15 +16,13 @@ public class SubQueryTaskSubmitterOLD implements Runnable, IRunningSubQueryTaskH
 
 	private ISubQueryConnectable subQuery;
 
-	private List<Future<SubQueryTaskResult>> runningSubQueryTasks;
+	private List<Future<SubQueryTaskResultOLD>> runningSubQueryTasks;
 	
-	private Map<Integer, Future<SubQueryTaskResult>> completedSubQueryTasks;
+	private Map<Integer, Future<SubQueryTaskResultOLD>> completedSubQueryTasks;
 	
 	long finished  = 0L;
 	long target    = 0L;
 	
-	long accTime = 0;
-
 	public SubQueryTaskSubmitterOLD(ISubQueryConnectable subQuery, SubQueryTaskCreationScheme creationScheme) {
 		this.subQuery = subQuery;
 		this.creationScheme = creationScheme;
@@ -48,13 +43,12 @@ public class SubQueryTaskSubmitterOLD implements Runnable, IRunningSubQueryTaskH
 		 * For each running task, check whether it has terminated and collect
 		 * those that have finished
 		 */
-		Iterator<Future<SubQueryTaskResult>> runningIter = runningSubQueryTasks.iterator();
+		Iterator<Future<SubQueryTaskResultOLD>> runningIter = runningSubQueryTasks.iterator();
 		while (runningIter.hasNext()) {
-			Future<SubQueryTaskResult> future = runningIter.next();
+			Future<SubQueryTaskResultOLD> future = runningIter.next();
 			if (future.isDone()) {
 				try {
 					completedSubQueryTasks.put(future.get().getLogicalOrderID(), future);
-					accTime += future.get().getComputationTime();
 					runningIter.remove();
 				} catch (InterruptedException | ExecutionException e1) {
 					// TODO Auto-generated catch block
@@ -63,7 +57,6 @@ public class SubQueryTaskSubmitterOLD implements Runnable, IRunningSubQueryTaskH
 				finished++;
 				if (finished == target) {
 					System.out.println("Done.");
-					System.out.println(String.format("%10.1f seconds", (double) accTime / 1000.));
 					this.subQuery.getParentMultiOperator().targetReached();
 				}
 			}
@@ -76,13 +69,13 @@ public class SubQueryTaskSubmitterOLD implements Runnable, IRunningSubQueryTaskH
 			/*
 			 * Submit the tasks
 			 */
-			Future<SubQueryTaskResult> future = this.subQuery.getParentMultiOperator().getExecutorService().submit(task);
+			Future<SubQueryTaskResultOLD> future = this.subQuery.getParentMultiOperator().getExecutorService().submit(task);
 			runningSubQueryTasks.add(future);
 		}
 	}
 
 	@Override
-	public Map<Integer, Future<SubQueryTaskResult>> getCompletedSubQueryTasks() {
+	public Map<Integer, Future<SubQueryTaskResultOLD>> getCompletedSubQueryTasks() {
 		return this.completedSubQueryTasks;
 	}
 }

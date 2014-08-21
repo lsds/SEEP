@@ -1,20 +1,14 @@
-/*******************************************************************************
- * Copyright (c) 2014 Imperial College London
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * 
- * Contributors:
- *     Raul Castro Fernandez - initial API and implementation
- ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 
 import java.util.Map;
+import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryTaskResultForwarder;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskDispatcher;
+import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public interface ISubQueryConnectable {
 
@@ -27,18 +21,17 @@ public interface ISubQueryConnectable {
 	public boolean isMostLocalUpstream();
 	public void connectTo(ISubQueryConnectable so, int streamID);
 
-	public Map<Integer, ISubQueryConnectable> getLocalDownstream();
-	public Map<Integer, ISubQueryConnectable> getLocalUpstream();
+	public Map<Integer, SubQueryBufferWindowWrapper> getLocalDownstreamBuffers();
+	public Map<Integer, SubQueryBufferWindowWrapper> getLocalUpstreamBuffers();
 
-	public Map<Integer, SubQueryBuffer> getLocalDownstreamBuffers();
-	public Map<Integer, SubQueryBuffer> getLocalUpstreamBuffers();
-
-	public void addLocalUpstream(ISubQueryConnectable so, int streamID);
-	public void addLocalDownstream(ISubQueryConnectable so, int streamID);
-
-	public void registerLocalUpstreamBuffer(SubQueryBuffer so, int streamID);
-	public void registerLocalDownstreamBuffer(SubQueryBuffer so, int streamID);
+	public void registerLocalUpstreamBuffer(SubQueryBufferWindowWrapper so, int streamID);
+	public void registerLocalDownstreamBuffer(SubQueryBufferWindowWrapper so, int streamID);
 	
 	public void processData(MultiOpTuple tuple);
+	public Map<Integer, IWindowDefinition> getWindowDefinitions();
+	public SubQueryTaskDispatcher getTaskDispatcher();
+
+	public void addResultForwarder(ISubQueryTaskResultForwarder forwarder);
+	public Set<ISubQueryTaskResultForwarder> getResultForwarders();
 
 }
