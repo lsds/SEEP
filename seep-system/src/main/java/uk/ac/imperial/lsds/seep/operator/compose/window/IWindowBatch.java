@@ -8,6 +8,9 @@ public interface IWindowBatch {
 	public long getStartTimestamp();
 	public long getEndTimestamp();
 
+	public void setStartTimestamp(long ts);
+	public void setEndTimestamp(long ts);
+
 	public int[] getWindowStartPointers();
 	public int[] getWindowEndPointers();
 	

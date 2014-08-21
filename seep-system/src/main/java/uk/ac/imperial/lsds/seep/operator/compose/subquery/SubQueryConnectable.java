@@ -3,8 +3,9 @@ package uk.ac.imperial.lsds.seep.operator.compose.subquery;
 import java.util.HashMap;
 import java.util.Map;
 
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWrapper;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
 
 public class SubQueryConnectable implements ISubQueryConnectable {
 
@@ -17,8 +18,8 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 
 	private SubQuery sq;
 
-	private Map<Integer, SubQueryBufferWrapper> localDownstreamBuffers;
-	private Map<Integer, SubQueryBufferWrapper> localUpstreamBuffers;
+	private Map<Integer, SubQueryBuffer> localDownstreamBuffers;
+	private Map<Integer, SubQueryBuffer> localUpstreamBuffers;
 	
 	public SubQueryConnectable() {
 		this.localDownstream = new HashMap<>();
@@ -32,6 +33,7 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 	public SubQueryConnectable(SubQuery sq) {
 		this();
 		this.sq = sq;
+		sq.setParent(this);
 	}
 
 	@Override
@@ -91,31 +93,46 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		 * sub query, even if multiple logical streams are defined
 		 */
 		if (!this.localDownstream.values().contains(so)) {
-			SubQueryBufferWrapper b = new SubQueryBufferWrapper(this.sq.getWindowDefinitions(), this.parent);
+			SubQueryBuffer b = new SubQueryBuffer();
 			this.localDownstreamBuffers.put(streamID, b);
 			so.registerLocalUpstreamBuffer(b, streamID);
 		}
 	}
 
 	@Override
-	public Map<Integer, SubQueryBufferWrapper> getLocalDownstreamBuffers() {
+	public Map<Integer, SubQueryBuffer> getLocalDownstreamBuffers() {
 		return this.localDownstreamBuffers;
 	}
 
 	@Override
-	public Map<Integer, SubQueryBufferWrapper> getLocalUpstreamBuffers() {
+	public Map<Integer, SubQueryBuffer> getLocalUpstreamBuffers() {
 		return this.localUpstreamBuffers;
 	}
 
 	@Override
-	public void registerLocalUpstreamBuffer(SubQueryBufferWrapper so, int streamID) {
+	public void registerLocalUpstreamBuffer(SubQueryBuffer so, int streamID) {
 		this.localUpstreamBuffers.put(streamID, so);
 	}
 
 	@Override
-	public void registerLocalDownstreamBuffer(SubQueryBufferWrapper so, int streamID) {
+	public void registerLocalDownstreamBuffer(SubQueryBuffer so, int streamID) {
 		this.localDownstreamBuffers.put(streamID, so);
 	}
 
+	@Override
+	public void processData(MultiOpTuple tuple) {
+		for (SubQueryBuffer b : this.localUpstreamBuffers.values()) {
+			while (!b.add(tuple)) {
+				try {
+					synchronized (b.getExternalLock()) {
+						b.getExternalLock().wait();
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			this.sq.updateWindowsOnInputBuffer(b, tuple);
+		}
+	}
 
 }

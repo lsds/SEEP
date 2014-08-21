@@ -15,26 +15,15 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 
 	@Override
 	public void forwardResult(MultiOpTuple[] result) {
-		// Update the buffer with the result
-		for (SubQueryBufferWrapper bw : subQueryConnectable.getLocalDownstreamBuffers().values()) {
-			// Make sure to copy elements if there is more than one downstream buffer
-			if (!singleDownstreamBuffer) {
-				MultiOpTuple[] copy = new MultiOpTuple[result.length];
-				for (int i = 0; i < result.length; i++)
-					copy[i] = MultiOpTuple.newInstance(result[i]);
-				result = copy;
-			}
-			
-			MultiOpTuple[] notAdded = bw.add(result);
-			while (notAdded.length == 0) {
-				try {
-					bw.getBuffer().wait();
-					notAdded = bw.add(notAdded);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
+		// Make sure to copy elements if there is more than one downstream buffer
+		if (!singleDownstreamBuffer) {
+			MultiOpTuple[] copy = new MultiOpTuple[result.length];
+			for (int i = 0; i < result.length; i++)
+				copy[i] = MultiOpTuple.newInstance(result[i]);
+			result = copy;
 		}
+		for (MultiOpTuple t : result) 
+			subQueryConnectable.processData(t);
 	}
 
 }

@@ -20,15 +20,9 @@ public class SubQueryTaskResult {
 		this.freeUpToIndices = freeUpToIndices;
 	}
 
-//	public SubQueryTaskResult(List<MultiOpTuple> resultStream, int logicalOrderID, Map<SubQueryBuffer, Integer> freeUpToIndices) {
-//		this(logicalOrderID, freeUpToIndices);
-//		this.resultStream = resultStream;
-//	}
-	
-	
 	public void freeIndicesInBuffers() {
 		for (SubQueryBuffer b : this.freeUpToIndices.keySet())
-			b.freeUpToIndex(b.normIndex(this.freeUpToIndices.get(b)));
+			b.freeUpToIndex(this.freeUpToIndices.get(b));
 	}
 	
 	public long getComputationTime() {

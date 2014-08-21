@@ -5,6 +5,10 @@ import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBuffer;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferHandler;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskSubmitter;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public class SubQuery {
@@ -16,6 +20,12 @@ public class SubQuery {
 	private IMicroOperatorConnectable mostDownstreamMicroOperator;
 
 	private Map<Integer, IWindowDefinition>  windowDefinitions;
+	
+	private SubQueryBufferHandler bufferHandler;
+
+	private SubQueryTaskSubmitter taskSubmitter;
+
+	private SubQueryConnectable parent;
 	
 	private SubQuery(Set<IMicroOperatorConnectable> microOperators, int id, Map<Integer, IWindowDefinition>  inputWindowDefinitions) {
 		this.id = id;
@@ -30,6 +40,9 @@ public class SubQuery {
 			if (microOperatorConnectable.isMostLocalDownstream())
 				mostDownstreamMicroOperator = microOperatorConnectable;
 		}
+		
+		this.bufferHandler = new SubQueryBufferHandler(parent);
+		this.taskSubmitter = new SubQueryTaskSubmitter(this);
 	}
 	
 	public int getId() {
@@ -57,4 +70,20 @@ public class SubQuery {
 		return windowDefinitions;
 	}
 	
+	public void updateWindowsOnInputBuffer(SubQueryBuffer b, MultiOpTuple tuple) {
+		this.bufferHandler.updateCurrentWindows(b, tuple);
+	}
+	
+	public SubQueryConnectable getParent() {
+		return parent;
+	}
+
+	public void setParent(SubQueryConnectable parent) {
+		this.parent = parent;
+	}
+	
+	public void dispatchTask(ISubQueryTaskCallable task) {
+		this.taskSubmitter.dispatch(task);
+	}
+
 }

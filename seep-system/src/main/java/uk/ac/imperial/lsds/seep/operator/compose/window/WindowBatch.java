@@ -8,7 +8,17 @@ public abstract class WindowBatch implements IWindowBatch {
 
 	protected long startTimestamp = -1;
 	protected long endTimestamp = -1;
-		
+
+	@Override
+	public void setStartTimestamp(long startTimestamp) {
+		this.startTimestamp = startTimestamp;
+	}
+
+	@Override
+	public void setEndTimestamp(long endTimestamp) {
+		this.endTimestamp = endTimestamp;
+	}
+	
 	@Override
 	public long getStartTimestamp() {
 		return this.startTimestamp;
@@ -73,4 +83,5 @@ public abstract class WindowBatch implements IWindowBatch {
 			}
 		}
 	}
+
 }

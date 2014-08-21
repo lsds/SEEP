@@ -20,9 +20,6 @@ public class BufferWindowBatch extends WindowBatch implements IWindowBatch {
 		this.buffer = buffer;
 		super.windowStartPointers = windowStartPointers;
 		super.windowEndPointers = windowEndPointers;
-		
-		super.startTimestamp = this.buffer.get(super.windowStartPointers[0]).timestamp;
-		super.endTimestamp = this.buffer.get(super.windowEndPointers[super.windowEndPointers.length-1]).timestamp;
 	}
 	
 	@Override

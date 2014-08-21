@@ -160,16 +160,16 @@ public class SubQueryBuffer {
 	 * Update methods
 	 * ###############################################
 	 */
-	public MultiOpTuple[] add(MultiOpTuple[] tuples) {
-		for (int i = 0; i < tuples.length; i++) {
-			if (!add(tuples[i])) {
-				MultiOpTuple[] remaining = new MultiOpTuple[tuples.length - i];
-				System.arraycopy(tuples, i, remaining, 0, tuples.length - i);
-				return remaining;
-			}
-		}
-		return new MultiOpTuple[0];
-	}
+//	public MultiOpTuple[] add(MultiOpTuple[] tuples) {
+//		for (int i = 0; i < tuples.length; i++) {
+//			if (!add(tuples[i])) {
+//				MultiOpTuple[] remaining = new MultiOpTuple[tuples.length - i];
+//				System.arraycopy(tuples, i, remaining, 0, tuples.length - i);
+//				return remaining;
+//			}
+//		}
+//		return new MultiOpTuple[0];
+//	}
 
 	public boolean add(MultiOpTuple element) {
 		synchronized (internalLock) {

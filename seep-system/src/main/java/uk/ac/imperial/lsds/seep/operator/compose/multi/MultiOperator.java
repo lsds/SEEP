@@ -104,22 +104,10 @@ public class MultiOperator implements StatelessOperator {
 		 * Try to push to all input buffers of the most upstream sub queries
 		 */
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
-			for (SubQueryBufferWrapper bw : q.getLocalUpstreamBuffers().values()) {
-				// Make sure to copy if there is more than one most upstream buffer
-				if (!singleUpstreamBuffer)
-					data = MultiOpTuple.newInstance(data);
-				// This code is accessed by a single thread only
-				while (!bw.add(data)) {
-					try {
-						synchronized (bw.getBuffer().getExternalLock()) {
-							bw.getBuffer().getExternalLock().wait();
-						}
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				tuples ++;
-			}
+			if (!singleUpstreamBuffer)
+				data = MultiOpTuple.newInstance(data);
+			q.processData(data);
+			tuples ++;
 		}
 	}
 
