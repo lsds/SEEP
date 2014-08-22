@@ -11,7 +11,15 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskGPUCallable extends AbstractSubQueryTask implements ISubQueryTask {
+public class SubQueryTaskGPUCallable implements ISubQueryTask {
+
+	/*
+	 * Input data for the actual execution of the task
+	 */
+	private ISubQueryConnectable subQueryConnectable;
+	private Map<Integer, IWindowBatch> windowBatches;
+
+	private ResultCollector collector;
 
 	private GPUExecutionContext gpu;
 	
@@ -43,7 +51,9 @@ public class SubQueryTaskGPUCallable extends AbstractSubQueryTask implements ISu
 			Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices,
 			GPUExecutionContext gpu) {
 		
-		super(subQueryConnectable, windowBatches, logicalOrderID, freeUpToIndices);
+		this.subQueryConnectable = subQueryConnectable;
+		this.windowBatches= windowBatches;
+		this.collector = new ResultCollector(subQueryConnectable, logicalOrderID, freeUpToIndices);
 		this.gpu = gpu;
 	}
 	
@@ -144,7 +154,7 @@ public class SubQueryTaskGPUCallable extends AbstractSubQueryTask implements ISu
 		
 		MultiOpTuple [] resultsForWindowBatch = new MultiOpTuple[0];
 		
-		this.resultStream = resultsForWindowBatch;
+		this.collector.pushResults(resultsForWindowBatch);
 	}
 
 }

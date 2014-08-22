@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,26 +26,28 @@ public class SubQueryTaskDispatcher {
 	 */
 	private int logicalOrderID = -1;
 	
-	private boolean GPU;
-	private GPUExecutionContext gpu;
-
 	private ISubQueryConnectable subQueryConnectable;
 	
-	long finished  = 0L;
-	long target    = 0L;
+	private boolean isGPUEnabled;
+	private GPUExecutionContext gpuContext;
+	
+	private AtomicInteger finished  = new AtomicInteger(0);
+	private long target    = 0L;
 	
 	public SubQueryTaskDispatcher(ISubQueryConnectable subQueryConnectable) {
 
 		assert(SUB_QUERY_WINDOW_BATCH_COUNT > 0);
 		
 		this.subQueryConnectable = subQueryConnectable;
-		
-		this.GPU = this.subQueryConnectable.getParentMultiOperator().isGPUEnabled();
-		this.gpu = this.subQueryConnectable.getParentMultiOperator().getGPUContext();
-		
+				
+	}
+	
+	public void setUp() {
 		this.target = this.subQueryConnectable.getParentMultiOperator().getTarget();
 		System.out.println(String.format("Target is %d tasks", target));
 		
+		this.isGPUEnabled = this.subQueryConnectable.getParentMultiOperator().isGPUEnabled();
+		this.gpuContext = this.subQueryConnectable.getParentMultiOperator().getGPUContext();
 	}
 	
 	public void assembleAndDispatchTask() {
@@ -73,8 +76,8 @@ public class SubQueryTaskDispatcher {
 			 * Create task 
 			 */
 			ISubQueryTask task;
-			if (this.GPU)
-				task = new SubQueryTaskGPUCallable(subQueryConnectable, windowBatchesForStreams, freshLogicalOrderID(), freeUpToIndices, gpu);
+			if (this.isGPUEnabled)
+				task = new SubQueryTaskGPUCallable(subQueryConnectable, windowBatchesForStreams, freshLogicalOrderID(), freeUpToIndices, this.gpuContext);
 			else
 				task = new SubQueryTaskCPUCallable(subQueryConnectable, windowBatchesForStreams, freshLogicalOrderID(), freeUpToIndices);
 
@@ -83,6 +86,13 @@ public class SubQueryTaskDispatcher {
 			 */
 			this.subQueryConnectable.getParentMultiOperator().getExecutorService().submit(task);
 		}
+	}
+	
+	public void taskFinished() {
+		int finishedTmp = this.finished.incrementAndGet();
+		
+		if (finishedTmp == target)
+			this.subQueryConnectable.getParentMultiOperator().targetReached();
 	}
 	
 	private int freshLogicalOrderID() {
@@ -94,6 +104,10 @@ public class SubQueryTaskDispatcher {
 
 	public int getNumberOfWindowsInBatch() {
 		return SUB_QUERY_WINDOW_BATCH_COUNT;
+	}
+	
+	public int getLogicalOrderID() {
+		return this.logicalOrderID;
 	}
 	
 	

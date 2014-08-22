@@ -157,6 +157,7 @@ public class MultiOperator implements StatelessOperator {
 		this.mostUpstreamSubQueries = new HashSet<>();
 		this.mostDownstreamSubQueries = new HashSet<>();
 		for (ISubQueryConnectable connectable : subQueries){
+			connectable.setUp();
 			if (connectable.isMostLocalUpstream()) {
 				this.mostUpstreamSubQueries.add(connectable);
 
@@ -165,7 +166,7 @@ public class MultiOperator implements StatelessOperator {
 			}
 			if (connectable.isMostLocalDownstream()) {
 				this.mostDownstreamSubQueries.add(connectable);
-				connectable.addResultForwarder(new SubQueryTaskResultAPIForwarder(this.api));
+				connectable.addResultForwarder(new SubQueryTaskResultAPIForwarder(this));
 			}
 		}
 		

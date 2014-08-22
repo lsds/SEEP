@@ -135,5 +135,10 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		return taskDispatcher;
 	}
 
+	@Override
+	public void setUp() {
+		this.taskDispatcher.setUp();
+	}
+
 	
 }

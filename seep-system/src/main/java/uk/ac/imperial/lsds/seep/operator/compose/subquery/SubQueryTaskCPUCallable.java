@@ -16,15 +16,27 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.ArrayWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskCPUCallable extends AbstractSubQueryTask implements ISubQueryTask, IWindowAPI {
+public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 		
+	/*
+	 * Input data for the actual execution of the task
+	 */
+	private ISubQueryConnectable subQueryConnectable;
+	private Map<Integer, IWindowBatch> windowBatches;
+
+	private ResultCollector collector;
+
+	/*
+	 * State
+	 */
 	private IMicroOperatorConnectable currentOperator;
 	private Map<Integer, IWindowBatch> currentWindowBatchResults;
-	
 	private IWindowBatch finalWindowBatchResult;
 	
 	public SubQueryTaskCPUCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices) {
-		super(subQueryConnectable, windowBatches, logicalOrderID, freeUpToIndices);
+		this.subQueryConnectable = subQueryConnectable;
+		this.windowBatches= windowBatches;
+		this.collector = new ResultCollector(subQueryConnectable, logicalOrderID, freeUpToIndices);
 	}
 	
 	@Override
@@ -38,9 +50,9 @@ public class SubQueryTaskCPUCallable extends AbstractSubQueryTask implements ISu
 		/*
 		 * Init for most upstream micro operators
 		 */
-		for (IMicroOperatorConnectable c : super.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
+		for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
 			toProcess.add(c);
-			windowBatchesForProcessing.put(c,super.windowBatches);
+			windowBatchesForProcessing.put(c,this.windowBatches);
 		}
 		
 		while (!toProcess.isEmpty()) {
@@ -101,9 +113,8 @@ public class SubQueryTaskCPUCallable extends AbstractSubQueryTask implements ISu
 			}
 		}
 		
-		this.resultStream = this.finalWindowBatchResult.getArrayContent();
-		
-		super.pushResults();
+		this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
+		this.subQueryConnectable.getTaskDispatcher().taskFinished();
 	}
 	
 	

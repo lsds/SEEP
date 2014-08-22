@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
+import uk.ac.imperial.lsds.seep.operator.compose.subquery.ResultHandler;
 
 public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultForwarder {
 	

@@ -12,6 +12,8 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
 public interface ISubQueryConnectable {
 
+	public void setUp();
+
 	public SubQuery getSubQuery();
 	
 	public void setParentMultiOperator(MultiOperator parent); 
