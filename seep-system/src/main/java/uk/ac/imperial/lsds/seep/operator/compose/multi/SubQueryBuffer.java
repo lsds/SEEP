@@ -46,6 +46,9 @@ public class SubQueryBuffer {
 		return (i%elements.length);
 	}
 
+	public int capacity() {
+		return this.elements.length;
+	}
 	
 	public boolean validIndex(int i) {
 		if (i < 0) {
@@ -185,6 +188,7 @@ public class SubQueryBuffer {
 			if ((end != start) || (end == start && start == nI))
 				full = false;
 	}
+
 	
 //	private boolean isFull() {
 //		return this.full;

@@ -249,6 +249,8 @@ public class SubQueryBufferWindowWrapper {
 					
 					// In the new window batch, we can use normalized indices again
 					this.currentElementIndexEnd = buffer.normIndex(this.currentElementIndexEnd);
+					if (this.currentElementIndexEnd <= windowBatchEnd.getWindowStartPointers()[0])
+						this.currentElementIndexEnd += buffer.capacity();
 					
 					// Since we closed a window batch, we should check whether there is a new set of batches (for different streams) for a task
 					this.connectable.getTaskDispatcher().assembleAndDispatchTask();
