@@ -42,79 +42,85 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 	@Override
 	public void run() {
 		
-		this.finalWindowBatchResult = new ArrayWindowBatch();
-		Set<IMicroOperatorConnectable> processed = new HashSet<>();
-		Queue<IMicroOperatorConnectable> toProcess = new LinkedList<>();
-		Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
-		
-		/*
-		 * Init for most upstream micro operators
-		 */
-		for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
-			toProcess.add(c);
-			windowBatchesForProcessing.put(c,this.windowBatches);
-		}
-		
-		while (!toProcess.isEmpty()) {
-			/*
-			 * Select a micro operator to execute
-			 */
-			currentOperator = toProcess.poll();
-			currentWindowBatchResults = new HashMap<>();
-			toProcess.remove(currentOperator);
-			processed.add(currentOperator);
-
-//				monitor.monitor("Input size of micro operator: " 
-//			+ (windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers()[windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers().length - 1]
-//					- windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowStartPointers()[0]));
-
-			/*
-			 * Execute
-			 * If the actual code is stateful, we need to obtain a new instance
-			 */
-			IMicroOperatorCode operatorCode = currentOperator.getMicroOperator().getOp();
+		try {
 			
-			if (operatorCode instanceof IStatefulMicroOperator) {
-				operatorCode = ((IStatefulMicroOperator) operatorCode).getNewInstance();
+			this.finalWindowBatchResult = new ArrayWindowBatch();
+			Set<IMicroOperatorConnectable> processed = new HashSet<>();
+			Queue<IMicroOperatorConnectable> toProcess = new LinkedList<>();
+			Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
+			
+			/*
+			 * Init for most upstream micro operators
+			 */
+			for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
+				toProcess.add(c);
+				windowBatchesForProcessing.put(c,this.windowBatches);
 			}
 			
+			while (!toProcess.isEmpty()) {
+				/*
+				 * Select a micro operator to execute
+				 */
+				currentOperator = toProcess.poll();
+				currentWindowBatchResults = new HashMap<>();
+				toProcess.remove(currentOperator);
+				processed.add(currentOperator);
 
-			operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
-			
-//				if (this.currentWindowBatchResults.values().size() > 0) {
-//					monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
-//				}
-			
-			/*
-			 * We got the complete window batch result for the operator. So,
-			 * we need to store the window batches for the subsequent operators 
-			 * (if there are any)
-			 */
-			for (Integer streamId : this.currentOperator.getLocalDownstream().keySet()) {
-				IMicroOperatorConnectable c = this.currentOperator.getLocalDownstream().get(streamId);
-				if (!windowBatchesForProcessing.containsKey(c))
-					windowBatchesForProcessing.put(c, new HashMap<Integer, IWindowBatch>());
+//					monitor.monitor("Input size of micro operator: " 
+//				+ (windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers()[windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers().length - 1]
+//						- windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowStartPointers()[0]));
+
+				/*
+				 * Execute
+				 * If the actual code is stateful, we need to obtain a new instance
+				 */
+				IMicroOperatorCode operatorCode = currentOperator.getMicroOperator().getOp();
 				
-				windowBatchesForProcessing.get(c).put(streamId, this.currentWindowBatchResults.get(streamId));
+				if (operatorCode instanceof IStatefulMicroOperator) {
+					operatorCode = ((IStatefulMicroOperator) operatorCode).getNewInstance();
+				}
+				
+
+				operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
+				
+//					if (this.currentWindowBatchResults.values().size() > 0) {
+//						monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
+//					}
+				
+				/*
+				 * We got the complete window batch result for the operator. So,
+				 * we need to store the window batches for the subsequent operators 
+				 * (if there are any)
+				 */
+				for (Integer streamId : this.currentOperator.getLocalDownstream().keySet()) {
+					IMicroOperatorConnectable c = this.currentOperator.getLocalDownstream().get(streamId);
+					if (!windowBatchesForProcessing.containsKey(c))
+						windowBatchesForProcessing.put(c, new HashMap<Integer, IWindowBatch>());
+					
+					windowBatchesForProcessing.get(c).put(streamId, this.currentWindowBatchResults.get(streamId));
+				}
+				
+				/*
+				 * Check for further operators that are ready to be executed, i.e., 
+				 * we have the window batch results for all their incoming streams
+				 */
+				for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMicroOperators()) {
+					if (processed.contains(c))
+						continue;
+					if (!windowBatchesForProcessing.containsKey(c))
+						continue;
+					
+					if (windowBatchesForProcessing.get(c).keySet().containsAll(c.getLocalUpstream().keySet())) 
+						toProcess.add(c);
+				}
 			}
 			
-			/*
-			 * Check for further operators that are ready to be executed, i.e., 
-			 * we have the window batch results for all their incoming streams
-			 */
-			for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMicroOperators()) {
-				if (processed.contains(c))
-					continue;
-				if (!windowBatchesForProcessing.containsKey(c))
-					continue;
-				
-				if (windowBatchesForProcessing.get(c).keySet().containsAll(c.getLocalUpstream().keySet())) 
-					toProcess.add(c);
-			}
+//			this.collector.pushResults(new MultiOpTuple[0]);
+			this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
+			this.subQueryConnectable.getTaskDispatcher().taskFinished();			
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		
-		this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
-		this.subQueryConnectable.getTaskDispatcher().taskFinished();
 	}
 	
 	

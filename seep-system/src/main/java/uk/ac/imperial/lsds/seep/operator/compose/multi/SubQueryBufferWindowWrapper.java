@@ -56,7 +56,7 @@ public class SubQueryBufferWindowWrapper {
 		windowBatchesEnd = new LinkedList<IWindowBatch>();
 		windowBatchesNextForEnd = new LinkedList<IWindowBatch>();
 
-		IWindowBatch windowBatch = new BufferWindowBatch(this.buffer, new int[this.numberOfWindowsInBatch],  new int[this.numberOfWindowsInBatch]);
+		IWindowBatch windowBatch = new BufferWindowBatch(this.buffer, freshInitializedArray(this.numberOfWindowsInBatch,-1),  freshInitializedArray(this.numberOfWindowsInBatch,-1));
 		windowBatches.add(windowBatch);
 		windowBatchesEnd.add(windowBatch);
 		
@@ -184,7 +184,9 @@ public class SubQueryBufferWindowWrapper {
 				this.currentElementIndexStart = buffer.getStartIndex();
 				this.currentElementIndexEnd = buffer.getStartIndex();
 				windowBatchStart.getWindowStartPointers()[this.currentWindowStartPointer] = this.currentElementIndexStart;
-				windowBatchStart.setStartTimestamp(buffer.get(buffer.getStartIndex()).timestamp);
+				long startTime = buffer.get(buffer.getStartIndex()).timestamp;
+				windowBatchStart.setStartTimestamp(startTime);
+				windowBatchStart.setEndTimestamp(startTime + windowDef.getSlide() * (this.numberOfWindowsInBatch-1) + windowDef.getSize());
 			}
 			else {
 				this.currentElementIndexStart++;
@@ -253,8 +255,6 @@ public class SubQueryBufferWindowWrapper {
 				}
 			}
 			
-			//System.out.println("RANGE BATCH:\t buffer view:\t" + windowStartPointers[0] + "-" + windowEndPointers[windowEndPointers.length - 1]+ "\t time:\t" +  startTimeForWindowBatch + "-" +  endTimeForWindowBatch);
-
 			break;
 
 		default:

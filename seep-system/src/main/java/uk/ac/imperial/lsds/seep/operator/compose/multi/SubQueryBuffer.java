@@ -42,58 +42,24 @@ public class SubQueryBuffer {
 	 * Read access methods
 	 * ###############################################
 	 */
-	public boolean isFull() {
-		return this.full;
-	}
-
 	public int normIndex(int i) {
 		return (i%elements.length);
 	}
 
-	public int size () {
-		int size = 0;
-		
-		if (end  < start) 
-			size = elements.length - start + end;
-		else if (end == start) 
-			size = (full ? elements.length : 0);
-		else 
-			size = end - start;
-		
-		return size;
-	}
-	
-	public boolean isMoreRecentThan(int first, int second) {
-		int nFirst = normIndex(first); 
-		int nSecond = normIndex(second); 
-		if (start < end)
-			return (nFirst < nSecond);
-		else {
-			// (end <= start)
-			if ((nFirst >= start) && (nSecond >= start)) 
-				return (nFirst < nSecond);
-			if ((nFirst < end) && (nSecond < end)) 
-				return (nFirst < nSecond);
-			if ((nFirst >= start) && (nSecond < end)) 
-				return false;
-			// ((second >= start) && (first < end)) 
-				return true;		
-		}
-	}
 	
 	public boolean validIndex(int i) {
 		if (i < 0) {
-//			System.out.println("ERROR smaller zero: " + i);
+			System.out.println("ERROR smaller zero: " + i);
 			return false;
 		}
 		
 		if ((end < start) && (i > end) && (i < start)) {
-//			System.out.println("ERROR 1: " + i + " " + start + " " + end);
+			System.out.println("ERROR 1: " + i + " " + start + " " + end);
 			return false;
 		}			
 		
 		if ((start < end) && ((i >= end) || (i < start))) {
-//			System.out.println("ERROR 2: " + i + " " + start + " " + end);
+			System.out.println("ERROR 2: " + i + " " + start + " " + end);
 			return false;
 		}
 		return true;
@@ -124,14 +90,6 @@ public class SubQueryBuffer {
 		return normIndex(i + this.elements.length);
 	}
 	
-	public int getEndIndex() {
-		return this.end;
-	}
-
-	public int capacity() {
-		return this.elements.length;
-	}
-
 	public MultiOpTuple[] getArray() {
 		return getArray(this.start, getIndexBefore(this.end,1));
 	}
@@ -228,4 +186,46 @@ public class SubQueryBuffer {
 				full = false;
 	}
 	
+//	private boolean isFull() {
+//		return this.full;
+//	}
+//
+//	public int size () {
+//		int size = 0;
+//		
+//		if (end  < start) 
+//			size = elements.length - start + end;
+//		else if (end == start) 
+//			size = (full ? elements.length : 0);
+//		else 
+//			size = end - start;
+//		
+//		return size;
+//	}
+//	
+//	public boolean isMoreRecentThan(int first, int second) {
+//		int nFirst = normIndex(first); 
+//		int nSecond = normIndex(second); 
+//		if (start < end)
+//			return (nFirst < nSecond);
+//		else {
+//			// (end <= start)
+//			if ((nFirst >= start) && (nSecond >= start)) 
+//				return (nFirst < nSecond);
+//			if ((nFirst < end) && (nSecond < end)) 
+//				return (nFirst < nSecond);
+//			if ((nFirst >= start) && (nSecond < end)) 
+//				return false;
+//			// ((second >= start) && (first < end)) 
+//				return true;		
+//		}
+//	}
+//
+//	public int capacity() {
+//		return this.elements.length;
+//	}
+//
+//	public int getEndIndex() {
+//		return this.end;
+//	}
 }

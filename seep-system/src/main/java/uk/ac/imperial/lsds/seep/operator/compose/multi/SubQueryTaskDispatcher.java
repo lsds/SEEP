@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,6 +69,11 @@ public class SubQueryTaskDispatcher {
 			for (Integer streamID : this.subQueryConnectable.getLocalUpstreamBuffers().keySet()) {
 				SubQueryBufferWindowWrapper bufferWrapper = this.subQueryConnectable.getLocalUpstreamBuffers().get(streamID);
 				IWindowBatch batch = bufferWrapper.getFullWindowBatches().poll();
+//				System.out.println("BATCH:\t buffer view:\t" + batch.getWindowStartPointers()[0] + "-" + batch.getWindowEndPointers()[batch.getWindowEndPointers().length - 1]+ "\t time:\t" +  batch.getStartTimestamp() + "-" +  batch.getEndTimestamp());
+//				System.out.println(Arrays.toString(batch.getWindowStartPointers()));
+//				System.out.println(Arrays.toString(batch.getWindowEndPointers()));
+//				System.out.println(bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch));
+				
 				windowBatchesForStreams.put(streamID, batch);
 				freeUpToIndices.put(bufferWrapper, bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch));
 			}
@@ -90,7 +96,7 @@ public class SubQueryTaskDispatcher {
 	
 	public void taskFinished() {
 		int finishedTmp = this.finished.incrementAndGet();
-		
+//		System.out.println("finished " + finishedTmp);
 		if (finishedTmp == target)
 			this.subQueryConnectable.getParentMultiOperator().targetReached();
 	}

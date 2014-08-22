@@ -26,13 +26,6 @@ public class ResultCollector {
 	protected void pushResults(MultiOpTuple[] resultStream) {
 		
 		/*
-		 * Computation has finished, so we can immediately free the data
-		 * in the input buffers
-		 */
-		for (SubQueryBufferWindowWrapper b : this.freeUpToIndices.keySet())
-			b.freeUpToIndexInBuffer(this.freeUpToIndices.get(b));
-		
-		/*
 		 * Push data to all the forwarders registered for the sub query
 		 */
 		for (ISubQueryTaskResultForwarder forwarder : this.subQueryConnectable.getResultForwarders()) {
@@ -46,15 +39,28 @@ public class ResultCollector {
 				 * Record the result. We expect the result buffer to be empty at the respective position. 
 				 * If that is not the case, we have to wait (should not happen though).
 				 */
-				while (!handler.freeResultSlots.compareAndSet(insertIndex, 1, 0))
+				while (!handler.freeResultSlots.compareAndSet(insertIndex, 1, 0)) { 
+					System.out.println("I AM WAITING");
 					Thread.sleep(1);
+				}
 
 				handler.results.set(insertIndex, resultStream);
+				handler.freeIndicesForResult.set(insertIndex, this.freeUpToIndices);
 				
 				MultiOpTuple[] result = handler.results.getAndSet(handler.nextToPush, null);
 				
 				while (result != null) {
+//					System.out.println("handler.nextToPush " + handler.nextToPush);
 					forwarder.forwardResult(result);
+					/*
+					 * All computation before this window batch has finished, so we can 
+					 * free the data in the input buffers
+					 */
+					Map<SubQueryBufferWindowWrapper, Integer> freeIndicesForForwarded = handler.freeIndicesForResult.get(handler.nextToPush);
+					for (SubQueryBufferWindowWrapper b : freeIndicesForForwarded.keySet()) {
+						b.freeUpToIndexInBuffer(freeIndicesForForwarded.get(b));
+					}
+
 					int forwardedIndex = handler.nextToPush;
 					handler.nextToPush = (handler.nextToPush + 1) % ResultHandler.NUMBER_RESULT_SLOTS;
 					handler.freeResultSlots.set(forwardedIndex, 1);
