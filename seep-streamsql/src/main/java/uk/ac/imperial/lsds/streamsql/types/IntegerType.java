@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.streamsql.types;
 
 public class IntegerType implements PrimitiveType {
 
-	public int value;
+	private int value;
 	
 	public IntegerType(int value) {
 		this.value = value;
@@ -26,26 +26,26 @@ public class IntegerType implements PrimitiveType {
 
 	@Override
 	public PrimitiveType add(PrimitiveType toAdd) {
-		value += ((IntegerType)toAdd).value;
-		return this;
+//		value += ((IntegerType)toAdd).value;
+		return new IntegerType(value + ((IntegerType)toAdd).value);
 	}
 
 	@Override
 	public PrimitiveType sub(PrimitiveType toAdd) {
 		value -= ((IntegerType)toAdd).value;
-		return this;
+		return new IntegerType(value - ((IntegerType)toAdd).value);
 	}
 
 	@Override
 	public PrimitiveType mul(PrimitiveType toAdd) {
-		value *= ((IntegerType)toAdd).value;
-		return this;
+//		value *= ((IntegerType)toAdd).value;
+		return new IntegerType(value * ((IntegerType)toAdd).value);
 	}
 
 	@Override
 	public PrimitiveType div(PrimitiveType toAdd) {
-		value = Math.round(1f*value / ((IntegerType)toAdd).value) ;
-		return this;
+//		value = Math.round(1f*value / ((IntegerType)toAdd).value) ;
+		return new IntegerType(Math.round(1f*value / ((IntegerType)toAdd).value));
 	}
 	
 	@Override

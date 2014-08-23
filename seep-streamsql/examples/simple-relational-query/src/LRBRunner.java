@@ -133,7 +133,7 @@ public class LRBRunner implements Callback {
 
 				MultiOpTuple t = parseLine(line);
 				// pos to segment translation
-				t.values[4] = new IntegerType((int)Math.floor(((IntegerType)t.values[4]).value / 5280));
+				t.values[4] = ((IntegerType)t.values[4]).div(new IntegerType(5280));
 				
 				data.add(t);
 				lastTupleTimestamp = t.timestamp;

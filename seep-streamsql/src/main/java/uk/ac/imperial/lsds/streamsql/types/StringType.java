@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.streamsql.types;
 
 public class StringType implements PrimitiveType {
 
-	public String value;
+	private String value;
 	
 	public StringType(String value) {
 		this.value = value;
@@ -20,8 +20,8 @@ public class StringType implements PrimitiveType {
 
 	@Override
 	public PrimitiveType add(PrimitiveType toAdd) {
-		value += ((StringType)toAdd).value;
-		return this;
+//		value += ((StringType)toAdd).value;
+		return new StringType(value + ((StringType)toAdd).value);
 	}
 
 	@Override
@@ -40,8 +40,8 @@ public class StringType implements PrimitiveType {
 	}
 
 	public StringType replace(CharSequence string, CharSequence string2) {
-		value = value.replace(string, string2);
-		return this;
+//		value = value.replace(string, string2);
+		return new StringType(value.replace(string, string2));
 	}
 
 	public boolean contains(StringType string) {
