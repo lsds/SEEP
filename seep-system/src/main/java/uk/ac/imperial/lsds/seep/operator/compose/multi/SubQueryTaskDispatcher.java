@@ -70,6 +70,7 @@ public class SubQueryTaskDispatcher {
 				SubQueryBufferWindowWrapper bufferWrapper = this.subQueryConnectable.getLocalUpstreamBuffers().get(streamID);
 				IWindowBatch batch = bufferWrapper.getFullWindowBatches().poll();
 //				System.out.println("BATCH:\t buffer view:\t" + batch.getWindowStartPointers()[0] + "-" + batch.getWindowEndPointers()[batch.getWindowEndPointers().length - 1]+ "\t time:\t" +  batch.getStartTimestamp() + "-" +  batch.getEndTimestamp());
+//				System.out.println(batch.getWindowEndPointers()[299] - batch.getWindowStartPointers()[0]);
 //				System.out.println(Arrays.toString(batch.getWindowStartPointers()));
 //				System.out.println(Arrays.toString(batch.getWindowEndPointers()));
 //				System.out.println(bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch));

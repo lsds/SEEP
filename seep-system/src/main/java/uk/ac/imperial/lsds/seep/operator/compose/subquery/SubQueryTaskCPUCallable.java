@@ -114,8 +114,19 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 						toProcess.add(c);
 				}
 			}
-			
+
+			/*
+			 * Code for only touching the input data
+			 */
+//			for (IWindowBatch windowBatch : this.windowBatches.values()) {
+//				int i = windowBatch.getWindowStartPointers()[0];
+//				int end = windowBatch.getWindowEndPointers()[windowBatch.getWindowEndPointers().length-1];
+//				while (i < end) {
+//					MultiOpTuple t = windowBatch.get(i++);
+//				}
+//			}	
 //			this.collector.pushResults(new MultiOpTuple[0]);
+			
 			this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
 			this.subQueryConnectable.getTaskDispatcher().taskFinished();			
 		} catch (Exception e) {
