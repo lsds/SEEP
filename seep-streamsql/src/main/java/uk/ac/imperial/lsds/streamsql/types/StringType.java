@@ -7,6 +7,11 @@ public class StringType implements PrimitiveType {
 	public StringType(String value) {
 		this.value = value;
 	}
+	
+	@Override
+	public Object clone() {
+		return new StringType(value);
+	}
 
 	@Override
 	public int compareTo(PrimitiveType o) {

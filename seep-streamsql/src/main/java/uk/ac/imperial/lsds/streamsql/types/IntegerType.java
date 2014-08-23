@@ -9,6 +9,11 @@ public class IntegerType implements PrimitiveType {
 	}
 
 	@Override
+	public Object clone() {
+		return new IntegerType(value);
+	}
+
+	@Override
 	public int compareTo(PrimitiveType o) {
 		int oI = ((IntegerType)o).value;
 

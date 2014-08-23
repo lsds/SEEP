@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.types;
 
-public interface PrimitiveType extends Comparable<PrimitiveType> {
+public interface PrimitiveType extends Comparable<PrimitiveType>, Cloneable {
 	
 	public PrimitiveType add(PrimitiveType toAdd);
 	public PrimitiveType sub(PrimitiveType toAdd);
@@ -9,4 +9,6 @@ public interface PrimitiveType extends Comparable<PrimitiveType> {
 	
 	public void setFromString(String s);
 	public PrimitiveType parseFromString(String s);
+	
+	public Object clone();
 }

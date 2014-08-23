@@ -9,6 +9,11 @@ public class FloatType implements PrimitiveType {
 	}
 
 	@Override
+	public Object clone() {
+		return new FloatType(value);
+	}
+
+	@Override
 	public int compareTo(PrimitiveType o) {
 		float oI = ((FloatType)o).value;
 
