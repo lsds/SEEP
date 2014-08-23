@@ -259,7 +259,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		
 		values[values.length - 1] = partitionValue;
 		
-		return MultiOpTuple.newInstance(values, timestamp, instrumentation_ts);
+		return new MultiOpTuple(values, timestamp, instrumentation_ts);
 	}
 	
 	@Override

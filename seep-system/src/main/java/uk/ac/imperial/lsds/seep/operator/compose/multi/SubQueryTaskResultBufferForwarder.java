@@ -23,7 +23,7 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 		if (!singleDownstreamBuffer) {
 			MultiOpTuple[] copy = new MultiOpTuple[result.length];
 			for (int i = 0; i < result.length; i++)
-				copy[i] = MultiOpTuple.newInstance(result[i]);
+				copy[i] = new MultiOpTuple(result[i]);
 			result = copy;
 		}
 		for (MultiOpTuple t : result) 

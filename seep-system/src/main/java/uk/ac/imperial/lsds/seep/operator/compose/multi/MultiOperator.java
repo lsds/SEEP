@@ -105,7 +105,7 @@ public class MultiOperator implements StatelessOperator {
 		 */
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
 			if (!singleUpstreamBuffer)
-				data = MultiOpTuple.newInstance(data);
+				data = new MultiOpTuple(data);
 			q.processData(data);
 			tuples ++;
 		}

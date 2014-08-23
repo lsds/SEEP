@@ -17,7 +17,12 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	/*
 	 * Expressions for the extended projection
 	 */
-	private IValueExpression<IntegerType>[] expressions;
+	private IValueExpression[] expressions;
+
+
+	public Projection(IValueExpression[] expressions) {
+		this.expressions = expressions;
+	}
 
 	public Projection(int attribute) {
 		this.expressions = new IValueExpression[] {new ColumnReference<IntegerType>(attribute)};
@@ -30,7 +35,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	}
 
 	private MultiOpTuple copyProject(MultiOpTuple data) {
-		MultiOpTuple t = MultiOpTuple.newInstance();
+		MultiOpTuple t = new MultiOpTuple();
 		t.values = new Object[expressions.length];
 
 		/*

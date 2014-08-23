@@ -71,7 +71,7 @@ public class LRBRunner implements Callback {
 			objects[i] = hardCodedCast(includeAttributes[i],s[includeAttributes[i]]);
 		
 		long timestamp = Long.valueOf(s[1]);
-		return MultiOpTuple.newInstance(objects, timestamp, timestamp);
+		return new MultiOpTuple(objects, timestamp, timestamp);
 	}
 	
 	public static void main (String [] args) {

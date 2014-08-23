@@ -1,93 +1,31 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
-import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 
 public class MultiOpTuple {
 	
-	public static final int MULTIOP_TUPLE_POOL_SIZE = Integer.valueOf(GLOBALS.valueFor("multiOpTuplePoolSize"));
-
-	private static Queue<MultiOpTuple> pool = new LinkedList<>();
-	
-	static {
-		int i = MULTIOP_TUPLE_POOL_SIZE;
-		while (i-- > 0)
-			pool.add(new MultiOpTuple());
-		
-	}
-	
 	public long timestamp;
 	public long instrumentation_ts;
 	public Object[] values;
 
-	public static MultiOpTuple newInstance(Object[] values, long timestamp, long instrumentation_ts) {
-		MultiOpTuple instance = pool.poll();
-		if (instance == null) 
-			return new MultiOpTuple(values, timestamp, instrumentation_ts);
-		
-		instance.timestamp = timestamp;
-		instance.instrumentation_ts = instrumentation_ts;
-		instance.values = values;
-		return instance;
-	}
-
-	public static MultiOpTuple newInstance(MultiOpTuple tuple) {
-		MultiOpTuple instance = pool.poll();
-		if (instance == null) 
-			return new MultiOpTuple(tuple);
-		
-		instance.timestamp = tuple.timestamp;
-		instance.instrumentation_ts = tuple.instrumentation_ts;
-		instance.values = tuple.values;
-		return instance;
-	}
-
-	public static MultiOpTuple newInstance(DataTuple tuple) {
-		MultiOpTuple instance = pool.poll();
-		if (instance == null) 
-			return new MultiOpTuple(tuple);
-		
-		instance.timestamp = tuple.getPayload().timestamp;
-		instance.instrumentation_ts = tuple.getPayload().instrumentation_ts;
-		instance.values = tuple.getPayload().attrValues.toArray();
-		return instance;
-	}
-
-	public static MultiOpTuple newInstance() {
-		MultiOpTuple instance = pool.poll();
-		if (instance == null) 
-			return new MultiOpTuple();
-		
-		return instance;
-	}
+	public MultiOpTuple() { }
 	
-	public void free() {
-		if (pool.size() < MULTIOP_TUPLE_POOL_SIZE)
-			pool.add(this);
-	}
-	
-	private MultiOpTuple() {
-		
-	}
-
-	private MultiOpTuple(MultiOpTuple tuple) {
+	public MultiOpTuple(MultiOpTuple tuple) {
 		this.timestamp = tuple.timestamp;
 		this.instrumentation_ts = tuple.instrumentation_ts;
 		this.values = tuple.values;
 	}
 
-	private MultiOpTuple(Object[] values, long timestamp, long instrumentation_ts) {
+	public MultiOpTuple(Object[] values, long timestamp, long instrumentation_ts) {
 		this.timestamp = timestamp;
 		this.instrumentation_ts = instrumentation_ts;
 		this.values = values;
 	}
 
-	private MultiOpTuple(DataTuple tuple) {
+	public MultiOpTuple(DataTuple tuple) {
 		this.timestamp = tuple.getPayload().timestamp;
 		this.instrumentation_ts = tuple.getPayload().instrumentation_ts;
 		this.values = tuple.getPayload().attrValues.toArray();
@@ -100,4 +38,22 @@ public class MultiOpTuple {
 		return result;
 	}
 
+//	public Object clone() {
+//		MultiOpTuple c = null;
+//		try {
+//			c = (MultiOpTuple) super.clone();
+//		} catch (CloneNotSupportedException e) {
+//			e.printStackTrace();
+//		}
+//		if (c != null) {
+//			c.timestamp = timestamp;
+//			c.instrumentation_ts = instrumentation_ts;
+//			c.values = new Object[values.length];
+//			for (int i = 0; i < values.length; i++)
+//				c.values[i] = values[i];
+//		}		
+//			
+//		return c;
+//	}
+	
 }

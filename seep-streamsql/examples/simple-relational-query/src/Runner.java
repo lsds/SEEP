@@ -17,16 +17,16 @@ public class Runner {
 		
 		public void run() {
 			for (int i = 0; i < 2000; i++)
-				buffer.add(MultiOpTuple.newInstance());
+				buffer.add(new MultiOpTuple());
 		}
 		
 	}
 	
 	public static void main(String[] args) {
-		MultiOpTuple t1 = MultiOpTuple.newInstance();
-		MultiOpTuple t2 = MultiOpTuple.newInstance();
-		MultiOpTuple t3 = MultiOpTuple.newInstance();
-		MultiOpTuple t4 = MultiOpTuple.newInstance();
+		MultiOpTuple t1 = new MultiOpTuple();
+		MultiOpTuple t2 = new MultiOpTuple();
+		MultiOpTuple t3 = new MultiOpTuple();
+		MultiOpTuple t4 = new MultiOpTuple();
 		
 		SubQueryBuffer b = new SubQueryBuffer(2);
 		
