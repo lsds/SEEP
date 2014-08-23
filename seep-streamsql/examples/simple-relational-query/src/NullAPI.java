@@ -100,14 +100,6 @@ public class NullAPI implements MultiAPI {
 	@Override
 	public void send(MultiOpTuple tuple) {
 		//System.out.println("received " + tuple.instrumentation_ts);
-		if ((waitForInstrumentationTimestamp <= tuple.instrumentation_ts) && !printedResults) {
-			printedResults = true;
-			double dt = (double) (System.currentTimeMillis() - startTimestamp) / 1000.;
-			double rate =  (double) (totalTuples) / dt;
-			System.out.println(String.format("%10.1f seconds", dt));
-			System.out.println(String.format("%10.1f tuples/s", rate));
-		}
-		tuple.free();
 	}
 
 }
