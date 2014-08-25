@@ -8,6 +8,12 @@ public class Division<T extends PrimitiveType> implements IValueExpression<T> {
 
 	private IValueExpression<T>[] expressions = null;
 
+	@SuppressWarnings("unchecked")
+	public Division(IValueExpression<T> expression1, IValueExpression<T> expression2) {
+		this.expressions = new IValueExpression[] {expression1, expression2};
+	}
+
+	
 	public Division(IValueExpression<T>[] expressions) {
 		this.expressions = expressions;
 	}

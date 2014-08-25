@@ -15,6 +15,7 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.Constant;
+import uk.ac.imperial.lsds.streamsql.expressions.Division;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -25,7 +26,7 @@ import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 
 
-public class LRBQ4 {
+public class LRBQ1To6 {
 
 	private MultiOperator mo;
 	
@@ -34,32 +35,33 @@ public class LRBQ4 {
 	public void setup(MultiAPI api) {
 		this.api = api;
 		
+		// INPUT STREAM vehicleID, speed, highway, direction, position
 		/*
 		 * Query 1
 		 * 
 		 * Select vehicleId, speed, xPos/5280 as segNo, dir, hwy
 		 * From PosSpeedStr
 		 */
-//		List<IValueExpression> projExpressions = new ArrayList<>();
-//		projExpressions.add(new ColumnReference<>(new StringConversion(), "vehicleId"));
-//		projExpressions.add(new ColumnReference<>(new StringConversion(), "speed"));
-//		IValueExpression ex = new Division(new ColumnReference<>(new DoubleConversion(), "xPos"), new ValueExpression<>(new IntegerConversion(), 5280));
-//		projExpressions.add(ex);
-//		projExpressions.add(new ColumnReference<>(new StringConversion(), "dir"));
-//		projExpressions.add(new ColumnReference<>(new StringConversion(), "hwy"));
-//		
-//		IMicroOperatorCode q1ProjCode = new Projection(projExpressions, segSpeedStr);
-//		IMicroOperatorConnectable q1Proj = QueryBuilder.newMicroOperator(q1ProjCode, 1);
-//		
-//		Set<IMicroOperatorConnectable> q1MicroOps = new HashSet<>();
-//		q1MicroOps.add(q1Proj);
-//
+		@SuppressWarnings("unchecked")
+		IValueExpression<PrimitiveType>[] projExpressions = new IValueExpression[] {
+				new ColumnReference<IntegerType>(0),
+				new ColumnReference<FloatType>(1),
+				new Division<IntegerType>(
+						new ColumnReference<IntegerType>(2), 
+						new Constant<IntegerType>(new IntegerType(5280))),
+				new ColumnReference<IntegerType>(3),
+				new ColumnReference<IntegerType>(4)
+		};
+		
+		IMicroOperatorCode q1ProjCode = new Projection(projExpressions);
+		IMicroOperatorConnectable q1Proj = QueryBuilder.newMicroOperator(q1ProjCode, 1000);
+		
+		Set<IMicroOperatorConnectable> q1MicroOps = new HashSet<>();
+		q1MicroOps.add(q1Proj);
+
 		Map<Integer, IWindowDefinition> windowDefs = new HashMap<>();
-//		windowDefs.put(11, new WindowDefinition(WindowType.ROW_BASED, 1, 1));
-//		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(q1MicroOps, 2, windowDefs);
-
-
-		// INPUT STREAM vehicleID, speed, highway, direction, position
+		windowDefs.put(11, new WindowDefinition(WindowType.ROW_BASED, 1, 1));
+		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(q1MicroOps, 100, windowDefs);
 
 		/*
 		 * Query 4
@@ -87,7 +89,7 @@ public class LRBQ4 {
 				having
 				);
 		
-		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
+		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 1001);
 
 		@SuppressWarnings("unchecked")
 		IMicroOperatorCode q2ProjCode = new Projection((IValueExpression<PrimitiveType>[]) new IValueExpression[] {
@@ -95,29 +97,25 @@ public class LRBQ4 {
 				new ColumnReference<IntegerType>(1),
 				new ColumnReference<IntegerType>(2)
 				});
-		
-		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 5);
+		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 1002);
 
-		q2Agg.connectTo(1, q2Proj);
+		q2Agg.connectTo(1000, q2Proj);
 
 		Set<IMicroOperatorConnectable> q2MicroOps = new HashSet<>();
 		q2MicroOps.add(q2Proj);
 		q2MicroOps.add(q2Agg);
 
 		windowDefs = new HashMap<>();
-		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
-//		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
-		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 5, windowDefs);
+		windowDefs.put(100, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
+		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 101, windowDefs);
 
-//		sq1.connectTo(sq2, 101);
+		sq1.connectTo(sq2, 100);
 
 		Set<ISubQueryConnectable> subQueries = new HashSet<>();
-//		subQueries.add(sq1);
+		subQueries.add(sq1);
 		subQueries.add(sq2);
-		
-//		Connectable multiOp = QueryBuilder.newMultiOperator(subQueries, 100, posSpeedStr);
 
-		this.mo = MultiOperator.synthesizeFrom(subQueries, 100);
+		this.mo = MultiOperator.synthesizeFrom(subQueries, 1);
 		this.mo.setUp();
 
 	}

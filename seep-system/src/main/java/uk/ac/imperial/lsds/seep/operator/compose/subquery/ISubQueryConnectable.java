@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryTaskResultForwarder;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskDispatcher;
@@ -29,7 +28,7 @@ public interface ISubQueryConnectable {
 	public void registerLocalUpstreamBuffer(SubQueryBufferWindowWrapper so, int streamID);
 	public void registerLocalDownstreamBuffer(SubQueryBufferWindowWrapper so, int streamID);
 	
-	public void processData(MultiOpTuple tuple);
+//	public void processData(MultiOpTuple tuple);
 	public Map<Integer, IWindowDefinition> getWindowDefinitions();
 	public SubQueryTaskDispatcher getTaskDispatcher();
 

@@ -6,10 +6,9 @@ import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.types.IntegerType;
+import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
@@ -17,21 +16,16 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	/*
 	 * Expressions for the extended projection
 	 */
-	private IValueExpression[] expressions;
+	private IValueExpression<PrimitiveType>[] expressions;
 
 
-	public Projection(IValueExpression[] expressions) {
+	public Projection(IValueExpression<PrimitiveType>[] expressions) {
 		this.expressions = expressions;
 	}
 
-	public Projection(int attribute) {
-		this.expressions = new IValueExpression[] {new ColumnReference<IntegerType>(attribute)};
-	}
-	
-	public Projection(int[] attributes) {
-		this.expressions = new IValueExpression[attributes.length];
-		for (int i = 0; i < attributes.length; i++)
-			this.expressions[i] = new ColumnReference<IntegerType>(attributes[i]);
+	@SuppressWarnings("unchecked")
+	public Projection(IValueExpression<PrimitiveType> expression) {
+		this.expressions = (IValueExpression<PrimitiveType>[]) new IValueExpression[] {expression};
 	}
 
 	private MultiOpTuple copyProject(MultiOpTuple data) {
@@ -54,7 +48,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Projection (");
-		for (IValueExpression<IntegerType> att : expressions)
+		for (IValueExpression<PrimitiveType> att : expressions)
 			sb.append(att.toString() + " ");
 		sb.append(")");
 		return sb.toString();

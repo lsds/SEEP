@@ -112,7 +112,7 @@ public class LRBRunner implements Callback {
 			start = System.currentTimeMillis();
 			long lastTupleTimestamp = 0;
 			
-			while ((line = b.readLine()) != null && lastTupleTimestamp < 10500) {
+			while ((line = b.readLine()) != null && lastTupleTimestamp < 2500) {
 				lines += 1;
 				bytes += line.length() +1; // +1 for '\n'
 				
@@ -133,7 +133,7 @@ public class LRBRunner implements Callback {
 
 				MultiOpTuple t = parseLine(line);
 				// pos to segment translation
-				t.values[4] = ((IntegerType)t.values[4]).div(new IntegerType(5280));
+				//t.values[4] = ((IntegerType)t.values[4]).div(new IntegerType(5280));
 				
 				data.add(t);
 				lastTupleTimestamp = t.timestamp;
@@ -160,7 +160,8 @@ public class LRBRunner implements Callback {
 			api.waitForInstrumentationTimestamp = lastTupleTimestamp;
 			api.totalTuples = totalTuples;
 			
-			LRBQ4 query = new LRBQ4();
+//			LRBQ4 query = new LRBQ4();
+			LRBQ1To6 query = new LRBQ1To6();
 			query.setup(api);
 			
 			/* Q4 */

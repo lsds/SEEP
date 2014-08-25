@@ -6,10 +6,9 @@ import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.multi.ISubQueryTaskResultForwarder;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskDispatcher;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskDispatcher;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryTaskResultBufferForwarder;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 
@@ -72,10 +71,10 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 
 	@Override
 	public void connectTo(ISubQueryConnectable so, int streamID) {
-		SubQueryBufferWindowWrapper bw = new SubQueryBufferWindowWrapper(this, streamID);
-		this.resultForwarders.add(new SubQueryTaskResultBufferForwarder(so));
+		SubQueryBufferWindowWrapper bw = new SubQueryBufferWindowWrapper(so, streamID);
 		this.registerLocalDownstreamBuffer(bw, streamID);
 		so.registerLocalUpstreamBuffer(bw, streamID);
+		this.resultForwarders.add(new SubQueryTaskResultBufferForwarder(bw));
 	}
 	
 	@Override
@@ -110,20 +109,20 @@ public class SubQueryConnectable implements ISubQueryConnectable {
 		this.localDownstreamBuffers.put(streamID, so);
 	}
 
-	@Override
-	public void processData(MultiOpTuple tuple) {
-		for (SubQueryBufferWindowWrapper bw : this.localUpstreamBuffers.values()) {
-			while (!bw.addToBuffer(tuple)) {
-				try {
-					synchronized (bw.getExternalBufferLock()) {
-						bw.getExternalBufferLock().wait();
-					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
+//	@Override
+//	public void processData(MultiOpTuple tuple) {
+//		for (SubQueryBufferWindowWrapper bw : this.localUpstreamBuffers.values()) {
+//			while (!bw.addToBuffer(tuple)) {
+//				try {
+//					synchronized (bw.getExternalBufferLock()) {
+//						bw.getExternalBufferLock().wait();
+//					}
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//	}
 
 	@Override
 	public Map<Integer, IWindowDefinition> getWindowDefinitions() {

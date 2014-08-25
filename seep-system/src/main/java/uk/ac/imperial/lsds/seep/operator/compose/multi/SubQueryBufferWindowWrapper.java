@@ -149,10 +149,10 @@ public class SubQueryBufferWindowWrapper {
 				/*
 				 * We have not yet closed any window, so we need to do the check based on the first opened window
 				 */
-				toClose |= (this.currentElementIndexEnd >= windowBatches.getFirst().getWindowStartPointers()[0] + (int) windowDef.getSize());
+				toClose |= (this.currentElementIndexEnd >= windowBatches.getFirst().getWindowStartPointers()[0] + (int) windowDef.getSize() - 1);
 			}
 			else {
-				toClose |= (this.currentElementIndexEnd >= windowBatchEnd.getWindowEndPointers()[this.currentWindowEndPointer] + (int) windowDef.getSlide());
+				toClose |= (this.currentElementIndexEnd >= windowBatchEnd.getWindowEndPointers()[this.currentWindowEndPointer] + (int) windowDef.getSlide() - 1);
 			}
 			
 			if (toClose) {
@@ -171,6 +171,9 @@ public class SubQueryBufferWindowWrapper {
 					
 					// In the new window batch, we can use normalized indices again
 					this.currentElementIndexEnd = buffer.normIndex(this.currentElementIndexEnd);
+					
+					// Since we closed a window batch, we should check whether there is a new set of batches (for different streams) for a task
+					this.connectable.getTaskDispatcher().assembleAndDispatchTask();
 				}
 				windowBatchEnd.getWindowEndPointers()[this.currentWindowEndPointer] = this.currentElementIndexEnd;
 			}

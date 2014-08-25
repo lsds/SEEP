@@ -104,10 +104,21 @@ public class MultiOperator implements StatelessOperator {
 		 * Try to push to all input buffers of the most upstream sub queries
 		 */
 		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
-			if (!singleUpstreamBuffer)
-				data = new MultiOpTuple(data);
-			q.processData(data);
-			tuples ++;
+			for (SubQueryBufferWindowWrapper bw : q.getLocalUpstreamBuffers().values()) {
+				if (!singleUpstreamBuffer)
+					data = new MultiOpTuple(data);
+				
+				while (!bw.addToBuffer(data)) {
+					try {
+						synchronized (bw.getExternalBufferLock()) {
+							bw.getExternalBufferLock().wait();
+						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				tuples++;
+			}
 		}
 	}
 
@@ -170,7 +181,10 @@ public class MultiOperator implements StatelessOperator {
 			}
 		}
 		
-		this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.size() == 1);
+		this.singleUpstreamBuffer = false;
+		if (this.mostUpstreamSubQueries.size() == 1) {
+			this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.iterator().next().getLocalUpstreamBuffers().keySet().size() == 1);
+		}
 	}
 
 	public MultiAPI getAPI() {

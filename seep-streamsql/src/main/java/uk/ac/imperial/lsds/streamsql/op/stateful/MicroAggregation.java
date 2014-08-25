@@ -9,8 +9,8 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IMicroIncrementalComputation;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
+import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
@@ -18,10 +18,9 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation, IStatefulMicroOperator {
 
-	private int[] groupByAttributes;
-	private PrimitiveType[] typesGroupByAttributes = null;
+	private ColumnReference<PrimitiveType>[] groupByAttributes;
 
-	private int aggregationAttribute;
+	private ColumnReference<PrimitiveType> aggregationAttribute;
 			
 	private AggregationType aggregationType;
 	
@@ -46,34 +45,33 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	}
 
 	
-	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, new int[0], new PrimitiveType[0], null);
+	@SuppressWarnings("unchecked")
+	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute) {
+		this(aggregationType, aggregationAttribute, (ColumnReference<PrimitiveType>[]) new ColumnReference[0], null);
 	}
 
-	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes, PrimitiveType[] typesGroupByAttributes, Selection havingSel) {
+	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes, Selection havingSel) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
-		this.typesGroupByAttributes = typesGroupByAttributes;
 		this.havingSel = havingSel;
 	}
 
-	public MicroAggregation(AggregationType aggregationType, int aggregationAttribute, int[] groupByAttributes,
-			PrimitiveType[] typesGroupByAttributes) {
-		this(aggregationType, aggregationAttribute, groupByAttributes, typesGroupByAttributes, null);
+	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes) {
+		this(aggregationType, aggregationAttribute, groupByAttributes, null);
 	}
 
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
-		sb.append(aggregationType.asString(aggregationAttribute) + " ");
+		sb.append(aggregationType.asString(aggregationAttribute.getColumn()) + " ");
 		return sb.toString();
 	}
 	
 	private int getGroupByKey(MultiOpTuple tuple) {
 		int result = 0;
 		for (int i = 0; i < this.groupByAttributes.length; i++)
-			result = 37 * result + tuple.values[this.groupByAttributes[i]].hashCode();
+			result = 37 * result + this.groupByAttributes[i].eval(tuple).hashCode();
 		
 		return result;
 	}
@@ -140,7 +138,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 					int key = getGroupByKey(tuple);
 					objects.put(key, tuple);
 					
-					PrimitiveType newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
+					PrimitiveType newValue = (PrimitiveType) this.aggregationAttribute.eval(tuple);
 					
 					lastTimestampInWindow = tuple.timestamp;
 					lastInstrumentationTimestampInWindow = tuple.instrumentation_ts;
@@ -193,7 +191,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			break;
 		case SUM:
 		case AVG:
-			newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
+			newValue = (PrimitiveType) this.aggregationAttribute.eval(tuple);
 			if (values.containsKey(key))
 				values.put(key,values.get(key).add(newValue));
 			else
@@ -232,7 +230,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			break;
 		case AVG:
 		case SUM:
-			newValue = (PrimitiveType) tuple.values[this.aggregationAttribute];
+			newValue = (PrimitiveType) this.aggregationAttribute.eval(tuple);
 			if (values.containsKey(key)) {
 				values.put(key,values.get(key).sub(newValue));
 			}			
@@ -255,7 +253,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 		Object[] values = new Object[this.groupByAttributes.length + 1];
 		for (int i = 0; i < this.groupByAttributes.length; i++)
-			values[i] = object.values[this.groupByAttributes[i]];
+			values[i] = this.groupByAttributes[i].eval(object);
 		
 		values[values.length - 1] = partitionValue;
 		
@@ -295,7 +293,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	@Override
 	public IMicroOperatorCode getNewInstance() {
-		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes, this.typesGroupByAttributes, this.havingSel);
+		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes, this.havingSel);
 	}
 
 }
