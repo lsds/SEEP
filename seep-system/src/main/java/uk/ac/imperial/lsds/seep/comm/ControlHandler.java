@@ -67,6 +67,7 @@ public class ControlHandler implements Runnable{
 	
 	public void run(){
 		ServerSocket controlServerSocket = null;
+		int socketCount = 0;
 		try{
 			//Establish listening port
     		controlServerSocket = new ServerSocket(connPort);
@@ -77,7 +78,8 @@ public class ControlHandler implements Runnable{
 				//Place new connections in a new thread. We have a thread per upstream connection
 				Socket incomingConn = controlServerSocket.accept();
 				String threadName = incomingConn.getInetAddress().toString();
-				Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T");
+				
+				Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T-"+socketCount++);
 				newConn.start();
 			}
 			controlServerSocket.close();

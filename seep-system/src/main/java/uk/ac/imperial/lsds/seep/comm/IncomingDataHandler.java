@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.comm;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public class IncomingDataHandler implements Runnable{
 
 	public void run(){
 		ServerSocket incDataServerSocket = null;
+		int socketCount=0;
 		try{
 			//Establish listening port
 			incDataServerSocket = new ServerSocket(connPort);
@@ -60,7 +62,9 @@ public class IncomingDataHandler implements Runnable{
 			LOG.info("-> IncomingDataHandler listening in port: {}", connPort);
 			//Upstream id
 			while(goOn){
-				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper, dsa));
+				Socket incomingConn = incDataServerSocket.accept();
+				String threadName = incomingConn.getInetAddress().toString();
+				Thread newConn = new Thread(new IncomingDataHandlerWorker(incomingConn, owner, idxMapper, dsa),  "idhw-"+threadName+"-T-"+socketCount++);
 				newConn.start();
 			}
 			incDataServerSocket.close();
