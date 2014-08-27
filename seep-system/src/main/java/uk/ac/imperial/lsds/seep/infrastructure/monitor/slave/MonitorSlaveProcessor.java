@@ -76,7 +76,7 @@ public class MonitorSlaveProcessor implements Processor {
         // Construct the tuple with all metrics from all readers
         for(MetricsReader reader : readers) {
             for(MetricName name : reader.readableNames()) {
-                logger.info("Reading value for metric " + name.toString());
+                logger.debug("Reading value for metric " + name.toString());
                 
                 MetricValue value = reader.readValue(name);
                 logger.debug(name.toString() + "," + value.toString());
@@ -90,7 +90,7 @@ public class MonitorSlaveProcessor implements Processor {
         
         // Now pass the tuple to each one of the reporters
         for(MetricsSerializer reporter : reporters) {
-            logger.info("Reporting tuple via " + reporter.toString());
+            logger.debug("Reporting tuple via " + reporter.toString());
             reporter.serialize(tuple);
         }
     }

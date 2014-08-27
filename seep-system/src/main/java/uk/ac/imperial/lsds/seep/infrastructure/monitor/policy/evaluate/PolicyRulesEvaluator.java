@@ -133,14 +133,14 @@ public class PolicyRulesEvaluator
         
         if((evaluators != null) && (provider != null)) {
             Integer operatorId = Integer.valueOf(provider.getOperatorId());
-            logger.info("Received metric reading for operator [" 
+            logger.debug("Received metric reading for operator [" 
                                             + operatorId.intValue() + "]");
         
             // If there is at least one operator for the identifier, then forward
             // to these evaluators (which will also include any rules with wildcards)
             if(evaluators.containsKey(operatorId)) {
                 for(PolicyRuleEvaluator e : evaluators.getCollection(operatorId)) {
-                    logger.info("Routing to evaluator " + e.toString());
+                    logger.debug("Routing to evaluator " + e.toString());
 
                     routeReadingToEvaluator(e, provider);
                 }
@@ -148,7 +148,7 @@ public class PolicyRulesEvaluator
                 // No specific rules for the operator, only forward to evaluators
                 // not associated to any concrete operator
                 for(PolicyRuleEvaluator allEvaluator : allEvaluators) {
-                    logger.info("Routing to evaluator " + allEvaluator.toString());
+                    logger.debug("Routing to evaluator " + allEvaluator.toString());
                     routeReadingToEvaluator(allEvaluator, provider);
                 }
             }
