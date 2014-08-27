@@ -23,6 +23,7 @@ import uk.ac.imperial.lsds.seep.operator.Connectable;
 public class Base implements QueryComposer{
 	private final int CHAIN_LENGTH = 2;
 	private final int REPLICATION_FACTOR = 2;
+	private final boolean CONNECT_TO_ALL_DOWNSTREAMS = false;
 
 	public QueryPlan compose() {
 		/** Declare operators **/
@@ -47,24 +48,16 @@ public class Base implements QueryComposer{
 		snkFields.add("value3");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		
-		// Connect intermediate ops 
-		for (int i = 0; i < CHAIN_LENGTH-1; i++)
+
+		if (CONNECT_TO_ALL_DOWNSTREAMS)
 		{
-			for (int j = 0; j < REPLICATION_FACTOR; j++)
-			{
-				for (int k=0; k < REPLICATION_FACTOR; k++)
-				{
-					ops.get(i).get(j).connectTo(ops.get(i+1).get(k), true, 0);
-				}
-			}
+			connectToAllDownstreams(src, snk, ops);
+		}
+		else
+		{
+			connectToOneDownstream(src, snk, ops);
 		}
 
-		// Connect src to ops and ops to sink
-		for (int j = 0; j < REPLICATION_FACTOR; j++)
-		{
-			src.connectTo(ops.get(0).get(j), true, 0);
-			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, 0);
-		}
 		
 		return QueryBuilder.build();
 	}
@@ -88,5 +81,48 @@ public class Base implements QueryComposer{
 		}
 
 		return ops;
+	}
+
+	private void connectToAllDownstreams(Connectable src, Connectable snk, Map<Integer, Map<Integer, Connectable>> ops)
+	{
+		// Connect intermediate ops 
+		for (int i = 0; i < CHAIN_LENGTH-1; i++)
+		{
+			for (int j = 0; j < REPLICATION_FACTOR; j++)
+			{
+				for (int k=0; k < REPLICATION_FACTOR; k++)
+				{
+					ops.get(i).get(j).connectTo(ops.get(i+1).get(k), true, 0);
+				}
+			}
+		}
+
+		// Connect src to ops and ops to sink
+		for (int j = 0; j < REPLICATION_FACTOR; j++)
+		{
+			src.connectTo(ops.get(0).get(j), true, 0);
+			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, 0);
+		}
+	}
+
+	private void connectToOneDownstream(Connectable src, Connectable snk, Map<Integer, Map<Integer, Connectable>> ops)
+	{
+		// Connect intermediate ops 
+		for (int i = 0; i < CHAIN_LENGTH-1; i++)
+		{
+			for (int j = 0; j < REPLICATION_FACTOR; j++)
+			{
+				ops.get(i).get(j).connectTo(ops.get(i+1).get(j), true, 0);
+			}
+		}
+
+		//Connect src to first op
+		src.connectTo(ops.get(0).get(0), true, 0);
+
+		// Connect ops to sink
+		for (int j = 0; j < REPLICATION_FACTOR; j++)
+		{
+			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, 0);
+		}
 	}
 }
