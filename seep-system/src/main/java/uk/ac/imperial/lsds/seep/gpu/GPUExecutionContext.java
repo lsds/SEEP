@@ -60,6 +60,28 @@ public class GPUExecutionContext {
 			@GlobalReadOnly("N")  int     [] N,
 			@GlobalWriteOnly("F") int     [] F
 		);
+		
+		public QueryOperator ht_plq (
+            Range range,
+            @Arg ("size")                 int          size,
+            @GlobalReadOnly ("key1")      int  []      key1,
+            @GlobalReadOnly ("val1")      int  []      val1,
+            @GlobalReadOnly ("offsets")   int  []   offsets,
+            @GlobalReadOnly ("counts")    int  []    counts,
+            @Arg ("_table_")              int       _table_,
+            @GlobalReadOnly ("x")         int  []         x,
+            @GlobalReadOnly ("y")         int  []         y,
+            @Local ("__local_x")          int  [] __local_x,
+            @Local ("__local_y")          int  [] __local_y,
+            @Arg ("__stash_x")            int     __stash_x,
+            @Arg ("__stash_y")            int     __stash_y,
+            @Arg ("iterations")           int    iterations,
+            @GlobalReadWrite ("sum")      int  []       sum,
+            @GlobalReadWrite ("contents") long []  contents,
+            @GlobalWriteOnly ("stashed")  int  []   stashed,
+            @GlobalWriteOnly ("failed")   int  []    failed,
+            @GlobalWriteOnly ("attempts") int  []  attempts
+        );
 	}
 	
 	class GPUMeasurement {
@@ -91,6 +113,58 @@ public class GPUExecutionContext {
 		}
 	}
 	
+	public static final float MIN_SPACE_REQUIREMENTS [] = {
+        Float.MAX_VALUE,
+        Float.MAX_VALUE,
+        2.01F,
+        1.10F,
+        1.03F,
+        1.02F
+    };
+
+    public static int __s_major_hash (int x, int y, int k) {
+        long xl = x & 0xffffffffL;
+        long yl = y & 0xffffffffL;
+        long kl = k & 0xffffffffL;
+        long prime  = 2147483647L;
+        long result = ((xl ^ kl) + yl) % prime;
+        return (int) result;
+    }
+
+    public static void constants (Random r, int [] x, int [] y, int [] stash) {
+        int prime = 2147483647;
+        /* assert (x.length == y.length); */
+        int i, n = x.length;
+        int t;
+        for (i = 0; i < n; i++) {
+            t = r.nextInt(prime);
+            x[i] = (1 > t ? 1 : t);
+            y[i] = r.nextInt(prime) % prime;
+        }
+        /* Stash hash constants */
+        stash[0] = Math.max(1, r.nextInt(prime)) % prime;
+        stash[1] = r.nextInt(prime) % prime;
+    }
+
+    public static int computeIterations (int n, int size) {
+        int result = 7;
+        float logn = (float) (Math.log((double) n) / Math.log(2.0));
+        return (int) (result * logn);
+    }
+	
+	public static int computeIterationsEmpirically (int n, int size) {
+        int result;
+        float logn = (float) (Math.log((double) n) / Math.log(2.0));
+        float load = (float) n / (float) size;
+        float logload = (float) (Math.log((double) load) / Math.log(2.71828183));
+        result = (int) (
+            4.0 *
+            Math.ceil(-1.0 / (0.028255 + 1.1594772 * logload) *
+            logn)
+        );
+        return result;
+    }
+	
 	private final Device dev;
 	private final OpenCLDevice device;
 	private final QueryOperator q;
@@ -115,6 +189,7 @@ public class GPUExecutionContext {
 	private LinkedList<Long> cpu_task_measurements;
 	
 	private Range __plq_range;
+	private Range __plq_range_ht;
 	private Range __wlq_range;
 	private Range __agg_range;
 	
@@ -126,15 +201,78 @@ public class GPUExecutionContext {
 	private int   [] __local_offsets;
 	private int   [] __local_count;
 	
+	private int   [] __S;
+	private int   [] __N;
+	private int   [] __F;
+	
 	private int __plq_threads;
 	private int __plq_threads_per_group;
 	private int __plq_groups;
 	private int __plq_outputs;
 	
+	private int __plq_threads_ht;
+	private int __plq_threads_per_group_ht;
+	private int __plq_groups_ht;
+	private int __plq_outputs_ht;
+	
 	private int __wlq_threads;
 	private int __wlq_threads_per_group;
 	private int __wlq_groups;
 	private int __wlq_outputs;
+	
+    private int [] __local_key1; /* Keys */
+    private int [] __local_val1; /* Values */
+	
+	/* Hash table configurations */
+    private int _HASH_FUNCTIONS_;
+    private int _stash_;
+    private float scale;
+    private int _table_;
+    private int slots;
+    private int iter1; /* Iterations */
+    private int iter2;
+    private int [] failed; /* Metadata */
+    private int [] stashed;
+    private int [] attempts;
+    private int [] x, __local_x; /* Hash constants */
+    private int [] y, __local_y;
+    private int [] sum;
+    private int [] __stash;
+    private int __stash_x, __stash_y;
+
+    private long [] contents;
+	
+	private void clearLocalInputs() {
+        Arrays.fill(__local_key1, 0);
+        Arrays.fill(__local_key2, 0);
+        Arrays.fill(__local_key3, 0);
+        Arrays.fill(__local_val1, 0);
+
+        Arrays.fill(__local_offsets, 0);
+        Arrays.fill(__local_counts,  0);
+        return ;
+    }
+
+    private void setLocalInputs(
+        int [] k1, int [] v1, int [] offset, int [] count) {
+        System.arraycopy(k1, 0, __local_key1, 0, k1.length);
+        System.arraycopy(v1, 0, __local_val1, 0, v1.length);
+
+        System.arraycopy(offset, 0, __local_offsets, 0, offset.length);
+        System.arraycopy(count,  0, __local_counts,  0,  count.length);
+        return ;
+    }
+
+    private void clearContents () {
+        Arrays.fill(contents, 0xffffffffL << 32);
+        Arrays.fill(sum, 0);
+    }
+
+    private void clearMetadata () {
+        Arrays.fill(failed  , 0);
+        Arrays.fill(stashed , 0);
+        Arrays.fill(attempts, 0);
+    }
 	
 	public GPUExecutionContext (int panes, int max_keys, int panes_per_window, int max_tuples_per_pane) {
 		/* Set internal counters */
@@ -168,14 +306,74 @@ public class GPUExecutionContext {
 		__wlq_outputs = __plq_outputs;
 		
 		__local_size = __panes * __max_tuples_per_pane;
+		
 		__local_keys = new int [__local_size];
 		__local_values = new int [__local_size];
 		__local_offsets = new int [panes];
 		__local_count = new int [panes];
 		
+		__S = new int [__plq_outputs]; 
+		__N = new int [__plq_outputs]; 
+		__F = new int [__wlq_outputs]; 
+		
 		plq_measurements = new LinkedList<GPUMeasurement>();
 		wlq_measurements = new LinkedList<GPUMeasurement>();
 		cpu_task_measurements = new LinkedList<Long>();
+		
+		__local_key1    = new int [__local_size];
+        __local_val1    = new int [__local_size];
+		
+        _HASH_FUNCTIONS_ = 5;
+        _stash_ = 101;
+        scale = 1.25f;
+        /* Check scale requirements */
+        if (scale < MIN_SPACE_REQUIREMENTS[_HASH_FUNCTIONS_])
+            throw new UnsupportedOperationException
+            ("Invalid scale factor.");
+
+        /* Size of hash table */
+        _table_ = (int) Math.ceil(max_tuples_per_pane * scale);
+        slots = (_table_ + _stash_) * panes; /* One stash per pane */
+
+        iter1 = computeIterations (max_tuples_per_pane, _table_);
+        iter2 = computeIterationsEmpirically (max_tuples_per_pane, _table_);
+
+        System.out.println(String.format("[DBG] %2d iterations (constant)" , iter1));
+        System.out.println(String.format("[DBG] %2d iterations (empirical)", iter2));
+        System.out.println("[DBG] |ht|   = " + _table_);
+        System.out.println("[DBG] #slots = " + slots);
+		
+		failed   = new int [panes];
+        stashed  = new int [panes];
+        attempts = new int [__local_size];
+
+        x = new int [_HASH_FUNCTIONS_];
+        y = new int [_HASH_FUNCTIONS_];
+
+        __local_x = new int [_HASH_FUNCTIONS_];
+        __local_y = new int [_HASH_FUNCTIONS_];
+
+
+        __stash = new int [2];
+
+        sum = new int [slots];
+        contents = new long [slots];
+
+        Random random = new Random ();
+
+        /* Generate hash constants */
+        constants(random, x, y, __stash);
+        __stash_x = __stash[0];
+        __stash_y = __stash[0];
+		
+		__plq_inputs_ht = __local_size;
+        __plq_threads_per_group_ht = 128;
+        __plq_groups_ht = panes;
+        __plq_threads_ht = __plq_groups * __plq_threads_per_group;
+        __plq_outputs = slots;
+
+        __plq_range_ht = Range.create(__plq_threads, __plq_threads_per_group);
+        /* Every pane is processed in parallel. `256` thread/workgroup */
 	}
 	
 	public void setTaskExecutionTime (long dt) {
@@ -220,14 +418,44 @@ public class GPUExecutionContext {
 	
 	public int getResultSize() { return __wlq_outputs; }
 	
+	public int ht_aggregate (int [] keys, int [] values, int [] offsets, int [] count, int [] results) {
+		
+		clearLocalInputs();
+		setLocalInputs(keys, values, offset, count);
+		clearContents();
+		clearMetadata();
+		
+		q.ht_plq(
+		__plq_range_ht,
+        __local_size,
+        __local_key1,
+        __local_val1,
+        __local_offsets,
+        __local_counts,
+        _table_,
+        x,
+        y,
+        __local_x,
+        __local_y,
+        __stash_x,
+        __stash_y,
+        iter1,
+        sum,
+        contents,
+        stashed,
+        failed,
+        attempts
+        );
+	}
+	
 	public int aggregate (int [] keys, int [] values, int [] offsets, int [] count, int [] result) {
 		
 		/* keys === segments, values === speed */
 		
 		/* Local, write-only results */
-		int [] __S = new int   [__plq_outputs];
+		/* int [] __S = new int   [__plq_outputs];
 		int [] __N = new int   [__plq_outputs];
-		int [] __F = new int   [__wlq_outputs];
+		int [] __F = new int   [__wlq_outputs]; */
 		Arrays.fill(__S, 0);
 		Arrays.fill(__N, 0);
 		Arrays.fill(__F, 0);

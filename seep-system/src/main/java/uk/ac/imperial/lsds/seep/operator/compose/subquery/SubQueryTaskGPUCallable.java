@@ -64,6 +64,8 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		 * For the LRB query, we know that there is only a single
 		 * input stream
 		 */
+		try {
+		
 		startTime = System.currentTimeMillis();
 		
 		IWindowBatch batch = this.windowBatches.values().iterator().next();
@@ -74,10 +76,20 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		
 		int batchSize = startIndex.length;
 		int start = startIndex[0];
-		int end =     endIndex[batchSize - 1];
-		int totalTuples = end - start + 1;
+		int end = endIndex[batchSize - 1];
+		
+		int totalTuples;
+			
+		if (end <= start) {
+			System.err.println(String.format("Warning: start %d end %d", start, end));
+			/* System.exit(1); */
+			totalTuples = 2000000 - start + end + 1;
+		} else {
+			totalTuples = end - start + 1;
+		}
 		
 		/* #panes */
+		
 		int panes = 2 * batchSize;
 		int   [] offsets = new int   [panes];
 		int   [] count   = new int   [panes];
@@ -100,9 +112,9 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		for (int i = 0; i < totalTuples; i++) {
 			tuple = batch.get(i + start);
 			t = tuple.timestamp;
-			highway = 0;
+			highway = ((IntegerType) tuple.values[2]).value;
 			direction = ((IntegerType) tuple.values[3]).value;
-			segment = ((IntegerType) tuple.values[4]).value / 5280;
+			segment = ((IntegerType) tuple.values[4]).value; // / 5280;
 			keys[i] = hash(highway, direction, segment);
 			values[i] = (int) ((FloatType) tuple.values[1]).value;
 			/* Populate offsets and count */
@@ -130,7 +142,8 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		int resultSize = gpu.getResultSize();
 		int [] gpuResults = new int [resultSize];
 		
-		int taskid = gpu.aggregate(keys, values, offsets, count, gpuResults);
+		// int taskid = gpu.aggregate(keys, values, offsets, count, gpuResults);
+		int taskid = gpu.aggregate();
 		
 		String dbg = String.format(
 		"task %3d %3d windows start @%6d end @%6d %8d %8d total %8d %4d panes", 
@@ -155,6 +168,11 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		MultiOpTuple [] resultsForWindowBatch = new MultiOpTuple[0];
 		
 		this.collector.pushResults(resultsForWindowBatch);
+		this.subQueryConnectable.getTaskDispatcher().taskFinished();
+		
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -9,6 +9,11 @@ public class FloatType implements PrimitiveType {
 	}
 
 	@Override
+	public Object clone() {
+		return new FloatType(value);
+	}
+
+	@Override
 	public int compareTo(PrimitiveType o) {
 		float oI = ((FloatType)o).value;
 
@@ -21,26 +26,26 @@ public class FloatType implements PrimitiveType {
 
 	@Override
 	public PrimitiveType add(PrimitiveType toAdd) {
-		value += ((FloatType)toAdd).value;
-		return this;
+//		value += ((FloatType)toAdd).value;
+		return new FloatType(value + ((FloatType)toAdd).value);
 	}
 
 	@Override
 	public PrimitiveType sub(PrimitiveType toAdd) {
-		value -= ((FloatType)toAdd).value;
-		return this;
+//		value -= ((FloatType)toAdd).value;
+		return new FloatType(value - ((FloatType)toAdd).value);
 	}
 
 	@Override
 	public PrimitiveType mul(PrimitiveType toAdd) {
-		value *= ((FloatType)toAdd).value;
-		return this;
+//		value *= ((FloatType)toAdd).value;
+		return new FloatType(value * ((FloatType)toAdd).value);
 	}
 
 	@Override
 	public PrimitiveType div(PrimitiveType toAdd) {
-		value /= ((FloatType)toAdd).value;
-		return this;
+//		value /= ((FloatType)toAdd).value;
+		return new FloatType(value / ((FloatType)toAdd).value);
 	}
 	
 	@Override

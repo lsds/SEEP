@@ -33,6 +33,8 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 	private Map<Integer, IWindowBatch> currentWindowBatchResults;
 	private IWindowBatch finalWindowBatchResult;
 	
+	private long startTime, dt;
+	
 	public SubQueryTaskCPUCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices) {
 		this.subQueryConnectable = subQueryConnectable;
 		this.windowBatches= windowBatches;
@@ -44,20 +46,32 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 		
 		try {
 			
+			startTime = System.currentTimeMillis();
+			
 			this.finalWindowBatchResult = new ArrayWindowBatch();
 			Set<IMicroOperatorConnectable> processed = new HashSet<>();
 			Queue<IMicroOperatorConnectable> toProcess = new LinkedList<>();
 			Map<IMicroOperatorConnectable, Map<Integer, IWindowBatch>> windowBatchesForProcessing = new HashMap<>();
 			
+			/* Added by Alex */
+			IWindowBatch batch = this.windowBatches.values().iterator().next();
+			int [] startIndex = batch.getWindowStartPointers();
+			int []   endIndex = batch.getWindowEndPointers();
+			int batchSize = startIndex.length;
+			int start = startIndex[0];
+			int end = endIndex[batchSize - 1];
+			int totalTuples = end - start + 1;
+			
 			/*
 			 * Init for most upstream micro operators
 			 */
-			for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
+			
+			 for (IMicroOperatorConnectable c : this.subQueryConnectable.getSubQuery().getMostUpstreamMicroOperators()) {
 				toProcess.add(c);
 				windowBatchesForProcessing.put(c,this.windowBatches);
 			}
 			
-			while (!toProcess.isEmpty()) {
+			 while (!toProcess.isEmpty()) {
 				/*
 				 * Select a micro operator to execute
 				 */
@@ -125,9 +139,26 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 //					MultiOpTuple t = windowBatch.get(i++);
 //				}
 //			}	
-//			this.collector.pushResults(new MultiOpTuple[0]);
+			this.collector.pushResults(new MultiOpTuple[0]);
 			
-			this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
+			// this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
+			
+			dt = System.currentTimeMillis() - startTime;
+			
+			System.out.println(
+			String.format("[DBG] task X %3d windows start @%6d end @%6d %8d %8d total %8d t_start %13d dt %6d (result size %10d)",
+			batch.getWindowStartPointers().length,
+			batch.getStartTimestamp(),
+			batch.getEndTimestamp(),
+			start,
+			end,
+			totalTuples,
+			startTime,
+			dt,
+			this.finalWindowBatchResult.getArrayContent().length
+			)
+			);
+			
 			this.subQueryConnectable.getTaskDispatcher().taskFinished();			
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -2,7 +2,9 @@
 
 DEFAULT_INPUT_FILE="datafile20seconds.dat"
 DEFAULT_EXEC_MODE="cpu"
-USAGE="usage: ./run.sh [cpu|gpu] [input filename]"
+DEFAULT_L="1"
+DEFAULT_CLASS="LRBRunner"
+USAGE="usage: ./run.sh [cpu|gpu] [input filename] [L]"
 
 # Classpath
 JCP="."
@@ -14,9 +16,9 @@ JCP=${JCP}:lib/seep-system-0.0.1-SNAPSHOT.jar
 API="/mnt/data/cccad3/akolious/aparapi-read-only"
 JLP="${API}/com.amd.aparapi.jni/dist"
 
-OPTS="-server -XX:+UseConcMarkSweepGC -Xms8g -Xmx8g"
+OPTS="-server -XX:+UseConcMarkSweepGC -Xms4g -Xmx8g"
 
-if [ $# -gt 2 ]; then
+if [ $# -gt 3 ]; then
 	echo $USAGE
 	exit 1
 fi
@@ -24,16 +26,16 @@ fi
 # Set execution mode
 EXEC_MODE=$DEFAULT_EXEC_MODE
 [ $# -gt 0 ] && EXEC_MODE=$1
-echo "[DBG] mode is $EXEC_MODE"
 if [ "$EXEC_MODE" != "cpu" -a "$EXEC_MODE" != "gpu" ]; then
 	echo $USAGE
 	exit 1
 fi
-
 # Do not load aparapi library for CPU execution
-if [ "$EXEC_MODE" == "cpu" ]; then
-	JLP=""
-fi
+[ "$EXEC_MODE" == "cpu" ] && JLP=""
+
+# Select class
+CLASS=$DEFAULT_CLASS
+# [ "$EXEC_MODE" == "gpu" ] && CLASS="LRBGPURunner"
 
 # Set input file
 INPUT_FILE=$DEFAULT_INPUT_FILE
@@ -43,6 +45,10 @@ if [ ! -f $INPUT_FILE ]; then
 	exit 1
 fi
 
-java -Djava.library.path=$JLP $OPTS -cp $JCP LRBRunner $INPUT_FILE
+# Set L
+L=$DEFAULT_L
+[ $# -gt 2 ] && L=$3
+
+java -Djava.library.path=$JLP $OPTS -cp $JCP $CLASS $INPUT_FILE $L
 
 exit 0

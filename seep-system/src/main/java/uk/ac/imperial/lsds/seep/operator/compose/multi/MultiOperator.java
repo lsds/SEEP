@@ -45,7 +45,7 @@ public class MultiOperator implements StatelessOperator {
 	int panes = 600;
 	int max_keys = 200;
 	int panes_per_window = 300;
-	int max_tuples_per_pane = 2000;
+	int max_tuples_per_pane = 2000 * Integer.valueOf(GLOBALS.valueFor("L"));
 
 	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
 	
@@ -158,7 +158,7 @@ public class MultiOperator implements StatelessOperator {
 			// this.executorService = Executors.newFixedThreadPool(1);
 		}
 
-		target = (long)Math.floor(10499d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
+		target = (long)Math.floor(2999d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
 //		target = 1;
 		
 		/*

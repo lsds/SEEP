@@ -37,6 +37,18 @@ public class ComparisonPredicate<T extends PrimitiveType> implements IPredicate 
 	public ComparisonPredicate(IValueExpression<T> v1, IValueExpression<T> v2) {
 		this(EQUAL_OP, v1, v2);
 	}
+	
+	public IValueExpression<T> getLeft () {
+		return v1;
+	}
+	
+	public IValueExpression<T> getRight () {
+		return v2;
+	}
+	
+	public String getComparisonOperator() {
+		return getOperationString();
+	}
 
 	public int getOperator(boolean inverse) {
 		int result = 0;

@@ -89,19 +89,19 @@ public class LRBQ4 {
 		
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
 
-		@SuppressWarnings("unchecked")
-		IMicroOperatorCode q2ProjCode = new Projection((IValueExpression<PrimitiveType>[]) new IValueExpression[] {
-				new ColumnReference<IntegerType>(0),
-				new ColumnReference<IntegerType>(1),
-				new ColumnReference<IntegerType>(2)
-				});
+		//@SuppressWarnings("unchecked")
+		//IMicroOperatorCode q2ProjCode = new Projection((IValueExpression<PrimitiveType>[]) new IValueExpression[] {
+		//		new ColumnReference<IntegerType>(0),
+		//		new ColumnReference<IntegerType>(1),
+		//		new ColumnReference<IntegerType>(2)
+		//		});
 		
-		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 5);
+		//IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 5);
 
-		q2Agg.connectTo(1, q2Proj);
+		//q2Agg.connectTo(1, q2Proj);
 
 		Set<IMicroOperatorConnectable> q2MicroOps = new HashSet<>();
-		q2MicroOps.add(q2Proj);
+		//q2MicroOps.add(q2Proj);
 		q2MicroOps.add(q2Agg);
 
 		windowDefs = new HashMap<>();

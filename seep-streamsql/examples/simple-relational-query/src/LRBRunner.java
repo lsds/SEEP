@@ -7,12 +7,14 @@ import java.util.LinkedList;
 
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 
+// import uk.ac.imperial.lsds.seep.gpu.types.*;
+
 
 public class LRBRunner implements Callback {
-
 	
 //	type         = Integer.parseInt(s[ 0]);
 //	timestamp    = Integer.parseInt(s[ 1]);
@@ -76,8 +78,8 @@ public class LRBRunner implements Callback {
 	
 	public static void main (String [] args) {
 		
-		if (args.length != 1) {
-			System.err.println("usage: java LRBRunner [input filename]");
+		if (args.length != 2) {
+			System.err.println("usage: java LRBRunner [input filename] [L]");
 			System.exit(1);
 		}
 		
@@ -103,6 +105,9 @@ public class LRBRunner implements Callback {
 		
 		long wrongtuples = 0L;
 		
+		int L = Integer.parseInt(args[1]);
+		System.out.println("L=" + L);
+		
 		try {
 			
 			f = new FileInputStream(args[0]);
@@ -112,7 +117,7 @@ public class LRBRunner implements Callback {
 			start = System.currentTimeMillis();
 			long lastTupleTimestamp = 0;
 			
-			while ((line = b.readLine()) != null && lastTupleTimestamp < 2500) {
+			while ((line = b.readLine()) != null && lastTupleTimestamp < 3000) { // 10500) {
 				lines += 1;
 				bytes += line.length() +1; // +1 for '\n'
 				
@@ -133,9 +138,20 @@ public class LRBRunner implements Callback {
 
 				MultiOpTuple t = parseLine(line);
 				// pos to segment translation
-				//t.values[4] = ((IntegerType)t.values[4]).div(new IntegerType(5280));
+				t.values[4] = ((IntegerType)t.values[4]).div(new IntegerType(5280));
 				
 				data.add(t);
+				
+				MultiOpTuple copy;
+				Object [] v;
+                for (int i = 1; i < L; i++) {
+					v = new Object [t.values.length];
+					System.arraycopy(t.values, 0, v, 0, t.values.length);
+                    copy = new MultiOpTuple (v, t.timestamp, t.instrumentation_ts);
+                    copy.values[2] = new IntegerType(i); /* L = 1, 2, 3,... */
+                    data.add(copy);
+                }
+				
 				lastTupleTimestamp = t.timestamp;
 			}
 			dt = (double ) (System.currentTimeMillis() - start) / 1000.;
@@ -160,8 +176,8 @@ public class LRBRunner implements Callback {
 			api.waitForInstrumentationTimestamp = lastTupleTimestamp;
 			api.totalTuples = totalTuples;
 			
-//			LRBQ4 query = new LRBQ4();
-			LRBQ1To6 query = new LRBQ1To6();
+			LRBQ4 query = new LRBQ4();
+			// LRBQ1To6 query = new LRBQ1To6();
 			query.setup(api);
 			
 			/* Q4 */

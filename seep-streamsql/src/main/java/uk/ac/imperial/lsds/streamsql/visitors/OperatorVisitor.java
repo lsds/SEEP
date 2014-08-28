@@ -7,6 +7,9 @@ import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.GPUSelection;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.GPUMicroAggregation;
+
 public interface OperatorVisitor {
 
 //	public void visit(AggregateOperator aggregation);
@@ -24,4 +27,8 @@ public interface OperatorVisitor {
 	public void visit(MicroAggregation aggregation);
 
 	public void visit(ThetaJoin join);
+	
+	public void visit(GPUSelection selection);
+	
+	public void visit(GPUMicroAggregation aggregation);
 }

@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.streamsql.types;
 
 public class IntegerType implements PrimitiveType {
 
-	private int value;
+	public int value;
 	
 	public IntegerType(int value) {
 		this.value = value;

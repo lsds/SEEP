@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.streamsql.types;
 
 public class FloatType implements PrimitiveType {
 
-	private float value;
+	public float value;
 	
 	public FloatType(float value) {
 		this.value = value;
