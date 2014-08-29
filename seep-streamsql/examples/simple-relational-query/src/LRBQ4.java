@@ -84,7 +84,8 @@ public class LRBQ4 {
 					new ColumnReference<FloatType>(3),
 					new ColumnReference<IntegerType>(4)
 					},
-				having
+				having,
+				211
 				);
 		
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
