@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,10 +30,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	/*
 	 * State used for incremental computation
 	 */
-	private Map<Integer, PrimitiveType> values = new HashMap<>();
-	private Map<Integer, Integer> countInPartition = new HashMap<>();
-	private Map<Integer, MultiOpTuple> objectStore = new HashMap<>();
-	
+	private Map<String, PrimitiveType> values = new HashMap<>();
+	private Map<String, Integer> countInPartition = new HashMap<>();
+	private Map<String, MultiOpTuple> objectStore = new HashMap<>();
+
 	private long lastTimestampInWindow = 0;
 	private long lastInstrumentationTimestampInWindow = 0;
 	
@@ -68,12 +69,23 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		return sb.toString();
 	}
 	
-	private int getGroupByKey(MultiOpTuple tuple) {
-		int result = 0;
-		for (int i = 0; i < this.groupByAttributes.length; i++)
-			result = 37 * result + this.groupByAttributes[i].eval(tuple).hashCode();
+//	private int getGroupByKey(MultiOpTuple tuple) {
+//		int result = 0;
+//		for (int i = 0; i < this.groupByAttributes.length; i++)
+//			result = 37 * result + this.groupByAttributes[i].eval(tuple).hashCode();
+//		
+//		return result;
+//	}
+	
+	private String getGroupByKey(MultiOpTuple tuple) {
+		StringBuilder sb = new StringBuilder();
 		
-		return result;
+		for (int i = 0; i < this.groupByAttributes.length; i++) {
+			sb.append(this.groupByAttributes[i].eval(tuple).hashCode());
+			sb.append('@');
+		}
+		
+		return sb.toString();
 	}
 	
 	@Override
@@ -127,15 +139,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			}
 			else {
 
-				Map<Integer, PrimitiveType> values = new HashMap<>();
-				Map<Integer, MultiOpTuple> objects = new HashMap<>();
+				Map<String, PrimitiveType> values = new HashMap<>();
+				Map<String, MultiOpTuple> objects = new HashMap<>();
 	
 				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
 				
 				for (int i = 0; i < windowEnd-windowStart+1; i++) {
 					
 					MultiOpTuple tuple = batch.get(windowStart + i);
-					int key = getGroupByKey(tuple);
+					String key = getGroupByKey(tuple);
 					objects.put(key, tuple);
 					
 					PrimitiveType newValue = (PrimitiveType) this.aggregationAttribute.eval(tuple);
@@ -154,7 +166,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				}
 	
 				int keyCount = 0;
-				for (int partitionKey : values.keySet()) {
+				for (String partitionKey : values.keySet()) {
 					MultiOpTuple tuple = prepareOutputTuple(objects.get(partitionKey), values.get(partitionKey), lastTimestampInWindow, lastInstrumentationTimestampInWindow);
 					if (havingSel != null) {
 						if (havingSel.getPredicate().satisfied(tuple))
@@ -164,7 +176,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 						windowResult[keyCount++] = tuple;
 					}
 				}
-				api.outputWindowResult(windowResult);
+				
+				if (havingSel != null) 
+					api.outputWindowResult(Arrays.copyOf(windowResult, keyCount));
+				else
+					api.outputWindowResult(windowResult);
 			}			
 		}
 	}
@@ -176,7 +192,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				||this.aggregationType.equals(AggregationType.SUM)
 				||this.aggregationType.equals(AggregationType.AVG));
 
-		int key = getGroupByKey(tuple);
+		String key = getGroupByKey(tuple);
 
 		lastTimestampInWindow = tuple.timestamp;
 		lastInstrumentationTimestampInWindow = tuple.instrumentation_ts;
@@ -218,7 +234,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				||this.aggregationType.equals(AggregationType.SUM)
 				||this.aggregationType.equals(AggregationType.AVG));
 		
-		int key = getGroupByKey(tuple);
+		String key = getGroupByKey(tuple);
 		
 		PrimitiveType newValue;
 		
@@ -272,19 +288,45 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		switch (aggregationType) {
 		case AVG:
 			int keyCount = 0;
-			for (int partitionKey : values.keySet()) {
-				PrimitiveType partitionValue = this.values.get(partitionKey).div(new FloatType(countInPartition.get(partitionKey)));
-				windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), partitionValue, this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+			for (String partitionKey : values.keySet()) {
+//				PrimitiveType partitionValue = this.values.get(partitionKey).div(new FloatType(countInPartition.get(partitionKey)));
+//				windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), partitionValue, this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				MultiOpTuple tuple = prepareOutputTuple(this.objectStore.get(partitionKey), this.values.get(partitionKey).div(new FloatType(countInPartition.get(partitionKey))), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				if (havingSel != null) {
+					if (havingSel.getPredicate().satisfied(tuple))
+						windowResult[keyCount++] = tuple;
+				}
+				else {
+					windowResult[keyCount++] = tuple;
+				}
 			}
-			api.outputWindowResult(windowResult);
+			
+			if (havingSel != null) 
+				api.outputWindowResult(Arrays.copyOf(windowResult, keyCount));
+			else
+				api.outputWindowResult(windowResult);
+
 			break;
 		case COUNT:
 		case SUM:
 			keyCount = 0;
-			for (int partitionKey : values.keySet()) 
-				windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+			for (String partitionKey : values.keySet()) {
+				//windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				MultiOpTuple tuple = prepareOutputTuple(this.objectStore.get(partitionKey), this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				if (havingSel != null) {
+					if (havingSel.getPredicate().satisfied(tuple))
+						windowResult[keyCount++] = tuple;
+				}
+				else {
+					windowResult[keyCount++] = tuple;
+				}
+			}
 			
-			api.outputWindowResult(windowResult);
+			if (havingSel != null) 
+				api.outputWindowResult(Arrays.copyOf(windowResult, keyCount));
+			else
+				api.outputWindowResult(windowResult);
+			
 			break;
 		default:
 			break;
