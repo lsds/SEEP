@@ -152,4 +152,10 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
     public void send_toIndices(DataTuple[] dts, int[] indices) {
         
     }
+
+	@Override
+	public void send_lowestCost(DataTuple dt) {
+		// TODO Auto-generated method stub
+		
+	}
 }

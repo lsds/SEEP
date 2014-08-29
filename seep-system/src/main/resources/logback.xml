@@ -18,7 +18,9 @@
     </encoder>
   </appender>
 
-  <root level="info">
+  <root level="debug">
     <appender-ref ref="STDOUT" />
   </root>
+
+  <logger name="uk.ac.imperial.lsds.seep.infrastructure.monitor" level="OFF"/>
 </configuration>

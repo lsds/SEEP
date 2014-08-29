@@ -39,6 +39,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.manet.CostHandler;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -85,6 +86,8 @@ public class CoreRE {
 	private IncomingDataHandler idh = null;
 	private BackupHandler bh = null;
 	private Thread backupH = null;
+	private Thread costHandlerT = null;
+	private CostHandler costHandler = null;
 	
 	static ControlTuple genericAck;
 	private int totalNumberOfChunks = -1;
@@ -188,6 +191,13 @@ public class CoreRE {
 		bh = new BackupHandler(this, inBT);
 		backupH = new Thread(bh, "backupHandlerT");
 		backupH.start();
+		
+		//TODO: is all this control logic really thread-safe? Don't think so.
+		costHandler = new CostHandler(this);
+		costHandlerT = new Thread(costHandler, "costHandlerT");
+		costHandlerT.start();
+		//TODO: What if we want to get costs from app-level probes?
+		
 	}
 	
 	public void setRuntime(){
@@ -373,6 +383,7 @@ public class CoreRE {
 	}
 	
 	///\todo{refactor: Represent this method as a finite state machine and provide methods to query and update the state}
+	//TODO: dokeeffe: Shouldn't this be synchronized since it could be called from multiple controlhandlerworkers?
 	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
 		/** 
 		 * SCALE_OUT (light state):

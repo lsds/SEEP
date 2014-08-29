@@ -211,6 +211,18 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		return keyToDownstreamRealIndex;
 	}
 
+	@Override
+	public ArrayList<Integer> route_lowestCost()
+	{
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+	
+	@Override
+	public void update_lowestCost(int newTarget)
+	{
+		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates. 
+	}
+	
     @Override
     public int[] collapseReplica(int opIndex) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.

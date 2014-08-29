@@ -41,6 +41,12 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 	}
 	
 	@Override
+	public synchronized void send_lowestCost(DataTuple dt)
+	{
+		op.send_lowestCost(dt);
+	}
+	
+	@Override
 	public synchronized void send_toIndex(DataTuple dt, int idx){
 		op.send_toIndex(dt, idx);
 	}

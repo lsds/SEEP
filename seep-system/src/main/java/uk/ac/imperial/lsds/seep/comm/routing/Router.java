@@ -146,6 +146,18 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forward(DataTuple dt){
 		int value = 0;
+		checkDownstreamRoutingImpl();
+		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+	}
+	
+	public ArrayList<Integer> forward_lowestCost(DataTuple dt)
+	{
+		checkDownstreamRoutingImpl();
+		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route_lowestCost();
+	}
+		
+	private void checkDownstreamRoutingImpl()
+	{
 		if(downstreamRoutingImpl == null){
 			System.out.println("downstreamrouting impl null");
 			System.exit(0); /// xtreme
@@ -156,8 +168,7 @@ public class Router implements Serializable{
 			}
 			System.out.println("idx for routing impl");
 			System.exit(0); // xtreme
-		}
-		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+		}		
 	}
 	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
@@ -202,6 +213,10 @@ public class Router implements Serializable{
 		return key;
 	}
 	
+	public void update_lowestCost(int newTarget)
+	{
+		downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_lowestCost(newTarget);
+	}
 	
 	public int[] newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key[];

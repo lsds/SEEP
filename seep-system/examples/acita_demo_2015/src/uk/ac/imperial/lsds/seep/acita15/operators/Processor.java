@@ -30,8 +30,8 @@ public class Processor implements StatelessOperator{
 		value3 = value3*value3;
 		
 		DataTuple outputTuple = data.setValues(value1, value2, value3);
-		System.out.println("Processed "+data.toString()+"->"+outputTuple);
-		api.send(outputTuple);
+		System.out.println("Operator "+api.getOperatorId()+ " processed "+data.toString()+"->"+outputTuple);
+		api.send_lowestCost(outputTuple);
 	}
 
 	

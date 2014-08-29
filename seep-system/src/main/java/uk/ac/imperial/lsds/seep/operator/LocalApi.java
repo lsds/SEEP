@@ -12,6 +12,8 @@ package uk.ac.imperial.lsds.seep.operator;
 
 import java.io.Serializable;
 
+import javax.sound.sampled.UnsupportedAudioFileException;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 
@@ -89,5 +91,10 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
         public void send_toIndices(DataTuple[] dts, int[] indices) {
             
         }
+
+		@Override
+		public void send_lowestCost(DataTuple dt) {
+			throw new UnsupportedOperationException("TODO");			
+		}
         
 }

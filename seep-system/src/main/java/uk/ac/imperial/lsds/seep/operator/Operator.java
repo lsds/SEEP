@@ -114,6 +114,13 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
         processingUnit.sendData(dt, targets);
 	}
 	
+	// Send downstream in round robin fashion
+	public synchronized void send_lowestCost(DataTuple dt){
+		// We check the targets with our routers
+		ArrayList<Integer> targets = router.forward_lowestCost(dt);
+        processingUnit.sendData(dt, targets);
+	}
+	
 	// Send to a particular downstream index
 	public synchronized void send_toIndex(DataTuple dt, int idx){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
@@ -166,7 +173,6 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
                 processingUnit.sendDataByThreadPool(dt, targets);
 	}
-	
 	
 	public void send_all_threadPool(DataTuple dt){
 		// When routing to all, targets are all the logical downstreamoperators

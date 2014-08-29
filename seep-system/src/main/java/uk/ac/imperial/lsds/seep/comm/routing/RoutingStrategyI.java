@@ -16,10 +16,12 @@ import java.util.ArrayList;
 public interface RoutingStrategyI {
 
 	public ArrayList<Integer> route(int value);
+	public ArrayList<Integer> route_lowestCost();
 	public ArrayList<Integer> route(ArrayList<Integer> targets, int value);
 	public ArrayList<Integer> routeToAll(ArrayList<Integer> targets);
 	public ArrayList<Integer> routeToAll();
     
+	public void update_lowestCost(int newTarget);
 	public int[] newReplica(int oldOpIndex, int newOpIndex);
     public int[] collapseReplica(int opIndex);
     

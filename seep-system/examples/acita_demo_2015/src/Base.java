@@ -23,7 +23,8 @@ import uk.ac.imperial.lsds.seep.operator.Connectable;
 public class Base implements QueryComposer{
 	private final int CHAIN_LENGTH = 2;
 	private final int REPLICATION_FACTOR = 2;
-	private final boolean CONNECT_TO_ALL_DOWNSTREAMS = false;
+	private final boolean AUTO_SCALEOUT = true;
+	private final boolean CONNECT_TO_ALL_DOWNSTREAMS = false;	//Deprecated.
 
 	public QueryPlan compose() {
 		/** Declare operators **/
@@ -37,9 +38,7 @@ public class Base implements QueryComposer{
 		srcFields.add("value3");
 		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
 		
-		// Declare processors
 		
-		Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, REPLICATION_FACTOR); 
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
@@ -48,16 +47,27 @@ public class Base implements QueryComposer{
 		snkFields.add("value3");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		
-
-		if (CONNECT_TO_ALL_DOWNSTREAMS)
+		
+		if (AUTO_SCALEOUT)
 		{
-			connectToAllDownstreams(src, snk, ops);
+			Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, 1); 
+			connectToOneDownstream(src, snk, ops);
+			autoScaleout(ops);
 		}
 		else
 		{
-			connectToOneDownstream(src, snk, ops);
+			// Declare processors
+			Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, REPLICATION_FACTOR); 
+			
+			if (CONNECT_TO_ALL_DOWNSTREAMS)
+			{
+				connectToAllDownstreams(src, snk, ops);
+			}
+			else
+			{
+				connectToOneDownstream(src, snk, ops);
+			}
 		}
-
 		
 		return QueryBuilder.build();
 	}
@@ -75,7 +85,7 @@ public class Base implements QueryComposer{
 				pFields.add("value1");
 				pFields.add("value2");
 				pFields.add("value3");
-				Connectable p = QueryBuilder.newStatelessOperator(new Processor(), (i*chainLength)+j, pFields);
+				Connectable p = QueryBuilder.newStatelessOperator(new Processor(), (i*replicationFactor)+j, pFields);
 				ops.get(i).put(j, p);
 			}
 		}
@@ -88,31 +98,37 @@ public class Base implements QueryComposer{
 		// Connect intermediate ops 
 		for (int i = 0; i < CHAIN_LENGTH-1; i++)
 		{
-			for (int j = 0; j < REPLICATION_FACTOR; j++)
+			for (int j = 0; j < ops.get(i).size(); j++)
 			{
-				for (int k=0; k < REPLICATION_FACTOR; k++)
+				for (int k=0; k < ops.get(i+1).size(); k++)
 				{
-					ops.get(i).get(j).connectTo(ops.get(i+1).get(k), true, 0);
+					ops.get(i).get(j).connectTo(ops.get(i+1).get(k), true, i+1);
 				}
 			}
 		}
 
-		// Connect src to ops and ops to sink
-		for (int j = 0; j < REPLICATION_FACTOR; j++)
+		// Connect src to first layer ops 
+		for (int j = 0; j < ops.get(0).size(); j++)
 		{
 			src.connectTo(ops.get(0).get(j), true, 0);
-			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, 0);
+		}
+
+		// Connect final layer ops to sink
+		for (int j = 0; j < ops.get(CHAIN_LENGTH-1).size(); j++)
+		{
+			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, CHAIN_LENGTH);
 		}
 	}
 
 	private void connectToOneDownstream(Connectable src, Connectable snk, Map<Integer, Map<Integer, Connectable>> ops)
 	{
 		// Connect intermediate ops 
+		// Assumes all layers are the same size.
 		for (int i = 0; i < CHAIN_LENGTH-1; i++)
 		{
-			for (int j = 0; j < REPLICATION_FACTOR; j++)
+			for (int j = 0; j < ops.get(i).size(); j++)
 			{
-				ops.get(i).get(j).connectTo(ops.get(i+1).get(j), true, 0);
+				ops.get(i).get(j).connectTo(ops.get(i+1).get(j), true, i+1);
 			}
 		}
 
@@ -120,9 +136,18 @@ public class Base implements QueryComposer{
 		src.connectTo(ops.get(0).get(0), true, 0);
 
 		// Connect ops to sink
-		for (int j = 0; j < REPLICATION_FACTOR; j++)
+		for (int j = 0; j < ops.get(CHAIN_LENGTH-1).size(); j++)
 		{
-			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, 0);
+			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, CHAIN_LENGTH);
+		}
+	}
+	
+	private void autoScaleout(Map<Integer, Map<Integer, Connectable>> ops)
+	{
+		for (int i = 0; i < CHAIN_LENGTH; i++)
+		{
+			if (ops.get(i).size() != 1) { throw new RuntimeException("Logic error."); }
+			QueryBuilder.scaleOut(ops.get(i).get(0).getOperatorId(), REPLICATION_FACTOR);
 		}
 	}
 }
