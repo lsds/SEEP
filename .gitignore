@@ -12,6 +12,7 @@ examples/*/lib/*.jar
 query.jar
 examples/stateless-simple-query/bin/*
 *.class
+*.pyc
 *test*
 seep-system/examples/stateless-simple-query/.settings/
 seep-system/examples/stateless-simple-query/lib/*

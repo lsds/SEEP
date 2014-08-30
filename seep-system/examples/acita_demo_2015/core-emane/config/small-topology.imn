@@ -1,0 +1,290 @@
+node n1 {
+    type wlan
+    network-config {
+	hostname wlan1
+	!
+	interface wireless
+	 ip address 10.0.0.0/32
+	 ipv6 address 2001:0::0/128
+	!
+	mobmodel
+	coreapi
+	basic_range
+	!
+    }
+    custom-config {
+	custom-config-id basic_range
+	custom-command {3 3 9 9 9}
+	config {
+	range=275
+	bandwidth=54000000
+	jitter=0
+	delay=20000
+	error=0
+	}
+    }
+    canvas c1
+    iconcoords {500.49537156377215 374.23546937776996}
+    labelcoords {500.49537156377215 406.2354693777701}
+    interface-peer {e0 n2}
+    interface-peer {e1 n3}
+    interface-peer {e2 n4}
+    interface-peer {e3 n5}
+    interface-peer {e4 n6}
+    interface-peer {e5 n7}
+    interface-peer {e6 n8}
+    interface-peer {e7 n9}
+}
+
+node n2 {
+    type router
+    model PC
+    network-config {
+	hostname n2
+	!
+	interface eth0
+	 ip address 10.0.0.20/32
+	 ipv6 address 2001:0::20/128
+	!
+    }
+    canvas c1
+    iconcoords {293.6202450183115 208.82552364314162}
+    labelcoords {293.6202450183115 240.82552364314174}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+node n3 {
+    type router
+    model PC
+    network-config {
+	hostname n3
+	!
+	interface eth0
+	 ip address 10.0.0.21/32
+	 ipv6 address 2001:0::21/128
+	!
+    }
+    canvas c1
+    iconcoords {287.9349192233982 345.572008877283}
+    labelcoords {287.9349192233982 377.5720088772831}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+node n4 {
+    type router
+    model PC
+    network-config {
+	hostname n4
+	!
+	interface eth0
+	 ip address 10.0.0.22/32
+	 ipv6 address 2001:0::22/128
+	!
+    }
+    canvas c1
+    iconcoords {452.26249015888493 205.43363607120233}
+    labelcoords {452.26249015888493 237.43363607120207}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Master}
+    custom-config {
+	custom-config-id service:Master
+	custom-command Master
+	config {
+	starttime=2
+	}
+    }
+}
+
+node n5 {
+    type router
+    model PC
+    network-config {
+	hostname n5
+	!
+	interface eth0
+	 ip address 10.0.0.23/32
+	 ipv6 address 2001:0::23/128
+	!
+    }
+    canvas c1
+    iconcoords {657.2265643645801 508.8374529360965}
+    labelcoords {657.2265643645801 540.8374529360963}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+node n6 {
+    type router
+    model PC
+    network-config {
+	hostname n6
+	!
+	interface eth0
+	 ip address 10.0.0.24/32
+	 ipv6 address 2001:0::24/128
+	!
+    }
+    canvas c1
+    iconcoords {665.1183927383952 387.95037542060527}
+    labelcoords {665.1183927383952 419.9503754206056}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+node n7 {
+    type router
+    model PC
+    network-config {
+	hostname n7
+	!
+	interface eth0
+	 ip address 10.0.0.25/32
+	 ipv6 address 2001:0::25/128
+	!
+    }
+    canvas c1
+    iconcoords {515.1974464788655 507.5340089006694}
+    labelcoords {515.1974464788655 539.5340089006693}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+node n8 {
+    type router
+    model PC
+    network-config {
+	hostname n8
+	!
+	interface eth0
+	 ip address 10.0.0.26/32
+	 ipv6 address 2001:0::26/128
+	!
+    }
+    canvas c1
+    iconcoords {304.64876113749233 515.7431101117365}
+    labelcoords {304.64876113749233 547.7431101117364}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+node n9 {
+    type router
+    model PC
+    network-config {
+	hostname n9
+	!
+	interface eth0
+	 ip address 10.0.0.27/32
+	 ipv6 address 2001:0::27/128
+	!
+    }
+    canvas c1
+    iconcoords {664.349840132546 221.5106564149736}
+    labelcoords {664.349840132546 253.51065641497374}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward Worker}
+    custom-config {
+	custom-config-id service:Worker
+	custom-command Worker
+	config {
+	starttime=10
+	}
+    }
+}
+
+link l1 {
+    nodes {n1 n2}
+}
+
+link l2 {
+    nodes {n1 n3}
+}
+
+link l3 {
+    nodes {n1 n4}
+}
+
+link l4 {
+    nodes {n1 n5}
+}
+
+link l5 {
+    nodes {n1 n6}
+}
+
+link l6 {
+    nodes {n1 n7}
+}
+
+link l7 {
+    nodes {n1 n8}
+}
+
+link l8 {
+    nodes {n1 n9}
+}
+
+canvas c1 {
+    name {Canvas1}
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses yes
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+}
+
