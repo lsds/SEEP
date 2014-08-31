@@ -17,6 +17,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.Constant;
 import uk.ac.imperial.lsds.streamsql.expressions.Division;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
@@ -79,7 +80,7 @@ public class LRBQ1To6 {
 				
 		@SuppressWarnings("unchecked")
 		IMicroOperatorCode q2AggCode = new MicroAggregation(
-				MicroAggregation.AggregationType.AVG, 
+				AggregationType.AVG, 
 				new ColumnReference<PrimitiveType>(1),
 				(ColumnReference<PrimitiveType>[]) new ColumnReference[] {
 					new ColumnReference<IntegerType>(2),

@@ -1,14 +1,14 @@
 package uk.ac.imperial.lsds.streamsql.visitors;
 
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.GPUMicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.GPUSelection;
 import uk.ac.imperial.lsds.streamsql.op.stateful.Aggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.Distinct;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroPaneAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
-
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.GPUSelection;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.GPUMicroAggregation;
 
 public interface OperatorVisitor {
 
@@ -25,6 +25,8 @@ public interface OperatorVisitor {
 	public void visit(Aggregation aggregation);
 
 	public void visit(MicroAggregation aggregation);
+
+	public void visit(MicroPaneAggregation aggregation);
 
 	public void visit(ThetaJoin join);
 	

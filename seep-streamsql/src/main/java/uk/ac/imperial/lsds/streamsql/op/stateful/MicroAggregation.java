@@ -14,6 +14,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
+import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
@@ -38,15 +39,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 	private long lastTimestampInWindow = 0;
 	private long lastInstrumentationTimestampInWindow = 0;
-	
-	public enum AggregationType {
-		MAX, MIN, COUNT, SUM, AVG;
-		
-		public String asString(int s) {
-			return this.toString() + "(" + s + ")";
-		}
-	}
-
 	
 	@SuppressWarnings("unchecked")
 	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute) {
@@ -128,9 +120,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		
 		assert(this.aggregationType.equals(AggregationType.MAX)||this.aggregationType.equals(AggregationType.MIN));
 		
-		long lastTimestampInWindow = 0;
-		long lastInstrumentationTimestampInWindow = 0;
-
 		IWindowBatch batch = windowBatches.values().iterator().next();
 		
 		int[] startPointers = batch.getWindowStartPointers();
@@ -146,21 +135,18 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			}
 			else {
 
-				Map<Long, PrimitiveType> values = new HashMap<>();
-				Map<Long, MultiOpTuple> objects = new HashMap<>();
+				Map<Integer, PrimitiveType> values = new HashMap<>();
+				Map<Integer, MultiOpTuple> objects = new HashMap<>();
 	
 				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
 				
 				for (int i = 0; i < windowEnd-windowStart+1; i++) {
 					
 					MultiOpTuple tuple = batch.get(windowStart + i);
-					long key = getGroupByKey(tuple);
+					int key = getGroupByKey(tuple);
 					objects.put(key, tuple);
 					
 					PrimitiveType newValue = (PrimitiveType) this.aggregationAttribute.eval(tuple);
-					
-					lastTimestampInWindow = tuple.timestamp;
-					lastInstrumentationTimestampInWindow = tuple.instrumentation_ts;
 					
 					if (values.containsKey(key)) {
 						if (values.get(key).compareTo(newValue) < 0 && this.aggregationType.equals(AggregationType.MAX))
@@ -173,8 +159,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				}
 	
 				int keyCount = 0;
-				for (Long partitionKey : values.keySet()) {
-					MultiOpTuple tuple = prepareOutputTuple(objects.get(partitionKey), values.get(partitionKey), lastTimestampInWindow, lastInstrumentationTimestampInWindow);
+				for (Integer partitionKey : values.keySet()) {
+					MultiOpTuple tuple = prepareOutputTuple(objects.get(partitionKey), values.get(partitionKey), batch.get(windowEnd-windowStart).timestamp, batch.get(windowEnd-windowStart).instrumentation_ts);
 					if (havingSel != null) {
 						if (havingSel.getPredicate().satisfied(tuple))
 							windowResult[keyCount++] = tuple;
@@ -315,6 +301,26 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 
 			break;
 		case COUNT:
+			keyCount = 0;
+			for (Integer partitionKey : countInPartition.keySet()) {
+				//windowResult[keyCount++] = prepareOutputTuple(this.objectStore.get(partitionKey), this.values.get(partitionKey), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				MultiOpTuple tuple = prepareOutputTuple(this.objectStore.get(partitionKey), new IntegerType(this.countInPartition.get(partitionKey)), this.lastTimestampInWindow, this.lastInstrumentationTimestampInWindow);
+				if (havingSel != null) {
+					if (havingSel.getPredicate().satisfied(tuple))
+						windowResult[keyCount++] = tuple;
+				}
+				else {
+					windowResult[keyCount++] = tuple;
+				}
+			}
+			
+			if (havingSel != null) 
+				api.outputWindowResult(Arrays.copyOf(windowResult, keyCount));
+			else
+				api.outputWindowResult(windowResult);
+			
+			break;
+			
 		case SUM:
 			keyCount = 0;
 			for (Integer partitionKey : values.keySet()) {

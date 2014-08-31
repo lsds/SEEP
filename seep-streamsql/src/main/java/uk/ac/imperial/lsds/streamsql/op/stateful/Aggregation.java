@@ -40,11 +40,6 @@ public class Aggregation implements StatefulOperator, IStreamSQLOperator, Window
 	
 	private AggregationType aggregationType;
 	
-	public enum AggregationType {
-		MAX, MIN, COUNT, SUM, AVG
-	}
-
-
 	public Aggregation(AggregationType aggregationType, String aggregationAttribute) {
 		this(aggregationType, aggregationAttribute, new ArrayList<String>());
 	}

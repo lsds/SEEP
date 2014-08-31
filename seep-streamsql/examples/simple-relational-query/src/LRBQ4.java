@@ -16,7 +16,9 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowT
 import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.Constant;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroPaneAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ComparisonPredicate;
@@ -76,8 +78,8 @@ public class LRBQ4 {
 				new Constant<FloatType>(new FloatType(40f))));
 				
 		@SuppressWarnings("unchecked")
-		IMicroOperatorCode q2AggCode = new MicroAggregation(
-				MicroAggregation.AggregationType.AVG, 
+		IMicroOperatorCode q2AggCode = new MicroPaneAggregation(
+				AggregationType.AVG, 
 				new ColumnReference<PrimitiveType>(1),
 				(ColumnReference<PrimitiveType>[]) new ColumnReference[] {
 					new ColumnReference<IntegerType>(2),
