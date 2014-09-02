@@ -43,38 +43,39 @@ public abstract class WindowBatch implements IWindowBatch {
 	public void performIncrementalComputation(
 			IMicroIncrementalComputation incrementalComputation, IWindowAPI api) {
 		
-		int prevWindowStart = 0;
-		int prevWindowEnd = 0;
+		int prevWindowStart = -1;
+		int prevWindowEnd = -1;
 		for (int currentWindow = 0; currentWindow < this.windowStartPointers.length; currentWindow++) {
 			int windowStart = this.windowStartPointers[currentWindow];
 			int windowEnd = this.windowEndPointers[currentWindow];
 
 			// empty window?
 			if (windowStart == -1) {
+				if (prevWindowStart != -1) 
+					for (int i = prevWindowStart; i < windowStart; i++)
+						incrementalComputation.exitedWindow(this.get(i));
+				
 				incrementalComputation.evaluateWindow(api);
-			}
-			// first window?
-			else if (currentWindow == 0) {
-				for (int i = windowStart; i <= windowEnd; i++) 
-					incrementalComputation.enteredWindow(this.get(i));
-
-				incrementalComputation.evaluateWindow(api);
-			
-				prevWindowStart = windowStart;
-				prevWindowEnd = windowEnd;
 			}
 			else {
 				/*
 				 * Tuples in current window that have not been in the previous window
 				 */
-				for (int i = prevWindowEnd; i <= windowEnd; i++) 
-					incrementalComputation.enteredWindow(this.get(i));
-			
+				if (prevWindowStart != -1) {
+					for (int i = prevWindowEnd; i <= windowEnd; i++) 
+						incrementalComputation.enteredWindow(this.get(i));
+				}
+				else {
+					for (int i = windowStart; i <= windowEnd; i++) 
+						incrementalComputation.enteredWindow(this.get(i));
+				}
+
 				/*
 				 * Tuples in previous window that are not in current window
 				 */
-				for (int i = prevWindowStart; i < windowStart; i++)
-					incrementalComputation.exitedWindow(this.get(i));
+				if (prevWindowStart != -1) 
+					for (int i = prevWindowStart; i < windowStart; i++)
+						incrementalComputation.exitedWindow(this.get(i));
 			
 				incrementalComputation.evaluateWindow(api);
 			
