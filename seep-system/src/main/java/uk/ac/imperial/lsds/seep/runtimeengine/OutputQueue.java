@@ -30,6 +30,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
 public class OutputQueue {
@@ -105,9 +106,29 @@ public class OutputQueue {
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
-					k.writeObject(channelRecord.getOutput(), msg);
-					//Flush the buffer to the stream
-					channelRecord.getOutput().flush();
+					
+					boolean flushed = false;
+					while(!flushed)
+					{
+						try
+						{
+							k.writeObject(channelRecord.getOutput(), msg);
+							//Flush the buffer to the stream
+							channelRecord.getOutput().flush();
+							flushed = true;
+						}
+						catch(KryoException e)
+						{
+							//TODO: Get rid of this global. Might want to
+							//Have different behaviour for different instances.
+							if(!"true".equals(GLOBALS.valueFor("autoReconnectChannel")))
+							{
+								throw(e);
+							}
+							channelRecord.reopenDownstreamDataSocket();
+						}
+					}
+					
 					// We save the data
 					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming

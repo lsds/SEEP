@@ -24,6 +24,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
 /**
@@ -100,6 +101,54 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return blindSocket;
 	}
 	
+	/** ThreadSafety: This method, getOutput(), and getDownstreamDataSocket()
+	 * should only ever be called with the corresponding OutputQueue lock held
+	 * to avoid concurrent data consumer threads trying to reopen a failed socket.
+	 * dokeeffe TODO: Currently this will just block indefinitely until the create socket call
+	 * succeeds. Probably want to add a way to interrupt the waiting (e.g. if we need
+	 * to scale-in/reconfigure/shutdown).
+	 * dokeeffe TODO: Need to handle this properly on the receive side too!
+	 * @return the new socket.
+	 */
+	public Socket reopenDownstreamDataSocket()
+	{
+		InetAddress ip = downstreamDataSocket.getInetAddress();
+		int port = downstreamDataSocket.getPort();
+		
+		//Try to close the current downstream data socket and output stream
+		try { output.close(); } 
+		catch (KryoException e) { e.printStackTrace(); } 
+		try { downstreamDataSocket.close(); } 
+		catch (IOException e) {e.printStackTrace();} 
+		output = null;
+		downstreamDataSocket = null;
+
+		boolean success = false;
+		while(!success)
+		{
+			Socket tmpSocket = null;
+			OutputStream tmpOutput = null;
+			try
+			{
+				tmpSocket = new Socket(ip, port);
+				tmpOutput = tmpSocket.getOutputStream();
+				downstreamDataSocket = tmpSocket;
+				output = new Output(tmpOutput);
+				success = true;
+			}
+			catch(IOException e)
+			{
+				if (tmpSocket != null) 
+				{ 
+					try { tmpSocket.close(); } 
+					catch (IOException e1) {} 
+				}
+				e.printStackTrace();
+			}
+		}
+		return downstreamDataSocket;
+	}
+	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;
 	}
@@ -128,6 +177,9 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return replay;
 	}
 	
+	//dokeeffe TODO: Hmm, might want to keep this internal
+	// and add an extra setter to the interface if this class
+	// is going to handle reconnects.
 	public AtomicBoolean getStop(){
 		return stop;
 	}
