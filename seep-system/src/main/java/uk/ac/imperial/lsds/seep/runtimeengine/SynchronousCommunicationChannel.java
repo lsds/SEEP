@@ -38,6 +38,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private Socket blindSocket;
 	private Buffer buffer;
 	
+	private final Object controlSocketLock = new Object(){};
+	
 	private Output output = null;
 	private OutputStream bos = null;
 	
@@ -80,8 +82,19 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return targetOperatorId;
 	}
 	
-	public Socket getDownstreamControlSocket(){
-		return downstreamControlSocket;
+	public Socket getDownstreamControlSocket() {
+		synchronized(controlSocketLock)
+		{
+			while (downstreamControlSocket == null)
+			{
+				try
+				{
+					controlSocketLock.wait(30*1000);
+				}
+				catch(InterruptedException e) { e.printStackTrace(); /*Urgh*/}
+			}
+			return downstreamControlSocket;
+		}
 	}
 	
 	public Socket getBlindSocket(){
@@ -103,15 +116,16 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	/** ThreadSafety: This method, getOutput(), and getDownstreamDataSocket()
 	 * should only ever be called with the corresponding OutputQueue lock held
-	 * to avoid concurrent data consumer threads trying to reopen a failed socket.
+	 * to avoid concurrent data consumer/processing threads trying to reopen a failed socket.
 	 * dokeeffe TODO: Currently this will just block indefinitely until the create socket call
 	 * succeeds. Probably want to add a way to interrupt the waiting (e.g. if we need
 	 * to scale-in/reconfigure/shutdown).
-	 * dokeeffe TODO: Need to handle this properly on the receive side too!
 	 * @return the new socket.
 	 */
 	public Socket reopenDownstreamDataSocket()
 	{
+		if (downstreamDataSocket == null) { throw new RuntimeException("No data socket on this channel."); }
+		
 		InetAddress ip = downstreamDataSocket.getInetAddress();
 		int port = downstreamDataSocket.getPort();
 		
@@ -147,6 +161,63 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			}
 		}
 		return downstreamDataSocket;
+	}
+	
+	/** 
+	 * dokeeffe TODO: Callers responsibility to ensure any previously held
+	 * versions of this socket are closed/cleaned up. Not ideal
+	 * but can't think of an easy way to avoid it right now.
+	 * 
+	 * dokeeffe TODO: Should probably allow this to be 
+	 * extended to support cancellation. At the moment it will
+	 * try to reconnect for ever.
+	 */	 
+	public Socket reopenDownstreamControlSocket()
+	{
+		InetAddress ip;
+		int port;
+		
+		synchronized(controlSocketLock)
+		{
+			if (downstreamControlSocket == null)
+			{
+				while (downstreamControlSocket == null)
+				{
+					//Another caller is already reopening the socket.
+					try
+					{
+						controlSocketLock.wait(30*1000);
+					}
+					catch(InterruptedException e) { e.printStackTrace(); /*Urgh*/ }				
+				}
+				return downstreamControlSocket;
+			}
+			else
+			{
+				ip = downstreamControlSocket.getInetAddress();
+				port = downstreamControlSocket.getPort();			
+				downstreamControlSocket = null;
+			}
+		}
+
+		while(true)
+		{
+			Socket tmpSocket = null;
+			try
+			{
+				tmpSocket = new Socket(ip, port);
+				synchronized(controlSocketLock)
+				{
+					downstreamControlSocket = tmpSocket;
+					controlSocketLock.notifyAll();
+					return downstreamControlSocket;
+				}
+			}
+			catch(IOException e)
+			{
+				e.printStackTrace(); // Urgh
+			}
+		}		
 	}
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
