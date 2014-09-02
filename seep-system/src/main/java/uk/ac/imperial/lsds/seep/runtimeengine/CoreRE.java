@@ -188,9 +188,13 @@ public class CoreRE {
 		iDataH.start();
 		
 		// Backup worker
-		bh = new BackupHandler(this, inBT);
-		backupH = new Thread(bh, "backupHandlerT");
-		backupH.start();
+		//dokeeffe TODO: Comment this out
+		if (!"true".equals(GLOBALS.valueFor("disableBackup")))
+		{
+			bh = new BackupHandler(this, inBT);
+			backupH = new Thread(bh, "backupHandlerT");
+			backupH.start();
+		}
 		
 		//TODO: is all this control logic really thread-safe? Don't think so.
 		costHandler = new CostHandler(this);
