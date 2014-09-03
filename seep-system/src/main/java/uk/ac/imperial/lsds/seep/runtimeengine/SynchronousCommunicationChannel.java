@@ -164,60 +164,69 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	}
 	
 	/** 
-	 * dokeeffe TODO: Callers responsibility to ensure any previously held
-	 * versions of this socket are closed/cleaned up. Not ideal
-	 * but can't think of an easy way to avoid it right now.
-	 * 
 	 * dokeeffe TODO: Should probably allow this to be 
 	 * extended to support cancellation. At the moment it will
 	 * try to reconnect for ever.
 	 */	 
-	public Socket reopenDownstreamControlSocket()
+	public void reopenDownstreamControlSocketNonBlocking(Socket prevSocketToClose)
 	{
-		InetAddress ip;
-		int port;
+		if (prevSocketToClose == null) 
+		{ 
+			//Temp sanity check, should probably remove this restriction.
+			throw new RuntimeException("Previous socket should never be null."); 
+		}
+		
+		final InetAddress ip;
+		final int port;
 		
 		synchronized(controlSocketLock)
 		{
-			if (downstreamControlSocket == null)
-			{
-				while (downstreamControlSocket == null)
-				{
-					//Another caller is already reopening the socket.
-					try
-					{
-						controlSocketLock.wait(30*1000);
-					}
-					catch(InterruptedException e) { e.printStackTrace(); /*Urgh*/ }				
-				}
-				return downstreamControlSocket;
-			}
-			else
+			if (downstreamControlSocket != null && prevSocketToClose == downstreamControlSocket)
 			{
 				ip = downstreamControlSocket.getInetAddress();
 				port = downstreamControlSocket.getPort();			
 				downstreamControlSocket = null;
 			}
+			else
+			{
+				try { prevSocketToClose.close(); }
+				catch(IOException e) { e.printStackTrace(); /*Urgh*/ }
+	
+				//Another caller is already reopening the socket.
+				return;
+			}			
 		}
 
-		while(true)
+		new Thread(new Runnable() 
 		{
-			Socket tmpSocket = null;
-			try
+			public void run()
 			{
-				tmpSocket = new Socket(ip, port);
-				synchronized(controlSocketLock)
+				while(true)
 				{
-					downstreamControlSocket = tmpSocket;
-					controlSocketLock.notifyAll();
-					return downstreamControlSocket;
+					Socket tmpSocket = null;
+					try
+					{
+						tmpSocket = new Socket(ip, port);
+						synchronized(controlSocketLock)
+						{
+							downstreamControlSocket = tmpSocket;
+							controlSocketLock.notifyAll();
+							return;
+							//return downstreamControlSocket;
+						}
+					}
+					catch(IOException e)
+					{
+						e.printStackTrace(); // Urgh
+					}
+					//dokeeffe TODO: N.B. If some other exception causes this
+					//thread to fail then this connection will be stuck forever
+					//as there is no way for another thread to restart the connection
+					//currently
 				}
 			}
-			catch(IOException e)
-			{
-				e.printStackTrace(); // Urgh
-			}
-		}		
+		}).start();
+		
 	}
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){

@@ -44,6 +44,7 @@ import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
@@ -113,9 +114,10 @@ public class ControlDispatcher {
 				}
 			}
 		}
-		catch(IOException io){
-			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
-			io.printStackTrace();
+		catch(IOException | KryoException e){
+			LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+			e.printStackTrace();
+			((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
 		}
 	}
 	
@@ -239,9 +241,10 @@ public class ControlDispatcher {
 					}
 				}
 			}
-			catch(IOException io){
-				LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
-				io.printStackTrace();
+			catch(IOException | KryoException e){
+				LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+				e.printStackTrace();
+				((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
 			}
 		}
 	}
