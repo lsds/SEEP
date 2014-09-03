@@ -729,7 +729,9 @@ public class CoreRE {
 			long ts = channelInfo.getValue();
 			ControlTuple ack = new ControlTuple(ControlTupleType.ACK, processingUnit.getOperator().getOperatorId(), ts);
 			int index = processingUnit.getOperator().getOpContext().getUpOpIndexFromOpId(opId);
-			controlDispatcher.sendUpstream(ack, index);
+			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
+			controlDispatcher.sendUpstream(ack, index, !bestEffortAcks);
+				
 		}
 	}
 	

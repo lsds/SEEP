@@ -97,6 +97,14 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}
 	}
 	
+	public Socket tryGetDownstreamControlSocket()
+	{
+		synchronized(controlSocketLock)
+		{
+			return downstreamControlSocket;
+		}
+	}
+	
 	public Socket getBlindSocket(){
 		return blindSocket;
 	}
