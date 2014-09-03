@@ -63,7 +63,7 @@ public class Source implements StatelessOperator  {
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
 		Bitmap bitmap = null;
 		Mat mGray = new Mat();
-		int i = 1;
+		int i = 9;//The frame files' index starts with 9
 		Handler myHandler = MainActivity.getImageViewHandler();
 
 		@Override
@@ -100,8 +100,8 @@ public class Source implements StatelessOperator  {
 				
 				i++;
 
-				if (i>164)
-					i = 1;
+				if (i>166)
+					i = 9;
 //				try {
 //					Thread.sleep(100);
 //				} catch (InterruptedException e) {
