@@ -12,7 +12,9 @@ package uk.ac.imperial.lsds.seep.comm;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,10 @@ public class IncomingDataHandler implements Runnable{
 	public void setConnPort(int connPort){
 		this.connPort = connPort;
 	}
+	
+	public void setGoOn(boolean value){
+		goOn = value;
+	}
 
 	public IncomingDataHandler(CoreRE owner, int connPort, Map<String, Integer> idxMapper, DataStructureAdapter dsa){
 		this.owner = owner;
@@ -53,16 +59,26 @@ public class IncomingDataHandler implements Runnable{
 
 	public void run(){
 		ServerSocket incDataServerSocket = null;
+		Thread newConn = null;
+		IncomingDataHandlerWorker incomingDataHandlerWorker = null;
 		try{
 			//Establish listening port
-			incDataServerSocket = new ServerSocket(connPort);
+			incDataServerSocket = new ServerSocket();
 			incDataServerSocket.setReuseAddress(true);
-			LOG.info("-> IncomingDataHandler listening in port: {}", connPort);
+			incDataServerSocket.bind(new InetSocketAddress(owner.getNodeDescr().getIp(),connPort));
+			LOG.info(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort()+"-> IncomingDataHandler listening on port: {}", connPort);
 			//Upstream id
 			while(goOn){
-				Thread newConn = new Thread(new IncomingDataHandlerWorker(incDataServerSocket.accept(), owner, idxMapper, dsa));
+				Socket incomingConn = incDataServerSocket.accept();
+				LOG.info(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort()+
+						"-> IncomingDataHandler starting a new IncomingDataHandlerWorker ");
+				incomingDataHandlerWorker = new IncomingDataHandlerWorker(incomingConn, owner, idxMapper, dsa);
+				newConn = new Thread(incomingDataHandlerWorker);
 				newConn.start();
+				
 			}
+			incomingDataHandlerWorker.setGoOn(false);
+			newConn.interrupt();
 			incDataServerSocket.close();
 		}
 		catch(BindException be){

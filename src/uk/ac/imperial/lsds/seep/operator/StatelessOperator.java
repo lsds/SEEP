@@ -10,9 +10,8 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.operator;
 
-import uk.ac.imperial.lsds.seep.operator.compose.SubOperatorCode;
 
 
-public interface StatelessOperator extends SubOperatorCode, OperatorCode{
+public interface StatelessOperator extends OperatorCode{
 	
 }

@@ -406,7 +406,6 @@ public class CoreProcessingLogic implements Serializable{
 		//Reconfigure backup stream index
 		//Pick one of the opIds of the message
 		int opId = ct.getOpId();
-		owner.manageBackupUpstreamIndex(opId);
 		//Clean the data processing channel from remaining tuples in old batch
 		LOG.debug("Changing to INITIALISING STATE, stopping all incoming comm");
 		pu.setSystemStatus(StatefulProcessingUnit.SystemStatus.INITIALISING_STATE);

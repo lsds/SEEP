@@ -128,7 +128,7 @@ public class OperatorContext implements Serializable{
 
 		return ip1.equals(ip2) ||
 				ip1Str.equals("127.0.0.1") && ip2Str.equals("127.0.1.1") ||
-				ip1Str.equals("127.0.1.1") && ip2Str.equals("127.0.0.1");
+				ip1Str.equals("127.0.1.1") && ip2Str.equals("127.0.0.1") ;
 	}
 
 	public int getOpIdFromUpstreamIp(InetAddress ip){

@@ -12,10 +12,14 @@ public enum MetricName {
     
     DEFAULT("default"),
     CPU_UTILIZATION("cpu"),
+    MEM_UTILIZATION("mem"),
     HEAP_SIZE("memory"),
     HEAP_UTILIZATION("memory-usage"),
     QUEUE_LENGTH("queue-length"),
-    OPERATOR_LATENCY("latency");
+    OPERATOR_LATENCY("latency"),
+    BATTERY_LIFE("battery"),
+    WIFI_STRENGTH("wifi");
+    
     
     public static MetricName metric(String name) {
         return MetricName.fromValue(name);

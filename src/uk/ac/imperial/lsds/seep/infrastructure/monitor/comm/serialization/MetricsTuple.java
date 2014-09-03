@@ -64,7 +64,8 @@ public class MetricsTuple implements Serializable {
             
             sb.append(",");
         }
-        sb.deleteCharAt(sb.length() - 1);
+        if (sb.length() > 0)
+        	sb.deleteCharAt(sb.length() - 1);
         
         return "MetricsTuple{" + "operatorId=" + operatorId 
                     + ", metrics=(" + sb.toString() + ")}";

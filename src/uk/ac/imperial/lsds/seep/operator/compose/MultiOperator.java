@@ -16,6 +16,8 @@ import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seep.operator.DistributedApi;
+import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
 public class MultiOperator implements OperatorCode, ComposedOperator, CommunicationPrimitives{
@@ -27,6 +29,8 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 	private Set<SubOperator> subOperators;
 	private SubOperator mostUpstream;
 	
+	DistributedApi api = new DistributedApi();
+
 	private MultiOperator(Set<SubOperator> subOperators, int multiOpId){
 		this.id = multiOpId;
 		if(checkConstraints(subOperators)){
@@ -152,4 +156,8 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
     public void send_toIndices(DataTuple[] dts, int[] indices) {
         
     }
+    
+    public void setCallbackOp(Operator op){
+		this.api.setCallbackObject(op);
+	}
 }

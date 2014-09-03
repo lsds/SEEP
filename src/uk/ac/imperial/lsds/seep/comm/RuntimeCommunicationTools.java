@@ -48,29 +48,53 @@ public class RuntimeCommunicationTools {
 	
 	
 	public void sendControlMsg(OperatorStaticInformation loc, ControlTuple ct, int socketId){
-		Socket connection = uniqueSocket.get(socketId);
-		try{
-			if(connection == null){
-				connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
-				LOG.debug("-> BCU. New socket in sendControlMsg");
-				uniqueSocket.put(socketId, connection);
+		SendControlMsgThread sendControlMsgThread = new SendControlMsgThread(loc,ct,socketId);
+		Thread thread1 = new Thread(sendControlMsgThread);	
+		thread1.start();
+	}
+	
+	class SendControlMsgThread implements Runnable {
+		OperatorStaticInformation loc;
+		ControlTuple ct;
+		int socketId;
+		
+		public SendControlMsgThread(OperatorStaticInformation loc, ControlTuple ct, int socketId){
+			this.loc = loc;
+			this.ct = ct;
+			this.socketId = socketId;
+		}
+		
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			Socket connection = uniqueSocket.get(socketId);
+			try{
+				if(connection == null){
+					connection = new Socket(loc.getMyNode().getIp(), loc.getInC());
+					LOG.debug("-> BCU. New socket in sendControlMsg");
+					uniqueSocket.put(socketId, connection);
+				}
+				Output output = new Output(connection.getOutputStream());
+				Input input = new Input(connection.getInputStream());
+				System.out.println("sendTo: "+connection.toString());
+				k.writeObject(output, ct);
+				/**Critical line in KRYO**/
+				output.flush();	
+				//wait for application level ack
+				//ControlTuple ack = k.readObject(input, ControlTuple.class);
+				//waiting for ack
+				//LOG.debug("-> controlMsg ACK");
+				output.close();
+				input.close();
 			}
-			Output output = new Output(connection.getOutputStream());
-			Input input = new Input(connection.getInputStream());
-			System.out.println("sendTo: "+connection.toString());
-			k.writeObject(output, ct);
-			/**Critical line in KRYO**/
-			output.flush();	
-			//wait for application level ack
-			ControlTuple ack = k.readObject(input, ControlTuple.class);
-			//waiting for ack
-			LOG.debug("-> controlMsg ACK");
+			catch(IOException io){
+				LOG.error("-> Infrastructure. While sending Msg "+io.getMessage());
+				io.printStackTrace();
+				LOG.error("CONN: "+connection.toString());
+			}
+			
 		}
-		catch(IOException io){
-			LOG.error("-> Infrastructure. While sending Msg "+io.getMessage());
-			io.printStackTrace();
-			LOG.error("CONN: "+connection.toString());
-		}
+		
 	}
 	
 	public void sendControlMsgWithoutACK(OperatorStaticInformation loc, ControlTuple ct, int socketId){

@@ -19,16 +19,20 @@ import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.os.AsyncTask;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
@@ -74,10 +78,51 @@ public class NodeManager{
 		this.bindAddr = bindAddr;
 
 		this.ownPort = ownPort;
-		nodeDescr = new WorkerNodeDescription("127.0.0.1", ownPort);
-
+		AsyncAction asyncAction = new AsyncAction();
+		String localAddr;
+		try {
+			localAddr = asyncAction.execute().get();
+			nodeDescr = new WorkerNodeDescription(localAddr, ownPort);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
+	}
+
+
+	class AsyncAction extends AsyncTask<String, Void, String> {
+		protected String doInBackground(String... args) { 
+			try {
+				//InetAddress localAddr = InetAddress.getLocalHost();
+				StringBuilder IFCONFIG=new StringBuilder();
+				for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+					NetworkInterface intf = en.nextElement();
+					for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+						InetAddress inetAddress = enumIpAddr.nextElement();
+						if (!inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() && inetAddress.isSiteLocalAddress()) {
+							IFCONFIG.append(inetAddress.getHostAddress().toString()+"\n");
+						}
+					}
+				}
+
+				String[] ips = IFCONFIG.toString().split("\n");
+				String ip = "";				
+//				if (ips.length > 1){
+//					ip = ips[1];
+//				} else
+					ip = ips[0];
+				return ip.toString();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			}
+		}
 	}
 
 	/// \todo{the client-server model implemented here is crap, must be refactored}
@@ -133,16 +178,18 @@ public class NodeManager{
 							LOG.info("-> OPERATOR resolved, OP-ID: {}", ((Operator)o).getOperatorId());
 							// Initialize monitor slave, start thread, we do it at
 							// this stage because we need to know the node is running an operator
-				//			int operatorId = ((Operator)o).getOperatorId();
+							int operatorId = ((Operator)o).getOperatorId();
 
-				//			MonitorSlaveFactory factory = new MonitorSlaveFactory(operatorId);
-				//			monitorSlave = factory.create();
+							if (GLOBALS.valueFor("enableMonitor").equals("true")){
+								MonitorSlaveFactory factory = new MonitorSlaveFactory(operatorId);
+								monitorSlave = factory.create();
 
-				//			monitorT = new Thread(monitorSlave);
-				//			monitorT.start();
+								monitorT = new Thread(monitorSlave);
+								monitorT.start();
 
-				//			LOG.info("-> Node Monitor running for operatorId={}", operatorId);
-
+								LOG.info("-> Node Monitor running for operatorId={}", operatorId);
+							}
+							
 							core.pushOperator((Operator)o);
 
 							out.println("ack");
@@ -236,7 +283,8 @@ public class NodeManager{
 							}
 							if(tokens[0].equals("START")){
 								LOG.info("-> START Command");
-								core.startDataProcessingAsync();
+								//	core.startDataProcessingAsync();
+								core.startDataProcessing();
 
 								//We call the processData method on the source
 								/// \todo {Is START used? is necessary to answer with ack? why is this not using startOperator?}
@@ -263,6 +311,7 @@ public class NodeManager{
 					}
 
 					serverSocket.close();
+					LOG.info("ServerSocket closed.");
 					System.exit(0);
 				}
 				//For now send nack, probably this is not the best option...

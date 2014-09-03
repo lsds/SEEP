@@ -89,6 +89,7 @@ public class OutputQueue {
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
 		//Output for this socket
+		LOG.debug("channelRecord has operatorID {}",channelRecord.getOperatorId());
 		try{
 			//To send tuple
 			if(replay.compareAndSet(true, false)){

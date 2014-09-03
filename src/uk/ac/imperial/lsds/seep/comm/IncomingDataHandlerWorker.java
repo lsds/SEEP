@@ -55,6 +55,10 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.k = initializeKryo();
 	}
 	
+	public void setGoOn(boolean goOn){
+		this.goOn = goOn;
+	}
+	
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
@@ -69,29 +73,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 	}
 	
 	public void run() {
-		
-		/** Experimental asyn **/
-//		try{
-//			//Get inputQueue from owner
-//			DataStructureAdapter dsa = owner.getDSA();
-//			//Get inputStream of incoming connection
-//			InputStream is = upstreamSocket.getInputStream();
-//			BufferedInputStream bis = new BufferedInputStream(is, 8192);
-//			Input i = new Input(bis);
-//
-//			while(goOn){
-//				TuplePayload tp = k.readObject(i, TuplePayload.class);
-//				DataTuple reg = new DataTuple(idxMapper, tp);
-//				dsa.push(reg);
-//			}
-//		}
-//		catch(IOException io){
-//			NodeManager.nLogger.severe("-> IncDataHandlerWorker. IO Error "+io.getMessage());
-//			io.printStackTrace();
-//		}
-		
-
-		
+	
 		/** experimental sync **/
 		try{
 			// Get incomingOp id

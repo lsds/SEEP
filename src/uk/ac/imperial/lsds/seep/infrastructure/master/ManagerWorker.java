@@ -17,9 +17,11 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -238,11 +240,11 @@ System.out.println("broadcast state and runtime init");
 		inf.deployConnection("add_upstream", dst, src, "NuLL");
 	}
 	
-	private void placeCommand(String[] token) throws NumberFormatException, UnknownHostException {
+	private void placeCommand(String[] token,int BaseInC, int BaseInD) throws NumberFormatException, UnknownHostException {
 		Operator op = (Operator) inf.elements.get(Integer.parseInt(token[1]));
 		Node n = new Node(InetAddress.getByName(token[2]),Integer.parseInt(token[3]));
 		System.out.println(op);
-		inf.placeNew(op,n);
+		inf.placeNew(op,n, BaseInC, BaseInD);
 		System.out.println(op);
 		inf.updateContextLocations(op);
 		System.out.println(op);
@@ -253,6 +255,8 @@ System.out.println("broadcast state and runtime init");
 		try {
 		//TODO change this
 		managerS = new ServerSocket(port);
+		StringBuilder IFCONFIG=new StringBuilder();
+		
 		LOG.info(" Listening on {}:{}", InetAddress.getLocalHost(), port);
 		BufferedReader bis = null;
 		goOn = true;
@@ -284,7 +288,7 @@ System.out.println("broadcast state and runtime init");
 						addOperatorCommand(token[1], token[2], token[3]);
 					}
 					else if(token[0].equals("place")) {
-						placeCommand(token);
+						placeCommand(token, Integer.parseInt(token[2]), Integer.parseInt(token[3]));
 					}
 					else if(token[0].equals("deploy_operator")) {
 						Operator op = (Operator) inf.elements.get(Integer.parseInt(token[1]));

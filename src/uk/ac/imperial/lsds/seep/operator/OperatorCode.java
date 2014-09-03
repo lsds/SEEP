@@ -17,10 +17,10 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public interface OperatorCode extends Serializable{
 
-	public DistributedApi api = DistributedApi.getInstance();
 	
 	public void setUp();
 	public void processData(DataTuple data);
 	public void processData(List<DataTuple> dataList);
+	public void setCallbackOp(Operator op);
 	
 }

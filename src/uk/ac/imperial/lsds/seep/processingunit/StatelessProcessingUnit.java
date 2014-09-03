@@ -54,6 +54,8 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
 	private OutputQueue outputQueue = null;
+	
+	ACKWorker ackWorker ;
         
         private ExecutorService poolOfThreads = Executors.newFixedThreadPool( 3 );//Runtime.getRuntime().availableProcessors()-1 );
 	
@@ -188,13 +190,15 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		else{
 			LOG.warn("-> The operator in this node is being overwritten");
 		}
-		o.setProcessingUnit(this);
+		runningOp.setProcessingUnit(this);
         
 		// To identify the monitor with the op id instead of the node id
-	//	NodeManager.monitorSlave.setOperatorId(o.getOperatorId());
-		LOG.debug("Operator: {}", o);
+	//	NodeManager.monitorSlave.setOperatorId(runningOp.getOperatorId());
+		LOG.debug("Operator: {}", runningOp);
         
-		LOG.info("-> Instantiating Operator...DONE");
+		LOG.info("-> Instantiating Operator...DONE. set opID {} with processingUnit {}:{}", 
+				runningOp.getOperatorId(), owner.getNodeDescr().getIp(),
+				owner.getNodeDescr().getOwnPort());
 	}
 
 	@Override
@@ -271,7 +275,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                     
                     // Seep monitoring: notify start of data tuple processing
                     int operatorId = runningOp.getOperatorId();
-
                     Timer.Context context = notifyThat(operatorId).operatorStart();
 
                     operatorObj.processData(dt);
@@ -411,6 +414,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		/// \todo{Find a better way to start the operator...}
 		DataTuple fake = DataTuple.getNoopDataTuple();
 		fake = null;
+		LOG.info("Starting with operator:{}",this.runningOp.getOperatorId());
 		this.runningOp.processData(fake);
 	}
 
@@ -442,7 +446,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public void createAndRunAckWorker() {
-		ACKWorker ackWorker = new ACKWorker(this); 
+		ackWorker = new ACKWorker(this); 
 		Thread ackT = new Thread(ackWorker);
 		ackT.start();
 	}
@@ -468,6 +472,13 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public int getOpIdFromUpstreamIp(InetAddress ip) {
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
+	}
+
+	@Override
+	public void stopAckWorker() {
+		// TODO Auto-generated method stub
+		if(ackWorker!=null)
+			ackWorker.stopACKWorker();
 	}
 
 }

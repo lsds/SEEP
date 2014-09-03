@@ -102,7 +102,8 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	
 	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
-		this.operatorCode.api.setCallbackObject(this);
+		this.operatorCode.setCallbackOp(this);
+		
 	}
 
 	/** Methods used by the developers to send data **/
