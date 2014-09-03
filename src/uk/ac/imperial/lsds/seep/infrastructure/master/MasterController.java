@@ -57,20 +57,20 @@ public class MasterController {
 	
 	public void init(){
 		LOG.debug("-> Initializing Master Controller...");
-		inf = new Infrastructure(Integer.parseInt(GLOBALS.valueFor("mainPort")));
+		inf = new Infrastructure(3500);
 		eiu = new ElasticInfrastructureUtils(inf);
 		inf.setEiu(eiu);
 		inf.startInfrastructure();
 		LOG.debug("-> Initializing Master Controller...DONE");
 	}
 	
-	public void submitQuery(QueryPlan qp){
+	public void submitQuery(QueryPlan qp, int BaseInC, int BaseInD){
 		LOG.info("-> Submitting query to the system...");
-		inf.loadQuery(qp);
+		inf.loadQuery(qp, BaseInC, BaseInD);
 		LOG.info("-> Submitting query to the system...DONE");
 	}
 	
-	public void start() throws OperatorDeploymentException{
+	public void start(int BaseInC, int BaseInD) throws OperatorDeploymentException{
 		LOG.info("-> Console, waiting for commands: ");
 		try {
 			boolean alive = false; //schfan: was true;
@@ -89,7 +89,7 @@ public class MasterController {
 							//Submit Query to the system
 							break;
 						case 1:
-							deployQueryToNodes();
+							deployQueryToNodes( BaseInC,  BaseInD);
 							break;
 						//start system
 						case 2:
@@ -147,24 +147,16 @@ public class MasterController {
 		}
 	}
 	
+	public void stopOperators(){
+		inf.stopAllOperators();
+	}
+	
 	public QueryPlan executeComposeFromQuery(String definitionClass){
 		Class<?> baseI = null;
 		Object baseInstance = null;
 		Method compose = null;
 		QueryPlan qp = null;
-//		inf.setPathToQueryDefinition(pathToJar);
-//		String urlPathToQueryDefinition = "file://" + pathToJar;
-//        LOG.debug("-> Set path to query definition: {}", urlPathToQueryDefinition);
-//        URL[] urls = new URL[1];
-//        try {
-//                urls[0] = new URL(urlPathToQueryDefinition);
-//        }
-//        catch (MalformedURLException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//        }
-        // First time it is created we pass the urls
-		
+
 		ucl = MasterController.class.getClassLoader();
 //		eiu.setClassLoader(ucl);
 		try {
@@ -198,38 +190,45 @@ public class MasterController {
 		return qp;
 	}
 	
-	public void deployQueryToNodes(){
+	
+	
+	public void deployQueryToNodes(int BaseInC, int BaseInD){
 		LOG.info("-> Configuring and deploying query...");
 		//First configure statically (local) the connections between operators
-		inf.localMapPhysicalOperatorsToNodes();
+		inf.localMapPhysicalOperatorsToNodes( BaseInC,  BaseInD);
 		inf.createInitialStarTopology();
-		// Create initial starTopology
-		//Finally deploy the new submitted query (instantiation, etc)
-		try {
-			// The code is previously sent to the nodes (when these attached to the master)
-			//Send code to nodes (query code)
-		/*	
-			try {
-				inf.deployCodeToAllOperators();
-			} catch (CodeDeploymentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		 */
-			inf.deployQuery();
-		}
+		inf.deployQuery0();	
+		LOG.info("-> Configuring and deploying query...DONE");
+	}
 	
+	public void deployQueryToNodes1(){
+		try {
+			inf.deployQuery1();
+		}
 		catch (OperatorDeploymentException e) {
 			// TODO Auto-generated catch block
 			Log.error("-> Deploy Query failed!!");
 			e.printStackTrace();
 		}
-		LOG.info("-> Configuring and deploying query...DONE");
 	}
 	
-	public void deployQueryToNodesStep2(){
-		inf.deployQueryStep2();
-
+	public void deployQueryToNodes2(){
+		try {
+			inf.deployQuery2();
+		}
+		catch (OperatorDeploymentException e) {
+			// TODO Auto-generated catch block
+			Log.error("-> Deploy Query failed!!");
+			e.printStackTrace();
+		}
+	}
+	
+	public void deployQueryToNodes3(){
+		inf.deployQuery3();
+	}
+	
+	public void plotRoutingMap(){
+		inf.plotRoutingMapFull();
 	}
 	
 	private String getUserInput(String msg) throws IOException{

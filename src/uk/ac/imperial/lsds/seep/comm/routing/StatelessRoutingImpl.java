@@ -14,8 +14,12 @@ package uk.ac.imperial.lsds.seep.comm.routing;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.evaluate.PolicyRulesEvaluator;
 
 public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 
@@ -56,60 +60,51 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 			remainingWindow = splitWindow;
 			// update target and reinitialize filterValue
 			target = downstreamIndex++%numberOfDownstreams;
-			
-//System.out.println("NUM DOWNSTR: "+numberOfDownstreams);
-//System.out.println("Down INDEX: "+downstreamIndex);
-//System.out.println("Target: "+target);
-//			System.out.println("Real routing info is: ");
-//			for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
-//				System.out.println("VirtualIdx: "+entry.getKey()+" RealIdx: "+entry.getValue());
-//			}
-//			System.out.println("And we are asking for: "+target);
 			targetRealIndex = virtualIndexToRealIndex.get(target);
-	//System.out.println("NW routeStrem add realIndex: "+targetRealIndex );
 			//If the index was not present in the targets list, add it.
 			if(!targets.contains(targetRealIndex)){
 				targets.add(targetRealIndex);
 			}
-	//System.out.println("NoWindow: targets-size: "+targets.size());
 			return targets;
 		}
 		remainingWindow--;
-		/// \todo Return the real Index, got from the virtual one. Optimize this
-//		for(Entry<Integer, Integer> entry : virtualIndexToRealIndex.entrySet()){
-//			System.out.println("vidx: "+entry.getKey()+" ridx: "+entry.getValue());
-//		}
+
 		targetRealIndex = virtualIndexToRealIndex.get(target);
-//System.out.println("W routeStrem add realIndex: "+virtualIndexToRealIndex.get(target));
 		if(!targets.contains(targetRealIndex)){
 			targets.add(targetRealIndex);
 		}
-//System.out.println("Window: targets-size: "+targets.size());
 		return targets;
 	}
+    
+    public void chooseTarget(){
+    	if (numberOfDownstreams > 1){
+    			Random rand = new Random();
+    			int randomNum = rand.nextInt(numberOfDownstreams);
+    			this.downstreamIndex = randomNum;
+    	}
+    }
 	
 	//overriden to make ANY faster...
     @Override
-	public synchronized ArrayList<Integer> route(int value){
-//System.out.println("Rem window: "+remainingWindow);
-//System.out.println("splitWindow: "+splitWindow);
+	public synchronized ArrayList<Integer> route(){
+
 		ArrayList<Integer> targets = new ArrayList<Integer>();
-		if(remainingWindow == 0){
-			//Reinitialize the window size
-			remainingWindow = splitWindow;
-			// update target and reinitialize filterValue
-			target = downstreamIndex++%numberOfDownstreams;
-			// get the real index from the virtual one.
-			//target = virtualIndexToRealIndex.get(target);
-//System.out.println("target: "+target);
-//System.out.println("numberOfDownstreams: "+numberOfDownstreams);
-			targets.add(target);
-			return targets;
-		}
-		remainingWindow--;
-		/// \todo Return the real Index, got from the virtual one. Optimize this
-		//target = virtualIndexToRealIndex.get(target);
-//System.out.println("Target: "+target);
+		
+//		if(remainingWindow == 0){
+//			//Reinitialize the window size
+//			remainingWindow = splitWindow;
+//			// update target and reinitialize filterValue
+//			if(numberOfDownstreams!=0){
+//				target = downstreamIndex++%numberOfDownstreams;					
+//			}
+//			// get the real index from the virtual one.
+//			//target = virtualIndexToRealIndex.get(target);
+//			targets.add(target);
+//			return targets;
+//		}
+//		remainingWindow--;
+		chooseTarget();
+		target = downstreamIndex;	
 		targets.add(target);
 		return targets;
 	}

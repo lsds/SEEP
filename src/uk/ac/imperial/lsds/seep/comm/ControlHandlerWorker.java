@@ -65,6 +65,10 @@ public class ControlHandlerWorker implements Runnable{
 		this.k = initializeKryo();
 	}
 	
+	public void setGoOn(boolean goOn){
+		this.goOn = goOn;
+	}
+	
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		k = new Kryo();
@@ -115,8 +119,8 @@ public class ControlHandlerWorker implements Runnable{
 				}
 			}
 			//Close streams and socket
-			LOG.error("-> Input reaches eof");
-			LOG.error("-> Closing connection");
+			//LOG.error("-> Input reaches eof");
+			//LOG.error("-> Closing connection");
 			is.close();
 			i.close();
 			os.close();

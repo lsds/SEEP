@@ -926,4 +926,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public int getOpIdFromUpstreamIp(InetAddress ip) {
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
 	}
+
+	@Override
+	public void stopAckWorker() {
+		// TODO Auto-generated method stub
+		
+	}
 }

@@ -12,6 +12,7 @@ package uk.ac.imperial.lsds.seep.comm;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -66,20 +67,29 @@ public class ControlHandler implements Runnable{
 	}
 	
 	public void run(){
-		ServerSocket controlServerSocket = null;
+		ServerSocket controlServerSocket = null; 
+		ControlHandlerWorker controlHandlerWorker = null;
+		Thread newConn = null;
 		try{
 			//Establish listening port
-    		controlServerSocket = new ServerSocket(connPort);
+			controlServerSocket = new ServerSocket();
 			controlServerSocket.setReuseAddress(true);
-			LOG.info("-> ControlHandler listening on port: {}", connPort);
+			controlServerSocket.bind(new InetSocketAddress(owner.getNodeDescr().getIp(),connPort));
+			LOG.info(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort()+"-> ControlHandler listening on port: {}", connPort);
 			//while goOn is active
 			while(goOn){
 				//Place new connections in a new thread. We have a thread per upstream connection
 				Socket incomingConn = controlServerSocket.accept();
 				String threadName = incomingConn.getInetAddress().toString();
-				Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T");
+				LOG.info(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort()+
+						"-> ControlHandler starting a new ControlHandlerWorker ");
+				controlHandlerWorker = new ControlHandlerWorker(incomingConn, owner);
+				newConn = new Thread(controlHandlerWorker, "chw-"+threadName+"-T");
 				newConn.start();
 			}
+			LOG.info("xxxxxxxxx controlserversocket closed xxxxxxxxxx");
+			controlHandlerWorker.setGoOn(false);
+			newConn.interrupt();
 			controlServerSocket.close();
 		}
 		catch(BindException be){

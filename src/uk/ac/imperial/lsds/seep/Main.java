@@ -16,6 +16,8 @@ import java.net.UnknownHostException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.example.android_seep_worker.MainActivity;
+
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
@@ -31,69 +33,46 @@ public class Main {
 	
 	public static MasterController mc;
 	
-	public static void main(String args[]) throws ClassNotFoundException{
-		
-		Main instance = new Main();
-		
-		if(args.length == 0){
-			System.out.println("ARGS:");
-			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass>");
-			System.out.println("Worker <localPort>");
-			System.exit(0);
-		}
-
-		if(args[0].equals("Master")){
-			instance.executeMaster(args);
-		}
-		else if(args[0].equals("Worker")){
-			//secondary receives port and ip of master node
-			instance.executeSec(args);
-		}
-		else{
-			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
-			System.exit(0);
-		}
-	}
-	
-	public void executeMaster(String[] args) throws ClassNotFoundException{
+	public void executeMaster(){
 		//Get instance of MasterController and initialize it
 		mc = MasterController.getInstance();
 		mc.init();
-		
-		
-		//If the user provided a query when launching the master node...
-		if(args[1] != null){
-			if(!(args.length > 1)){
-				System.out.println("Error. Main Master <path_to_query.jar> <Base_class_name>");
-				System.exit(0);
-			}
-			//Then we execute the compose method and get the QueryPlan back
-			//Once we have the QueryPlan from the user submitted query, we submit the query plan to the MasterController
-		}
-		//In any case we start the MasterController to get access to the interface
-		//try {
-		//	mc.start();
-		//}
-		//catch (OperatorDeploymentException e) {
-		//	e.printStackTrace();
-		//}
 	}
 	
-	public void deploy(String classname){
+	public void deploy(String classname,int BaseInC, int BaseInD){
 		QueryPlan qp = null;
 		qp = mc.executeComposeFromQuery(classname);
-		mc.submitQuery(qp);
-		mc.deployQueryToNodes();
+		mc.submitQuery(qp, BaseInC,  BaseInD);
 
+	}
+	
+	public void deploy0(int BaseInC, int BaseInD){
+		mc.deployQueryToNodes( BaseInC,  BaseInD);
+	}
+	
+	public void deploy1(){
+		mc.deployQueryToNodes1();
 	}
 	
 	public void deploy2(){
-		mc.deployQueryToNodesStep2();
+		mc.deployQueryToNodes2();
 
+	}
+	
+	public void deploy3(){
+		mc.deployQueryToNodes3();
+	}
+	
+	public void plotRouting(){
+		mc.plotRoutingMap();
 	}
 	
 	public void start(){
 		mc.startSystem();
+	}
+	
+	public void stop(){
+		mc.stopOperators();
 	}
 	
 	public void executeSec(String args[]){
@@ -107,10 +86,6 @@ public class Main {
 			e.printStackTrace();
 		}
 		int ownPort = 0;
-		if(args.length > 2){
-			System.out.println("Error. Main Worker <listen_port(optional)>");
-			System.exit(0);
-		}
 		if(args.length > 1){
 			ownPort = new Integer(args[1]);
 		}

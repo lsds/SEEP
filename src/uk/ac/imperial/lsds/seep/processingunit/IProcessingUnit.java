@@ -95,6 +95,8 @@ public interface IProcessingUnit {
 	public boolean isMultiCoreEnabled();
 
 	public void createAndRunAckWorker();
+	
+	public void stopAckWorker();
 
 	public TimestampTracker getLastACK();
 

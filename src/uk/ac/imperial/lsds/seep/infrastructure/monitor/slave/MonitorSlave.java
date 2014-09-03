@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.Stoppable;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.BinaryMetricsSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricName;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsReader;
 
 /**
@@ -71,6 +72,8 @@ public class MonitorSlave implements Runnable, Stoppable {
             // and initialise it accordingly.
             MonitorSlaveProcessor processor 
                     = createSlaveProcessor(slaveSocket.getOutputStream());
+            
+            processor.addReader(new DefaultMetricsReader());
             
 			// Execute in a tight loop, requesting the processor to read from whatever
             // readers it is set to use and report with any configured reporters.

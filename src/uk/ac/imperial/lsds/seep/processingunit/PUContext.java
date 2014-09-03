@@ -44,30 +44,30 @@ import com.esotericsoftware.kryo.io.Output;
 public class PUContext {
 
 	final private Logger LOG = LoggerFactory.getLogger(PUContext.class);
-	
-//	private WorkerNodeDescription nodeDescr = null;
-	
+
+	//	private WorkerNodeDescription nodeDescr = null;
+
 	private final int CONTROL_SOCKET;
-	
+
 	private ArrayList<EndPoint> remoteUpstream = new ArrayList<EndPoint>();
 	private ArrayList<EndPoint> remoteDownstream = new ArrayList<EndPoint>();
 	//These structures are Vector because they are potentially accessed from more than one point at a time
 	/// \todo {refactor this to a synchronized map??}
 	private Vector<EndPoint> downstreamTypeConnection = null;
 	private Vector<EndPoint> upstreamTypeConnection = null;
-	
+
 	//The structure just stores the ip adresses of those nodes in the topology ready to receive state chunks
 	private ArrayList<EndPoint> starTopology = null;
-	
+
 	// Selector for asynchrony in downstream connections
 	private Selector selector;
-	
+
 	//map in charge of storing the buffers that this operator is using
 	private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
-	
+
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
 		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket")); 
-//		this.nodeDescr = nodeDescr;
+		//		this.nodeDescr = nodeDescr;
 		this.starTopology = starTopology;
 		try {
 			this.selector = SelectorProvider.provider().openSelector();
@@ -77,7 +77,7 @@ public class PUContext {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public boolean isScalingOpDirectDownstream(int opId){
 		for(EndPoint ep : downstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
@@ -86,11 +86,11 @@ public class PUContext {
 		}
 		return false;
 	}
-	
+
 	public int getStarTopologySize(){
 		return starTopology.size();
 	}
-	
+
 	public void filterStarTopology(int opId){
 		for(int i = 0; i < starTopology.size(); i++){
 			EndPoint ep = starTopology.get(i);
@@ -99,7 +99,7 @@ public class PUContext {
 			}
 		}
 	}
-	
+
 	public void updateStarTopology(ArrayList<EndPoint> starTopology){
 		this.starTopology = starTopology;
 	}
@@ -112,11 +112,11 @@ public class PUContext {
 		}
 		return null;
 	}
-	
+
 	public ArrayList<EndPoint> getStarTopology(){
 		return starTopology;
 	}
-	
+
 	public ArrayList<OutputBuffer> getOutputBuffers(){
 		ArrayList<OutputBuffer> outputBuffers = new ArrayList<OutputBuffer>();
 		for(EndPoint ep : this.getDownstreamTypeConnection()){
@@ -126,19 +126,19 @@ public class PUContext {
 		}
 		return outputBuffers;
 	}
-	
+
 	public Vector<EndPoint> getDownstreamTypeConnection() {
 		return downstreamTypeConnection;
 	}
-	
+
 	public Vector<EndPoint> getUpstreamTypeConnection() {
 		return upstreamTypeConnection;
 	}
-	
+
 	public Selector getConfiguredSelector(){
 		return selector;
 	}
-	
+
 	private void configureDownstreamAndUpstreamConnections(Operator op){
 		//Gather nature of downstream operators, i.e. local or remote
 		for(PlacedOperator down: op.getOpContext().downstreams){
@@ -150,14 +150,14 @@ public class PUContext {
 			configureNewUpstreamCommunication(up.opID(), up.location());
 		}
 	}
-	
+
 	public void configureOperatorConnections(Operator op) {
-		
+
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
 		configureDownstreamAndUpstreamConnections(op);	
 	}
-	
+
 	/**
 	 * This function creates a (always) synchronous communication channel with the specified upstream operator
 	 * @param opID
@@ -177,70 +177,87 @@ public class PUContext {
 		//If remote, create communication with other point			
 		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
 			createRemoteSynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD(), loc.getInC(), "down");
-			LOG.debug("-> New remote downstream (SYNC) conn to OP: ", opID);
+			LOG.info("-> New remote downstream (SYNC) conn to OP: {}", opID);
 		}
 		else{
 			createRemoteAsynchronousCommunication(opID, loc.getMyNode().getIp(), loc.getInD());
 			LOG.debug("-> New remote downstream (ASYNC) conn to OP: ", opID);
 		}
 	}
-	
+
 	private void createRemoteAsynchronousCommunication(int opId, InetAddress ip, int port){
-		LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), port);
-		try {
-			// Create a non-blocking socket channel
-			SocketChannel socketChannel = SocketChannel.open();
-			socketChannel.configureBlocking(false);
-			// establish connection
-			socketChannel.connect(new InetSocketAddress(ip, port));
-			// We create an output where to write serialized data (kryo stuff), and we associate a native byte buffer in a bytebufferoutputstream
-			
-			ByteBuffer nativeBuffer = ByteBuffer.allocateDirect(20000);
-			ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
-			
-			Output o = new Output(bbos);
-			// finally we register this socket to the selector for the async behaviour, and we link nativeBuffer, for the selector to access it directly
-//			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, nativeBuffer);
-			
-			//Finally create the metadata structure associated to this connection
-			Buffer buf = new Buffer();
-			AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf, o, nativeBuffer);
-			acc.setSelector(selector);
-			
-			SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, acc);
-			// To make sure conn is established...
+		LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), port);	
+		DoAfterConnection doAfterConnection = new DoAfterConnection(opId, ip, port);
+		doAfterConnection.run();
+	}
+
+	private class DoAfterConnection implements Runnable {
+		int opId = 0;
+		InetAddress ip = null;
+		int port = 0;
+		
+		public DoAfterConnection(int opId, InetAddress ip, int port){
+			this.opId = opId;
+			this.ip = ip;
+			this.port = port;
+		}
+
+		@Override
+		public void run() {
 			try {
-				Thread.sleep(10);
+				// Create a non-blocking socket channel
+				SocketChannel socketChannel = SocketChannel.open();
+				socketChannel.configureBlocking(false);
+				// establish connection
+				socketChannel.connect(new InetSocketAddress(ip, port));
+				// We create an output where to write serialized data (kryo stuff), and we associate a native byte buffer in a bytebufferoutputstream
+
+				ByteBuffer nativeBuffer = ByteBuffer.allocateDirect(20000);
+				ByteBufferOutputStream bbos = new ByteBufferOutputStream(nativeBuffer);
+
+				Output o = new Output(bbos);
+				// finally we register this socket to the selector for the async behaviour, and we link nativeBuffer, for the selector to access it directly
+				//				SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, nativeBuffer);
+
+				//Finally create the metadata structure associated to this connection
+				Buffer buf = new Buffer();
+				AsynchronousCommunicationChannel acc = new AsynchronousCommunicationChannel(opId, buf, o, nativeBuffer);
+				acc.setSelector(selector);
+
+				SelectionKey key = socketChannel.register(selector, SelectionKey.OP_WRITE, acc);
+				// To make sure conn is established...
+
+				try {
+					Thread.sleep(100);
+				}
+				catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				boolean connSuccess = socketChannel.finishConnect();
+				if(!connSuccess){
+					///\fixme{fix this}
+					LOG.error("Failed connection to: "+key.toString());
+					System.exit(0);
+				}
+
+				downstreamTypeConnection.add(acc);
+				remoteDownstream.add(acc);
+				// Set the buffer
+				downstreamBuffers.put((port-40000), buf);			
 			}
-			catch (InterruptedException e) {
+
+			catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			boolean connSuccess = socketChannel.finishConnect();
-			if(!connSuccess){
-				///\fixme{fix this}
-				LOG.error("Failed connection to: "+key.toString());
-				System.exit(0);
-			}
-			
-			downstreamTypeConnection.add(acc);
-			remoteDownstream.add(acc);
-			// Set the buffer
-			downstreamBuffers.put((port-40000), buf);
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
-	
-	
+
 	private void createRemoteSynchronousCommunication(int opID, InetAddress ip, int portD, int portC, String type){
 		Socket socketD = null;
 		Socket socketC = null;
-		Socket socketBlind = null;
-		int blindPort = new Integer(GLOBALS.valueFor("blindSocket"));
-		
+
 		try{
 			if(type.equals("down")){
 				LOG.info("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
@@ -248,20 +265,20 @@ public class PUContext {
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
 				}
-				
+
 				Buffer buffer = new Buffer();
-				
-				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
+
+				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, buffer);
 				downstreamTypeConnection.add(con);
 				remoteDownstream.add(con);
-/// \todo{here a 40000 is used, change this line to make it properly}
+				/// \todo{here a 40000 is used, change this line to make it properly}
 				downstreamBuffers.put((portD-40000), buffer);
 			}
 			else if(type.equals("up")){
 				LOG.info("-> Trying remote upstream conn to: {}/{}", ip.toString(), portC);
 				socketC = new Socket(ip, portC);
-				socketBlind = new Socket(ip, blindPort);
-				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
+				//				socketBlind = new Socket(ip, blindPort);
+				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC,null);
 				upstreamTypeConnection.add(con);
 				remoteUpstream.add(con);
 			}
@@ -281,8 +298,8 @@ public class PUContext {
 			io.printStackTrace();
 		}
 	}
-	
-	
+
+
 	public SynchronousCommunicationChannel getCCIfromOpId(int opId, String type){
 		if(type.equals("d")){
 			for(EndPoint ep : downstreamTypeConnection){
@@ -304,20 +321,19 @@ public class PUContext {
 	public Buffer getBuffer(int opId) {
 		return downstreamBuffers.get(opId);
 	}
-	
+
 	/** Dynamic Reconfiguration **/
-	
+
 	public void updateConnection(int opRecId, Operator opToReconfigure, InetAddress newIp){
 		int opId = opRecId;
 		int dataPort = 0;
 		int controlPort = 0;
-		int blindPort = new Integer(GLOBALS.valueFor("blindSocket"));
-		
+
 		if(opToReconfigure.getOpContext().downstreams.size() > 0){
 			dataPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInD();
 			controlPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInC();
 		}
-	
+
 		for(EndPoint ep : downstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
 				try{
@@ -326,7 +342,7 @@ public class PUContext {
 					Socket blindS = null;
 					Buffer buf = downstreamBuffers.get(opId);
 					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
-					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, blindS, buf);
+					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, buf);
 					downstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){
@@ -339,9 +355,8 @@ public class PUContext {
 				int upControlPort = CONTROL_SOCKET + ep.getOperatorId();
 				try{
 					Socket controlS = new Socket(newIp, upControlPort);
-					Socket blindS = new Socket(newIp, blindPort);
 					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
-					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, blindS, null);
+					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, null);
 					upstreamTypeConnection.set(index, cci);
 				}
 				catch(IOException io){

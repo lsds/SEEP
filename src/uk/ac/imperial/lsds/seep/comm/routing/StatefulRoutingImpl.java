@@ -220,4 +220,10 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
     public int[] collapseStaticReplica(int opIndex) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+	@Override
+	public ArrayList<Integer> route() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

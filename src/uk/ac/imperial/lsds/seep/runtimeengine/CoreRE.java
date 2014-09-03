@@ -83,8 +83,6 @@ public class CoreRE {
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
-	private BackupHandler bh = null;
-	private Thread backupH = null;
 	
 	static ControlTuple genericAck;
 	private int totalNumberOfChunks = -1;
@@ -146,9 +144,10 @@ public class CoreRE {
 	public void setOpReady(int opId) {
 		processingUnit.setOpReady(opId);
 		if(processingUnit.isOperatorReady()){
-			LOG.info("-> All operators in this unit are ready. Initializing communications...");
+			//LOG.info("-> All operators in this unit are ready. Initializing communications...");
 			// Once the operators are in the node, we extract and declare how they will handle data tuples
 			Map<String, Integer> idxMapper = processingUnit.createTupleAttributeMapper();
+			LOG.info("-> createdTupleAtrributeMapper");
 			processingUnit.initOperator();
 			initializeCommunications(idxMapper);
 		}
@@ -170,12 +169,12 @@ public class CoreRE {
 		// Start communications and worker threads
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInD();
-		int inBT = new Integer(GLOBALS.valueFor("blindSocket"));
 		//Control worker
 		ch = new ControlHandler(this, inC);
 		controlH = new Thread(ch, "controlHandlerT");
 		//Data worker
 		idh = new IncomingDataHandler(this, inD, tupleIdxMapper, dsa);
+		LOG.info("-> new DataHandler with map {}", tupleIdxMapper.toString());
 		iDataH = new Thread(idh, "dataHandlerT");
 		//Consumer worker
 		dataConsumer = new DataConsumer(this, dsa);
@@ -183,11 +182,7 @@ public class CoreRE {
 
 		controlH.start();
 		iDataH.start();
-		LOG.info("Setting backuphandler...");
-		// Backup worker
-		bh = new BackupHandler(this, inBT);
-		backupH = new Thread(bh, "backupHandlerT");
-		backupH.start();
+
 	}
 	
 	public void setRuntime(){
@@ -199,14 +194,14 @@ public class CoreRE {
 		// Set up output communication module
 		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
 			processingUnit.setOutputQueue(outputQueue);
-			LOG.info("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
+			LOG.debug("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
 		}
 		else{
 			Selector s = puCtx.getConfiguredSelector();
 			odhw = new OutgoingDataHandlerWorker(s);
 			Thread odhw_t = new Thread(odhw);
 			odhw_t.start();
-			LOG.info("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
+			LOG.debug("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
 		}
 		
 		// Set up multi-core support structures
@@ -241,7 +236,10 @@ public class CoreRE {
 		b.setType(ControlTupleType.ACK);
 		genericAck = b;
 		
-		LOG.info("-> Node {} instantiated", nodeDescr.getNodeId());
+		LOG.info("-> Node {} instantiated", nodeDescr.getIp()+":"+nodeDescr.getOwnPort());
+		if (nodeDescr.getOwnPort()==2004)
+			LOG.info("############## Ready to start ###############");
+
 		
 		/// INITIALIZATION
 
@@ -255,7 +253,7 @@ public class CoreRE {
 				LOG.info("-> State Worker working on {}", nodeDescr.getNodeId());
 			}
 		}
-		LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
+	//	LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 		
 		// If ackworker is active
 		if(GLOBALS.valueFor("ackWorkerActive").equals("true")){
@@ -273,7 +271,7 @@ public class CoreRE {
      * we are unable to send any more control tuples to the node.
      */
 	public void startDataProcessing(){
-		LOG.info("-> Starting to process data...");
+		LOG.info("-> {}:{} Starting to process data...",nodeDescr.getIp(),nodeDescr.getOwnPort());
 		processingUnit.startDataProcessing();
 	}
     
@@ -307,6 +305,9 @@ public class CoreRE {
         if (dataConsumer != null) {
             dataConsumer.setDoWork(false);
         }
+        ch.setGoOn(false);
+        idh.setGoOn(false);
+        processingUnit.stopAckWorker();
     }
 	
 	public enum ControlTupleType{
@@ -343,10 +344,7 @@ public class CoreRE {
 		return backupUpstreamIndex;
 	}
 
-	public void setBackupUpstreamIndex(int backupUpstreamIndex) {
-		System.out.println("% current backupIdx: "+this.backupUpstreamIndex+" changes to: "+backupUpstreamIndex);
-		this.backupUpstreamIndex = backupUpstreamIndex;
-	}
+
 	
 	public int getOriginalUpstreamFromOpId(int opId){
 		return processingUnit.getOriginalUpstreamFromOpId(opId);
@@ -421,7 +419,7 @@ public class CoreRE {
 		else if(ctt.equals(ControlTupleType.OPEN_BACKUP_SIGNAL)){
 			System.out.println("%%%%%%%%%%%%%%%%%%");
 			LOG.info("-> Node {} recv ControlTuple.OPEN_SIGNAL from OP: {}", nodeDescr.getNodeId(), ct.getOpenSignal().getOpId());
-			bh.openSession(ct.getOpenSignal().getOpId(), remoteAddress);
+//			bh.openSession(ct.getOpenSignal().getOpId(), remoteAddress);
 			PrintWriter out = new PrintWriter(os, true);
 			out.println("ack");
 			LOG.debug("-> ACK Open Signal");
@@ -430,7 +428,7 @@ public class CoreRE {
 		/** CLOSE_SIGNAL message **/
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
 			LOG.info("-> Node {} recv ControlTuple.CLOSE_SIGNAL from OP: ", nodeDescr.getNodeId(), ct.getCloseSignal().getOpId());
-			bh.closeSession(ct.getCloseSignal().getOpId(), remoteAddress);
+//			bh.closeSession(ct.getCloseSignal().getOpId(), remoteAddress);
 			
 //			coreProcessLogic.directReplayState(new ReplayStateInfo(1, 1, true), bh);
 		}
@@ -533,7 +531,7 @@ public class CoreRE {
 			if(processingUnit.isNodeStateful()){ // if stateful, backup routing information after updating it
 				coreProcessLogic.backupRoutingInformation(oldOpId);
 			}
-			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh); // finally replay
+//			coreProcessLogic.directReplayStateScaleOut(oldOpId, newOpId, bh); // finally replay
 //			controlDispatcher.ackControlMessage(genericAck, os);
 		}
 		/** REPLAY_STATE **/
@@ -541,8 +539,8 @@ public class CoreRE {
 //			//Replay the state that this node keeps
 			LOG.info("-> Node {} recv ControlTuple.STREAM_STATE", nodeDescr.getNodeId());
 //			
-			int opId = ct.getStreamState().getTargetOpId();
-			coreProcessLogic.directReplayStateFailure(opId, bh);
+//			int opId = ct.getStreamState().getTargetOpId();
+//			coreProcessLogic.directReplayStateFailure(opId, bh);
 			
 			// no ack, just be fast
 			//Finally ack the processing of this message
@@ -662,7 +660,6 @@ public class CoreRE {
 				/// \fixme{Reconfigure this taking into account the inputdataingestion mode}
 				int upstreamSizeForBarrier = processingUnit.getOperator().getOpContext().getUpstreamNumberOfType(originalOpId);
 				int upstreamSize = processingUnit.getOperator().getOpContext().upstreams.size();
-				reconfigureUpstreamBackupIndex(upstreamSize);
 //				dsa.reconfigureNumUpstream(originalOpId, upstreamSize);
 				dsa.reconfigureNumUpstream(originalOpId, upstreamSizeForBarrier);
 			}
@@ -739,19 +736,7 @@ public class CoreRE {
 		}
 	}
 
-	public void manageBackupUpstreamIndex(int opId){
-		//Firstly, I configure my upstreamBackupIndex, which is the index of the operatorId coming in this message (the one in charge of managing it)
-//		int newIndex = opContext.findUpstream(opId).index();
-		int newIndex = processingUnit.getOperator().getOpContext().findUpstream(opId).index();
-		if(backupUpstreamIndex != -1 && newIndex != backupUpstreamIndex){
-			//ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
-			ControlTuple ct = new ControlTuple().makeInvalidateMessage(processingUnit.getOperator().getOperatorId());
-			
-			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
-		}
-		//Set the new backup upstream index, this has been sent by the manager.
-		this.setBackupUpstreamIndex(newIndex);
-	}
+
 	
 	public void sendBackupState(ControlTuple ctB){
 		int stateOwnerId = ctB.getBackupState().getOpId();
@@ -760,10 +745,7 @@ public class CoreRE {
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
 	
-	public void sendBlindData(ControlTuple ctB, int index){
-		controlDispatcher.sendUpstream_blind(ctB, index);
-	}
-	
+
 	public void setTotalNumberOfStateChunks(int number){
 		this.totalNumberOfChunks = number;
 		//coreProcessLogic.setTotalNumberOfChunks(number);
@@ -777,48 +759,15 @@ public class CoreRE {
 		
 		//source obviously cant compute this value
 		if(upstreamSize == 0){
-			LOG.warn("-> If this node is not the most upstream, there is a problem");
+			LOG.warn("-> If this node ({}) is not the most upstream, there is a problem", getNodeDescr().getIp()+":"+getNodeDescr().getOwnPort());
 			return;
 		}
 		int upIndex = ownInfo%upstreamSize;
 		upIndex = (upIndex < 0) ? upIndex*-1 : upIndex;
 		
 		//Update my information
-		System.out.println("% ConfigureUpstreamIndex");
-		this.setBackupUpstreamIndex(upIndex);
-		LOG.debug("-> The new Upstream backup INDEX is: "+backupUpstreamIndex);
+		// System.out.println("% ConfigureUpstreamIndex");
 	}
 	
-	public void reconfigureUpstreamBackupIndex(int upstreamSize){
-		LOG.debug("-> Reconfiguring upstream backup index");
-		//First I compute my own info, which is the hash of my id.
-		/** There is a reason to hash the opId. Imagine upSize=2 and opId of downstream 2, 4, 6, 8... So better to mix the space*/
-		int ownInfo = Router.customHash(nodeDescr.getNodeId());
-//		int upstreamSize = opContext.upstreams.size();
-		int upIndex = ownInfo%upstreamSize;
-		//Since ownInfo (hashed) may be negative, this enforces the final value is always positive.
-		upIndex = (upIndex < 0) ? upIndex*-1 : upIndex;
-		//If the upstream is different from previous sent, then additional management is necessary
-		//In particular, invalidate the management of my state in the previous operator in charge to do so...
-		//... and notify the new operator in charge of my OPID
-		//UPDATE!! AND send STATE in case this operator is backuping state
-		if(upIndex != backupUpstreamIndex){
-			LOG.debug("-> Upstream backup has changed...");
-			//Invalidate old Upstream state
-			//ControlTuple ct = new ControlTuple().makeInvalidateMessage(backupUpstreamIndex);
-			ControlTuple ct = new ControlTuple().makeInvalidateMessage(processingUnit.getOperator().getOperatorId());
-			controlDispatcher.sendUpstream(ct, backupUpstreamIndex);
-		
-			//Update my information
-			System.out.println("% ReconfigureUpstreamIndex");
-			this.setBackupUpstreamIndex(upIndex);
-			
-			//Without waiting for the counter, we backup the state right now, (in case operator is stateful)
-			if(processingUnit.isNodeStateful()){
-				LOG.debug("-> sending BACKUP_STATE to the new manager of my state");
-				
-				((StatefulProcessingUnit)processingUnit).lockFreeParallelCheckpointAndBackupState();
-			}
-		}
-	}
+	
 }

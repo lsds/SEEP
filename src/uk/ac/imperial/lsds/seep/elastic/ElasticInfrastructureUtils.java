@@ -170,7 +170,7 @@ public class ElasticInfrastructureUtils {
         List<Integer> stoppableIds = scalingMap.get(opIdToUnparallelize);
         if (!stoppableIds.isEmpty()) {
             // We always pick the first identifier to stop first
-            inf.stop(stoppableIds.get(0));
+            inf.stopOneOperator(stoppableIds.get(0));
             
             // Remove stopped operator's identifier from scaling map
             scalingMap.get(opIdToUnparallelize).remove(0);
@@ -331,7 +331,7 @@ public class ElasticInfrastructureUtils {
 	}
 	
 	// One option to scale out automatically operators, statically
-	public ArrayList<ScaleOutIntentBean> staticInstantiationNewReplicaOperators(QueryPlan qp){
+	public ArrayList<ScaleOutIntentBean> staticInstantiationNewReplicaOperators(QueryPlan qp, int BaseInC, int BaseInD){
 		// We have to return an arraylist of scaleoutintent that gives the operators to scale out ordered.
 		ArrayList<ScaleOutIntentBean> soib = new ArrayList<ScaleOutIntentBean>();
 		// Get the operators to scale out
@@ -349,7 +349,7 @@ public class ElasticInfrastructureUtils {
                             
 				Node newNode = new Node(nodeId);
                                 int oldOpId = op.getOperatorId();
-				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp);
+				Operator newReplica = staticScaleOut(oldOpId, newOpId, newNode, qp, BaseInC, BaseInD);
                                 
 				if(op.getOpContext().isSource()){ // probably not the best place to do this
 					LOG.debug("-> Statically scaling out SOURCE operator");
@@ -368,7 +368,7 @@ public class ElasticInfrastructureUtils {
 	} 
 	
 	// One option to scale out manually operators, statically.
-	public ArrayList<ScaleOutIntentBean> staticInstantiateNewReplicaOperator(ArrayList<ScaleOutIntentBean> soib, QueryPlan qp){
+	public ArrayList<ScaleOutIntentBean> staticInstantiateNewReplicaOperator(ArrayList<ScaleOutIntentBean> soib, QueryPlan qp, int BaseInC, int BaseInD){
 		// Go through intents and execute all of them, or prompt back an ERROR if not possible
 		for(ScaleOutIntentBean so : soib){
 			//addOperator
@@ -377,7 +377,7 @@ public class ElasticInfrastructureUtils {
 			//Operator opToScaleOut = so.getOpToScaleOut();
 			Node newNode = so.getNewProvisionedNode();
 			
-			Operator newOp = staticScaleOut(oldOpId, newOpId, newNode, qp);
+			Operator newOp = staticScaleOut(oldOpId, newOpId, newNode, qp, BaseInC, BaseInD);
 			///\todo{ probably not the best place to do this}
 			if(inf.getOperatorById(oldOpId).getOpContext().isSource()){
 				LOG.debug("-> Statically scaling out SOURCE operator");
@@ -390,7 +390,7 @@ public class ElasticInfrastructureUtils {
 		return soib;
 	}
 	
-	private Operator staticScaleOut(int oldOpId, int newOpId, Node newNode, QueryPlan qp){
+	private Operator staticScaleOut(int oldOpId, int newOpId, Node newNode, QueryPlan qp, int BaseInC, int BaseInD){
 		Operator opToScaleOut = inf.getOperatorById(oldOpId);
 		Operator newOp = null;
 		try {
@@ -419,7 +419,7 @@ public class ElasticInfrastructureUtils {
                 
 		// inf place new and update context
 		System.out.println("checking new node: "+newNode.toString());
-		inf.placeNew(newOp, newNode);
+		inf.placeNew(newOp, newNode, BaseInC, BaseInD);
 		inf.updateContextLocations(newOp);
                 
                 //SANITY CHECK

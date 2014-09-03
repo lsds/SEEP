@@ -15,7 +15,8 @@ public enum MetricUnit {
     MEGABYTES("megabytes"),
     GIGABYTES("gigabytes"),
     MILLISECONDS("milliseconds"),
-    TUPLES("tuples");
+    TUPLES("tuples"),
+    DOUBLE("double");
     
     private String name;
     

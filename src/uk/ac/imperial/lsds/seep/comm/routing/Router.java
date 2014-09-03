@@ -14,6 +14,8 @@ package uk.ac.imperial.lsds.seep.comm.routing;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.zip.CRC32;
 
 import org.slf4j.Logger;
@@ -29,7 +31,7 @@ import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 public class Router implements Serializable{
 
 	final private Logger LOG = LoggerFactory.getLogger(Router.class);
-	
+
 	private static final long serialVersionUID = 1L;
 
 	private static final int DEFAULT_SPLIT_WINDOW = 1;
@@ -38,24 +40,24 @@ public class Router implements Serializable{
 	private static final int INDEX_FOR_ROUTING_IMPL = 0;
 
 	private static CRC32 crc32 = new CRC32();
-	
+
 	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
 	private boolean requiresLogicalRouting = false;
 	private HashMap<Integer, ArrayList<Integer>> routeInfo = new HashMap<Integer, ArrayList<Integer>>();
-	
+
 	//This map stores the load balancer for each type of downstream. This map is related to routeInfo
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
-	
+
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
 		EQ
 	}
-	
+
 	public Router(boolean requiresLogicalRouting, HashMap<Integer, ArrayList<Integer>> routeInfo){
 		this.requiresLogicalRouting = requiresLogicalRouting;
 		this.routeInfo = routeInfo;
 	}
-	
+
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
 		RoutingStrategyI rs = null;
@@ -66,7 +68,14 @@ public class Router implements Serializable{
 		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getKeyToDownstreamRealIndex();
 	}
-	
+
+	public boolean isDownstreamRoutingImplNull(){
+		boolean result = true;
+		if (downstreamRoutingImpl.get(0)!=null)
+			result = false;
+		return result;
+	}
+
 	//Gather keys from statefulDynamic Load balancer
 	public ArrayList<Integer> getKeysInformation(int oldOpId){
 		RoutingStrategyI rs = null;
@@ -76,7 +85,7 @@ public class Router implements Serializable{
 		}
 		rs = downstreamRoutingImpl.get(oldOpId);
 		return ((StatefulRoutingImpl)rs).getDownstreamNodeKeys();
-}
+	}
 
 	public void configureRoutingImpl(OperatorContext opContext, ArrayList<Operator> downstream){
 		RoutingStrategyI rs = null;
@@ -93,38 +102,41 @@ public class Router implements Serializable{
 			int index = opContext.getDownOpIndexFromOpId(id);
 			if(down.getOperatorCode() instanceof StatelessOperator){
 				int numDownstreams = downstream.size();
-				LOG.debug("Configuring Static Stateless Routing Impl with {} downstreams", numDownstreams);
+				LOG.info("Configuring Static Stateless Routing Impl with {} downstreams", numDownstreams);
+				LOG.info("Downstream operatorID is {}", id);
+				LOG.info("Downstream index is {}", index);
 				// At this point there can only be 1 downstream (an operator can have N downstream types,
 				//but only 1 instance of a given type Ni)
-				rs = new StatelessRoutingImpl(DEFAULT_SPLIT_WINDOW, index, 1);
+				rs = new StatelessRoutingImpl(DEFAULT_SPLIT_WINDOW, index, numDownstreams);
 			}
 			else if(down.getOperatorCode() instanceof StatefulOperator){
 				//We crash the stateful RI temporarily, anyway it will be recovered by the RI message
 				rs = new StatefulRoutingImpl(index);
 			}
-			
+
 			//If more than one downstream type, then put the new rs with the opId
 			if(opContext.getOriginalDownstream().size() > 1){
-				LOG.debug("-> More than one downstream type. Assign RS for op: {}",id);
+				LOG.info("-> More than one downstream type. Assign RS for op: {}",id);
 				downstreamRoutingImpl.put(id, rs);
+				LOG.info("Adding [opID:{},rs]",id);
 			}
-			
+
 			//Otherwise, store the rs in the reserved place of downstreamRoutingImpl
-			//else if (opContext.downstreams.size() == 1){
-			else if(opContext.getOriginalDownstream().size() == 1){
-				downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
+			//else if (opContext.downstreams.size() == 1){ /
+			else{// if(opContext.getOriginalDownstream().size() == 1){
+				//downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
+				downstreamRoutingImpl.put(0, rs);
 			}
 		}
 	}
-	
-	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
+ 	public ArrayList<Integer> routeToAll(ArrayList<Integer> logicalTargets){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer lt : logicalTargets){
 			targets = downstreamRoutingImpl.get(lt).routeToAll(targets);
 		}
 		return targets;
 	}
-	
+
 	public ArrayList<Integer> forwardToAllDownstream(DataTuple dt){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		if(requiresLogicalRouting){
@@ -136,52 +148,62 @@ public class Router implements Serializable{
 		}
 		return targets;
 	}
-	
+
 	public ArrayList<Integer> forwardToAllOpsInStreamId(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
 		targets = routeToAll(logicalTargets);
 		return targets;
 	}
-	
+
 	public ArrayList<Integer> forward(DataTuple dt){
 		int value = 0;
+		ArrayList<Integer> results = null;
 		if(downstreamRoutingImpl == null){
 			System.out.println("downstreamrouting impl null");
 			System.exit(0); /// xtreme
 		}
-		if(downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL) == null){
-			for(Integer i : downstreamRoutingImpl.keySet()){
-				System.out.println(downstreamRoutingImpl.get(i));
-			}
-			System.out.println("idx for routing impl");
-			System.exit(0); // xtreme
+		if(downstreamRoutingImpl.keySet().size()==0){
+			System.out.println("Downstream Routing implementation hashmap is empty!");
+			System.exit(0);
+		} else if (downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL)!=null){
+			results = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route();
+		} else {
+			//			Set<Integer> impls = downstreamRoutingImpl.keySet();
+			//			Iterator<Integer> it = impls.iterator();
+			results = downstreamRoutingImpl.get(1).route();	
+			LOG.info("---> routing result is {}",results.get(0).toString());
+			//			for(Integer i : downstreamRoutingImpl.keySet()){
+			//				System.out.print(i+": ");
+			//				System.out.println(downstreamRoutingImpl.get(i));
+			//			}
+			//			System.out.println("idx ("+INDEX_FOR_ROUTING_IMPL+") for routing impl not valid");
 		}
-		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(value);
+		return results;
 	}
-	
+
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
 		targets = physicalRouting(logicalTargets, streamId);
 		return targets;
 	}
-	
+
 	public ArrayList<Integer> forward_splitKey(DataTuple dt, int key){
-		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route(key);
+		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route();
 	}
-	
+
 	public ArrayList<Integer> forward_toOp_splitKey(DataTuple dt, int streamId, int key){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);
 		targets = physicalRouting(logicalTargets, key);
 		return targets;
 	}
-	
+
 	private ArrayList<Integer> logicalRouting(DataTuple dt, int streamId){
 		return routeInfo.get(streamId);
 	}
-	
+
 	private ArrayList<Integer> physicalRouting(ArrayList<Integer> logicalTargets, int key){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		for(Integer ltarget : logicalTargets){
@@ -189,7 +211,7 @@ public class Router implements Serializable{
 		}
 		return targets;
 	}
-	
+
 	public int[] newStaticOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key[];
 		if(requiresLogicalRouting){
@@ -201,8 +223,8 @@ public class Router implements Serializable{
 		}
 		return key;
 	}
-	
-	
+
+
 	public int[] newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key[];
 		if(requiresLogicalRouting){
@@ -214,23 +236,23 @@ public class Router implements Serializable{
 		}
 		return key;
 	}
-    
-    public int[] collapseOperatorPartition(int operatorId, int operatorIndex) {
-        int key[];
-        
-        key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).collapseReplica(operatorIndex);
-        return key;
-    }
-	
+
+	public int[] collapseOperatorPartition(int operatorId, int operatorIndex) {
+		int key[];
+
+		key = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).collapseReplica(operatorIndex);
+		return key;
+	}
+
 	/** this can be moved along with downTypeToLoadBalancer */
 	private int[] configureRoutingStrategyForNewPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex) {
 		//We gather the load balancer for the operator splitting (the old one)
 		RoutingStrategyI rs = downstreamRoutingImpl.get(oldOpId);
-		
-if(rs == null){
-System.out.println("LB for OP: "+oldOpId+" is null !!!!!!!!!!");
-System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
-}
+
+		if(rs == null){
+			System.out.println("LB for OP: "+oldOpId+" is null !!!!!!!!!!");
+			System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
+		}
 
 		//Then we update this load balancer (the old one) with the new information
 		int key[] = rs.newReplica(oldOpIndex, newOpIndex);
@@ -240,7 +262,7 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 		//And finally we return the new key computed
 		return key;
 	}
-	
+
 	private void setNewLoadBalancer(int opId, RoutingStrategyI rs){
 		if(requiresLogicalRouting){
 			downstreamRoutingImpl.put(opId, rs);
@@ -249,21 +271,21 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
 			downstreamRoutingImpl.put(INDEX_FOR_ROUTING_IMPL, rs);
 		}
 	}
-	
+
 	public void reconfigureRoutingInformation(ArrayList<Integer> downstreamIds, ArrayList<Integer> indexes, ArrayList<Integer> keys) {
 		for(Integer opId : downstreamIds){
 			StatefulRoutingImpl sr = new StatefulRoutingImpl(indexes, keys);
 			setNewLoadBalancer(opId, sr);
 		}
 	}
-	
+
 	public static int customHash(int value){
 		crc32.update(value);
 		int v = (int)crc32.getValue();
 		crc32.reset();
 		return v;
 	}
-	
+
 	public static int customHash(String value){
 		/// \todo{Search for a more efficient way of hashing a java string}
 		int v = 0; 
@@ -312,7 +334,7 @@ System.out.println("OPIds: "+downstreamRoutingImpl.keySet());
  * and so it needs just to put a routingImpl per oprator. Now, the problem is that when this is being called because of a scale out/scale in
  * the downstream is not the original one. NEED to differentiate between main/execution graph. Or, make explicit whith type is and call as it is required
  * CHANGE-> actually the DIFFERENTIATION IS required
-**/
+ **/
 /*public void _configureRoutingImpl(OperatorContext opContext){
 	RoutingStrategyI rs = null;
 	int opId = 0;

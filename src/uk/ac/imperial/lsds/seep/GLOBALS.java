@@ -42,7 +42,7 @@ public class GLOBALS {
 	//Load properties from file
 	private static void loadProperties(){
 		try {
-			File file = new File("/data/config.properties");
+			File file = new File("/sdcard/config.properties");
 			InputStream fis = new BufferedInputStream(new FileInputStream(file));
 			globals.load(fis);
 		}

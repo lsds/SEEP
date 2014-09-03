@@ -16,6 +16,10 @@ public class MetricValue implements Serializable {
     public static MetricValue percent(double value) {
         return new MetricValue(value, MetricUnit.PERCENT);
     }
+    
+    public static MetricValue doubles(double value){
+    	return new MetricValue(value, MetricUnit.DOUBLE);
+    }
             
     public static MetricValue gb(int value) {
         return new MetricValue(value, MetricUnit.GIGABYTES);
@@ -100,7 +104,8 @@ public class MetricValue implements Serializable {
 
     @Override
     public String toString() {
-        return "MetricValue{" + "value=" + value + ", unit=" + unit + '}';
+        //return "MetricValue{" + "value=" + value + ", unit=" + unit + '}';
+    	return value + "";
     }
 
     @Override

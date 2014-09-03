@@ -17,10 +17,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectStreamClass;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +77,7 @@ public class NodeManagerCommunication {
 
 					LOG.debug("-> Class about to send: "+o.getClass());
 
-				//	oos.writeClassDescriptor(ObjectStreamClass.lookup(o.getClass()));
+					//	oos.writeClassDescriptor(ObjectStreamClass.lookup(o.getClass()));
 					oos.writeObject(o);
 
 
@@ -162,15 +165,38 @@ public class NodeManagerCommunication {
 		@Override
 		protected Integer doInBackground(ArrayList<String>... passing) {
 			ArrayList<String> parameters = passing[0];
+			//	InetAddress ownIp;
+			String command;
+			try {
 
-			String command = "bootstrap "+("127.0.0.1 "+parameters.get(2) +"\n");
-			LOG.info("--> Boot Info: {} to: {} on: {}", command, parameters.get(1), parameters.get(0));
-			try{	
+				StringBuilder IFCONFIG=new StringBuilder();
+				for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+					NetworkInterface intf = en.nextElement();
+					for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+						InetAddress inetAddress = enumIpAddr.nextElement();
+						if (!inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() && inetAddress.isSiteLocalAddress()) {
+							IFCONFIG.append(inetAddress.getHostAddress().toString()+"\n");
+						}
+
+					}
+				}
+				
+				String[] ips = IFCONFIG.toString().split("\n");
+				String ip = "";
+				
+//				if (ips.length > 1){
+//					ip = ips[1];
+//				} else
+					ip = ips[0];
+				
+				command = "bootstrap"+" "+ip+" "+parameters.get(2)+"\n";
+				LOG.info("--> Boot Info: {} to: {} on: {}", command, parameters.get(1), parameters.get(0));
 				Socket conn = new Socket(InetAddress.getByName(parameters.get(1)), Integer.parseInt(parameters.get(0)));
 				(conn.getOutputStream()).write(command.getBytes());
 				conn.close();
-				return 0;		
-			}catch(UnknownHostException uhe){
+				return 0;	
+			}
+			catch(UnknownHostException uhe){
 				System.out.println("INF.sendBootstrapInformation: "+uhe.getMessage());
 				LOG.error("-> Infrastructure. sendBootstrapInfo "+uhe.getMessage());
 				uhe.printStackTrace();

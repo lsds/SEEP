@@ -14,24 +14,24 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class DistributedApi implements API, CommunicationPrimitives, Serializable{
 
 	private static final long serialVersionUID = 1L;
-	private static DistributedApi instance = new DistributedApi();
 	private Operator op;
+	private final Logger LOG = LoggerFactory.getLogger(DistributedApi.class);
+
 	
 	@Override
 	public void setCallbackObject(Callback c) {
 		this.op = (Operator)c;
 	}
 	
-	public static DistributedApi getInstance(){
-		return instance;
-	}
-
-	private DistributedApi(){}
+	public DistributedApi(){}
 	
 	// Communication primitives
 	

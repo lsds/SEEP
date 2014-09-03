@@ -45,7 +45,8 @@ public class QueryPlan {
 	private Map<Operator, Integer> partitionRequirements = new LinkedHashMap<Operator, Integer>(0);
 	private Map<Integer, Connectable> elements = new HashMap<Integer, Connectable>();
 	//More than one source is supported
-	private ArrayList<Operator> src = new ArrayList<Operator>();
+	//private ArrayList<Operator> src = new ArrayList<Operator>();
+	private Operator src;
 	private Operator snk;
 	//Mapping of operators to node
 	private Map<Integer, Operator> mapOperatorToNode = new LinkedHashMap<Integer, Operator>();
@@ -72,7 +73,11 @@ public class QueryPlan {
 		return partitionRequirements;
 	}
 
-	public ArrayList<Operator> getSrc() {
+//	public ArrayList<Operator> getSrc() {
+//		return src;
+//	}
+	
+	public Operator getSrc() {
 		return src;
 	}
 
@@ -232,8 +237,9 @@ public class QueryPlan {
 	}
 	
 	private void setSource(Operator source) {
-		LOG.info("Configured NEW SOURCE, Operator: {}", src.toString());
-		src.add(source);
+		LOG.info("Configured NEW SOURCE, Operator: {}", source.toString());
+	//	src.add(source);
+		this.src = source;
 	}
 
 	private void setSink(Operator snk){
@@ -249,7 +255,8 @@ public class QueryPlan {
 	private void addOperator(Operator o) {
 		ops.add(o);
 		elements.put(o.getOperatorId(), o);
-		LOG.info("Added new Operator to Infrastructure: {}", o.toString());
+		LOG.info("Added new Operator to Infrastructure: {}", 
+				"operatorID="+o.getOperatorId()+" "+o.getOperatorCode().toString());
 	}
     
     public void withPolicyRules(PolicyRules rules) {
