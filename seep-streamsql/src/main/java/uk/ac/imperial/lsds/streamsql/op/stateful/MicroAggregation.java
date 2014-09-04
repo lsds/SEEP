@@ -276,7 +276,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 				||this.aggregationType.equals(AggregationType.SUM)
 				||this.aggregationType.equals(AggregationType.AVG));
 
-		MultiOpTuple[] windowResult = new MultiOpTuple[values.keySet().size()];
+		MultiOpTuple[] windowResult = new MultiOpTuple[countInPartition.keySet().size()];
 
 		switch (aggregationType) {
 		case AVG:
