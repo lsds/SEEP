@@ -123,8 +123,17 @@ public class SubQueryBufferWindowWrapper {
 				
 				// Is the new window part of the next window batch?
 				if (this.currentWindowStartPointer >= this.numberOfWindowsInBatch) {
-					// Store free indices for current batch
-					freeUpTo.put(windowBatchStart, this.currentElementIndexStart-1);
+					// Store free indices for current batch, i.e., we can free up to the index before the start of the new window
+					if (this.currentElementIndexStart == 0) {
+						// If the start is zero, we need to check whether there is actually old data in the buffer
+						if (buffer.getStartIndex() == 0)
+							freeUpTo.put(windowBatchStart, -1);
+						else
+							freeUpTo.put(windowBatchStart, this.buffer.capacity()-1);
+					}
+					else 
+						freeUpTo.put(windowBatchStart, this.currentElementIndexStart-1);
+
 					// Create new window batch
 					windowBatchStart = new BufferWindowBatch(buffer, new int[this.numberOfWindowsInBatch],  new int[this.numberOfWindowsInBatch]);
 					this.windowBatches.add(windowBatchStart);
@@ -208,8 +217,17 @@ public class SubQueryBufferWindowWrapper {
 				
 				// Is the new window part of the next window batch?
 				if (this.currentWindowStartPointer >= this.numberOfWindowsInBatch) {
-					// Store free indices for current batch
-					freeUpTo.put(windowBatchStart, this.currentElementIndexStart-1);
+					// Store free indices for current batch, i.e., we can free up to the index before the start of the new window
+					if (this.currentElementIndexStart == 0) {
+						// If the start is zero, we need to check whether there is actually old data in the buffer
+						if (buffer.getStartIndex() == 0)
+							freeUpTo.put(windowBatchStart, -1);
+						else
+							freeUpTo.put(windowBatchStart, this.buffer.capacity()-1);
+					}
+					else 
+						freeUpTo.put(windowBatchStart, this.currentElementIndexStart-1);
+					
 					long startTimeForNextBatch = windowBatchStart.getStartTimestamp() + this.numberOfWindowsInBatch * windowDef.getSlide();
 					// Create new window batch
 					windowBatchStart = new BufferWindowBatch(buffer, freshInitializedArray(this.numberOfWindowsInBatch,-1),  freshInitializedArray(this.numberOfWindowsInBatch,-1));
