@@ -89,7 +89,13 @@ public class LRBQ4 {
 				having,
 				211
 				);
-		
+
+//		@SuppressWarnings("unchecked")
+//		IMicroOperatorCode q2AggCode = new MicroPaneAggregation(
+//				AggregationType.AVG, 
+//				new ColumnReference<PrimitiveType>(1)
+//				);
+
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
 
 		//@SuppressWarnings("unchecked")

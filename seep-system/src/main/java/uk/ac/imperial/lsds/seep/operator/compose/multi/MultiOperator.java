@@ -158,8 +158,7 @@ public class MultiOperator implements StatelessOperator {
 			// this.executorService = Executors.newFixedThreadPool(1);
 		}
 
-		target = (long)Math.floor(2999d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
-//		target = 1;
+		target = (long)Math.floor(2700d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
 		
 		/*
 		 * Identify most upstream and most downstream local operators
