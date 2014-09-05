@@ -90,7 +90,7 @@ public class SubQueryBufferWindowWrapper {
 	
 	public void freeUpToIndexInBuffer(int i) {
 		// i - buffer.getStartIndex()
-		this.buffer.freeUpToIndex(i);
+		this.buffer.setFreeUpToIndex(i);
 	}
 	
 	public long getProcessedTuples() {
