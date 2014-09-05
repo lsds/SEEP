@@ -89,7 +89,9 @@ public class SubQueryTaskDispatcher {
 //				System.out.println(bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch));
 				
 				windowBatchesForStreams.put(streamID, batch);
-				freeUpToIndices.put(bufferWrapper, bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch));
+				int freeUpToIndex = bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch);
+				if (freeUpToIndex != -1)
+					freeUpToIndices.put(bufferWrapper, freeUpToIndex);
 			}
 			
 			/*
