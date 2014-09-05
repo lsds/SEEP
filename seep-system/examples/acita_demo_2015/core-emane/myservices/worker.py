@@ -46,7 +46,10 @@ class Worker(CoreService):
 	cfg += "pwd\n"
 	cfg += "ls\n"
 	cfg += "cp %s/lib/%s .\n"%(seep_example_dir, seep_jar)
+	cfg += "cp %s/core-emane/config/watch-neighbours.sh .\n"%(seep_example_dir)
 	cfg += "route\n"
+	cfg += "touch /tmp/worker-nbrs.log\n"
+	cfg += "./watch-neighbours.sh >> /tmp/worker-nbrs.log &\n"
 	cfg += "echo Starting Worker on `hostname`\n"
 	cfg += "java -jar %s Worker\n"%(seep_jar)
 
