@@ -45,7 +45,7 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 	}
 
 	public MicroPaneAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes, Selection havingSel) {
-		this(aggregationType, aggregationAttribute, (ColumnReference<PrimitiveType>[]) new ColumnReference[0], null, 211);
+		this(aggregationType, aggregationAttribute, groupByAttributes, null, 211);
 	}
 	
 	public MicroPaneAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes, Selection havingSel, int hashMultiplier) {

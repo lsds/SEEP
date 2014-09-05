@@ -14,6 +14,7 @@ import java.lang.UnsupportedOperationException;
 
 import java.util.List;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.LinkedList;
 
 public class GPUExecutionContext {
@@ -244,12 +245,10 @@ public class GPUExecutionContext {
 	
 	private void clearLocalInputs() {
         Arrays.fill(__local_key1, 0);
-        Arrays.fill(__local_key2, 0);
-        Arrays.fill(__local_key3, 0);
         Arrays.fill(__local_val1, 0);
 
         Arrays.fill(__local_offsets, 0);
-        Arrays.fill(__local_counts,  0);
+        Arrays.fill(__local_count,  0);
         return ;
     }
 
@@ -259,7 +258,7 @@ public class GPUExecutionContext {
         System.arraycopy(v1, 0, __local_val1, 0, v1.length);
 
         System.arraycopy(offset, 0, __local_offsets, 0, offset.length);
-        System.arraycopy(count,  0, __local_counts,  0,  count.length);
+        System.arraycopy(count,  0, __local_count,  0,  count.length);
         return ;
     }
 
@@ -366,7 +365,6 @@ public class GPUExecutionContext {
         __stash_x = __stash[0];
         __stash_y = __stash[0];
 		
-		__plq_inputs_ht = __local_size;
         __plq_threads_per_group_ht = 128;
         __plq_groups_ht = panes;
         __plq_threads_ht = __plq_groups * __plq_threads_per_group;
@@ -421,7 +419,7 @@ public class GPUExecutionContext {
 	public int ht_aggregate (int [] keys, int [] values, int [] offsets, int [] count, int [] results) {
 		
 		clearLocalInputs();
-		setLocalInputs(keys, values, offset, count);
+		setLocalInputs(keys, values, offsets, count);
 		clearContents();
 		clearMetadata();
 		
@@ -431,7 +429,7 @@ public class GPUExecutionContext {
         __local_key1,
         __local_val1,
         __local_offsets,
-        __local_counts,
+        __local_count,
         _table_,
         x,
         y,
@@ -446,6 +444,8 @@ public class GPUExecutionContext {
         failed,
         attempts
         );
+		
+		return ++__agg_runs;
 	}
 	
 	public int aggregate (int [] keys, int [] values, int [] offsets, int [] count, int [] result) {

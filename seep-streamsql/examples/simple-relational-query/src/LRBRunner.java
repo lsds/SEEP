@@ -82,6 +82,9 @@ public class LRBRunner implements Callback {
 			System.err.println("usage: java LRBRunner [input filename] [L]");
 			System.exit(1);
 		}
+		System.out.println("Application starts at " + System.currentTimeMillis());
+		
+		// Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
 		
 		FileInputStream f;
 		DataInputStream d;
@@ -116,6 +119,10 @@ public class LRBRunner implements Callback {
 			
 			start = System.currentTimeMillis();
 			long lastTupleTimestamp = 0;
+			long dummy_lastTupleTimestamp = 0;
+			
+			long dummy_ts = 0;
+			long tuple_counter = 0;
 			
 			while ((line = b.readLine()) != null && lastTupleTimestamp < 3000) { // 10500) {
 				lines += 1;
@@ -139,8 +146,16 @@ public class LRBRunner implements Callback {
 				MultiOpTuple t = parseLine(line);
 				// pos to segment translation
 				t.values[4] = ((IntegerType)t.values[4]).div(new IntegerType(5280));
+				lastTupleTimestamp = t.timestamp;
+				
+				t.timestamp = dummy_ts;
+				t.instrumentation_ts = dummy_ts;
 				
 				data.add(t);
+				
+				tuple_counter += 1;
+				if (tuple_counter % 42 == 0)
+					dummy_ts += 1;
 				
 				MultiOpTuple copy;
 				Object [] v;
@@ -151,8 +166,8 @@ public class LRBRunner implements Callback {
                     copy.values[2] = new IntegerType(i); /* L = 1, 2, 3,... */
                     data.add(copy);
                 }
+				dummy_lastTupleTimestamp = t.timestamp;
 				
-				lastTupleTimestamp = t.timestamp;
 			}
 			dt = (double ) (System.currentTimeMillis() - start) / 1000.;
 			d.close();
@@ -181,11 +196,22 @@ public class LRBRunner implements Callback {
 			query.setup(api);
 			
 			/* Q4 */
-			System.out.println("Q4 computations "); // + System.currentTimeMillis());
+			System.out.println("Q4 computations " + System.currentTimeMillis());
 			// System.out.println("will be done when receiving tuple with timestamp " + lastTupleTimestamp);
 			api.startTimestamp = System.currentTimeMillis(); /* End-to-end measurement */
-			for (MultiOpTuple t: data) {
+			
+			/* Previous loop */
+			// for (MultiOpTuple t: data) {
+			//	query.process(t);
+			//}
+			
+			MultiOpTuple t;
+			while (true) {
+				t = data.poll();
 				query.process(t);
+				t.timestamp += dummy_lastTupleTimestamp;
+				t.instrumentation_ts += dummy_lastTupleTimestamp;
+				data.add(t);
 			}
 			
 		} catch (Exception e) { System.err.println(e.getMessage()); }

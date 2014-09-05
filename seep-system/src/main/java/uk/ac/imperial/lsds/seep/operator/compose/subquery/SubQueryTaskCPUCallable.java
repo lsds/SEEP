@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
@@ -80,10 +81,6 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 				toProcess.remove(currentOperator);
 				processed.add(currentOperator);
 
-//					monitor.monitor("Input size of micro operator: " 
-//				+ (windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers()[windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowEndPointers().length - 1]
-//						- windowBatchesForProcessing.get(currentOperator).values().iterator().next().getWindowStartPointers()[0]));
-
 				/*
 				 * Execute
 				 * If the actual code is stateful, we need to obtain a new instance
@@ -96,10 +93,6 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 				
 
 				operatorCode.processData(windowBatchesForProcessing.get(currentOperator), this);
-				
-//					if (this.currentWindowBatchResults.values().size() > 0) {
-//						monitor.monitor("Result size of micro operator: " + currentOperator.getMicroOperator().getOpID() + " " + this.currentWindowBatchResults.values().iterator().next().getArrayContent().length);
-//					}
 				
 				/*
 				 * We got the complete window batch result for the operator. So,
@@ -138,25 +131,37 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 //				while (i < end) {
 //					MultiOpTuple t = windowBatch.get(i++);
 //				}
-//			}	
-			this.collector.pushResults(new MultiOpTuple[0]);
+//			}
+//			
+			//int _taskcount = this.subQueryConnectable.getTaskDispatcher().taskcounter.getAndIncrement();
+			//if (_taskcount < 7) {
+			//	Thread.sleep(_taskcount * 200);
+			//}
+			/* Dummy computation */
+//			Random random = new Random();
+//			int result = 0;
+//			for (int i = 0; i < 10000000; i++) {
+//			 	result = random.nextInt(1024);
+//				result *= result;
+//			}
 			
-			// this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
+			// this.collector.pushResults(new MultiOpTuple[0]);
+			this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
 			
 			dt = System.currentTimeMillis() - startTime;
 			
 			System.out.println(
-			String.format("[DBG] task X %3d windows start @%6d end @%6d %8d %8d total %8d t_start %13d dt %6d (result size %10d)",
-			batch.getWindowStartPointers().length,
-			batch.getStartTimestamp(),
-			batch.getEndTimestamp(),
-			start,
-			end,
-			totalTuples,
-			startTime,
-			dt,
-			this.finalWindowBatchResult.getArrayContent().length
-			)
+				String.format("[DBG] task X %3d windows start @%6d end @%6d %8d %8d total %8d t_start %13d dt %6d (result size %10d)",
+					batch.getWindowStartPointers().length,
+					batch.getStartTimestamp(),
+					batch.getEndTimestamp(),
+					start,
+					end,
+					totalTuples,
+					startTime,
+					dt,
+					this.finalWindowBatchResult.getArrayContent().length
+				)
 			);
 			
 			this.subQueryConnectable.getTaskDispatcher().taskFinished();			

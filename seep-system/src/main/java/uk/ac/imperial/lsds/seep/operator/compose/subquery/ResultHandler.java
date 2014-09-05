@@ -11,7 +11,7 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapp
 
 public class ResultHandler {
 
-	public static final int NUMBER_RESULT_SLOTS = 50;
+	public static final int NUMBER_RESULT_SLOTS = 5000;
 
 	public AtomicReferenceArray<MultiOpTuple[]> results = new AtomicReferenceArray<MultiOpTuple[]>(NUMBER_RESULT_SLOTS); 
 	public AtomicIntegerArray freeResultSlots = new AtomicIntegerArray(NUMBER_RESULT_SLOTS); 

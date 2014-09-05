@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.seep.operator.compose.multi;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,8 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskGPUCallabl
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
 public class SubQueryTaskDispatcher {
+	
+	private Thread measurementThread;
 	
 	private final Logger LOG = LoggerFactory.getLogger(SubQueryTaskDispatcher.class);
 
@@ -32,7 +35,14 @@ public class SubQueryTaskDispatcher {
 	private GPUExecutionContext gpuContext;
 	
 	private AtomicInteger finished  = new AtomicInteger(0);
+	// public AtomicInteger taskcounter  = new AtomicInteger(0);
 	private long target    = 0L;
+	
+	// private long current_time, previous_time = 0L;
+	// private long ntuples, dt;
+	// private double rate;
+	public AtomicLong num_tasks = new AtomicLong(0L);
+	public AtomicLong current_tuplecount = new AtomicLong(0L);
 	
 	public SubQueryTaskDispatcher(ISubQueryConnectable subQueryConnectable) {
 
@@ -48,10 +58,14 @@ public class SubQueryTaskDispatcher {
 		
 		this.isGPUEnabled = this.subQueryConnectable.getParentMultiOperator().isGPUEnabled();
 		this.gpuContext = this.subQueryConnectable.getParentMultiOperator().getGPUContext();
+		
+		Thread measurementThread = new Thread(new DispatcherMeasurement(this, this.subQueryConnectable));
+		measurementThread.start();
 	}
 	
-	public void assembleAndDispatchTask() {
+	public void assembleAndDispatchTask(long current_tuplecount) {
 		
+		this.current_tuplecount.set(current_tuplecount);
 		/*
 		 * We can assemble a new task if there is at least one fully filled
 		 * window batch for all the input streams of this query 
@@ -68,7 +82,7 @@ public class SubQueryTaskDispatcher {
 			for (Integer streamID : this.subQueryConnectable.getLocalUpstreamBuffers().keySet()) {
 				SubQueryBufferWindowWrapper bufferWrapper = this.subQueryConnectable.getLocalUpstreamBuffers().get(streamID);
 				IWindowBatch batch = bufferWrapper.getFullWindowBatches().poll();
-				// System.out.println("BATCH for stream "+ streamID + "\t buffer view:\t" + batch.getWindowStartPointers()[0] + "-" + batch.getWindowEndPointers()[batch.getWindowEndPointers().length - 1]+ "\t time:\t" +  batch.getStartTimestamp() + "-" +  batch.getEndTimestamp());
+//				System.out.println("BATCH for stream "+ streamID + "\t buffer view:\t" + batch.getWindowStartPointers()[0] + "-" + batch.getWindowEndPointers()[batch.getWindowEndPointers().length - 1]+ "\t time:\t" +  batch.getStartTimestamp() + "-" +  batch.getEndTimestamp());
 //				System.out.println(batch.getWindowEndPointers()[299] - batch.getWindowStartPointers()[0]);
 //				System.out.println(Arrays.toString(batch.getWindowStartPointers()));
 //				System.out.println(Arrays.toString(batch.getWindowEndPointers()));
@@ -86,11 +100,31 @@ public class SubQueryTaskDispatcher {
 				task = new SubQueryTaskGPUCallable(subQueryConnectable, windowBatchesForStreams, freshLogicalOrderID(), freeUpToIndices, this.gpuContext);
 			else
 				task = new SubQueryTaskCPUCallable(subQueryConnectable, windowBatchesForStreams, freshLogicalOrderID(), freeUpToIndices);
-
+			
 			/*
 			 * Dispatch task 
 			 */
-			this.subQueryConnectable.getParentMultiOperator().getExecutorService().submit(task);
+			try {
+				this.subQueryConnectable.getParentMultiOperator().getExecutorService().submit(task);
+			} catch (Exception e) {
+				System.err.println(e);
+				e.printStackTrace();	
+			}
+			// long dummy_time = System.currentTimeMillis();
+			
+			//if (num_tasks % 100 == 0) {
+			//	current_time = System.currentTimeMillis();
+			//	if (previous_time > 0) {
+			//		dt = current_time - previous_time;
+			//		ntuples = current_tuplecount - previous_tuplecount;
+			//		rate = ((double) ntuples) / ((double) dt / 1000.);
+			//		System.out.println(String.format("[DBG] [Dispatcher] task %3d %10d tuples %10.1f tuples/s queue size %d tstamp %13d", 
+			//		num_tasks, ntuples, rate, (num_tasks + 1 - finished.get()), current_time));
+			//	}
+			//	previous_time = current_time;
+			//	previous_tuplecount = current_tuplecount;
+			//}
+			num_tasks.incrementAndGet();
 		}
 	}
 	
@@ -99,6 +133,10 @@ public class SubQueryTaskDispatcher {
 //		System.out.println("finished " + finishedTmp);
 		if (finishedTmp == target)
 			this.subQueryConnectable.getParentMultiOperator().targetReached();
+	}
+	
+	public int getFinishedTasks() {
+		return finished.get();
 	}
 	
 	private int freshLogicalOrderID() {
@@ -116,7 +154,12 @@ public class SubQueryTaskDispatcher {
 		return this.logicalOrderID;
 	}
 	
-	
+	/*
+	 * 
+	 * BELOW IS THE OLD CODE:
+	 * updating of windows is not done incrementally
+	 * 
+	 */
 //	private void checkClearance() {
 //
 //		for (int s = 0; s < numberOfStreams; s++) {

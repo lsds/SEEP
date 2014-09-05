@@ -16,7 +16,8 @@ JCP=${JCP}:lib/seep-system-0.0.1-SNAPSHOT.jar
 API="/mnt/data/cccad3/akolious/aparapi-read-only"
 JLP="${API}/com.amd.aparapi.jni/dist"
 
-OPTS="-server -XX:+UseConcMarkSweepGC -Xms4g -Xmx8g"
+# OPTS="-server -XX:+UseConcMarkSweepGC -Xms4g -Xmx8g"
+OPTS="-server -XX:+UseConcMarkSweepGC -Xms4g -Xmx10g -Xloggc:test-gc.out"
 
 if [ $# -gt 3 ]; then
 	echo $USAGE
@@ -49,6 +50,22 @@ fi
 L=$DEFAULT_L
 [ $# -gt 2 ] && L=$3
 
-java -Djava.library.path=$JLP $OPTS -cp $JCP $CLASS $INPUT_FILE $L
+java -Djava.library.path=$JLP $OPTS -cp $JCP $CLASS $INPUT_FILE $L 2>&1 >test.out &
+seep_pid=$!
+
+echo $(($(date +%s%N)/1000000)) >> test-cpu.out
+top -b -n240 -d 1 | grep "Cpu" >> test-cpu.out
+
+# mon_pid=$!
+# sleep 180
+
+kill -9 $seep_pid
+
+echo "Done."
+# kill -9 $mon_pid
+
+sleep 10
+
+echo "Bye."
 
 exit 0

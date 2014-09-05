@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.gpu.types;
+package uk.ac.imperial.lsds.streamsql.types;
 
 public class FloatType implements PrimitiveType {
 

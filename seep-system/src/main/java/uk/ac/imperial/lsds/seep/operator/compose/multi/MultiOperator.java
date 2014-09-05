@@ -74,17 +74,29 @@ public class MultiOperator implements StatelessOperator {
 		this.parentConnectable = parentConnectable;
 	}
 	
-	public GPUExecutionContext getGPUContext() { return gpu; }
-	public boolean isGPUEnabled() { return GPU; }
-	public long getTarget() { return target; }
+	public GPUExecutionContext getGPUContext() { 
+		return gpu; 
+	}
+	
+	public boolean isGPUEnabled() { 
+		return GPU; 
+	}
+	
+	public long getTarget() { 
+		return target; 
+	}
+	
 	public void targetReached() {
-		dt = (double) (System.currentTimeMillis() - start) / 1000.;
-		/* Stats */
-		rate =  (double) (tuples) / dt;
+		
+		dt = (System.currentTimeMillis() - start) / 1000.;
+		rate =  tuples / dt;
+		
 		System.out.println(String.format("%10d tuples processed", tuples));
-		System.out.println(String.format("%10.1f seconds", (double) dt));
+		System.out.println(String.format("%10.1f seconds", dt));
 		System.out.println(String.format("%10.1f tuples/s", rate));
-		if (GPU) gpu.stats();
+		
+		if (GPU) 
+			gpu.stats();
 	}
 	
 	/**
@@ -111,6 +123,7 @@ public class MultiOperator implements StatelessOperator {
 				while (!bw.addToBuffer(data)) {
 					try {
 						synchronized (bw.getExternalBufferLock()) {
+							// System.out.println("Waiting...");
 							bw.getExternalBufferLock().wait();
 						}
 					} catch (InterruptedException e) {
@@ -149,16 +162,22 @@ public class MultiOperator implements StatelessOperator {
 		int numberOfCores = Runtime.getRuntime().availableProcessors();
 		//TODO: think about tuning this selection
 		int numberOfCoresToUse = Math.max(numberOfCores, subQueries.size());
+		// numberOfCoresToUse = 64;
 		System.out.println(numberOfCoresToUse + " available processors");
+		
 		if (GPU) {
+			System.out.println("Launching GPU executor service...");
 			gpu = new GPUExecutionContext(panes, max_keys, panes_per_window, max_tuples_per_pane);
 		 	this.executorService = new GPUExecutorService(1000);
 		} else {
+			/* */
 			this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
+			// this.executorService = new ThreadPoolExecutor(numberOfCoresToUse, numberOfCoresToUse, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(10000, true));
 			// this.executorService = Executors.newFixedThreadPool(1);
 		}
 
-		target = (long)Math.floor(2700d / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))); 
+		target = (long)Math.floor((2999d - 300d) / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))) + 1; 
+//		target = 1;
 		
 		/*
 		 * Identify most upstream and most downstream local operators

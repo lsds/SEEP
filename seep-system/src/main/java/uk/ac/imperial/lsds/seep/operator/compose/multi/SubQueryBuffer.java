@@ -18,6 +18,8 @@ public class SubQueryBuffer {
 	
 	private Object externalLock = new Object();
 	private Object internalLock = new Object();
+	
+	private long processedTuples = 0L;
 
 	/*
 	 * ###############################################
@@ -27,6 +29,8 @@ public class SubQueryBuffer {
 	public SubQueryBuffer () {
 		this(SUB_QUERY_BUFFER_CAPACITY);
 	}
+	
+	public long getProcessedTuples() { return processedTuples; }
 	
 	public SubQueryBuffer(int size) {
 		if (size <= 0)
@@ -125,18 +129,30 @@ public class SubQueryBuffer {
 
 	public boolean add(MultiOpTuple element) {
 		synchronized (internalLock) {
-			if (full)
+			if (full) {
+				// System.out.println("Buffer is full.");
 				return false;
+			}
 			
 			return insertElement(element);
 		}
 	}
 	
 	public void freeUpToIndex(int i) {
+		
+		// System.out.println("____________freeUpToIndex");
+		
 		int nI = normIndex(i); 
 		
 		synchronized (internalLock) {
-	
+			
+			if (i < start) {
+				System.err.println("Error.");
+				System.exit(1);
+			}
+			
+			processedTuples += (i - start);
+			
 			int toFree = start;
 			do {
 				freeIndex(toFree);

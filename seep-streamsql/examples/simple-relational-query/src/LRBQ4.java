@@ -77,24 +77,29 @@ public class LRBQ4 {
 				new ColumnReference<FloatType>(3), 
 				new Constant<FloatType>(new FloatType(40f))));
 				
+//		@SuppressWarnings("unchecked")
+//		IMicroOperatorCode q2AggCode = new MicroPaneAggregation(
+//				AggregationType.AVG, 
+//				new ColumnReference<PrimitiveType>(1),
+//				(ColumnReference<PrimitiveType>[]) new ColumnReference[] {
+//					new ColumnReference<IntegerType>(2),
+//					new ColumnReference<FloatType>(3),
+//					new ColumnReference<IntegerType>(4)
+//					},
+//				having,
+//				211
+//				);
+
 		@SuppressWarnings("unchecked")
 		IMicroOperatorCode q2AggCode = new MicroPaneAggregation(
-				AggregationType.AVG, 
-				new ColumnReference<PrimitiveType>(1),
+				AggregationType.COUNT, 
+				new ColumnReference<PrimitiveType>(4),
 				(ColumnReference<PrimitiveType>[]) new ColumnReference[] {
 					new ColumnReference<IntegerType>(2),
 					new ColumnReference<FloatType>(3),
 					new ColumnReference<IntegerType>(4)
-					},
-				having,
-				211
+					}
 				);
-
-//		@SuppressWarnings("unchecked")
-//		IMicroOperatorCode q2AggCode = new MicroPaneAggregation(
-//				AggregationType.AVG, 
-//				new ColumnReference<PrimitiveType>(1)
-//				);
 
 		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 3);
 
@@ -114,6 +119,7 @@ public class LRBQ4 {
 		q2MicroOps.add(q2Agg);
 
 		windowDefs = new HashMap<>();
+		// windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 1, 1));
 		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
 //		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 2, 1));
 		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 5, windowDefs);

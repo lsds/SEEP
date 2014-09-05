@@ -41,6 +41,8 @@ public class SubQueryBufferWindowWrapper {
 	private Deque<IWindowBatch> windowBatchesNextForEnd;
 		
 	private Map<IWindowBatch, Integer> freeUpTo;
+	
+	private long ntuples = 0L;
 
 	public SubQueryBufferWindowWrapper(ISubQueryConnectable connectable, int streamID) {
 
@@ -63,6 +65,8 @@ public class SubQueryBufferWindowWrapper {
 		this.currentWindowStartPointer = -1;
 		this.currentWindowEndPointer = -1;
 		this.freeUpTo = new HashMap<>();
+		
+		ntuples = 0L;
 	}
 	
 	/**
@@ -85,11 +89,18 @@ public class SubQueryBufferWindowWrapper {
 	}
 	
 	public void freeUpToIndexInBuffer(int i) {
+		// i - buffer.getStartIndex()
 		this.buffer.freeUpToIndex(i);
 	}
 	
+	public long getProcessedTuples() {
+		return this.buffer.getProcessedTuples();
+	}
+	
 	private void updateCurrentWindow(MultiOpTuple element) {
-
+		
+		ntuples ++;
+		
 		IWindowBatch windowBatchStart = windowBatches.getLast();
 		IWindowBatch windowBatchEnd = windowBatchesEnd.getLast();
 		
@@ -173,7 +184,7 @@ public class SubQueryBufferWindowWrapper {
 					this.currentElementIndexEnd = buffer.normIndex(this.currentElementIndexEnd);
 					
 					// Since we closed a window batch, we should check whether there is a new set of batches (for different streams) for a task
-					this.connectable.getTaskDispatcher().assembleAndDispatchTask();
+					this.connectable.getTaskDispatcher().assembleAndDispatchTask(ntuples);
 				}
 				windowBatchEnd.getWindowEndPointers()[this.currentWindowEndPointer] = this.currentElementIndexEnd;
 			}
@@ -256,7 +267,7 @@ public class SubQueryBufferWindowWrapper {
 						this.currentElementIndexEnd += buffer.capacity();
 					
 					// Since we closed a window batch, we should check whether there is a new set of batches (for different streams) for a task
-					this.connectable.getTaskDispatcher().assembleAndDispatchTask();
+					this.connectable.getTaskDispatcher().assembleAndDispatchTask(ntuples);
 				}
 			}
 			
