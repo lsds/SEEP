@@ -12,6 +12,7 @@ package uk.ac.imperial.lsds.seep;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,26 +31,46 @@ public class Main {
 		
 	public static void main(String args[]){
 
-		Interactive instance = new Interactive();
+		Interactive instance = null;
 		
 		if(args.length == 0){
 			System.out.println("ARGS:");
-			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass>");
+			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass> <Interactive>/<Webserver>");
 			System.out.println("Worker <localPort>");
+			System.out.println("Worker <MasterIp> <localPort>");
 			System.exit(0);
 		}
 
 		if(args[0].equals("Master")){
-			instance.executeMaster(args);
+			if (args.length != 5) {
+				exitInvalidArgs();
+			}
+			if (args[4].equals("Interactive")) {
+				instance = new Interactive();
+				String[] newArgs = Arrays.copyOfRange(args,0,3);
+				instance.executeMaster(newArgs);
+			}
+			else if (args[4].equals("Webserver")){
+				/* TODO JETTY STUFF */
+			}
+			else {
+				exitInvalidArgs();
+			}
 		}
 		else if(args[0].equals("Worker")){
-			//secondary receives port and ip of master node
+			//secondary receives port and ip of master node§
+			instance = new Interactive();
 			instance.executeSec(args);
 		}
 		else{
-			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
-			System.exit(0);
+			exitInvalidArgs();
 		}
+	}
+
+	//Exit application because of invalid arguments
+	private static void exitInvalidArgs() {
+		System.out.println("Unrecognized command. Run again without arguments to view the required parameters.");
+		System.exit(0);
 	}
 	
 }
