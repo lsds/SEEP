@@ -46,6 +46,7 @@ class Master(CoreService):
 	cfg += "pwd\n"
 	cfg += "ls\n"
 	cfg += "route\n"
+	cfg += "touch /tmp/worker-nbrs.log ; rm /tmp/worker-nbrs.log\n"
 	cfg += "cp %s/lib/%s .\n"%(seep_example_dir, seep_jar)
 	cfg += "cp %s/dist/%s .\n"%(seep_example_dir, query_jar)
 	cfg += "echo Starting Master on `hostname`.\n"
