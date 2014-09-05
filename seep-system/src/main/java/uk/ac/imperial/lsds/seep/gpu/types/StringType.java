@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.types;
+package uk.ac.imperial.lsds.seep.gpu.types;
 
 public class StringType implements PrimitiveType {
 

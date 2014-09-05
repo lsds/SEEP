@@ -120,15 +120,15 @@ public class MultiOperator implements StatelessOperator {
 				if (!singleUpstreamBuffer)
 					data = new MultiOpTuple(data);
 				
-				while (!bw.addToBuffer(data)) {
-					try {
-						synchronized (bw.getExternalBufferLock()) {
-							// System.out.println("Waiting...");
+				try {
+					//System.out.println("-----------------Waiting");
+					synchronized (bw.getExternalBufferLock()) {
+						while (!bw.addToBuffer(data)) {
 							bw.getExternalBufferLock().wait();
 						}
-					} catch (InterruptedException e) {
-						e.printStackTrace();
 					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 				tuples++;
 			}
@@ -162,7 +162,7 @@ public class MultiOperator implements StatelessOperator {
 		int numberOfCores = Runtime.getRuntime().availableProcessors();
 		//TODO: think about tuning this selection
 		int numberOfCoresToUse = Math.max(numberOfCores, subQueries.size());
-		// numberOfCoresToUse = 64;
+//		numberOfCoresToUse = 1;
 		System.out.println(numberOfCoresToUse + " available processors");
 		
 		if (GPU) {

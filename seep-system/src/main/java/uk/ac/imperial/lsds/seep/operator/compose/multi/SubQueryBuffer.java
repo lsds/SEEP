@@ -1,7 +1,5 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
-import java.util.Arrays;
-
 import uk.ac.imperial.lsds.seep.GLOBALS;
 
 public class SubQueryBuffer {
@@ -9,18 +7,15 @@ public class SubQueryBuffer {
 	public static final int SUB_QUERY_BUFFER_CAPACITY = Integer.valueOf(GLOBALS.valueFor("subQueryBufferCapacity"));
 
 	private MultiOpTuple[] elements;	
-	private boolean[] freeElements;	
 	
 	private int start = 0;
 	private int end = 0;
-	
 	private boolean full = false;
 	
 	private Object externalLock = new Object();
-	private Object internalLock = new Object();
 	
 	private long processedTuples = 0L;
-
+	
 	/*
 	 * ###############################################
 	 * Constructors
@@ -30,15 +25,15 @@ public class SubQueryBuffer {
 		this(SUB_QUERY_BUFFER_CAPACITY);
 	}
 	
-	public long getProcessedTuples() { return processedTuples; }
+	public long getProcessedTuples() { 
+		return processedTuples; 
+	}
 	
 	public SubQueryBuffer(int size) {
 		if (size <= 0)
 			throw new IllegalArgumentException
 			("Buffer size must be greater than 0.");
 		elements = new MultiOpTuple[size];
-		freeElements = new boolean[size];
-		Arrays.fill(freeElements, false);
 	}
 
 	/*
@@ -128,39 +123,28 @@ public class SubQueryBuffer {
 	 */
 
 	public boolean add(MultiOpTuple element) {
-		synchronized (internalLock) {
-			if (full) {
-				// System.out.println("Buffer is full.");
-				return false;
-			}
-			
-			return insertElement(element);
-		}
+		if (full)
+			return false;
+		
+		return insertElement(element);
 	}
-	
-	public void freeUpToIndex(int i) {
+
+	public void setFreeUpToIndex(int i) {
+//		System.out.println("Free normalised " + normIndex(i));
 		
-		// System.out.println("____________freeUpToIndex");
-		
-		int nI = normIndex(i); 
-		
-		synchronized (internalLock) {
-			
-			if (i < start) {
-				System.err.println("Error.");
-				System.exit(1);
-			}
-			
-			processedTuples += (i - start);
-			
-			int toFree = start;
-			do {
-				freeIndex(toFree);
-				toFree = normIndex(toFree + 1);
-			}
-			while (toFree != nI);
-		}
-		
+		// Count how many tuples have been freed
+		if (i < this.start)
+			processedTuples += (i + elements.length - this.start);
+		else
+			processedTuples += (i - this.start);
+
+//		System.out.println("Freeing up to " + i + "\t" + "start is: " + start + "\t new processed: " + processedTuples);
+
+		// Set the mark for the data that can safely be overwritten
+		this.start = normIndex(i + 1);
+		full = false;
+
+		// Notify the pushing thread
 		synchronized (getExternalLock()) {
 			this.getExternalLock().notifyAll();
 		}
@@ -170,40 +154,69 @@ public class SubQueryBuffer {
 		return externalLock;
 	}
 
+	private boolean insertElement(MultiOpTuple element) {
+		elements[end] = element;
+		end = normIndex(end + 1);
+		full = (start == end);
+		return true;
+	}
+
 	/*
 	 * ###############################################
-	 * Private helper methods
+	 * OLD METHODS
 	 * ###############################################
 	 */
-	private boolean insertElement(MultiOpTuple element) {
-			elements[end] = element;
-			end = normIndex(end + 1);
-			
-			if (end == start)
-				full = true;
-			
-		return true;			
-	}
-	
-	private void freeIndex(int i) {
-		int nI = normIndex(i); 
-		if (!validIndex(nI))
-			throw new IllegalArgumentException();
-		
-		freeElements[nI] = true;
 
-			while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
-				int free = start;
-				// first, move pointer
-				start = normIndex(start+1);
-				// second, reset the buffer
-				elements[free] = null;
-				freeElements[free] = false;
-			}
-			
-			if ((end != start) || (end == start && start == nI))
-				full = false;
-	}
+//	private void freeIndex(int i) {
+//		int nI = normIndex(i); 
+//		if (!validIndex(nI))
+//			throw new IllegalArgumentException();
+//		
+//		freeElements[nI] = true;
+//
+//			while((freeElements[start]) && ((end != start) || (end == start && start == nI))) {
+//				int free = start;
+//				// first, move pointer
+//				start = normIndex(start+1);
+//				// second, reset the buffer
+//				elements[free] = null;
+//				freeElements[free] = false;
+//			}
+//			
+//			if ((end != start) || (end == start && start == nI))
+//				full = false;
+//	}
+//	
+//	public void freeUpToIndex(int i) {
+//		
+//		// System.out.println("____________freeUpToIndex");
+//		
+//		int nI = normIndex(i); 
+//		
+//		synchronized (internalLock) {
+//			
+//			if (i < start) {
+//				System.err.println("Error.");
+//				System.exit(1);
+//			}
+//			
+//			processedTuples += (i - start);
+//			
+//			int toFree = start;
+//			do {
+//				freeIndex(toFree);
+//				toFree = normIndex(toFree + 1);
+//			}
+//			while (toFree != nI);
+//		}
+//		
+//		synchronized (getExternalLock()) {
+//			this.getExternalLock().notifyAll();
+//		}
+//	}
+	
+//	private boolean[] freeElements;	
+//	private Object internalLock = new Object();
 
 	
 //	private boolean isFull() {

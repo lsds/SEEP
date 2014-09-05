@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.operator.compose.multi;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,8 +18,6 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQueryTaskGPUCallabl
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
 public class SubQueryTaskDispatcher {
-	
-	private Thread measurementThread;
 	
 	private final Logger LOG = LoggerFactory.getLogger(SubQueryTaskDispatcher.class);
 
@@ -88,10 +87,13 @@ public class SubQueryTaskDispatcher {
 //				System.out.println(Arrays.toString(batch.getWindowEndPointers()));
 //				System.out.println(bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch));
 				
-				windowBatchesForStreams.put(streamID, batch);
 				int freeUpToIndex = bufferWrapper.getFreeIndexForBatchAndRemoveEntry(batch);
+//				System.out.println("In dispatcher, free: " + freeUpToIndex);
 				if (freeUpToIndex != -1)
 					freeUpToIndices.put(bufferWrapper, freeUpToIndex);
+				
+				windowBatchesForStreams.put(streamID, batch);
+				
 			}
 			
 			/*

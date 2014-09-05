@@ -20,6 +20,13 @@ public class ResultCollector {
 		this.subQueryConnectable = subQueryConnectable;
 		this.logicalOrderID = logicalOrderID;
 		this.freeUpToIndices = freeUpToIndices;
+		
+		if (this.freeUpToIndices.values().size() != 1) {
+			System.out.println("Result Collector with empty free up to index map");
+			if (logicalOrderID != 0)
+				System.exit(1);
+		}
+		
 	}
 
 	
@@ -46,20 +53,26 @@ public class ResultCollector {
 
 				handler.results.set(insertIndex, resultStream);
 				handler.freeIndicesForResult.set(insertIndex, this.freeUpToIndices);
-				
+
 				MultiOpTuple[] result = handler.results.getAndSet(handler.nextToPush, null);
 				
 				while (result != null) {
-//					System.out.println("handler.nextToPush " + handler.nextToPush);
+					//System.out.println("handler.nextToPush " + handler.nextToPush);
 					forwarder.forwardResult(result);
 					/*
 					 * All computation before this window batch has finished, so we can 
 					 * free the data in the input buffers
 					 */
 					Map<SubQueryBufferWindowWrapper, Integer> freeIndicesForForwarded = handler.freeIndicesForResult.get(handler.nextToPush);
-					for (SubQueryBufferWindowWrapper b : freeIndicesForForwarded.keySet()) {
-						b.freeUpToIndexInBuffer(freeIndicesForForwarded.get(b));
+					
+					if (freeIndicesForForwarded == null) {
+						System.out.println("Insert: " + insertIndex + " " + this.freeUpToIndices);
+						System.out.println("handler.nextToPush " + handler.nextToPush);
+						System.out.println("Keys: " + handler.freeIndicesForResult.toString());
 					}
+					
+					for (SubQueryBufferWindowWrapper b : freeIndicesForForwarded.keySet()) 
+						b.freeUpToIndexInBuffer(freeIndicesForForwarded.get(b));
 
 					int forwardedIndex = handler.nextToPush;
 					handler.nextToPush = (handler.nextToPush + 1) % ResultHandler.NUMBER_RESULT_SLOTS;
@@ -69,6 +82,7 @@ public class ResultCollector {
 
 			} catch (Exception e) {
 				e.printStackTrace();
+				System.exit(-1);
 			}
 		}	
 	}
