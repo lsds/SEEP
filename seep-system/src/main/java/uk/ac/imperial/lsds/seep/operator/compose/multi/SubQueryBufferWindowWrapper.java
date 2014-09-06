@@ -84,10 +84,6 @@ public class SubQueryBufferWindowWrapper {
 		return added;
 	}
 	
-	public Object getExternalBufferLock() {
-		return this.buffer.getExternalLock();
-	}
-	
 	public void freeUpToIndexInBuffer(int i) {
 		// i - buffer.getStartIndex()
 		this.buffer.setFreeUpToIndex(i);

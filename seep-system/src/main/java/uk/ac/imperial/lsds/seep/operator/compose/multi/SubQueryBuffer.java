@@ -12,7 +12,7 @@ public class SubQueryBuffer {
 	private int end = 0;
 	private boolean full = false;
 	
-	private Object externalLock = new Object();
+	private Object lock = new Object();
 	
 	private long processedTuples = 0L;
 	
@@ -123,14 +123,19 @@ public class SubQueryBuffer {
 	 */
 
 	public boolean add(MultiOpTuple element) {
-		if (full)
-			return false;
-		
+		try {
+			synchronized (lock) {
+				while (full) 
+					lock.wait();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
 		return insertElement(element);
 	}
 
 	public void setFreeUpToIndex(int i) {
-//		System.out.println("Free normalised " + normIndex(i));
 		
 		// Count how many tuples have been freed
 		if (i < this.start)
@@ -145,13 +150,9 @@ public class SubQueryBuffer {
 		full = false;
 
 		// Notify the pushing thread
-		synchronized (getExternalLock()) {
-			this.getExternalLock().notifyAll();
+		synchronized (lock) {
+			lock.notifyAll();
 		}
-	}
-
-	public synchronized Object getExternalLock() {
-		return externalLock;
 	}
 
 	private boolean insertElement(MultiOpTuple element) {

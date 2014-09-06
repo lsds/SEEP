@@ -120,16 +120,7 @@ public class MultiOperator implements StatelessOperator {
 				if (!singleUpstreamBuffer)
 					data = new MultiOpTuple(data);
 				
-				try {
-					//System.out.println("-----------------Waiting");
-					synchronized (bw.getExternalBufferLock()) {
-						while (!bw.addToBuffer(data)) {
-							bw.getExternalBufferLock().wait();
-						}
-					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+				bw.addToBuffer(data);
 				tuples++;
 			}
 		}

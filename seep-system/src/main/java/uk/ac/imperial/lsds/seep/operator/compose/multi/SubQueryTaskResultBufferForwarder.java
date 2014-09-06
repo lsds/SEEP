@@ -16,17 +16,8 @@ public class SubQueryTaskResultBufferForwarder implements ISubQueryTaskResultFor
 	@Override
 	public void forwardResult(MultiOpTuple[] result) {
 		
-		for (MultiOpTuple t : result) {
-			while (!bw.addToBuffer(t)) {
-				try {
-					synchronized (bw.getExternalBufferLock()) {
-						bw.getExternalBufferLock().wait();
-					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
+		for (MultiOpTuple t : result) 
+			bw.addToBuffer(t);
 	}
 
 	@Override
