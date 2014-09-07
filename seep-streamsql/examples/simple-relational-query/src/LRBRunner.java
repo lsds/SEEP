@@ -2,14 +2,15 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.LinkedList;
 
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-
+import uk.ac.imperial.lsds.seep.operator.compose.multi.TupleObject;
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.IntegerType;
+import uk.ac.imperial.lsds.streamsql.types.StringType;
 
 // import uk.ac.imperial.lsds.seep.gpu.types.*;
 
@@ -32,14 +33,14 @@ public class LRBRunner implements Callback {
 //	minute       = Integer.parseInt(s[13]);
 //	day          = Integer.parseInt(s[14]);
 
-	private static Object hardCodedCast(int i, String value) {
+	private static TupleObject hardCodedCast(int i, String value) {
 		switch (attributes[i].split(":")[1]) {
 		case "Integer":
 			return new IntegerType(Integer.valueOf(value));
 		case "Float":
 			return new FloatType(Float.valueOf(value));
 		default:
-			return value;
+			return new StringType(value);
 		}
 	}
 
@@ -68,7 +69,7 @@ public class LRBRunner implements Callback {
 	
 	private static MultiOpTuple parseLine(String line) {
 		String [] s = line.split(",");
-		Object[] objects = new Object[includeAttributes.length];
+		TupleObject[] objects = new TupleObject[includeAttributes.length];
 		for (int i = 0; i < includeAttributes.length; i++)
 			objects[i] = hardCodedCast(includeAttributes[i],s[includeAttributes[i]]);
 		
@@ -95,7 +96,7 @@ public class LRBRunner implements Callback {
 		long MAX_LINES = 12048577L;
         long percent_ = 0L, _percent = 0L;
 		
-		Deque<MultiOpTuple> data = new LinkedList<>();
+		Deque<MultiOpTuple> data = new ArrayDeque<>();
 		
 		/* Time measurements */
 		long start = 0L;
@@ -158,11 +159,12 @@ public class LRBRunner implements Callback {
 					dummy_ts += 1;
 				
 				MultiOpTuple copy;
-				Object [] v;
+//				TupleObject [] v;
                 for (int i = 1; i < L; i++) {
-					v = new Object [t.values.length];
-					System.arraycopy(t.values, 0, v, 0, t.values.length);
-                    copy = new MultiOpTuple (v, t.timestamp, t.instrumentation_ts);
+//					v = new TupleObject[t.values.length];
+//					System.arraycopy(t.values, 0, v, 0, t.values.length);
+                    copy = (MultiOpTuple) t.clone(); 
+                    //new MultiOpTuple (v, t.timestamp, t.instrumentation_ts);
                     copy.values[2] = new IntegerType(i); /* L = 1, 2, 3,... */
                     data.add(copy);
                 }
@@ -205,13 +207,14 @@ public class LRBRunner implements Callback {
 			//	query.process(t);
 			//}
 			
-			MultiOpTuple t;
+			MultiOpTuple t, copy;
 			while (true) {
 				t = data.poll();
 				query.process(t);
-				t.timestamp += dummy_lastTupleTimestamp;
-				t.instrumentation_ts += dummy_lastTupleTimestamp;
-				data.add(t);
+                copy = (MultiOpTuple) t.clone(); 
+				copy.timestamp += dummy_lastTupleTimestamp;
+				copy.instrumentation_ts += dummy_lastTupleTimestamp;
+				data.add(copy);
 			}
 			
 		} catch (Exception e) { System.err.println(e.getMessage()); }

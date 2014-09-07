@@ -30,7 +30,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private MultiOpTuple copyProject(MultiOpTuple data) {
 		MultiOpTuple t = new MultiOpTuple();
-		t.values = new Object[expressions.length];
+		t.values = new PrimitiveType[expressions.length];
 
 		/*
 		 * Add all the content as defined by the projection expressions

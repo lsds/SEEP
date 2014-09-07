@@ -625,7 +625,7 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 	
 	private MultiOpTuple prepareOutputTuple(MultiOpTuple object, PrimitiveType partitionValue, long timestamp, long instrumentation_ts) {
 
-		Object[] values = new Object[this.groupByAttributes.length + 1];
+		PrimitiveType[] values = new PrimitiveType[this.groupByAttributes.length + 1];
 		for (int i = 0; i < this.groupByAttributes.length; i++)
 			values[i] = this.groupByAttributes[i].eval(object);
 		

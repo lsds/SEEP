@@ -1,14 +1,24 @@
 
 
+import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.seep.operator.compose.multi.TupleObject;
 import uk.ac.imperial.lsds.streamsql.expressions.Addition;
 import uk.ac.imperial.lsds.streamsql.expressions.Constant;
 import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.IntegerType;
+import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 
 
 public class TypeRunner {
 
 	public static void main(String[] args) {
+
+		PrimitiveType n = new IntegerType(1);
+		PrimitiveType f = new FloatType(5f);
+
+		MultiOpTuple tuple1 = new MultiOpTuple(new TupleObject[]{n,f}, 100, 101); 
+		MultiOpTuple tuple2 = (MultiOpTuple) tuple1.clone(); 
 		
 		IValueExpression<IntegerType> v1 = new Constant<IntegerType>(new IntegerType(1));
 		IValueExpression<IntegerType> v2 = new Constant<IntegerType>(new IntegerType(1));

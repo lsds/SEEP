@@ -5,11 +5,11 @@ import java.util.Map;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 
-public class MultiOpTuple {
+public class MultiOpTuple implements Cloneable {
 	
 	public long timestamp;
 	public long instrumentation_ts;
-	public Object[] values;
+	public TupleObject[] values;
 
 	public MultiOpTuple() { }
 	
@@ -19,7 +19,7 @@ public class MultiOpTuple {
 		this.values = tuple.values;
 	}
 
-	public MultiOpTuple(Object[] values, long timestamp, long instrumentation_ts) {
+	public MultiOpTuple(TupleObject[] values, long timestamp, long instrumentation_ts) {
 		this.timestamp = timestamp;
 		this.instrumentation_ts = instrumentation_ts;
 		this.values = values;
@@ -28,7 +28,7 @@ public class MultiOpTuple {
 	public MultiOpTuple(DataTuple tuple) {
 		this.timestamp = tuple.getPayload().timestamp;
 		this.instrumentation_ts = tuple.getPayload().instrumentation_ts;
-		this.values = tuple.getPayload().attrValues.toArray();
+		this.values = (TupleObject[]) tuple.getPayload().attrValues.toArray();
 	}
 
 	public DataTuple toDataTuple(Map<String, Integer> idxMapper) {
@@ -38,22 +38,27 @@ public class MultiOpTuple {
 		return result;
 	}
 
-//	public Object clone() {
-//		MultiOpTuple c = null;
-//		try {
-//			c = (MultiOpTuple) super.clone();
-//		} catch (CloneNotSupportedException e) {
-//			e.printStackTrace();
-//		}
-//		if (c != null) {
-//			c.timestamp = timestamp;
-//			c.instrumentation_ts = instrumentation_ts;
-//			c.values = new Object[values.length];
-//			for (int i = 0; i < values.length; i++)
-//				c.values[i] = values[i];
-//		}		
-//			
-//		return c;
-//	}
+	public Object clone() {
+		MultiOpTuple c = null;
+
+		try {
+			c = (MultiOpTuple) super.clone();
+		} catch (CloneNotSupportedException e) {
+			e.printStackTrace();
+		}
+		
+		if (c != null) {
+			c.timestamp = timestamp;
+			c.instrumentation_ts = instrumentation_ts;
+			c.values = new TupleObject[values.length];
+			for (int i = 0; i < values.length; i++)
+				c.values[i] = (TupleObject) values[i].clone();
+		}
+		else {
+			c = new MultiOpTuple();
+		}
+			
+		return c;
+	}
 	
 }

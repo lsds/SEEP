@@ -2,26 +2,27 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.LinkedList;
 
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-
+import uk.ac.imperial.lsds.seep.operator.compose.multi.TupleObject;
 /* import uk.ac.imperial.lsds.seep.gpu.types.*; */
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.IntegerType;
+import uk.ac.imperial.lsds.streamsql.types.StringType;
 
 public class LRBGPURunner implements Callback {
 
-	private static Object hardCodedCast (int i, String value) {
+	private static TupleObject hardCodedCast (int i, String value) {
 		
 		switch (attributes[i].split(":")[1]) {
 			case "Integer": 
 				return new IntegerType(Integer.valueOf(value));
 			case "Float":
 				return new FloatType(Float.valueOf(value));
-			default: return value;
+			default: return new StringType(value);
 		}
 	}
 	
@@ -49,7 +50,7 @@ public class LRBGPURunner implements Callback {
 	
 	private static MultiOpTuple parseLine(String line) {
         String [] s = line.split(",");
-        Object[] objects = new Object[includeAttributes.length];
+        TupleObject[] objects = new TupleObject[includeAttributes.length];
         for (int i = 0; i < includeAttributes.length; i++)
             objects[i] = hardCodedCast(includeAttributes[i],s[includeAttributes[i]]);
 
@@ -73,7 +74,7 @@ public class LRBGPURunner implements Callback {
 		long MAX_LINES = 12048577L;
         long percent_ = 0L, _percent = 0L;
 		
-		Deque<MultiOpTuple> data = new LinkedList<MultiOpTuple>();
+		Deque<MultiOpTuple> data = new ArrayDeque<>();
 		
 		/* Time measurements */
 		long start = 0L;
