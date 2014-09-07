@@ -48,10 +48,10 @@ public class LRBQ1To6 {
 				new ColumnReference<IntegerType>(0),
 				new ColumnReference<FloatType>(1),
 				new Division<IntegerType>(
-						new ColumnReference<IntegerType>(2), 
+						new ColumnReference<IntegerType>(4), 
 						new Constant<IntegerType>(new IntegerType(5280))),
 				new ColumnReference<IntegerType>(3),
-				new ColumnReference<IntegerType>(4)
+				new ColumnReference<IntegerType>(2)
 		};
 		
 		IMicroOperatorCode q1ProjCode = new Projection(projExpressions);
@@ -63,7 +63,29 @@ public class LRBQ1To6 {
 		Map<Integer, IWindowDefinition> windowDefs = new HashMap<>();
 		windowDefs.put(11, new WindowDefinition(WindowType.ROW_BASED, 1, 1));
 		ISubQueryConnectable sq1 = QueryBuilder.newSubQuery(q1MicroOps, 100, windowDefs);
+		
+		// INPUT STREAM vehicleId, speed, segNo, dir, hwy
+		/*
+		 * Query 2
+		 * 
+		 * Select Distinct L.vehicleId, L.segNo, L.dir, L.hwy
+		 * From SegSpeedStr [Range 30 Seconds] as A,
+		 *      SegSpeedStr [Partition by vehicleId Rows 1] as L
+		 * Where A.vehicleId = L.vehicleId
+		 */
+		int vehicleIndex = 0;
+		int[] projectionIndices = new int[] {0,2,3,4};
+		IMicroOperatorCode q2Code = new LRBQ2MicroOpCode(vehicleIndex, projectionIndices);
+		IMicroOperatorConnectable q2 = QueryBuilder.newMicroOperator(q2Code, 1001);
 
+		Set<IMicroOperatorConnectable> q2MicroOps = new HashSet<>();
+		q2MicroOps.add(q2);
+
+		windowDefs = new HashMap<>();
+		windowDefs.put(12, new WindowDefinition(WindowType.RANGE_BASED, 30, 1));
+		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 101, windowDefs);
+		
+		// INPUT STREAM vehicleId, speed, segNo, dir, hwy
 		/*
 		 * Query 4
 		 * 
@@ -79,7 +101,7 @@ public class LRBQ1To6 {
 				new Constant<FloatType>(new FloatType(40f))));
 				
 		@SuppressWarnings("unchecked")
-		IMicroOperatorCode q2AggCode = new MicroAggregation(
+		IMicroOperatorCode q4AggCode = new MicroAggregation(
 				AggregationType.AVG, 
 				new ColumnReference<PrimitiveType>(1),
 				(ColumnReference<PrimitiveType>[]) new ColumnReference[] {
@@ -90,31 +112,33 @@ public class LRBQ1To6 {
 				having
 				);
 		
-		IMicroOperatorConnectable q2Agg = QueryBuilder.newMicroOperator(q2AggCode, 1001);
+		IMicroOperatorConnectable q4Agg = QueryBuilder.newMicroOperator(q4AggCode, 1003);
 
 		@SuppressWarnings("unchecked")
-		IMicroOperatorCode q2ProjCode = new Projection((IValueExpression<PrimitiveType>[]) new IValueExpression[] {
+		IMicroOperatorCode q4ProjCode = new Projection((IValueExpression<PrimitiveType>[]) new IValueExpression[] {
 				new ColumnReference<IntegerType>(0),
 				new ColumnReference<IntegerType>(1),
 				new ColumnReference<IntegerType>(2)
 				});
-		IMicroOperatorConnectable q2Proj = QueryBuilder.newMicroOperator(q2ProjCode, 1002);
+		IMicroOperatorConnectable q4Proj = QueryBuilder.newMicroOperator(q4ProjCode, 1002);
 
-		q2Agg.connectTo(1000, q2Proj);
+		q4Agg.connectTo(1000, q4Proj);
 
-		Set<IMicroOperatorConnectable> q2MicroOps = new HashSet<>();
-		q2MicroOps.add(q2Proj);
-		q2MicroOps.add(q2Agg);
+		Set<IMicroOperatorConnectable> q4MicroOps = new HashSet<>();
+		q4MicroOps.add(q4Proj);
+		q4MicroOps.add(q4Agg);
 
 		windowDefs = new HashMap<>();
 		windowDefs.put(100, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
-		ISubQueryConnectable sq2 = QueryBuilder.newSubQuery(q2MicroOps, 101, windowDefs);
+		ISubQueryConnectable sq4 = QueryBuilder.newSubQuery(q4MicroOps, 103, windowDefs);
 
 		sq1.connectTo(sq2, 100);
+		sq2.connectTo(sq4, 100);
 
 		Set<ISubQueryConnectable> subQueries = new HashSet<>();
 		subQueries.add(sq1);
 		subQueries.add(sq2);
+		subQueries.add(sq4);
 
 		this.mo = MultiOperator.synthesizeFrom(subQueries, 1);
 		this.mo.setUp();
