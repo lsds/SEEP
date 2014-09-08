@@ -35,36 +35,39 @@ public class Main {
 		Interactive instance = null;
 		WebServer server = null;
 		
-		server = new WebServer();
-		server.initWebServer();
+		//server = new WebServer();
+		//server.initWebServer();
 
-		/*
+		
 		if(args.length == 0){
 			System.out.println("ARGS:");
-			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass> <Interactive>/<Webserver>");
+			System.out.println("Master <Webserver>");
+			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass>");
 			System.out.println("Worker <localPort>");
 			System.out.println("Worker <MasterIp> <localPort>");
 			System.exit(0);
 		}
 
 		if(args[0].equals("Master")){
-			if (args.length != 5) {
+			System.out.println(args.length);
+			if (!(args.length == 4 || args.length == 3 || args.length == 2)) {
+				System.out.println("HERE");
 				exitInvalidArgs();
 			}
-			if (args[4].equals("Interactive")) {
-				//start interactive mode
-				instance = new Interactive();
-				String[] newArgs = Arrays.copyOfRange(args,0,3);
-				instance.executeMaster(newArgs);
-			}
-			else if (args[4].equals("Webserver")){
-				//start the webserver
+			if (args[1].equals("Webserver")) {
+				//start the webserverE
+				System.out.println("HEREE");
 				server = new WebServer();
 				server.initWebServer();
+				
 			}
 			else {
-				exitInvalidArgs();
+				//start interactive mode
+				System.out.println("HEREEE");
+				instance = new Interactive();
+				instance.executeMaster(args);
 			}
+			
 		}
 		else if(args[0].equals("Worker")){
 			//secondary receives port and ip of master node§
@@ -72,8 +75,9 @@ public class Main {
 			instance.executeSec(args);
 		}
 		else{
+			System.out.println("HEREEEE");
 			exitInvalidArgs();
-		}*/
+		}
 	}
 
 	//Exit application because of invalid arguments

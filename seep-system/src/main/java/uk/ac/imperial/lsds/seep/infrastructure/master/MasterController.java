@@ -180,7 +180,7 @@ public class MasterController {
 		return qp;
 	}
 	
-	private void deployQueryToNodes(){
+	public boolean deployQueryToNodes(){
 		LOG.info("-> Configuring and deploying query...");
 		//First configure statically (local) the connections between operators
 		inf.localMapPhysicalOperatorsToNodes();
@@ -196,12 +196,15 @@ public class MasterController {
 		catch (CodeDeploymentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return false;
 		} 
 		catch (OperatorDeploymentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return false;
 		}
 		LOG.info("-> Configuring and deploying query...DONE");
+		return true;
 	}
 	
 	private String getUserInput(String msg) throws IOException{
@@ -216,6 +219,16 @@ public class MasterController {
 		
         //Start the source, and thus the stream processing system
 		inf.start();
+	}
+
+	public boolean startSystem() {
+		try {
+			inf.start();
+		} catch (ESFTRuntimeException e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
 	}
 	
 	public void configureSourceRateOption(Infrastructure inf) throws IOException{

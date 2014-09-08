@@ -59,6 +59,49 @@ public class Interactive {
 	
 	//Execute as a worker
 	public void executeSec(String args[]){
+
+		if(args.length > 3){
+			System.out.println("Error.");
+			System.out.println("Main Worker ");
+			System.out.println("Main Worker <masterip>");
+			System.out.println("Main Worker <localPort>");
+			System.out.println("Main Worker <masterIp> <localPort>");
+			System.exit(0);
+		}
+
+		// Get master ip and local port from the config file
+		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
+		InetAddress bindAddr = null;
+
+		try {
+			bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
+		} 
+		catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+
+		int ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
+		if (args.length == 3) {
+			try {
+				bindAddr = InetAddress.getByName(args[1]);
+			} 
+			catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+			ownPort = new Integer(args[2]);
+		}
+
+		if (args.length == 2) {
+			InetAddress tmp;
+			try {
+				tmp = InetAddress.getByName(args[1]);
+				bindAddr = tmp;
+			} 
+			catch (UnknownHostException e) {
+				ownPort = new Integer(args[1]);
+			}
+		} 
+		/*
 		//Read parameters from properties
 		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		InetAddress bindAddr = null;
@@ -78,7 +121,7 @@ public class Interactive {
 		}
 		else{
 			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
-		}
+		}*/
 		
 		
 		// NodeManager instantiation
