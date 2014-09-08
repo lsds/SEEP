@@ -17,7 +17,8 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.interactive.Interactive;
+import uk.ac.imperial.lsds.seep.interaction.Interactive;
+import uk.ac.imperial.lsds.seep.interaction.WebServer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
@@ -29,10 +30,15 @@ import uk.ac.imperial.lsds.seep.infrastructure.master.MasterController;
 
 public class Main {
 		
-	public static void main(String args[]){
+	public static void main(String args[]) throws Exception{
 
 		Interactive instance = null;
+		WebServer server = null;
 		
+		server = new WebServer();
+		server.initWebServer();
+
+		/*
 		if(args.length == 0){
 			System.out.println("ARGS:");
 			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass> <Interactive>/<Webserver>");
@@ -46,12 +52,15 @@ public class Main {
 				exitInvalidArgs();
 			}
 			if (args[4].equals("Interactive")) {
+				//start interactive mode
 				instance = new Interactive();
 				String[] newArgs = Arrays.copyOfRange(args,0,3);
 				instance.executeMaster(newArgs);
 			}
 			else if (args[4].equals("Webserver")){
-				/* TODO JETTY STUFF */
+				//start the webserver
+				server = new WebServer();
+				server.initWebServer();
 			}
 			else {
 				exitInvalidArgs();
@@ -64,7 +73,7 @@ public class Main {
 		}
 		else{
 			exitInvalidArgs();
-		}
+		}*/
 	}
 
 	//Exit application because of invalid arguments

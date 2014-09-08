@@ -8,7 +8,7 @@
  * Contributors:
  *     Constantinos Vryonides - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.interactive;
+package uk.ac.imperial.lsds.seep.interaction;
 
 import org.eclipse.jetty.server.Server;
 
@@ -29,6 +29,7 @@ public class WebServer {
 	public void initWebServer() {
 		LOG.info("Starting webserver.");
 		try {
+			SERVER.setHandler(new RequestHandler());
 			SERVER.start();
 			LOG.info("Webserver started successfully");
 			SERVER.join();

@@ -8,7 +8,7 @@
  * Contributors:
  *     Constantinos Vryonides - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.interactive;
+package uk.ac.imperial.lsds.seep.interaction;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -40,7 +40,7 @@ public class Interactive {
 		//If the user provided a query when launching the master node...
 		if(args[1] != null){
 			if(!(args.length > 2)){
-				System.out.println("Error. Main Master <path_to_query.jar> <Base_class_name>");
+				System.out.println("Error. Main Master <path_to_query.jar> <Base_class_name> Interactive/Webserver");
 				System.exit(0);
 			}
 			//Then we execute the compose method and get the QueryPlan back
