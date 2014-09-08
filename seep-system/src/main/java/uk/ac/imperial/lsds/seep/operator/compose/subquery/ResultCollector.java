@@ -44,8 +44,8 @@ public class ResultCollector {
 					Thread.sleep(1);
 				}
 
-				handler.results.set(insertIndex, resultStream);
 				handler.freeIndicesForResult.set(insertIndex, this.freeUpToIndices);
+				handler.results.set(insertIndex, resultStream);
 
 				MultiOpTuple[] result = handler.results.getAndSet(handler.nextToPush, null);
 				
