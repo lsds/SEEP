@@ -120,8 +120,6 @@ public class RequestHandler extends AbstractHandler {
                     }
 
                 }
-
-
             }).start();
         }
         else if (target.equals("/stop/")) {
@@ -138,18 +136,6 @@ public class RequestHandler extends AbstractHandler {
 
         baseRequest.setHandled(true);
 
-        /*
-        System.out.println("Incoming request");
-
-        response.setContentType("text/html;charset=utf-8");
-        response.setStatus(HttpServletResponse.SC_OK);
-        baseRequest.setHandled(true);
-
-        System.out.println(target);
-        System.out.println(request.getParameter("username"));
-        System.out.println(request.getParameter("password"));
-
-        response.getWriter().println("<h1>Hello</h1>");*/
     }
 
 }
