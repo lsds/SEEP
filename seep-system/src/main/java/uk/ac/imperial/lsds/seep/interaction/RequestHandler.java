@@ -108,7 +108,21 @@ public class RequestHandler extends AbstractHandler {
         else if (target.equals("/exit/")) {
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().println("Exiting..");
-            System.exit(0);
+            new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        Thread.sleep(1000);
+                        System.exit(0); 
+                    }
+                    catch (Exception e) {
+                        System.exit(0);
+                    }
+
+                }
+
+
+            }).start();
         }
         else if (target.equals("/stop/")) {
             response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED);
