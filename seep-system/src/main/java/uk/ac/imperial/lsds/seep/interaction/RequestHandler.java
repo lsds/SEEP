@@ -22,7 +22,10 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import uk.ac.imperial.lsds.seep.infrastructure.master.MasterController;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 
-
+/* The request handler that handles all of the requests.
+ * In the future detailed information about errors could 
+ * be returned as apart of the response.
+ */ 
 public class RequestHandler extends AbstractHandler {
 
     final private MasterController mc = MasterController.getInstance();
@@ -69,14 +72,6 @@ public class RequestHandler extends AbstractHandler {
             response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED);
             response.getWriter().println("Not implemented");
 
-            /*
-            String path = request.getParameter("path");
-
-            if (path == null) {
-                // No valid http request. Just return with error 400
-                return;
-            }*/
-
         }
         else if (target.equals("/deploy/")) {
             boolean succ = mc.deployQueryToNodes();
@@ -108,11 +103,16 @@ public class RequestHandler extends AbstractHandler {
         else if (target.equals("/exit/")) {
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().println("Exiting..");
+
+            // Create a new thread to exit the system to give time to seep
+            // to reply back
             new Thread(new Runnable() {
+
+                private final long DELAY = 1000;
 
                 public void run() {
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(DELAY);
                         System.exit(0); 
                     }
                     catch (Exception e) {
@@ -130,8 +130,9 @@ public class RequestHandler extends AbstractHandler {
             response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED);
             response.getWriter().println("Not implemented");       
         } else {
-            // No valid http request. Just return with error 404
-            return;
+            // No valid request. Just return with error 404
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().println("Request not found");       
         }
 
         baseRequest.setHandled(true);

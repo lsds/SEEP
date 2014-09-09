@@ -101,28 +101,6 @@ public class Interactive {
 				ownPort = new Integer(args[1]);
 			}
 		} 
-		/*
-		//Read parameters from properties
-		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
-		InetAddress bindAddr = null;
-		try {
-			bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
-		} 
-		catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
-		int ownPort = 0;
-		if(args.length > 2){
-			System.out.println("Error. Main Worker <listen_port(optional)>");
-			System.exit(0);
-		}
-		if(args.length > 1){
-			ownPort = new Integer(args[1]);
-		}
-		else{
-			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
-		}*/
-		
 		
 		// NodeManager instantiation
 		NodeManager nm = new NodeManager(port, bindAddr, ownPort);

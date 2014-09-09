@@ -35,10 +35,6 @@ public class Main {
 		Interactive instance = null;
 		WebServer server = null;
 		
-		//server = new WebServer();
-		//server.initWebServer();
-
-		
 		if(args.length == 0){
 			System.out.println("ARGS:");
 			System.out.println("Master <Webserver>");
@@ -51,19 +47,15 @@ public class Main {
 		if(args[0].equals("Master")){
 			System.out.println(args.length);
 			if (!(args.length == 4 || args.length == 3 || args.length == 2)) {
-				System.out.println("HERE");
 				exitInvalidArgs();
 			}
 			if (args[1].equals("Webserver")) {
-				//start the webserverE
-				System.out.println("HEREE");
+				//start the webserver
 				server = new WebServer();
-				server.initWebServer();
-				
+				server.initWebServer();				
 			}
 			else {
 				//start interactive mode
-				System.out.println("HEREEE");
 				instance = new Interactive();
 				instance.executeMaster(args);
 			}
@@ -75,7 +67,6 @@ public class Main {
 			instance.executeSec(args);
 		}
 		else{
-			System.out.println("HEREEEE");
 			exitInvalidArgs();
 		}
 	}
