@@ -1,22 +1,31 @@
 #!/bin/bash
 # Must invoke this with sudo
 
-ip link add veth7.core type veth peer name veth7.host
-ip link add veth8.core type veth peer name veth8.host
-ip link add veth9.core type veth peer name veth9.host
-ip link add veth10.core type veth peer name veth10.host
-ip link add veth11.core type veth peer name veth11.host
+ip link add $CORE_MASTER_VETH type veth peer name $VMCORE_MASTER_VETH 
+ip link add $CORE_WORKER1_VETH type veth peer name $VMCORE_WORKER1_VETH 
+ip link add $CORE_WORKER2_VETH type veth peer name $VMCORE_WORKER1_VETH 
+ip link add $CORE_WORKER3_VETH type veth peer name $VMCORE_WORKER1_VETH 
+ip link add $CORE_WORKER4_VETH type veth peer name $VMCORE_WORKER1_VETH 
+ip link add $CORE_WORKER5_VETH type veth peer name $VMCORE_WORKER1_VETH 
+ip link add $CORE_WORKER6_VETH type veth peer name $VMCORE_WORKER1_VETH 
 
-ifconfig veth7.host "10.0.7.11/24"
-ifconfig veth8.host "10.0.8.11/24"
-ifconfig veth9.host "10.0.9.11/24"
-ifconfig veth10.host "10.0.10.11/24"
-ifconfig veth11.host "10.0.11.11/24"
+ifconfig $VMCORE_MASTER_VETH  "$VMCORE_MASTER_VETH_IP/24"
+ifconfig $VMCORE_WORKER1_VETH  "$VMCORE_WORKER1_VETH_IP/24"
+ifconfig $VMCORE_WORKER2_VETH  "$VMCORE_WORKER2_VETH_IP/24"
+ifconfig $VMCORE_WORKER3_VETH  "$VMCORE_WORKER3_VETH_IP/24"
+ifconfig $VMCORE_WORKER4_VETH  "$VMCORE_WORKER4_VETH_IP/24"
+ifconfig $VMCORE_WORKER5_VETH  "$VMCORE_WORKER5_VETH_IP/24"
+ifconfig $VMCORE_WORKER6_VETH  "$VMCORE_WORKER6_VETH_IP/24"
+#ifconfig veth7.host "10.0.7.11/24"
  
-ifconfig veth7.host up
-ifconfig veth8.host up
-ifconfig veth9.host up
-ifconfig veth10.host up
-ifconfig veth11.host up
+ifconfig $VMCORE_MASTER_VETH up 
+ifconfig $VMCORE_WORKER1_VETH up 
+ifconfig $VMCORE_WORKER2_VETH up 
+ifconfig $VMCORE_WORKER3_VETH up 
+ifconfig $VMCORE_WORKER4_VETH up 
+ifconfig $VMCORE_WORKER5_VETH up 
+ifconfig $VMCORE_WORKER6_VETH up 
+
+#ifconfig veth7.host up
 
 sysctl -w net.ipv4.ip_forward=1

@@ -1,0 +1,346 @@
+node n1 {
+    delay 20000
+    bandwidth 54000000
+    type wlan
+    network-config {
+	hostname wlan1
+	!
+	interface wireless
+	 ip address 10.0.0.13/32
+	 ipv6 address 2001::0/128
+	!
+	mobmodel
+	coreapi
+	basic_range
+	!
+    }
+    custom-config {
+	custom-config-id basic_range
+	custom-command {3 3 9 9 9}
+	config {
+	range=275
+	bandwidth=54000000
+	jitter=0
+	delay=20000
+	error=0
+	}
+    }
+    canvas c1
+    iconcoords {474.0 300.0}
+    labelcoords {474.0 332.0}
+    interface-peer {e0 n7}
+    interface-peer {e1 n8}
+    interface-peer {e2 n9}
+    interface-peer {e3 n10}
+    interface-peer {e4 n11}
+    interface-peer {e5 n12}
+}
+
+node n2 {
+    type rj45
+    network-config {
+	hostname veth2.core
+	!
+	model
+	rj45
+	!
+    }
+    canvas c1
+    iconcoords {306.0 145.0}
+    labelcoords {306.0 177.0}
+    interface-peer {0 n8}
+}
+
+node n3 {
+    type rj45
+    network-config {
+	hostname veth3.core
+	!
+	model
+	rj45
+	!
+    }
+    canvas c1
+    iconcoords {669.0 112.0}
+    labelcoords {669.0 144.0}
+    interface-peer {0 n9}
+}
+
+node n4 {
+    type rj45
+    network-config {
+	hostname veth4.core
+	!
+	model
+	rj45
+	!
+    }
+    canvas c1
+    iconcoords {827.0 317.0}
+    labelcoords {827.0 349.0}
+    interface-peer {0 n10}
+}
+
+node n6 {
+    type rj45
+    network-config {
+	hostname veth5.core
+	!
+	model
+	rj45
+	!
+    }
+    canvas c1
+    iconcoords {312.0 537.0}
+    labelcoords {312.0 569.0}
+    interface-peer {0 n11}
+}
+
+node n7 {
+    type router
+    model host
+    network-config {
+	hostname n1
+	!
+	interface eth1
+	 ipv6 address 2001::10/64
+	 ip address 10.0.1.10/24
+	!
+	interface eth0
+	 ipv6 address 2001::14/128
+	 ip address 10.0.0.1/32
+	!
+    }
+    canvas c1
+    iconcoords {306.0 323.0}
+    labelcoords {306.0 355.0}
+    interface-peer {eth0 n1}
+    interface-peer {eth1 n5}
+    services {OLSR IPForward}
+}
+
+node n9 {
+    type router
+    model host
+    network-config {
+	hostname n3
+	!
+	interface eth1
+	 ipv6 address 2001:2::10/64
+	 ip address 10.0.3.10/24
+	!
+	interface eth0
+	 ipv6 address 2001::11/128
+	 ip address 10.0.0.3/32
+	!
+    }
+    canvas c1
+    iconcoords {561.0 241.0}
+    labelcoords {561.0 273.0}
+    interface-peer {eth0 n1}
+    interface-peer {eth1 n3}
+    services {OLSR IPForward}
+}
+
+node n10 {
+    type router
+    model host
+    network-config {
+	hostname n4
+	!
+	interface eth1
+	 ipv6 address 2001:3::10/64
+	 ip address 10.0.4.10/24
+	!
+	interface eth0
+	 ipv6 address 2001::12/128
+	 ip address 10.0.0.4/32
+	!
+    }
+    canvas c1
+    iconcoords {664.0 347.0}
+    labelcoords {664.0 379.0}
+    interface-peer {eth0 n1}
+    interface-peer {eth1 n4}
+    services {OLSR IPForward SSH}
+}
+
+node n11 {
+    type router
+    model host
+    network-config {
+	hostname n5
+	!
+	interface eth1
+	 ipv6 address 2001:4::10/64
+	 ip address 10.0.5.10/24
+	!
+	interface eth0
+	 ipv6 address 2001::13/128
+	 ip address 10.0.0.5/32
+	!
+    }
+    canvas c1
+    iconcoords {427.0 437.0}
+    labelcoords {427.0 469.0}
+    interface-peer {eth0 n1}
+    interface-peer {eth1 n6}
+    services {OLSR IPForward}
+}
+
+node n8 {
+    type router
+    model host
+    network-config {
+	hostname n2
+	!
+	interface eth1
+	 ipv6 address 2001:1::10/64
+	 ip address 10.0.2.10/24
+	!
+	interface eth0
+	 ipv6 address 2001::10/128
+	 ip address 10.0.0.2/32
+	!
+    }
+    canvas c1
+    iconcoords {414.0 198.0}
+    labelcoords {414.0 230.0}
+    interface-peer {eth0 n1}
+    interface-peer {eth1 n2}
+    services {OLSR IPForward}
+}
+
+node n5 {
+    type rj45
+    network-config {
+	hostname veth1.core
+	!
+	model
+	rj45
+	!
+    }
+    canvas c1
+    iconcoords {211.0 344.0}
+    labelcoords {211.0 376.0}
+    interface-peer {0 n7}
+}
+
+node n12 {
+    type router
+    model host
+    network-config {
+	hostname n6
+	!
+	interface eth1
+	 ip address 10.0.6.10/24
+	 ipv6 address 2001:0::10/64
+	!
+	interface eth0
+	 ipv6 address 2001::15/128
+	 ip address 10.0.0.6/32
+	!
+    }
+    canvas c1
+    iconcoords {568.0 455.0}
+    labelcoords {568.0 487.0}
+    interface-peer {eth0 n1}
+    services {OLSR IPForward}
+    interface-peer {eth1 n13}
+}
+
+node n13 {
+    type rj45
+    network-config {
+	hostname veth6.core
+	!
+    }
+    canvas c1
+    iconcoords {652.0 533.0}
+    labelcoords {652.0 565.0}
+    interface-peer {0 n12}
+}
+
+link l1 {
+    delay 20000
+    bandwidth 54000000
+    nodes {n1 n7}
+}
+
+link l2 {
+    delay 20000
+    nodes {n1 n8}
+    bandwidth 54000000
+}
+
+link l3 {
+    delay 20000
+    nodes {n1 n9}
+    bandwidth 54000000
+}
+
+link l4 {
+    delay 20000
+    nodes {n1 n10}
+    bandwidth 54000000
+}
+
+link l5 {
+    delay 20000
+    nodes {n1 n11}
+    bandwidth 54000000
+}
+
+link l6 {
+    nodes {n3 n9}
+}
+
+link l7 {
+    nodes {n2 n8}
+}
+
+link l8 {
+    nodes {n5 n7}
+}
+
+link l9 {
+    nodes {n6 n11}
+}
+
+link l10 {
+    nodes {n4 n10}
+}
+
+link l11 {
+    nodes {n1 n12}
+    bandwidth 54000000
+}
+
+link l12 {
+    nodes {n12 n13}
+}
+
+canvas c1 {
+    name {Canvas1}
+}
+
+option global {
+    interface_names yes
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+    controlnet=
+    enablerj45=1
+    enablesdt=0
+    preservedir=0
+}
+
