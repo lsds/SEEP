@@ -204,8 +204,8 @@ node n8 {
 	!
     }
     canvas c1
-    iconcoords {414.0 198.0}
-    labelcoords {414.0 230.0}
+    iconcoords {414.0 199.0}
+    labelcoords {414.0 231.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n2}
     services {OLSR IPForward}
@@ -339,7 +339,7 @@ option global {
 
 option session {
     controlnet=
-    enablerj45=1
+    enablerj45=0
     enablesdt=0
     preservedir=0
 }
