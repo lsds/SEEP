@@ -1,0 +1,8 @@
+#!/bin/sh
+source demo_env.sh
+
+ip route add $ANDROID_WORKER1_NET via $VMCORE_ANDROID_WORKER2_ETH_IP dev eth0
+ip route add $ANDROID_WORKER3_NET via $VMCORE_ANDROID_WORKER2_ETH_IP dev eth0
+ip route add $ANDROID_WORKER4_NET via $VMCORE_ANDROID_WORKER2_ETH_IP dev eth0
+ip route add $ANDROID_WORKER5_NET via $VMCORE_ANDROID_WORKER2_ETH_IP dev eth0
+ip route add $ANDROID_WORKER6_NET via $VMCORE_ANDROID_WORKER2_ETH_IP dev eth0
