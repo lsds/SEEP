@@ -1,7 +1,9 @@
+#!/bin/bash
 # Master 
+source demo_env.sh
 ip route add $ANDROID_WORKER3_NET via $VMCORE_WORKER3_VETH_IP dev $CORE_VMCORE_ETH
 
-ip route add $ANDROID_MASTER_NET via $CORE_MASTER_IP dev $CORE_MANET_ETH 
+#ip route add $ANDROID_MASTER_NET via $CORE_MASTER_IP dev $CORE_MANET_ETH 
 ip route add $ANDROID_WORKER1_NET via $CORE_WORKER1_IP dev $CORE_MANET_ETH 
 ip route add $ANDROID_WORKER2_NET via $CORE_WORKER2_IP dev $CORE_MANET_ETH 
 ip route add $ANDROID_WORKER4_NET via $CORE_WORKER4_IP dev $CORE_MANET_ETH 

@@ -47,12 +47,12 @@ class Android(CoreService):
 	cfg += "cp %s/core-emane/config/core-worker`hostname`-android-routes.sh .\n"%(seep_example_dir)
 	cfg += "echo routes before:\n"
 	cfg += "route\n"
-	cfg += "source core-worker`hostname`-android-routes.sh\n"
+	cfg += "./core-worker`hostname`-android-routes.sh\n"
 	cfg += "echo routes after:\n"
 	cfg += "route\n"
 
         return cfg
 
 # this line is required to add the above class to the list of available services
-addservice(Worker)
+addservice(Android)
 
