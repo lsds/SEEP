@@ -1,16 +1,22 @@
 #!/usr/bin/python
 
-import sys, re, threading
+import sys, re, threading, argparse
 
-def main():
+def main(num_nodes):
 
-	link_states = LinkState(6)
+	link_states = LinkState(num_nodes)
 
 	start_tailer(link_states)
 
 	#start_server(link_states)
+def start_tailer(link_states):
 
-class LinkState
+	for line in sys.stdin:
+		print 'Update: %s'%line
+		link_states.handleUpdate(line)
+		print 'Link states: %s'%(str(link_states))
+
+class LinkState:
 
 	def __init__(self, nodes):
 		self.num_nodes = nodes
@@ -85,4 +91,7 @@ class LinkState
 				raise Exception("Didn't reset node %d neighbours properly: %s"%(node, str(self.next_updates[node][nbr])))
 		
 if __name__=="__main__":
-	main()
+	parser = argparse.ArgumentParser(description='Monitor and distribute OLSR link state information to workers.')		
+	parser.add_argument('--num_nodes', dest='num_nodes', default='6', help='number of nodes [6]')
+	args = parser.parse_args()
+	main(int(args.num_nodes))
