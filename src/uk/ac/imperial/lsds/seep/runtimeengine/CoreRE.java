@@ -39,6 +39,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.manet.LinkCostHandler;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -83,6 +84,8 @@ public class CoreRE {
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
+	private Thread linkCostHandlerT = null;
+	private LinkCostHandler linkCostHandler = null;
 	
 	static ControlTuple genericAck;
 	private int totalNumberOfChunks = -1;
@@ -180,8 +183,12 @@ public class CoreRE {
 		dataConsumer = new DataConsumer(this, dsa);
 		dConsumerH = new Thread(dataConsumer, "dataConsumerT");
 
+		linkCostHandler = new LinkCostHandler(this);
+		linkCostHandlerT = new Thread(linkCostHandler, "linkCostHandlerT");
+		
 		controlH.start();
 		iDataH.start();
+		linkCostHandlerT.start();
 
 	}
 	
