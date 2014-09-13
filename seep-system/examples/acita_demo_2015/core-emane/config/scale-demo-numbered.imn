@@ -91,8 +91,8 @@ node n6 {
 	!
     }
     canvas c1
-    iconcoords {312.0 537.0}
-    labelcoords {312.0 569.0}
+    iconcoords {324.0 529.0}
+    labelcoords {324.0 561.0}
     interface-peer {0 n11}
 }
 
@@ -112,8 +112,8 @@ node n7 {
 	!
     }
     canvas c1
-    iconcoords {355.0 320.0}
-    labelcoords {355.0 352.0}
+    iconcoords {376.0 316.0}
+    labelcoords {376.0 348.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n5}
     services {OLSR IPForward Android}
@@ -142,8 +142,8 @@ node n9 {
 	!
     }
     canvas c1
-    iconcoords {561.0 241.0}
-    labelcoords {561.0 273.0}
+    iconcoords {568.0 237.0}
+    labelcoords {568.0 269.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n3}
     services {OLSR IPForward Android}
@@ -172,8 +172,8 @@ node n10 {
 	!
     }
     canvas c1
-    iconcoords {613.0 312.0}
-    labelcoords {613.0 344.0}
+    iconcoords {629.0 312.0}
+    labelcoords {629.0 344.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n4}
     services {OLSR IPForward SSH Android}
@@ -202,8 +202,8 @@ node n11 {
 	!
     }
     canvas c1
-    iconcoords {441.0 387.0}
-    labelcoords {441.0 419.0}
+    iconcoords {449.0 392.0}
+    labelcoords {449.0 424.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n6}
     services {OLSR IPForward Android}
@@ -232,8 +232,8 @@ node n8 {
 	!
     }
     canvas c1
-    iconcoords {436.0 240.0}
-    labelcoords {436.0 272.0}
+    iconcoords {446.0 235.0}
+    labelcoords {446.0 267.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n2}
     services {OLSR IPForward Android}
@@ -277,8 +277,8 @@ node n12 {
 	!
     }
     canvas c1
-    iconcoords {559.0 389.0}
-    labelcoords {559.0 421.0}
+    iconcoords {572.0 392.0}
+    labelcoords {572.0 424.0}
     interface-peer {eth0 n1}
     services {OLSR IPForward Android}
     interface-peer {eth1 n13}
