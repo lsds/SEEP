@@ -116,7 +116,15 @@ node n7 {
     labelcoords {376.0 348.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n5}
-    services {OLSR IPForward Android}
+    services {OLSR IPForward Android LinkMonitor}
+    custom-config {
+	custom-config-id service:LinkMonitor
+	custom-command LinkMonitor
+	config {
+	cmddown=('rm /tmp/nbrs.log', )
+	starttime=10
+	}
+    }
     custom-config {
 	custom-config-id service:Android
 	custom-command Android
@@ -146,7 +154,14 @@ node n9 {
     labelcoords {568.0 269.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n3}
-    services {OLSR IPForward Android}
+    services {OLSR IPForward Android LinkMonitor}
+    custom-config {
+	custom-config-id service:LinkMonitor
+	custom-command LinkMonitor
+	config {
+	starttime=10
+	}
+    }
     custom-config {
 	custom-config-id service:Android
 	custom-command Android
@@ -176,7 +191,14 @@ node n10 {
     labelcoords {629.0 344.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n4}
-    services {OLSR IPForward SSH Android}
+    services {OLSR IPForward SSH Android LinkMonitor}
+    custom-config {
+	custom-config-id service:LinkMonitor
+	custom-command LinkMonitor
+	config {
+	starttime=10
+	}
+    }
     custom-config {
 	custom-config-id service:Android
 	custom-command Android
@@ -206,7 +228,14 @@ node n11 {
     labelcoords {449.0 424.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n6}
-    services {OLSR IPForward Android}
+    services {OLSR IPForward Android LinkMonitor}
+    custom-config {
+	custom-config-id service:LinkMonitor
+	custom-command LinkMonitor
+	config {
+	starttime=10
+	}
+    }
     custom-config {
 	custom-config-id service:Android
 	custom-command Android
@@ -236,7 +265,14 @@ node n8 {
     labelcoords {446.0 267.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n2}
-    services {OLSR IPForward Android}
+    services {OLSR IPForward Android LinkMonitor}
+    custom-config {
+	custom-config-id service:LinkMonitor
+	custom-command LinkMonitor
+	config {
+	starttime=10
+	}
+    }
     custom-config {
 	custom-config-id service:Android
 	custom-command Android
@@ -280,8 +316,15 @@ node n12 {
     iconcoords {572.0 392.0}
     labelcoords {572.0 424.0}
     interface-peer {eth0 n1}
-    services {OLSR IPForward Android}
+    services {OLSR IPForward Android LinkMonitor}
     interface-peer {eth1 n13}
+    custom-config {
+	custom-config-id service:LinkMonitor
+	custom-command LinkMonitor
+	config {
+	starttime=10
+	}
+    }
     custom-config {
 	custom-config-id service:Android
 	custom-command Android
