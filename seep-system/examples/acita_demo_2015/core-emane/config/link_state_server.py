@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
-import sys, re, threading, argparse
+import sys, re, threading, argparse, socket
 
-def main(num_nodes):
+def main(num_nodes, host, port):
 
 	link_states = LinkState(num_nodes)
 
 	#start_reader(link_states)
+	threading.Thread(target=start_server, args=(host,port,link_states,)).start()
+
 	start_tailer(link_states)
 
 	#start_server(link_states)
@@ -20,6 +22,28 @@ def start_tailer(link_states):
 		#print 'Update: %s\n'%line
 		link_states.handleUpdate(line)
 		#print 'Link states: %s\n'%(str(link_states))
+
+def start_server(host, port, link_states):
+
+	try:
+		server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		server_socket.bind((host, port))
+		server_socket.listen(1)
+		while True:
+			conn, addr = server_socket.accept()
+			print 'Received connection from %s'%str(addr)
+			threading.Thread(target=start_worker, args=(conn, addr, link_states,)).start()
+	finally: 
+		server_socket.close()
+
+def start_worker(conn, addr, link_states):
+	try:
+		msg = '%s\n'%(str(link_states))
+		utf8_msg = unicode(msg, 'utf-8')
+		conn.write(utf8_msg)
+	finally:
+		conn.close()
 
 class LinkState:
 
@@ -99,6 +123,8 @@ class LinkState:
 		
 if __name__=="__main__":
 	parser = argparse.ArgumentParser(description='Monitor and distribute OLSR link state information to workers.')		
+	parser.add_argument('--addr', dest='addr', help='server socket address')
+	parser.add_argument('--port', dest='port', help='server socket port')
 	parser.add_argument('--num_nodes', dest='num_nodes', default='6', help='number of nodes [6]')
 	args = parser.parse_args()
-	main(int(args.num_nodes))
+	main(int(args.num_nodes), args.addr, int(args.port))
