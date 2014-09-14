@@ -71,21 +71,24 @@ public class Query implements Serializable
     return result; 
   } 
 
+  //TODO: Change this name to getPhysicalIds
   public Set getPhysicalNodeIds(Integer logicalId)
   {
     return (Set)log2phys.get(logicalId);
   }
 
+  //TODO: Change this name to getLogicalId
   public Integer getLogicalNodeId(Integer physicalId)
   {
     return (Integer)phys2log.get(physicalId);
   } 
 
-  public InetAddress getPhysicalAddress(Integer physicalId)
+  public InetAddress getNodeAddress(Integer physicalId)
   {
 	  return phys2addr.get(physicalId);
   }
 
+  //TODO: Change this name to getLogicalIds
   public Set getLogicalNodeIds()
   {
     return logicalTopology.keySet();
@@ -143,6 +146,46 @@ public class Query implements Serializable
   public boolean isOperator(Integer logicalId)
   {
   	return logicalId != null && logicalTopology.containsKey(logicalId) && !isSource(logicalId) && !isSink(logicalId);
+  }
+  
+  public Set<Integer> getSourcePhysicalIds()
+  {
+	  Set<Integer> result = new HashSet<Integer>();
+	  Iterator iter = log2phys.keySet().iterator();
+	  while (iter.hasNext())
+	  {
+		  Integer logicalId = (Integer)iter.next(); 
+		  if (isSource(logicalId))
+		  {  
+			  result.addAll(getPhysicalNodeIds(logicalId));			  
+		  }	
+	  }
+	  if (result.isEmpty()) { throw new RuntimeException("Logic error."); }
+	  return result;
+  }
+  
+  public Integer getSinkPhysicalId()
+  {
+	  Integer sinkLogicalId = getSinkLogicalId();
+	  Set physicalIds = getPhysicalNodeIds(sinkLogicalId);
+	  if (physicalIds.isEmpty() || physicalIds.size() > 1) { throw new RuntimeException("Logic error: size = "+physicalIds.size()); }
+	  return (Integer)(physicalIds.iterator().next());	  
+  }
+  
+  public Set<Integer> getOpPhysicalIds()
+  {
+	  Set<Integer> result = new HashSet<Integer>();
+	  Iterator iter = log2phys.keySet().iterator();
+	  while (iter.hasNext())
+	  {
+		  Integer logicalId = (Integer)iter.next(); 
+		  if (isOperator(logicalId))
+		  {  
+			  result.addAll(getPhysicalNodeIds(logicalId));			  
+		  }	
+	  }
+	  if (result.isEmpty()) { throw new RuntimeException("Logic error."); }
+	  return result;
   }
   
   public boolean isParallel(Integer logicalId)
@@ -418,4 +461,18 @@ public class Query implements Serializable
   		if (!planLogicalIds.contains(iter.next())) { throw new RuntimeException("Logic error.");}
   	}
   }
+  
+	public Integer addrToNodeId(InetAddress addr)
+	{
+		//TODO: Get rid of this, complete hack.
+		for (int i = 1; i <= 6; i++)
+		{
+			if (("192.168.20"+i+".101").equals(addr.getHostAddress()))
+			{
+				return new Integer(i);
+			}
+		}
+
+		throw new RuntimeException("Unknown address: "+addr);		
+	}
 }

@@ -31,10 +31,14 @@ public class LinkCostHandler implements Runnable
 	private final int RECOMPUTE_INTERVAL_MS = 5 * 1000;
 	private final CoreRE owner;
 	private volatile boolean goOn = true;
+	private final NetworkAwareRouter netRouter; 
 	
 	public LinkCostHandler(CoreRE owner)
 	{
 		this.owner = owner;
+		this.netRouter = new NetworkAwareRouter(
+				owner.getProcessingUnit().getOperator().getOperatorId(),
+				owner.getProcessingUnit().getOperator().getQuery());
 	}
 	
 	public void run()
@@ -44,11 +48,15 @@ public class LinkCostHandler implements Runnable
 			String linkState = requestRoutingStateSync();
 			log.error("Current routing state: "+ linkState);
 			//TODO: Compute best target
-			int newTarget = computeLowestCostTarget(linkState);
-			//TODO: Update local routing
-			//owner.getProcessingUnit().getOperator().getRouter().updateLowestCost(newTarget);
-			//TODO: Update CORE routing graphics
-			//updateCOREGraphicsSync(newTarget);
+			int newOperatorId = computeLowestCostOperatorId(linkState);
+			if (newOperatorId != NetworkAwareRouter.NO_ROUTE)
+			{
+				//TODO: Update local routing
+				int downOpIndex = owner.getProcessingUnit().getOperator().getOpContext().findOpIndexFromDownstream(newOperatorId);
+				owner.getProcessingUnit().getOperator().getRouter().updateLowestCost(downOpIndex);
+				//TODO: Update CORE routing graphics
+				//updateCOREGraphicsSync(newTarget);
+			}
 			
 			long lastRecompute = System.currentTimeMillis();
 			
@@ -128,17 +136,16 @@ public class LinkCostHandler implements Runnable
 		return result;
 	}
 	
-	private int computeLowestCostTarget(String linkState) 
+	private int computeLowestCostOperatorId(String linkState) 
 	{ 		
-		Map netTopology = parseLinkState(linkState);
+		Map<Integer, Map<Integer, Integer>> netTopology = parseLinkState(linkState); 
 		
-		
-		int localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
-		int localNodeId = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getNodeId();
-		InetAddress localNodeIp = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getIp();
-		int localNodePort = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getPort();
-		Query q = owner.getProcessingUnit().getOperator().getQuery();
-		log.info("Local logical id = "+q.getLogicalNodeId(localOpId));
+		//int localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
+		//int localNodeId = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getNodeId();
+		//InetAddress localNodeIp = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getIp();
+		//int localNodePort = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getPort();
+		//Query q = owner.getProcessingUnit().getOperator().getQuery();
+		//log.info("Local logical id = "+q.getLogicalNodeId(localOpId));
 		//int downOpId = owner.getProcessingUnit().getOperator().getOpContext().getDownOpIdFromIndex(index);
 
 		/* In infrastructure
@@ -153,8 +160,8 @@ public class LinkCostHandler implements Runnable
 		
 		*/
 
-		GraphUtil.logTopology(netTopology);
-		return -1;
+		//GraphUtil.logTopology(netTopology);
+		return netRouter.route(netTopology);
 	} 
 	
 	private Map<Integer,Map<Integer, Integer>> parseLinkState(String linkState)
@@ -193,7 +200,7 @@ public class LinkCostHandler implements Runnable
 	}
 	
 	
-	private void updateCOREGraphicsSync(int newTarget) 
+	private void updateCOREGraphicsSync(int downstreamOpId) 
 	{ 
 		//Open a connection to the link cost monitor
 		Socket s = null;
@@ -220,8 +227,16 @@ public class LinkCostHandler implements Runnable
 			}
 	
 			//TODO: Get ip of newTarget?
-			try {
-				writer.write(owner.getNodeDescr().getIp()+","+getTargetIp(newTarget)+"\n");
+			try {				
+				InetAddress downstreamIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(downstreamOpId); 
+				int downstreamPort = owner.getProcessingUnit().getOperator().getOpContext().findDownstream(downstreamOpId).location().getMyNode().getPort();
+				/*
+				Integer downstreamNodeId = owner.getProcessingUnit().getOperator().getQuery().addrToNodeId(downstreamIp);
+				Integer localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
+				InetAddress localIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(localOpId);
+				Integer localNodeId = owner.getProcessingUnit().getOperator().getQuery().addrToNodeId(localIp);
+				*/
+				writer.write(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort() + ","+downstreamIp.getHostAddress()+":"+downstreamPort+"\n");
 			} catch (IOException e) {
 				log.error("Error writing target to painter", e); System.exit(1);
 			}
@@ -236,10 +251,4 @@ public class LinkCostHandler implements Runnable
 			}
 		}
 	}	
-	
-	private String getTargetIp(int target)
-	{
-		//TODO: Get downstream ip address for new target.
-		return "192.168.202.101";
-	}
 }
