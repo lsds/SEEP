@@ -7,7 +7,9 @@ def main(num_nodes, host, port):
 	link_states = LinkState(num_nodes)
 
 	#start_reader(link_states)
-	threading.Thread(target=start_server, args=(host,port,link_states,)).start()
+	t = threading.Thread(target=start_server, args=(host,port,link_states,))
+	t.setDaemon(True)
+	t.start()
 
 	start_tailer(link_states)
 
@@ -29,11 +31,13 @@ def start_server(host, port, link_states):
 		server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		server_socket.bind((host, port))
-		server_socket.listen(1)
+		server_socket.listen(10)
 		while True:
 			conn, addr = server_socket.accept()
-			print 'Received connection from %s'%str(addr)
-			threading.Thread(target=start_worker, args=(conn, addr, link_states,)).start()
+			#print 'Received connection from %s'%str(addr)
+			t = threading.Thread(target=start_worker, args=(conn, addr, link_states,))
+			t.setDaemon(True)
+			t.start()
 	finally: 
 		server_socket.close()
 
@@ -41,7 +45,7 @@ def start_worker(conn, addr, link_states):
 	try:
 		msg = '%s\n'%(str(link_states))
 		utf8_msg = unicode(msg, 'utf-8')
-		conn.write(utf8_msg)
+		conn.send(utf8_msg)
 	finally:
 		conn.close()
 
