@@ -114,7 +114,7 @@ public class Processor1 implements StatelessOperator  {
 						facesArray[0].y,
 						facesArray[0].width,
 						facesArray[0].height);
-				api.send(output);
+				api.sendLowestCost(output);
 				//LOG.info(">>>Processor1 sent: "+m.toString());
 				
 

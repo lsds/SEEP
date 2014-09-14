@@ -72,11 +72,11 @@ public class Processor implements StatelessOperator{
 			}	
 
 			DataTuple output = data.setValues(index,null,0,0,0,name,timeStamp,x,y,width,height);
-			api.send(output);
+			api.sendLowestCost(output);
 			//LOG.info(">>>Processor sent "+name);
 		} else {
 			DataTuple output = data.setValues(index,null,0,0,0,"",timeStamp,x,y,width,height);
-			api.send(output);
+			api.sendLowestCost(output);
 		}
 	}
 
