@@ -1,9 +1,18 @@
 package uk.ac.imperial.lsds.seep.manet;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +23,12 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 public class LinkCostHandler implements Runnable 
 {
 	private final Logger log = LoggerFactory.getLogger(LinkCostHandler.class);
-	private final int linkCostPort = Integer.parseInt(GLOBALS.valueFor("linkCostPort"));
+	private final String linkCostMonitorAddr = GLOBALS.valueFor("linkCostMonitorAddr");
+	private final int linkCostMonitorPort = Integer.parseInt(GLOBALS.valueFor("linkCostMonitorPort"));
+	private final String linkPainterAddr = GLOBALS.valueFor("linkPainterAddr");
+	private final int linkPainterPort = Integer.parseInt(GLOBALS.valueFor("linkPainterPort"));
+	private final String charSet = GLOBALS.valueFor("linkCostCharSet");
+	private final int RECOMPUTE_INTERVAL_MS = 5 * 1000;
 	private final CoreRE owner;
 	private volatile boolean goOn = true;
 	
@@ -25,50 +39,186 @@ public class LinkCostHandler implements Runnable
 	
 	public void run()
 	{
-		ServerSocket serverSocket = null;
-		LinkCostWorker worker = null;
-		Thread workerT = null;
-		
-		// Start server socket in a loop listening on the link cost port.
-		try{
-			serverSocket = new ServerSocket();
-			serverSocket.setReuseAddress(true);
-			serverSocket.bind(new InetSocketAddress(owner.getNodeDescr().getIp(), linkCostPort));
-		}
-		catch(Exception e)
+		while(goOn)
 		{
-			log.error("Could not bind to link cost server socket addr:"+owner.getNodeDescr().getIp()+":"+linkCostPort, e);
-			System.exit(1);	//Temp.
-		}
-		
-		while (goOn)
-		{		
+			String linkState = requestRoutingStateSync();
+			log.error("Current routing state: "+ linkState);
+			//TODO: Compute best target
+			int newTarget = computeLowestCostTarget(linkState);
+			//TODO: Update local routing
+			//owner.getProcessingUnit().getOperator().getRouter().updateLowestCost(newTarget);
+			//TODO: Update CORE routing graphics
+			//updateCOREGraphicsSync(newTarget);
 			
-			try {
-				//Spawn a worker to compute the lowest cost path to the destination,
-				//notify the CORE EMANE link cost painter with the result, and			
-				//update the local router with the lowest cost next hop.
-				Socket incomingConn = serverSocket.accept();
-				String threadName = incomingConn.getInetAddress().toString();
-				log.info(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort()+
-						"-> LinkCostHandler starting a new LinkCostWorker ");
-				worker = new LinkCostWorker(owner, incomingConn);
-				workerT = new Thread(worker, "lcw-"+threadName+"-T");
-				workerT.start();
-			} catch (IOException e) {
-				log.error("Problem listening for link state updates on"+owner.getNodeDescr().getIp()+":"+linkCostPort, e);
-				System.exit(1); //Temp
-			}			
-		}	
-		log.info("xxxxxxxxx link cost handler serversocket closed xxxxxxxxxx");
-		worker.setGoOn(false);
-		workerT.interrupt();
-		try {
-			serverSocket.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+			long lastRecompute = System.currentTimeMillis();
+			
+			while (lastRecompute + RECOMPUTE_INTERVAL_MS > System.currentTimeMillis())
+			{
+				try
+				{
+					Thread.sleep(lastRecompute + RECOMPUTE_INTERVAL_MS - System.currentTimeMillis());					
+				} catch (InterruptedException e)
+				{
+					if (!goOn) { break; }
+					log.error("Link cost thread interrupted.", e);
+				}
+			}
 		}
+		log.warn("Link cost handler thread exiting.");
 	}
 	
+	
 	public void setGoOn(boolean goOn) { this.goOn = goOn; }
+	private String requestRoutingStateSync() 
+	{ 
+		//Open a connection to the link cost monitor
+		Socket s = null;	
+		String result = "";
+		
+		//TODO: Remove sys exits once stabilized
+		try
+		{			
+			try {
+				s = new Socket(linkCostMonitorAddr, linkCostMonitorPort);
+			} catch (UnknownHostException e) {
+				log.error("Error opening link cost monitor socket: ",e); System.exit(1);
+			} catch (IOException e) {
+				log.error("Error opening link cost monitor socket: ",e); System.exit(1);
+			}
+			
+			//Read link cost update
+			BufferedReader reader = null;
+			try {
+				reader = new BufferedReader(new InputStreamReader(s.getInputStream(), charSet));
+			} catch (UnsupportedEncodingException e) {
+				log.error("Error opening link cost reader: ",e); System.exit(1);
+			} catch (IOException e) {
+				log.error("Error opening link cost reader: ",e); System.exit(1);
+			}
+	
+			//Read until EOF
+			while (goOn)
+			{
+				try {
+					String line = reader.readLine();
+					if (line != null)
+					{
+						log.info("Link cost handler read line:"+ line);
+						result += line;
+					}
+					else
+					{
+						break;
+					}
+				} catch (IOException e) {
+					log.error("Error reading line from link cost monitor: ",e); System.exit(1);
+				}
+			}
+		}
+		finally
+		{
+			//Close connection
+			try {
+				s.close();
+			} catch (IOException e) {
+				log.warn("Error closing connection to link cost monitor.");
+			}
+		}
+
+		return result;
+	}
+	
+	private int computeLowestCostTarget(String linkState) 
+	{ 		
+		Map netTopology = parseLinkState(linkState);
+		
+		GraphUtil.logTopology(netTopology);
+		return -1;
+	} 
+	
+	private Map<Integer,Map<Integer, Integer>> parseLinkState(String linkState)
+	{
+		//src-id -> {dest-id -> cost}
+		Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
+		String trimmedBraces = linkState.substring(1, linkState.length() -1);
+		if (!linkState.equals("{"+trimmedBraces+"}")) { throw new RuntimeException("Logic error: invalid link state string:"+linkState); }
+		String[] splits = trimmedBraces.split("\\}, ");
+		String lastSplit = splits[splits.length-1];
+		splits[splits.length-1] = lastSplit.substring(0, lastSplit.length() -1);
+		for (String split : splits)
+		{
+			//log.info("Split="+split);
+			Integer src = Integer.parseInt(split.substring(0, split.indexOf(":")));
+			result.put(src, new HashMap<Integer, Integer>());
+			String destCostsUnsplit = split.substring(split.indexOf(":")+1, split.length());
+			String[] destCostsSplits = destCostsUnsplit.split(",");
+			destCostsSplits[0] = destCostsSplits[0].substring(2, destCostsSplits[0].length());
+
+			for (String destCostSplit : destCostsSplits)
+			{
+				//log.info("DestCostSplit="+destCostSplit);
+				 
+				String[] destCost = destCostSplit.split(":");
+				Integer dest = Integer.parseInt(destCost[0].trim());
+				if (destCost.length > 2) { throw new RuntimeException("destCost length > 2: " + destCostSplit); }
+				if (!"None".equals(destCost[1].trim()))
+				{
+					Integer cost = Integer.parseInt(destCost[1].trim());
+					result.get(src).put(dest, cost);
+				}				
+			}			
+		}
+		return result;		
+	}
+	
+	
+	private void updateCOREGraphicsSync(int newTarget) 
+	{ 
+		//Open a connection to the link cost monitor
+		Socket s = null;
+		
+		//TODO: Remove sys exits once stabilized
+		try
+		{
+			try {
+				s = new Socket(linkPainterAddr, linkPainterPort);
+			} catch (UnknownHostException e) {
+				log.error("Error opening link painter socket: ",e); System.exit(1);
+			} catch (IOException e) {
+				log.error("Error opening link painter socket: ",e); System.exit(1);
+			}
+			
+			//Read link cost update
+			BufferedWriter writer = null;
+			try {
+				writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), charSet));
+			} catch (UnsupportedEncodingException e) {
+				log.error("Error opening link painter writer: ",e); System.exit(1);
+			} catch (IOException e) {
+				log.error("Error opening link painter writer: ",e); System.exit(1);
+			}
+	
+			//TODO: Get ip of newTarget?
+			try {
+				writer.write(owner.getNodeDescr().getIp()+","+getTargetIp(newTarget)+"\n");
+			} catch (IOException e) {
+				log.error("Error writing target to painter", e); System.exit(1);
+			}
+		}
+		finally
+		{
+			//Close connection
+			try {
+				s.close();
+			} catch (IOException e) {
+				log.warn("Error closing connection to link cost monitor.");
+			}
+		}
+	}	
+	
+	private String getTargetIp(int target)
+	{
+		//TODO: Get downstream ip address for new target.
+		return "192.168.202.101";
+	}
 }
