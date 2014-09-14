@@ -127,8 +127,9 @@ class LinkState:
 		
 if __name__=="__main__":
 	parser = argparse.ArgumentParser(description='Monitor and distribute OLSR link state information to workers.')		
-	parser.add_argument('--addr', dest='addr', help='server socket address')
 	parser.add_argument('--port', dest='port', help='server socket port')
+	parser.add_argument('--addr', dest='addr', default='', help='server socket address')
 	parser.add_argument('--num_nodes', dest='num_nodes', default='6', help='number of nodes [6]')
 	args = parser.parse_args()
+	
 	main(int(args.num_nodes), args.addr, int(args.port))
