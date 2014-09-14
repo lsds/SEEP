@@ -6,15 +6,20 @@ def main(num_nodes):
 
 	link_states = LinkState(num_nodes)
 
+	#start_reader(link_states)
 	start_tailer(link_states)
 
 	#start_server(link_states)
 def start_tailer(link_states):
 
-	for line in sys.stdin:
-		print 'Update: %s'%line
+	while True:
+		line = sys.stdin.readline()
+		if not line:
+			raise Exception("Link state server tail failed.")
+
+		#print 'Update: %s\n'%line
 		link_states.handleUpdate(line)
-		print 'Link states: %s'%(str(link_states))
+		#print 'Link states: %s\n'%(str(link_states))
 
 class LinkState:
 
@@ -25,7 +30,7 @@ class LinkState:
 		self.link_state_lock = threading.Lock()
 
 		self.start_update_regex = re.compile(r'n(/d+) start')
-		self.update_reges = re.compile(r'n(/d+) n(/d+) (/d+)$')
+		self.update_regex = re.compile(r'n(/d+) n(/d+) (/d+)$')
 		self.end_update_regex = re.compile(r'n(/d+) start')
 
 
@@ -36,6 +41,7 @@ class LinkState:
 			for j in range(1, self.num_nodes+1):
 				if i != j:
 					result[i][j] = None
+		return result
 		
 	def handleUpdate(self, update):
 		match = re.search(self.start_update_regex, update)
@@ -61,10 +67,11 @@ class LinkState:
 			return
 		
 
-	def str(self):
+	def __str__(self):
 		copy_link_states = {}
-		with link_state_lock:
+		with self.link_state_lock:
 			for i in range(1, self.num_nodes+1):
+				copy_link_states[i] = {}
 				for j in range(1, self.num_nodes+1):
 					if i != j:
 						copy_link_states[i][j] = self.link_states[i][j]
@@ -74,7 +81,7 @@ class LinkState:
 		return str(copy_link_states)
 
 	def _update_link_states(self, node):
-		with link_state_lock:
+		with self.link_state_lock:
 			for nbr in self.next_updates[node].keys():
 				self.link_states[node][nbr] = self.next_updates[node][nbr]
 				#Assume symmetric links for now
