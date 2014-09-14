@@ -44,6 +44,7 @@ import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
@@ -100,26 +101,45 @@ public class ControlDispatcher {
 		}
 	}
 
-	public void sendUpstream(ControlTuple ct, int index){
+	public void sendUpstream(ControlTuple ct, int index)
+	{
+		sendUpstream(ct, index, true);
+	}
+	
+	public void sendUpstream(ControlTuple ct, int index, boolean block){
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
-		Output output = null;
-		try{
-			output = new Output(socket.getOutputStream());
-			synchronized(k){
-				synchronized(socket){
-					synchronized (output){
-						k.writeObject(output, ct);
-						output.flush();
+		SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
+		boolean success = false;
+		while(!success)
+		{
+			Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
+			if (socket == null)
+			{
+				if (!block) { throw new RuntimeException("Logic error."); }
+				return;
+			}
+
+			Output output = null;
+			try{
+				output = new Output(socket.getOutputStream());
+				synchronized(k){
+					synchronized(socket){
+						synchronized (output){
+							k.writeObject(output, ct);
+							output.flush();
+						}
 					}
 				}
+				success = true;
+			}
+			catch(IOException | KryoException e){
+				LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+				e.printStackTrace();
+				((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
+				if (!block) { break; }
 			}
 		}
-		catch(IOException io){
-			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
-			io.printStackTrace();
-		}
-	}
+	}	
 	
 	public void sendOpenSessionWaitACK(ControlTuple ct, int index){
 		DisposableCommunicationChannel dcc = (DisposableCommunicationChannel) puCtx.getStarTopology().get(index);
@@ -216,25 +236,44 @@ public class ControlDispatcher {
 
 	
 	public void sendDownstream(ControlTuple ct, int index){
+		sendDownstream(ct, index, true);
+	}
+	public void sendDownstream(ControlTuple ct, int index, boolean block)
+	{
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
 		if (obj instanceof SynchronousCommunicationChannel){
-			Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
-			Output output = null;
-			try{
-				output = new Output(socket.getOutputStream());
-				synchronized(k){
-					synchronized (socket){
-						k.writeObject(output, ct);
-						output.flush();
-					}
+			SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
+			boolean success = false;
+			while (!success)
+			{
+				Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
+				if (socket == null)
+				{
+					if (!block) { throw new RuntimeException("Logic error."); }
+					return;
 				}
-			}
-			catch(IOException io){
-				LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
-				io.printStackTrace();
+
+				Output output = null;
+				try{
+					output = new Output(socket.getOutputStream());
+					synchronized(k){
+						synchronized (socket){
+							k.writeObject(output, ct);
+							output.flush();
+						}
+					}
+					success = true;
+				}
+				catch(IOException | KryoException e){
+					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+					e.printStackTrace();
+					((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
+					if (!block) { break; }
+				}
 			}
 		}
 	}
+
 	
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
 		Output output = new Output(os);

@@ -160,4 +160,10 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
     public void setCallbackOp(Operator op){
 		this.api.setCallbackObject(op);
 	}
+
+	@Override
+	public void sendLowestCost(DataTuple dt) {
+		throw new RuntimeException("TODO");
+		
+	}
 }

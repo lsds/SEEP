@@ -184,4 +184,10 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
     public void send_toIndices(DataTuple[] dts, int[] indices) {
         
     }
+
+	@Override
+	public void sendLowestCost(DataTuple dt) {
+		throw new RuntimeException("TODO");
+		
+	}
 }

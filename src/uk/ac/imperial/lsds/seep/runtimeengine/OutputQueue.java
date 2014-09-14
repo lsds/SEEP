@@ -30,6 +30,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
 public class OutputQueue {
@@ -81,10 +82,10 @@ public class OutputQueue {
 		LOG.debug("-> replaySemaphore to: {}", replaySemaphore.toString());
 	}
 	
-	
+
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
-		
+
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
@@ -107,21 +108,41 @@ public class OutputQueue {
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
-					k.writeObject(channelRecord.getOutput(), msg);
-					//Flush the buffer to the stream
-					channelRecord.getOutput().flush();
+
+					boolean flushed = false;
+					while(!flushed)
+					{
+						try
+						{
+							k.writeObject(channelRecord.getOutput(), msg);
+							//Flush the buffer to the stream
+							channelRecord.getOutput().flush();
+							flushed = true;
+						}
+						catch(KryoException e)
+						{
+							//TODO: Get rid of this global. Might want to
+							//Have different behaviour for different instances.
+							if(!"true".equals(GLOBALS.valueFor("autoReconnectChannel")))
+							{
+								throw(e);
+							}
+							channelRecord.reopenDownstreamDataSocket();
+						}
+					}
+
 					// We save the data
 					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
 						if(GLOBALS.valueFor("TTT").equals("TRUE")){
-							
+
 						}
 						else{
 							buffer.save(msg, msg.outputTs, owner.getIncomingTT());
 						}
 					}
 					// Anf finally we reset the batch
-//					channelRecord.cleanBatch(); // RACE CONDITION ??
+					//					channelRecord.cleanBatch(); // RACE CONDITION ??
 					channelRecord.cleanBatch2();
 				}
 			}

@@ -159,14 +159,8 @@ public class Router implements Serializable{
 	public ArrayList<Integer> forward(DataTuple dt){
 		int value = 0;
 		ArrayList<Integer> results = null;
-		if(downstreamRoutingImpl == null){
-			System.out.println("downstreamrouting impl null");
-			System.exit(0); /// xtreme
-		}
-		if(downstreamRoutingImpl.keySet().size()==0){
-			System.out.println("Downstream Routing implementation hashmap is empty!");
-			System.exit(0);
-		} else if (downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL)!=null){
+		checkDownstreamRoutingImpl();
+		if (downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL)!=null){
 			results = downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route();
 		} else {
 			//			Set<Integer> impls = downstreamRoutingImpl.keySet();
@@ -180,6 +174,23 @@ public class Router implements Serializable{
 			//			System.out.println("idx ("+INDEX_FOR_ROUTING_IMPL+") for routing impl not valid");
 		}
 		return results;
+	}
+	
+	public ArrayList<Integer> forwardLowestCost(DataTuple dt){
+		checkDownstreamRoutingImpl();
+		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).routeLowestCost();
+	}
+	
+	private void checkDownstreamRoutingImpl()
+	{		
+		if(downstreamRoutingImpl == null){
+			System.out.println("downstreamrouting impl null");
+			System.exit(0); /// xtreme
+		}
+		if(downstreamRoutingImpl.keySet().size()==0){
+			System.out.println("Downstream Routing implementation hashmap is empty!");
+			System.exit(0);
+		}
 	}
 
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
@@ -224,6 +235,10 @@ public class Router implements Serializable{
 		return key;
 	}
 
+	public void updateLowestCost(int newTarget)
+	{
+		downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).updateLowestCost(newTarget);
+	}
 
 	public int[] newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
 		int key[];

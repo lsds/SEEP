@@ -122,6 +122,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		ArrayList<Integer> targets = router.forward(dt);
         processingUnit.sendData(dt, targets);
 	}
+
+
+	public void sendLowestCost(DataTuple dt) {
+		ArrayList<Integer> targets = router.forwardLowestCost(dt);
+		processingUnit.sendData(dt, targets);		
+	}
 	
 	// Send to a particular downstream index
 	public synchronized void send_toIndex(DataTuple dt, int idx){
@@ -284,4 +290,5 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	public String toString() {
 		return "Operator [operatorId="+operatorId+", opContext= "+opContext+"]";
 	}
+
 }

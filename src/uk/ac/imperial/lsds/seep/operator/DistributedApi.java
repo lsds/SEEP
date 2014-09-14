@@ -37,13 +37,21 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 	
 	@Override
 	public synchronized void send(DataTuple dt){
-		op.send(dt);
+		op.sendLowestCost(dt);
+	}
+	
+
+	@Override
+	public void sendLowestCost(DataTuple dt) {
+		throw new RuntimeException("TODO");
+		
 	}
 	
 	@Override
 	public synchronized void send_toIndex(DataTuple dt, int idx){
 		op.send_toIndex(dt, idx);
 	}
+	
 	
 	@Override
 	public synchronized void send_splitKey(DataTuple dt, int key){
@@ -124,4 +132,5 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 	public void disableMultiCoreSupport(){
 		op.disableMultiCoreSupport();
 	}
+
 }

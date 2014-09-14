@@ -89,5 +89,11 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
         public void send_toIndices(DataTuple[] dts, int[] indices) {
             
         }
+
+		@Override
+		public void sendLowestCost(DataTuple dt) {
+			throw new RuntimeException("TODO");
+			
+		}
         
 }
