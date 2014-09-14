@@ -132,6 +132,27 @@ public class LinkCostHandler implements Runnable
 	{ 		
 		Map netTopology = parseLinkState(linkState);
 		
+		
+		int localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
+		int localNodeId = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getNodeId();
+		InetAddress localNodeIp = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getIp();
+		int localNodePort = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getPort();
+		Query q = owner.getProcessingUnit().getOperator().getQuery();
+		log.info("Local logical id = "+q.getLogicalNodeId(localOpId));
+		//int downOpId = owner.getProcessingUnit().getOperator().getOpContext().getDownOpIdFromIndex(index);
+
+		/* In infrastructure
+		ArrayList<Operator> ops = qp.getOps();
+		src = qp.getSrc();
+		snk = qp.getSnk();
+		queryToNodesMapping = qp.getMapOperatorToNode();
+		
+		In Operator
+		compose(Connectable down)
+		opContext.addDownstream(down.getOperatorId());
+		
+		*/
+
 		GraphUtil.logTopology(netTopology);
 		return -1;
 	} 

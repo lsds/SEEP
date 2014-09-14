@@ -28,8 +28,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +57,7 @@ import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMaster;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterFactory;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
@@ -66,9 +71,11 @@ import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
+
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterListener;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
@@ -351,9 +358,68 @@ public class Infrastructure {
 			placeNew(e.getValue(), a, BaseInC, BaseInD);
 		}
 		LOG.info("-> All operators have been mapped");
+		Query q = buildMeanderQuery();
 		for(Operator o : queryToNodesMapping.values()){
 			LOG.debug("OP: {}, CONF: {}", o.getOperatorId(), o);
+			o.setQuery(q);
 		}
+	}
+	
+	private Query buildMeanderQuery()
+	{
+		//TreeMap logicalTopology
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		//TODO: Generalize this for non-face recognition queries.
+		logicalTopology.put(1, new Integer[]{}); //src
+		logicalTopology.put(2, new Integer[]{1}); //face detector
+		logicalTopology.put(3, new Integer[]{2}); //face recognizer
+		logicalTopology.put(4, new Integer[]{3}); //sink
+				
+		//TreeMap log2Phys
+		//use SEEP operator ids here for now. Will need to also store operator id <-> (node_addr, port) mapping
+		//Will probably need to change the getCost function in LinkCostHandler too to look up the costs by node_addr 
+		// (from the op id).
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<Integer, Set<Integer>>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<Integer, InetAddress>();
+		
+		//Walk the ops, starting at the source.
+		Set<Integer> srcPhys = new HashSet<Integer>(); 
+		srcPhys.add(src.getOperatorId());
+		log2phys.put(1, srcPhys);
+		phys2addr.put(src.getOperatorId(), src.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+		
+		int numDownstreams = src.getOpContext().getDownstreamSize();
+		int downstreamLogicalIndex = 2;
+		Operator current = src;
+		while (numDownstreams > 0)
+		{			
+			Set<Integer> downstreamPhys = new HashSet<Integer>();
+			
+			//TODO: Complete hack. For the FR query, enough to know the downstreams of one 
+			//physical replica to know the downstreams of all.
+			Operator next = null;
+			for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)
+			{
+				downstreamPhys.add(downstreamPlacement.opID());
+				next = getOp(downstreamPlacement.opID());
+				phys2addr.put(downstreamPlacement.opID(), next.getOpContext().getOperatorStaticInformation().getMyNode().getIp());								
+			}
+			log2phys.put(downstreamLogicalIndex, downstreamPhys);
+			downstreamLogicalIndex++;
+			numDownstreams = next.getOpContext().getDownstreamSize();
+			current = next;
+		}
+		
+		return new Query(logicalTopology, log2phys, phys2addr);		
+	}
+	
+	private Operator getOp(int opId)
+	{
+		for (Operator op : ops)
+		{
+			if (op.getOperatorId() == opId) { return op; }
+		}
+		throw new RuntimeException("Logic error, no operator with id: "+opId);
 	}
 
 	public void createInitialStarTopology(){

@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -35,6 +36,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
         
 	private final OperatorCode operatorCode;
 	private final StateWrapper stateWrapper;
+	private Query meanderQuery = null;
 	
 	private OperatorContext opContext = new OperatorContext();
 	private boolean ready = false;
@@ -79,10 +81,16 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
         }
 	
 	/** Other methods **/
-	
 	public StateWrapper getStateWrapper(){
 		return stateWrapper;
 	}
+	
+	public void setQuery(Query query)
+	{
+		this.meanderQuery = query;
+	}
+	
+	public Query getQuery() { return meanderQuery; }
 	
 	public void setReady(boolean ready){
 		this.ready = ready;
