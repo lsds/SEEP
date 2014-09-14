@@ -21,9 +21,8 @@ def start_tailer(link_states):
 		if not line:
 			raise Exception("Link state server tail failed.")
 
-		#print 'Update: %s\n'%line
 		link_states.handleUpdate(line)
-		#print 'Link states: %s\n'%(str(link_states))
+		print 'Link states: %s\n'%(str(link_states))
 
 def start_server(host, port, link_states):
 
@@ -57,9 +56,9 @@ class LinkState:
 		self.next_updates = self._init_nodes_map()
 		self.link_state_lock = threading.Lock()
 
-		self.start_update_regex = re.compile(r'n(/d+) start')
-		self.update_regex = re.compile(r'n(/d+) n(/d+) (/d+)$')
-		self.end_update_regex = re.compile(r'n(/d+) start')
+		self.start_update_regex = re.compile(r'n(\d+) start')
+		self.update_regex = re.compile(r'n(\d+) n(\d+) (\d+)$')
+		self.end_update_regex = re.compile(r'n(\d+) end')
 
 
 	def _init_nodes_map(self):
@@ -75,7 +74,7 @@ class LinkState:
 		match = re.search(self.start_update_regex, update)
 		if match:
 			node = int(match.group(1))
-			self.assert_next_updates_reset(node)
+			self._assert_next_updates_reset(node)
 			return
 
 		match = re.search(self.update_regex, update)
@@ -94,6 +93,7 @@ class LinkState:
 			self._reset_next_updates(node)
 			return
 		
+		raise Exception("Invalid update: %s"%update)
 
 	def __str__(self):
 		copy_link_states = {}
