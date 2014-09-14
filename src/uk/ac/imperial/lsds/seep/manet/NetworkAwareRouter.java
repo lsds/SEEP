@@ -7,8 +7,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class NetworkAwareRouter 
 {
+	private final static Logger logger = LoggerFactory.getLogger(NetworkAwareRouter.class);
 	public static final int NO_ROUTE = -1;
 	private final Query query;
 	private final int localPhysicalId;
@@ -19,11 +23,11 @@ public class NetworkAwareRouter
 		this.localPhysicalId = localPhysicalId;
 	}
 
-
 	public int route(Map<Integer, Map<Integer, Integer>> netTopology)
 	{
 		Map initialAppTopology = computeInitialAppTopology(netTopology);
 		Map appTopology = computeFinalAppTopology(initialAppTopology);
+		logger.info("App topology (localOpId="+localPhysicalId+": "+ appTopology);
 		Integer nextHop = useBandwidthMetric() ? 
 				GraphUtil.nextHopBandwidth(localPhysicalId, query.getSinkPhysicalId(), appTopology) : 
 					GraphUtil.nextHop(localPhysicalId, query.getSinkPhysicalId(), appTopology);

@@ -31,7 +31,8 @@ public class LinkCostHandler implements Runnable
 	private final int RECOMPUTE_INTERVAL_MS = 5 * 1000;
 	private final CoreRE owner;
 	private volatile boolean goOn = true;
-	private final NetworkAwareRouter netRouter; 
+	private final NetworkAwareRouter netRouter;
+	private final int localPhysicalId;
 	
 	public LinkCostHandler(CoreRE owner)
 	{
@@ -39,6 +40,7 @@ public class LinkCostHandler implements Runnable
 		this.netRouter = new NetworkAwareRouter(
 				owner.getProcessingUnit().getOperator().getOperatorId(),
 				owner.getProcessingUnit().getOperator().getQuery());
+		this.localPhysicalId = owner.getProcessingUnit().getOperator().getOperatorId();
 	}
 	
 	public void run()
@@ -49,10 +51,10 @@ public class LinkCostHandler implements Runnable
 			log.error("Current routing state: "+ linkState);
 			//TODO: Compute best target
 			int newOperatorId = computeLowestCostOperatorId(linkState);
-			if (newOperatorId != NetworkAwareRouter.NO_ROUTE)
-			{
-				//TODO: Update local routing
-				int downOpIndex = owner.getProcessingUnit().getOperator().getOpContext().findOpIndexFromDownstream(newOperatorId);
+			if (newOperatorId != NetworkAwareRouter.NO_ROUTE && newOperatorId != localPhysicalId)
+			{				
+				int downOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getDownOpIndexFromOpId(newOperatorId);
+				log.info("Op "+localPhysicalId+" updating router to use new downstream operator "+newOperatorId+", target index="+downOpIndex);
 				owner.getProcessingUnit().getOperator().getRouter().updateLowestCost(downOpIndex);
 				//TODO: Update CORE routing graphics
 				//updateCOREGraphicsSync(newTarget);

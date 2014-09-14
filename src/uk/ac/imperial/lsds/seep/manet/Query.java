@@ -45,9 +45,9 @@ public class Query implements Serializable
     this.phys2addr = phys2addr;
 
 	logger.info("Number of logical nodes:"+logicalTopology.size());
-    logger.debug("Logical topology: "+ logicalTopologyToString()); 
-    logger.debug("Log2phys: "+ log2physToString());
-    logger.debug("Parallelizable: "+ parallelized);
+    logger.info("Logical topology: "+ logicalTopologyToString()); 
+    logger.info("Log2phys: "+ log2physToString());
+    logger.info("Parallelizable: "+ parallelized);
 
     //TODO validation.
   }
