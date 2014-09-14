@@ -39,75 +39,71 @@ class AppLinkState:
 
 	def __init__(self, nodes):
 		self.num_nodes = nodes
-		self.link_states = self._init_nodes_map()
-		self.link_state_lock = threading.Lock()
+		self.emulator_ips = self.init_emulator_ips()
+		self.downstreams = {}
+		self.downstreams_lock = threading.Lock()
+		self.update_regex = re.compile(r'(.*):(\d+),(.*):(\d+)|(.*):(\d+),None')
+		self.has_downstream_regex = re.compile(r'(.*):(\d+),(.*):(\d+)')
+		self.no_downstream_regex = re.compile(r'(.*):(\d+),None')
+		self.emulator_ip_regex = re.compile(r'192.168.20([1-6]).101')
 
+	def _init_emulator_ips(self):
+		result = {}
+		for in range(1, self.num_nodes+1):
+			ip = "192.168.20%d.101"%i
+			result[i] = ip 
 
-	def _init_nodes_map(self):
+	def handleUpdate(update)	
+		match = re.search(self.update_regex, update)
+		if not match: raise Exception("Invalid link painter update: %s"%update)
+		match = re.search(self.has_downstream_regex, update)
+		if match:
+			node_addr = match.group(1)
+			node_port = match.group(2)
+			nbr_addr = match.group(3)
+			nbr_port = match.group(4)
+			if re.search(emulator_ip_regex, node_addr) and re.search(emulator_ip_regex, nbr_addr):
+				self._set_downstream(node_addr, node_port, nbr_addr, nbr_port)
+			else:
+				raise Exception("Unexpected node or nbr address: %s,%s"%(node_addr, nbr_addr))
+		else:
+			match = re.search(self.no_downstream_regex, update)
+			if not match: raise Exception("Logic error, should be no downstream update: %s"%update)	
+			node_addr = match.group(1)
+			node_port = match.group(2)
+			if re.search(emulator_ip_regex, node_addr): 
+				self._unset_downstream(node_addr, node_port)
+			else:
+				raise Exception("Unexpected node address: %s"%node_addr)
+
+	def _set_downstream(node_addr, node_port, nbr_addr, nbr_port):
+		with self.downstreams_lock:
+			self.downstreams[(node_addr,node_port)] = (nbr_addr, nbr_port)
+		
+	def _unset_downstream(node_addr, node_port, nbr_addr, nbr_port):
+		with self.downstreams_lock:
+			self.downstreams[(node_addr,node_port)] = None 
+
+			
+	def compute_downstream_ids(node)
+		emulator_ip = self.emulator_ips[node]
+		downstream_ids = self._init_downstream_ids()
+		with self.downstreams_lock:
+			for (addr, port) in self.downstreams.keys():
+				if addr == emulator_ip:
+					if self.downstreams[(addr,port)]:
+						(downstream_addr, downstream_port) = self.downstreams[(addr,port)]
+						downstream_id = re.search(self.emulator_ip_regex, self.downstream_addr)
+						downstream_ids[node] = True
+		return downstream_ids
+		
+	def _init_downstream_ids(node):
 		result = {}
 		for i in range(1, self.num_nodes+1):
-			result[i] = {}
-			for j in range(1, self.num_nodes+1):
-				if i != j:
-					result[i][j] = None
+			if i != node:
+				result[i] = False
 		return result
-		
-	def handleUpdate(self, update):
-		
-		
-		match = re.search(self.start_update_regex, update)
-		if match:
-			node = int(match.group(1))
-			self.assert_next_updates_reset(node)
-			return
 
-		match = re.search(self.update_regex, update)
-		if match:
-			node = int(match.group(1))
-			nbr = int(match.group(2))
-			hops = int(match.group(3))
-			if not hops == 1: raise Exception("Unexpected number of hops %d -> %d = %d"%(node, nbr, hops))
-			self.next_updates[node][nbr] = hops
-			return
-
-		match = re.search(self.end_update_regex, update)
-		if match:
-			node = int(match.group(1))
-			self._update_link_states(node)
-			self._reset_next_updates(node)
-			return
-		
-
-	def __str__(self):
-		copy_link_states = {}
-		with self.link_state_lock:
-			for i in range(1, self.num_nodes+1):
-				copy_link_states[i] = {}
-				for j in range(1, self.num_nodes+1):
-					if i != j:
-						copy_link_states[i][j] = self.link_states[i][j]
-
-		# No real need for all the above at the moment, but might
-		# want to change this later.
-		return str(copy_link_states)
-
-	def _update_link_states(self, node):
-		with self.link_state_lock:
-			for nbr in self.next_updates[node].keys():
-				self.link_states[node][nbr] = self.next_updates[node][nbr]
-				#Assume symmetric links for now
-				self.link_states[nbr][node] = self.next_updates[node][nbr]
-			
-
-	def _reset_next_updates(self, node):
-		for nbr in self.next_updates[node].keys():
-			self.next_updates[node][nbr] = None
-		
-	def _assert_next_updates_reset(self, node):
-		for nbr in self.next_updates[node].keys():
-			if self.next_updates[node][nbr]:
-				raise Exception("Didn't reset node %d neighbours properly: %s"%(node, str(self.next_updates[node][nbr])))
-		
 if __name__=="__main__":
 	parser = argparse.ArgumentParser(description='Monitor and distribute OLSR link state information to workers.')		
 	parser.add_argument('--addr', dest='addr', help='server socket address')
