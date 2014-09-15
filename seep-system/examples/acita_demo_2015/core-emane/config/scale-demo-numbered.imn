@@ -49,6 +49,7 @@ node n2 {
     iconcoords {306.0 145.0}
     labelcoords {306.0 177.0}
     interface-peer {0 n8}
+    hidden 1
 }
 
 node n3 {
@@ -64,6 +65,7 @@ node n3 {
     iconcoords {672.0 147.0}
     labelcoords {672.0 179.0}
     interface-peer {0 n9}
+    hidden 1
 }
 
 node n4 {
@@ -79,6 +81,7 @@ node n4 {
     iconcoords {806.0 323.0}
     labelcoords {806.0 355.0}
     interface-peer {0 n10}
+    hidden 1
 }
 
 node n6 {
@@ -94,6 +97,7 @@ node n6 {
     iconcoords {324.0 529.0}
     labelcoords {324.0 561.0}
     interface-peer {0 n11}
+    hidden 1
 }
 
 node n7 {
@@ -112,8 +116,8 @@ node n7 {
 	!
     }
     canvas c1
-    iconcoords {376.0 316.0}
-    labelcoords {376.0 348.0}
+    iconcoords {373.0 294.0}
+    labelcoords {373.0 326.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n5}
     services {OLSR IPForward Android LinkMonitor}
@@ -187,8 +191,8 @@ node n10 {
 	!
     }
     canvas c1
-    iconcoords {629.0 312.0}
-    labelcoords {629.0 344.0}
+    iconcoords {635.0 303.0}
+    labelcoords {635.0 335.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n4}
     services {OLSR IPForward SSH Android LinkMonitor}
@@ -224,8 +228,8 @@ node n11 {
 	!
     }
     canvas c1
-    iconcoords {449.0 392.0}
-    labelcoords {449.0 424.0}
+    iconcoords {430.0 381.0}
+    labelcoords {430.0 413.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n6}
     services {OLSR IPForward Android LinkMonitor}
@@ -261,8 +265,8 @@ node n8 {
 	!
     }
     canvas c1
-    iconcoords {446.0 235.0}
-    labelcoords {446.0 267.0}
+    iconcoords {434.0 209.0}
+    labelcoords {434.0 241.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n2}
     services {OLSR IPForward Android LinkMonitor}
@@ -295,6 +299,7 @@ node n5 {
     iconcoords {211.0 344.0}
     labelcoords {211.0 376.0}
     interface-peer {0 n7}
+    hidden 1
 }
 
 node n12 {
@@ -344,6 +349,7 @@ node n13 {
     iconcoords {761.0 554.0}
     labelcoords {761.0 586.0}
     interface-peer {0 n12}
+    hidden 1
 }
 
 link l1 {
