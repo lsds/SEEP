@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
@@ -30,22 +30,23 @@ import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
 public class OutputQueue {
-	
+
 	final private Logger LOG = LoggerFactory.getLogger(OutputQueue.class);
 
 	// replaySemaphore controls whether it is possible to send or not
 	private CoreRE owner = null;
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
-	
+
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
 		this.k = initializeKryo();
 	}
-	
+
 	private Kryo initializeKryo(){
 		//optimize here kryo
 		Kryo k = new Kryo();
@@ -56,7 +57,7 @@ public class OutputQueue {
 		k.setAsmEnabled(true);
 		return k;
 	}
-	
+
 	//Start incoming data, one thread has finished replaying
 	public synchronized void start(){
 		/// \todo {this is a safe check that should not be done because we eventually will be sure that it works well}
@@ -73,18 +74,18 @@ public class OutputQueue {
 			this.notify();
 		}
 	}
-	
+
 	public synchronized void stop() {
 		//Stop incoming data, a new thread is replaying
 		LOG.debug("-> replaySemaphore from: {}", replaySemaphore.toString());
 		replaySemaphore.incrementAndGet();
 		LOG.debug("-> replaySemaphore to: {}", replaySemaphore.toString());
 	}
-	
-	
+
+
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
-		
+
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
@@ -107,21 +108,41 @@ public class OutputQueue {
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
-					k.writeObject(channelRecord.getOutput(), msg);
-					//Flush the buffer to the stream
-					channelRecord.getOutput().flush();
+
+					boolean flushed = false;
+					while(!flushed)
+					{
+						try
+						{
+							k.writeObject(channelRecord.getOutput(), msg);
+							//Flush the buffer to the stream
+							channelRecord.getOutput().flush();
+							flushed = true;
+						}
+						catch(KryoException e)
+						{
+							//TODO: Get rid of this global. Might want to
+							//Have different behaviour for different instances.
+							if(!"true".equals(GLOBALS.valueFor("autoReconnectChannel")))
+							{
+								throw(e);
+							}
+							channelRecord.reopenDownstreamDataSocket();
+						}
+					}
+
 					// We save the data
 					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
 						if(GLOBALS.valueFor("TTT").equals("TRUE")){
-							
+
 						}
 						else{
 							buffer.save(msg, msg.outputTs, owner.getIncomingTT());
 						}
 					}
 					// Anf finally we reset the batch
-//					channelRecord.cleanBatch(); // RACE CONDITION ??
+					//					channelRecord.cleanBatch(); // RACE CONDITION ??
 					channelRecord.cleanBatch2();
 				}
 			}
@@ -138,7 +159,7 @@ public class OutputQueue {
 			ie.printStackTrace();
 		}
 	}
-	
+
 	public void replay(SynchronousCommunicationChannel oi){
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){
@@ -150,12 +171,12 @@ public class OutputQueue {
 		long b = System.currentTimeMillis() - a;
 		System.out.println("Dis.replay: "+b);
 	}
-	
+
 	public void replayTuples(SynchronousCommunicationChannel cci) {
 		Iterator<OutputLogEntry> sharedIterator = cci.getBuffer().iterator();
 		Output output = cci.getOutput();
 		int bufferSize = cci.getBuffer().size();
-		int controlThreshold = (int)(bufferSize)/10;
+		int controlThreshold = (bufferSize)/10;
 		int replayed = 0;
 //		while(sharedIterator.hasNext()) {
 //			BatchTuplePayload dt = sharedIterator.next().batch;
@@ -178,5 +199,5 @@ public class OutputQueue {
 		cci.setSharedIterator(sharedIterator);
 		start();
 	}
-	
+
 }

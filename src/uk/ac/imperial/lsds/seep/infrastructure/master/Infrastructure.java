@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  *     Martin Rouaux - Changes to support operator scale-in of operators
@@ -28,8 +28,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +57,7 @@ import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMaster;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterFactory;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
@@ -66,9 +71,11 @@ import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
+
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterListener;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
@@ -78,7 +85,6 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 /**
  * Infrastructure. This class is in charge of dealing with nodes, deployment and profiling of the system.
  */
-
 
 public class Infrastructure {
 
@@ -140,8 +146,8 @@ public class Infrastructure {
 		this.src = op;
 	}
 
-	/** 
-	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
+	/**
+	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries,
 	 * and then, for the below methods, indicate the query id that needs to be accessed.
 	 **/
 	public void loadQuery(QueryPlan qp, int BaseInC, int BaseInD) {
@@ -342,7 +348,7 @@ public class Infrastructure {
 			Node a = null;
 			try {
 				a = getNodeFromPool();
-			} 
+			}
 			catch (NodePoolEmptyException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -351,9 +357,68 @@ public class Infrastructure {
 			placeNew(e.getValue(), a, BaseInC, BaseInD);
 		}
 		LOG.info("-> All operators have been mapped");
+		Query q = buildMeanderQuery();
 		for(Operator o : queryToNodesMapping.values()){
 			LOG.debug("OP: {}, CONF: {}", o.getOperatorId(), o);
+			o.setQuery(q);
 		}
+	}
+
+	private Query buildMeanderQuery()
+	{
+		//TreeMap logicalTopology
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		//TODO: Generalize this for non-face recognition queries.
+		logicalTopology.put(1, new Integer[]{}); //src
+		logicalTopology.put(2, new Integer[]{1}); //face detector
+		logicalTopology.put(3, new Integer[]{2}); //face recognizer
+		logicalTopology.put(4, new Integer[]{3}); //sink
+
+		//TreeMap log2Phys
+		//use SEEP operator ids here for now. Will need to also store operator id <-> (node_addr, port) mapping
+		//Will probably need to change the getCost function in LinkCostHandler too to look up the costs by node_addr
+		// (from the op id).
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<Integer, Set<Integer>>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<Integer, InetAddress>();
+
+		//Walk the ops, starting at the source.
+		Set<Integer> srcPhys = new HashSet<Integer>();
+		srcPhys.add(src.getOperatorId());
+		log2phys.put(1, srcPhys);
+		phys2addr.put(src.getOperatorId(), src.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+
+		int numDownstreams = src.getOpContext().getDownstreamSize();
+		int downstreamLogicalIndex = 2;
+		Operator current = src;
+		while (numDownstreams > 0)
+		{
+			Set<Integer> downstreamPhys = new HashSet<Integer>();
+
+			//TODO: Complete hack. For the FR query, enough to know the downstreams of one
+			//physical replica to know the downstreams of all.
+			Operator next = null;
+			for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)
+			{
+				downstreamPhys.add(downstreamPlacement.opID());
+				next = getOp(downstreamPlacement.opID());
+				phys2addr.put(downstreamPlacement.opID(), next.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			}
+			log2phys.put(downstreamLogicalIndex, downstreamPhys);
+			downstreamLogicalIndex++;
+			numDownstreams = next.getOpContext().getDownstreamSize();
+			current = next;
+		}
+
+		return new Query(logicalTopology, log2phys, phys2addr);
+	}
+
+	private Operator getOp(int opId)
+	{
+		for (Operator op : ops)
+		{
+			if (op.getOperatorId() == opId) { return op; }
+		}
+		throw new RuntimeException("Logic error, no operator with id: "+opId);
 	}
 
 	public void createInitialStarTopology(){
@@ -410,7 +475,7 @@ public class Infrastructure {
 		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -419,7 +484,7 @@ public class Infrastructure {
 			try {
 				if(fis!=null)
 					fis.close();
-			} 
+			}
 			catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -657,19 +722,19 @@ public class Infrastructure {
 							//It needs to replay buffer
 							String target = "";
 							ControlTuple ctb2 = new ControlTuple().makeReconfigure(0, "replay", target);
-						}	
+						}
 					}
 				}
 			}
 		}
-	}	
+	}
 
 	public void start() throws ESFTRuntimeException{
 		//Send the messages to start the sources
 		//for(Operator source : src){
 		Operator source = src;
 		String msg = "START "+source.getOperatorId();
-		LOG.info("-> Starting source at source (OpId {}:{}), msg = {}", 
+		LOG.info("-> Starting source at source (OpId {}:{}), msg = {}",
 				source.getOpContext().getOperatorStaticInformation().getMyNode().getIp(),
 				source.getOpContext().getOperatorStaticInformation().getMyNode().getPort(),
 				msg);
@@ -710,7 +775,7 @@ public class Infrastructure {
 
 				// We first find the upstream operator for the chosen victim
 
-				// TODO: support multiple upstreams. I only intend to support one 
+				// TODO: support multiple upstreams. I only intend to support one
 				// upstream at the moment. Not difficult to support many.
 				int size = op.getOpContext().getUpstreamSize();
 				if (size > 1) {
@@ -721,7 +786,7 @@ public class Infrastructure {
 					// Send SCALE_IN control tuple to the upstream of the victim
 					PlacedOperator upstreamVictimOp = op.getOpContext().upstreams.iterator().next();
 					if (upstreamVictimOp != null) {
-						LOG.info("-> Stopping upstream operator {}, msg = {}", 
+						LOG.info("-> Stopping upstream operator {}, msg = {}",
 								upstreamVictimOp.opID(), ControlTupleType.SCALE_IN.toString());
 
 						ControlTuple ct = new ControlTuple()
@@ -761,8 +826,8 @@ public class Infrastructure {
 		boolean isStatefull = (o.getOperatorCode() instanceof StatefulOperator) ? true : false;
 		// Note that opId and originalOpId are the same value here, since placeNew places only original operators in the query
 
-		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, 
-				BaseInC + opId, 
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n,
+				BaseInC + opId,
 				BaseInD + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 
@@ -784,8 +849,8 @@ public class Infrastructure {
 		int originalOpId = originalOp.getOpContext().getOperatorStaticInformation().getOpId();
 		boolean isStatefull = (o.getOperatorCode() instanceof StatefulOperator) ? true : false;
 
-		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, 
-				Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId, 
+		OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n,
+				Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId,
 				Integer.parseInt(GLOBALS.valueFor("dataSocket")) + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 
@@ -905,7 +970,7 @@ public class Infrastructure {
 	public String getOpType(int opId) {
 		for(Operator op : ops){
 			if(op.getOperatorId() == opId){
-				return op.getClass().getName(); 
+				return op.getClass().getName();
 			}
 		}
 		return null;
@@ -914,11 +979,11 @@ public class Infrastructure {
 	public void parallelRecovery(String oldIp_txt) throws UnknownHostException{
 		try {
 			eiu.executeParallelRecovery(oldIp_txt);
-		} 
+		}
 		catch (NodePoolEmptyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 		catch (ParallelRecoveryException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

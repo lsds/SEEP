@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
@@ -17,19 +17,20 @@ import uk.ac.imperial.lsds.seep.operator.compose.SubOperator;
 
 public class LocalApi implements API, CommunicationPrimitives, Serializable{
 
+
 	private static final long serialVersionUID = 1L;
 	private static LocalApi instance = new LocalApi();
 	private SubOperator so;
-	
+
 	@Override
 	public void setCallbackObject(Callback c) {
 		this.so = (SubOperator)c;
 	}
-	
+
 	public static LocalApi getInstance(){
 		return instance;
 	}
-	
+
 	@Override
 	public void send(DataTuple dt) {
 		so.send(dt);
@@ -57,7 +58,7 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
 
 	@Override
 	public void send_toStreamId_splitKey(DataTuple dt, int streamId, int key) {
-		so.send_toStreamId_splitKey(dt, streamId, key);	
+		so.send_toStreamId_splitKey(dt, streamId, key);
 	}
 
 	@Override
@@ -77,17 +78,23 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
 
         @Override
         public void send_to_OpId(DataTuple dt, int opId) {
-            
+
         }
 
         @Override
         public void send_to_OpIds(DataTuple[] dt, int[] opId) {
-            
+
         }
 
         @Override
         public void send_toIndices(DataTuple[] dts, int[] indices) {
-            
+
         }
-        
+
+		@Override
+		public void sendLowestCost(DataTuple dt) {
+			throw new RuntimeException("TODO");
+
+		}
+
 }

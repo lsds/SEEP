@@ -226,4 +226,14 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public ArrayList<Integer> routeLowestCost() {
+		throw new RuntimeException("TODO");
+	}
+
+	@Override
+	public void updateLowestCost(int newTarget) {
+		throw new RuntimeException("TODO");
+	}
 }

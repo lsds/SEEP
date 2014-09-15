@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
@@ -21,20 +21,21 @@ import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
 
 public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Callback{
 
+
 	private static final long serialVersionUID = 1L;
-	
+
 	private SubOperatorCode code;
 	private MultiOperator multiOp;
-	
+
 	private boolean mostDownstream;
 	private boolean mostUpstream;
 	private Map<Integer, SubOperator> localDownstream;
 	private Map<Integer, SubOperator> localUpstream;
-	
+
 	public static SubOperator getSubOperator(SubOperatorCode code){
 		return new SubOperator(code);
 	}
-	
+
 	private SubOperator(SubOperatorCode code){
 		this.code = code;
 		this.mostDownstream = true;
@@ -43,7 +44,7 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		this.localUpstream = new HashMap<Integer, SubOperator>();
 		//code.api.setCallbackObject(this);
 	}
-	
+
 	private void addLocalDownstream(int localStreamId, SubOperator so){
 		this.mostDownstream = false;
 		if(!localDownstream.containsKey(localStreamId)){
@@ -53,7 +54,7 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 			// TODO: Throw error overwrite?
 		}
 	}
-	
+
 	private void addLocalUpstream(int localStreamId, SubOperator so){
 		this.mostUpstream = false;
 		if(!localUpstream.containsKey(localStreamId)){
@@ -63,9 +64,9 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 			// TODO: Throw error overwrite?
 		}
 	}
-	
+
 	/** Implementation of CommunicationPrimitives **/
-	
+
 	@Override
 	public void send(DataTuple dt) {
 		if(localDownstream.size() == 1){
@@ -78,10 +79,10 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 			}
 		}
 		else{
-			//Throw error, as downstream cannot be scaled out inside the node, (or can they?) there should be only one entry 
+			//Throw error, as downstream cannot be scaled out inside the node, (or can they?) there should be only one entry
 		}
 	}
-	
+
 	@Override
 	public void send_toStreamId(DataTuple dt, int streamId) {
 		SubOperator target = localDownstream.get(streamId);
@@ -96,45 +97,45 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 	@Override
 	public void send_all(DataTuple dt) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_splitKey(DataTuple dt, int key) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_toIndex(DataTuple dt, int idx) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_toStreamId_splitKey(DataTuple dt, int streamId, int key) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_toStreamId_toAll(DataTuple dt, int streamId) {
 		// TODO Auto-generated method stub
-		
+
 	}
-        
+
         @Override
         public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
-                
+
         }
-        
+
         @Override
         public void send_all_threadPool(DataTuple dt){
-                
+
         }
-	
+
 	/** Implementation of SubOperatorAPI **/
-	
+
 	@Override
 	public void connectSubOperatorTo(int localStreamId, SubOperator so){
 		this.addLocalDownstream(localStreamId, so);
@@ -172,16 +173,22 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 
     @Override
     public void send_to_OpId(DataTuple dt, int opId) {
-        
+
     }
 
     @Override
     public void send_to_OpIds(DataTuple[] dt, int[] opId) {
-        
+
     }
 
     @Override
     public void send_toIndices(DataTuple[] dts, int[] indices) {
-        
+
     }
+
+	@Override
+	public void sendLowestCost(DataTuple dt) {
+		throw new RuntimeException("TODO");
+
+	}
 }

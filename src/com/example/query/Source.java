@@ -93,7 +93,7 @@ public class Source implements StatelessOperator  {
 							0,
 							0,
 							0);
-					api.send(output);
+					api.sendLowestCost(output);
 					sendTime = System.currentTimeMillis();
 					LOG.info(">>>Source sent ["+i+"] at "+sendTime);
 					i++;

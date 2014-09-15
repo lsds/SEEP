@@ -108,7 +108,7 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		targets.add(target);
 		return targets;
 	}
-	
+
     @Override
 	public synchronized int[] newReplica(int oldOpIndex, int newOpIndex) {
 		//In this case oldOpIndex does not do anything
@@ -191,4 +191,40 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		return routeToAll(targets);
 	}
+
+	@Override
+	public synchronized ArrayList<Integer> routeLowestCost() {
+		ArrayList<Integer> targets = new ArrayList<Integer>();
+		targets.add(virtualIndexToRealIndex.get(target));
+		return targets;
+	}
+
+   @Override
+    public synchronized void updateLowestCost(int newIndex)
+    {
+       //TODO: Might want to coordinate this switchover with replaying
+      //any tuples buffered for target but that haven't yet been acked.
+       //As it stands, we'll continue to try and send those tuples to
+       //target instead of new target, meaning they could be dropped
+       //as dupes. Furthermore, if downstream could fail we might want
+       //to replay those tuples to the new target. Again, would need to
+       //make sure they aren't eliminated as dupes. Could perhaps reuse
+       //the current scale out mechanism.
+       for (Integer virtualIndex: virtualIndexToRealIndex.keySet())
+       {
+               if (virtualIndexToRealIndex.get(virtualIndex) == newIndex)
+               {
+                       if (target != virtualIndex)
+                       {
+                               LOG.info("Switched from vIndex "+target+" to " +virtualIndex);
+                       }
+                      target = virtualIndex;
+
+                       return;
+               }
+       }
+
+       throw new RuntimeException("Logic error - tried to switch to non-existent ds index="+newIndex);
+       //target = newTarget;
+    }
 }

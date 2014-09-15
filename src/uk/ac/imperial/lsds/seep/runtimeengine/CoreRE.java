@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  *     Martin Rouaux - Support for scale-in of operators.
@@ -39,6 +39,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.manet.LinkCostHandler;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -56,18 +57,18 @@ import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
 */
 
 public class CoreRE {
-	
+
 	final private Logger LOG = LoggerFactory.getLogger(CoreRE.class);
 
 	private WorkerNodeDescription nodeDescr = null;
-	
+
     private Thread processingUnitThread = null;
     private IProcessingUnit processingUnit = null;
-    
+
 	private PUContext puCtx = null;
 	private RuntimeClassLoader rcl = null;
 	private ArrayList<EndPoint> starTopology = null;
-	
+
 	private int backupUpstreamIndex = -1;
 
 	private CoreProcessingLogic coreProcessLogic;
@@ -78,34 +79,36 @@ public class CoreRE {
 	private ControlDispatcher controlDispatcher;
 	private OutputQueue outputQueue;
 	private OutgoingDataHandlerWorker odhw = null;
-	
+
 	private Thread controlH = null;
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
-	
+	private Thread linkCostHandlerT = null;
+	private LinkCostHandler linkCostHandler = null;
+
 	static ControlTuple genericAck;
 	private int totalNumberOfChunks = -1;
-	
+
 	// Timestamp of the last data tuple processed by this operator
 	private TimestampTracker incomingTT = new TimestampTracker();
 	// Track last ack processed by this op
 	private TimestampTracker ts_ack_vector = new TimestampTracker();
-		
+
 	public CoreRE(WorkerNodeDescription nodeDescr, RuntimeClassLoader rcl){
 		this.nodeDescr = nodeDescr;
-		this.rcl = rcl;		
+		this.rcl = rcl;
 		coreProcessLogic = new CoreProcessingLogic();
 	}
-	
+
 	public RuntimeClassLoader getRuntimeClassLoader(){
 		return rcl;
 	}
-	
+
 	public WorkerNodeDescription getNodeDescr(){
 		return nodeDescr;
 	}
-	
+
 	public ControlDispatcher getControlDispatcher(){
 		return controlDispatcher;
 	}
@@ -113,7 +116,7 @@ public class CoreRE {
     public IProcessingUnit getProcessingUnit() {
         return processingUnit;
     }
-	
+
 	public void pushOperator(Operator o){
 		boolean multicoreSupport = GLOBALS.valueFor("multicoreSupport").equals("true") ? true : false;
 		if(o.getOpContext().getOperatorStaticInformation().isStatefull() ){
@@ -124,7 +127,7 @@ public class CoreRE {
 		}
 		processingUnit.newOperatorInstantiation(o);
 	}
-	
+
 	/** Stores all the information concerning starTopology. In particular, this own operator is also included **/
 	public void pushStarTopology(ArrayList<EndPoint> starTopology){
 		// Store it here to enable async initialisation
@@ -135,12 +138,12 @@ public class CoreRE {
 			puCtx.filterStarTopology(processingUnit.getOperator().getOperatorId());
 		}
 	}
-	
+
 	/** Retrieves all the information concerning the star topology **/
 	public ArrayList<EndPoint> getInitialStarTopology(){
 		return starTopology;
 	}
-	
+
 	public void setOpReady(int opId) {
 		processingUnit.setOpReady(opId);
 		if(processingUnit.isOperatorReady()){
@@ -152,7 +155,7 @@ public class CoreRE {
 			initializeCommunications(idxMapper);
 		}
 	}
-	
+
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
 		outputQueue = new OutputQueue(this);
 
@@ -180,17 +183,21 @@ public class CoreRE {
 		dataConsumer = new DataConsumer(this, dsa);
 		dConsumerH = new Thread(dataConsumer, "dataConsumerT");
 
+		linkCostHandler = new LinkCostHandler(this);
+		linkCostHandlerT = new Thread(linkCostHandler, "linkCostHandlerT");
+
 		controlH.start();
 		iDataH.start();
+		linkCostHandlerT.start();
 
 	}
-	
+
 	public void setRuntime(){
-		
+
 		/// At this point I need information about what connections I need to establish
 		LOG.info("-> Configuring remote connections...");
 		puCtx = processingUnit.setUpRemoteConnections();
-		
+
 		// Set up output communication module
 		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
 			processingUnit.setOutputQueue(outputQueue);
@@ -203,7 +210,7 @@ public class CoreRE {
 			odhw_t.start();
 			LOG.debug("-> CONFIGURING SYSTEM WITH AN ASYNCHRONOUS OUTPUT");
 		}
-		
+
 		// Set up multi-core support structures
 		if(GLOBALS.valueFor("multicoreSupport").equals("true")){
 			if(processingUnit.isMultiCoreEnabled()){
@@ -228,19 +235,19 @@ public class CoreRE {
 		coreProcessLogic.setProcessingUnit(processingUnit);
 		coreProcessLogic.setOpContext(puCtx);
 		coreProcessLogic.initializeSerialization();
-		
+
 		controlDispatcher = new ControlDispatcher(puCtx);
 
 		//initialize the genericAck message to answer some specific messages.
 		ControlTuple b = new ControlTuple();
 		b.setType(ControlTupleType.ACK);
 		genericAck = b;
-		
+
 		LOG.info("-> Node {} instantiated", nodeDescr.getIp()+":"+nodeDescr.getOwnPort());
 		if (nodeDescr.getOwnPort()==2004)
 			LOG.info("############## Ready to start ###############");
 
-		
+
 		/// INITIALIZATION
 
 		//Choose the upstreamBackupIndex for this operator
@@ -254,7 +261,7 @@ public class CoreRE {
 			}
 		}
 	//	LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
-		
+
 		// If ackworker is active
 		if(GLOBALS.valueFor("ackWorkerActive").equals("true")){
 			//If this is the sink operator (extremely ugly)
@@ -265,7 +272,7 @@ public class CoreRE {
 			}
 		}
 	}
-	
+
     /**
      * This method is blocking. So, basically, if invoked from NodeManager directly,
      * we are unable to send any more control tuples to the node.
@@ -274,10 +281,10 @@ public class CoreRE {
 		LOG.info("-> {}:{} Starting to process data...",nodeDescr.getIp(),nodeDescr.getOwnPort());
 		processingUnit.startDataProcessing();
 	}
-    
+
     /**
      * Starts data processing on a separate thread and returns immediately. If
-     * invoked from NodeManager, then control is returned immediately 
+     * invoked from NodeManager, then control is returned immediately
      */
     public void startDataProcessingAsync() {
         processingUnitThread = new Thread(new Runnable() {
@@ -285,7 +292,7 @@ public class CoreRE {
             @Override
             public void run() {
                 LOG.info("-> Starting to process data (asynchronous)...");
-                
+
                 while(true) {
                     // Let's protect the operator against exceptions
                     try {
@@ -296,10 +303,10 @@ public class CoreRE {
                 }
             }
         });
-        
+
         processingUnitThread.start();
     }
-	
+
 	public void stopDataProcessing(){
 		LOG.info("-> The system has been remotely stopped. No processing data");
         if (dataConsumer != null) {
@@ -309,13 +316,13 @@ public class CoreRE {
         idh.setGoOn(false);
         processingUnit.stopAckWorker();
     }
-	
+
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, SCALE_IN, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
 		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT,
 		KEY_SPACE_BOUNDS
 	}
-	
+
 	public synchronized void setTsData(int stream, long ts_data){
 		this.incomingTT.set(stream, ts_data);
 	}
@@ -323,37 +330,37 @@ public class CoreRE {
 	public synchronized long getTsData(int stream){
 		return incomingTT.get(stream);
 	}
-	
+
 	public TimestampTracker getIncomingTT(){
 		return incomingTT;
 	}
-	
+
 	public DataStructureAdapter getDSA(){
 		return dsa;
 	}
-	
+
 	public void forwardData(DataTuple data){
 		processingUnit.processData(data);
 	}
-	
+
 	public void forwardData(ArrayList<DataTuple> data){
 		processingUnit.processData(data);
 	}
-	
+
 	public int getBackupUpstreamIndex() {
 		return backupUpstreamIndex;
 	}
 
 
-	
+
 	public int getOriginalUpstreamFromOpId(int opId){
 		return processingUnit.getOriginalUpstreamFromOpId(opId);
 	}
-	
+
 	public int getOpIdFromInetAddress(InetAddress ip){
 		return processingUnit.getOpIdFromUpstreamIp(ip);
 	}
-	
+
 	//TODO To refine this method...
 	/// \todo {this method should work when an operator must be killed in a proper way}
 	public boolean killHandlers(){
@@ -369,10 +376,10 @@ public class CoreRE {
 		}
 		return false;
 	}
-	
+
 	///\todo{refactor: Represent this method as a finite state machine and provide methods to query and update the state}
 	public void processControlTuple(ControlTuple ct, OutputStream os, InetAddress remoteAddress) {
-		/** 
+		/**
 		 * SCALE_OUT (light state):
 		 * M = Master, U = Upstream, D = Downstream
 		 * M -> (scale_out) -> U
@@ -380,7 +387,7 @@ public class CoreRE {
 		 * U -> (init_message) -> D
 		 * D -> (state_ack) -> U
 		 * U -> replay tuples and go on processing data
-		 * 
+		 *
 		 * DISTRIBUTED_SCALE_OUT (large state):
 		 *
 		 **/
@@ -429,7 +436,7 @@ public class CoreRE {
 		else if(ctt.equals(ControlTupleType.CLOSE_BACKUP_SIGNAL)){
 			LOG.info("-> Node {} recv ControlTuple.CLOSE_SIGNAL from OP: ", nodeDescr.getNodeId(), ct.getCloseSignal().getOpId());
 //			bh.closeSession(ct.getCloseSignal().getOpId(), remoteAddress);
-			
+
 //			coreProcessLogic.directReplayState(new ReplayStateInfo(1, 1, true), bh);
 		}
 		/** STATE_BACKUP message **/
@@ -467,7 +474,7 @@ public class CoreRE {
 		}
 		/** SCALE_OUT message **/
 		else if(ctt.equals(ControlTupleType.SCALE_OUT)) {
-			
+
 			LOG.info("-> Node {} recv ControlTuple.SCALE_OUT ", nodeDescr.getNodeId());
 			// Get index of new replica operator
 			int newOpIndex = -1;
@@ -476,19 +483,19 @@ public class CoreRE {
 					newOpIndex = op.index();
                 }
             }
-			
+
             // Get index of the scaling operator
 			int oldOpIndex = processingUnit.getOperator().getOpContext().findDownstream(ct.getScaleOutInfo().getOldOpId()).index();
 			coreProcessLogic.scaleOut(ct.getScaleOutInfo(), newOpIndex, oldOpIndex);
-            
+
 			//Ack the message
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
         /** SCALE_IN message **/
         else if(ctt.equals(ControlTupleType.SCALE_IN)) {
-        
+
         	LOG.info("-> Node {} recv ControlTuple.SCALE_IN ", nodeDescr.getNodeId());
-		
+
             // Get index of replica operator being terminated as part of scale-in
             // We usually refer to this replica as "victim" of the scale-in action
 			int victimOpIndex = -1;
@@ -497,10 +504,10 @@ public class CoreRE {
 					victimOpIndex = op.index();
 				}
             }
-        
+
             // Perform scale-in action
             coreProcessLogic.scaleIn(ct.getScaleInInfo(), victimOpIndex);
-            
+
             // Ack the message
 			controlDispatcher.ackControlMessage(genericAck, os);
         }
@@ -538,10 +545,10 @@ public class CoreRE {
 		else if(ctt.equals(ControlTupleType.STREAM_STATE)){
 //			//Replay the state that this node keeps
 			LOG.info("-> Node {} recv ControlTuple.STREAM_STATE", nodeDescr.getNodeId());
-//			
+//
 //			int opId = ct.getStreamState().getTargetOpId();
 //			coreProcessLogic.directReplayStateFailure(opId, bh);
-			
+
 			// no ack, just be fast
 			//Finally ack the processing of this message
 //			controlDispatcher.ackControlMessage(genericAck, os);
@@ -558,11 +565,11 @@ public class CoreRE {
 		else if (ctt.equals(ControlTupleType.RESUME)) {
 			LOG.info("-> Node {} recv ControlTuple.RESUME", nodeDescr.getNodeId());
 			Resume resumeM = ct.getResume();
-            
+
             // This if statement is necessary because processingUnit might be
             // of type StatelessProcessingUnit. Otherwise, a ClassCastException is thrown.
 			if (processingUnit instanceof StatefulProcessingUnit) {
-                
+
                 if (((StatefulProcessingUnit)processingUnit).getCheckpointMode().equals(CheckpointMode.LIGHT_STATE)) {
                     // If I have previously splitted the state, I am in WAITING FOR STATE-ACK status and I have to replay it.
                     // I may be managing a state but I dont have to replay it if I have not splitted it previously
@@ -589,24 +596,24 @@ public class CoreRE {
                     LOG.info("Ignoring RESUME message because checkpoint mode is LARGE-STATE");
                 }
             }
-        
+
 			//Finally ack the processing of this message
 			controlDispatcher.ackControlMessage(genericAck, os);
 		}
-		
+
 		/** RECONFIGURE message **/
 		else if(ctt.equals(ControlTupleType.RECONFIGURE)){
 			processCommand(ct.getReconfigureConnection(), os);
 		}
 	}
-	
+
 	/// \todo {stopping and starting the conn should be done from updateConnection in some way to hide the complexity this introduces here}
 	public void processCommand(ReconfigureConnection rc, OutputStream os){
 		String command = rc.getCommand();
 		LOG.info("-> Node {} recv {} command ", nodeDescr.getNodeId(), command);
 		InetAddress ip = null;
 		int opId = rc.getOpId();
-		
+
 		try{
 			ip = InetAddress.getByName(rc.getIp());
 		}
@@ -622,9 +629,9 @@ public class CoreRE {
 				/// \test {what is it is twitter storm but it is also the first node, then I also need to stop connection, right?}
 			if((command.equals("reconfigure_D") || command.equals("just_reconfigure_D"))){
 				processingUnit.stopConnection(opId);
-			} 
+			}
 			processingUnit.reconfigureOperatorConnection(opId, ip);
-			
+
 			if(command.equals("reconfigure_U")){
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
 			}
@@ -642,8 +649,8 @@ public class CoreRE {
 		else if(command.equals("add_downstream") || command.equals("add_upstream")){
 //			operatorStatus = OperatorStatus.RECONFIGURING_COMM;
 			// at this point we need opId and originalOpId
-			
-			OperatorStaticInformation loc = new OperatorStaticInformation(opId, rc.getOriginalOpId(), 
+
+			OperatorStaticInformation loc = new OperatorStaticInformation(opId, rc.getOriginalOpId(),
 					new Node(ip, rc.getNode_port()), rc.getInC(), rc.getInD(), rc.getOperatorNature());
 			if(command.equals("add_downstream")){
 				processingUnit.addDownstream(opId, loc);
@@ -653,7 +660,7 @@ public class CoreRE {
 				processingUnit.addUpstream(opId, loc);
 				//Send to that upstream the routing information I am storing (in case there are ri).
 				coreProcessLogic.sendRoutingInformation(opId, rc.getOperatorType());
-				
+
 				// Check how many replicas of this operator are at the moment and reconfigure barrier with this number.
 				// This is necessary for cases where there is more than one InputDataIngestionMode
 				int originalOpId = processingUnit.getOriginalUpstreamFromOpId(opId);
@@ -701,7 +708,7 @@ public class CoreRE {
 			throw new RuntimeException("Operator: ERROR in processCommand");
 		}
 	}
-	
+
 	public void ack(TimestampTracker tsVector) {
 		// ack per input channel
 		Iterator<Entry<Integer, Long>> i = tsVector.getTsStream();
@@ -711,10 +718,11 @@ public class CoreRE {
 			long ts = channelInfo.getValue();
 			ControlTuple ack = new ControlTuple(ControlTupleType.ACK, processingUnit.getOperator().getOperatorId(), ts);
 			int index = processingUnit.getOperator().getOpContext().getUpOpIndexFromOpId(opId);
-			controlDispatcher.sendUpstream(ack, index);
+			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
+			controlDispatcher.sendUpstream(ack, index, !bestEffortAcks);
 		}
 	}
-	
+
 	public void signalOpenBackupSession(int totalSizeST){
 		int opId = processingUnit.getOperator().getOperatorId();
 		LOG.debug("-> Opening backup session from: {}", opId);
@@ -726,7 +734,7 @@ public class CoreRE {
 		}
 		LOG.debug("-> SESSION opened from {}", opId);
 	}
-	
+
 	public void signalCloseBackupSession(int starTopologySize){
 		int opId = processingUnit.getOperator().getOperatorId();
 		LOG.debug("-> Closing backup session from: {}", opId);
@@ -737,26 +745,26 @@ public class CoreRE {
 	}
 
 
-	
+
 	public void sendBackupState(ControlTuple ctB){
 		int stateOwnerId = ctB.getBackupState().getOpId();
 		LOG.debug(" -> Backuping state with owner: {} to NODE index: {}", stateOwnerId, backupUpstreamIndex);
 //		controlDispatcher.sendUpstream_large(ctB, backupUpstreamIndex);
 		controlDispatcher.sendUpstream(ctB, backupUpstreamIndex);
 	}
-	
+
 
 	public void setTotalNumberOfStateChunks(int number){
 		this.totalNumberOfChunks = number;
 		//coreProcessLogic.setTotalNumberOfChunks(number);
 	}
-	
+
 	//Initial compute of upstreamBackupindex. This is useful for initial instantiations (not for splits, because in splits, upstreamIdx comes in the INIT_STATE)
 	// This method is called only once during initialisation of the node (from setRuntime)
 	public void configureUpstreamIndex(int upstreamSize){
 		int ownInfo = Router.customHash(getNodeDescr().getNodeId());
 //		int upstreamSize = opContext.upstreams.size();
-		
+
 		//source obviously cant compute this value
 		if(upstreamSize == 0){
 			LOG.warn("-> If this node ({}) is not the most upstream, there is a problem", getNodeDescr().getIp()+":"+getNodeDescr().getOwnPort());
@@ -764,10 +772,10 @@ public class CoreRE {
 		}
 		int upIndex = ownInfo%upstreamSize;
 		upIndex = (upIndex < 0) ? upIndex*-1 : upIndex;
-		
+
 		//Update my information
 		// System.out.println("% ConfigureUpstreamIndex");
 	}
-	
-	
+
+
 }
