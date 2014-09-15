@@ -13,364 +13,364 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class GraphUtil {
-  private final static Logger log = LoggerFactory.getLogger(GraphUtil.class);
-  public final static Integer INFINITE_DISTANCE = new Integer(1000000);
-  public final static Integer SUB_INFINITE_DISTANCE = new Integer(999999);
-  public final static Double MAX_BANDWIDTH = new Double(Double.MAX_VALUE);
+	private final static Logger log = LoggerFactory.getLogger(GraphUtil.class);
+	public final static Integer INFINITE_DISTANCE = new Integer(1000000);
+	public final static Integer SUB_INFINITE_DISTANCE = new Integer(999999);
+	public final static Double MAX_BANDWIDTH = new Double(Double.MAX_VALUE);
 
-  public static void logTopology(Map graph) {
-    if (graph == null)
-    {
-      log.info("Topology:<null>");
-      return;
-    }
+	public static void logTopology(Map graph) {
+		if (graph == null)
+		{
+			log.info("Topology:<null>");
+			return;
+		}
 
-    log.info("Topology:");
-    Iterator srcIter = graph.keySet().iterator();
-    while (srcIter.hasNext())
-    {
-      Integer srcId = (Integer)srcIter.next();
-      String neighbourList = "Src=" + srcId + " : Neighbours=";
-      Map links = (Map)graph.get(srcId);
-      Iterator destIter = links.keySet().iterator();
-      while (destIter.hasNext())
-      {
-        Integer destId = (Integer)destIter.next();
-        neighbourList += " " + destId + "(" + links.get(destId) + ")";
-      }
-      log.info(neighbourList);
-    }
-  }
+		log.info("Topology:");
+		Iterator srcIter = graph.keySet().iterator();
+		while (srcIter.hasNext())
+		{
+			Integer srcId = (Integer)srcIter.next();
+			String neighbourList = "Src=" + srcId + " : Neighbours=";
+			Map links = (Map)graph.get(srcId);
+			Iterator destIter = links.keySet().iterator();
+			while (destIter.hasNext())
+			{
+				Integer destId = (Integer)destIter.next();
+				neighbourList += " " + destId + "(" + links.get(destId) + ")";
+			}
+			log.info(neighbourList);
+		}
+	}
 
-  public static void logShortestPaths(Map costs)
-  {
-    Iterator iter = costs.keySet().iterator();
+	public static void logShortestPaths(Map costs)
+	{
+		Iterator iter = costs.keySet().iterator();
 
-    while (iter.hasNext())
-    {
-      Integer dest = (Integer)iter.next();
-      Integer cost = (Integer)costs.get(dest);
-      Object[] destCost = { dest, cost };
-      log.info(MessageFormat.format("d({0,number,integer})={1,number,integer}", destCost));
-    }
-  }
+		while (iter.hasNext())
+		{
+			Integer dest = (Integer)iter.next();
+			Integer cost = (Integer)costs.get(dest);
+			Object[] destCost = { dest, cost };
+			log.info(MessageFormat.format("d({0,number,integer})={1,number,integer}", destCost));
+		}
+	}
 
-  public static void testPrintShortestPaths()
-  {
-    Map test = new HashMap();
-    test.put(new Integer(1), new Integer(5));
-    logShortestPaths(test);
-  }
-
-
-  public static Map shortestPaths(Integer source, Map graph)
-  {
-    Djikstra djikstra = new Djikstra(graph);
-    djikstra.execute(source);
-    return djikstra.getShortestDistances();
-  }
-
-  public static Integer nextHop(Integer source, Integer dest, Map graph)
-  {
-    Djikstra djikstra = new Djikstra(graph);
-    //TODO Should perhaps have another execute(source, dest) method
-    djikstra.execute(source);
-    return djikstra.getBestNextHop(source, dest);
-  }
+	public static void testPrintShortestPaths()
+	{
+		Map test = new HashMap();
+		test.put(new Integer(1), new Integer(5));
+		logShortestPaths(test);
+	}
 
 
-  private static abstract class AbstractDjikstra
-  {
-    /** Stores the neighbours map. */
-    protected final Map map;
+	public static Map shortestPaths(Integer source, Map graph)
+	{
+		Djikstra djikstra = new Djikstra(graph);
+		djikstra.execute(source);
+		return djikstra.getShortestDistances();
+	}
 
-    public AbstractDjikstra(Map map) { this.map = map; }
-    protected final Set settledNodes = new HashSet();
-
-    protected boolean isSettled(Integer id) { return settledNodes.contains(id); }
-
-    protected final Map predecessors = new HashMap();
-    protected void setPredecessor(Integer id, Integer predecessor) { predecessors.put(id, predecessor); }
-    protected Integer getPredecessor(Integer id)
-    {
-      Object predecessor = predecessors.get(id);
-      return (predecessor == null) ? null : (Integer)predecessor;
-    }
-
-    //Unfortunately no PriorityQueue in Java 1.4 so just
-    //brute force it for now. Might try and fix up Jist
-    //to run under a newer version of Java at some point.
-    protected final Set unsettledNodes = new HashSet();
-
-    protected Set getNeighbours(Integer id)
-    {
-      return ((Map)map.get(id)).keySet();
-    }
-
-    public abstract void execute(Integer source);
-    protected abstract Integer getBestNextHop(Integer source, Integer dest);
-    protected abstract void relaxNeighbours(Integer u);
-  }
+	public static Integer nextHop(Integer source, Integer dest, Map graph)
+	{
+		Djikstra djikstra = new Djikstra(graph);
+		//TODO Should perhaps have another execute(source, dest) method
+		djikstra.execute(source);
+		return djikstra.getBestNextHop(source, dest);
+	}
 
 
-  private static class Djikstra extends AbstractDjikstra
-  {
+	private static abstract class AbstractDjikstra
+	{
+		/** Stores the neighbours map. */
+		protected final Map map;
 
-    public Djikstra(Map map) { super(map); }
+		public AbstractDjikstra(Map map) { this.map = map; }
+		protected final Set settledNodes = new HashSet();
 
-    private final Map shortestDistances = new HashMap();
-    private void setShortestDistance(Integer id, Integer distance) { shortestDistances.put(id, distance); }
-    private Integer getShortestDistance(Integer id)
-    {
-      Object d = shortestDistances.get(id);
-      return (d == null) ? INFINITE_DISTANCE : (Integer)d;
-    }
+		protected boolean isSettled(Integer id) { return settledNodes.contains(id); }
 
-    private final Map getShortestDistances() { return Collections.unmodifiableMap(shortestDistances); }
+		protected final Map predecessors = new HashMap();
+		protected void setPredecessor(Integer id, Integer predecessor) { predecessors.put(id, predecessor); }
+		protected Integer getPredecessor(Integer id)
+		{
+			Object predecessor = predecessors.get(id);
+			return (predecessor == null) ? null : (Integer)predecessor;
+		}
 
-    //Presumes execute has been called for source
-    @Override
-	protected Integer getBestNextHop(Integer source, Integer dest)
-    {
-      if (getShortestDistance(dest).intValue() >= SUB_INFINITE_DISTANCE.intValue())
-      {
-        //Infinite distance => no path
-        return null;
-      }
+		//Unfortunately no PriorityQueue in Java 1.4 so just
+		//brute force it for now. Might try and fix up Jist
+		//to run under a newer version of Java at some point.
+		protected final Set unsettledNodes = new HashSet();
 
-      Integer best = dest;
-      Integer predecessor = getPredecessor(best);
-      while (predecessor != null && predecessor.intValue() != source.intValue())
-      {
-        best = predecessor;
-        predecessor = getPredecessor(best);
-      }
-      return best;
-    }
+		protected Set getNeighbours(Integer id)
+		{
+			return ((Map)map.get(id)).keySet();
+		}
 
-    private final Comparator comp = new Comparator()
-    {
-      @Override
-	public int compare(Object o1, Object o2)
-      {
-        Integer left = (Integer)o1;
-        Integer right = (Integer)o2;
+		public abstract void execute(Integer source);
+		protected abstract Integer getBestNextHop(Integer source, Integer dest);
+		protected abstract void relaxNeighbours(Integer u);
+	}
 
-        int shortestDistanceLeft = getShortestDistance(left).intValue();
-        int shortestDistanceRight = getShortestDistance(right).intValue();
 
-        if (shortestDistanceLeft > shortestDistanceRight) { return 1; }
-        else if (shortestDistanceLeft < shortestDistanceRight) { return -1; }
-        else { assert left.compareTo(right) != 0; return left.compareTo(right); }
-      }
-    };
+	private static class Djikstra extends AbstractDjikstra
+	{
 
-    private Integer extractMin()
-    {
-      Object min = Collections.min(unsettledNodes, comp);
-      unsettledNodes.remove(min);
-      return (Integer)min;
-    }
+		public Djikstra(Map map) { super(map); }
 
-    private void init(Integer source)
-    {
-      settledNodes.clear();
-      unsettledNodes.clear();
-      shortestDistances.clear();
-      predecessors.clear();
+		private final Map shortestDistances = new HashMap();
+		private void setShortestDistance(Integer id, Integer distance) { shortestDistances.put(id, distance); }
+		private Integer getShortestDistance(Integer id)
+		{
+			Object d = shortestDistances.get(id);
+			return (d == null) ? INFINITE_DISTANCE : (Integer)d;
+		}
 
-      initShortestDistances();
-      setShortestDistance(source, new Integer(0));
-      unsettledNodes.add(source);
-    }
+		private final Map getShortestDistances() { return Collections.unmodifiableMap(shortestDistances); }
 
-    private void initShortestDistances()
-    {
-      Iterator iter = map.keySet().iterator();
-      while (iter.hasNext())
-      {
-        setShortestDistance((Integer)iter.next(),INFINITE_DISTANCE);
-      }
-    }
+		//Presumes execute has been called for source
+		@Override
+		protected Integer getBestNextHop(Integer source, Integer dest)
+		{
+			if (getShortestDistance(dest).intValue() >= SUB_INFINITE_DISTANCE.intValue())
+			{
+				//Infinite distance => no path
+				return null;
+			}
 
-    @Override
-	public void execute(Integer source)
-    {
-      init(source);
-      Integer u;
+			Integer best = dest;
+			Integer predecessor = getPredecessor(best);
+			while (predecessor != null && predecessor.intValue() != source.intValue())
+			{
+				best = predecessor;
+				predecessor = getPredecessor(best);
+			}
+			return best;
+		}
 
-      while (!unsettledNodes.isEmpty())
-      {
-        u = extractMin();
-        //if (u == destination) break;
-        settledNodes.add(u);
-        relaxNeighbours(u);
-      }
+		private final Comparator comp = new Comparator()
+		{
+			@Override
+			public int compare(Object o1, Object o2)
+			{
+				Integer left = (Integer)o1;
+				Integer right = (Integer)o2;
 
-    }
+				int shortestDistanceLeft = getShortestDistance(left).intValue();
+				int shortestDistanceRight = getShortestDistance(right).intValue();
 
-    @Override
-	protected void relaxNeighbours(Integer u)
-    {
-      Iterator neighbourIter = getNeighbours(u).iterator();
-      while (neighbourIter.hasNext())
-      {
-        Integer v = (Integer)neighbourIter.next();
-        if (isSettled(v)) continue;
+				if (shortestDistanceLeft > shortestDistanceRight) { return 1; }
+				else if (shortestDistanceLeft < shortestDistanceRight) { return -1; }
+				else { assert left.compareTo(right) != 0; return left.compareTo(right); }
+			}
+		};
 
-        int shortDist = getShortestDistance(u).intValue() + getDistance(u,v).intValue();
-        if (shortDist < getShortestDistance(v).intValue())
-        {
-          setShortestDistance(v, new Integer(shortDist));
-          setPredecessor(v,u);
-          unsettledNodes.add(v);
-        }
-      }
-    }
+		private Integer extractMin()
+		{
+			Object min = Collections.min(unsettledNodes, comp);
+			unsettledNodes.remove(min);
+			return (Integer)min;
+		}
 
-    private Integer getDistance(Integer u, Integer v)
-    {
-      assert ((Map)map.get(u)).keySet().contains(v);
+		private void init(Integer source)
+		{
+			settledNodes.clear();
+			unsettledNodes.clear();
+			shortestDistances.clear();
+			predecessors.clear();
 
-      return ((Map)map.get(u)).keySet().contains(v) ? (Integer)((Map)map.get(u)).get(v) : INFINITE_DISTANCE /*Should never happen*/;
-    }
-  }
+			initShortestDistances();
+			setShortestDistance(source, new Integer(0));
+			unsettledNodes.add(source);
+		}
 
-  public static Map widestPaths(Integer source, Map graph)
-  {
-  	DjikstraBandwidth djikstra = new DjikstraBandwidth(graph);
-  	djikstra.execute(source);
-  	return djikstra.getWidestPaths();
-  }
+		private void initShortestDistances()
+		{
+			Iterator iter = map.keySet().iterator();
+			while (iter.hasNext())
+			{
+				setShortestDistance((Integer)iter.next(),INFINITE_DISTANCE);
+			}
+		}
 
-  public static Integer nextHopBandwidth(Integer source, Integer dest, Map graph)
-  {
-    DjikstraBandwidth djikstra = new DjikstraBandwidth(graph);
-    //TODO Should perhaps have another execute(source, dest) method
-    djikstra.execute(source);
-    return djikstra.getBestNextHop(source, dest);
-  }
+		@Override
+		public void execute(Integer source)
+		{
+			init(source);
+			Integer u;
 
-  private static class DjikstraBandwidth extends AbstractDjikstra
-  {
-  	public DjikstraBandwidth(Map map) { super(map); }
+			while (!unsettledNodes.isEmpty())
+			{
+				u = extractMin();
+				//if (u == destination) break;
+				settledNodes.add(u);
+				relaxNeighbours(u);
+			}
 
-    private final Map getWidestPaths() { return Collections.unmodifiableMap(widestPaths); }
-    private final Map widestPaths = new HashMap();
-    private void setWidestPath(Integer id, Double width) { widestPaths.put(id, width); }
-    private Double getWidestPath(Integer id)
-    {
-      Object w = widestPaths.get(id);
-      return (w == null) ? new Double(0) : (Double)w;
-    }
+		}
 
-    private Double getWidth(Integer u, Integer v)
-    {
-      assert ((Map)map.get(u)).keySet().contains(v);
+		@Override
+		protected void relaxNeighbours(Integer u)
+		{
+			Iterator neighbourIter = getNeighbours(u).iterator();
+			while (neighbourIter.hasNext())
+			{
+				Integer v = (Integer)neighbourIter.next();
+				if (isSettled(v)) continue;
 
-      return ((Map)map.get(u)).keySet().contains(v) ? (Double)((Map)map.get(u)).get(v) : new Double(0) /*Should never happen*/;
-    }
+				int shortDist = getShortestDistance(u).intValue() + getDistance(u,v).intValue();
+				if (shortDist < getShortestDistance(v).intValue())
+				{
+					setShortestDistance(v, new Integer(shortDist));
+					setPredecessor(v,u);
+					unsettledNodes.add(v);
+				}
+			}
+		}
 
-    private void init(Integer source)
-    {
-      settledNodes.clear();
-      unsettledNodes.clear();
-      widestPaths.clear();
-      predecessors.clear();
+		private Integer getDistance(Integer u, Integer v)
+		{
+			assert ((Map)map.get(u)).keySet().contains(v);
 
-      initWidestPaths();
-      setWidestPath(source, new Double(Double.MAX_VALUE));
-      unsettledNodes.add(source);
-    }
+			return ((Map)map.get(u)).keySet().contains(v) ? (Integer)((Map)map.get(u)).get(v) : INFINITE_DISTANCE /*Should never happen*/;
+		}
+	}
 
-    private void initWidestPaths()
-    {
-      Iterator iter = map.keySet().iterator();
-      while (iter.hasNext())
-      {
-        setWidestPath((Integer)iter.next(),new Double(0));
-      }
-    }
+	public static Map widestPaths(Integer source, Map graph)
+	{
+		DjikstraBandwidth djikstra = new DjikstraBandwidth(graph);
+		djikstra.execute(source);
+		return djikstra.getWidestPaths();
+	}
 
-    @Override
-	public void execute(Integer source)
-    {
-      init(source);
-      Integer u;
+	public static Integer nextHopBandwidth(Integer source, Integer dest, Map graph)
+	{
+		DjikstraBandwidth djikstra = new DjikstraBandwidth(graph);
+		//TODO Should perhaps have another execute(source, dest) method
+		djikstra.execute(source);
+		return djikstra.getBestNextHop(source, dest);
+	}
 
-      while (!unsettledNodes.isEmpty())
-      {
-        u = extractMax();
-        //if (u == destination) break;
-        settledNodes.add(u);
-        relaxNeighbours(u);
-      }
+	private static class DjikstraBandwidth extends AbstractDjikstra
+	{
+		public DjikstraBandwidth(Map map) { super(map); }
 
-    }
+		private final Map getWidestPaths() { return Collections.unmodifiableMap(widestPaths); }
+		private final Map widestPaths = new HashMap();
+		private void setWidestPath(Integer id, Double width) { widestPaths.put(id, width); }
+		private Double getWidestPath(Integer id)
+		{
+			Object w = widestPaths.get(id);
+			return (w == null) ? new Double(0) : (Double)w;
+		}
 
-    @Override
-	protected void relaxNeighbours(Integer u)
-    {
-      Iterator neighbourIter = getNeighbours(u).iterator();
-      while (neighbourIter.hasNext())
-      {
-        Integer v = (Integer)neighbourIter.next();
-        if (isSettled(v)) continue;
+		private Double getWidth(Integer u, Integer v)
+		{
+			assert ((Map)map.get(u)).keySet().contains(v);
 
-        double widestPath = Math.min(getWidestPath(u).doubleValue(), getWidth(u,v).doubleValue());
-        if (widestPath > getWidestPath(v).doubleValue())
-        {
-        	setWidestPath(v, new Double(widestPath));
-        	setPredecessor(v,u);
-        	unsettledNodes.add(v);
-        }
-      }
-    }
+			return ((Map)map.get(u)).keySet().contains(v) ? (Double)((Map)map.get(u)).get(v) : new Double(0) /*Should never happen*/;
+		}
 
-    private Integer extractMax()
-    {
-      Object max = Collections.max(unsettledNodes, comp);
-      unsettledNodes.remove(max);
-      return (Integer)max;
-    }
+		private void init(Integer source)
+		{
+			settledNodes.clear();
+			unsettledNodes.clear();
+			widestPaths.clear();
+			predecessors.clear();
 
-    private final Comparator comp = new Comparator()
-    {
-      @Override
-	public int compare(Object o1, Object o2)
-      {
-        Integer left = (Integer)o1;
-        Integer right = (Integer)o2;
+			initWidestPaths();
+			setWidestPath(source, new Double(Double.MAX_VALUE));
+			unsettledNodes.add(source);
+		}
 
-        double widestPathLeft = getWidestPath(left).doubleValue();
-        double widestPathRight = getWidestPath(right).doubleValue();
+		private void initWidestPaths()
+		{
+			Iterator iter = map.keySet().iterator();
+			while (iter.hasNext())
+			{
+				setWidestPath((Integer)iter.next(),new Double(0));
+			}
+		}
 
-        if (widestPathLeft < widestPathRight) { return -1; }
-        else if (widestPathLeft > widestPathRight) { return 1; }
-        else { assert left.compareTo(right) != 0; return left.compareTo(right); }
-      }
-    };
+		@Override
+		public void execute(Integer source)
+		{
+			init(source);
+			Integer u;
 
-    //Presumes execute has been called for source
-    @Override
-	protected Integer getBestNextHop(Integer source, Integer dest)
-    {
-      if (getWidestPath(dest).intValue() == 0)
-      {
-        //Zero width => no path
-        return null;
-      }
+			while (!unsettledNodes.isEmpty())
+			{
+				u = extractMax();
+				//if (u == destination) break;
+				settledNodes.add(u);
+				relaxNeighbours(u);
+			}
 
-      Integer best = dest;
-      Integer predecessor = getPredecessor(best);
-      while (predecessor != null && predecessor.intValue() != source.intValue())
-      {
-        best = predecessor;
-        predecessor = getPredecessor(best);
-      }
-      return best;
-    }
+		}
 
-  }
+		@Override
+		protected void relaxNeighbours(Integer u)
+		{
+			Iterator neighbourIter = getNeighbours(u).iterator();
+			while (neighbourIter.hasNext())
+			{
+				Integer v = (Integer)neighbourIter.next();
+				if (isSettled(v)) continue;
+
+				double widestPath = Math.min(getWidestPath(u).doubleValue(), getWidth(u,v).doubleValue());
+				if (widestPath > getWidestPath(v).doubleValue())
+				{
+					setWidestPath(v, new Double(widestPath));
+					setPredecessor(v,u);
+					unsettledNodes.add(v);
+				}
+			}
+		}
+
+		private Integer extractMax()
+		{
+			Object max = Collections.max(unsettledNodes, comp);
+			unsettledNodes.remove(max);
+			return (Integer)max;
+		}
+
+		private final Comparator comp = new Comparator()
+		{
+			@Override
+			public int compare(Object o1, Object o2)
+			{
+				Integer left = (Integer)o1;
+				Integer right = (Integer)o2;
+
+				double widestPathLeft = getWidestPath(left).doubleValue();
+				double widestPathRight = getWidestPath(right).doubleValue();
+
+				if (widestPathLeft < widestPathRight) { return -1; }
+				else if (widestPathLeft > widestPathRight) { return 1; }
+				else { assert left.compareTo(right) != 0; return left.compareTo(right); }
+			}
+		};
+
+		//Presumes execute has been called for source
+		@Override
+		protected Integer getBestNextHop(Integer source, Integer dest)
+		{
+			if (getWidestPath(dest).intValue() == 0)
+			{
+				//Zero width => no path
+				return null;
+			}
+
+			Integer best = dest;
+			Integer predecessor = getPredecessor(best);
+			while (predecessor != null && predecessor.intValue() != source.intValue())
+			{
+				best = predecessor;
+				predecessor = getPredecessor(best);
+			}
+			return best;
+		}
+
+	}
 
 }

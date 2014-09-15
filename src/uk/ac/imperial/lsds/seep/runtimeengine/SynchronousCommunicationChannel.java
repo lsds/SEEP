@@ -104,120 +104,120 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}
 	}
 
-    /** ThreadSafety: This method, getOutput(), and getDownstreamDataSocket()
-     * should only ever be called with the corresponding OutputQueue lock held
-     * to avoid concurrent data consumer/processing threads trying to reopen a failed socket.
-     * dokeeffe TODO: Currently this will just block indefinitely until the create socket call
-     * succeeds. Probably want to add a way to interrupt the waiting (e.g. if we need
-     * to scale-in/reconfigure/shutdown).
-     * @return the new socket.
-     */
-    public Socket reopenDownstreamDataSocket()
-    {
-            if (downstreamDataSocket == null) { throw new RuntimeException("No data socket on this channel."); }
+	/** ThreadSafety: This method, getOutput(), and getDownstreamDataSocket()
+	 * should only ever be called with the corresponding OutputQueue lock held
+	 * to avoid concurrent data consumer/processing threads trying to reopen a failed socket.
+	 * dokeeffe TODO: Currently this will just block indefinitely until the create socket call
+	 * succeeds. Probably want to add a way to interrupt the waiting (e.g. if we need
+	 * to scale-in/reconfigure/shutdown).
+	 * @return the new socket.
+	 */
+	public Socket reopenDownstreamDataSocket()
+	{
+		if (downstreamDataSocket == null) { throw new RuntimeException("No data socket on this channel."); }
 
-            InetAddress ip = downstreamDataSocket.getInetAddress();
-            int port = downstreamDataSocket.getPort();
+		InetAddress ip = downstreamDataSocket.getInetAddress();
+		int port = downstreamDataSocket.getPort();
 
-            //Try to close the current downstream data socket and output stream
-            try { output.close(); }
-            catch (KryoException e) { e.printStackTrace(); }
-            try { downstreamDataSocket.close(); }
-            catch (IOException e) {e.printStackTrace();}
-            output = null;
-            downstreamDataSocket = null;
+		//Try to close the current downstream data socket and output stream
+		try { output.close(); }
+		catch (KryoException e) { e.printStackTrace(); }
+		try { downstreamDataSocket.close(); }
+		catch (IOException e) {e.printStackTrace();}
+		output = null;
+		downstreamDataSocket = null;
 
-            boolean success = false;
-            while(!success)
-            {
-                    Socket tmpSocket = null;
-                    OutputStream tmpOutput = null;
-                    try
-                    {
-                            tmpSocket = new Socket(ip, port);
-                            tmpOutput = tmpSocket.getOutputStream();
-                            downstreamDataSocket = tmpSocket;
-                            output = new Output(tmpOutput);
-                            success = true;
-                    }
-                    catch(IOException e)
-                    {
-                            if (tmpSocket != null)
-                            {
-                                    try { tmpSocket.close(); }
-                                    catch (IOException e1) {}
-                            }
-                            e.printStackTrace();
-                    }
-            }
-            return downstreamDataSocket;
-    }
+		boolean success = false;
+		while(!success)
+		{
+			Socket tmpSocket = null;
+			OutputStream tmpOutput = null;
+			try
+			{
+				tmpSocket = new Socket(ip, port);
+				tmpOutput = tmpSocket.getOutputStream();
+				downstreamDataSocket = tmpSocket;
+				output = new Output(tmpOutput);
+				success = true;
+			}
+			catch(IOException e)
+			{
+				if (tmpSocket != null)
+				{
+					try { tmpSocket.close(); }
+					catch (IOException e1) {}
+				}
+				e.printStackTrace();
+			}
+		}
+		return downstreamDataSocket;
+	}
 
-    /**
-     * dokeeffe TODO: Should probably allow this to be
-     * extended to support cancellation. At the moment it will
-     * try to reconnect for ever.
-     */
-    public void reopenDownstreamControlSocketNonBlocking(Socket prevSocketToClose)
-    {
-    	if (prevSocketToClose == null)
-    	{
-    		//Temp sanity check, should probably remove this restriction.
-    		throw new RuntimeException("Previous socket should never be null.");
-    	}
+	/**
+	 * dokeeffe TODO: Should probably allow this to be
+	 * extended to support cancellation. At the moment it will
+	 * try to reconnect for ever.
+	 */
+	public void reopenDownstreamControlSocketNonBlocking(Socket prevSocketToClose)
+	{
+		if (prevSocketToClose == null)
+		{
+			//Temp sanity check, should probably remove this restriction.
+			throw new RuntimeException("Previous socket should never be null.");
+		}
 
-    	final InetAddress ip;
-    	final int port;
+		final InetAddress ip;
+		final int port;
 
-    	synchronized(controlSocketLock)
-    	{
-    		if (downstreamControlSocket != null && prevSocketToClose == downstreamControlSocket)
-    		{
-    			ip = downstreamControlSocket.getInetAddress();
-    			port = downstreamControlSocket.getPort();
-    			downstreamControlSocket = null;
-    		}
-    		else
-    		{
-    			try { prevSocketToClose.close(); }
-    			catch(IOException e) { e.printStackTrace(); /*Urgh*/ }
+		synchronized(controlSocketLock)
+		{
+			if (downstreamControlSocket != null && prevSocketToClose == downstreamControlSocket)
+			{
+				ip = downstreamControlSocket.getInetAddress();
+				port = downstreamControlSocket.getPort();
+				downstreamControlSocket = null;
+			}
+			else
+			{
+				try { prevSocketToClose.close(); }
+				catch(IOException e) { e.printStackTrace(); /*Urgh*/ }
 
-    			//Another caller is already reopening the socket.
-    			return;
-    		}
-    	}
+				//Another caller is already reopening the socket.
+				return;
+			}
+		}
 
-    	new Thread(new Runnable()
-    	{
-    		@Override
+		new Thread(new Runnable()
+		{
+			@Override
 			public void run()
-    		{
-    			while(true)
-    			{
-    				Socket tmpSocket = null;
-    				try
-    				{
-    					tmpSocket = new Socket(ip, port);
-    					synchronized(controlSocketLock)
-    					{
-    						downstreamControlSocket = tmpSocket;
-    						controlSocketLock.notifyAll();
-    						return;
-    						//return downstreamControlSocket;
-    					}
-    				}
-    				catch(IOException e)
-    				{
-    					e.printStackTrace(); // Urgh
-    				}
-    				//dokeeffe TODO: N.B. If some other exception causes this
-    				//thread to fail then this connection will be stuck forever
-    				//as there is no way for another thread to restart the connection
-    			}
-    		}
-    	}).start();
+			{
+				while(true)
+				{
+					Socket tmpSocket = null;
+					try
+					{
+						tmpSocket = new Socket(ip, port);
+						synchronized(controlSocketLock)
+						{
+							downstreamControlSocket = tmpSocket;
+							controlSocketLock.notifyAll();
+							return;
+							//return downstreamControlSocket;
+						}
+					}
+					catch(IOException e)
+					{
+						e.printStackTrace(); // Urgh
+					}
+					//dokeeffe TODO: N.B. If some other exception causes this
+					//thread to fail then this connection will be stuck forever
+					//as there is no way for another thread to restart the connection
+				}
+			}
+		}).start();
 
-    }
+	}
 
 
 
@@ -249,9 +249,9 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return replay;
 	}
 
-    //dokeeffe TODO: Hmm, might want to keep this internal
-    // and add an extra setter to the interface if this class
-    // is going to handle reconnects.
+	//dokeeffe TODO: Hmm, might want to keep this internal
+	// and add an extra setter to the interface if this class
+	// is going to handle reconnects.
 	public AtomicBoolean getStop(){
 		return stop;
 	}
