@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
@@ -22,13 +22,14 @@ import uk.ac.imperial.lsds.seep.operator.OperatorCode;
 
 public class MultiOperator implements OperatorCode, ComposedOperator, CommunicationPrimitives{
 
+
 	private static final long serialVersionUID = 1L;
 
 	private final int id;
-	
+
 	private Set<SubOperator> subOperators;
 	private SubOperator mostUpstream;
-	
+
 	DistributedApi api = new DistributedApi();
 
 	private MultiOperator(Set<SubOperator> subOperators, int multiOpId){
@@ -40,7 +41,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 			//TODO throw error
 		}
 	}
-	
+
 	private boolean checkConstraints(Set<SubOperator> subOperators){
 		// TODO:
 		// - constains:
@@ -48,9 +49,9 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 		// - ...
 		return true;
 	}
-	
+
 	/** Implementation of OperatorCode interface **/
-	
+
 	@Override
 	public void processData(DataTuple data) {
 		// just call the first op to start processing data
@@ -72,14 +73,15 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 
 	/** Implementation of ComposedOperator interface **/
 
+	@Override
 	public int getMultiOpId(){
 		return id;
 	}
-	
+
 	public static MultiOperator synthesizeFrom(Set<SubOperator> subOperators, int multiOpId){
 		return new MultiOperator(subOperators, multiOpId);
 	}
-	
+
 	@Override
 	public int getNumberOfSubOperators() {
 		// TODO Auto-generated method stub
@@ -96,7 +98,7 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 	public void send(DataTuple dt) {
 		api.send(dt);
 	}
-	
+
 	@Override
 	public void send_toStreamId(DataTuple dt, int streamId) {
 		api.send_toStreamId(dt, streamId);
@@ -105,65 +107,66 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 	@Override
 	public void send_all(DataTuple dt) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_splitKey(DataTuple dt, int key) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_toIndex(DataTuple dt, int idx) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_toStreamId_splitKey(DataTuple dt, int streamId, int key) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void send_toStreamId_toAll(DataTuple dt, int streamId) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
     @Override
     public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId) {
-        
+
     }
 
     @Override
     public void send_all_threadPool(DataTuple dt) {
-        
+
     }
 
     @Override
     public void send_to_OpId(DataTuple dt, int opId) {
-        
+
     }
 
     @Override
     public void send_to_OpIds(DataTuple[] dt, int[] opId) {
-        
+
     }
 
     @Override
     public void send_toIndices(DataTuple[] dts, int[] indices) {
-        
+
     }
-    
-    public void setCallbackOp(Operator op){
+
+    @Override
+	public void setCallbackOp(Operator op){
 		this.api.setCallbackObject(op);
 	}
 
 	@Override
 	public void sendLowestCost(DataTuple dt) {
 		throw new RuntimeException("TODO");
-		
+
 	}
 }

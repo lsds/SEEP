@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
-public class LinkCostHandler implements Runnable 
+public class LinkCostHandler implements Runnable
 {
 	private final Logger log = LoggerFactory.getLogger(LinkCostHandler.class);
 	private final String linkCostMonitorAddr = GLOBALS.valueFor("linkCostMonitorAddr");
@@ -33,7 +33,7 @@ public class LinkCostHandler implements Runnable
 	private volatile boolean goOn = true;
 	private final NetworkAwareRouter netRouter;
 	private final int localPhysicalId;
-	
+
 	public LinkCostHandler(CoreRE owner)
 	{
 		this.owner = owner;
@@ -42,7 +42,8 @@ public class LinkCostHandler implements Runnable
 				owner.getProcessingUnit().getOperator().getQuery());
 		this.localPhysicalId = owner.getProcessingUnit().getOperator().getOperatorId();
 	}
-	
+
+	@Override
 	public void run()
 	{
 		while(goOn)
@@ -52,21 +53,21 @@ public class LinkCostHandler implements Runnable
 			//TODO: Compute best target
 			int newOperatorId = computeLowestCostOperatorId(linkState);
 			if (newOperatorId != NetworkAwareRouter.NO_ROUTE && newOperatorId != localPhysicalId)
-			{				
+			{
 				int downOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getDownOpIndexFromOpId(newOperatorId);
 				log.info("Op "+localPhysicalId+" updating router to use new downstream operator "+newOperatorId+", target index="+downOpIndex);
 				owner.getProcessingUnit().getOperator().getRouter().updateLowestCost(downOpIndex);
 				//TODO: Update CORE routing graphics
 				//updateCOREGraphicsSync(newTarget);
 			}
-			
+
 			long lastRecompute = System.currentTimeMillis();
-			
+
 			while (lastRecompute + RECOMPUTE_INTERVAL_MS > System.currentTimeMillis())
 			{
 				try
 				{
-					Thread.sleep(lastRecompute + RECOMPUTE_INTERVAL_MS - System.currentTimeMillis());					
+					Thread.sleep(lastRecompute + RECOMPUTE_INTERVAL_MS - System.currentTimeMillis());
 				} catch (InterruptedException e)
 				{
 					if (!goOn) { break; }
@@ -76,18 +77,18 @@ public class LinkCostHandler implements Runnable
 		}
 		log.warn("Link cost handler thread exiting.");
 	}
-	
-	
+
+
 	public void setGoOn(boolean goOn) { this.goOn = goOn; }
-	private String requestRoutingStateSync() 
-	{ 
+	private String requestRoutingStateSync()
+	{
 		//Open a connection to the link cost monitor
-		Socket s = null;	
+		Socket s = null;
 		String result = "";
-		
+
 		//TODO: Remove sys exits once stabilized
 		try
-		{			
+		{
 			try {
 				s = new Socket(linkCostMonitorAddr, linkCostMonitorPort);
 			} catch (UnknownHostException e) {
@@ -95,7 +96,7 @@ public class LinkCostHandler implements Runnable
 			} catch (IOException e) {
 				log.error("Error opening link cost monitor socket: ",e); System.exit(1);
 			}
-			
+
 			//Read link cost update
 			BufferedReader reader = null;
 			try {
@@ -105,7 +106,7 @@ public class LinkCostHandler implements Runnable
 			} catch (IOException e) {
 				log.error("Error opening link cost reader: ",e); System.exit(1);
 			}
-	
+
 			//Read until EOF
 			while (goOn)
 			{
@@ -137,11 +138,11 @@ public class LinkCostHandler implements Runnable
 
 		return result;
 	}
-	
-	private int computeLowestCostOperatorId(String linkState) 
-	{ 		
-		Map<Integer, Map<Integer, Integer>> netTopology = parseLinkState(linkState); 
-		
+
+	private int computeLowestCostOperatorId(String linkState)
+	{
+		Map<Integer, Map<Integer, Integer>> netTopology = parseLinkState(linkState);
+
 		//int localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
 		//int localNodeId = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getNodeId();
 		//InetAddress localNodeIp = owner.getProcessingUnit().getOperator().getOpContext().getOperatorStaticInformation().getMyNode().getIp();
@@ -155,17 +156,17 @@ public class LinkCostHandler implements Runnable
 		src = qp.getSrc();
 		snk = qp.getSnk();
 		queryToNodesMapping = qp.getMapOperatorToNode();
-		
+
 		In Operator
 		compose(Connectable down)
 		opContext.addDownstream(down.getOperatorId());
-		
+
 		*/
 
 		//GraphUtil.logTopology(netTopology);
 		return netRouter.route(netTopology);
-	} 
-	
+	}
+
 	private Map<Integer,Map<Integer, Integer>> parseLinkState(String linkState)
 	{
 		//src-id -> {dest-id -> cost}
@@ -187,7 +188,7 @@ public class LinkCostHandler implements Runnable
 			for (String destCostSplit : destCostsSplits)
 			{
 				//log.info("DestCostSplit="+destCostSplit);
-				 
+
 				String[] destCost = destCostSplit.split(":");
 				Integer dest = Integer.parseInt(destCost[0].trim());
 				if (destCost.length > 2) { throw new RuntimeException("destCost length > 2: " + destCostSplit); }
@@ -195,18 +196,18 @@ public class LinkCostHandler implements Runnable
 				{
 					Integer cost = Integer.parseInt(destCost[1].trim());
 					result.get(src).put(dest, cost);
-				}				
-			}			
+				}
+			}
 		}
-		return result;		
+		return result;
 	}
-	
-	
-	private void updateCOREGraphicsSync(int downstreamOpId) 
-	{ 
+
+
+	private void updateCOREGraphicsSync(int downstreamOpId)
+	{
 		//Open a connection to the link cost monitor
 		Socket s = null;
-		
+
 		//TODO: Remove sys exits once stabilized
 		try
 		{
@@ -217,7 +218,7 @@ public class LinkCostHandler implements Runnable
 			} catch (IOException e) {
 				log.error("Error opening link painter socket: ",e); System.exit(1);
 			}
-			
+
 			//Read link cost update
 			BufferedWriter writer = null;
 			try {
@@ -227,10 +228,10 @@ public class LinkCostHandler implements Runnable
 			} catch (IOException e) {
 				log.error("Error opening link painter writer: ",e); System.exit(1);
 			}
-	
+
 			//TODO: Get ip of newTarget?
-			try {				
-				InetAddress downstreamIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(downstreamOpId); 
+			try {
+				InetAddress downstreamIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(downstreamOpId);
 				int downstreamPort = owner.getProcessingUnit().getOperator().getOpContext().findDownstream(downstreamOpId).location().getMyNode().getPort();
 				/*
 				Integer downstreamNodeId = owner.getProcessingUnit().getOperator().getQuery().addrToNodeId(downstreamIp);
@@ -252,5 +253,5 @@ public class LinkCostHandler implements Runnable
 				log.warn("Error closing connection to link cost monitor.");
 			}
 		}
-	}	
+	}
 }

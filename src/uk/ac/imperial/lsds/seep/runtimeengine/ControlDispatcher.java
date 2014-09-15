@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
@@ -49,27 +49,27 @@ import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
 public class ControlDispatcher {
-	
+
 	final private Logger LOG = LoggerFactory.getLogger(ControlDispatcher.class);
 
 	private final int BLIND_SOCKET;
 	private final int CONTROL_SOCKET;
-	
+
 	private PUContext puCtx = null;
 	private Kryo k = null;
-	
+
 	///\fixme{remove this variable asap. debugging for now}
 	// FIXME: REMOVE THIS FROM HERE ASAP
 	//private Output largeOutput = new Output(10000000);
 	private Output largeOutput = new Output(4096000);//4MB
-	
+
 	public ControlDispatcher(PUContext puCtx){
 		this.puCtx = puCtx;
 		this.BLIND_SOCKET = new Integer(GLOBALS.valueFor("blindSocket"));
 		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket"));
 		this.k = initializeKryo();
 	}
-	
+
 	private Kryo initializeKryo(){
 		k = new Kryo();
 		k.register(ControlTuple.class);
@@ -94,7 +94,7 @@ public class ControlDispatcher {
 		k.setAsmEnabled(true);
 		return k;
 	}
-	
+
 	public void sendAllUpstreams(ControlTuple ct){
 		for(int i = 0; i < puCtx.getUpstreamTypeConnection().size(); i++) {
 			sendUpstream(ct, i);
@@ -105,7 +105,7 @@ public class ControlDispatcher {
 	{
 		sendUpstream(ct, index, true);
 	}
-	
+
 	public void sendUpstream(ControlTuple ct, int index, boolean block){
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
@@ -139,13 +139,13 @@ public class ControlDispatcher {
 				if (!block) { break; }
 			}
 		}
-	}	
-	
+	}
+
 	public void sendOpenSessionWaitACK(ControlTuple ct, int index){
 		DisposableCommunicationChannel dcc = (DisposableCommunicationChannel) puCtx.getStarTopology().get(index);
 		int targetOpId = dcc.getOperatorId();
 		InetAddress ip_endpoint = dcc.getIp();
-		
+
 		Output output = null;
 		BufferedReader in = null;
 		try{
@@ -172,7 +172,7 @@ public class ControlDispatcher {
 			io.printStackTrace();
 		}
 	}
-	
+
 	public void sendCloseSession(ControlTuple ct, int index){
 		DisposableCommunicationChannel dcc = (DisposableCommunicationChannel) puCtx.getStarTopology().get(index);
 		int targetOpId = dcc.getOperatorId();
@@ -197,7 +197,7 @@ public class ControlDispatcher {
 			io.printStackTrace();
 		}
 	}
-	
+
 	public void sendUpstream_blind(ControlTuple ct, int index){
 		long startSend = System.currentTimeMillis();
 //		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
@@ -206,7 +206,7 @@ public class ControlDispatcher {
 //		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
 		try{
 			Socket socket = new Socket(ip_endpoint, BLIND_SOCKET);
-		
+
 			largeOutput.setOutputStream(socket.getOutputStream());
 //			output = new Output(socket.getOutputStream());
 //			System.out.println("WRITING TO: "+socket.toString());
@@ -232,9 +232,9 @@ public class ControlDispatcher {
 		long stopSend = System.currentTimeMillis();
 //		System.out.println("% Send : "+(stopSend-startSend));
 	}
-	
 
-	
+
+
 	public void sendDownstream(ControlTuple ct, int index){
 		sendDownstream(ct, index, true);
 	}
@@ -274,7 +274,7 @@ public class ControlDispatcher {
 		}
 	}
 
-	
+
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
 		Output output = new Output(os);
 		synchronized(k){
@@ -282,7 +282,7 @@ public class ControlDispatcher {
 		}
 		output.flush();
 	}
-	
+
 	public void initStateMessage(ControlTuple initStateMsg, OutputStream os){
 		Output output = new Output(os);
 		synchronized(k){
@@ -290,7 +290,7 @@ public class ControlDispatcher {
 		}
 		output.flush();
 	}
-	
+
 	public Object deepCopy(Object toCopy){
 		long s = System.currentTimeMillis();
 		System.out.println("CLASS: "+toCopy.getClass().toString());

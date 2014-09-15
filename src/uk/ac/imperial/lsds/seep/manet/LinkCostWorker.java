@@ -27,9 +27,9 @@ public class LinkCostWorker implements Runnable {
 		this.owner = owner;
 		this.inputSocket = inputSocket;
 	}
-	
+
 	@Override
-	public void run() 
+	public void run()
 	{
 		//Read link cost update
 		BufferedReader reader = null;
@@ -40,8 +40,8 @@ public class LinkCostWorker implements Runnable {
 		} catch (IOException e) {
 			log.error("Error opening link cost reader: ",e); System.exit(1);
 		}
-		
-		
+
+
 		try {
 			//Read the connection to get the data
 			while(goOn){
@@ -63,17 +63,17 @@ public class LinkCostWorker implements Runnable {
 		catch(IOException e){
 			log.error("Exn closing link cost socket:", e);
 		}
-		
+
 		if (!goOn) return;
 		//Log it
-		
+
 		//TODO: Compute lowest cost path and next hop to the destination.
 		//Notify the CORE EMANE link cost painter to do something.
-		//TODO: notify the CORE EMANE link cost painter with (local node id -> next hop id)			
+		//TODO: notify the CORE EMANE link cost painter with (local node id -> next hop id)
 		//TODO: update the local router with the lowest cost next hop.
 	}
 
 	public void setGoOn(boolean goOn) {
-		this.goOn = goOn;		
+		this.goOn = goOn;
 	}
 }

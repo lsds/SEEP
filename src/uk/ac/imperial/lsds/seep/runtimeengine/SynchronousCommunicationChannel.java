@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
@@ -36,20 +36,20 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
 	private Buffer buffer;
-	
+
 	private final Object controlSocketLock = new Object(){};
-	
+
 	private Output output = null;
 	private OutputStream bos = null;
-	
+
 	//Set atomic variables to their initial value
 	private AtomicBoolean stop = new AtomicBoolean(false);
 	private AtomicBoolean replay = new AtomicBoolean(false);
-	
+
 	private TimestampTracker reconf_ts;
 	private long last_ts;
 	private Iterator<OutputLogEntry> sharedIterator;
-	
+
 	//Batch information for this channel
 	private BatchTuplePayload batch = new BatchTuplePayload();
 	private int channelBatchSize = Integer.parseInt(GLOBALS.valueFor("batchLimit"));
@@ -75,11 +75,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			e.printStackTrace();
 		}
 	}
-	
+
+	@Override
 	public int getOperatorId(){
 		return targetOperatorId;
 	}
-	
+
 	public Socket getDownstreamControlSocket() {
 		synchronized(controlSocketLock)
 		{
@@ -152,8 +153,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
             return downstreamDataSocket;
     }
 
-    /** 
-     * dokeeffe TODO: Should probably allow this to be 
+    /**
+     * dokeeffe TODO: Should probably allow this to be
      * extended to support cancellation. At the moment it will
      * try to reconnect for ever.
      */
@@ -188,7 +189,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 
     	new Thread(new Runnable()
     	{
-    		public void run()
+    		@Override
+			public void run()
     		{
     			while(true)
     			{
@@ -222,74 +224,74 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;
 	}
-	
+
 	public Iterator<OutputLogEntry> getSharedIterator(){
 		return sharedIterator;
 	}
-	
+
 	public Output getOutput() {
 		return output;
 	}
-	
+
 	public void setTick(long tick){
 		this.tick = tick;
 	}
-	
+
 	public Socket getDownstreamDataSocket(){
 		return downstreamDataSocket;
 	}
-	
+
 	public Buffer getBuffer(){
 		return buffer;
 	}
-	
+
 	public AtomicBoolean getReplay(){
 		return replay;
 	}
-	
+
     //dokeeffe TODO: Hmm, might want to keep this internal
     // and add an extra setter to the interface if this class
     // is going to handle reconnects.
 	public AtomicBoolean getStop(){
 		return stop;
 	}
-	
+
 	public synchronized BatchTuplePayload getBatch(){
 		return batch;
 	}
-	
+
 	public synchronized void addDataToBatch(TuplePayload payload){
 		batch.addTuple(payload);
 		channelBatchSize--;
 		last_ts = payload.timestamp;
 	}
-	
+
 	public int getChannelBatchSize(){
 		return channelBatchSize;
 	}
-	
+
 	public void resetChannelBatchSize(){
 		channelBatchSize = 0;
 	}
-	
+
 	public void cleanBatch(){
 		batch.clear();
 		int limit = Integer.parseInt(GLOBALS.valueFor("batchLimit"));
 		channelBatchSize = limit;
 	}
-	
+
 	public void cleanBatch2(){
 		batch = new BatchTuplePayload();
 	}
-	
+
 	public long getLast_ts(){
 		return last_ts;
 	}
-	
+
 	public TimestampTracker getReconf_ts(){
 		return reconf_ts;
 	}
-	
+
 	public void setReconf_ts(TimestampTracker ts){
 		this.reconf_ts = ts;
 	}

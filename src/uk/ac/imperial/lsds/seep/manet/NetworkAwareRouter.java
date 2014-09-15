@@ -10,14 +10,14 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NetworkAwareRouter 
+public class NetworkAwareRouter
 {
 	private final static Logger logger = LoggerFactory.getLogger(NetworkAwareRouter.class);
 	public static final int NO_ROUTE = -1;
 	private final Query query;
 	private final int localPhysicalId;
 
-	public NetworkAwareRouter(int localPhysicalId, Query query) 
+	public NetworkAwareRouter(int localPhysicalId, Query query)
 	{
 		this.query = query;
 		this.localPhysicalId = localPhysicalId;
@@ -28,8 +28,8 @@ public class NetworkAwareRouter
 		Map initialAppTopology = computeInitialAppTopology(netTopology);
 		Map appTopology = computeFinalAppTopology(initialAppTopology);
 		logger.info("App topology (localOpId="+localPhysicalId+": "+ appTopology);
-		Integer nextHop = useBandwidthMetric() ? 
-				GraphUtil.nextHopBandwidth(localPhysicalId, query.getSinkPhysicalId(), appTopology) : 
+		Integer nextHop = useBandwidthMetric() ?
+				GraphUtil.nextHopBandwidth(localPhysicalId, query.getSinkPhysicalId(), appTopology) :
 					GraphUtil.nextHop(localPhysicalId, query.getSinkPhysicalId(), appTopology);
 
 				if (nextHop == null) { return NO_ROUTE; }
@@ -53,10 +53,10 @@ public class NetworkAwareRouter
 		{
 			appTopology = computeUnreplicatedAppTopology(appTopology);
 		}
-		return appTopology; 
+		return appTopology;
 	}
 
-	
+
 	private Map initAppNodesMap()
 	{
 		Map appNodesMap = new HashMap();
@@ -108,7 +108,7 @@ public class NetworkAwareRouter
 			Integer sourceId = (Integer)srcIter.next();
 
 			Integer sourceNodeId = query.addrToNodeId(query.getNodeAddress(sourceId));
-			
+
 			Map sourceCosts = useBandwidthMetric() ? GraphUtil.widestPaths(sourceNodeId, currentNetTopology):GraphUtil.shortestPaths(sourceNodeId, currentNetTopology);
 
 			Integer sourceLogicalId = query.getLogicalNodeId(sourceId);
@@ -122,7 +122,7 @@ public class NetworkAwareRouter
 				Integer nextOp = (Integer)nextOpIter.next();
 				Integer nextOpNodeId = query.addrToNodeId(query.getNodeAddress(nextOp));
 				setLinkCost(sourceId, nextOp, sourceCosts.get(nextOpNodeId), appTopology);
-			}        
+			}
 		}
 
 		//TODO Could probably define a QueryIterator class
@@ -138,12 +138,12 @@ public class NetworkAwareRouter
 				Integer logicalId = (Integer)queryIter.next();
 				Integer nextHopLogicalId = query.getNextHopLogicalNodeId(logicalId);
 				if (nextHopLogicalId != null)
-				{ 
+				{
 					moreToProcess.add(nextHopLogicalId);
 					Set physicalIds = query.getPhysicalNodeIds(logicalId);
 					Set nextHopPhysicalIds = query.getPhysicalNodeIds(nextHopLogicalId);
 
-					Iterator physIter = physicalIds.iterator(); 
+					Iterator physIter = physicalIds.iterator();
 					while (physIter.hasNext())
 					{
 						Integer physicalId = (Integer)physIter.next();
@@ -156,15 +156,15 @@ public class NetworkAwareRouter
 						{
 							Integer nextHopPhysicalId = (Integer)nextHopPhysIter.next();
 							Integer nextHopPhysicalNodeId = query.addrToNodeId(query.getNodeAddress(nextHopPhysicalId));
-							setLinkCost(physicalId, nextHopPhysicalId, opCosts.get(nextHopPhysicalNodeId), appTopology);  
-						}    
-					}  
+							setLinkCost(physicalId, nextHopPhysicalId, opCosts.get(nextHopPhysicalNodeId), appTopology);
+						}
+					}
 				}
 				else
 				{
 					//Must be the sink node.
 					if (queryIter.hasNext()) throw new RuntimeException("Logic error.");
-				} 
+				}
 
 				processed.add(logicalId);
 			}
@@ -177,19 +177,19 @@ public class NetworkAwareRouter
 	}
 
 	private boolean useBandwidthMetric()
-	{	  
-		return false; //TODO  
+	{
+		return false; //TODO
 	}
 
 	private void setLinkCost(Integer src, Integer nextHop, Object cost, Map appTopology)
 	{
-		((Map)appTopology.get(src)).put(nextHop, cost); 
+		((Map)appTopology.get(src)).put(nextHop, cost);
 	}
 
 	private Object getLinkCost(Integer src, Integer nextHop, Map appTopology)
 	{
-		return ((Map)appTopology.get(src)).get(nextHop); 
+		return ((Map)appTopology.get(src)).get(nextHop);
 	}
-	
+
 
 }

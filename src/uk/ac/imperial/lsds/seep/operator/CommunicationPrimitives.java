@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
@@ -23,8 +23,8 @@ public interface CommunicationPrimitives {
 	public void send_all(DataTuple dt);
 	public void send_toStreamId(DataTuple dt, int streamId);
 	public void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId);
-        public void send_all_threadPool(DataTuple dt);
-        public void send_to_OpId(DataTuple dt, int opId);
-        public void send_to_OpIds(DataTuple[] dt, int[] opId);
-        public void send_toIndices(DataTuple[] dts, int[] indices);
+	public void send_all_threadPool(DataTuple dt);
+	public void send_to_OpId(DataTuple dt, int opId);
+	public void send_to_OpIds(DataTuple[] dt, int[] opId);
+	public void send_toIndices(DataTuple[] dts, int[] indices);
 }
