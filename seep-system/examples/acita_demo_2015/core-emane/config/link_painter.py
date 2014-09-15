@@ -7,7 +7,7 @@ images_dir = '/home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2
 def main(num_nodes, host, port):
 
 	app_link_states = AppLinkState(num_nodes)
-	gui_t = threading.Thread(target=start_gui_painter, args=(app_link_states,))
+	gui_t = threading.Thread(target=start_gui_painter, args=(num_nodes, app_link_states,))
 	gui_t.setDaemon(True)
 	gui_t.start()
 
@@ -31,29 +31,37 @@ def start_server(host, port, app_link_states):
 
 	print 'Link painter exiting.'
 
-def start_gui_painter(app_link_states):
+def start_gui_painter(num_nodes, app_link_states):
+	reset_node_icons(num_nodes)
 
 	while True:
 		hosting_nodes = app_link_states.get_hosts()
-		update_icons(hosting_nodes)
+		update_icons(num_nodes, hosting_nodes)
 		update_app_links(app_link_states)
 		time.sleep(1)
+
+def reset_node_icons(num_nodes):
+	for i in range(1, num_nodes):
+		show_initial_icon(num_nodes, i)
 		
-def update_icons(hosting_nodes):
+def update_icons(num_nodes, hosting_nodes):
 	for hosting_node in hosting_nodes:
 		if hosting_node == 1:
-			show_hosting_source(hosting_node)
+			show_hosting_source(num_nodes, hosting_node)
 		else:
-			show_hosting_op(hosting_node)
+			show_hosting_op(num_nodes, hosting_node)
 
-def show_hosting_source(node):
-	set_node_icon(node, "%s/%s"%(images_dir, "host_op_red.svg"))
+def show_initial_icon(num_nodes, node):
+	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host.gif"))
 
-def show_hosting_op(node):
-	set_node_icon(node, "%s/%s"%(images_dir, "host_op_yellow.svg"))
+def show_hosting_source(num_nodes, node):
+	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host_op_red.png"))
+
+def show_hosting_op(num_nodes, node):
+	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host_op_yellow.png"))
 	
-def set_node_icon(node, img_path):
-	cmd = "coresendmsg node number=%d icon=%s"%(node, img_path)
+def set_node_icon(num_nodes, node, img_path):
+	cmd = "coresendmsg node number=%d icon=%s"%(node+num_nodes, img_path)
 	os.system(cmd)
 		
 def update_app_links(app_link_states):
