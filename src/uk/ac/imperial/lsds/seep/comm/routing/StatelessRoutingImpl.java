@@ -111,9 +111,7 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
 		targets.add(target);
 		return targets;
 	}
-    
-    
-	
+
     @Override
 	public synchronized int[] newReplica(int oldOpIndex, int newOpIndex) {
 		//In this case oldOpIndex does not do anything
@@ -219,7 +217,7 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
        {
                if (virtualIndexToRealIndex.get(virtualIndex) == newIndex)
                {
-                       if (target != virtualIndex) 
+                       if (target != virtualIndex)
                        {
                                LOG.info("Switched from vIndex "+target+" to " +virtualIndex);
                        }
@@ -228,7 +226,7 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
                        return;
                }
        }
-       
+
        throw new RuntimeException("Logic error - tried to switch to non-existent ds index="+newIndex);
        //target = newTarget;
     }

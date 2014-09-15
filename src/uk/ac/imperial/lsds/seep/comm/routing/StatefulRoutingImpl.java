@@ -235,6 +235,5 @@ public class StatefulRoutingImpl implements RoutingStrategyI, Serializable{
 	@Override
 	public void updateLowestCost(int newTarget) {
 		throw new RuntimeException("TODO");
-		
 	}
 }

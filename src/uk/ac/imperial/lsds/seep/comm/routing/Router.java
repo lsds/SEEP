@@ -175,14 +175,14 @@ public class Router implements Serializable{
 		}
 		return results;
 	}
-	
+
 	public ArrayList<Integer> forwardLowestCost(DataTuple dt){
 		checkDownstreamRoutingImpl();
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).routeLowestCost();
 	}
-	
+
 	private void checkDownstreamRoutingImpl()
-	{		
+	{
 		if(downstreamRoutingImpl == null){
 			System.out.println("downstreamrouting impl null");
 			System.exit(0); /// xtreme
