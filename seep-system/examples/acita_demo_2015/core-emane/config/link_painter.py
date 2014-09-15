@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-import sys, re, threading, argparse, socket, time
+import sys, re, threading, argparse, socket, time, os
 
-images_dir = '/home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2014/core-emane/config'
+images_dir = '/home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config'
 
 def main(num_nodes, host, port):
 
@@ -60,13 +60,16 @@ def update_app_links(app_link_states):
 	pass
  
 def start_worker(conn, addr, app_link_states):
+	print 'Starting painter worker for ip: %s'%str(addr)
 	try:
-		with conn.makefile() as reader:
-			while True:
-				line = reader.readline().decode('utf8')
-				if not line: return			
-				app_link_states.handleUpdate(line)	
+		reader = conn.makefile()
+		while True:
+			line = reader.readline().decode('utf8')
+			print 'Painter worker %s received: %s'%(str(addr), line)
+			if not line: return			
+			app_link_states.handleUpdate(line)	
 	finally:
+		reader.close()
 		conn.close()
 
 class AppLinkState:
@@ -104,7 +107,7 @@ class AppLinkState:
 			node_port = match.group(2)
 			nbr_addr = match.group(3)
 			nbr_port = match.group(4)
-			if re.search(emulator_ip_regex, node_addr) and re.search(emulator_ip_regex, nbr_addr):
+			if re.search(self.emulator_ip_regex, node_addr) and re.search(self.emulator_ip_regex, nbr_addr):
 				self._set_downstream(node_addr, node_port, nbr_addr, nbr_port)
 				self._add_hosting_node(node_addr)
 			else:
@@ -114,7 +117,7 @@ class AppLinkState:
 			if not match: raise Exception("Logic error, should be no downstream update: %s"%update)	
 			node_addr = match.group(1)
 			node_port = match.group(2)
-			if re.search(emulator_ip_regex, node_addr): 
+			if re.search(self.emulator_ip_regex, node_addr): 
 				self._unset_downstream(node_addr, node_port)
 				self._add_hosting_node(node_addr)
 			else:
@@ -154,7 +157,7 @@ class AppLinkState:
 			self.hosting_nodes.add(node_id)
 
 	def _get_core_node_id(self, emulator_ip):
-		return int(re.search(emulator_ip_regex, emulator_ip).group(1))
+		return int(re.search(self.emulator_ip_regex, emulator_ip).group(1))
 
 if __name__=="__main__":
 	parser = argparse.ArgumentParser(description='Monitor and distribute OLSR link state information to workers.')		
