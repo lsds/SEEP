@@ -1,16 +1,20 @@
 #!/usr/bin/python
 
-import sys, re, threading, argparse, socket
+import sys, re, threading, argparse, socket, time
+
+images_dir = '/home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2014/core-emane/config'
 
 def main(num_nodes, host, port):
 
-	t = threading.Thread(target=start_server, args=(host,port,num_nodes,))
-	t.setDaemon(True)
-	t.start()
+	app_link_states = AppLinkState(num_nodes)
+	gui_t = threading.Thread(target=start_gui_painter, args=(app_link_states,))
+	gui_t.setDaemon(True)
+	gui_t.start()
 
-def start_server(host, port, num_nodes):
+	start_server(host, port, app_link_states)
 
-	app_link_states = AppLinks(num_nodes)
+def start_server(host, port, app_link_states):
+
 	try:
 		server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -25,6 +29,36 @@ def start_server(host, port, num_nodes):
 	finally: 
 		server_socket.close()
 
+	print 'Link painter exiting.'
+
+def start_gui_painter(app_link_states):
+
+	while True:
+		hosting_nodes = app_link_states.get_hosts()
+		update_icons(hosting_nodes)
+		update_app_links(app_link_states)
+		time.sleep(1)
+		
+def update_icons(hosting_nodes):
+	for hosting_node in hosting_nodes:
+		if hosting_node == 1:
+			show_hosting_source(hosting_node)
+		else:
+			show_hosting_op(hosting_node)
+
+def show_hosting_source(node):
+	set_node_icon(node, "%s/%s"%(images_dir, "host_op_red.svg"))
+
+def show_hosting_op(node):
+	set_node_icon(node, "%s/%s"%(images_dir, "host_op_yellow.svg"))
+	
+def set_node_icon(node, img_path):
+	cmd = "coresendmsg node number=%d icon=%s"%(node, img_path)
+	os.system(cmd)
+		
+def update_app_links(app_link_states):
+	pass
+ 
 def start_worker(conn, addr, app_link_states):
 	try:
 		with conn.makefile() as reader:
@@ -39,21 +73,29 @@ class AppLinkState:
 
 	def __init__(self, nodes):
 		self.num_nodes = nodes
-		self.emulator_ips = self.init_emulator_ips()
+		self.emulator_ips = self._init_emulator_ips()
 		self.downstreams = {}
 		self.downstreams_lock = threading.Lock()
 		self.update_regex = re.compile(r'(.*):(\d+),(.*):(\d+)|(.*):(\d+),None')
 		self.has_downstream_regex = re.compile(r'(.*):(\d+),(.*):(\d+)')
 		self.no_downstream_regex = re.compile(r'(.*):(\d+),None')
 		self.emulator_ip_regex = re.compile(r'192.168.20([1-6]).101')
+		if self.num_nodes > 6: raise Exception("Fix emulator_ip_regex")
+		self.hosting_nodes = set()
+		self.hosting_nodes_lock = threading.Lock()
 
 	def _init_emulator_ips(self):
 		result = {}
-		for in range(1, self.num_nodes+1):
+		for i in range(1, self.num_nodes+1):
 			ip = "192.168.20%d.101"%i
 			result[i] = ip 
 
-	def handleUpdate(update)	
+	def get_hosts(self):
+		with self.hosting_nodes_lock:
+			hosts_copy = frozenset(self.hosting_nodes)
+		return hosts_copy
+
+	def handleUpdate(self, update):
 		match = re.search(self.update_regex, update)
 		if not match: raise Exception("Invalid link painter update: %s"%update)
 		match = re.search(self.has_downstream_regex, update)
@@ -64,6 +106,7 @@ class AppLinkState:
 			nbr_port = match.group(4)
 			if re.search(emulator_ip_regex, node_addr) and re.search(emulator_ip_regex, nbr_addr):
 				self._set_downstream(node_addr, node_port, nbr_addr, nbr_port)
+				self._add_hosting_node(node_addr)
 			else:
 				raise Exception("Unexpected node or nbr address: %s,%s"%(node_addr, nbr_addr))
 		else:
@@ -73,19 +116,20 @@ class AppLinkState:
 			node_port = match.group(2)
 			if re.search(emulator_ip_regex, node_addr): 
 				self._unset_downstream(node_addr, node_port)
+				self._add_hosting_node(node_addr)
 			else:
 				raise Exception("Unexpected node address: %s"%node_addr)
 
-	def _set_downstream(node_addr, node_port, nbr_addr, nbr_port):
+	def _set_downstream(self, node_addr, node_port, nbr_addr, nbr_port):
 		with self.downstreams_lock:
 			self.downstreams[(node_addr,node_port)] = (nbr_addr, nbr_port)
 		
-	def _unset_downstream(node_addr, node_port, nbr_addr, nbr_port):
+	def _unset_downstream(self, node_addr, node_port, nbr_addr, nbr_port):
 		with self.downstreams_lock:
 			self.downstreams[(node_addr,node_port)] = None 
 
 			
-	def compute_downstream_ids(node)
+	def compute_downstream_ids(self, node):
 		emulator_ip = self.emulator_ips[node]
 		downstream_ids = self._init_downstream_ids()
 		with self.downstreams_lock:
@@ -97,12 +141,20 @@ class AppLinkState:
 						downstream_ids[node] = True
 		return downstream_ids
 		
-	def _init_downstream_ids(node):
+	def _init_downstream_ids(self, node):
 		result = {}
 		for i in range(1, self.num_nodes+1):
 			if i != node:
 				result[i] = False
 		return result
+
+	def _add_hosting_node(self, node_addr):
+		node_id = self._get_core_node_id(node_addr)
+		with self.hosting_nodes_lock:
+			self.hosting_nodes.add(node_id)
+
+	def _get_core_node_id(self, emulator_ip):
+		return int(re.search(emulator_ip_regex, emulator_ip).group(1))
 
 if __name__=="__main__":
 	parser = argparse.ArgumentParser(description='Monitor and distribute OLSR link state information to workers.')		
