@@ -87,6 +87,7 @@ public class MainActivity extends Activity {
 	ToggleButton btn_startWorkers;
 	ToggleButton btn_deploy;
 	ToggleButton btn_start;
+	ToggleButton btn_scaled;
 
 	Button btn_stop;
 
@@ -120,7 +121,9 @@ public class MainActivity extends Activity {
 	public static int level, scale;
 	public static WifiManager mainWifi;
 	public static boolean isSystemRunning = false;
-	
+	public final static String queryNoScaleOut = "com.example.query.Base";
+	public final static String queryScaleOut2 = "com.example.query.BaseScale2";
+	private static String classname = queryNoScaleOut;
 	static Bitmap currentFrame;
 
 	@Override
@@ -234,17 +237,19 @@ public class MainActivity extends Activity {
 		textresult = (TextView) findViewById(R.id.textResult);
 		btn_local = (ToggleButton) findViewById(R.id.button1);
 		btn_startWorkers = (ToggleButton) findViewById(R.id.button2);
+		btn_scaled = (ToggleButton) findViewById(R.id.buttonScaled);
 		btn_deploy = (ToggleButton) findViewById(R.id.button3);
 		btn_start = (ToggleButton) findViewById(R.id.button4);
 		btn_stop = (Button) findViewById(R.id.button5);
 
-		final String classname = "com.example.query.Base";
+		//final String classname = "com.example.query.Base";
 
 		btn_local.setOnClickListener(new OnClickListener(){
 			@Override
 			public void onClick(View arg0){
 				btn_local.setChecked(true);
 				btn_startWorkers.setClickable(false);
+				btn_scaled.setClickable(false);
 				Main instance1 = new Main();
 				String worker = "Worker";
 				String port = "2001";
@@ -293,6 +298,7 @@ public class MainActivity extends Activity {
 				
 				btn_startWorkers.setChecked(true);
 				btn_local.setClickable(false);
+				btn_scaled.setClickable(false);
 				Main instance1 = new Main();
 				String worker = "Worker";
 				String port = "2001";
@@ -323,6 +329,42 @@ public class MainActivity extends Activity {
 			
 		});
 
+		btn_scaled.setOnClickListener(new OnClickListener(){
+			@Override
+			public void onClick(View arg0){
+				btn_scaled.setChecked(true);
+				btn_startWorkers.setClickable(false);
+				btn_local.setClickable(false);
+				Main instance1 = new Main();
+				String worker = "Worker";
+				String port = "2001";
+				String[] args = {worker, port};
+				instance1.executeSec(args);
+				classname = queryScaleOut2;
+				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MainActivity.this);
+				// set title
+				alertDialogBuilder.setTitle("Please join the workers")
+				.setMessage("Click when workers have joined")
+				      .setCancelable(false)
+				      .setNeutralButton("Done",
+				         new DialogInterface.OnClickListener() {
+				         public void onClick(DialogInterface dialog, int whichButton){
+				        	 Main instance2 = new Main();
+								String worker = "Worker";
+								String port = "2002";
+								String[] args = {worker, port};
+								args[1] = port;
+								instance2.executeSec(args);
+								Toast.makeText(getApplicationContext(), "Done! Please deploy!", 
+										   Toast.LENGTH_LONG).show();
+				         }
+				         })
+				      .show();
+
+			}
+			
+		});
+		
 		btn_deploy.setOnClickListener(new OnClickListener(){
 			@Override
 			public void onClick(View arg0){
@@ -374,6 +416,8 @@ public class MainActivity extends Activity {
 				isSystemRunning = false;
 				instance.stop();
 				btn_startWorkers.setChecked(false);
+				btn_local.setChecked(false);
+				btn_scaled.setChecked(false);
 				btn_deploy.setChecked(false);
 				btn_start.setChecked(false);
 			}

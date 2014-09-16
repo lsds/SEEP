@@ -72,6 +72,14 @@
             android:textOn="Remote" />
 
         <ToggleButton
+            android:id="@+id/buttonScaled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ToggleButton"
+            android:textOff="Scaled"
+            android:textOn="Scaled" />
+
+        <ToggleButton
             android:id="@+id/button3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -84,14 +92,12 @@
             android:layout_height="wrap_content"
             android:textOff="Start"
             android:textOn="Start" />
-        
+
         <Button
             android:id="@+id/button5"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stop"
-            />
-        
+            android:text="Stop" />
         
     </LinearLayout>
 
