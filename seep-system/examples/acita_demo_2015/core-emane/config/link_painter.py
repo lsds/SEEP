@@ -34,10 +34,14 @@ def start_server(host, port, app_link_states):
 def start_gui_painter(num_nodes, app_link_states):
 	reset_node_icons(num_nodes)
 
+
+	prev_hosting_nodes = set()	
 	while True:
 		hosting_nodes = app_link_states.get_hosts()
-		update_icons(num_nodes, hosting_nodes)
+		if hosting_nodes != prev_hosting_nodes:
+			update_icons(num_nodes, hosting_nodes)
 		update_app_links(app_link_states)
+		prev_hosting_nodes=hosting_nodes
 		time.sleep(1)
 
 def reset_node_icons(num_nodes):
