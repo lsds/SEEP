@@ -260,7 +260,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return batch;
 	}
 
-	public synchronized void addDataToBatch(TuplePayload payload){
+	public synchronized void addDataToBatch(TuplePayload payload)
+	{
 		batch.addTuple(payload);
 		channelBatchSize--;
 		last_ts = payload.timestamp;

@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
+import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 
 public class LinkCostHandler implements Runnable
@@ -58,8 +59,10 @@ public class LinkCostHandler implements Runnable
 				log.info("Op "+localPhysicalId+" updating router to use new downstream operator "+newOperatorId+", target index="+downOpIndex);
 				owner.getProcessingUnit().getOperator().getRouter().updateLowestCost(downOpIndex);
 				//TODO: Update CORE routing graphics
-				//updateCOREGraphicsSync(newTarget);
+				updateCOREGraphicsSync(newOperatorId);
 			}
+
+
 
 			long lastRecompute = System.currentTimeMillis();
 
@@ -231,15 +234,28 @@ public class LinkCostHandler implements Runnable
 
 			//TODO: Get ip of newTarget?
 			try {
-				InetAddress downstreamIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(downstreamOpId);
-				int downstreamPort = owner.getProcessingUnit().getOperator().getOpContext().findDownstream(downstreamOpId).location().getMyNode().getPort();
+				String local = owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort();
+				log.info("Op "+localPhysicalId+" sending downstream update to painter.");
+
+				String downstream = "None";
+				if (downstreamOpId != NetworkAwareRouter.NO_ROUTE)
+				{
+					InetAddress downstreamIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(downstreamOpId);
+					PlacedOperator downstreamPlacedOp = owner.getProcessingUnit().getOperator().getOpContext().findDownstream(downstreamOpId);
+					if (downstreamPlacedOp == null) { throw new RuntimeException("Logic error, op "+localPhysicalId+" has null downstream placed op: "+downstreamOpId); }
+					int downstreamPort = downstreamPlacedOp.location().getMyNode().getPort();
+					downstream = downstreamIp.getHostAddress()+":"+downstreamPort;
+				}
 				/*
 				Integer downstreamNodeId = owner.getProcessingUnit().getOperator().getQuery().addrToNodeId(downstreamIp);
 				Integer localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
 				InetAddress localIp = owner.getProcessingUnit().getOperator().getQuery().getNodeAddress(localOpId);
 				Integer localNodeId = owner.getProcessingUnit().getOperator().getQuery().addrToNodeId(localIp);
 				*/
-				writer.write(owner.getNodeDescr().getIp()+":"+owner.getNodeDescr().getOwnPort() + ","+downstreamIp.getHostAddress()+":"+downstreamPort+"\n");
+				String msg =  local + ","+ downstream + "\n";
+				log.info("Op "+localPhysicalId+ " updating downstream  "+ msg);
+				writer.write(msg);
+				writer.flush();
 			} catch (IOException e) {
 				log.error("Error writing target to painter", e); System.exit(1);
 			}
