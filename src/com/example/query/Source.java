@@ -144,10 +144,9 @@ public class Source implements StatelessOperator  {
 	}
 
 	private Bitmap getFrame(int i) {
+		//String filename = "/sdcard/frames/scene00";
+		String filename = "/sdcard/frames/0000";
 		try {
-
-			//String filename = "/sdcard/frames/scene00";
-			String filename = "/sdcard/frames/0000";
 			if (i < 10) { filename = filename + "000" + i + ".jpg"; }
 			else if (i < 100) { filename = filename + "00" + i + ".jpg"; }
 			else if (i < 1000) { filename = filename + "0" + i + ".jpg"; }
@@ -166,6 +165,7 @@ public class Source implements StatelessOperator  {
 			return BitmapFactory.decodeFile(filename);
 
 		} catch (Exception e) {
+			LOG.error("Exception decoding filename="+filename, e);
 			return null;
 		}
 	}

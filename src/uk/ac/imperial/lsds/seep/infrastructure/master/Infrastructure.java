@@ -387,11 +387,13 @@ public class Infrastructure {
 		log2phys.put(1, srcPhys);
 		phys2addr.put(src.getOperatorId(), src.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
 
+		LOG.info("Source op id="+src.getOperatorId()+",physAddr="+phys2addr.get(srcPhys));
 		int numDownstreams = src.getOpContext().getDownstreamSize();
 		int downstreamLogicalIndex = 2;
 		Operator current = src;
 		while (numDownstreams > 0)
 		{
+			LOG.info("Number of downstreams for op "+ current.getOperatorId()+"= "+numDownstreams);
 			Set<Integer> downstreamPhys = new HashSet<Integer>();
 
 			//TODO: Complete hack. For the FR query, enough to know the downstreams of one
@@ -402,6 +404,7 @@ public class Infrastructure {
 				downstreamPhys.add(downstreamPlacement.opID());
 				next = getOp(downstreamPlacement.opID());
 				phys2addr.put(downstreamPlacement.opID(), next.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+				LOG.info("Added op "+ current.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
 			}
 			log2phys.put(downstreamLogicalIndex, downstreamPhys);
 			downstreamLogicalIndex++;
