@@ -91,11 +91,11 @@ def update_node_app_links(node, node_downstreams):
 
 def show_app_link(node, downstream_id):
 	print 'Showing link from %d to %d'%(node, downstream_id)
-	set_app_link(node, downstream_id, True)
+	#set_app_link(node, downstream_id, True)
 
 def hide_app_link(node, downstream_id):
 	print 'Hiding link from %d to %d'%(node, downstream_id)
-	set_app_link(node, downstream_id, False)
+	#set_app_link(node, downstream_id, False)
 
 def set_app_link(node, downstream_id, show):
 	node_core_id = core_placement_id(node) 
