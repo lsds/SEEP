@@ -104,6 +104,8 @@ def set_app_link(node, downstream_id, show):
 	ifip_dest = "127.%d.0.%d"%(node, downstream_id)
 	flag = 'add' if show else 'del'
 	cmd = "coresendmsg link	flags=%s n1number=%d n2number=%d if1ip4='%s' if1ip4mask=24 if2ip4='%s' if2ip4mask=24"%(flag, node_core_id, downstream_core_id, ifip_node, ifip_dest)
+	print 'Sending command to core: %s'%cmd
+	os.system(cmd)
 
 def core_placement_id(node):
 	return node + 7
