@@ -36,16 +36,29 @@ def start_gui_painter(num_nodes, app_link_states):
 
 
 	prev_hosting_nodes = set()	
+	prev_downstreams=init_prev_downstreams(num_nodes)
 	while True:
 		hosting_nodes = app_link_states.get_hosts()
 		if hosting_nodes != prev_hosting_nodes:
 			update_icons(num_nodes, hosting_nodes)
-		update_app_links(app_link_states)
+		for i in range(1, num_nodes+1):
+			node_downstreams = app_link_states.compute_downstream_ids(i)
+			if node_downstreams != prev_downstreams[i]:
+				print 'Node %d downstreams changed: %s'%(i, str(node_downstreams))
+				update_node_app_links(i, node_downstreams)
+				prev_downstreams[i] = node_downstreams
+		#update_app_links(app_link_states)
 		prev_hosting_nodes=hosting_nodes
 		time.sleep(1)
 
+def init_prev_downstreams(num_nodes):
+	prev_downstreams = {}
+	for i in range(1, num_nodes+1):
+		prev_downstreams[i] = {}
+	return prev_downstreams
+	
 def reset_node_icons(num_nodes):
-	for i in range(1, num_nodes):
+	for i in range(1, num_nodes+1):
 		show_initial_icon(num_nodes, i)
 		
 def update_icons(num_nodes, hosting_nodes):
@@ -68,9 +81,33 @@ def set_node_icon(num_nodes, node, img_path):
 	cmd = "coresendmsg node number=%d icon=%s"%(node+num_nodes, img_path)
 	os.system(cmd)
 		
-def update_app_links(app_link_states):
-	pass
- 
+def update_node_app_links(node, node_downstreams):
+	for downstream_id in node_downstreams.keys():
+		if node != downstream_id:
+			if node_downstreams[downstream_id]:
+				show_app_link(node, downstream_id)
+			else:
+				hide_app_link(node, downstream_id)
+
+def show_app_link(node, downstream_id):
+	print 'Showing link from %d to %d'%(node, downstream_id)
+	set_app_link(node, downstream_id, True)
+
+def hide_app_link(node, downstream_id):
+	print 'Hiding link from %d to %d'%(node, downstream_id)
+	set_app_link(node, downstream_id, False)
+
+def set_app_link(node, downstream_id, show):
+	node_core_id = core_placement_id(node) 
+	downstream_core_id = core_placement_id(downstream_id) 
+	ifip_node = "127.%d.0.%d"%(node,node)
+	ifip_dest = "127.%d.0.%d"%(node, downstream_id)
+	flag = 'add' if show else 'del'
+	cmd = "coresendmsg link	flags=%s n1number=%d n2number=%d if1ip4='%s' if1ip4mask=24 if2ip4='%s' if2ip4mask=24"%(flag, node_core_id, downstream_core_id, ifip_node, ifip_dest)
+
+def core_placement_id(node):
+	return node + 7
+
 def start_worker(conn, addr, app_link_states):
 	print 'Starting painter worker for ip: %s'%str(addr)
 	try:
@@ -104,6 +141,7 @@ class AppLinkState:
 		for i in range(1, self.num_nodes+1):
 			ip = "192.168.20%d.101"%i
 			result[i] = ip 
+		return result
 
 	def get_hosts(self):
 		with self.hosting_nodes_lock:
@@ -146,14 +184,14 @@ class AppLinkState:
 			
 	def compute_downstream_ids(self, node):
 		emulator_ip = self.emulator_ips[node]
-		downstream_ids = self._init_downstream_ids()
+		downstream_ids = self._init_downstream_ids(node)
 		with self.downstreams_lock:
 			for (addr, port) in self.downstreams.keys():
 				if addr == emulator_ip:
 					if self.downstreams[(addr,port)]:
 						(downstream_addr, downstream_port) = self.downstreams[(addr,port)]
-						downstream_id = re.search(self.emulator_ip_regex, self.downstream_addr)
-						downstream_ids[node] = True
+						downstream_id = self._get_core_node_id(downstream_addr)
+						downstream_ids[downstream_id] = True
 		return downstream_ids
 		
 	def _init_downstream_ids(self, node):
