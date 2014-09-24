@@ -84,6 +84,20 @@ public class NodeManager{
 	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
 	private Server restAPIServer; 
 	
+//	public static void main(String[] args) {
+//
+//		NodeManager.restAPIRegistry = new HashMap<>();
+//		NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(new WorkerNodeDescription(null, 1111)));
+//		Server restAPIServer = new Server(8011);
+//		restAPIServer.setHandler(new RestAPIHandler());
+//		try {
+//			restAPIServer.start();
+//			restAPIServer.join();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
+	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
 
 		if (NodeManager.enableRestAPI) {
