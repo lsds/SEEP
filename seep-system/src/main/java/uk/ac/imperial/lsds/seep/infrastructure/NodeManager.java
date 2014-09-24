@@ -18,16 +18,28 @@ import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
+
+import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ser.std.InetAddressSerializer;
+
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPINodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIHandler;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
@@ -67,7 +79,26 @@ public class NodeManager{
 		
 	private Thread monitorT = null;
 	
+	public static final boolean enableRestAPI = Boolean.valueOf(GLOBALS.valueFor("enableRestAPI"));
+	public static final int restAPIPort = Integer.valueOf(GLOBALS.valueFor("restAPIPort"));
+	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
+	private Server restAPIServer; 
+	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
+
+		if (NodeManager.enableRestAPI) {
+			NodeManager.restAPIRegistry = new HashMap<>();
+			NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(this.nodeDescr));
+			this.restAPIServer = new Server(restAPIPort);
+			this.restAPIServer.setHandler(new RestAPIHandler());
+			try {
+				this.restAPIServer.start();
+				this.restAPIServer.join();
+			} catch (Exception e) {
+				LOG.error("Failed to start server for restful node API:\n{}", e.getMessage());
+			}
+		}
+		
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
         
