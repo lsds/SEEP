@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 import com.espertech.esper.client.Configuration;
@@ -129,6 +130,12 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 				}
 			}
 		});
+		
+		/*
+		 * Register monitoring handlers
+		 */
+		NodeManager.restAPIRegistry.put("/node/matches", new RestAPIEsperGetMatches(this));
+		NodeManager.restAPIRegistry.put("/node/query", new RestAPIEsperGetQueryDesc(this));
 	}
 	
 	protected void sendOutput(EventBean out) {
@@ -238,13 +245,8 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		return enableLoggingOfMatches;
 	}
 
-	public synchronized List<DataTuple> getAndEmptyCache() {
-		List<DataTuple> result = new ArrayList<>();
-		
-		synchronized(this.matchCache) {
-			result.addAll(matchCache);
-			matchCache.clear();
-		}		
-		return result;
+	public List<DataTuple> getMatchCache() {
+		return this.matchCache;
 	}
+	
 }

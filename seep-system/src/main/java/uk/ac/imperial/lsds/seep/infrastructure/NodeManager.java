@@ -102,7 +102,7 @@ public class NodeManager{
 
 		if (NodeManager.enableRestAPI) {
 			NodeManager.restAPIRegistry = new HashMap<>();
-			NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(this.nodeDescr));
+			NodeManager.restAPIRegistry.put("/node/description", new RestAPINodeDescription(this.nodeDescr));
 			this.restAPIServer = new Server(restAPIPort);
 			this.restAPIServer.setHandler(new RestAPIHandler());
 			try {
