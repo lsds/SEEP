@@ -136,7 +136,7 @@ node n7 {
 	starttime=5
 	}
     }
-    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_blue.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_blue.png
 }
 
 node n9 {
@@ -174,7 +174,7 @@ node n9 {
 	starttime=5
 	}
     }
-    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n10 {
@@ -212,7 +212,7 @@ node n10 {
 	starttime=5
 	}
     }
-    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n11 {
@@ -250,7 +250,7 @@ node n11 {
 	starttime=5
 	}
     }
-    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n8 {
@@ -288,7 +288,7 @@ node n8 {
 	starttime=5
 	}
     }
-    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n5 {
@@ -342,7 +342,7 @@ node n12 {
 	starttime=5
 	}
     }
-    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n13 {
@@ -420,7 +420,7 @@ link l12 {
 canvas c1 {
     name {Canvas1}
     wallpaper-style {upperleft}
-    wallpaper {/home/administrator/.core/configs/sample1-bg.gif}
+    wallpaper {/home/acita14demo/.core/configs/sample1-bg.gif}
     size {1000 750}
 }
 
