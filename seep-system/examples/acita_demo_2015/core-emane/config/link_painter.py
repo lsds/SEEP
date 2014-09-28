@@ -72,10 +72,10 @@ def show_initial_icon(num_nodes, node):
 	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host.gif"))
 
 def show_hosting_source(num_nodes, node):
-	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host_op_red.png"))
+	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host_op_blue.png"))
 
 def show_hosting_op(num_nodes, node):
-	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host_op_yellow.png"))
+	set_node_icon(num_nodes, node, "%s/%s"%(images_dir, "host_op_green.png"))
 	
 def set_node_icon(num_nodes, node, img_path):
 	cmd = "coresendmsg node number=%d icon=%s"%(node+num_nodes, img_path)

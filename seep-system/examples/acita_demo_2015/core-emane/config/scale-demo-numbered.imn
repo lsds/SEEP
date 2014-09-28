@@ -136,6 +136,7 @@ node n7 {
 	starttime=5
 	}
     }
+    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_blue.png
 }
 
 node n9 {
@@ -173,6 +174,7 @@ node n9 {
 	starttime=5
 	}
     }
+    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n10 {
@@ -210,6 +212,7 @@ node n10 {
 	starttime=5
 	}
     }
+    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n11 {
@@ -228,8 +231,8 @@ node n11 {
 	!
     }
     canvas c1
-    iconcoords {430.0 381.0}
-    labelcoords {430.0 413.0}
+    iconcoords {441.0 391.0}
+    labelcoords {441.0 423.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n6}
     services {OLSR IPForward Android LinkMonitor}
@@ -247,6 +250,7 @@ node n11 {
 	starttime=5
 	}
     }
+    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n8 {
@@ -265,8 +269,8 @@ node n8 {
 	!
     }
     canvas c1
-    iconcoords {434.0 209.0}
-    labelcoords {434.0 241.0}
+    iconcoords {480.0 229.0}
+    labelcoords {480.0 261.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n2}
     services {OLSR IPForward Android LinkMonitor}
@@ -284,6 +288,7 @@ node n8 {
 	starttime=5
 	}
     }
+    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n5 {
@@ -337,6 +342,7 @@ node n12 {
 	starttime=5
 	}
     }
+    custom-image /home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
 }
 
 node n13 {
@@ -413,6 +419,9 @@ link l12 {
 
 canvas c1 {
     name {Canvas1}
+    wallpaper-style {upperleft}
+    wallpaper {/home/administrator/.core/configs/sample1-bg.gif}
+    size {1000 750}
 }
 
 option global {
@@ -424,7 +433,7 @@ option global {
     show_api no
     background_images no
     annotations yes
-    grid yes
+    grid no
     traffic_start 0
 }
 
