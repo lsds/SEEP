@@ -116,8 +116,8 @@ node n7 {
 	!
     }
     canvas c1
-    iconcoords {373.0 294.0}
-    labelcoords {373.0 326.0}
+    iconcoords {374.0 295.0}
+    labelcoords {374.0 327.0}
     interface-peer {eth0 n1}
     interface-peer {eth1 n5}
     services {OLSR IPForward Android LinkMonitor}
@@ -136,7 +136,7 @@ node n7 {
 	starttime=5
 	}
     }
-    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_blue.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host.gif
 }
 
 node n9 {
@@ -174,7 +174,7 @@ node n9 {
 	starttime=5
 	}
     }
-    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host.gif
 }
 
 node n10 {
@@ -212,7 +212,7 @@ node n10 {
 	starttime=5
 	}
     }
-    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host.gif
 }
 
 node n11 {
@@ -250,7 +250,7 @@ node n11 {
 	starttime=5
 	}
     }
-    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host.gif
 }
 
 node n8 {
@@ -288,7 +288,7 @@ node n8 {
 	starttime=5
 	}
     }
-    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host.gif
 }
 
 node n5 {
@@ -342,7 +342,7 @@ node n12 {
 	starttime=5
 	}
     }
-    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host_op_green.png
+    custom-image /home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/host.gif
 }
 
 node n13 {

@@ -2,7 +2,7 @@
 
 import sys, re, threading, argparse, socket, time, os
 
-images_dir = '/home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config'
+images_dir = '/home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config'
 
 def main(num_nodes, host, port):
 

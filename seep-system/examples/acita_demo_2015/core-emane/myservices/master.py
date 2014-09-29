@@ -38,7 +38,7 @@ class Master(CoreService):
         ''' Return a string that will be written to filename, or sent to the
             GUI for user customization.
         '''
-	seep_example_dir = "/home/administrator/dev/seep-ita/seep-system/examples/acita_demo_2015"
+	seep_example_dir = "/home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015"
 	seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
 	query_jar = "acita_demo_2015.jar"
         cfg = "#!/bin/sh\n"
