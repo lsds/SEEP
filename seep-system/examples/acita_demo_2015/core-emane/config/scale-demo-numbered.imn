@@ -420,7 +420,7 @@ link l12 {
 canvas c1 {
     name {Canvas1}
     wallpaper-style {upperleft}
-    wallpaper {/home/acita14demo/.core/configs/sample1-bg.gif}
+    wallpaper {/home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config/sample1-bg.gif}
     size {1000 750}
 }
 
