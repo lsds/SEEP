@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
@@ -52,6 +52,7 @@ public class Source implements StatelessOperator  {
 
 	DistributedApi api = new DistributedApi();
 
+	@Override
 	public void setUp() {
 		LOG.info(">>>>>>>>>>>>>>>>>>>>Source set up");
 		sendOutputTupleThread = new sendOutTuples();
@@ -59,17 +60,27 @@ public class Source implements StatelessOperator  {
 
 	class sendOutTuples implements Runnable {
 
+		private final int INITIAL_IMAGE_INDEX = 0;
+		private final int LAST_IMAGE_INDEX = 1032;
+		//private final int INITIAL_IMAGE_INDEX = 9;
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
 		Bitmap bitmap = null;
 		Mat mGray = new Mat();
-		int i = 1;
+		int i = INITIAL_IMAGE_INDEX;//The frame files' index starts with 9
 		Handler myHandler = MainActivity.getImageViewHandler();
 
 		@Override
 		public void run() {
-			while(MainActivity.isSystemRunning){	
-				bitmap = getFrame(i);	
+			while(MainActivity.isSystemRunning){
+				bitmap = getFrame(i);
+				if (bitmap == null)
+				{
+					LOG.info("No such frame: "+ i);
+					i++;
+					continue;
+				}
+
 				Message msg = myHandler.obtainMessage();
 				msg.obj = bitmap;
 				msg.what = 1;
@@ -79,15 +90,15 @@ public class Source implements StatelessOperator  {
 				Imgproc.cvtColor(mGray, mGray, Imgproc.COLOR_BGR2GRAY);
 
 				if(mGray != null){
-					byte[] bytes = new byte[(safeLongToInt(mGray.total())) * mGray.channels()];		
+					byte[] bytes = new byte[(safeLongToInt(mGray.total())) * mGray.channels()];
 					mGray.get(0, 0, bytes);
 
-					DataTuple output = data.newTuple(i, 
-							bytes, 
-							mGray.rows(), 
-							mGray.cols(), 
-							mGray.type(), 
-							"", 
+					DataTuple output = data.newTuple(i,
+							bytes,
+							mGray.rows(),
+							mGray.cols(),
+							mGray.type(),
+							"",
 							System.currentTimeMillis(),
 							0,
 							0,
@@ -99,20 +110,22 @@ public class Source implements StatelessOperator  {
 					i++;
 				}
 
-				if (i>164)
-					i = 1;
+				if (i>LAST_IMAGE_INDEX)
+					i = INITIAL_IMAGE_INDEX;
 					//Thread.sleep(50);
 					// System.gc();
-				
+
 			}
 
 		}
 	}
 
-	public void processData(DataTuple dt) {	
+	@Override
+	public void processData(DataTuple dt) {
 		sendOutputTupleThread.run();
 	}
 
+	@Override
 	public void setCallbackOp(Operator op){
 		this.api.setCallbackObject(op);
 	}
@@ -126,23 +139,31 @@ public class Source implements StatelessOperator  {
 	}
 
 	private Bitmap getFrame(int i) {
+		//String filename = "/sdcard/frames/scene00";
+		String filename = "/sdcard/frames/0000";
 		try {
-
-			String filename = "/sdcard/frames/scene00";
+			if (i < 10) { filename = filename + "000" + i + ".jpg"; }
+			else if (i < 100) { filename = filename + "00" + i + ".jpg"; }
+			else if (i < 1000) { filename = filename + "0" + i + ".jpg"; }
+			else if (i < 10000) { filename = filename + i + ".jpg"; }
+			else { throw new RuntimeException ("Too many frames: "+ i); }
+			/*
 			if (i<10){
 				filename = filename + "00" + i + ".jpg";
 			} else if (i<100){
 				filename = filename + "0" + i + ".jpg";
 			} else
 				filename = filename + i + ".jpg";
-
+			*/
 			return BitmapFactory.decodeFile(filename);
 
-		} catch (Exception e) { 
-			return null; 
+		} catch (Exception e) {
+			LOG.error("Exception decoding filename="+filename, e);
+			return null;
 		}
 	}
 
+	@Override
 	public void processData(List<DataTuple> arg0) {
 		// TODO Auto-generated method stub
 

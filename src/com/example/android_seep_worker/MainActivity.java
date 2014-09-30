@@ -113,7 +113,7 @@ public class MainActivity extends Activity {
 	public static int level, scale;
 	public static WifiManager mainWifi;
 	public static boolean isSystemRunning = false;
-	
+
 	static Bitmap currentFrame;
 
 	@Override
@@ -131,45 +131,50 @@ public class MainActivity extends Activity {
 		mDetectorName[NATIVE_DETECTOR] = "Native (tracking)";
 
 		mPath=Environment.getExternalStorageDirectory()+"/facerecogOCV/";
+		//mPath="/mnt/shared/worker/facerecogOCV/";
 
 
 		mTextViewHandler = new Handler() {
 			@Override
 			public void handleMessage(Message msg) {
-				if (msg.obj != null){	
-					textresult.setText(msg.obj.toString());
-				} 
+				if (msg.obj != null){
+					if (textresult != null)
+					{
+						textresult.setText(msg.obj.toString());
+					}
+					else { LOG.error("Text result is null!"); }
+				}
 			}
 		};
-		
+
 		mImageViewHandler = new Handler(){
-			
+
 			@Override
 			public void handleMessage(Message msg) {
-				
+
 				if(msg.what == 1){
 					currentFrame= (Bitmap) msg.obj;
 					if(currentFrame!=null)
 						mImageView.setImageBitmap(currentFrame);
 				}
-				
+
 				if(msg.what == 2){
 					Bitmap tempBitmap = Bitmap.createBitmap(currentFrame.getWidth(), currentFrame.getHeight(), Bitmap.Config.RGB_565);
 					Paint myPaint = new Paint();
 					myPaint.setStyle(Paint.Style.STROKE);
 					myPaint.setColor(0xFF3399FF);
 					myPaint.setStrokeWidth(5);
-					
-					Canvas tempCanvas = new Canvas(tempBitmap);		
-					
+
+					Canvas tempCanvas = new Canvas(tempBitmap);
+
 					Bundle b=msg.getData();
-					 
+
 		            //log the data received
-		            float x = (float) b.getInt("x");
-		            float y = (float) b.getInt("y");
-		            float width = (float) b.getInt("width");
-		            float height = (float) b.getInt("height");		 
-					
+		            float x = b.getInt("x");
+		            float y = b.getInt("y");
+		            float width = b.getInt("width");
+		            float height = b.getInt("height");
+
 		            if (x+y+width+height > 0){
 					RectF rect = new RectF(x,
 							y,
@@ -185,12 +190,13 @@ public class MainActivity extends Activity {
 					mImageView.setImageDrawable(new BitmapDrawable(getResources(), tempBitmap));
 		            }
 				}
-				
+
 				super.handleMessage(msg);
 			}
 		};
 
-		
+
+		/*
 		BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
@@ -200,21 +206,22 @@ public class MainActivity extends Activity {
 		};
 		IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 		registerReceiver(batteryReceiver, filter);
+		*/
 	}
 
 	public static Context getAppContext(){
 		return context;
 	}
-	
+
 	public static Handler getImageViewHandler(){
 		return mImageViewHandler;
 	}
-	
+
 	public static Handler getTextViewHandler(){
 		return mTextViewHandler;
-	}	
-	
-	
+	}
+
+
 
 
 	public void addListenerOnButtons(){
@@ -222,7 +229,7 @@ public class MainActivity extends Activity {
 
 		final String classname = "com.example.query.Base";
 
-		
+
 		btn_startWorkers.setOnClickListener(new OnClickListener(){
 			@Override
 			public void onClick(View arg0){
@@ -233,7 +240,9 @@ public class MainActivity extends Activity {
 				String[] args = {worker, port};
 				instance1.executeSec(args);
 
+				/*
 				mHandler2.postDelayed(new Runnable() {
+					@Override
 					public void run() {
 						Main instance2 = new Main();
 						String worker = "Worker";
@@ -243,10 +252,11 @@ public class MainActivity extends Activity {
 						instance2.executeSec(args);
 					}
 				}, 200);
+				*/
 			}
 		});
 
-		
+
 
 	}
 	@Override
@@ -287,7 +297,7 @@ public class MainActivity extends Activity {
 	@Override
 	public void onPause()
 	{
-		super.onPause();      
+		super.onPause();
 	}
 
 	@Override
@@ -297,6 +307,7 @@ public class MainActivity extends Activity {
 		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
 	}
 
+	@Override
 	public void onDestroy() {
 		super.onDestroy();
 	}

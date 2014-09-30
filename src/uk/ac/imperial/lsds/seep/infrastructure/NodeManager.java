@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  *     Martin Rouaux - Changes to support scale-in of operators
@@ -47,7 +47,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 /**
- * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the 
+ * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the
  * operators that are within that node.
  */
 
@@ -82,6 +82,7 @@ public class NodeManager{
 		String localAddr;
 		try {
 			localAddr = asyncAction.execute().get();
+			LOG.info("Starting new worker on "+localAddr+":"+bindPort);
 			nodeDescr = new WorkerNodeDescription(localAddr, ownPort);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -96,7 +97,8 @@ public class NodeManager{
 
 
 	class AsyncAction extends AsyncTask<String, Void, String> {
-		protected String doInBackground(String... args) { 
+		@Override
+		protected String doInBackground(String... args) {
 			try {
 				//InetAddress localAddr = InetAddress.getLocalHost();
 				StringBuilder IFCONFIG=new StringBuilder();
@@ -111,7 +113,7 @@ public class NodeManager{
 				}
 
 				String[] ips = IFCONFIG.toString().split("\n");
-				String ip = "";				
+				String ip = "";
 //				if (ips.length > 1){
 //					ip = ips[1];
 //				} else
@@ -167,7 +169,7 @@ public class NodeManager{
 
 						//Lazy load of the required class in case is an operator
 
-						//	if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer")) && 
+						//	if(!(osc.getName().equals("java.lang.String")) && !(osc.getName().equals("java.lang.Integer")) &&
 						//			!(osc.getName().equals("java.util.ArrayList"))){
 						//		LOG.info("-> Received Unknown Class -> {} <- Using custom class loader to resolve it", osc.getName());
 						//rcl.loadClass(osc.getName());
@@ -189,7 +191,7 @@ public class NodeManager{
 
 								LOG.info("-> Node Monitor running for operatorId={}", operatorId);
 							}
-							
+
 							core.pushOperator((Operator)o);
 
 							out.println("ack");
@@ -198,7 +200,7 @@ public class NodeManager{
 						}
 						else if (o instanceof StateWrapper){
 							LOG.info("-> STATE resolved, Class: {}", o.getClass().getName());
-							out.println("ack");			
+							out.println("ack");
 							out.flush();
 						}
 						else if(o instanceof ArrayList<?>){
@@ -210,7 +212,7 @@ public class NodeManager{
 
 						}
 						else if(o instanceof Integer){
-							LOG.info("-> SetOpReady: "+(Integer)o);
+							LOG.info("-> SetOpReady: "+o);
 
 							core.setOpReady((Integer)o);
 
@@ -322,13 +324,13 @@ public class NodeManager{
 				catch(IllegalThreadStateException itse){
 					System.out.println("IllegalThreadStateException, no problem, monitor thing");
 					itse.printStackTrace();
-				} 
+				}
 				catch (SecurityException e) {
 					e.printStackTrace();
-				} 
+				}
 				catch (IllegalArgumentException e) {
 					e.printStackTrace();
-				} 
+				}
 				catch (ClassNotFoundException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -337,7 +339,7 @@ public class NodeManager{
 			}
 		});
 
-		thread1.start(); 
+		thread1.start();
 	}
 
 
