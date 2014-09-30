@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.log4j.Logger;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
@@ -96,6 +97,7 @@ public class DataConsumer implements Runnable {
 					if(owner.checkSystemStatus()){
 						owner.forwardData(data);
 					}
+                                        
 				}
 			}
 			else if(dsi instanceof Barrier){
