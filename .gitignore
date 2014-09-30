@@ -1,0 +1,9 @@
+bin/classes
+bin/*.apk
+bin/R.txt
+bin/dexedLibs
+bin/res
+bin/AndroidManifest.xml
+bin/jarlist.cache
+bin/classes.dex
+bin/resources.*
