@@ -11,6 +11,7 @@
 package uk.ac.imperial.lsds.seep.infrastructure.master;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -136,11 +137,11 @@ public class MasterController {
 		Method compose = null;
 		QueryPlan qp = null;
 		inf.setPathToQueryDefinition(pathToJar);
-		String urlPathToQueryDefinition = "file://" + pathToJar;
-		LOG.debug("-> Set path to query definition: {}", urlPathToQueryDefinition);
+		File urlPathToQueryDefinition = new File(pathToJar);
+		LOG.debug("-> Set path to query definition: {}", urlPathToQueryDefinition.getAbsolutePath());
 		URL[] urls = new URL[1];
 		try {
-			urls[0] = new URL(urlPathToQueryDefinition);
+			urls[0] = urlPathToQueryDefinition.toURI().toURL();
 		}
 		catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
