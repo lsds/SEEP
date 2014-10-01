@@ -43,9 +43,8 @@
   <modules>
   	<module>seep-system</module>
     <module>seep-java2sdg</module>
-    
-    
     <module>seep-streamsql</module>
+    <module>seep-contribs</module>
   </modules>
   
   <dependencies>
