@@ -256,13 +256,8 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		return enableLoggingOfMatches;
 	}
 
-	public synchronized List<DataTuple> getAndEmptyCache() {
-		List<DataTuple> result = new ArrayList<>();
-		
-		synchronized(this.matchCache) {
-			result.addAll(matchCache);
-			matchCache.clear();
-		}		
-		return result;
+	public List<DataTuple> getMatchCache() {
+		return this.matchCache;
 	}
+	
 }
