@@ -21,7 +21,7 @@
     <application  
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name" >
+        android:label="@string/app_name" android:hardwareAccelerated="true" android:vmSafeMode="true">
         <activity
              android:screenOrientation="landscape" 
        		 android:configChanges="orientation|keyboardHidden"

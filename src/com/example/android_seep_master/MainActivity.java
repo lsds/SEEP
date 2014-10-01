@@ -205,6 +205,8 @@ public class MainActivity extends Activity {
 			}
 		};
 		
+		
+		/*
 		BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
@@ -214,6 +216,7 @@ public class MainActivity extends Activity {
 		};
 		IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 		registerReceiver(batteryReceiver, filter);
+		*/
 		
 		instance = new Main();
 		instance.executeMaster();

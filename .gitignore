@@ -1,7 +1,2 @@
-/bin/AndroidManifest.xml
-/bin/R.java
-/bin/R.txt
-/bin/jarlist.cache
-/bin/classes
-/bin/dexedLibs
+/bin
 /gen/*
