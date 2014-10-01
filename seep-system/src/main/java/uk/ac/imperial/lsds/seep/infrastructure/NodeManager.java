@@ -79,8 +79,7 @@ public class NodeManager{
 		
 	private Thread monitorT = null;
 	
-	public static final boolean enableRestAPI = Boolean.valueOf(GLOBALS.valueFor("enableRestAPI"));
-	public static final int restAPIPort = Integer.valueOf(GLOBALS.valueFor("restAPIPort"));
+	private static final boolean enableRestAPI = Boolean.valueOf(GLOBALS.valueFor("enableRestAPI"));
 	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
 	private Server restAPIServer; 
 	
@@ -100,19 +99,6 @@ public class NodeManager{
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
 
-		if (NodeManager.enableRestAPI) {
-			NodeManager.restAPIRegistry = new HashMap<>();
-			NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(this.nodeDescr));
-			this.restAPIServer = new Server(restAPIPort);
-			this.restAPIServer.setHandler(new RestAPIHandler());
-			try {
-				this.restAPIServer.start();
-				this.restAPIServer.join();
-			} catch (Exception e) {
-				LOG.error("Failed to start server for restful node API:\n{}", e.getMessage());
-			}
-		}
-		
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
         
@@ -125,6 +111,19 @@ public class NodeManager{
 		}
         
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
+		
+		if (NodeManager.enableRestAPI) {
+			NodeManager.restAPIRegistry = new HashMap<>();
+			NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(this.nodeDescr));
+			//TODO: have a reasonable way of configuring the monitoring port
+			this.restAPIServer = new Server(ownPort + 1000);
+			this.restAPIServer.setHandler(new RestAPIHandler(restAPIRegistry));
+			try {
+				this.restAPIServer.start();
+			} catch (Exception e) {
+				LOG.error("Failed to start server for restful node API:\n{}", e.getMessage());
+			}
+		}
 	}
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
@@ -330,7 +329,7 @@ public class NodeManager{
 	private void loadCodeToRuntime(File pathToCode){
 		URL urlToCode = null;
 		try {
-			urlToCode = new URL("file://"+pathToCode.getAbsolutePath());
+			urlToCode = pathToCode.toURI().toURL();
 			System.out.println("Loading into class loader: "+urlToCode.toString());
 			URL[] urls = new URL[1];
 			urls[0] = urlToCode;

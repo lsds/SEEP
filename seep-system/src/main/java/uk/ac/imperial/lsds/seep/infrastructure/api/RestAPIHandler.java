@@ -12,14 +12,17 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.util.MultiMap;
 
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class RestAPIHandler extends AbstractHandler {
 	
 	public static final ObjectMapper mapper = new ObjectMapper();
 	
+	private Map<String, RestAPIRegistryEntry> restAPIRegistry;
+	
+	public RestAPIHandler(Map<String, RestAPIRegistryEntry> restAPIRegistry) {
+		this.restAPIRegistry = restAPIRegistry;
+	}
 	
 	public static Map<String, String> getReqParameter(String query) {
 		String[] params = query.split("&");  
@@ -37,19 +40,28 @@ public class RestAPIHandler extends AbstractHandler {
 			HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException {
 		
+		String callback = request.getParameter("callback");
+
 		response.setContentType("application/json;charset=utf-8");
 		response.setStatus(HttpServletResponse.SC_OK);
 		
 		if (baseRequest.getMethod().equals("GET")) {
-			if (NodeManager.restAPIRegistry.containsKey(target)) {
+			if (this.restAPIRegistry.containsKey(target)) {
 				MultiMap<String> reqParameters = new MultiMap<>();
+				baseRequest.setHandled(true);
 				baseRequest.getUri().decodeQueryTo(reqParameters);
-				mapper.writeValue(response.getWriter(),NodeManager.restAPIRegistry.get(target).getAnswer(reqParameters));
+				if (callback != null) 
+					response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(reqParameters)) + ")");
+				else 
+					response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(reqParameters)));
 			}
 			else {
 				// default case: answer with a list of available keys
 				baseRequest.setHandled(true);
-				mapper.writeValue(response.getWriter(),NodeManager.restAPIRegistry.keySet());
+				if (callback != null) 
+					response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.keySet()) + ")");
+				else 
+					response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.keySet()));
 			}
 		}
 	}

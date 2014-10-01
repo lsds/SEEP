@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +51,12 @@ import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializ
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
 import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIHandler;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPINodeDescription;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIQueryPlan;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMaster;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterFactory;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
@@ -66,9 +72,11 @@ import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
+
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterListener;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
@@ -121,7 +129,15 @@ public class Infrastructure {
     private PolicyRules policyRules;
     
     public static int RESET_SYSTEM_STABLE_TIME_OP_ID = -666;
-    
+
+    /*
+     *  Members for restful monitoring API
+     */
+	private static final boolean enableRestAPI = Boolean.valueOf(GLOBALS.valueFor("enableRestAPI"));
+	private static final int restAPIPort = Integer.valueOf(GLOBALS.valueFor("restAPIPort"));
+	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
+	private Server restAPIServer; 
+
 	public Infrastructure(int listeningPort) {
 		this.port = listeningPort;
  	}
@@ -196,6 +212,20 @@ public class Infrastructure {
 		}
 		// After everything is set up, then we scale out ops
 		eiu.executeStaticScaleOutFromIntent(soib);
+		
+		
+		if (Infrastructure.enableRestAPI) {
+			Infrastructure.restAPIRegistry = new HashMap<>();
+			Infrastructure.restAPIRegistry.put("/queryplan", new RestAPIQueryPlan(qp));
+			this.restAPIServer = new Server(restAPIPort);
+			this.restAPIServer.setHandler(new RestAPIHandler(restAPIRegistry));
+			try {
+				this.restAPIServer.start();
+			} catch (Exception e) {
+				LOG.error("Failed to start server for restful node API:\n{}", e.getMessage());
+			}
+		}
+		
 	}
 	
 	private void makeDataIngestionModeLocalToOp(Operator op){
