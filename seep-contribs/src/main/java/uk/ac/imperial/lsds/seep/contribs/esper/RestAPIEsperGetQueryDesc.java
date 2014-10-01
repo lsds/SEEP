@@ -16,7 +16,8 @@ public class RestAPIEsperGetQueryDesc implements RestAPIRegistryEntry {
 		
 		this.queryDesc.put("typesPerStream", operator.getTypesPerStream());
 		this.queryDesc.put("esperEngineURL", operator.getEsperEngineURL());
-		this.queryDesc.put("esperQuery", operator.getEsperQuery());
+		this.queryDesc.put("query", operator.getEsperQuery());
+		this.queryDesc.put("name", operator.getName());
 		this.queryDesc.put("loggingOfResultsEnabled", operator.isEnableLoggingOfMatches());
 	}
 

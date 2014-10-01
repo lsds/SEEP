@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 import com.espertech.esper.client.Configuration;
@@ -21,6 +22,8 @@ import com.espertech.esper.client.EventBean;
 import com.espertech.esper.client.UpdateListener;
 
 public class EsperSingleQueryOperator implements StatelessOperator {
+
+	private static final long serialVersionUID = 1L;
 
 	private final static Logger log = LoggerFactory.getLogger(EsperSingleQueryOperator.class);
 
@@ -46,6 +49,8 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 	 */
 	private String esperQuery = "";
 
+	private String name = "";
+	
 	/*
 	 * The query as a statement, built from the query string
 	 */
@@ -55,21 +60,22 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 	private List<DataTuple> matchCache;
 	
 
-	public EsperSingleQueryOperator(String query, String url) {
+	public EsperSingleQueryOperator(String query, String url, String name) {
 		this.esperQuery = query;
 		this.esperEngineURL = url;
+		this.name = name;
 		if (enableLoggingOfMatches) {
 			this.matchCache = Collections.synchronizedList(new ArrayList<DataTuple>());
 		}
 	}
 
-	public EsperSingleQueryOperator(String query, String url, String streamKey, String[] typeBinding) {
-		this(query, url);
+	public EsperSingleQueryOperator(String query, String url, String streamKey, String name, String[] typeBinding) {
+		this(query, url, name);
 		this.typesPerStream.put(streamKey, getTypes(typeBinding));
 	}
 
-	public EsperSingleQueryOperator(String query, String url, Map<String, String[]> typeBinding) {
-		this(query, url);
+	public EsperSingleQueryOperator(String query, String url, String name, Map<String, String[]> typeBinding) {
+		this(query, url, name);
 		for (String stream : typeBinding.keySet())
 			this.typesPerStream.put(stream, getTypes(typeBinding.get(stream)));
 	}
@@ -129,6 +135,14 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 				}
 			}
 		});
+		
+		/*
+		 * Register rest API handler
+		 */
+		NodeManager.restAPIRegistry.put("/query", new RestAPIEsperGetQueryDesc(this));
+		NodeManager.restAPIRegistry.put("/matches", new RestAPIEsperGetMatches(this));
+		
+		
 	}
 	
 	protected void sendOutput(EventBean out) {
@@ -232,6 +246,10 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 
 	public String getEsperQuery() {
 		return esperQuery;
+	}
+
+	public String getName() {
+		return name;
 	}
 
 	public boolean isEnableLoggingOfMatches() {
