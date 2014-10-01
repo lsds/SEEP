@@ -44,7 +44,7 @@ public class RestAPIEsperGetMatches implements RestAPIRegistryEntry {
 				Iterator<DataTuple> iter = cache.iterator();
 				while (iter.hasNext()) {
 					DataTuple t = iter.next();
-					if (start < t.getPayload().timestamp && t.getPayload().timestamp < stop) {
+					if (start <= t.getPayload().timestamp && t.getPayload().timestamp <= stop) {
 						tmpResult.add(t);
 						if (!keep) 
 							iter.remove();
@@ -59,25 +59,27 @@ public class RestAPIEsperGetMatches implements RestAPIRegistryEntry {
 				step = Long.valueOf(reqParameters.getValue("step",0));
 			
 			if (step != -1) {
-				Iterator<DataTuple> iter = tmpResult.iterator();
 				
 				long stepEnd = start + step;
-				while (stepEnd <= stop) {
-					if (iter.hasNext()) {
-						DataTuple t = iter.next();
+				int i = 0;
+				do {
+					if (i < tmpResult.size()) {
+						DataTuple t = tmpResult.get(i);
 						if (t.getPayload().timestamp < stepEnd) {
 							result.add(t);
-							while ((t.getPayload().timestamp < stepEnd) && iter.hasNext())
-								t = iter.next();
+							while ((t.getPayload().timestamp < stepEnd) && i < tmpResult.size())
+								t = tmpResult.get(i++);
 						}
-						else
+						else {
 							result.add(null);
+						}
 					}
 					else 
 						result.add(null);
 					
 					stepEnd += step;
 				}
+				while (stepEnd <= stop);
 			}
 			else {
 				result = tmpResult; 
