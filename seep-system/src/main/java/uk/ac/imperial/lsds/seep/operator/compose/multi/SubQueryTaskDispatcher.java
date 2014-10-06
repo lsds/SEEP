@@ -48,7 +48,6 @@ public class SubQueryTaskDispatcher {
 		assert(SUB_QUERY_WINDOW_BATCH_COUNT > 0);
 		
 		this.subQueryConnectable = subQueryConnectable;
-				
 	}
 	
 	public void setUp() {
@@ -108,12 +107,14 @@ public class SubQueryTaskDispatcher {
 			/*
 			 * Dispatch task 
 			 */
+			
 			try {
 				this.subQueryConnectable.getParentMultiOperator().getExecutorService().submit(task);
 			} catch (Exception e) {
 				System.err.println(e);
 				e.printStackTrace();	
 			}
+			
 			// long dummy_time = System.currentTimeMillis();
 			
 			//if (num_tasks % 100 == 0) {

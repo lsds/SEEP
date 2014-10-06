@@ -50,22 +50,16 @@ fi
 L=$DEFAULT_L
 [ $# -gt 2 ] && L=$3
 
-java -Djava.library.path=$JLP $OPTS -cp $JCP $CLASS $INPUT_FILE $L 2>&1 >test.out &
-seep_pid=$!
+java -Djava.library.path=$JLP $OPTS -cp $JCP $CLASS $INPUT_FILE $L # 2>&1 >test.out &
+# seep_pid=$!
 
-echo $(($(date +%s%N)/1000000)) >> test-cpu.out
-top -b -n240 -d 1 | grep "Cpu" >> test-cpu.out
+# echo $(($(date +%s%N)/1000000)) >> test-cpu.out
+# top -b -n240 -d 1 | grep "Cpu" >> test-cpu.out
 
-# mon_pid=$!
-# sleep 180
-
-kill -9 $seep_pid
+# kill -9 $seep_pid
 
 echo "Done."
-# kill -9 $mon_pid
-
 sleep 10
-
 echo "Bye."
 
 exit 0

@@ -13,6 +13,8 @@ package uk.ac.imperial.lsds.seep;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.File;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -40,8 +42,16 @@ public class GLOBALS {
 	//Load properties from file
 	private static void loadProperties(){
 		try {
-			InputStream fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
-			globals.load(fis);
+			InputStream fis;
+			String filename = "/mnt/data/cccad3/akolious/SEEP3/seep-system/src/main/resources/config.properties";
+			if (new File(filename).isFile()) {
+				LOG.debug("Loading properties from " + filename);
+				fis = (InputStream) new FileInputStream(filename);
+				globals.load(fis);
+			} else {
+				fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
+				globals.load(fis);
+			}
 		}
 		catch (FileNotFoundException e1) {
 			System.out.println("Properties file not found "+e1.getMessage());

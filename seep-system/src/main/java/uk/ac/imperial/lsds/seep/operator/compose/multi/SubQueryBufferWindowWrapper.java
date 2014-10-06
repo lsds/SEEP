@@ -80,7 +80,7 @@ public class SubQueryBufferWindowWrapper {
 	public boolean addToBuffer(MultiOpTuple element) {
 		boolean added = this.buffer.add(element);
 		if (added)
-			updateCurrentWindow(element);
+		 	updateCurrentWindow(element);
 		return added;
 	}
 	

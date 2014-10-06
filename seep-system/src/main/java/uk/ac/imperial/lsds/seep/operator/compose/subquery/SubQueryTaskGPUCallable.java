@@ -11,38 +11,27 @@ import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.SubQueryBufferWindowWrapper;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskGPUCallable implements ISubQueryTask {
+/* 
+ * No-op task: selection
+ *
+ */
 
+public class SubQueryTaskGPUCallable implements ISubQueryTask {
+	
 	/*
 	 * Input data for the actual execution of the task
 	 */
 	private ISubQueryConnectable subQueryConnectable;
 	private Map<Integer, IWindowBatch> windowBatches;
-
+	
 	private ResultCollector collector;
-
+	
 	private GPUExecutionContext gpu;
+	
+	private IWindowBatch batch;
 	
 	private long startTime = 0L;
 	private long dt = 0L;
-	
-	private static final int MAX_SEGMENTS = 100;
-	
-	private int hash (int highway, int direction, int segment) {
-		return (segment + (MAX_SEGMENTS * direction)) * (highway + 1);
-	}
-	
-	private int getHighway () {
-		return 0;
-	}
-	
-	private int getDirection (int key) {
-		return ((key >= MAX_SEGMENTS) ? 1 : 0);
-	}
-	
-	private int getSegment (int key) {
-		return (key - (MAX_SEGMENTS * getDirection(key)));
-	}
 	
 	public SubQueryTaskGPUCallable(
 			ISubQueryConnectable subQueryConnectable, 
@@ -55,53 +44,38 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		this.windowBatches= windowBatches;
 		this.collector = new ResultCollector(subQueryConnectable, logicalOrderID, freeUpToIndices);
 		this.gpu = gpu;
+		/*
+		 * For the No-op query, we know that there is only a single
+		 * input stream
+		 */
+		batch = this.windowBatches.values().iterator().next();
 	}
 	
 	@Override
 	public void run() {
 		
-		/*
-		 * For the LRB query, we know that there is only a single
-		 * input stream
-		 */
 		try {
 		
 		startTime = System.currentTimeMillis();
 		
-		IWindowBatch batch = this.windowBatches.values().iterator().next();
-		
 		/* Transform data */
 		int [] startIndex = batch.getWindowStartPointers();
 		int []   endIndex = batch.getWindowEndPointers();
-		
 		int batchSize = startIndex.length;
 		int start = startIndex[0];
 		int end = endIndex[batchSize - 1];
-		
-		int totalTuples;
-			
-		if (end <= start) {
-			System.err.println(String.format("Warning: start %d end %d", start, end));
-			/* System.exit(1); */
-			totalTuples = 2000000 - start + end + 1;
-		} else {
-			totalTuples = end - start + 1;
-		}
+		int totalTuples = end - start + 1;
 		
 		/* #panes */
-		
-		int panes = 2 * batchSize;
-		int   [] offsets = new int   [panes];
-		int   [] count   = new int   [panes];
-		int   [] keys    = new int   [totalTuples];
-		int   [] values  = new int   [totalTuples];
+		int panes = batchSize;
+		int   [] offsets    = new int   [panes];
+		int   [] count      = new int   [panes];
+		float [] attribute1 = new float [totalTuples];
 		
 		Arrays.fill(offsets, -1);
 		Arrays.fill(count, -1);
-		Arrays.fill(keys, -1);
-		Arrays.fill(values, -1);
+		Arrays.fill(attribute1, -1);
 		
-		int segment, highway, direction;
 		MultiOpTuple tuple;
 		
 		int p = 0; /* Current pane */
@@ -112,18 +86,15 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		for (int i = 0; i < totalTuples; i++) {
 			tuple = batch.get(i + start);
 			t = tuple.timestamp;
-			highway = ((IntegerType) tuple.values[2]).value;
-			direction = ((IntegerType) tuple.values[3]).value;
-			segment = ((IntegerType) tuple.values[4]).value; // / 5280;
-			keys[i] = hash(highway, direction, segment);
-			values[i] = (int) ((FloatType) tuple.values[1]).value;
+			attribute1[i] = ((FloatType) tuple.values[1]).value;
 			/* Populate offsets and count */
 			if (t > _t) {
 				/* Set current pane & move to next one */
 				count[p] = tpp;
 				p += 1;
 				tpp = 1;
-				offsets[p] = i;
+				if (p < panes)
+					offsets[p] = i;
 			} else {
 				/* Inc. current pane count */
 				tpp += 1;
@@ -131,20 +102,21 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 			_t = t;
 		}
 		/* Populate last pane */
-		count[p] = tpp;
+		count[p - 1] = tpp;
 		
 		/* Print pane offsets and count
 		for (int i = 0; i < panes; i++) {
 			GPUUtils.out(String.format("pane %3d offset %8d count %8d", i, offsets[i], count[i]));
-		}
-		*/
+		} */
 		
-		int resultSize = gpu.getResultSize();
-		int [] gpuResults = new int [resultSize];
+		int S = gpu.getResultSize();
+		float [] results = new float [S];
+		int taskid = gpu.noop(attribute1, offsets, count, results);
 		
-		// int taskid = gpu.aggregate(keys, values, offsets, count, gpuResults);
-		int taskid = gpu.aggregate();
+		if (taskid % 100 == 0)
+			gpu.stats();
 		
+		/*
 		String dbg = String.format(
 		"task %3d %3d windows start @%6d end @%6d %8d %8d total %8d %4d panes", 
 		taskid, 
@@ -154,9 +126,10 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 		start, 
 		end, 
 		totalTuples,
-		p + 1
+		p
 		);
 		GPUUtils.out(dbg);
+		*/
 		
 		/*
 		 * Store the results of the computation
@@ -174,5 +147,5 @@ public class SubQueryTaskGPUCallable implements ISubQueryTask {
 			e.printStackTrace();
 		}
 	}
-
 }
+

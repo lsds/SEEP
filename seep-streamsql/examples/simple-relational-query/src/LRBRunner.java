@@ -8,12 +8,13 @@ import java.util.Deque;
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.TupleObject;
+
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 import uk.ac.imperial.lsds.streamsql.types.StringType;
-
-// import uk.ac.imperial.lsds.seep.gpu.types.*;
-
+/*
+import uk.ac.imperial.lsds.seep.gpu.types.*;
+*/
 
 public class LRBRunner implements Callback {
 	
@@ -125,7 +126,7 @@ public class LRBRunner implements Callback {
 			long dummy_ts = 0;
 			long tuple_counter = 0;
 			
-			while ((line = b.readLine()) != null && lastTupleTimestamp < 3000) { // 10500) {
+			while ((line = b.readLine()) != null && lastTupleTimestamp < 1000) { // 10500) {
 				lines += 1;
 				bytes += line.length() +1; // +1 for '\n'
 				
@@ -193,8 +194,11 @@ public class LRBRunner implements Callback {
 			api.waitForInstrumentationTimestamp = lastTupleTimestamp;
 			api.totalTuples = totalTuples;
 			
-			LRBQ4 query = new LRBQ4();
+			// LRBQ4 query = new LRBQ4();
+			IdentityOperator query = new IdentityOperator();
+			
 			// LRBQ1To6 query = new LRBQ1To6();
+			
 			query.setup(api);
 			
 			/* Q4 */
@@ -207,14 +211,19 @@ public class LRBRunner implements Callback {
 			//	query.process(t);
 			//}
 			
-			MultiOpTuple t, copy;
+			// MultiOpTuple t, copy;
 			while (true) {
-				t = data.poll();
+				MultiOpTuple t = data.poll();
 				query.process(t);
-                copy = (MultiOpTuple) t.clone(); 
-				copy.timestamp += dummy_lastTupleTimestamp;
-				copy.instrumentation_ts += dummy_lastTupleTimestamp;
-				data.add(copy);
+                // MultiOpTuple copy = (MultiOpTuple) t.clone(); 
+				// copy.timestamp += dummy_lastTupleTimestamp;
+				// copy.instrumentation_ts += dummy_lastTupleTimestamp;
+				// data.add(copy);
+				t.timestamp += dummy_lastTupleTimestamp;
+				t.instrumentation_ts += dummy_lastTupleTimestamp;
+				data.add(t);
+				t = null;
+				// Thread.sleep(10);
 			}
 			
 		} catch (Exception e) { System.err.println(e.getMessage()); }

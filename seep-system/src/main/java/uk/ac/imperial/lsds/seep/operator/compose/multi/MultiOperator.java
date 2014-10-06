@@ -29,6 +29,8 @@ import uk.ac.imperial.lsds.seep.operator.MultiAPI;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 
+import uk.ac.imperial.lsds.seep.operator.compose.executor.CPUExecutorService;
+
 public class MultiOperator implements StatelessOperator {
 	
 	/* Simple flag to switch to the GPU executor service. */
@@ -39,13 +41,15 @@ public class MultiOperator implements StatelessOperator {
 	long target = 0L;
 	long tuples = 0L;
 	long start = 0L;
-	double dt, rate;
+	long dt;
+	double rate;
+	long dtuples, previous_tuples, current_time;
 	
 	/* GPU context static configuration */
-	int panes = 600;
-	int max_keys = 200;
-	int panes_per_window = 300;
-	int max_tuples_per_pane = 2000 * Integer.valueOf(GLOBALS.valueFor("L"));
+	int panes; // = 600;
+ 	// int max_keys = 200;
+	// int panes_per_window = 300;
+	int max_tuples_per_pane; // = 2000 * Integer.valueOf(GLOBALS.valueFor("L"));
 
 	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
 	
@@ -62,6 +66,8 @@ public class MultiOperator implements StatelessOperator {
 	private Connectable parentConnectable; 
 	
 	private ExecutorService executorService;
+	
+	private SubQueryBufferWindowWrapper single_buffer;
 	
 	private MultiOperator(Set<ISubQueryConnectable> subQueries, int multiOpId){
 		this.id = multiOpId;
@@ -86,8 +92,9 @@ public class MultiOperator implements StatelessOperator {
 		return target; 
 	}
 	
+	
 	public void targetReached() {
-		
+	/*	
 		dt = (System.currentTimeMillis() - start) / 1000.;
 		rate =  tuples / dt;
 		
@@ -97,6 +104,7 @@ public class MultiOperator implements StatelessOperator {
 		
 		if (GPU) 
 			gpu.stats();
+	*/
 	}
 	
 	/**
@@ -110,19 +118,41 @@ public class MultiOperator implements StatelessOperator {
 		 */
 		this.api = api;
 		
-		if (tuples == 0)
+		if (tuples == 0) {
 			start = System.currentTimeMillis();
+			previous_tuples = 0;
+		}
 		/*
 		 * Try to push to all input buffers of the most upstream sub queries
 		 */
-		for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
-			for (SubQueryBufferWindowWrapper bw : q.getLocalUpstreamBuffers().values()) {
-				if (!singleUpstreamBuffer)
-					data = new MultiOpTuple(data);
+		//for (ISubQueryConnectable q : this.mostUpstreamSubQueries) {
+		//	for (SubQueryBufferWindowWrapper bw : q.getLocalUpstreamBuffers().values()) {
+		//		if (!singleUpstreamBuffer)
+		//			data = new MultiOpTuple(data);
 				
-				bw.addToBuffer(data);
-				tuples++;
-			}
+				// bw.addToBuffer(data);
+		//		tuples++;
+				// System.out.println(tuples);
+		//	}
+		//}
+		
+		//SubQueryBufferWindowWrapper bw = 
+		//	this.mostUpstreamSubQueries.iterator().next().getLocalUpstreamBuffers().values().iterator().next();
+		
+		single_buffer.addToBuffer(data);
+		
+		tuples ++;
+		
+		if (tuples % 60000000 == 0) {
+			current_time = System.currentTimeMillis();
+			dt = current_time - start;
+			dtuples = tuples - previous_tuples;
+			rate = (double) dtuples / ((double) dt / 1000.);
+			System.out.println(
+			String.format("[DBG] [MultiOperator] %13d tuples | %10d msec |%15.2f tuples/sec", tuples, dt, rate)
+			);
+			previous_tuples = tuples;
+			start = current_time;
 		}
 	}
 
@@ -153,15 +183,20 @@ public class MultiOperator implements StatelessOperator {
 		int numberOfCores = Runtime.getRuntime().availableProcessors();
 		//TODO: think about tuning this selection
 		int numberOfCoresToUse = Math.max(numberOfCores, subQueries.size());
-//		numberOfCoresToUse = 1;
+		numberOfCoresToUse = Integer.valueOf(GLOBALS.valueFor("numcores"));
 		System.out.println(numberOfCoresToUse + " available processors");
 		
 		if (GPU) {
 			System.out.println("Launching GPU executor service...");
-			gpu = new GPUExecutionContext(panes, max_keys, panes_per_window, max_tuples_per_pane);
+			// gpu = new GPUExecutionContext(panes, max_keys, panes_per_window, max_tuples_per_pane);
+			panes = Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"));
+			max_tuples_per_pane = 1024;
+			System.out.println(String.format("%d panes %d tuples/pane", panes, max_tuples_per_pane));
+			gpu = new GPUExecutionContext(panes, max_tuples_per_pane);
 		 	this.executorService = new GPUExecutorService(1000);
 		} else {
 			/* */
+			// this.executorService = new CPUExecutorService(3, 10000);
 			this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
 			// this.executorService = new ThreadPoolExecutor(numberOfCoresToUse, numberOfCoresToUse, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(10000, true));
 			// this.executorService = Executors.newFixedThreadPool(1);
@@ -192,8 +227,11 @@ public class MultiOperator implements StatelessOperator {
 		
 		this.singleUpstreamBuffer = false;
 		if (this.mostUpstreamSubQueries.size() == 1) {
+			System.out.println("_______1 subquery upstream");
 			this.singleUpstreamBuffer = (this.mostUpstreamSubQueries.iterator().next().getLocalUpstreamBuffers().keySet().size() == 1);
 		}
+		
+		single_buffer = this.mostUpstreamSubQueries.iterator().next().getLocalUpstreamBuffers().values().iterator().next();
 	}
 
 	public MultiAPI getAPI() {

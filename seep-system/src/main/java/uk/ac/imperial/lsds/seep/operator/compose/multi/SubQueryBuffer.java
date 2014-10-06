@@ -125,8 +125,10 @@ public class SubQueryBuffer {
 	public boolean add(MultiOpTuple element) {
 		try {
 			synchronized (lock) {
-				while (full) 
+				while (full) {
+					// System.out.println("___waiting...");
 					lock.wait();
+				}
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -158,6 +160,7 @@ public class SubQueryBuffer {
 	private boolean insertElement(MultiOpTuple element) {
 		elements[end] = element;
 		end = normIndex(end + 1);
+		
 		full = (start == end);
 		return true;
 	}
