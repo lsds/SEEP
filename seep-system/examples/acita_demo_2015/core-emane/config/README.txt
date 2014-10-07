@@ -2,7 +2,7 @@ Steps to set up VM network interfaces POST VM REBOOT:
 -------------------------------------
 
 (i) You need to recreate the virtual interfaces used to connect each CORE node
-to the VM's host only network interfaces. To do this, simply execute the veth-setup.sh script in DEMO_CONFIG_DIR=$SEEP-ITA_DIR/seep-system/examples/acita_demo_2015/core-emane/config):
+to the VM's host only network interfaces. To do this, simply execute the veth-setup.sh script in DEMO_CONFIG_DIR=/home/acita14demo/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/config):
 	> sudo ./veth-setup.sh
 To check it has worked, execute ifconfig -a and you should see 6 virtual ethernet interface pairs (veth<id>.host & veth<id>.core, for <id> in 1-6).
 
@@ -36,8 +36,10 @@ There should be 6 worker emulators. The master application is installed on Worke
 
 To check the routes are set up properly, you can execute "ip route". The output should show a default gateway to the virtual networks of each of the other 5 workers. You should also be able to ping the other emulators once they have been started.
 
-(ii) The master/worker application can be started by clicking on the SEEP icon on the emulator desktop. You should always start the master first, then start the appropriate number of worker applications for the deployment scenario (local=No other workers, remote=2 more, scaled=4 more).
+Running the Demo
+-----------------
+(i) The master/worker application can be started by clicking on the SEEP icon on the emulator desktop. You should always start the master first, then start the appropriate number of worker applications for the deployment scenario (local=No other workers, remote=2 more, scaled=4 more).
 
-(iii) Having chosen your deployment scenario on the master using the appropriate button, then click the join button for each of the workers needed. Once they have joined, click deploy on the master. When deployment completes (as indicated by a popup on the master), click start.
+(ii) Having chosen your deployment scenario on the master using the appropriate button, click the join button for each of the workers needed. Once they have joined, click deploy on the master. When deployment completes (as indicated by a popup on the master), click start.
 
-(iv) When the demo completes, you'll need to completely kill and restart each of the master and worker applications in order to rerun it.
+(iii) When the demo completes, you'll need to completely kill and restart each of the master and worker applications in order to rerun it.
