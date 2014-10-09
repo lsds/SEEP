@@ -148,21 +148,21 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 			// this.collector.pushResults(new MultiOpTuple[0]);
 			this.collector.pushResults(this.finalWindowBatchResult.getArrayContent());
 			
-			dt = System.currentTimeMillis() - startTime;
-			
-			System.out.println(
-				String.format("[DBG] task X %3d windows start @%6d end @%6d %8d %8d total %8d t_start %13d dt %6d (result size %10d)",
-					batch.getWindowStartPointers().length,
-					batch.getStartTimestamp(),
-					batch.getEndTimestamp(),
-					start,
-					end,
-					totalTuples,
-					startTime,
-					dt,
-					this.finalWindowBatchResult.getArrayContent().length
-				)
-			);
+//			dt = System.currentTimeMillis() - startTime;
+//			
+//			System.out.println(
+//				String.format("[DBG] task X %3d windows start @%6d end @%6d %8d %8d total %8d t_start %13d dt %6d (result size %10d)",
+//					batch.getWindowStartPointers().length,
+//					batch.getStartTimestamp(),
+//					batch.getEndTimestamp(),
+//					start,
+//					end,
+//					totalTuples,
+//					startTime,
+//					dt,
+//					this.finalWindowBatchResult.getArrayContent().length
+//				)
+//			);
 			
 			this.subQueryConnectable.getTaskDispatcher().taskFinished();			
 		} catch (Exception e) {

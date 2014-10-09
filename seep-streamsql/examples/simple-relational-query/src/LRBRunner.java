@@ -8,7 +8,6 @@ import java.util.Deque;
 import uk.ac.imperial.lsds.seep.operator.Callback;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
 import uk.ac.imperial.lsds.seep.operator.compose.multi.TupleObject;
-
 import uk.ac.imperial.lsds.streamsql.types.FloatType;
 import uk.ac.imperial.lsds.streamsql.types.IntegerType;
 import uk.ac.imperial.lsds.streamsql.types.StringType;
@@ -98,6 +97,7 @@ public class LRBRunner implements Callback {
         long percent_ = 0L, _percent = 0L;
 		
 		Deque<MultiOpTuple> data = new ArrayDeque<>();
+//		List<MultiOpTuple> data = new ArrayList<>();
 		
 		/* Time measurements */
 		long start = 0L;
@@ -195,7 +195,8 @@ public class LRBRunner implements Callback {
 			api.totalTuples = totalTuples;
 			
 			// LRBQ4 query = new LRBQ4();
-			IdentityOperator query = new IdentityOperator();
+			//IdentityOperator query = new IdentityOperator();
+			IdentityAggOperator query = new IdentityAggOperator();
 			
 			// LRBQ1To6 query = new LRBQ1To6();
 			
@@ -215,6 +216,7 @@ public class LRBRunner implements Callback {
 			while (true) {
 				MultiOpTuple t = data.poll();
 				query.process(t);
+				
                 // MultiOpTuple copy = (MultiOpTuple) t.clone(); 
 				// copy.timestamp += dummy_lastTupleTimestamp;
 				// copy.instrumentation_ts += dummy_lastTupleTimestamp;
