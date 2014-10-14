@@ -12,6 +12,8 @@ dependencies {
 
 
 task fatJar(type: Jar){
+	description "Builds and creates one Fat Jar that includes all \
+	necessary dependencies for a self-deployment"
         from { 
     		configurations.compile.collect { 
 			it.isDirectory() ? it : zipTree(it) 

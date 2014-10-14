@@ -10,6 +10,8 @@ dependencies {
 }
 
 task fatJar(type: Jar){
+	description "Builds and creates one Fat Jar that includes all \
+dependencies"
         from { 
     		configurations.compile.collect { 
 			it.isDirectory() ? it : zipTree(it) 
