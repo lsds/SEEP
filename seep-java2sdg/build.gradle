@@ -1,0 +1,29 @@
+repositories {
+	flatDir {
+		dirs "libs"
+	}
+}
+
+dependencies {
+	compile project(':seep-system')
+	compile 'javassist:javassist:3.12.1.GA'
+	compile name: 'soot-2.5.0' //local lib
+}
+
+
+task fatJar(type: Jar){
+        from { 
+    		configurations.compile.collect { 
+			it.isDirectory() ? it : zipTree(it) 
+	    	} 
+	} 
+	{
+		exclude 'META-INF/*.RSA'
+		exclude 'META-INF/*.SF'
+		exclude 'META-INF/*.DSA'
+	}
+	with jar 
+	manifest {
+		attributes 'Main-Class': 'uk.ac.imperial.lsds.java2sdg.Main'
+	}
+}

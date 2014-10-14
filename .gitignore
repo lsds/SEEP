@@ -9,6 +9,7 @@ examples/*/lib/*.jar
 .project
 .classpath
 .codepro
+.gradle
 query.jar
 examples/stateless-simple-query/bin/*
 *.class

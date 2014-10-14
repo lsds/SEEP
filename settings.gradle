@@ -1,0 +1,5 @@
+include \
+	"seep-system",
+	"seep-java2sdg",
+	"seep-streamsql",
+	"seep-contribs"
