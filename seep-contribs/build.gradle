@@ -1,4 +1,6 @@
 dependencies {
+	compile project(':seep-common')
+	compile project(':seep-master')
 	compile project(':seep-system')
 	compile 'com.espertech:esper:4.11.0'
 }

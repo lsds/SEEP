@@ -6,6 +6,9 @@ scripts/*
 log.out
 examples/*/lib/*.jar
 .settings/*
+*/.settings/*
+*/.settings/
+seep-system/.settings/org.eclipse.jdt.core.prefs
 .project
 .classpath
 .codepro
@@ -14,6 +17,7 @@ query.jar
 examples/stateless-simple-query/bin/*
 *.class
 *test*
+*/bin/
 seep-system/examples/stateless-simple-query/.settings/
 seep-system/examples/stateless-simple-query/lib/*
 seep-java2sdg/target/seep-java2sdg-0.0.1-SNAPSHOT.jar
@@ -24,3 +28,4 @@ seep-contribs/target/
 seep-streamsql/target/
 seep-java2sdg/showGraph.sh
 .DS_Store
+/bin/

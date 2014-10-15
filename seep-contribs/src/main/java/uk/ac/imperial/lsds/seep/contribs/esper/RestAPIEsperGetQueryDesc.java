@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.eclipse.jetty.util.MultiMap;
 
-import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.api.RestAPIRegistryEntry;
 
 public class RestAPIEsperGetQueryDesc implements RestAPIRegistryEntry {
 	

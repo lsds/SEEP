@@ -7,7 +7,7 @@ import java.util.List;
 import org.eclipse.jetty.util.MultiMap;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.api.RestAPIRegistryEntry;
 
 public class RestAPIEsperGetMatches implements RestAPIRegistryEntry {
 
