@@ -17,8 +17,8 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext;
+import uk.ac.imperial.lsds.seepworker.operator.InputDataIngestionMode;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
 import uk.ac.imperial.lsds.seepworker.processingunit.Operator;
 
 public class DataStructureAdapter {

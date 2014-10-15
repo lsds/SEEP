@@ -1,15 +1,21 @@
 /*******************************************************************************
- * Copyright (c) 2014 Imperial College London
+ * Copyright (c) 2013 Imperial College London.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  * 
  * Contributors:
- *     Raul Castro Fernandez - initial API and implementation
+ *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seepworker.operator;
 
-public enum InputDataIngestionMode {
-	ONE_AT_A_TIME, BATCH, WINDOW, ORDERED, UPSTREAM_SYNC_BARRIER
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+
+public interface OneTupleProcessing {
+
+	public void setUp();
+
+	public void processData(DataTuple dt);
+	
 }

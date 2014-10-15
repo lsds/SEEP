@@ -24,22 +24,20 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.comm.NodeManagerCommunication;
-import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIHandler;
-import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPINodeDescription;
-import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
+//import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIHandler;
+//import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPINodeDescription;
+//import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
 import uk.ac.imperial.lsds.seepworker.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seepworker.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
 import uk.ac.imperial.lsds.seepworker.processingunit.Operator;
 import uk.ac.imperial.lsds.seepworker.processingunit.StateWrapper;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.CoreRE;
@@ -72,7 +70,7 @@ public class NodeManager{
 	private Thread monitorT = null;
 	
 	private static final boolean enableRestAPI = Boolean.valueOf(GLOBALS.valueFor("enableRestAPI"));
-	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
+//	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
 	private Server restAPIServer; 
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
@@ -91,16 +89,16 @@ public class NodeManager{
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 		
 		if (NodeManager.enableRestAPI) {
-			NodeManager.restAPIRegistry = new HashMap<>();
-			NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(this.nodeDescr));
-			//TODO: have a reasonable way of configuring the monitoring port
-			this.restAPIServer = new Server(ownPort + 1000);
-			this.restAPIServer.setHandler(new RestAPIHandler(restAPIRegistry));
-			try {
-				this.restAPIServer.start();
-			} catch (Exception e) {
-				LOG.error("Failed to start server for restful node API:\n{}", e.getMessage());
-			}
+//			NodeManager.restAPIRegistry = new HashMap<>();
+//			NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(this.nodeDescr));
+//			//TODO: have a reasonable way of configuring the monitoring port
+//			this.restAPIServer = new Server(ownPort + 1000);
+//			this.restAPIServer.setHandler(new RestAPIHandler(restAPIRegistry));
+//			try {
+//				this.restAPIServer.start();
+//			} catch (Exception e) {
+//				LOG.error("Failed to start server for restful node API:\n{}", e.getMessage());
+//			}
 		}
 	}
 	

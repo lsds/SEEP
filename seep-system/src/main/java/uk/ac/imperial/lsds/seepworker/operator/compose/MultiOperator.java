@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seepworker.operator.CommunicationPrimitives;
 import uk.ac.imperial.lsds.seepworker.processingunit.OperatorCode;
 
 public class MultiOperator implements OperatorCode, ComposedOperator, CommunicationPrimitives{

@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.Callback;
-import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seepworker.operator.Callback;
+import uk.ac.imperial.lsds.seepworker.operator.CommunicationPrimitives;
 
 public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Callback{
 

@@ -19,13 +19,13 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.api.ConnectionType;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.Callback;
-import uk.ac.imperial.lsds.seep.operator.Connectable;
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
-import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seepworker.comm.routing.Router;
+import uk.ac.imperial.lsds.seepworker.operator.Callback;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.InputDataIngestionMode;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
 
 public class Operator implements Serializable, EndPoint, Connectable, Callback{
 
@@ -258,7 +258,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.connectTo(down, InputDataIngestionMode.ONE_AT_A_TIME, originalQuery, streamId);
 	}
 
-	@Override
+	
 	public void connectTo(Connectable down, InputDataIngestionMode mode,
 			boolean originalQuery, int streamId) {
 		LOG.debug("Connecting OP: "+this.getOperatorId()+" with downstream Op: "+down.getOperatorId());
@@ -276,5 +276,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	@Override 
 	public String toString() {
 		return "Operator [operatorId="+operatorId+", opContext= "+opContext+"]";
+	}
+
+	@Override
+	public void connectTo(Connectable down, ConnectionType mode,
+			boolean originalQuery, int streamId) {
+		// TODO Auto-generated method stub
+		
 	}
 }

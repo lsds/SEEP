@@ -28,15 +28,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
-
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
 
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
 import uk.ac.imperial.lsds.seepworker.comm.routing.Router;
@@ -56,6 +52,9 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ScaleInI
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seepworker.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seepworker.processingunit.PUContext;
 import uk.ac.imperial.lsds.seepworker.processingunit.Partitionable;

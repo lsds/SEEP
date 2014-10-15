@@ -23,7 +23,6 @@ import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.BackupNodeState;
@@ -40,6 +39,7 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
 import uk.ac.imperial.lsds.seepworker.processingunit.PUContext;
 import uk.ac.imperial.lsds.seepworker.reliable.MemoryChunk;
 

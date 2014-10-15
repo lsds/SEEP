@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.comm;
+package uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -18,10 +18,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ControlTuple;
-import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
-import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;

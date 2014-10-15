@@ -13,7 +13,7 @@ package uk.ac.imperial.lsds.seepworker.runtimeengine;
 import java.io.Serializable;
 import java.net.InetAddress;
 
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
 
 public class DisposableCommunicationChannel implements EndPoint, Serializable {
 

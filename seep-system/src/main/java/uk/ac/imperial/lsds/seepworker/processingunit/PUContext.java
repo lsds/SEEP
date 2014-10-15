@@ -27,12 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
-import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
 import uk.ac.imperial.lsds.seepworker.buffer.OutputBuffer;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.DisposableCommunicationChannel;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.SynchronousCommunicationChannel;

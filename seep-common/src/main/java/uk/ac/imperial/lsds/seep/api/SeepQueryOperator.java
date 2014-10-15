@@ -11,17 +11,14 @@ public class SeepQueryOperator implements LogicalOperator {
 	private SeepTask task;
 	private LogicalState state;
 	
-	private List<DownstreamConnection> downstream;
-	private List<UpstreamConnection> upstream;
+	private List<DownstreamConnection> downstream = new ArrayList<DownstreamConnection>();
+	private List<UpstreamConnection> upstream = new ArrayList<UpstreamConnection>();
 	
 	private SeepQueryOperator(int opId, SeepTask task, String name){
 		this.opId = opId;
 		this.task = task;
 		this.name = name;
 		this.stateful = false;
-		
-		downstream = new ArrayList<DownstreamConnection>();
-		upstream = new ArrayList<UpstreamConnection>();
 	}
 	
 	private SeepQueryOperator(int opId, SeepTask task, LogicalState state, String name){
@@ -30,9 +27,6 @@ public class SeepQueryOperator implements LogicalOperator {
 		this.name = name;
 		this.state = state;
 		this.stateful = true;
-		
-		downstream = new ArrayList<DownstreamConnection>();
-		upstream = new ArrayList<UpstreamConnection>();
 	}
 	
 	public static LogicalOperator newStatelessOperator(int opId, SeepTask task){
@@ -116,24 +110,34 @@ public class SeepQueryOperator implements LogicalOperator {
 	
 	/* Methods to print info about the operator */
 	public String toString(){
+		String ls = System.getProperty("line.separator");
 		StringBuilder sb = new StringBuilder();
 		sb.append("LogicalOperator");
+		sb.append(ls);
 		sb.append("###############");
+		sb.append(ls);
 		sb.append("Name: "+this.name);
+		sb.append(ls);
 		sb.append("OpId: "+this.opId);
+		sb.append(ls);
 		sb.append("Stateful?: "+this.stateful);
+		sb.append(ls);
 		sb.append("#Downstream: "+this.downstream.size());
+		sb.append(ls);
 		for(int i = 0; i<this.downstream.size(); i++){
 			DownstreamConnection down = downstream.get(i);
 			sb.append("  Down-conn-"+i+"-> StreamId: "+down.getStreamId()+" to opId: "
 					+ ""+down.getDownstreamLogicalOperator().getLogicalOperatorId());
+			sb.append(ls);
 		}
 		sb.append("#Upstream: "+this.upstream.size());
+		sb.append(ls);
 		for(int i = 0; i<this.upstream.size(); i++){
 			UpstreamConnection up = upstream.get(i);
 			sb.append("  Up-conn-"+i+"-> StreamId: "+up.getStreamId()+" to opId: "
 					+ ""+up.getUpstreamLogicalOperator().getLogicalOperatorId()+""
-							+ "with connType: "+up.getConnectionType());
+							+ " with connType: "+up.getConnectionType());
+			sb.append(ls);
 		}
 		return sb.toString();
 	}

@@ -8,8 +8,15 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seepworker.operator;
 
-public interface StatelessOperator extends OperatorCode{
+import java.util.ArrayList;
+
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+
+public interface AfterBarrierProcessing {
+
+	public void setUp();
 	
+	public void processData(ArrayList<DataTuple> ldt);
 }

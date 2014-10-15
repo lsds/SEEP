@@ -24,7 +24,7 @@ import java.net.URLClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.api.QueryPlan;
+import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
 import uk.ac.imperial.lsds.seep.infrastructure.Node;
 import uk.ac.imperial.lsds.seepmaster.GLOBALS;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.OperatorDeploymentException;
@@ -59,9 +59,9 @@ public class MasterController {
 		LOG.debug("-> Initializing Master Controller...DONE");
 	}
 	
-	public void submitQuery(QueryPlan qp){
+	public void submitQuery(LogicalSeepQuery lsq){
 		LOG.info("-> Submitting query to the system...");
-		inf.loadQuery(qp);
+		inf.loadQuery(lsq);
 		LOG.info("-> Submitting query to the system...DONE");
 	}
 	
@@ -132,11 +132,11 @@ public class MasterController {
 		}
 	}
 	
-	public QueryPlan executeComposeFromQuery(String pathToJar, String definitionClass){
+	public LogicalSeepQuery executeComposeFromQuery(String pathToJar, String definitionClass){
 		Class<?> baseI = null;
 		Object baseInstance = null;
 		Method compose = null;
-		QueryPlan qp = null;
+		LogicalSeepQuery lsq = null;
 		inf.setPathToQueryDefinition(pathToJar);
 		File urlPathToQueryDefinition = new File(pathToJar);
 		LOG.debug("-> Set path to query definition: {}", urlPathToQueryDefinition.getAbsolutePath());
@@ -155,7 +155,7 @@ public class MasterController {
 			baseI = ucl.loadClass(definitionClass);
 			baseInstance = baseI.newInstance();
 			compose = baseI.getDeclaredMethod("compose", (Class<?>[])null);
-			qp = (QueryPlan) compose.invoke(baseInstance, (Object[])null);
+			lsq = (LogicalSeepQuery) compose.invoke(baseInstance, (Object[])null);
 		}
 		catch (SecurityException e) {
 			e.printStackTrace();
@@ -179,7 +179,7 @@ public class MasterController {
 			e.printStackTrace();
 		}
 		//Finally we return the queryPlan
-		return qp;
+		return lsq;
 	}
 	
 	private void deployQueryToNodes(){

@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seepworker.operator;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 

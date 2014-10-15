@@ -8,15 +8,16 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seepworker.operator;
 
-import java.util.ArrayList;
+import uk.ac.imperial.lsds.seepworker.processingunit.OperatorCode;
+import uk.ac.imperial.lsds.seepworker.processingunit.StateWrapper;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
-public interface AfterBarrierProcessing {
+public interface StatefulOperator extends OperatorCode{
 
-	public void setUp();
-	
-	public void processData(ArrayList<DataTuple> ldt);
+	// FIXME: State (state impl) instead of StateWrapper
+	public StateWrapper getState();
+	public void replaceState(StateWrapper state);
+
 }

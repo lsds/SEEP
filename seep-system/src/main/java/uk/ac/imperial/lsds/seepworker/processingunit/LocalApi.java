@@ -13,9 +13,9 @@ package uk.ac.imperial.lsds.seepworker.processingunit;
 import java.io.Serializable;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.API;
-import uk.ac.imperial.lsds.seep.operator.Callback;
-import uk.ac.imperial.lsds.seep.operator.CommunicationPrimitives;
+import uk.ac.imperial.lsds.seepworker.operator.API;
+import uk.ac.imperial.lsds.seepworker.operator.Callback;
+import uk.ac.imperial.lsds.seepworker.operator.CommunicationPrimitives;
 import uk.ac.imperial.lsds.seepworker.operator.compose.SubOperator;
 
 public class LocalApi implements API, CommunicationPrimitives, Serializable{

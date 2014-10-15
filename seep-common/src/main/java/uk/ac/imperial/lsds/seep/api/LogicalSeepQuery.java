@@ -11,6 +11,8 @@
 
 package uk.ac.imperial.lsds.seep.api;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,11 +24,11 @@ public class LogicalSeepQuery {
 	
 	final private Logger LOG = LoggerFactory.getLogger(LogicalSeepQuery.class);
 	
-	private List<LogicalOperator> logicalOperators;
-	private List<LogicalOperator> sources;
+	private List<LogicalOperator> logicalOperators = new ArrayList<>();
+	private List<LogicalOperator> sources = new ArrayList<>();
 	private LogicalOperator sink;
-	private List<LogicalState> logicalStates;
-	private Map<Integer, Integer> initialPhysicalInstancesPerOperator;
+	private List<LogicalState> logicalStates = new ArrayList<>();
+	private Map<Integer, Integer> initialPhysicalInstancesPerOperator = new HashMap<>();
 	
 	public List<LogicalOperator> getAllOperators(){
 		return logicalOperators;
@@ -91,12 +93,18 @@ public class LogicalSeepQuery {
 	
 	@Override
 	public String toString(){
+		String ls = System.getProperty("line.separator");
 		StringBuilder sb = new StringBuilder();
 		sb.append("Seep Query");
+		sb.append(ls);
 		sb.append("##########");
+		sb.append(ls);
 		sb.append("#Sources: "+this.sources.size());
+		sb.append(ls);
 		sb.append("#Operators(including-sources): "+this.logicalOperators.size());
+		sb.append(ls);
 		sb.append("#States: "+this.logicalStates.size());
+		sb.append(ls);
 		return sb.toString();
 	}
 	

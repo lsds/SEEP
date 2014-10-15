@@ -3,8 +3,6 @@ package uk.ac.imperial.lsds.seep.api;
 import java.util.List;
 
 public interface QueryAPI {
-
-	public QueryBuilder queryAPI = new QueryBuilder();
 	
 	public List<LogicalOperator> getQueryOperators();
 	public List<LogicalState> getQueryState();

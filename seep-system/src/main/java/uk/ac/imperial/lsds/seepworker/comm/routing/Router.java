@@ -20,9 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext;
-import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
-import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
+import uk.ac.imperial.lsds.seepworker.operator.StatefulOperator;
+import uk.ac.imperial.lsds.seepworker.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seepworker.processingunit.Operator;
 
 

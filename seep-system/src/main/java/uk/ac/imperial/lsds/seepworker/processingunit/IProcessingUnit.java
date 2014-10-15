@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.OutputQueue;

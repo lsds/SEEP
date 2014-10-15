@@ -29,10 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.EndPoint;
-import uk.ac.imperial.lsds.seep.operator.OperatorContext;
-import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
-import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.MalformedStateChunk;
 import uk.ac.imperial.lsds.seep.state.NullChunkWhileMerging;
@@ -45,6 +41,10 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ControlT
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
+import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
+import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
+import uk.ac.imperial.lsds.seepworker.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seepworker.reliable.ACKWorker;
 import uk.ac.imperial.lsds.seepworker.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seepworker.reliable.SerialiserWorker;
@@ -779,7 +779,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		// Replace state
 		this.runningOpState = state;
 		// And reference in operator
-		((StatefulOperator)runningOp).replaceState(state);
+		
+		// %%%%%%%%%%%%%%%%
+		
+		
+//		((StatefulOperator)runningOp).replaceState(state);
+		
+		// %%%%%%%%%%%%%%%%
+		
 //		System.out.println("END INSTALL state: inputqueue size: "+MetricsReader.eventsInputQueue.getCount());
 	}
 	

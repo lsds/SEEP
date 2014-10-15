@@ -12,6 +12,8 @@ package uk.ac.imperial.lsds.seep.api;
 
 public interface QueryComposer {
 	
+	public QueryBuilder queryAPI = new QueryBuilder();
+	
 	public LogicalSeepQuery compose();
     
 }

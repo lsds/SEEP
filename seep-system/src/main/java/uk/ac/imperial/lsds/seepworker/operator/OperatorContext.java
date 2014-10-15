@@ -11,7 +11,7 @@
  *     Martin Rouaux - Removal of upstream and downstream connections (OperatorStaticInformation)
  *     which is required to support scale-in of operators.
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.operator;
+package uk.ac.imperial.lsds.seepworker.operator;
 
 import java.io.Serializable;
 import java.net.InetAddress;

@@ -37,6 +37,9 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seepmaster.GLOBALS;
 import uk.ac.imperial.lsds.seepmaster.api.ScaleOutIntentBean;
+import uk.ac.imperial.lsds.seep.api.LogicalOperator;
+import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
+import uk.ac.imperial.lsds.seep.api.LogicalState;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.comm.ConnHandler;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
@@ -99,15 +102,20 @@ public class Infrastructure {
 	private boolean systemIsRunning = false;
 	private String pathToQueryDefinition = null;
 	
+	private List<LogicalOperator> logicalOperators = new ArrayList<>();
+	private List<LogicalState> logicalStates = new ArrayList<>();
+	private List<LogicalOperator> sources = new ArrayList<>();
+	private LogicalOperator sink;
+	
 	///\todo{Put this in a map{query->structure} and refer back to it properly}
-	private ArrayList<Operator> ops = new ArrayList<Operator>();
+	//private ArrayList<Operator> ops = new ArrayList<Operator>();
 	// States of the query
-	private ArrayList<StateWrapper> states = new ArrayList<StateWrapper>();
+//	private ArrayList<StateWrapper> states = new ArrayList<StateWrapper>();
 	//public Map<Integer,QuerySpecificationI> elements = new HashMap<Integer, QuerySpecificationI>();
-	public Map<Integer,Connectable> elements = new HashMap<Integer, Connectable>();
+//	public Map<Integer,Connectable> elements = new HashMap<Integer, Connectable>();
 	//More than one source is supported
-	private ArrayList<Operator> src = new ArrayList<Operator>();
-	private Operator snk;
+//	private ArrayList<Operator> src = new ArrayList<Operator>();
+//	private Operator snk;
 	//Mapping of nodeId-operator
 	private Map<Integer, Operator> queryToNodesMapping = new HashMap<Integer, Operator>();
 	//map with star topology information
@@ -122,7 +130,7 @@ public class Infrastructure {
 	private int port;
 	
     // Scaling policy rules. These are needed by the MonitorMaster instance.
-    private PolicyRules policyRules;
+//    private PolicyRules policyRules;
     
     public static int RESET_SYSTEM_STABLE_TIME_OP_ID = -666;
 
@@ -150,11 +158,7 @@ public class Infrastructure {
 		this.src.add(op);
 	}
 	
-	/** 
-	 * For now, the query plan is directly submitted to the infrastructure. to support multi-query, first step is to have a map with the queries, 
-	 * and then, for the below methods, indicate the query id that needs to be accessed.
-	**/
-	public void loadQuery(QueryPlan qp) {
+	public void loadQuery(LogicalSeepQuery lsq) {
         // We can only start the monitor master process at this point because
         // we need to know the scaling rules in advance. These are only accessible
         // through the QueryPlan.
