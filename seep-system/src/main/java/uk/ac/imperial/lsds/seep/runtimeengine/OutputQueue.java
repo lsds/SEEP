@@ -82,6 +82,8 @@ public class OutputQueue {
 	
 	
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
+            
+                System.out.println("Just got in sendToDownstream()");
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		Buffer buffer = channelRecord.getBuffer();
@@ -135,6 +137,8 @@ public class OutputQueue {
 			LOG.error("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 			ie.printStackTrace();
 		}
+                
+                System.out.println("About to get out from sendToDownstream");
 	}
 	
 	public void replay(SynchronousCommunicationChannel oi){

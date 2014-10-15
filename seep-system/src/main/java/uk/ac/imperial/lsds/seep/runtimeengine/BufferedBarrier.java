@@ -69,7 +69,7 @@ public class BufferedBarrier implements DataStructureI{
                 cummulatedBarrierTime += System.nanoTime() - barrierTimeEachPhase;
                 
                 if (repetitionsANN % 100 == 0) {
-                    System.out.println("Repetitions = " + repetitionsANN + ", Accum barrier time: " + 
+                    System.out.println("BuffBar Repetitions = " + repetitionsANN + ", Accum barrier time: " + 
                             df.format(((double) (cummulatedBarrierTime / 1000000000.0))) + " s");
                 }
                 if (repetitionsANN == 10000) {

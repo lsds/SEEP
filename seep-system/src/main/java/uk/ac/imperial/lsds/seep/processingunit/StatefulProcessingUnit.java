@@ -19,9 +19,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import org.slf4j.Logger;
@@ -146,7 +148,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	private boolean isCheckpointEnabled = true;
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
         
-        protected ExecutorService poolOfThreads = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors());
+        protected ExecutorService poolOfThreads;
 	
 	//Multi-core support
 	private Executor pool;
@@ -157,6 +159,13 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
+                
+                int numCores = Runtime.getRuntime().availableProcessors() ;
+                if(numCores > 2 ){
+                    poolOfThreads = Executors.newFixedThreadPool( numCores ) ;
+                }else{
+                    poolOfThreads = Executors.newFixedThreadPool( 1 ) ;
+                }
 	}
 	
 	public void setKeySpaceBounds(int minBound, int maxBound){
@@ -433,15 +442,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
         
             int numTargets = targets.size();
             final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
-            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            ArrayList<Future> futures = new ArrayList<>(numTargets);
             
             for (int i = 0; i < numTargets; i++) {
                 
-                final int j = i;
-                final int target = targetsCopy.get(j);
+                final int target = targetsCopy.get(i);
                 final DataTuple dtCopy = dt; 
                 
-                taskList.add(new Callable() {
+                 futures.add(i, poolOfThreads.submit(new Callable() {
                     public Object call() throws Exception {
                         
                         EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
@@ -465,13 +473,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
                         
                         return null;
                     }
-                });
+                }));
             }
             
-            try {
-                poolOfThreads.invokeAll(taskList);
+             try {
+                for (int i = 0; i < numTargets; i++) {
+                    futures.get(i).get();
+                }
             } catch (InterruptedException ex) {
-                java.util.logging.Logger.getLogger(StatelessProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
+                java.util.logging.Logger.getLogger(StatefulProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                java.util.logging.Logger.getLogger(StatefulProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
             }
             
        
@@ -484,15 +496,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
             
             int numTargets = targets.size();
             final ArrayList<Integer> targetsCopy =  new ArrayList<>(targets);
-            List<Callable<Object>> taskList = new ArrayList<>(numTargets);
+            ArrayList<Future> futures = new ArrayList<>(numTargets);
             
             for (int i = 0; i < numTargets; i++) {
                 
-                final int j = i;
-                final int target = targetsCopy.get(j);
+                final int target = targetsCopy.get(i);
                 final DataTuple dtCopy = dts[i]; 
                 
-                taskList.add(new Callable() {
+                futures.add(i, poolOfThreads.submit(new Callable() {
                     public Object call() throws Exception {
                         
                         EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
@@ -516,13 +527,17 @@ public class StatefulProcessingUnit implements IProcessingUnit{
                         
                         return null;
                     }
-                });
+                }));
             }
             
             try {
-                poolOfThreads.invokeAll(taskList);
+                for (int i = 0; i < numTargets; i++) {
+                    futures.get(i).get();
+                }
             } catch (InterruptedException ex) {
-                java.util.logging.Logger.getLogger(StatelessProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
+                java.util.logging.Logger.getLogger(StatefulProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                java.util.logging.Logger.getLogger(StatefulProcessingUnit.class.getName()).log(Level.SEVERE, null, ex);
             }
             
        
@@ -885,7 +900,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		int numberOfProcessors = Runtime.getRuntime().availableProcessors();
 		numberOfWorkerThreads = (numberOfProcessors - 2) > 1 ? (numberOfProcessors-2) : 1;
 		///\fixme{It's fine this for now, but find a formula such the previuos lines to establish the best number of Cores} 
-		numberOfWorkerThreads = 4;
+		//numberOfWorkerThreads = 4;
 		if(runningOpState instanceof Partitionable){
 			executorMutex = new Semaphore(numberOfWorkerThreads, true);
 			pool = Executors.newFixedThreadPool(numberOfWorkerThreads);
