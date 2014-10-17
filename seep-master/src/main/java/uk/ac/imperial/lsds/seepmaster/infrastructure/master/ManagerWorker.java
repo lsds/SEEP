@@ -41,7 +41,7 @@ public class ManagerWorker implements Runnable {
 
 	final private Logger LOG = LoggerFactory.getLogger(ManagerWorker.class);
 	
-	private Infrastructure inf = null;
+	private OldInfrastructure inf = null;
 	private ServerSocket managerS = null;
 	private Socket clientSocket = null;
 
@@ -51,7 +51,7 @@ public class ManagerWorker implements Runnable {
 
 	private int port;
 		
-	public ManagerWorker(Infrastructure inf, int port){
+	public ManagerWorker(OldInfrastructure inf, int port){
 		this.inf = inf;
 		this.port = port;
 	}
@@ -66,7 +66,7 @@ public class ManagerWorker implements Runnable {
 		//get numDownstreams from opId
 		int numOfUpstreams = inf.getNumUpstreams(opId);
 		//set initial time of crash and number of downstreams
-		Infrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
+		OldInfrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
 		InetAddress oldIP = InetAddress.getByName(oldIP_txt);
 		int oldPort = Integer.parseInt(oldPort_txt);
 		InetAddress newIP = InetAddress.getByName(newIP_txt);
@@ -125,7 +125,7 @@ System.out.println("broadcast state and runtime init");
 		//get numDownstreams from opId
 		int numOfUpstreams = inf.getNumUpstreams(opId);
 		//set initial time of crash and number of downstreams
-		Infrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
+		OldInfrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
 		InetAddress oldIP = InetAddress.getByName(oldIP_txt);
 		int oldPort = Integer.parseInt(oldPort_txt);
 		InetAddress newIP = InetAddress.getByName(newIP_txt);
@@ -279,7 +279,7 @@ System.out.println("broadcast state and runtime init");
 						bootstrapCommand(token[1], Integer.parseInt(token[2]));
 					}
 					else if(token[0].equals("systemStable")){
-						Infrastructure.msh.setSystemStableTime(System.currentTimeMillis());
+						OldInfrastructure.msh.setSystemStableTime(System.currentTimeMillis());
 					}
 					else if(token[0].equals("add_operator")) {
 						addOperatorCommand(token[1], token[2], token[3]);
@@ -306,9 +306,7 @@ inf.printCurrentInfrastructure();
 						Operator op = (Operator) inf.elements.get(Integer.parseInt(token[1]));
 						inf.init(op);
 					}
-				}
-				//bis.close();
-					//other options...				
+				}			
 			} 
 			catch (Exception e) {
 				e.printStackTrace();

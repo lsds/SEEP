@@ -16,9 +16,9 @@ import java.io.InputStreamReader;
 
 public class EC2Worker implements Runnable{
 
-	private Infrastructure inf = null;
+	private OldInfrastructure inf = null;
 	
-	public EC2Worker(Infrastructure inf){
+	public EC2Worker(OldInfrastructure inf){
 		this.inf = inf;
 	}
 	

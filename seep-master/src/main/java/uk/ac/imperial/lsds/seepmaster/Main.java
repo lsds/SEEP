@@ -4,9 +4,17 @@ package uk.ac.imperial.lsds.seepmaster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
+import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerAPIImplementation;
+import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerCommManager;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManagerFactory;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureType;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.OperatorDeploymentException;
-import uk.ac.imperial.lsds.seepmaster.infrastructure.master.MasterController;
+import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
+import uk.ac.imperial.lsds.seepmaster.ui.OldMasterController;
+import uk.ac.imperial.lsds.seepmaster.ui.UI;
+import uk.ac.imperial.lsds.seepmaster.ui.UIFactory;
+import uk.ac.imperial.lsds.seepmaster.ui.UIType;
 
 /**
 * Main. This can be executed as Main (master Node) or as secondary.
@@ -30,11 +38,22 @@ public class Main {
 	}
 	
 	private void executeMaster(String[] args){
-		// Get instance of MasterController and initialize it
-		MasterController mc = MasterController.getInstance();
-		mc.init();
+		// Get the properties that apply
+		// TODO
+		QueryManager qm = QueryManager.getInstance();
+		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
+		// put this in the config manager
+		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
+		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);
+		MasterWorkerCommManager mwcm = new MasterWorkerCommManager(port, api);
+		UI ui = UIFactory.createUI(UIType.CONSOLE, qm, inf);
+		//OldMasterController mc = OldMasterController.getInstance();
+		//ManagerWorker manager = new ManagerWorker(this, port);
+		//Thread centralManagerT = new Thread(manager, "managerWorkerT");
+		//centralManagerT.start();
+		//mc.init();
 		
-		LogicalSeepQuery lsq = null;
+		//LogicalSeepQuery lsq = null;
 		// If the user provided a query when launching the master node...
 		if(args[0] != null){
 			if(!(args.length > 2)){
@@ -42,16 +61,12 @@ public class Main {
 				System.exit(0);
 			}
 			// Then we execute the compose method and get the QueryPlan back
-			lsq = mc.executeComposeFromQuery(args[0], args[1]);
+			//lsq = mc.executeComposeFromQuery(args[0], args[1]);
+			//lsq = qm.executeComposeFromQuery(args[0], args[1]);
+			qm.loadQueryFromFile(args[0], args[1]);
 			// Once we have the QueryPlan from the user submitted query, we submit the query plan to the MasterController
-			mc.submitQuery(lsq);
+			//mc.submitQuery(lsq);
 		}
-		//In any case we start the MasterController to get access to the interface
-		try {
-			mc.start();
-		}
-		catch (OperatorDeploymentException e) {
-			e.printStackTrace();
-		}
+		ui.start();
 	}
 }

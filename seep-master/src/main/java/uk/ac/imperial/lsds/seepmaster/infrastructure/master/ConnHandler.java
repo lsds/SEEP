@@ -15,9 +15,9 @@ import uk.ac.imperial.lsds.seepworker.processingunit.Operator;
 public class ConnHandler implements Runnable {
 
 	Operator o;
-	Infrastructure inf;
+	OldInfrastructure inf;
 	
-	public ConnHandler(Operator o, Infrastructure inf){
+	public ConnHandler(Operator o, OldInfrastructure inf){
 		this.o = o;
 		this.inf = inf;
 	}

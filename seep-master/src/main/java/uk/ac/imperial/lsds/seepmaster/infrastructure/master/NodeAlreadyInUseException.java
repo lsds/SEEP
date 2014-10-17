@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seepmaster.api;
+package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 
 public class NodeAlreadyInUseException extends Exception {
 

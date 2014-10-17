@@ -8,10 +8,12 @@
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seepmaster.api;
+package uk.ac.imperial.lsds.seep.api.annotations;
 
-public interface DriverProgram {
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-		public void main();
-		
+@Retention(RetentionPolicy.SOURCE)
+public @interface Collection {
+
 }

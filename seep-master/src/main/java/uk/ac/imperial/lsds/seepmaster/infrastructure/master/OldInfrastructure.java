@@ -87,9 +87,9 @@ import uk.ac.imperial.lsds.seepmaster.infrastructure.api.RestAPIRegistryEntry;
 */
 
 
-public class Infrastructure {
+public class OldInfrastructure {
 
-	final private Logger LOG = LoggerFactory.getLogger(Infrastructure.class);
+	final private Logger LOG = LoggerFactory.getLogger(OldInfrastructure.class);
 	
 	int value = Integer.parseInt(GLOBALS.valueFor("maxLatencyAllowed"));
 	static public MasterStatisticsHandler msh = new MasterStatisticsHandler();
@@ -142,7 +142,7 @@ public class Infrastructure {
 	public static Map<String, RestAPIRegistryEntry> restAPIRegistry;
 	private Server restAPIServer; 
 
-	public Infrastructure(int listeningPort) {
+	public OldInfrastructure(int listeningPort) {
 		this.port = listeningPort;
  	}
 	
@@ -158,7 +158,11 @@ public class Infrastructure {
 		this.src.add(op);
 	}
 	
-	public void loadQuery(LogicalSeepQuery lsq) {
+	public void loadQuery(LogicalSeepQuery lsq){
+		LOG.warn("monitoring DISABLED, REDESIGNING");
+	}
+	
+	public void _loadQuery(LogicalSeepQuery lsq) {
         // We can only start the monitor master process at this point because
         // we need to know the scaling rules in advance. These are only accessible
         // through the QueryPlan.
@@ -214,9 +218,9 @@ public class Infrastructure {
 		eiu.executeStaticScaleOutFromIntent(soib);
 		
 		
-		if (Infrastructure.enableRestAPI) {
-			Infrastructure.restAPIRegistry = new HashMap<>();
-			Infrastructure.restAPIRegistry.put("/queryplan", new RestAPIQueryPlan(qp));
+		if (OldInfrastructure.enableRestAPI) {
+			OldInfrastructure.restAPIRegistry = new HashMap<>();
+			OldInfrastructure.restAPIRegistry.put("/queryplan", new RestAPIQueryPlan(qp));
 			this.restAPIServer = new Server(restAPIPort);
 			this.restAPIServer.setHandler(new RestAPIHandler(restAPIRegistry));
 			try {

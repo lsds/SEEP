@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial design and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
+package uk.ac.imperial.lsds.seepmaster.ui;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,37 +27,47 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
 import uk.ac.imperial.lsds.seep.infrastructure.Node;
 import uk.ac.imperial.lsds.seepmaster.GLOBALS;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.CodeDeploymentException;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ESFTRuntimeException;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.OldInfrastructure;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seepmaster.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seepmaster.elastic.NodePoolEmptyException;
 
 
-public class MasterController {
+public class OldMasterController {
 	
-	final private Logger LOG = LoggerFactory.getLogger(MasterController.class.getName());
+	final private Logger LOG = LoggerFactory.getLogger(OldMasterController.class.getName());
 
 	//MasterController must be a singleton
-	private static final MasterController instance = new MasterController();
+	private static final OldMasterController instance = new OldMasterController();
 	
 	private URLClassLoader ucl = null;
 	
-    private MasterController() {}
- 
-    public static MasterController getInstance() {
-        return instance;
-    }
-	
-    private Infrastructure inf;
-    ElasticInfrastructureUtils eiu;
-	
-	public void init(){
-		LOG.debug("-> Initializing Master Controller...");
-		inf = new Infrastructure(Integer.parseInt(GLOBALS.valueFor("mainPort")));
+    private OldMasterController() {
+    	LOG.debug("-> Initializing Master Controller...");
+		inf = new OldInfrastructure(Integer.parseInt(GLOBALS.valueFor("mainPort")));
 		eiu = new ElasticInfrastructureUtils(inf);
 		inf.setEiu(eiu);
 		inf.startInfrastructure();
 		LOG.debug("-> Initializing Master Controller...DONE");
-	}
+    }
+ 
+    public static OldMasterController getInstance() {
+        return instance;
+    }
+	
+    private OldInfrastructure inf;
+    ElasticInfrastructureUtils eiu;
+	
+//	public void init(){
+//		LOG.debug("-> Initializing Master Controller...");
+//		inf = new Infrastructure(Integer.parseInt(GLOBALS.valueFor("mainPort")));
+//		eiu = new ElasticInfrastructureUtils(inf);
+//		inf.setEiu(eiu);
+//		inf.startInfrastructure();
+//		LOG.debug("-> Initializing Master Controller...DONE");
+//	}
 	
 	public void submitQuery(LogicalSeepQuery lsq){
 		LOG.info("-> Submitting query to the system...");
@@ -213,14 +223,14 @@ public class MasterController {
 		return option;
 	}
 	
-	public void startSystemOption(Infrastructure inf) throws IOException, ESFTRuntimeException{
+	public void startSystemOption(OldInfrastructure inf) throws IOException, ESFTRuntimeException{
 		getUserInput("Press a button to start the source");
 		
         //Start the source, and thus the stream processing system
 		inf.start();
 	}
 	
-	public void configureSourceRateOption(Infrastructure inf) throws IOException{
+	public void configureSourceRateOption(OldInfrastructure inf) throws IOException{
 //		String option = getUserInput("Introduce number of events: ");
 //		int numberEvents = Integer.parseInt(option);
 //		option = getUserInput("Introduce time (ms): ");
@@ -228,7 +238,7 @@ public class MasterController {
 //		inf.configureSourceRate(numberEvents, time);
 	}
 	
-	public void parallelizeOpManualOption(Infrastructure inf, ElasticInfrastructureUtils eiu) throws IOException{
+	public void parallelizeOpManualOption(OldInfrastructure inf, ElasticInfrastructureUtils eiu) throws IOException{
 		String option = getUserInput("Enter operator ID (old): ");
 		int opId = Integer.parseInt(option);
 		option = getUserInput("Enter operator ID (new): ");

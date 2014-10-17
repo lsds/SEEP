@@ -30,13 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seepmaster.GLOBALS;
-import uk.ac.imperial.lsds.seepmaster.api.NodeAlreadyInUseException;
 import uk.ac.imperial.lsds.seepmaster.api.ScaleOutIntentBean;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.comm.RuntimeCommunicationTools;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
-import uk.ac.imperial.lsds.seepmaster.infrastructure.master.Infrastructure;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.NodeAlreadyInUseException;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.OldInfrastructure;
 import uk.ac.imperial.lsds.seep.infrastructure.Node;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -51,7 +51,7 @@ public class ElasticInfrastructureUtils {
 
 	final private Logger LOG = LoggerFactory.getLogger(ElasticInfrastructureUtils.class);
 	
-	private Infrastructure inf = null;
+	private OldInfrastructure inf = null;
 	private RuntimeCommunicationTools rct = null;
 	private URLClassLoader ucl = null;
     
@@ -60,7 +60,7 @@ public class ElasticInfrastructureUtils {
     // twice and instances 50 and 51 are started, the map contains: <1, [50, 51]>
     private Map<Integer, List<Integer>> scalingMap;
 	
-	public ElasticInfrastructureUtils(Infrastructure inf){
+	public ElasticInfrastructureUtils(OldInfrastructure inf){
 		this.inf = inf;
 		this.rct = inf.getRCT();
 		inf.getBCU();
@@ -200,7 +200,7 @@ public class ElasticInfrastructureUtils {
 		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
 		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
 		//set initial time and number of downstreams
-		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
+		OldInfrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
 		Operator newOp = null;
 		try {
 			newOp = addOperator(opIdToParallelize, newOpId);
@@ -258,7 +258,7 @@ public class ElasticInfrastructureUtils {
 		//get number of upstreams to indicate msh how many messages to wait -> measurement purposes
 		int numUpstreamsOpId = inf.getNumUpstreams(opIdToParallelize);
 		//set initial time and number of downstreams
-		Infrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
+		OldInfrastructure.msh.setParallelizationStartTime(System.currentTimeMillis(), numUpstreamsOpId);
 		Operator newOp = null;
 		try {
 			newOp = addOperator(opIdToParallelize, newOpId);
@@ -528,7 +528,7 @@ public class ElasticInfrastructureUtils {
 		//get numDownstreams from opId
 		int numOfUpstreams = inf.getNumUpstreams(opId);
 		//set initial time of crash and number of downstreams
-		Infrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
+		OldInfrastructure.msh.setCrashInitialTime(System.currentTimeMillis(), numOfUpstreams);
 		//Pick new node
 		Node newNode = inf.getNodeFromPool();
 		inf.reDeploy(newNode);
