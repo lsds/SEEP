@@ -2,9 +2,13 @@ package uk.ac.imperial.lsds.seepmaster.comm;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.infrastructure.Node;
+import uk.ac.imperial.lsds.seep.comm.BootstrapCommand;
+import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.PhysicalNode;
 import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
 
 public class MasterWorkerAPIImplementation {
@@ -12,13 +16,22 @@ public class MasterWorkerAPIImplementation {
 	private QueryManager qm;
 	private InfrastructureManager inf;
 	
-	public MasterWorkerAPIImplementation(QueryManager qm, InfrastructureManager inf){
+	public MasterWorkerAPIImplementation(QueryManager qm, InfrastructureManager inf) {
 		this.qm = qm;
 		this.inf = inf;
 	}
 	
-	private void bootstrapCommand(String ip, int port) throws UnknownHostException{
-//		InetAddress bootIp = InetAddress.getByName(ip);
+	public void bootstrapCommand(Map<String, String> arguments) throws UnknownHostException {
+		InetAddress bootIp = InetAddress.getByName(arguments.get(BootstrapCommand.Arguments.IP));
+		int port = new Integer(arguments.get(BootstrapCommand.Arguments.PORT));
+		// Create execution unit of the necessary type, i.e. the one inf knows how to handle
+		ExecutionUnit eu = null;
+		if(inf.getExecutionUnitType().equals(ExecutionUnitType.PHYSICAL_NODE)){
+			eu = new PhysicalNode(bootIp, port);
+		}
+		inf.addExecutionUnit(eu);
+		qm.increaseExecutionUnitsAvailable();
+		
 //		Node n = new Node(bootIp, port);
 //		//add node to the stack
 //		inf.addNode(n);

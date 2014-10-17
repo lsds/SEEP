@@ -10,6 +10,7 @@ import java.net.URLClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.api.LogicalOperator;
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
 
 public class QueryManager {
@@ -19,6 +20,9 @@ public class QueryManager {
 	private static QueryManager qm;
 	private String pathToQuery;
 	private LogicalSeepQuery lsq;
+	
+	private int executionUnitsAvailable = 0;
+	private int executionUnitsRequiredToStart;
 	
 	private QueryManager(){}
 	
@@ -31,9 +35,33 @@ public class QueryManager {
 		}
 	}
 	
+	public void increaseExecutionUnitsAvailable(){
+		executionUnitsAvailable++;
+	}
+	
+	public void decreaseExecutionUnitsAvailable(){
+		executionUnitsAvailable--;
+	}
+	
+	public boolean canStartExecution(){
+		return executionUnitsAvailable >= executionUnitsRequiredToStart;
+	}
+	
 	public void loadQueryFromFile(String pathToJar, String definitionClass){
 		this.pathToQuery = pathToJar;
 		this.lsq = executeComposeFromQuery(pathToJar, definitionClass);
+		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
+	}
+	
+	private int computeRequiredExecutionUnits(LogicalSeepQuery lsq){
+		int totalInstances = 0;
+		for(LogicalOperator lo : lsq.getAllOperators()){
+			int opId = lo.getLogicalOperatorId();
+			if(lsq.hasSetInitialPhysicalInstances(opId)){
+				totalInstances += lsq.getInitialPhysicalInstancesForLogicalOperator(opId);
+			}
+		}
+		return totalInstances;
 	}
 	
 	private LogicalSeepQuery executeComposeFromQuery(String pathToJar, String definitionClass){

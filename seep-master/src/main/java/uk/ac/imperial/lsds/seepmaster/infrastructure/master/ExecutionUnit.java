@@ -1,8 +1,13 @@
 package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 
-public interface ExecutionUnit {
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
 
-	public String getDescriptor();
+public interface ExecutionUnit {
+	
+	public ExecutionUnitType getType();
 	public int getId();
+	public String toString();
+	public EndPoint getEndPoint();
 	
 }

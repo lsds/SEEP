@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.seepmaster;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,9 +8,7 @@ import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerCommManager;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManagerFactory;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureType;
-import uk.ac.imperial.lsds.seepmaster.infrastructure.master.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
-import uk.ac.imperial.lsds.seepmaster.ui.OldMasterController;
 import uk.ac.imperial.lsds.seepmaster.ui.UI;
 import uk.ac.imperial.lsds.seepmaster.ui.UIFactory;
 import uk.ac.imperial.lsds.seepmaster.ui.UIType;
@@ -46,6 +43,7 @@ public class Main {
 		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);
 		MasterWorkerCommManager mwcm = new MasterWorkerCommManager(port, api);
+		mwcm.start();
 		UI ui = UIFactory.createUI(UIType.CONSOLE, qm, inf);
 		//OldMasterController mc = OldMasterController.getInstance();
 		//ManagerWorker manager = new ManagerWorker(this, port);

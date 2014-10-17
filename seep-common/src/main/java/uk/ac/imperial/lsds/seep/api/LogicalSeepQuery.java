@@ -50,6 +50,14 @@ public class LogicalSeepQuery {
 		this.initialPhysicalInstancesPerOperator.put(opId, numInstances);
 	}
 	
+	public int getInitialPhysicalInstancesForLogicalOperator(int opId){
+		return initialPhysicalInstancesPerOperator.get(opId);
+	}
+	
+	public boolean hasSetInitialPhysicalInstances(int opId){
+		return initialPhysicalInstancesPerOperator.containsKey(opId);
+	}
+	
 	public LogicalOperator newStatefulSource(SeepTask seepTask, LogicalState state, int opId){
 		LogicalOperator lo = newStatefulOperator(seepTask, state, opId);
 		this.sources.add(lo);

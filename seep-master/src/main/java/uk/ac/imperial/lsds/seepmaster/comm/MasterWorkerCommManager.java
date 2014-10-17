@@ -6,9 +6,12 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import uk.ac.imperial.lsds.seep.comm.MasterWorkerAPI;
 
 public class MasterWorkerCommManager {
 
@@ -31,12 +34,12 @@ public class MasterWorkerCommManager {
 		listener = new Thread(new CommManagerWorker());
 	}
 	
-	public void startListening(){
+	public void start(){
 		this.working = true;
 		this.listener.start();
 	}
 	
-	public void stopListening(){
+	public void stop(){
 		//TODO: do some other cleaning work here
 		this.working = false;
 	}
@@ -54,22 +57,25 @@ public class MasterWorkerCommManager {
 					bis = new BufferedReader(new InputStreamReader(incomingSocket.getInputStream()));
 					String command = bis.readLine();
 					if(command == null){
-						//TODO: inidicate error here
+						//TODO: indicate error here
 					}
 					String[] commandTokens = command.split(" ");
 					String commandCode = commandTokens[0];
-					switch(commandCode){
-					case MasterWorkerAPI.BOOTSTRAP:
+					Map<String, String> commandArguments = MasterWorkerAPI.arrayToMap(commandTokens);
+					MasterWorkerAPI.API apiInstance = MasterWorkerAPI.getAPIByName(command);
+					if(apiInstance != null){
+						//TODO: indicate error here, no such command
+						if (! MasterWorkerAPI.validatesCommand(apiInstance, commandArguments)){
+							//TODO: indicate error here, args do not validate
+						}
+					}
+					
+					if (MasterWorkerAPI.API.BOOTSTRAP.commandName().equals(commandCode)) {
 						LOG.info("Bootstrap command");
-						if(MasterWorkerAPI.validatesCommand(MasterWorkerAPI.BOOTSTRAP, commandTokens)){
-							
-						}
-						break;
-					case MasterWorkerAPI.CRASH:
+						api.bootstrapCommand(commandArguments);
+					} else if (MasterWorkerAPI.API.CRASH.commandName().equals(commandCode)) {
 						LOG.info("Crash command");
-						if(MasterWorkerAPI.validatesCommand(MasterWorkerAPI.CRASH, commandTokens)){
-							
-						}
+						//TODO: implement
 					}
 					
 				}
