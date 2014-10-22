@@ -753,14 +753,14 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 	public void placeNew(Operator o, Node n) {
             
 		int opId = o.getOperatorId();
-                int originalOpId = o.getOriginalOpId();
+        int originalOpId = o.getOriginalOpId();
                 
 		boolean isStatefull = (o.getOperatorCode() instanceof StatefulOperator) ? true : false;
 		// Note that opId and originalOpId are the same value here, since placeNew places only original operators in the query
 		
-                OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, 
-				Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId, 
-				Integer.parseInt(GLOBALS.valueFor("dataSocket")) + opId, isStatefull);
+        OperatorStaticInformation l = new OperatorStaticInformation(opId, originalOpId, n, 
+        Integer.parseInt(GLOBALS.valueFor("controlSocket")) + opId, 
+		Integer.parseInt(GLOBALS.valueFor("dataSocket")) + opId, isStatefull);
 		o.getOpContext().setOperatorStaticInformation(l);
 		
 		for (OperatorContext.PlacedOperator downDescr: o.getOpContext().downstreams) {

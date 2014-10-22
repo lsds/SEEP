@@ -34,6 +34,14 @@ public class LogicalSeepQuery {
 		return logicalOperators;
 	}
 	
+	public LogicalOperator getOperatorWithId(int opId){
+		for(LogicalOperator lo : logicalOperators){
+			if(lo.getLogicalOperatorId() == opId)
+				return lo;
+		}
+		return null;
+	}
+	
 	public List<LogicalState> getAllStates(){
 		return logicalStates;
 	}

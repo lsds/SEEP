@@ -6,12 +6,18 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.api.LogicalOperator;
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
+import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
+import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 
 public class QueryManager {
@@ -22,24 +28,29 @@ public class QueryManager {
 	private String pathToQuery;
 	private LogicalSeepQuery lsq;
 	
+	private PhysicalSeepQuery originalQuery;
+	private PhysicalSeepQuery runtimeQuery;
+	
 	private InfrastructureManager inf;
+	private Map<Integer, EndPoint> opToEndpointMapping;
 	
 	private int executionUnitsRequiredToStart;
 	
-	private QueryManager(InfrastructureManager inf){
+	private QueryManager(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
 		this.inf = inf;
+		this.opToEndpointMapping = mapOpToEndPoint;
 	}
 	
-	public static QueryManager getInstance(InfrastructureManager inf){
+	public static QueryManager getInstance(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
 		if(qm == null){
-			return new QueryManager(inf);
+			return new QueryManager(inf, mapOpToEndPoint);
 		}
 		else{
 			return qm;
 		}
 	}
 	
-	public boolean canStartExecution(){
+	private boolean canStartExecution(){
 		return inf.executionUnitsAvailable() >= executionUnitsRequiredToStart;
 	}
 	
@@ -50,6 +61,46 @@ public class QueryManager {
 	}
 	
 	public void deployQueryToNodes(){
+		// Check whether there are sufficient execution units to deploy query
+		if(! canStartExecution()){
+			// return error to UI
+		}
+		// 1 create connections between operators
+		// get node, and put operator in node by assigning control and data socket, etc
+		createOriginalPhysicalQuery();
+		// 2 create initial star topology
+		// stupid stuff
+		// 3 deploy code to nodes
+		// read and send the actual code to all workers
+		// 4 deploy query to nodes
+		// first send starTopology
+		// send operator, serialization of operator
+		sendQueryInformationToNodes();
+		// after all nodes have operators, then send init (the one who activates connections)
+		// broadcast state so that they can register these states
+		// send SET-RUNTIME command
+	}
+	
+	private void createOriginalPhysicalQuery(){
+		// use pre-defined description if exists
+		if(this.opToEndpointMapping != null){
+			for(Entry<Integer, EndPoint> e : opToEndpointMapping.entrySet()){
+				LogicalOperator lo = lsq.getOperatorWithId(e.getKey());
+				if(lo != null) {
+					PhysicalOperator po = PhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lo, e.getValue());
+				}
+			}
+		}
+		// otherwise map to random workers
+		else{
+			for(LogicalOperator lso : lsq.getAllOperators()){
+				ExecutionUnit eu = inf.getExecutionUnit();
+				PhysicalOperator po = PhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lso, eu.getEndPoint());
+			}
+		}
+	}
+	
+	private void sendQueryInformationToNodes(){
 		
 	}
 	

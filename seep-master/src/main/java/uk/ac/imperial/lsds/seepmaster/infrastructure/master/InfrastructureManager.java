@@ -6,7 +6,8 @@ public interface InfrastructureManager {
 	
 	public ExecutionUnit buildExecutionUnit(EndPoint ep);
 	
-	public boolean addExecutionUnit(ExecutionUnit eu);
+	public void addExecutionUnit(ExecutionUnit eu);
+	public ExecutionUnit getExecutionUnit();
 	public boolean removeExecutionUnit(int id);
 	public int executionUnitsAvailable();
 	

@@ -1,8 +1,11 @@
 package uk.ac.imperial.lsds.seepmaster;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerAPIImplementation;
 import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerCommManager;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
@@ -38,7 +41,9 @@ public class Main {
 		// TODO: Get the properties that apply
 		// TODO: get inf type from config
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
-		QueryManager qm = QueryManager.getInstance(inf);
+		// TODO: get file from config if exists and parse it to get a map from operator to endPoint
+		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
+		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint);
 		// TODO: put this in the config manager
 		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);
