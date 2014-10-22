@@ -1,10 +1,10 @@
 package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 
-import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 
 public interface InfrastructureManager {
-
-	public ExecutionUnitType getExecutionUnitType();
+	
+	public ExecutionUnit buildExecutionUnit(EndPoint ep);
 	
 	public boolean addExecutionUnit(ExecutionUnit eu);
 	public boolean removeExecutionUnit(int id);

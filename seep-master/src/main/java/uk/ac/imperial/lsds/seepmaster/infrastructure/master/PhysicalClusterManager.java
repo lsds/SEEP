@@ -2,17 +2,23 @@ package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
 
 public class PhysicalClusterManager implements InfrastructureManager {
 	
-	private static final ExecutionUnitType executionUnitType = ExecutionUnitType.PHYSICAL_NODE;
+	public final ExecutionUnitType executionUnitType = ExecutionUnitType.PHYSICAL_NODE;
 	private Set<ExecutionUnit> physicalNodes;
 
 	@Override
-	public ExecutionUnitType getExecutionUnitType() {
-		return executionUnitType;
+	public ExecutionUnit buildExecutionUnit(EndPoint ep) {
+		return new PhysicalNode(ep);
 	}
+	
+//	@Override
+//	public ExecutionUnitType getExecutionUnitType() {
+//		return executionUnitType;
+//	}
 	
 	@Override
 	public boolean addExecutionUnit(ExecutionUnit eu) {

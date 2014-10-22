@@ -6,7 +6,7 @@ import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
 public class UIFactory {
 
 	public static UI createUI(UIType uiType, QueryManager qm, InfrastructureManager inf){
-		if(uiType == UIType.CONSOLE) {
+		if(uiType == UIType.SIMPLECONSOLE) {
 			return new SimpleConsole(qm, inf);
 		}
 		return null;

@@ -7,13 +7,51 @@ import java.io.InputStreamReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ESFTRuntimeException;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
 
 public class SimpleConsole implements UI{
 
 	final private Logger LOG = LoggerFactory.getLogger(SimpleConsole.class.getName());
+	
+	private static String uiText;
+	private static String emptyText;
+	
+	private boolean working = false;
+	
+	static{
+		// Build ui text
+		StringBuilder sb = new StringBuilder();
+		sb.append("#############");
+		sb.append(System.getProperty("line.separator"));
+		sb.append("SEEP Master SimpleConsole");
+		sb.append(System.getProperty("line.separator"));
+		sb.append("--------------");
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		sb.append("Choose an option and press Enter");
+		sb.append(System.getProperty("line.separator"));
+		sb.append("1. Deploy query to Cluster");
+		sb.append(System.getProperty("line.separator"));
+		sb.append("2. Start query");
+		sb.append(System.getProperty("line.separator"));
+		sb.append("3. Stop query");
+		sb.append(System.getProperty("line.separator"));
+		sb.append("100. Exit");
+
+		uiText = sb.toString();
+		
+		StringBuilder sb2 = new StringBuilder();
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		sb.append(System.getProperty("line.separator"));
+		
+		emptyText = sb2.toString();
+	}
 	
 	private QueryManager qm;
 	private InfrastructureManager inf;
@@ -25,6 +63,32 @@ public class SimpleConsole implements UI{
 	
 	@Override
 	public void start() {
+		while(working){
+			try{
+				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+				String option = br.readLine();
+				switch(option){
+				case "1":
+					qm.deployQueryToNodes();
+					break;
+				case "2":
+					qm.startQuery();
+					break;
+				case "3":
+					qm.stopQuery();
+					break;
+				case "100":
+					//
+					break;
+				default:
+					//
+				}
+			}
+			catch(IOException io){
+				
+			}
+		}
+		
 //		LOG.info("-> Console, waiting for commands: ");
 //		try {
 //			boolean alive = true;
@@ -106,17 +170,10 @@ public class SimpleConsole implements UI{
 	}
 	
 	public void consoleOutputMessage(){
-		System.out.println("#############");
-		System.out.println("USER Console, choose an option");
-		System.out.println();
-		System.out.println("0- Submit query to the System");
-		System.out.println("1- Deploy query to Nodes");
-		System.out.println("2- Start system");
-//		System.out.println("3- Configure source rate");
-		System.out.println("4- Parallelize Operator Manually");
-		System.out.println("5- Stop system console (EXP)");
-		System.out.println("6- Exit");
-		System.out.println("10- Parse txt file to binary kryo");
+		// Shallow attempt to empty screen
+		System.out.println(emptyText);
+		// Print message
+		System.out.println(uiText);
 	}
 
 }

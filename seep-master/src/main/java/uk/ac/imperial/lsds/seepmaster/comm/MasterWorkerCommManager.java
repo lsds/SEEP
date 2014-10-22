@@ -31,7 +31,8 @@ public class MasterWorkerCommManager {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		listener = new Thread(new CommManagerWorker());
+		listener = new Thread(new CommMasterWorker());
+		listener.setName(CommMasterWorker.class.getName());
 	}
 	
 	public void start(){
@@ -44,7 +45,7 @@ public class MasterWorkerCommManager {
 		this.working = false;
 	}
 	
-	class CommManagerWorker implements Runnable{
+	class CommMasterWorker implements Runnable{
 
 		@Override
 		public void run() {

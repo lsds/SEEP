@@ -5,10 +5,9 @@ import java.net.UnknownHostException;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.BootstrapCommand;
-import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
-import uk.ac.imperial.lsds.seepmaster.infrastructure.master.PhysicalNode;
 import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
 
 public class MasterWorkerAPIImplementation {
@@ -25,12 +24,8 @@ public class MasterWorkerAPIImplementation {
 		InetAddress bootIp = InetAddress.getByName(arguments.get(BootstrapCommand.Arguments.IP));
 		int port = new Integer(arguments.get(BootstrapCommand.Arguments.PORT));
 		// Create execution unit of the necessary type, i.e. the one inf knows how to handle
-		ExecutionUnit eu = null;
-		if(inf.getExecutionUnitType().equals(ExecutionUnitType.PHYSICAL_NODE)){
-			eu = new PhysicalNode(bootIp, port);
-		}
+		ExecutionUnit eu = inf.buildExecutionUnit(new EndPoint(bootIp, port));
 		inf.addExecutionUnit(eu);
-		qm.increaseExecutionUnitsAvailable();
 		
 //		Node n = new Node(bootIp, port);
 //		//add node to the stack

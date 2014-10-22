@@ -35,16 +35,16 @@ public class Main {
 	}
 	
 	private void executeMaster(String[] args){
-		// Get the properties that apply
-		// TODO
-		QueryManager qm = QueryManager.getInstance();
+		// TODO: Get the properties that apply
+		// TODO: get inf type from config
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
-		// put this in the config manager
+		QueryManager qm = QueryManager.getInstance(inf);
+		// TODO: put this in the config manager
 		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);
 		MasterWorkerCommManager mwcm = new MasterWorkerCommManager(port, api);
 		mwcm.start();
-		UI ui = UIFactory.createUI(UIType.CONSOLE, qm, inf);
+		UI ui = UIFactory.createUI(UIType.SIMPLECONSOLE, qm, inf);
 		//OldMasterController mc = OldMasterController.getInstance();
 		//ManagerWorker manager = new ManagerWorker(this, port);
 		//Thread centralManagerT = new Thread(manager, "managerWorkerT");

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.api.LogicalOperator;
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
+import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 
 public class QueryManager {
 
@@ -21,36 +22,43 @@ public class QueryManager {
 	private String pathToQuery;
 	private LogicalSeepQuery lsq;
 	
-	private int executionUnitsAvailable = 0;
+	private InfrastructureManager inf;
+	
 	private int executionUnitsRequiredToStart;
 	
-	private QueryManager(){}
+	private QueryManager(InfrastructureManager inf){
+		this.inf = inf;
+	}
 	
-	public static QueryManager getInstance(){
+	public static QueryManager getInstance(InfrastructureManager inf){
 		if(qm == null){
-			return new QueryManager();
+			return new QueryManager(inf);
 		}
 		else{
 			return qm;
 		}
 	}
 	
-	public void increaseExecutionUnitsAvailable(){
-		executionUnitsAvailable++;
-	}
-	
-	public void decreaseExecutionUnitsAvailable(){
-		executionUnitsAvailable--;
-	}
-	
 	public boolean canStartExecution(){
-		return executionUnitsAvailable >= executionUnitsRequiredToStart;
+		return inf.executionUnitsAvailable() >= executionUnitsRequiredToStart;
 	}
 	
 	public void loadQueryFromFile(String pathToJar, String definitionClass){
 		this.pathToQuery = pathToJar;
 		this.lsq = executeComposeFromQuery(pathToJar, definitionClass);
 		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
+	}
+	
+	public void deployQueryToNodes(){
+		
+	}
+	
+	public void startQuery(){
+		
+	}
+	
+	public void stopQuery(){
+		
 	}
 	
 	private int computeRequiredExecutionUnits(LogicalSeepQuery lsq){
