@@ -24,19 +24,19 @@ public class LogicalSeepQuery {
 	
 	final private Logger LOG = LoggerFactory.getLogger(LogicalSeepQuery.class);
 	
-	private List<LogicalOperator> logicalOperators = new ArrayList<>();
-	private List<LogicalOperator> sources = new ArrayList<>();
-	private LogicalOperator sink;
+	private List<Operator> logicalOperators = new ArrayList<>();
+	private List<Operator> sources = new ArrayList<>();
+	private Operator sink;
 	private List<LogicalState> logicalStates = new ArrayList<>();
 	private Map<Integer, Integer> initialPhysicalInstancesPerOperator = new HashMap<>();
 	
-	public List<LogicalOperator> getAllOperators(){
+	public List<Operator> getAllOperators(){
 		return logicalOperators;
 	}
 	
-	public LogicalOperator getOperatorWithId(int opId){
-		for(LogicalOperator lo : logicalOperators){
-			if(lo.getLogicalOperatorId() == opId)
+	public Operator getOperatorWithId(int opId){
+		for(Operator lo : logicalOperators){
+			if(lo.getOperatorId() == opId)
 				return lo;
 		}
 		return null;
@@ -46,11 +46,11 @@ public class LogicalSeepQuery {
 		return logicalStates;
 	}
 	
-	public List<LogicalOperator> getSources(){
+	public List<Operator> getSources(){
 		return sources;
 	}
 	
-	public LogicalOperator getSink(){
+	public Operator getSink(){
 		return sink;
 	}
 	
@@ -79,14 +79,14 @@ public class LogicalSeepQuery {
 	}
 	
 	public LogicalOperator newStatefulOperator(SeepTask seepTask, LogicalState state, int opId){
-		LogicalOperator lo = SeepQueryOperator.newStatefulOperator(opId, seepTask, state);
+		LogicalOperator lo = SeepQueryLogicalOperator.newStatefulOperator(opId, seepTask, state);
 		logicalOperators.add(lo);
 		logicalStates.add(state);
 		return lo;
 	}
 	
 	public LogicalOperator newStatelessOperator(SeepTask seepTask, int opId){
-		LogicalOperator lo = SeepQueryOperator.newStatelessOperator(opId, seepTask);
+		LogicalOperator lo = SeepQueryLogicalOperator.newStatelessOperator(opId, seepTask);
 		logicalOperators.add(lo);
 		return lo;
 	}

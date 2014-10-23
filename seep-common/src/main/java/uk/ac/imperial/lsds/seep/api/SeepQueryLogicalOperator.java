@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.seep.api;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SeepQueryOperator implements LogicalOperator {
+public class SeepQueryLogicalOperator implements LogicalOperator {
 
 	private int opId;
 	private String name;
@@ -14,14 +14,14 @@ public class SeepQueryOperator implements LogicalOperator {
 	private List<DownstreamConnection> downstream = new ArrayList<DownstreamConnection>();
 	private List<UpstreamConnection> upstream = new ArrayList<UpstreamConnection>();
 	
-	private SeepQueryOperator(int opId, SeepTask task, String name){
+	private SeepQueryLogicalOperator(int opId, SeepTask task, String name){
 		this.opId = opId;
 		this.task = task;
 		this.name = name;
 		this.stateful = false;
 	}
 	
-	private SeepQueryOperator(int opId, SeepTask task, LogicalState state, String name){
+	private SeepQueryLogicalOperator(int opId, SeepTask task, LogicalState state, String name){
 		this.opId = opId;
 		this.task = task;
 		this.name = name;
@@ -31,29 +31,29 @@ public class SeepQueryOperator implements LogicalOperator {
 	
 	public static LogicalOperator newStatelessOperator(int opId, SeepTask task){
 		String name = new Integer(opId).toString();
-		return SeepQueryOperator.newStatelessOperator(opId, task, name);
+		return SeepQueryLogicalOperator.newStatelessOperator(opId, task, name);
 	}
 	
 	public static LogicalOperator newStatelessOperator(int opId, SeepTask task, String name){
-		return new SeepQueryOperator(opId, task, name);
+		return new SeepQueryLogicalOperator(opId, task, name);
 	}
 	
 	public static LogicalOperator newStatefulOperator(int opId, SeepTask task, LogicalState state){
 		String name = new Integer(opId).toString();
-		return SeepQueryOperator.newStatefulOperator(opId, task, state, name);
+		return SeepQueryLogicalOperator.newStatefulOperator(opId, task, state, name);
 	}
 	
 	public static LogicalOperator newStatefulOperator(int opId, SeepTask task, LogicalState state, String name){
-		return new SeepQueryOperator(opId, task, state, name);
+		return new SeepQueryLogicalOperator(opId, task, state, name);
 	}
 	
 	@Override
-	public int getLogicalOperatorId() {
+	public int getOperatorId() {
 		return opId;
 	}
 
 	@Override
-	public String getLogicalOperatorName() {
+	public String getOperatorName() {
 		return name;
 	}
 
@@ -83,27 +83,27 @@ public class SeepQueryOperator implements LogicalOperator {
 	}
 
 	@Override
-	public void connectTo(LogicalOperator downstreamOperator, int streamId) {
+	public void connectTo(Operator downstreamOperator, int streamId) {
 		this.connectTo(downstreamOperator, streamId, ConnectionType.ONE_AT_A_TIME);
 	}
 
 	@Override
-	public void connectTo(LogicalOperator downstreamOperator, int streamId,
+	public void connectTo(Operator downstreamOperator, int streamId,
 			ConnectionType connectionType) {
 		// Add downstream to this operator
 		this.addDownstream(downstreamOperator, streamId);
 		// Add this, as upstream, to the downstream operator
-		((SeepQueryOperator)downstreamOperator).addUpstream(this, connectionType, streamId);
+		((SeepQueryLogicalOperator)downstreamOperator).addUpstream(this, connectionType, streamId);
 	}
 	
 	/* Methods to manage logicalOperator connections */
 	
-	private void addDownstream(LogicalOperator lo, int streamId){
+	private void addDownstream(Operator lo, int streamId){
 		DownstreamConnection dc = new DownstreamConnection(lo, streamId);
 		this.downstream.add(dc);
 	}
 	
-	private void addUpstream(LogicalOperator lo, ConnectionType connectionType, int streamId){
+	private void addUpstream(Operator lo, ConnectionType connectionType, int streamId){
 		UpstreamConnection uc = new UpstreamConnection(lo, connectionType, streamId);
 		this.upstream.add(uc);
 	}
@@ -127,7 +127,7 @@ public class SeepQueryOperator implements LogicalOperator {
 		for(int i = 0; i<this.downstream.size(); i++){
 			DownstreamConnection down = downstream.get(i);
 			sb.append("  Down-conn-"+i+"-> StreamId: "+down.getStreamId()+" to opId: "
-					+ ""+down.getDownstreamLogicalOperator().getLogicalOperatorId());
+					+ ""+down.getDownstreamOperator().getOperatorId());
 			sb.append(ls);
 		}
 		sb.append("#Upstream: "+this.upstream.size());
@@ -135,7 +135,7 @@ public class SeepQueryOperator implements LogicalOperator {
 		for(int i = 0; i<this.upstream.size(); i++){
 			UpstreamConnection up = upstream.get(i);
 			sb.append("  Up-conn-"+i+"-> StreamId: "+up.getStreamId()+" to opId: "
-					+ ""+up.getUpstreamLogicalOperator().getLogicalOperatorId()+""
+					+ ""+up.getUpstreamOperator().getOperatorId()+""
 							+ " with connType: "+up.getConnectionType());
 			sb.append(ls);
 		}

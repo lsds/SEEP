@@ -2,15 +2,15 @@ package uk.ac.imperial.lsds.seep.api;
 
 public class DownstreamConnection {
 
-	private LogicalOperator downstreamLogicalOperator;
+	private Operator downstreamOperator;
 	private int streamId;
 
-	public LogicalOperator getDownstreamLogicalOperator() {
-		return downstreamLogicalOperator;
+	public Operator getDownstreamOperator() {
+		return downstreamOperator;
 	}
 
-	public void setDownstreamLogicalOperator(LogicalOperator downstreamLogicalOperator) {
-		this.downstreamLogicalOperator = downstreamLogicalOperator;
+	public void setDownstreamOperator(Operator downstreamOperator) {
+		this.downstreamOperator = downstreamOperator;
 	}
 
 	public int getStreamId() {
@@ -21,9 +21,13 @@ public class DownstreamConnection {
 		this.streamId = streamId;
 	}
 	
-	public DownstreamConnection(LogicalOperator downstreamLogicalOperator, int streamId){
-		this.setDownstreamLogicalOperator(downstreamLogicalOperator);
+	public DownstreamConnection(Operator downstreamOperator, int streamId){
+		this.setDownstreamOperator(downstreamOperator);
 		this.setStreamId(streamId);
+	}
+	
+	public void replaceOperator(Operator replacement){
+		this.downstreamOperator = replacement;
 	}
 	
 }

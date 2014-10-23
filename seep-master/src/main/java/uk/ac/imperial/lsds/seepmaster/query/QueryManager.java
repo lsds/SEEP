@@ -6,16 +6,22 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.api.LogicalOperator;
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
+import uk.ac.imperial.lsds.seep.api.Operator;
 import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
 import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
+import uk.ac.imperial.lsds.seep.api.SeepQueryPhysicalOperator;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
@@ -67,7 +73,7 @@ public class QueryManager {
 		}
 		// 1 create connections between operators
 		// get node, and put operator in node by assigning control and data socket, etc
-		createOriginalPhysicalQuery();
+		originalQuery = createOriginalPhysicalQuery();
 		// 2 create initial star topology
 		// stupid stuff
 		// 3 deploy code to nodes
@@ -81,23 +87,54 @@ public class QueryManager {
 		// send SET-RUNTIME command
 	}
 	
-	private void createOriginalPhysicalQuery(){
+	private PhysicalSeepQuery createOriginalPhysicalQuery(){
+		Set<SeepQueryPhysicalOperator> physicalOperators = new HashSet<>();
+		Map<Operator, List<Operator>> instancesPerOriginalOp = new HashMap<>();
 		// use pre-defined description if exists
 		if(this.opToEndpointMapping != null){
 			for(Entry<Integer, EndPoint> e : opToEndpointMapping.entrySet()){
-				LogicalOperator lo = lsq.getOperatorWithId(e.getKey());
-				if(lo != null) {
-					PhysicalOperator po = PhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lo, e.getValue());
-				}
+//				LogicalOperator lo = lsq.getOperatorWithId(e.getKey());
+//				if(lo != null) {
+//					SeepQueryPhysicalOperator po = SeepQueryPhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lo, e.getValue());
+//					physicalOperators.add(po);
+//				}
 			}
 		}
 		// otherwise map to random workers
 		else{
-			for(LogicalOperator lso : lsq.getAllOperators()){
+			for(Operator lso : lsq.getAllOperators()){
 				ExecutionUnit eu = inf.getExecutionUnit();
-				PhysicalOperator po = PhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lso, eu.getEndPoint());
+				SeepQueryPhysicalOperator po = SeepQueryPhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lso, eu.getEndPoint());
+				physicalOperators.add(po);
+				// get number of replicas
+				int numInstances = lsq.getInitialPhysicalInstancesForLogicalOperator(lso.getOperatorId());
+				int originalOpId = lso.getOperatorId();
+				for(int i = 0; i<numInstances; i++) {
+					int instanceOpId = getNewOpIdForInstance(originalOpId, i);
+					ExecutionUnit euInstance = inf.getExecutionUnit();
+					SeepQueryPhysicalOperator poInstance = SeepQueryPhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(instanceOpId, lso, euInstance.getEndPoint());
+					physicalOperators.add(poInstance);
+					addInstanceForOriginalOp(po, poInstance, instancesPerOriginalOp);
+				}
 			}
 		}
+		return PhysicalSeepQuery.buildPhysicalQueryFrom(physicalOperators, instancesPerOriginalOp, lsq);
+	}
+	
+	private void addInstanceForOriginalOp(SeepQueryPhysicalOperator po, SeepQueryPhysicalOperator newInstance, 
+			Map<Operator, List<Operator>> instancesPerOriginalOp) {
+		if(instancesPerOriginalOp.containsKey(po)) {
+			instancesPerOriginalOp.get(po).add(newInstance);
+		}
+		else{
+			List<Operator> newInstances = new ArrayList<>();
+			newInstances.add(newInstance);
+			instancesPerOriginalOp.put(po, newInstances);
+		}
+	}
+	
+	private int getNewOpIdForInstance(int opId, int it){
+		return opId * it + 1000;
 	}
 	
 	private void sendQueryInformationToNodes(){
@@ -114,8 +151,8 @@ public class QueryManager {
 	
 	private int computeRequiredExecutionUnits(LogicalSeepQuery lsq){
 		int totalInstances = 0;
-		for(LogicalOperator lo : lsq.getAllOperators()){
-			int opId = lo.getLogicalOperatorId();
+		for(Operator lo : lsq.getAllOperators()){
+			int opId = lo.getOperatorId();
 			if(lsq.hasSetInitialPhysicalInstances(opId)){
 				totalInstances += lsq.getInitialPhysicalInstancesForLogicalOperator(opId);
 			}

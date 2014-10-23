@@ -22,7 +22,7 @@ public class QueryBuilder implements QueryAPI {
 	}
 
 	@Override
-	public List<LogicalOperator> getQueryOperators() {
+	public List<Operator> getQueryOperators() {
 		return qp.getAllOperators();
 	}
 
@@ -37,12 +37,12 @@ public class QueryBuilder implements QueryAPI {
 	}
 
 	@Override
-	public List<LogicalOperator> getSources() {
+	public List<Operator> getSources() {
 		return qp.getSources();
 	}
 
 	@Override
-	public LogicalOperator getSink() {
+	public Operator getSink() {
 		return qp.getSink();
 	}
 
