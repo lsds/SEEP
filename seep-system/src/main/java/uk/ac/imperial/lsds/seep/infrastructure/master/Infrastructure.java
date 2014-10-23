@@ -146,6 +146,7 @@ public class Infrastructure {
         // We can only start the monitor master process at this point because
         // we need to know the scaling rules in advance. These are only accessible
         // through the QueryPlan.
+            
         LOG.debug("-> MonitorMaster running");
         MonitorMasterFactory factory = new MonitorMasterFactory(this, qp.getPolicyRules());
         monitorMaster = factory.create();

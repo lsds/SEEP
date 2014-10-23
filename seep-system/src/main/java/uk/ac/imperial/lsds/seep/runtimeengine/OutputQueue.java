@@ -40,6 +40,7 @@ public class OutputQueue {
 	private CoreRE owner = null;
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
+        
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
@@ -82,13 +83,13 @@ public class OutputQueue {
 	
 	
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
-            
-                System.out.println("Just got in sendToDownstream()");
+                //System.out.println("Hi, I'm: "+Thread.currentThread().getId());
+                
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
-		
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
+                
 		//Output for this socket
 		try{
 			//To send tuple
@@ -122,10 +123,12 @@ public class OutputQueue {
 					}
 					// Anf finally we reset the batch
 //					channelRecord.cleanBatch(); // RACE CONDITION ??
+
 					channelRecord.cleanBatch2();
 				}
 			}
 			//Is there any thread replaying?
+                        
 			while(replaySemaphore.get() >= 1){
 				//If so, wait.
 				synchronized(this){
@@ -137,8 +140,6 @@ public class OutputQueue {
 			LOG.error("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 			ie.printStackTrace();
 		}
-                
-                System.out.println("About to get out from sendToDownstream");
 	}
 	
 	public void replay(SynchronousCommunicationChannel oi){

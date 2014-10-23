@@ -156,7 +156,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		channelBatchSize = limit;
 	}
 	
-	public void cleanBatch2(){
+	public synchronized void cleanBatch2(){
 		batch = new BatchTuplePayload();
 	}
 	

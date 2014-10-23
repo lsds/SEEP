@@ -161,11 +161,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		this.multiCoreEnabled = multiCoreEnabled;
                 
                 int numCores = Runtime.getRuntime().availableProcessors() ;
-                if(numCores > 2 ){
-                    poolOfThreads = Executors.newFixedThreadPool( numCores ) ;
-                }else{
-                    poolOfThreads = Executors.newFixedThreadPool( 1 ) ;
-                }
+		int numThreads = (numCores - 2) > 1 ? (numCores-2) : 1;
+                poolOfThreads = Executors.newFixedThreadPool( numThreads ) ;
 	}
 	
 	public void setKeySpaceBounds(int minBound, int maxBound){

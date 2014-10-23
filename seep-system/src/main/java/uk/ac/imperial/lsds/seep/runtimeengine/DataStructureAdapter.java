@@ -69,7 +69,7 @@ public class DataStructureAdapter {
                 if (entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)) {
                     InputQueue iq = new InputQueue();
                     dsoMap.put(entry.getKey(), iq);
-                    LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
+                    System.out.println("-> Ingest with InputQueue from {}" + entry.getKey());
                 } else if (entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)) {
                     ///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
                     int originalOperatorOnBarrier = entry.getKey();

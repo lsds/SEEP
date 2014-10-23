@@ -33,6 +33,9 @@ import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import java.net.SocketException;
+import java.util.logging.Level;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 public class IncomingDataHandlerWorker implements Runnable{
 
@@ -53,6 +56,19 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.idxMapper = idxMapper;
 		this.dsa = dsa;
 		this.k = initializeKryo();
+            try {                
+                //int size = upstreamSocket.getReceiveBufferSize();
+                //System.out.println("Default socketRcvBufSize = " + size);
+                int so_rcvBuf = Integer.parseInt(GLOBALS.valueFor("socketRcvBufSize"));
+                if(so_rcvBuf > 0){
+                    upstreamSocket.setReceiveBufferSize(so_rcvBuf);
+                }
+                
+            } catch (SocketException ex) {
+                java.util.logging.Logger.getLogger(IncomingDataHandlerWorker.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            
 	}
 	
 	private Kryo initializeKryo(){
@@ -93,10 +109,12 @@ public class IncomingDataHandlerWorker implements Runnable{
 		
 		/** experimental sync **/
 		try{
+                    
+                        
 			// Get incomingOp id
 			int opId = owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress());
 			int originalOpId = owner.getOriginalUpstreamFromOpId(opId);
-			
+                        
 			DataStructureI dso = null;
 			if(dsa.getUniqueDso() != null){
 				dso = dsa.getUniqueDso();
@@ -108,15 +126,26 @@ public class IncomingDataHandlerWorker implements Runnable{
 			}
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
-			BufferedInputStream bis = new BufferedInputStream(is);
-			Input i = new Input(bis);
+                        
+                        int inputStreamBufSize = Integer.parseInt(GLOBALS.valueFor("inputStreamBufSize"));
+                        BufferedInputStream bis ;
+                        if(inputStreamBufSize < 0){
+                            bis = new BufferedInputStream(is); 
+                        }else{
+                            bis = new BufferedInputStream(is, inputStreamBufSize); 
+                        }
+			
+                        Input i = new Input(bis);
 			BatchTuplePayload batchTuplePayload = null;
 
 			long lastIncomingTs = -1;
 			
 			while(goOn){
-				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+                            
+                                batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+				
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
+                                
 				for(TuplePayload t_payload : batch){
 					long incomingTs = t_payload.timestamp;
 					// Check for already processed data
@@ -129,6 +158,8 @@ public class IncomingDataHandlerWorker implements Runnable{
 					owner.setTsData(opId, incomingTs);
 					lastIncomingTs = incomingTs;
 					//Put data in inputQueue
+
+                                        
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
 						
@@ -137,7 +168,10 @@ public class IncomingDataHandlerWorker implements Runnable{
 					else{
 						///\todo{check for garbage in the tcp buffers}
 					}
+                                        
+                                        
 				}
+                                
 			}
 			LOG.error("-> Data connection closing...");
 			upstreamSocket.close();

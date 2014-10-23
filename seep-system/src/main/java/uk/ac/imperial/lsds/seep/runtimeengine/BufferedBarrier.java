@@ -103,7 +103,8 @@ public class BufferedBarrier implements DataStructureI{
 //		}
                 int idx = upstreamOpId_mapper.get(upstreamOpId);
 		try {
-			buffers.get(idx).put(dt);
+                    buffers.get(idx).put(dt);
+			
 		}
 		catch (InterruptedException e) {
 			// TODO Auto-generated catch block

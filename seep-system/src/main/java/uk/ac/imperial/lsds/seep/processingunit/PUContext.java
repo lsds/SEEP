@@ -243,12 +243,26 @@ public class PUContext {
 		try{
 			if(type.equals("down")){
 				LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
-                                System.out.println("ip = " + ip.toString() + "port = " + portD);
+                                //System.out.println("ip = " + ip.toString() + "port = " + portD);
 				socketD = new Socket(ip, portD);
-				if(portC != 0){
+                                
+                                System.out.println("Default time-out:::" + "ip =" + ip.toString() + " port = " + portD + " ::: is " + socketD.getSoTimeout());
+                                socketD.setSoTimeout(100);
+                                System.out.println("After-set time-out:::" + "ip =" + ip.toString() + " port = " + portD + " ::: is " + socketD.getSoTimeout());
+				System.out.println("Default keep-alive flag: " + socketD.getKeepAlive());
+                                socketD.setKeepAlive(true);
+                                System.out.println("After-set keep-alive flag:::" + "ip =" + ip.toString() + " port = " + portD + " ::: is " + socketD.getKeepAlive());
+                                
+                                
+                                if(portC != 0){
 					socketC = new Socket(ip, portC);
 				}
-				
+                                System.out.println("SO_SNDBUF default = " + socketD.getSendBufferSize());
+                                int so_sndBuf = Integer.parseInt(GLOBALS.valueFor("socketSndBufSize")); 
+                                if(so_sndBuf > 0){
+                                    socketD.setSendBufferSize(so_sndBuf);
+                                }
+                                
 				Buffer buffer = new Buffer();
 				
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
