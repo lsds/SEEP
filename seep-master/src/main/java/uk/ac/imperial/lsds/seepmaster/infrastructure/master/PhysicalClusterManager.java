@@ -2,26 +2,23 @@ package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
-import uk.ac.imperial.lsds.seep.infrastructure.Node;
 
 public class PhysicalClusterManager implements InfrastructureManager {
 	
 	public final ExecutionUnitType executionUnitType = ExecutionUnitType.PHYSICAL_NODE;
 	private Deque<ExecutionUnit> physicalNodes;
 
+	public PhysicalClusterManager(){
+		this.physicalNodes = new ArrayDeque<>();
+	}
+	
 	@Override
 	public ExecutionUnit buildExecutionUnit(EndPoint ep) {
 		return new PhysicalNode(ep);
 	}
-	
-//	@Override
-//	public ExecutionUnitType getExecutionUnitType() {
-//		return executionUnitType;
-//	}
 	
 	@Override
 	public void addExecutionUnit(ExecutionUnit eu) {

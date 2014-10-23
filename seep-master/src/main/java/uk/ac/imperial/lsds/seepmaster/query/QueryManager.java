@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.Operator;
-import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
 import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.SeepQueryPhysicalOperator;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
@@ -41,6 +40,21 @@ public class QueryManager {
 	private Map<Integer, EndPoint> opToEndpointMapping;
 	
 	private int executionUnitsRequiredToStart;
+	
+	public PhysicalSeepQuery getOriginalPhysicalQuery(){
+		return originalQuery;
+	}
+	
+	public PhysicalSeepQuery getRuntimePhysicalQuery(){
+		return runtimeQuery;
+	}
+	
+	public QueryManager(LogicalSeepQuery lsq, InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
+		this.lsq = lsq;
+		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
+		this.inf = inf;
+		this.opToEndpointMapping = mapOpToEndPoint;
+	}
 	
 	private QueryManager(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
 		this.inf = inf;
@@ -68,7 +82,7 @@ public class QueryManager {
 	
 	public void deployQueryToNodes(){
 		// Check whether there are sufficient execution units to deploy query
-		if(! canStartExecution()){
+		if(!canStartExecution()){
 			// return error to UI
 		}
 		// 1 create connections between operators

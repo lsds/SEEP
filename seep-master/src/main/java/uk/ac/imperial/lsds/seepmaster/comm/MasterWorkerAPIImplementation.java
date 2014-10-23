@@ -21,8 +21,8 @@ public class MasterWorkerAPIImplementation {
 	}
 	
 	public void bootstrapCommand(Map<String, String> arguments) throws UnknownHostException {
-		InetAddress bootIp = InetAddress.getByName(arguments.get(BootstrapCommand.Arguments.IP));
-		int port = new Integer(arguments.get(BootstrapCommand.Arguments.PORT));
+		InetAddress bootIp = InetAddress.getByName(arguments.get(BootstrapCommand.Arguments.IP.argName()));
+		int port = new Integer(arguments.get(BootstrapCommand.Arguments.PORT.argName()));
 		// Create execution unit of the necessary type, i.e. the one inf knows how to handle
 		ExecutionUnit eu = inf.buildExecutionUnit(new EndPoint(bootIp, port));
 		inf.addExecutionUnit(eu);
