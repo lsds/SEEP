@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 
+import java.net.InetAddress;
+
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
 
@@ -10,9 +12,14 @@ public class PhysicalNode implements ExecutionUnit {
 	private EndPoint ep;
 	private int id;
 	
-	public PhysicalNode(EndPoint ep) {
-		this.ep = ep;
-		this.id = ep.getIp().hashCode() + ep.getPort();
+//	public PhysicalNode(EndPoint ep) {
+//		this.ep = ep;
+//		this.id = ep.getIp().hashCode() + ep.getPort();
+//	}
+
+	public PhysicalNode(InetAddress ip, int port) {
+		this.id = ip.hashCode() + port;
+		this.ep = new EndPoint(id, ip, port);
 	}
 
 	@Override

@@ -16,8 +16,8 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 	private EndPoint ep;
 	
 	private SeepQueryPhysicalOperator(int opId, String name, SeepTask seepTask, 
-									LogicalState state, List<DownstreamConnection> list, 
-									List<UpstreamConnection> list2, EndPoint ep) {
+									LogicalState state, List<DownstreamConnection> downstreamConnections, 
+									List<UpstreamConnection> upstreamConnections, EndPoint ep) {
 		this.opId = opId;
 		this.name = name;
 		this.seepTask = seepTask;
@@ -105,5 +105,10 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 			ConnectionType connectionType) {
 		// TODO REPLACEMENT IN THIS CASE
 		
+	}
+	
+	@Override
+	public int getIdOfWrappingExecutionUnit() {
+		return this.ep.getId();
 	}
 }

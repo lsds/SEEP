@@ -5,12 +5,12 @@ public class SeepQueryOperatorState implements LogicalState{
 	private int ownerId;
 	private SeepState state;
 	
-	private SeepQueryOperatorState(SeepState state, int ownerId){
+	private SeepQueryOperatorState(SeepState state, int ownerId) {
 		this.state = state;
 		this.ownerId = ownerId;
 	}
 	
-	public static LogicalState newState(SeepState state, int ownerId){
+	public static LogicalState newState(SeepState state, int ownerId) {
 		return new SeepQueryOperatorState(state, ownerId);
 	}
 	

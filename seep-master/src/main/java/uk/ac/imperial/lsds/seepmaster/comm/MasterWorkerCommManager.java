@@ -74,7 +74,8 @@ public class MasterWorkerCommManager {
 					if (MasterWorkerAPI.API.BOOTSTRAP.commandName().equals(commandCode)) {
 						LOG.info("Bootstrap command");
 						api.bootstrapCommand(commandArguments);
-					} else if (MasterWorkerAPI.API.CRASH.commandName().equals(commandCode)) {
+					} 
+					else if (MasterWorkerAPI.API.CRASH.commandName().equals(commandCode)) {
 						LOG.info("Crash command");
 						//TODO: implement
 					}

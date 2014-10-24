@@ -19,9 +19,15 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.Operator;
+import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
 import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.SeepQueryPhysicalOperator;
+import uk.ac.imperial.lsds.seep.comm.Connection;
+import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seep.util.Utils;
+import uk.ac.imperial.lsds.seepmaster.comm.Comm;
+import uk.ac.imperial.lsds.seepmaster.comm.CommunicationUtils;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 
@@ -32,14 +38,14 @@ public class QueryManager {
 	private static QueryManager qm;
 	private String pathToQuery;
 	private LogicalSeepQuery lsq;
-	
 	private PhysicalSeepQuery originalQuery;
 	private PhysicalSeepQuery runtimeQuery;
+	private int executionUnitsRequiredToStart;
 	
 	private InfrastructureManager inf;
 	private Map<Integer, EndPoint> opToEndpointMapping;
 	
-	private int executionUnitsRequiredToStart;
+	private final Comm comm;
 	
 	public PhysicalSeepQuery getOriginalPhysicalQuery(){
 		return originalQuery;
@@ -54,11 +60,13 @@ public class QueryManager {
 		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
 		this.inf = inf;
 		this.opToEndpointMapping = mapOpToEndPoint;
+		this.comm = new CommunicationUtils();
 	}
 	
 	private QueryManager(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
 		this.inf = inf;
 		this.opToEndpointMapping = mapOpToEndPoint;
+		this.comm = new CommunicationUtils();
 	}
 	
 	public static QueryManager getInstance(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
@@ -85,17 +93,14 @@ public class QueryManager {
 		if(!canStartExecution()){
 			// return error to UI
 		}
-		// 1 create connections between operators
-		// get node, and put operator in node by assigning control and data socket, etc
+		
 		originalQuery = createOriginalPhysicalQuery();
-		// 2 create initial star topology
-		// stupid stuff
-		// 3 deploy code to nodes
-		// read and send the actual code to all workers
 		// 4 deploy query to nodes
 		// first send starTopology
 		// send operator, serialization of operator
-		sendQueryInformationToNodes();
+		Set<Integer> involvedEUId = originalQuery.getIdOfEUInvolved();
+		Set<Connection> connections = inf.getConnectionsTo(involvedEUId);
+		sendQueryInformationToNodes(connections);
 		// after all nodes have operators, then send init (the one who activates connections)
 		// broadcast state so that they can register these states
 		// send SET-RUNTIME command
@@ -103,7 +108,7 @@ public class QueryManager {
 	
 	private PhysicalSeepQuery createOriginalPhysicalQuery(){
 		Set<SeepQueryPhysicalOperator> physicalOperators = new HashSet<>();
-		Map<Operator, List<Operator>> instancesPerOriginalOp = new HashMap<>();
+		Map<PhysicalOperator, List<PhysicalOperator>> instancesPerOriginalOp = new HashMap<>();
 		// use pre-defined description if exists
 		if(this.opToEndpointMapping != null){
 			for(Entry<Integer, EndPoint> e : opToEndpointMapping.entrySet()){
@@ -136,14 +141,14 @@ public class QueryManager {
 	}
 	
 	private void addInstanceForOriginalOp(SeepQueryPhysicalOperator po, SeepQueryPhysicalOperator newInstance, 
-			Map<Operator, List<Operator>> instancesPerOriginalOp) {
+			Map<PhysicalOperator, List<PhysicalOperator>> instancesPerOriginalOp) {
 		if(instancesPerOriginalOp.containsKey(po)) {
 			instancesPerOriginalOp.get(po).add(newInstance);
 		}
 		else{
-			List<Operator> newInstances = new ArrayList<>();
+			List<PhysicalOperator> newInstances = new ArrayList<>();
 			newInstances.add(newInstance);
-			instancesPerOriginalOp.put(po, newInstances);
+			instancesPerOriginalOp.put((PhysicalOperator)po, newInstances);
 		}
 	}
 	
@@ -151,7 +156,30 @@ public class QueryManager {
 		return opId * it + 1000;
 	}
 	
-	private void sendQueryInformationToNodes(){
+	private void sendQueryInformationToNodes(Set<Connection> connections){
+		
+		/**
+		 * what a worker expects
+		 * 
+		 * 1. send command "CODE"
+		 * 2. send actual code
+		 * 
+		 * 3. send starTopology
+		 * 4. send operator to only the specific node (instantiation)
+		 * 5. send in parallel the op id to specific node (initialization)
+		 * 6. broadcast state to all nodes
+		 * 
+		 * 7. sync. send command "SET-RUNTIME"
+		 * 
+		 */
+		
+		
+		// Send data file to nodes
+		byte[] queryFile = Utils.readDataFromFile(pathToQuery);
+		comm.send_sync("CODE", connections); // tell nodes we are sending code...
+		comm.send_async(queryFile, connections); // send the actual code...
+		comm.send_sync(originalQuery, connections, new JavaSerializer()); // send query to all of them...
+		comm.send_sync("SET-RUNTIME", connections);
 		
 	}
 	
