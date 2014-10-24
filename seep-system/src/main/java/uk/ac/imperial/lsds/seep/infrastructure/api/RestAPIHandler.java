@@ -44,26 +44,32 @@ public class RestAPIHandler extends AbstractHandler {
 
 		response.setContentType("application/json;charset=utf-8");
 		response.setStatus(HttpServletResponse.SC_OK);
+		response.setHeader("Access-Control-Allow-Origin", "*");
+		response.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT");
+
 		
-		if (baseRequest.getMethod().equals("GET")) {
-			if (this.restAPIRegistry.containsKey(target)) {
-				MultiMap<String> reqParameters = new MultiMap<>();
+		if (!this.restAPIRegistry.containsKey(target)) {
+			baseRequest.setHandled(true);
+			if (callback != null) 
+				response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.keySet()) + ")");
+			else 
+				response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.keySet()));
+		}
+		else {
+			if (baseRequest.getMethod().equals("GET")) {
 				baseRequest.setHandled(true);
-				baseRequest.getUri().decodeQueryTo(reqParameters);
 				if (callback != null) 
-					response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(reqParameters)) + ")");
+					response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(baseRequest.getParameters())) + ")");
 				else 
-					response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(reqParameters)));
+					response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(baseRequest.getParameters())));
 			}
-			else {
-				// default case: answer with a list of available keys
+			else if (baseRequest.getMethod().equals("POST")) {
 				baseRequest.setHandled(true);
 				if (callback != null) 
-					response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.keySet()) + ")");
+					response.getWriter().println(callback + "(" + mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(baseRequest.getParameters())) + ")");
 				else 
-					response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.keySet()));
+					response.getWriter().println(mapper.writeValueAsString(this.restAPIRegistry.get(target).getAnswer(baseRequest.getParameters())));
 			}
 		}
 	}
-
 }

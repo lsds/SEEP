@@ -2,9 +2,12 @@ package uk.ac.imperial.lsds.seep.contribs.esper;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +62,9 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 	private boolean enableLoggingOfMatches = true;	
 	private List<DataTuple> matchCache;
 	
-
+	private Queue<DataTuple> initCache;
+	private boolean initialised = false;
+	
 	public EsperSingleQueryOperator(String query, String url, String name) {
 		this.esperQuery = query;
 		this.esperEngineURL = url;
@@ -67,6 +72,7 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		if (enableLoggingOfMatches) {
 			this.matchCache = Collections.synchronizedList(new ArrayList<DataTuple>());
 		}
+		this.initCache = new LinkedList<DataTuple>();
 	}
 
 	public EsperSingleQueryOperator(String query, String url, String streamKey, String name, String[] typeBinding) {
@@ -80,7 +86,42 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 			this.typesPerStream.put(stream, getTypes(typeBinding.get(stream)));
 	}
 
+	public void initStatement() {
+		
+		if (statement != null) {
+			statement.removeAllListeners();
+			statement.destroy();
+		}
+		
+		log.info("Creating ESPER query...");
+		
+		/*
+		 * Build the ESPER statement
+		 */
+		statement = epService.getEPAdministrator().createEPL(this.esperQuery);
 
+		/*
+		 * Set a listener called when statement matches
+		 */
+		statement.addListener(new UpdateListener() {
+			@Override
+			public void update(EventBean[] newEvents, EventBean[] oldEvents) {
+				if (newEvents == null) {
+					// we don't care about events leaving the window (old
+					// events)
+					return;
+				}
+				for (EventBean theEvent : newEvents) {
+					sendOutput(theEvent);
+				}
+			}
+		});
+		
+		initialised = true;
+		log.info("Done with init: {}", this.esperQuery);
+	}
+
+	
 	@Override
 	public void setUp() {
 		/*
@@ -112,43 +153,23 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		epService = EPServiceProviderManager.getProvider(esperEngineURL,
 				configuration);
 
-		log.info("Creating ESPER query...");
-		
 		/*
-		 * Build the ESPER statement
+		 * Initialise the query statement
 		 */
-		statement = epService.getEPAdministrator().createEPL(this.esperQuery);
-
-		/*
-		 * Set a listener called when statement matches
-		 */
-		statement.addListener(new UpdateListener() {
-			@Override
-			public void update(EventBean[] newEvents, EventBean[] oldEvents) {
-				if (newEvents == null) {
-					// we don't care about events leaving the window (old
-					// events)
-					return;
-				}
-				for (EventBean theEvent : newEvents) {
-					sendOutput(theEvent);
-				}
-			}
-		});
+		initStatement();
 		
 		/*
 		 * Register rest API handler
 		 */
 		NodeManager.restAPIRegistry.put("/query", new RestAPIEsperGetQueryDesc(this));
 		NodeManager.restAPIRegistry.put("/matches", new RestAPIEsperGetMatches(this));
-		
+		NodeManager.restAPIRegistry.put("/query_update", new RestAPIEsperPostQueryUpdate(this));
 		
 	}
 	
 	protected void sendOutput(EventBean out) {
+		log.debug("Query returned a new result event: {}", out);
 		
-		log.info("Query returned a new result event: {}", out);
-
 		DataTuple output = new DataTuple(api.getDataMapper(), new TuplePayload());
 		List<Object> objects = new ArrayList<>();
 		
@@ -158,22 +179,38 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 				continue;
 			objects.add(value);
 		}
-		DataTuple t = output.setValues(objects.toArray());
+		DataTuple outTuple = output.setValues(objects.toArray());
+		outTuple.getPayload().timestamp = System.currentTimeMillis();
 		
-		log.info("Sending output {}", t.getPayload().attrValues);
+		log.debug("At {}, sending output {}", outTuple.getPayload().timestamp, outTuple.getPayload().attrValues);
 		
-		if (this.enableLoggingOfMatches)
-			matchCache.add(t);
+		if (this.enableLoggingOfMatches) {
+			long cutOffTime = System.currentTimeMillis() - 1000*60*20;
+			synchronized (matchCache) {
+				
+				matchCache.add(outTuple);
+				
+				// Remove old items
+				Iterator<DataTuple> iter = matchCache.iterator();
+				boolean run = true;
+				while (iter.hasNext() && run) {
+					DataTuple t = iter.next();
+					if (t.getPayload().timestamp < cutOffTime) {
+						iter.remove();
+					}
+					else {
+						run = false;
+					}
+				}
+			}
+		}
 		
-		api.send(t);
+		log.info("Match cache size: {}", this.matchCache.size());
+		
+		api.send(outTuple);
 	}
 
-	@Override
-	public void processData(DataTuple input) {
-
-		log.info("Received input tuple {}", input.toString());
-		log.info("Map of received input tuple {}", input.getMap().toString());
-		
+	public void sendData(DataTuple input) {
 		String stream = input.getString(STREAM_IDENTIFIER);
 		
 		Map<String, Object> item = new LinkedHashMap<String, Object>();
@@ -182,10 +219,27 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		for (String key : this.typesPerStream.get(stream).keySet()) 
 			item.put(key, input.getValue(key));
 		
-		log.info("Sending item {} with name '{}' to esper engine", item,
+		log.debug("Sending item {} with name '{}' to esper engine", item,
 				stream);
-
+		
 		epService.getEPRuntime().sendEvent(item, stream);		
+	}
+
+	@Override
+	public void processData(DataTuple input) {
+
+		log.debug("Received input tuple {}", input.toString());
+		log.debug("Map of received input tuple {}", input.getMap().toString());
+		
+		if (!initialised) {
+			this.initCache.add(input);
+		}
+		else {
+			while (!this.initCache.isEmpty()) {
+				sendData(this.initCache.poll());
+			}
+			sendData(input);
+		}
 	}
 
 	@Override
@@ -246,6 +300,14 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 
 	public String getEsperQuery() {
 		return esperQuery;
+	}
+
+	public void initWithNewEsperQuery(String query) {
+		log.info("init with new esper query: {}", query);
+		initialised = false;
+		this.esperQuery = query;
+		NodeManager.restAPIRegistry.put("/query", new RestAPIEsperGetQueryDesc(this));
+		initStatement();
 	}
 
 	public String getName() {

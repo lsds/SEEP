@@ -23,13 +23,12 @@ public class RestAPIEsperGetMatches implements RestAPIRegistryEntry {
 		List<DataTuple> cache = this.operator.getMatchCache();
 
 		/*
-		 * Should we keep the matches?
+		 * Should we keep all matches?
 		 */
 		boolean keep = false;
 		if (reqParameters.containsKey("keep"))
 			keep = Boolean.valueOf(reqParameters.getValue("keep",0));
 
-		
 		/*
 		 * Do we have a time window?
 		 */
@@ -51,6 +50,8 @@ public class RestAPIEsperGetMatches implements RestAPIRegistryEntry {
 					}
 				}
 			}
+			
+			
 			/*
 			 * Is there a step to consider?
 			 */

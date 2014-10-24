@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -27,19 +26,16 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ser.std.InetAddressSerializer;
-
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
+import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIHandler;
 import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPINodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIRegistryEntry;
-import uk.ac.imperial.lsds.seep.infrastructure.api.RestAPIHandler;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Infrastructure;
@@ -48,7 +44,6 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.MonitorSlave;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.MonitorSlaveFactory;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
-import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
@@ -86,9 +81,9 @@ public class NodeManager{
 //	public static void main(String[] args) {
 //
 //		NodeManager.restAPIRegistry = new HashMap<>();
-//		NodeManager.restAPIRegistry.put("/nodedescription", new RestAPINodeDescription(new WorkerNodeDescription(null, 1111)));
+//		NodeManager.restAPIRegistry.put("/query_update", new RestAPINodeDescription(new WorkerNodeDescription(null, 1111)));
 //		Server restAPIServer = new Server(8011);
-//		restAPIServer.setHandler(new RestAPIHandler());
+//		restAPIServer.setHandler(new RestAPIHandler(restAPIRegistry));
 //		try {
 //			restAPIServer.start();
 //			restAPIServer.join();
