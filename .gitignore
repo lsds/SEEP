@@ -16,7 +16,6 @@ seep-system/.settings/org.eclipse.jdt.core.prefs
 query.jar
 examples/stateless-simple-query/bin/*
 *.class
-*test*
 */bin/
 seep-system/examples/stateless-simple-query/.settings/
 seep-system/examples/stateless-simple-query/lib/*
