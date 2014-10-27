@@ -1,11 +1,17 @@
 package uk.ac.imperial.lsds.seepmaster;
 
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seepmaster.comm.Comm;
+import uk.ac.imperial.lsds.seepmaster.comm.IOComm;
 import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerAPIImplementation;
 import uk.ac.imperial.lsds.seepmaster.comm.MasterWorkerCommManager;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
@@ -43,7 +49,9 @@ public class Main {
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
 		// TODO: get file from config if exists and parse it to get a map from operator to endPoint
 		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
-		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint);
+		// TODO: from properties get serializer and type of thread pool and resources assigned to it
+		Comm comm = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
+		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint, comm);
 		// TODO: put this in the config manager
 		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);

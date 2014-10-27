@@ -5,7 +5,6 @@ import java.net.UnknownHostException;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.BootstrapCommand;
-import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 import uk.ac.imperial.lsds.seepmaster.query.QueryManager;

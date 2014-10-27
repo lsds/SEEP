@@ -23,11 +23,9 @@ import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
 import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.SeepQueryPhysicalOperator;
 import uk.ac.imperial.lsds.seep.comm.Connection;
-import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.util.Utils;
 import uk.ac.imperial.lsds.seepmaster.comm.Comm;
-import uk.ac.imperial.lsds.seepmaster.comm.CommunicationUtils;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 
@@ -55,23 +53,24 @@ public class QueryManager {
 		return runtimeQuery;
 	}
 	
-	public QueryManager(LogicalSeepQuery lsq, InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
+	public QueryManager(LogicalSeepQuery lsq, InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint,
+			Comm comm){
 		this.lsq = lsq;
 		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
 		this.inf = inf;
 		this.opToEndpointMapping = mapOpToEndPoint;
-		this.comm = new CommunicationUtils();
+		this.comm = comm;
 	}
 	
-	private QueryManager(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
+	private QueryManager(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint, Comm comm){
 		this.inf = inf;
 		this.opToEndpointMapping = mapOpToEndPoint;
-		this.comm = new CommunicationUtils();
+		this.comm = comm;
 	}
 	
-	public static QueryManager getInstance(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint){
+	public static QueryManager getInstance(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint, Comm comm){
 		if(qm == null){
-			return new QueryManager(inf, mapOpToEndPoint);
+			return new QueryManager(inf, mapOpToEndPoint, comm);
 		}
 		else{
 			return qm;
@@ -178,7 +177,7 @@ public class QueryManager {
 		byte[] queryFile = Utils.readDataFromFile(pathToQuery);
 		comm.send_sync("CODE", connections); // tell nodes we are sending code...
 		comm.send_async(queryFile, connections); // send the actual code...
-		comm.send_sync(originalQuery, connections, new JavaSerializer()); // send query to all of them...
+		comm.send_sync(originalQuery, connections); // send query to all of them...
 		comm.send_sync("SET-RUNTIME", connections);
 		
 	}

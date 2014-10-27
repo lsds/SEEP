@@ -3,9 +3,11 @@ package uk.ac.imperial.lsds.seepmaster.comm;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManagerFactory;
@@ -18,7 +20,8 @@ public class MasterWorkerAPIImplementationTest {
 	public void testBootstrap() {
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
 		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
-		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint);
+		Comm cu = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
+		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint, cu);
 		
 		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);
 		
