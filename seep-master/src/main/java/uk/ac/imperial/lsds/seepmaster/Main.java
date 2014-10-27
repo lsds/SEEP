@@ -1,8 +1,6 @@
 package uk.ac.imperial.lsds.seepmaster;
 
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
@@ -34,7 +32,11 @@ public class Main {
 		
 		Main instance = new Main();
 		
+		// TODO: Get the properties that apply
+		// TODO: parse config properly
+		
 		if(args.length == 0){
+			System.out.println("Usage Error:");
 			System.out.println("ARGS:");
 			System.out.println("<querySourceFile.jar> <MainClass>");
 			System.exit(0);
@@ -44,7 +46,6 @@ public class Main {
 	}
 	
 	private void executeMaster(String[] args){
-		// TODO: Get the properties that apply
 		// TODO: get inf type from config
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
 		// TODO: get file from config if exists and parse it to get a map from operator to endPoint

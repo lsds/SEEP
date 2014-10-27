@@ -16,6 +16,7 @@ import java.net.UnknownHostException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
 
 /**
@@ -32,49 +33,53 @@ public class Main {
 		
 		if(args.length == 0){
 			System.out.println("ARGS:");
-			System.out.println("Master <querySourceFile.jar> <policyRulesFile.jar> <MainClass>");
 			System.out.println("Worker <localPort>");
 			System.exit(0);
 		}
 
-		if(args[0].equals("Master")){
-			//instance.executeMaster(args);
-		}
-		else if(args[0].equals("Worker")){
-			//secondary receives port and ip of master node
-			instance.executeSec(args);
-		}
-		else{
-			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
-			System.exit(0);
-		}
+		instance.executeWorker(args);
+		
+//		if(args[0].equals("Master")){
+//			//instance.executeMaster(args);
+//		}
+//		else if(args[0].equals("Worker")){
+//			//secondary receives port and ip of master node
+//			instance.executeSec(args);
+//		}
+//		else{
+//			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
+//			System.exit(0);
+//		}
 	}
 	
-	private void executeSec(String args[]){
-		//Read parameters from properties
-		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
-		InetAddress bindAddr = null;
+	private void executeWorker(String args[]){
+		// TODO: Read parameters from properties
+		int masterPort = Integer.parseInt(GLOBALS.valueFor("mainPort"));
+		InetAddress masterIp = null;
 		try {
-			bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
+			masterIp = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
+		
 		int ownPort = 0;
-		if(args.length > 2){
+		
+		if(args.length > 1){
 			System.out.println("Error. Main Worker <listen_port(optional)>");
 			System.exit(0);
 		}
-		if(args.length > 1){
+		if(args.length > 0){
 			ownPort = new Integer(args[1]);
 		}
 		else{
 			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
 		}
 		
+		//EndPoint masterEndPoint = new EndPoint(masterIp, masterPort);
 		
 		// NodeManager instantiation
-		NodeManager nm = new NodeManager(port, bindAddr, ownPort);
+		NodeManager nm = new NodeManager(masterPort, masterIp, ownPort);
 		LOG.info("Initializing Node Manager...");
 		nm.init();
 		LOG.warn("NodeManager was remotely stopped");

@@ -128,7 +128,7 @@ public class NodeManagerCommunication {
 	public void sendBootstrapInformation(int port, InetAddress bindAddr, int ownPort){
 		try{
 			InetAddress ownIp = InetAddress.getLocalHost();
-			String command = "bootstrap "+(ownIp.getHostAddress()+" "+ownPort+"\n");
+			String command = "bootstrap ip:"+(ownIp.getHostAddress()+" port:"+ownPort+"\n");
 			LOG.info("--> Boot Info: {} to: {} on: {}", command, bindAddr, port);
 			Socket conn = new Socket(bindAddr, port);
 			(conn.getOutputStream()).write(command.getBytes());
