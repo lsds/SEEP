@@ -8,7 +8,7 @@ repositories {
 dependencies {
 	compile project(':seep-common')
 	compile project(':seep-master')
-	compile project(':seep-system')
+	compile project(':seep-worker')
 	compile 'javassist:javassist:3.12.1.GA'
 	compile name: 'soot-2.5.0' //local lib
 }
