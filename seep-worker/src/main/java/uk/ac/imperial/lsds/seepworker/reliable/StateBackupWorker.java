@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.processingunit.StateWrapper;
 import uk.ac.imperial.lsds.seepworker.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.DisposableCommunicationChannel;
@@ -151,7 +151,7 @@ public class StateBackupWorker implements Runnable, Serializable{
 						
 						System.out.println("STAR TOPOLOGY");
 						System.out.println("##############");
-						for(EndPoint dcc : processingUnit.getPuContext().getStarTopology()){
+						for(OldEndPoint dcc : processingUnit.getPuContext().getStarTopology()){
 							System.out.println((DisposableCommunicationChannel)dcc);
 						}
 						System.out.println("##############");

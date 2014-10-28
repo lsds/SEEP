@@ -13,9 +13,9 @@ package uk.ac.imperial.lsds.seepworker.runtimeengine;
 import java.io.Serializable;
 import java.net.InetAddress;
 
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 
-public class DisposableCommunicationChannel implements EndPoint, Serializable {
+public class DisposableCommunicationChannel implements OldEndPoint, Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private int opId;

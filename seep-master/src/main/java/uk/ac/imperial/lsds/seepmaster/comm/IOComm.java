@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectStreamClass;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeoutException;
 
 import uk.ac.imperial.lsds.seep.comm.Connection;
 import uk.ac.imperial.lsds.seep.comm.serialization.Serializer;
+import uk.ac.imperial.lsds.seep.infrastructure.ExtendedObjectOutputStream;
 
 public class IOComm implements Comm {
 
@@ -41,6 +43,8 @@ public class IOComm implements Comm {
 			String ack = in.readLine();
 			if(! ack.equals("ACK")){
 				// retry or something...
+				dos.close();
+				in.close();
 				return false;
 			}
 			dos.close();
@@ -250,6 +254,80 @@ public class IOComm implements Comm {
 	public void send_async_parallel(String data, Set<Connection> cs) {
 		byte[] d = s.serialize(data);
 		this.send_async_parallel(d, cs);
+	}
+
+	@Override
+	public boolean send_object_sync(Object data, Connection c) {
+		Socket connection = c.getOpenSocket();
+		ExtendedObjectOutputStream oos = null;
+		BufferedReader in = null;
+		
+		try {
+			oos = new ExtendedObjectOutputStream(connection.getOutputStream());
+			in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			oos.writeClassDescriptor(ObjectStreamClass.lookup(data.getClass()));
+			oos.writeObject(data);
+			
+			String ack = in.readLine();
+			
+			if(! ack.equals("ACK")){
+				// retry or something...
+				oos.close();
+				in.close();
+				return false;
+			}
+			oos.close();
+			in.close();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return true;	
+	}
+
+	@Override
+	public void send_object_async(Object data, Connection c) {
+		Socket connection = c.getOpenSocket();
+		ExtendedObjectOutputStream oos = null;
+		
+		try {
+			oos = new ExtendedObjectOutputStream(connection.getOutputStream());
+			oos.writeClassDescriptor(ObjectStreamClass.lookup(data.getClass()));
+			oos.writeObject(data);
+			oos.close();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void send_object_sync(Object data, Set<Connection> cs) {
+		for(Connection c : cs){
+			this.send_object_sync(data, c);
+		}
+	}
+
+	@Override
+	public void send_object_async(Object data, Set<Connection> cs) {
+		for(Connection c : cs){
+			this.send_object_async(data, c);
+		}
+	}
+
+	@Override
+	public boolean send_object_sync_parallel(Object data, Set<Connection> cs) {
+		// TODO Auto-generated method stub
+		
+		return false;
+	}
+
+	@Override
+	public void send_object_async_parallel(Object data, Set<Connection> cs) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 //	public boolean sendObject(Node n, int operatorId, Object o){

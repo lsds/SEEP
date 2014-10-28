@@ -52,7 +52,7 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ScaleInI
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seepworker.processingunit.IProcessingUnit;

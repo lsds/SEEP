@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+
 public class PhysicalSeepQuery {
 
 	private List<PhysicalOperator> physicalOperators;
@@ -47,6 +49,59 @@ public class PhysicalSeepQuery {
 			}
 		}
 		return new PhysicalSeepQuery(pOps, pSources, pSink, instancesPerOriginalOp);
+	}
+	
+	public List<PhysicalOperator> getOperators(){
+		return physicalOperators;
+	}
+	
+	public List<PhysicalOperator> getSources(){
+		return sources;
+	}
+	
+	public PhysicalOperator getSink(){
+		return sink;
+	}
+	
+	public PhysicalOperator getOperatorWithId(int opId){
+		for(PhysicalOperator po : this.physicalOperators){
+			if(po.getOperatorId() == opId){
+				return po;
+			}
+		}
+		return null;
+	}
+	
+	public PhysicalOperator getOperatorLivingInExecutionUnitId(int euId){
+		for(PhysicalOperator po : this.physicalOperators){
+			if(po.getIdOfWrappingExecutionUnit() == euId){
+				return po;
+			}
+		}
+		return null;
+	}
+	
+	public List<EndPoint> getMeshTopology(int euId){
+		List<EndPoint> meshTopology = new ArrayList<>();
+		for(PhysicalOperator po : physicalOperators) {
+			if( (!isSource(po)) && (!isSink(po)) && po.getOperatorId() != euId){
+				meshTopology.add(po.getWrappingEndPoint());
+			}
+		}
+		return meshTopology;
+	}
+	
+	private boolean isSource(PhysicalOperator po){
+		for(PhysicalOperator src : sources){
+			if(src.getOperatorId() == po.getOperatorId()){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean isSink(PhysicalOperator po){
+		return po.getOperatorId() == sink.getOperatorId();
 	}
 	
 	public Set<Integer> getIdOfEUInvolved(){

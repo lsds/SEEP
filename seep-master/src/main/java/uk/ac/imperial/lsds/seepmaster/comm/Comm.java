@@ -22,11 +22,19 @@ public interface Comm {
 	public void send_sync_parallel(String data, Set<Connection> cs);
 	public void send_async_parallel(String data, Set<Connection> cs);
 	
-	// Object serialization commands
+	// Object commands
 	public void send_sync(Object data, Connection c);
 	public void send_async(Object data, Connection c);
 	public void send_sync(Object data, Set<Connection> cs);
 	public void send_async(Object data, Set<Connection> cs);
 	public void send_sync_parallel(Object data, Set<Connection> cs);
 	public void send_async_parallel(Object data, Set<Connection> cs);
+	
+	// Object serialization commands
+	public boolean send_object_sync(Object data, Connection c);
+	public void send_object_async(Object data, Connection c);
+	public void send_object_sync(Object data, Set<Connection> cs);
+	public void send_object_async(Object data, Set<Connection> cs);
+	public boolean send_object_sync_parallel(Object data, Set<Connection> cs);
+	public void send_object_async_parallel(Object data, Set<Connection> cs);
 }

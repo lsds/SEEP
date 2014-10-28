@@ -39,7 +39,7 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seepworker.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.Node;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorContext.PlacedOperator;
@@ -66,7 +66,7 @@ public class CoreRE {
     
 	private PUContext puCtx = null;
 	private RuntimeClassLoader rcl = null;
-	private ArrayList<EndPoint> starTopology = null;
+	private ArrayList<OldEndPoint> starTopology = null;
 	
 	private int backupUpstreamIndex = -1;
 
@@ -128,7 +128,7 @@ public class CoreRE {
 	}
 	
 	/** Stores all the information concerning starTopology. In particular, this own operator is also included **/
-	public void pushStarTopology(ArrayList<EndPoint> starTopology){
+	public void pushStarTopology(ArrayList<OldEndPoint> starTopology){
 		// Store it here to enable async initialisation
 		this.starTopology = starTopology;
 		if(puCtx != null){
@@ -139,7 +139,7 @@ public class CoreRE {
 	}
 	
 	/** Retrieves all the information concerning the star topology **/
-	public ArrayList<EndPoint> getInitialStarTopology(){
+	public ArrayList<OldEndPoint> getInitialStarTopology(){
 		return starTopology;
 	}
 	

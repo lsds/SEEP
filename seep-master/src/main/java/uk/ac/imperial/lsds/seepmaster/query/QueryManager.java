@@ -123,6 +123,7 @@ public class QueryManager {
 			for(Operator lso : lsq.getAllOperators()){
 				ExecutionUnit eu = inf.getExecutionUnit();
 				SeepQueryPhysicalOperator po = SeepQueryPhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lso, eu.getEndPoint());
+				opToEndpointMapping.put(po.getOperatorId(), eu.getEndPoint());
 				physicalOperators.add(po);
 				// get number of replicas
 				int numInstances = lsq.getInitialPhysicalInstancesForLogicalOperator(lso.getOperatorId());
@@ -175,11 +176,20 @@ public class QueryManager {
 		
 		// Send data file to nodes
 		byte[] queryFile = Utils.readDataFromFile(pathToQuery);
-		comm.send_sync("CODE", connections); // tell nodes we are sending code...
+		comm.send_object_sync("CODE", connections); // tell nodes we are sending code...
 		comm.send_async(queryFile, connections); // send the actual code...
-		comm.send_sync(originalQuery, connections); // send query to all of them...
-		comm.send_sync("SET-RUNTIME", connections);
+		comm.send_object_async(originalQuery, connections); // send query to all of them...
 		
+		// FIXME: temporal for refactoring, a worker should know its operator by looking at the EU id.
+		for(Connection c : connections){
+			for(Entry<Integer, EndPoint> e : opToEndpointMapping.entrySet()){
+				if(e.getValue().getId() == c.getId()){
+					comm.send_object_sync(e.getKey(), c);
+				}
+			}
+		}
+		
+		comm.send_object_sync("SET-RUNTIME", connections);
 	}
 	
 	public void startQuery(){

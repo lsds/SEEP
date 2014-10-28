@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,10 @@ import org.slf4j.LoggerFactory;
 public class Utils {
 
 	final static private Logger LOG = LoggerFactory.getLogger(Utils.class);
+	
+	public static int computeIdFromIpAndPort(InetAddress ip, int port){
+		return ip.hashCode() + port;
+	}
 	
 	public static byte[] readDataFromFile(String path){
 		FileInputStream fis = null;

@@ -30,7 +30,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
 import uk.ac.imperial.lsds.seepworker.buffer.OutputBuffer;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seepworker.runtimeengine.AsynchronousCommunicationChannel;
@@ -48,15 +48,15 @@ public class PUContext {
 	
 	private final int CONTROL_SOCKET;
 	
-	private ArrayList<EndPoint> remoteUpstream = new ArrayList<EndPoint>();
-	private ArrayList<EndPoint> remoteDownstream = new ArrayList<EndPoint>();
+	private ArrayList<OldEndPoint> remoteUpstream = new ArrayList<OldEndPoint>();
+	private ArrayList<OldEndPoint> remoteDownstream = new ArrayList<OldEndPoint>();
 	//These structures are Vector because they are potentially accessed from more than one point at a time
 	/// \todo {refactor this to a synchronized map??}
-	private Vector<EndPoint> downstreamTypeConnection = null;
-	private Vector<EndPoint> upstreamTypeConnection = null;
+	private Vector<OldEndPoint> downstreamTypeConnection = null;
+	private Vector<OldEndPoint> upstreamTypeConnection = null;
 	
 	//The structure just stores the ip adresses of those nodes in the topology ready to receive state chunks
-	private ArrayList<EndPoint> starTopology = null;
+	private ArrayList<OldEndPoint> starTopology = null;
 	
 	// Selector for asynchrony in downstream connections
 	private Selector selector;
@@ -64,7 +64,7 @@ public class PUContext {
 	//map in charge of storing the buffers that this operator is using
 	private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
 	
-	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
+	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<OldEndPoint> starTopology){
 		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket")); 
 //		this.nodeDescr = nodeDescr;
 		this.starTopology = starTopology;
@@ -78,7 +78,7 @@ public class PUContext {
 	}
 	
 	public boolean isScalingOpDirectDownstream(int opId){
-		for(EndPoint ep : downstreamTypeConnection){
+		for(OldEndPoint ep : downstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
 				return true;
 			}
@@ -92,19 +92,19 @@ public class PUContext {
 	
 	public void filterStarTopology(int opId){
 		for(int i = 0; i < starTopology.size(); i++){
-			EndPoint ep = starTopology.get(i);
+			OldEndPoint ep = starTopology.get(i);
 			if(ep.getOperatorId() == opId){
 				starTopology.remove(i);
 			}
 		}
 	}
 	
-	public void updateStarTopology(ArrayList<EndPoint> starTopology){
+	public void updateStarTopology(ArrayList<OldEndPoint> starTopology){
 		this.starTopology = starTopology;
 	}
 
 	public DisposableCommunicationChannel getDCCfromOpIdInStarTopology(int opId){
-		for(EndPoint dcc : starTopology){
+		for(OldEndPoint dcc : starTopology){
 			if(dcc.getOperatorId() == opId){
 				return (DisposableCommunicationChannel)dcc;
 			}
@@ -112,13 +112,13 @@ public class PUContext {
 		return null;
 	}
 	
-	public ArrayList<EndPoint> getStarTopology(){
+	public ArrayList<OldEndPoint> getStarTopology(){
 		return starTopology;
 	}
 	
 	public ArrayList<OutputBuffer> getOutputBuffers(){
 		ArrayList<OutputBuffer> outputBuffers = new ArrayList<OutputBuffer>();
-		for(EndPoint ep : this.getDownstreamTypeConnection()){
+		for(OldEndPoint ep : this.getDownstreamTypeConnection()){
 			if(ep instanceof SynchronousCommunicationChannel){
 				outputBuffers.add(new OutputBuffer(((SynchronousCommunicationChannel) ep).getBatch(), ep.getOperatorId()));
 			}
@@ -126,11 +126,11 @@ public class PUContext {
 		return outputBuffers;
 	}
 	
-	public Vector<EndPoint> getDownstreamTypeConnection() {
+	public Vector<OldEndPoint> getDownstreamTypeConnection() {
 		return downstreamTypeConnection;
 	}
 	
-	public Vector<EndPoint> getUpstreamTypeConnection() {
+	public Vector<OldEndPoint> getUpstreamTypeConnection() {
 		return upstreamTypeConnection;
 	}
 	
@@ -151,8 +151,8 @@ public class PUContext {
 	
 	public void configureOperatorConnections(Operator op) {
 		
-		downstreamTypeConnection = new Vector<EndPoint>();
-		upstreamTypeConnection = new Vector<EndPoint>();
+		downstreamTypeConnection = new Vector<OldEndPoint>();
+		upstreamTypeConnection = new Vector<OldEndPoint>();
 		configureDownstreamAndUpstreamConnections(op);	
 	}
 	
@@ -283,14 +283,14 @@ public class PUContext {
 	
 	public SynchronousCommunicationChannel getCCIfromOpId(int opId, String type){
 		if(type.equals("d")){
-			for(EndPoint ep : downstreamTypeConnection){
+			for(OldEndPoint ep : downstreamTypeConnection){
 				if(ep.getOperatorId() == opId){
 					return (SynchronousCommunicationChannel)ep;
 				}
 			}
 		}
 		else if(type.equals("u")){
-			for(EndPoint ep : upstreamTypeConnection){
+			for(OldEndPoint ep : upstreamTypeConnection){
 				if(ep.getOperatorId() == opId){
 					return (SynchronousCommunicationChannel)ep;
 				}
@@ -316,7 +316,7 @@ public class PUContext {
 			controlPort = opToReconfigure.getOpContext().findDownstream(opId).location().getInC();
 		}
 	
-		for(EndPoint ep : downstreamTypeConnection){
+		for(OldEndPoint ep : downstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
 				try{
 					Socket dataS = new Socket(newIp, dataPort);
@@ -332,7 +332,7 @@ public class PUContext {
 				}
 			}
 		}
-		for(EndPoint ep : upstreamTypeConnection){
+		for(OldEndPoint ep : upstreamTypeConnection){
 			if(ep.getOperatorId() == opId){
 				int upControlPort = CONTROL_SOCKET + ep.getOperatorId();
 				try{

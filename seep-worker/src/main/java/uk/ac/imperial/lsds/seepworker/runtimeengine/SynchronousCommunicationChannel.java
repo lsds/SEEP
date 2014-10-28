@@ -22,14 +22,14 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
 import uk.ac.imperial.lsds.seepworker.buffer.OutputLogEntry;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 
 import com.esotericsoftware.kryo.io.Output;
 
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
 */
-public class SynchronousCommunicationChannel implements EndPoint{
+public class SynchronousCommunicationChannel implements OldEndPoint{
 
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;

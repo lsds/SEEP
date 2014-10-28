@@ -39,7 +39,7 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.processingunit.PUContext;
 import uk.ac.imperial.lsds.seepworker.reliable.MemoryChunk;
 
@@ -99,7 +99,7 @@ public class ControlDispatcher {
 	}
 
 	public void sendUpstream(ControlTuple ct, int index){
-		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
+		OldEndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
 		Output output = null;
 		try{
@@ -211,7 +211,7 @@ public class ControlDispatcher {
 	}
 	
 	public void sendUpstream_blind_metadata(int data, int index){
-		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
+		OldEndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
 		try{
 			DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
@@ -226,7 +226,7 @@ public class ControlDispatcher {
 	}
 	
 	public void sendDownstream(ControlTuple ct, int index){
-		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
+		OldEndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
 		if (obj instanceof SynchronousCommunicationChannel){
 			Socket socket = ((SynchronousCommunicationChannel) obj).getDownstreamControlSocket();
 			Output output = null;

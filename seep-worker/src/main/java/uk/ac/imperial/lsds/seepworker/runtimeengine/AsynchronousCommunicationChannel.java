@@ -20,12 +20,12 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
 import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 
-public class AsynchronousCommunicationChannel implements EndPoint{
+public class AsynchronousCommunicationChannel implements OldEndPoint{
 
 	private int opId;
 	private Buffer buf;

@@ -4,6 +4,7 @@ import java.net.InetAddress;
 
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
+import uk.ac.imperial.lsds.seep.util.Utils;
 
 public class PhysicalNode implements ExecutionUnit {
 
@@ -18,7 +19,7 @@ public class PhysicalNode implements ExecutionUnit {
 //	}
 
 	public PhysicalNode(InetAddress ip, int port) {
-		this.id = ip.hashCode() + port;
+		this.id = Utils.computeIdFromIpAndPort(ip, port);
 		this.ep = new EndPoint(id, ip, port);
 	}
 

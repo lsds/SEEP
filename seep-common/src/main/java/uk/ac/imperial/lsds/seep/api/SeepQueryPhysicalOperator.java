@@ -111,4 +111,9 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 	public int getIdOfWrappingExecutionUnit() {
 		return this.ep.getId();
 	}
+	
+	@Override
+	public EndPoint getWrappingEndPoint(){
+		return ep;
+	}
 }

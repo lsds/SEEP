@@ -10,7 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seepworker.operator;
 
-public interface EndPoint {
+public interface OldEndPoint {
 
 	public int getOperatorId();
 	

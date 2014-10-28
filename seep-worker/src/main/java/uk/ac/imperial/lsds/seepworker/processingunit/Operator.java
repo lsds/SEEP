@@ -20,14 +20,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.api.ConnectionType;
+import uk.ac.imperial.lsds.seep.api.SeepTask;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seepworker.comm.routing.Router;
 import uk.ac.imperial.lsds.seepworker.operator.Callback;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
 
-public class Operator implements Serializable, EndPoint, Connectable, Callback{
+public class Operator implements Serializable, OldEndPoint, Connectable, Callback{
 
 	private static final long serialVersionUID = 1L;
 	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
@@ -36,6 +37,12 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	private int originalOpId;
         
 	private final OperatorCode operatorCode;
+	
+	/**
+	 * refactoring
+	 */
+	private SeepTask seepTask;
+	
 	private final StateWrapper stateWrapper;
 	
 	private OperatorContext opContext = new OperatorContext();
@@ -52,8 +59,35 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		return new Operator(opId, opCode, attributes);
 	}
 	
+	public static Operator getStatelessOperator(int opId, SeepTask st){
+		return new Operator(opId, st);
+	}
+	
+	@Deprecated
 	public OperatorCode getOperatorCode(){
 		return operatorCode;
+	}
+	
+	/**
+	 * refactoring
+	 */
+	public SeepTask getSeepTask(){
+		return seepTask;
+	}
+	
+	/**
+	 * while refactoring
+	 * @param opId
+	 * @param opCode
+	 * @param attributes
+	 */
+	private Operator(int opId, SeepTask st){
+		this.operatorId = opId;
+		this.operatorCode = null;
+		this.stateWrapper = null;
+		opContext.setDeclaredWorkingAttributes(null);
+		this.originalOpId = opId;
+		this.seepTask = st;
 	}
 	
 	private Operator(int opId, OperatorCode opCode, List<String> attributes){
@@ -61,7 +95,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.operatorCode = opCode;
 		this.stateWrapper = null;
 		opContext.setDeclaredWorkingAttributes(attributes);
-                this.originalOpId = opId;
+        this.originalOpId = opId;
 	}
 	
 	private Operator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
@@ -69,16 +103,16 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.operatorCode = opCode;
 		this.stateWrapper = s;
 		opContext.setDeclaredWorkingAttributes(attributes);
-                this.originalOpId = opId;
+        this.originalOpId = opId;
 	}
 
-        public void setOriginalOpId(int x){
-            originalOpId = x ;
-        }
-        
-        public int getOriginalOpId(){
-            return originalOpId;
-        }
+    public void setOriginalOpId(int x){
+        originalOpId = x ;
+    }
+    
+    public int getOriginalOpId(){
+        return originalOpId;
+    }
 	
 	/** Other methods **/
 	
@@ -123,13 +157,13 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		processingUnit.sendData(dt, targets);
 	}
         
-        public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
-                ArrayList<Integer> targets = new ArrayList<>();
-                for(int idx : idxs){
-                    targets.add(idx);
-                }
-                processingUnit.sendPartitionedData(dts, targets);
+    public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
+        ArrayList<Integer> targets = new ArrayList<>();
+        for(int idx : idxs){
+            targets.add(idx);
         }
+        processingUnit.sendPartitionedData(dts, targets);
+    }
 	
 	// Send downstream to stateful partitionable operator
 	public synchronized void send_splitKey(DataTuple dt, int key){
@@ -235,15 +269,27 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	}
 	
 	public void processData(DataTuple data){
-		operatorCode.processData(data);
+		/**
+		 * refactoring
+		 */
+		//operatorCode.processData(data);
+		seepTask.processData(data);
 	}
 	
 	public void processData(ArrayList<DataTuple> dataList){
-		operatorCode.processData(dataList);
+		/**
+		 * refactoring
+		 */
+		//operatorCode.processData(dataList);
+		seepTask.processData(dataList);
 	}
 	
 	public void setUp(){
-		operatorCode.setUp();
+		/**
+		 * refactoring
+		 */
+		//operatorCode.setUp();
+		seepTask.setUp();
 	}
 
 	@Override

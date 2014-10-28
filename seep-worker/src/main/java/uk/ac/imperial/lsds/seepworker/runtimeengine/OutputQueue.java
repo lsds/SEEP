@@ -27,7 +27,7 @@ import uk.ac.imperial.lsds.seepworker.GLOBALS;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
 import uk.ac.imperial.lsds.seepworker.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
@@ -81,7 +81,7 @@ public class OutputQueue {
 	}
 	
 	
-	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
+	public synchronized void sendToDownstream(DataTuple tuple, OldEndPoint dest) {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		Buffer buffer = channelRecord.getBuffer();

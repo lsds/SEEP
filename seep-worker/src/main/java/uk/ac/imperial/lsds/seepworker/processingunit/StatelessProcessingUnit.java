@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seepworker.buffer.Buffer;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seepworker.reliable.ACKWorker;
@@ -251,7 +251,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			int target = targets.get(i);
 			try{
 //System.out.println("SEND TO: "+target+" SIZE: "+ctx.getDownstreamTypeConnection().size()+" targetSize: "+targets.size());
-				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+				OldEndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){
 					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
@@ -300,7 +300,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                 taskList.add(new Callable() {
                     public Object call() throws Exception {
                         
-                        EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+                        OldEndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 
                         // REMOTE ASYNC
                         if (dest instanceof AsynchronousCommunicationChannel) {
@@ -350,7 +350,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                 taskList.add(new Callable() {
                     public Object call() throws Exception {
                         
-                        EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+                        OldEndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 
                         // REMOTE ASYNC
                         if (dest instanceof AsynchronousCommunicationChannel) {

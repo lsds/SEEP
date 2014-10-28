@@ -41,7 +41,7 @@ import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.ControlT
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seepworker.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
-import uk.ac.imperial.lsds.seepworker.operator.EndPoint;
+import uk.ac.imperial.lsds.seepworker.operator.OldEndPoint;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorContext;
 import uk.ac.imperial.lsds.seepworker.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seepworker.operator.StatefulOperator;
@@ -385,7 +385,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		for(int i = 0; i<targets.size(); i++){
 			int target = targets.get(i);
 			try{
-				EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+				OldEndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 				// REMOTE ASYNC
 				if(dest instanceof AsynchronousCommunicationChannel){
 					((AsynchronousCommunicationChannel)dest).writeDataToOutputBuffer(dt);
@@ -444,7 +444,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
                 taskList.add(new Callable() {
                     public Object call() throws Exception {
                         
-                        EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+                        OldEndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 
                         // REMOTE ASYNC
                         if (dest instanceof AsynchronousCommunicationChannel) {
@@ -494,7 +494,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
                 taskList.add(new Callable() {
                     public Object call() throws Exception {
                         
-                        EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
+                        OldEndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 
                         // REMOTE ASYNC
                         if (dest instanceof AsynchronousCommunicationChannel) {
