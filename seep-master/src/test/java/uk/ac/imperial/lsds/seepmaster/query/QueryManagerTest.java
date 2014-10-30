@@ -7,10 +7,10 @@ import org.junit.Test;
 
 import uk.ac.imperial.lsds.seep.api.BaseTest;
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
+import uk.ac.imperial.lsds.seep.comm.Comm;
+import uk.ac.imperial.lsds.seep.comm.IOComm;
 import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
-import uk.ac.imperial.lsds.seepmaster.comm.Comm;
-import uk.ac.imperial.lsds.seepmaster.comm.IOComm;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManagerFactory;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureType;

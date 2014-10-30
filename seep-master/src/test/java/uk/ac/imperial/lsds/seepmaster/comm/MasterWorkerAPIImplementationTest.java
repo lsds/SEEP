@@ -7,6 +7,8 @@ import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
+import uk.ac.imperial.lsds.seep.comm.Comm;
+import uk.ac.imperial.lsds.seep.comm.IOComm;
 import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;

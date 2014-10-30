@@ -1,8 +1,6 @@
-package uk.ac.imperial.lsds.seepmaster.comm;
+package uk.ac.imperial.lsds.seep.comm;
 
 import java.util.Set;
-
-import uk.ac.imperial.lsds.seep.comm.Connection;
 
 public interface Comm {
 
@@ -37,4 +35,5 @@ public interface Comm {
 	public void send_object_async(Object data, Set<Connection> cs);
 	public boolean send_object_sync_parallel(Object data, Set<Connection> cs);
 	public void send_object_async_parallel(Object data, Set<Connection> cs);
+	
 }

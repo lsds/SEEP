@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seepmaster.comm;
+package uk.ac.imperial.lsds.seep.comm;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -17,7 +17,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import uk.ac.imperial.lsds.seep.comm.Connection;
 import uk.ac.imperial.lsds.seep.comm.serialization.Serializer;
 import uk.ac.imperial.lsds.seep.infrastructure.ExtendedObjectOutputStream;
 

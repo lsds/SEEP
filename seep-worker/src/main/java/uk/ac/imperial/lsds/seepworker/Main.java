@@ -16,7 +16,9 @@ import java.net.UnknownHostException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.comm.Connection;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seep.util.Utils;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
 
 /**
@@ -63,8 +65,14 @@ public class Main {
 			e.printStackTrace();
 		}
 		
-		int ownPort = 0;
+		// Get connection to master node
+		int masterId = Utils.computeIdFromIpAndPort(masterIp, masterPort);
+		Connection masterConnection = new Connection(new EndPoint(masterId, masterIp, masterPort));
 		
+		// TODO: store execution unit type -> got from properties, just in case
+		
+		// TODO: get own port from properties
+		int ownPort = 0;
 		if(args.length > 1){
 			System.out.println("Error. Main Worker <listen_port(optional)>");
 			System.exit(0);
@@ -75,8 +83,6 @@ public class Main {
 		else{
 			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
 		}
-		
-		//EndPoint masterEndPoint = new EndPoint(masterIp, masterPort);
 		
 		// NodeManager instantiation
 		NodeManager nm = new NodeManager(masterPort, masterIp, ownPort);
