@@ -1,6 +1,5 @@
 dependencies {
 	compile project(':seep-common')
-	compile 'com.esotericsoftware:kryo:3.0.0'
 	compile 'com.codahale.metrics:metrics-core:3.0.1'
 	compile 'com.codahale.metrics:metrics-jvm:3.0.1'
 	compile 'com.outr.javasysmon:javasysmon_2.10:0.3.4'

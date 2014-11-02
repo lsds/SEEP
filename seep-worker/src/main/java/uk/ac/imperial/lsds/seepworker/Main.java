@@ -11,6 +11,7 @@
 package uk.ac.imperial.lsds.seepworker;
 
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 
 import org.slf4j.Logger;
@@ -18,7 +19,10 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.Connection;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seep.infrastructure.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.util.Utils;
+import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterAPIImplementation;
+import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterCommManager;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
 
 /**
@@ -33,7 +37,7 @@ public class Main {
 		
 		Main instance = new Main();
 		
-		if(args.length == 0){
+		if(args.length > 1){
 			System.out.println("ARGS:");
 			System.out.println("Worker <localPort>");
 			System.exit(0);
@@ -57,9 +61,11 @@ public class Main {
 	private void executeWorker(String args[]){
 		// TODO: Read parameters from properties
 		int masterPort = Integer.parseInt(GLOBALS.valueFor("mainPort"));
+		masterPort = 3500;
 		InetAddress masterIp = null;
 		try {
 			masterIp = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
+			masterIp = InetAddress.getByName("192.168.1.8");
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -82,7 +88,14 @@ public class Main {
 		}
 		else{
 			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
+			ownPort = 3501;
 		}
+		
+		// Create workerMaster comm manager
+		WorkerMasterAPIImplementation api = new WorkerMasterAPIImplementation();
+		RuntimeClassLoader rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
+		
+		WorkerMasterCommManager wmcm = new WorkerMasterCommManager(ownPort, api, rcl);
 		
 		// NodeManager instantiation
 		NodeManager nm = new NodeManager(masterPort, masterIp, ownPort);

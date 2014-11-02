@@ -7,7 +7,8 @@ public class MasterWorkerAPI {
 
 	public enum API{
 		BOOTSTRAP(new BootstrapCommand()),
-		CRASH(new CrashCommand());
+		CRASH(new CrashCommand()),
+		CODE(new CodeCommand());
 		
 		private Command c;
 		

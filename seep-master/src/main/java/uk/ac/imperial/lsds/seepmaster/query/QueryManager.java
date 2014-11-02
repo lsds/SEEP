@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seepmaster.query;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -83,7 +84,10 @@ public class QueryManager {
 	
 	public void loadQueryFromFile(String pathToJar, String definitionClass){
 		this.pathToQuery = pathToJar;
+		// get logical query
 		this.lsq = executeComposeFromQuery(pathToJar, definitionClass);
+		// get *all* classes required by that query and store their names
+		
 		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
 	}
 	
@@ -176,19 +180,9 @@ public class QueryManager {
 		
 		// Send data file to nodes
 		byte[] queryFile = Utils.readDataFromFile(pathToQuery);
-		comm.send_object_sync("CODE", connections); // tell nodes we are sending code...
+		comm.send_object_sync("code", connections); // tell nodes we are sending code...
 		comm.send_async(queryFile, connections); // send the actual code...
 		comm.send_object_async(originalQuery, connections); // send query to all of them...
-		
-		// FIXME: temporal for refactoring, a worker should know its operator by looking at the EU id.
-		for(Connection c : connections){
-			for(Entry<Integer, EndPoint> e : opToEndpointMapping.entrySet()){
-				if(e.getValue().getId() == c.getId()){
-					comm.send_object_sync(e.getKey(), c);
-				}
-			}
-		}
-		
 		comm.send_object_sync("SET-RUNTIME", connections);
 	}
 	
@@ -233,8 +227,10 @@ public class QueryManager {
 		try {
 			baseI = ucl.loadClass(definitionClass);
 			baseInstance = baseI.newInstance();
+			// FIXME: eliminate hardcoded name
 			compose = baseI.getDeclaredMethod("compose", (Class<?>[])null);
 			lsq = (LogicalSeepQuery) compose.invoke(baseInstance, (Object[])null);
+			ucl.close();
 		}
 		catch (SecurityException e) {
 			e.printStackTrace();
@@ -255,6 +251,9 @@ public class QueryManager {
 			e.printStackTrace();
 		} 
 		catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} 
+		catch (IOException e) {
 			e.printStackTrace();
 		}
 		//Finally we return the queryPlan

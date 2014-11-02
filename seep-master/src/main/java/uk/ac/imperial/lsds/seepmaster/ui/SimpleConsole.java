@@ -63,6 +63,7 @@ public class SimpleConsole implements UI{
 	
 	@Override
 	public void start() {
+		this.consoleOutputMessage();
 		while(working){
 			try{
 				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));

@@ -24,7 +24,7 @@ public class QueryManagerTest {
 		//Get logical seep query by composing the base class
 		LogicalSeepQuery lsq = bt.compose();
 		
-		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
+		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(0);
 		// TODO: get file from config if exists and parse it to get a map from operator to endPoint
 		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
 		Comm cu = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());

@@ -20,7 +20,7 @@ public class MasterWorkerAPIImplementationTest {
 
 	@Test
 	public void testBootstrap() {
-		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(InfrastructureType.PHYSICAL_CLUSTER);
+		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(0);
 		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
 		Comm cu = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
 		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint, cu);
