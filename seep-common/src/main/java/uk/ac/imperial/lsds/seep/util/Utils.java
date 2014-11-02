@@ -83,4 +83,11 @@ public class Utils {
 		return prop;
 	}
 	
+	public static Properties overwriteSecondPropertiesWithFirst(Properties commandLineProperties, Properties fileProperties) {
+		for(Object key : commandLineProperties.keySet()){
+			fileProperties.put(key, commandLineProperties.get(key));
+		}
+		return fileProperties;
+	}
+	
 }

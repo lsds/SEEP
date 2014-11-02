@@ -64,5 +64,11 @@ public class BootstrapCommand implements Command{
 	public int getTotalNumberArguments() {
 		return BootstrapCommand.Arguments.values().length + BootstrapCommand.OptArguments.values().length;
 	}
+	
+	public static String buildBootstrapCommand(String ip, int port){
+		String command = "bootstrap " + BootstrapCommand.Arguments.IP.key+": "
+						+BootstrapCommand.Arguments.PORT.key+": "+port;
+		return command;
+	}
 
 }

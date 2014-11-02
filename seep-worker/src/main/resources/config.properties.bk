@@ -1,0 +1,87 @@
+#-------------------------------------------------------------------------------
+# Copyright (c) 2014 Imperial College London
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+# 
+# Contributors:
+#     Raul Castro Fernandez - initial API and implementation
+#-------------------------------------------------------------------------------
+######################
+#INFRASTRUCTURE CONFIGURATION
+######################
+mainAddr = 146.169.12.182
+#mainAddr = 10.99.62.154
+mainPort = 3500
+ownPort = 3500
+
+######################
+#GENERAL PARAMS
+######################
+baseId = 50
+controlSocket = 50000
+dataSocket = 40000
+blindSocket = 60000
+inputQueueLength = 10000
+
+#####################
+#ACK-WORKER PARAMS
+#####################
+ackWorkerActive = true
+ackEmitInterval = 3000
+
+####################
+#FAULT TOLERANCE PARAMS
+####################
+! Checkpointing mode: {large-state, light-state}
+checkpointMode = light-state
+parallelRecovery = true
+eftMechanismEnabled = true
+ftDiskMode=true
+stateChunkSize=500000
+! eliminate this thing. debugging
+TTT=FALSE
+
+######################
+#MONITOR PARAMS
+######################
+monitorInterval = 5
+monitorManagerPort = 5555
+cpuUThreshold = 50
+numMaxAlerts = 2
+enableAutomaticScaleOut = true
+minimumTimeBetweenSplit = 6
+fileWithCpuU = OUT
+minimumNodesAvailable = 10
+
+######################
+#BATCHING CONFIGURATION
+######################
+!batch tupleSize in bytes
+tupleSize = 10
+!packet size in bytes
+packetSize = 16000
+batchLimit = 1
+!maximum latency allowed for a packet to be sent, in milliseconds
+maxLatencyAllowed = 250
+
+#######################
+#SYSTEM ARCHITECTURE
+# Do change this only if you know what you are doing
+#######################
+synchronousOutput = true
+multicoreSupport = false
+
+#####################
+#DEBUGGING
+####################
+INIT=true
+
+#######################
+#RESTful node API
+#######################
+!flag to enable/disable the API
+enableRestAPI = true
+!port over which the services are offered
+restAPIPort = 8081

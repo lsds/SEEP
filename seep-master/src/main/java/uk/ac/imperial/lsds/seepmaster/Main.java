@@ -25,16 +25,13 @@ import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
 import uk.ac.imperial.lsds.seepmaster.ui.UI;
 import uk.ac.imperial.lsds.seepmaster.ui.UIFactory;
 
-/**
-* Main. This can be executed as Main (master Node) or as secondary.
-*/
 
 public class Main {
 	
 	final private static Logger LOG = LoggerFactory.getLogger(Main.class);
 
 	private void executeMaster(String[] args, MasterConfig mc){
-		int infType = mc.getInt("deployment_target.type");
+		int infType = mc.getInt(MasterConfig.DEPLOYMENT_TARGET_TYPE);
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(infType);
 		// TODO: get file from config if exists and parse it to get a map from operator to endPoint
 		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
@@ -42,11 +39,11 @@ public class Main {
 		Comm comm = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
 		QueryManager qm = QueryManager.getInstance(inf, mapOperatorToEndPoint, comm);
 		// TODO: put this in the config manager
-		int port = mc.getInt("master.port");
+		int port = mc.getInt(MasterConfig.LISTENING_PORT);
 		MasterWorkerAPIImplementation api = new MasterWorkerAPIImplementation(qm, inf);
 		MasterWorkerCommManager mwcm = new MasterWorkerCommManager(port, api);
 		mwcm.start();
-		int uiType = mc.getInt("ui.type");
+		int uiType = mc.getInt(MasterConfig.UI_TYPE);
 		UI ui = UIFactory.createUI(uiType, qm, inf);
 		//OldMasterController mc = OldMasterController.getInstance();
 		//ManagerWorker manager = new ManagerWorker(this, port);
@@ -65,8 +62,8 @@ public class Main {
 			// Then we execute the compose method and get the QueryPlan back
 			//lsq = mc.executeComposeFromQuery(args[0], args[1]);
 			//lsq = qm.executeComposeFromQuery(args[0], args[1]);
-			String queryPathFile = mc.getString("query.file");
-			String baseClass = mc.getString("baseclass.name");
+			String queryPathFile = mc.getString(MasterConfig.QUERY_FILE);
+			String baseClass = mc.getString(MasterConfig.BASECLASS_NAME);
 			qm.loadQueryFromFile(queryPathFile, baseClass);
 			// Once we have the QueryPlan from the user submitted query, we submit the query plan to the MasterController
 			//mc.submitQuery(lsq);
@@ -76,8 +73,8 @@ public class Main {
 	
 	public static void main(String args[]){
 
-		List<ConfigKey> configKeys = MasterConfig.getAllConfigKey();
 		// Get Properties with command line configuration 
+		List<ConfigKey> configKeys = MasterConfig.getAllConfigKey();
 		OptionParser parser = new OptionParser();
 		parser.accepts("query.file", "Jar file with the compiled SEEP query").withRequiredArg();
 		parser.accepts("baseclass.name", "Name of the Base Class").withRequiredArg();
@@ -86,7 +83,7 @@ public class Main {
 		
 		// Get Properties with file configuration
 		Properties fileProperties = null;
-		if(commandLineProperties.containsKey("properties.file")){
+		if(commandLineProperties.containsKey(MasterConfig.PROPERTIES_FILE)){
 			String propertiesFile = commandLineProperties.getProperty("properties.file");
 			fileProperties = Utils.readPropertiesFromFile(propertiesFile, false);
 		}
@@ -95,17 +92,10 @@ public class Main {
 		}
 		
 		// Merge both properties, command line has preference
-		Properties validatedProperties = mergeProperties(commandLineProperties, fileProperties);
-		
+		Properties validatedProperties = Utils.overwriteSecondPropertiesWithFirst(commandLineProperties, fileProperties);
+		// TODO: validte properties, making sure all required are there
 		MasterConfig mc = new MasterConfig(validatedProperties);
 		Main instance = new Main();
 		instance.executeMaster(args, mc);
-	}
-	
-	private static Properties mergeProperties(Properties commandLineProperties, Properties fileProperties) {
-		for(Object key : commandLineProperties.keySet()){
-			fileProperties.put(key, commandLineProperties.get(key));
-		}
-		return fileProperties;
 	}
 }

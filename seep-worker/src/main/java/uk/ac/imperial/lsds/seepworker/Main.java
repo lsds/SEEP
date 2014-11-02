@@ -13,11 +13,21 @@ package uk.ac.imperial.lsds.seepworker;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.Executors;
+
+import joptsimple.OptionParser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.comm.Comm;
 import uk.ac.imperial.lsds.seep.comm.Connection;
+import uk.ac.imperial.lsds.seep.comm.IOComm;
+import uk.ac.imperial.lsds.seep.comm.serialization.JavaSerializer;
+import uk.ac.imperial.lsds.seep.config.CommandLineArgs;
+import uk.ac.imperial.lsds.seep.config.ConfigKey;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.infrastructure.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.util.Utils;
@@ -25,9 +35,6 @@ import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterAPIImplementation;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterCommManager;
 import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
 
-/**
-* Main. This can be executed as Main (master Node) or as secondary.
-*/
 
 public class Main {
 	
@@ -35,37 +42,36 @@ public class Main {
 	
 	public static void main(String args[]){
 		
-		Main instance = new Main();
+		// Get properties from command line
+		List<ConfigKey> configKeys = WorkerConfig.getAllConfigKey();
+		OptionParser parser = new OptionParser();
+		CommandLineArgs cla = new CommandLineArgs(args, parser, configKeys);
+		Properties commandLineProperties = cla.getProperties();
 		
-		if(args.length > 1){
-			System.out.println("ARGS:");
-			System.out.println("Worker <localPort>");
-			System.exit(0);
+		// Get properties from file, if any
+		Properties fileProperties = null;
+		if(commandLineProperties.containsKey("properties.file")){
+			String propertiesFile = commandLineProperties.getProperty("properties.file");
+			fileProperties = Utils.readPropertiesFromFile(propertiesFile, false);
 		}
-
-		instance.executeWorker(args);
+		else{
+			fileProperties = Utils.readPropertiesFromFile("config.properties", true);
+		}
 		
-//		if(args[0].equals("Master")){
-//			//instance.executeMaster(args);
-//		}
-//		else if(args[0].equals("Worker")){
-//			//secondary receives port and ip of master node
-//			instance.executeSec(args);
-//		}
-//		else{
-//			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
-//			System.exit(0);
-//		}
+		Properties validatedProperties = Utils.overwriteSecondPropertiesWithFirst(commandLineProperties, fileProperties);
+		//TODO: validate properties
+		
+		WorkerConfig wc = new WorkerConfig(validatedProperties);
+		Main instance = new Main();
+		instance.executeWorker(wc);
 	}
 	
-	private void executeWorker(String args[]){
+	private void executeWorker(WorkerConfig wc){
 		// TODO: Read parameters from properties
-		int masterPort = Integer.parseInt(GLOBALS.valueFor("mainPort"));
-		masterPort = 3500;
+		int masterPort = wc.getInt(WorkerConfig.MASTER_PORT);
 		InetAddress masterIp = null;
 		try {
-			masterIp = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
-			masterIp = InetAddress.getByName("192.168.1.8");
+			masterIp = InetAddress.getByName(wc.getString(WorkerConfig.MASTER_IP));
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -75,32 +81,31 @@ public class Main {
 		int masterId = Utils.computeIdFromIpAndPort(masterIp, masterPort);
 		Connection masterConnection = new Connection(new EndPoint(masterId, masterIp, masterPort));
 		
-		// TODO: store execution unit type -> got from properties, just in case
-		
-		// TODO: get own port from properties
-		int ownPort = 0;
-		if(args.length > 1){
-			System.out.println("Error. Main Worker <listen_port(optional)>");
-			System.exit(0);
-		}
-		if(args.length > 0){
-			ownPort = new Integer(args[1]);
-		}
-		else{
-			ownPort = Integer.parseInt(GLOBALS.valueFor("ownPort"));
-			ownPort = 3501;
-		}
+		int myPort = wc.getInt(WorkerConfig.LISTENING_PORT);
 		
 		// Create workerMaster comm manager
-		WorkerMasterAPIImplementation api = new WorkerMasterAPIImplementation();
+		Comm comm = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
+		WorkerMasterAPIImplementation api = new WorkerMasterAPIImplementation(comm, wc);
 		RuntimeClassLoader rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 		
-		WorkerMasterCommManager wmcm = new WorkerMasterCommManager(ownPort, api, rcl);
+		WorkerMasterCommManager wmcm = new WorkerMasterCommManager(myPort, api, rcl);
+		wmcm.start();
+		
+		// bootstrap
+		String myIp = null;
+		try {
+			myIp = InetAddress.getLocalHost().toString();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("about to call bootstrap");
+		api.bootstrap(masterConnection, myIp, myPort);
 		
 		// NodeManager instantiation
-		NodeManager nm = new NodeManager(masterPort, masterIp, ownPort);
-		LOG.info("Initializing Node Manager...");
-		nm.init();
-		LOG.warn("NodeManager was remotely stopped");
+		//NodeManager nm = new NodeManager(masterPort, masterIp, ownPort);
+		//LOG.info("Initializing Node Manager...");
+		//nm.init();
+		//LOG.warn("NodeManager was remotely stopped");
 	}
 }

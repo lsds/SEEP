@@ -60,6 +60,7 @@ public class MasterWorkerCommManager {
 					if(command == null){
 						//TODO: indicate error here
 					}
+					LOG.info("Received command: {}", command);
 					String[] commandTokens = command.split(" ");
 					String commandCode = commandTokens[0];
 					Map<String, String> commandArguments = MasterWorkerAPI.arrayToMap(commandTokens);
