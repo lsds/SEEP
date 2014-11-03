@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.seep.comm;
 
 import java.util.Set;
 
-public interface Command {
+public interface OldCommand {
 	
 	public String commandName();
 	public Set<String> getMandatoryArguments();

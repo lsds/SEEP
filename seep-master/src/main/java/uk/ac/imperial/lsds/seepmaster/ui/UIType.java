@@ -12,4 +12,5 @@ public enum UIType {
 	public int ofType(){
 		return type;
 	}
+	
 }

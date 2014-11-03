@@ -18,6 +18,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.kryo.Kryo;
+
 import uk.ac.imperial.lsds.seep.api.LogicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.Operator;
 import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
@@ -25,6 +27,9 @@ import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
 import uk.ac.imperial.lsds.seep.api.SeepQueryPhysicalOperator;
 import uk.ac.imperial.lsds.seep.comm.Comm;
 import uk.ac.imperial.lsds.seep.comm.Connection;
+import uk.ac.imperial.lsds.seep.comm.KryoFactory;
+import uk.ac.imperial.lsds.seep.comm.protocol.Command;
+import uk.ac.imperial.lsds.seep.comm.protocol.ProtocolCommandFactory;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.util.Utils;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.ExecutionUnit;
@@ -45,6 +50,7 @@ public class QueryManager {
 	private Map<Integer, EndPoint> opToEndpointMapping;
 	
 	private final Comm comm;
+	private final Kryo k;
 	
 	public PhysicalSeepQuery getOriginalPhysicalQuery(){
 		return originalQuery;
@@ -59,14 +65,17 @@ public class QueryManager {
 		this.lsq = lsq;
 		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
 		this.inf = inf;
+		
 		this.opToEndpointMapping = mapOpToEndPoint;
 		this.comm = comm;
+		this.k = KryoFactory.buildKryoForMasterWorkerProtocol();
 	}
 	
 	private QueryManager(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint, Comm comm){
 		this.inf = inf;
 		this.opToEndpointMapping = mapOpToEndPoint;
 		this.comm = comm;
+		this.k = KryoFactory.buildKryoForMasterWorkerProtocol();
 	}
 	
 	public static QueryManager getInstance(InfrastructureManager inf, Map<Integer, EndPoint> mapOpToEndPoint, Comm comm){
@@ -86,18 +95,22 @@ public class QueryManager {
 		this.pathToQuery = pathToJar;
 		// get logical query
 		this.lsq = executeComposeFromQuery(pathToJar, definitionClass);
+		LOG.debug("Logical query loaded: {}", lsq.toString());
 		// get *all* classes required by that query and store their names
-		
 		this.executionUnitsRequiredToStart = this.computeRequiredExecutionUnits(lsq);
+		LOG.info("New query requires: {} units to start execution", this.executionUnitsRequiredToStart);
 	}
 	
 	public void deployQueryToNodes(){
 		// Check whether there are sufficient execution units to deploy query
 		if(!canStartExecution()){
-			// return error to UI
+			LOG.warn("Cannot deploy query, not enough nodes. Required: {}, available: {}"
+					, executionUnitsRequiredToStart, inf.executionUnitsAvailable());
+			return;
 		}
-		
+		LOG.info("Building physicalQuery from logicalQuery...");
 		originalQuery = createOriginalPhysicalQuery();
+		LOG.debug("Building physicalQuery from logicalQuery...OK {}", originalQuery.toString());
 		// 4 deploy query to nodes
 		// first send starTopology
 		// send operator, serialization of operator
@@ -124,15 +137,22 @@ public class QueryManager {
 		}
 		// otherwise map to random workers
 		else{
+			this.opToEndpointMapping = new HashMap<>();
+			
 			for(Operator lso : lsq.getAllOperators()){
 				ExecutionUnit eu = inf.getExecutionUnit();
 				SeepQueryPhysicalOperator po = SeepQueryPhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(lso, eu.getEndPoint());
-				opToEndpointMapping.put(po.getOperatorId(), eu.getEndPoint());
+				int pOpId = po.getOperatorId();
+				EndPoint ep = eu.getEndPoint();
+				LOG.debug("LogicalOperator: {} will run on: {}", pOpId, ep.getId());
+				opToEndpointMapping.put(pOpId, ep);
 				physicalOperators.add(po);
 				// get number of replicas
 				int numInstances = lsq.getInitialPhysicalInstancesForLogicalOperator(lso.getOperatorId());
+				LOG.debug("LogicalOperator: {} requires {} executionUnits", lso.getOperatorId(), numInstances);
 				int originalOpId = lso.getOperatorId();
-				for(int i = 0; i<numInstances; i++) {
+				// Start with 1 because that's the minimum anyway
+				for(int i = 1; i < numInstances; i++) {
 					int instanceOpId = getNewOpIdForInstance(originalOpId, i);
 					ExecutionUnit euInstance = inf.getExecutionUnit();
 					SeepQueryPhysicalOperator poInstance = SeepQueryPhysicalOperator.createPhysicalOperatorFromLogicalOperatorAndEndPoint(instanceOpId, lso, euInstance.getEndPoint());
@@ -141,7 +161,8 @@ public class QueryManager {
 				}
 			}
 		}
-		return PhysicalSeepQuery.buildPhysicalQueryFrom(physicalOperators, instancesPerOriginalOp, lsq);
+		PhysicalSeepQuery psq = PhysicalSeepQuery.buildPhysicalQueryFrom(physicalOperators, instancesPerOriginalOp, lsq);
+		return psq;
 	}
 	
 	private void addInstanceForOriginalOp(SeepQueryPhysicalOperator po, SeepQueryPhysicalOperator newInstance, 
@@ -177,13 +198,20 @@ public class QueryManager {
 		 * 
 		 */
 		
-		
 		// Send data file to nodes
 		byte[] queryFile = Utils.readDataFromFile(pathToQuery);
-		comm.send_object_sync("code", connections); // tell nodes we are sending code...
-		comm.send_async(queryFile, connections); // send the actual code...
-		comm.send_object_async(originalQuery, connections); // send query to all of them...
-		comm.send_object_sync("SET-RUNTIME", connections);
+		LOG.info("Ready to send query file of size: {} bytes", queryFile.length);
+		//comm.send_object_sync("code", connections); // tell nodes we are sending code...
+		//comm.send_async(queryFile, connections); // send the actual code...
+		
+		Command code = ProtocolCommandFactory.buildCodeCommand(queryFile);
+		comm.send_object_sync(code, connections, k);
+		
+		Command queryDeploy = ProtocolCommandFactory.buildQueryDeployCommand(originalQuery);
+		comm.send_object_sync(queryDeploy, connections, k);
+		
+		//comm.send_object_async(originalQuery, connections); // send query to all of them...
+		//comm.send_object_sync("SET-RUNTIME", connections);
 	}
 	
 	public void startQuery(){
@@ -200,6 +228,10 @@ public class QueryManager {
 			int opId = lo.getOperatorId();
 			if(lsq.hasSetInitialPhysicalInstances(opId)){
 				totalInstances += lsq.getInitialPhysicalInstancesForLogicalOperator(opId);
+			}
+			else{
+				// At least one is required
+				totalInstances++;
 			}
 		}
 		return totalInstances;

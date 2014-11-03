@@ -3,9 +3,11 @@ package uk.ac.imperial.lsds.seep.util;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -19,6 +21,38 @@ public class Utils {
 	
 	public static int computeIdFromIpAndPort(InetAddress ip, int port){
 		return ip.hashCode() + port;
+	}
+	
+	public static File writeDataToFile(byte[] serializedFile, String fileName){
+		FileOutputStream fos;
+		try {
+			fos = new FileOutputStream(new File(fileName));
+			fos.write(serializedFile);
+			fos.close();
+		} 
+		catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} 
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		//At this point we should have the file on disk
+		File pathToCode = new File(fileName);
+		if(!pathToCode.exists()){
+			return null;
+		}
+		return pathToCode;
+		
+//		if(pathToCode.exists()){
+//			LOG.info("-> Loading CODE from: {}", pathToCode.getAbsolutePath());
+//			loadCodeToRuntime(pathToCode);
+//			/**
+//			 * if we get all the names of the classes to load, we can iterate and load them now, right?
+//			 */
+//		}
+//		else{
+//			LOG.error("-> No access to the CODE");
+//		}
 	}
 	
 	public static byte[] readDataFromFile(String path){
@@ -37,6 +71,8 @@ public class Utils {
 			//Check if we have read correctly
 			if(readBytesFromFile != fileSize){
 				LOG.warn("Mismatch between read bytes and file size");
+				fis.close();
+				return null;
 			}
 			//Close the stream
 			fis.close();
@@ -88,6 +124,18 @@ public class Utils {
 			fileProperties.put(key, commandLineProperties.get(key));
 		}
 		return fileProperties;
+	}
+	
+	public static String getStringRepresentationOfLocalIp(){
+		String ipStr = null;
+		try {
+			InetAddress myIp = InetAddress.getLocalHost();
+			ipStr = myIp.getHostAddress();
+		} 
+		catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+		return ipStr;
 	}
 	
 }

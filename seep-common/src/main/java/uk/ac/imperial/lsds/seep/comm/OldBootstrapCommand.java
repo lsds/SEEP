@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.seep.comm;
 import java.util.HashSet;
 import java.util.Set;
 
-public class BootstrapCommand implements Command{
+public class OldBootstrapCommand implements OldCommand{
 	
 	private static String commandName = "bootstrap";
 	
@@ -45,7 +45,7 @@ public class BootstrapCommand implements Command{
 	@Override
 	public Set<String> getMandatoryArguments() {
 		Set<String> args = new HashSet<>();
-		for(Arguments arg : BootstrapCommand.Arguments.values()){
+		for(Arguments arg : OldBootstrapCommand.Arguments.values()){
 			args.add(arg.argName());
 		}
 		return args;
@@ -54,7 +54,7 @@ public class BootstrapCommand implements Command{
 	@Override
 	public Set<String> getOptArguments() {
 		Set<String> args = new HashSet<>();
-		for(OptArguments arg : BootstrapCommand.OptArguments.values()){
+		for(OptArguments arg : OldBootstrapCommand.OptArguments.values()){
 			args.add(arg.argName());
 		}
 		return args;
@@ -62,12 +62,12 @@ public class BootstrapCommand implements Command{
 
 	@Override
 	public int getTotalNumberArguments() {
-		return BootstrapCommand.Arguments.values().length + BootstrapCommand.OptArguments.values().length;
+		return OldBootstrapCommand.Arguments.values().length + OldBootstrapCommand.OptArguments.values().length;
 	}
 	
 	public static String buildBootstrapCommand(String ip, int port){
-		String command = "bootstrap " + BootstrapCommand.Arguments.IP.key+": "
-						+BootstrapCommand.Arguments.PORT.key+": "+port;
+		String command = "bootstrap " + OldBootstrapCommand.Arguments.IP.key+": "
+						+OldBootstrapCommand.Arguments.PORT.key+": "+port;
 		return command;
 	}
 

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seep.util.Utils;
 
 public class PhysicalSeepQuery {
 
@@ -110,6 +111,33 @@ public class PhysicalSeepQuery {
 			ids.add(o.getIdOfWrappingExecutionUnit());
 		}
 		return ids;
+	}
+	
+	@Override
+	public String toString(){
+		StringBuilder sb = new StringBuilder();
+		sb.append("##############");
+		sb.append(Utils.NL);
+		sb.append("Physical QUERY:");
+		sb.append(Utils.NL);
+		sb.append("Sources:");
+		sb.append(Utils.NL);
+		for(PhysicalOperator src : sources){
+			sb.append(src.toString());
+			sb.append(Utils.NL);
+		}
+		sb.append("All Operators:");
+		sb.append(Utils.NL);
+		for(PhysicalOperator op : physicalOperators){
+			sb.append(op.toString());
+			sb.append(Utils.NL);
+		}
+		sb.append("Sink:");
+		sb.append(Utils.NL);
+		sb.append(sink.toString());
+		sb.append(Utils.NL);
+		sb.append("##############");
+		return sb.toString();
 	}
 
 }

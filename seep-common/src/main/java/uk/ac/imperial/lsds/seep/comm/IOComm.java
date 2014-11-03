@@ -1,10 +1,12 @@
 package uk.ac.imperial.lsds.seep.comm;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectStreamClass;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,11 +19,20 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import uk.ac.imperial.lsds.seep.comm.protocol.Command;
 import uk.ac.imperial.lsds.seep.comm.serialization.Serializer;
 import uk.ac.imperial.lsds.seep.infrastructure.ExtendedObjectOutputStream;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+
 public class IOComm implements Comm {
 
+	final private Logger LOG = LoggerFactory.getLogger(IOComm.class.getName());
+	
 	private Serializer s;
 	private ExecutorService e;
 	
@@ -138,7 +149,7 @@ public class IOComm implements Comm {
 
 		@Override
 		public boolean cancel(boolean mayInterruptIfRunning) {
-			// TODO Auto-generated method stub
+			
 			return false;
 		}
 
@@ -318,14 +329,107 @@ public class IOComm implements Comm {
 
 	@Override
 	public boolean send_object_sync_parallel(Object data, Set<Connection> cs) {
-		// TODO Auto-generated method stub
+		try {
+			throw new Exception("NOT IMPLEMENTED");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
 		
 		return false;
 	}
 
 	@Override
 	public void send_object_async_parallel(Object data, Set<Connection> cs) {
-		// TODO Auto-generated method stub
+		try {
+			throw new Exception("NOT IMPLEMENTED");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		
+	}
+
+	@Override
+	public boolean send_object_sync(Command co, Connection c, Kryo k) {
+		Socket s = c.getOpenSocket();
+		try {
+			//BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
+			OutputStream bos = s.getOutputStream();
+			BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+			Output o = new Output(bos);
+			k.writeObject(o, co);
+			o.flush(); // this line
+			String ack = in.readLine();
+			if(!ack.equals("ack")){
+				in.close();
+				o.close();
+				return false;
+			}
+			o.close();
+			return true;
+		} 
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	@Override
+	public boolean send_object_async(Command co, Connection c, Kryo k) {
+		Socket s = c.getOpenSocket();
+		try {
+			//BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
+			OutputStream bos = s.getOutputStream();
+			Output o = new Output(bos);
+			k.writeObject(o, co);
+			o.close();
+			return true;
+		} 
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	@Override
+	public boolean send_object_sync(Command co, Set<Connection> cs, Kryo k) {
+		for(Connection c : cs){
+			LOG.trace("Send to: {}", c.toString());
+			boolean success = this.send_object_sync(co, c, k);
+			if(!success)
+				return false;
+		}
+		return true;
+	}
+
+	@Override
+	public boolean send_object_async(Command co, Set<Connection> cs, Kryo k) {
+		try {
+			throw new Exception("NOT IMPLEMENTED");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return false;
+	}
+
+	@Override
+	public boolean send_object_sync_parallel(Command data, Set<Connection> cs,
+			Kryo k) {
+		try {
+			throw new Exception("NOT IMPLEMENTED");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return false;
+	}
+
+	@Override
+	public void send_object_async_parallel(Command data, Set<Connection> cs,
+			Kryo k) {
+		try {
+			throw new Exception("NOT IMPLEMENTED");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
 		
 	}
 	

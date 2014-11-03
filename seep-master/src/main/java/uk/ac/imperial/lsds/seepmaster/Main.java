@@ -32,6 +32,7 @@ public class Main {
 
 	private void executeMaster(String[] args, MasterConfig mc){
 		int infType = mc.getInt(MasterConfig.DEPLOYMENT_TARGET_TYPE);
+		LOG.info("Deploy target of type: {}", InfrastructureManagerFactory.nameInfrastructureManagerWithType(infType));
 		InfrastructureManager inf = InfrastructureManagerFactory.createInfrastructureManager(infType);
 		// TODO: get file from config if exists and parse it to get a map from operator to endPoint
 		Map<Integer, EndPoint> mapOperatorToEndPoint = null;
@@ -45,39 +46,44 @@ public class Main {
 		mwcm.start();
 		int uiType = mc.getInt(MasterConfig.UI_TYPE);
 		UI ui = UIFactory.createUI(uiType, qm, inf);
+		LOG.info("Created UI of type: {}", UIFactory.nameUIOfType(uiType));
 		//OldMasterController mc = OldMasterController.getInstance();
 		//ManagerWorker manager = new ManagerWorker(this, port);
 		//Thread centralManagerT = new Thread(manager, "managerWorkerT");
 		//centralManagerT.start();
 		//mc.init();
 		
+		String queryPathFile = mc.getString(MasterConfig.QUERY_FILE);
+		String baseClass = mc.getString(MasterConfig.BASECLASS_NAME);
+		LOG.info("Loading query {} with baseClass: {} from local file...", queryPathFile, baseClass);
+		qm.loadQueryFromFile(queryPathFile, baseClass);
+		LOG.info("Loading query...OK");
+		ui.start();
+		
 		//LogicalSeepQuery lsq = null;
 		// If the user provided a query when launching the master node...
-		if(args[0] != null){
-			System.out.println(args.length);
-			if(!(args.length > 1)){
-				System.out.println("Error. Main Master <path_to_query.jar> <Base_class_name>");
-				System.exit(0);
-			}
-			// Then we execute the compose method and get the QueryPlan back
-			//lsq = mc.executeComposeFromQuery(args[0], args[1]);
-			//lsq = qm.executeComposeFromQuery(args[0], args[1]);
-			String queryPathFile = mc.getString(MasterConfig.QUERY_FILE);
-			String baseClass = mc.getString(MasterConfig.BASECLASS_NAME);
-			qm.loadQueryFromFile(queryPathFile, baseClass);
-			// Once we have the QueryPlan from the user submitted query, we submit the query plan to the MasterController
-			//mc.submitQuery(lsq);
-		}
-		ui.start();
+//		if(args[0] != null){
+//			System.out.println(args.length);
+//			if(!(args.length > 1)){
+//				System.out.println("Error. Main Master <path_to_query.jar> <Base_class_name>");
+//				System.exit(0);
+//			}
+//			// Then we execute the compose method and get the QueryPlan back
+//			//lsq = mc.executeComposeFromQuery(args[0], args[1]);
+//			//lsq = qm.executeComposeFromQuery(args[0], args[1]);
+//			
+//			// Once we have the QueryPlan from the user submitted query, we submit the query plan to the MasterController
+//			//mc.submitQuery(lsq);
+//		}
+		
 	}
 	
 	public static void main(String args[]){
-
 		// Get Properties with command line configuration 
 		List<ConfigKey> configKeys = MasterConfig.getAllConfigKey();
 		OptionParser parser = new OptionParser();
-		parser.accepts("query.file", "Jar file with the compiled SEEP query").withRequiredArg();
-		parser.accepts("baseclass.name", "Name of the Base Class").withRequiredArg();
+		parser.accepts(MasterConfig.QUERY_FILE, "Jar file with the compiled SEEP query").withRequiredArg();
+		parser.accepts(MasterConfig.BASECLASS_NAME, "Name of the Base Class").withRequiredArg();
 		CommandLineArgs cla = new CommandLineArgs(args, parser, configKeys);
 		Properties commandLineProperties = cla.getProperties();
 		

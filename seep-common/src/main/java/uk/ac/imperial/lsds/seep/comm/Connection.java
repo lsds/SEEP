@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.Socket;
 
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
+import uk.ac.imperial.lsds.seep.util.Utils;
 
 public class Connection {
 
@@ -23,7 +24,7 @@ public class Connection {
 	}
 	
 	public Socket getOpenSocket(){
-		if(s == null){
+		if(s == null || s.isClosed()){
 			try {
 				s = new Socket(ep.getIp(), ep.getPort());
 				return s;
@@ -49,6 +50,20 @@ public class Connection {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	@Override
+	public String toString(){
+		StringBuilder sb = new StringBuilder();
+		sb.append("IP: "+ep.getIp().toString()+" port: "+ep.getPort());
+		sb.append(Utils.NL);
+		if(s != null){
+			sb.append("ConnectionStatus: "+s.toString());
+		}
+		else{
+			sb.append("ConnectionStatus: NULL");
+		}
+		return sb.toString();
 	}
 	
 }

@@ -24,6 +24,6 @@ dependencies"
 	}
 	with jar 
 	manifest {
-		attributes 'Main-Class': 'uk.ac.imperial.lsds.seep.Main'
+		attributes 'Main-Class': 'uk.ac.imperial.lsds.seepworker.Main'
 	}
 }

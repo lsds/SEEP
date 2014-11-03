@@ -2,6 +2,10 @@ package uk.ac.imperial.lsds.seep.comm;
 
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.comm.protocol.Command;
+
+import com.esotericsoftware.kryo.Kryo;
+
 public interface Comm {
 
 	// Raw data commands
@@ -35,5 +39,13 @@ public interface Comm {
 	public void send_object_async(Object data, Set<Connection> cs);
 	public boolean send_object_sync_parallel(Object data, Set<Connection> cs);
 	public void send_object_async_parallel(Object data, Set<Connection> cs);
+	
+	// Primitives for master-worker communication
+	public boolean send_object_sync(Command co, Connection c, Kryo k);
+	public boolean send_object_async(Command co, Connection c, Kryo k);
+	public boolean send_object_sync(Command co, Set<Connection> cs, Kryo k);
+	public boolean send_object_async(Command co, Set<Connection> cs, Kryo k);
+	public boolean send_object_sync_parallel(Command data, Set<Connection> cs, Kryo k);
+	public void send_object_async_parallel(Command data, Set<Connection> cs, Kryo k);
 	
 }

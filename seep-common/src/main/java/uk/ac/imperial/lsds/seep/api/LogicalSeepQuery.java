@@ -59,7 +59,10 @@ public class LogicalSeepQuery {
 	}
 	
 	public int getInitialPhysicalInstancesForLogicalOperator(int opId){
-		return initialPhysicalInstancesPerOperator.get(opId);
+		if (initialPhysicalInstancesPerOperator.containsKey(opId))
+			return initialPhysicalInstancesPerOperator.get(opId);
+		else
+			return 1; // there is always, at least one instance per defined operator
 	}
 	
 	public boolean hasSetInitialPhysicalInstances(int opId){

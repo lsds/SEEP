@@ -6,17 +6,15 @@ import java.util.Map;
 public class MasterWorkerAPI {
 
 	public enum API{
-		BOOTSTRAP(new BootstrapCommand()),
-		CRASH(new CrashCommand()),
-		CODE(new CodeCommand());
+		BOOTSTRAP(new OldBootstrapCommand()),
+		CRASH(new OldCrashCommand()),
+		CODE(new OldCodeCommand());
 		
-		private Command c;
+		private OldCommand c;
 		
-		API(Command c){
+		API(OldCommand c){
 			this.c = c;
 		}
-		
-		
 		
 		public String commandName(){
 			return c.commandName();

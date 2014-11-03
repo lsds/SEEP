@@ -3,14 +3,20 @@ package uk.ac.imperial.lsds.seepmaster.infrastructure.master;
 import java.net.InetAddress;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.Connection;
 import uk.ac.imperial.lsds.seep.infrastructure.ExecutionUnitType;
 
 public class PhysicalClusterManager implements InfrastructureManager {
+	
+	final private Logger LOG = LoggerFactory.getLogger(PhysicalClusterManager.class);
 	
 	public final ExecutionUnitType executionUnitType = ExecutionUnitType.PHYSICAL_NODE;
 	private Deque<ExecutionUnit> physicalNodes;
@@ -18,6 +24,7 @@ public class PhysicalClusterManager implements InfrastructureManager {
 
 	public PhysicalClusterManager(){
 		this.physicalNodes = new ArrayDeque<>();
+		this.connectionsToPhysicalNodes = new HashMap<>();
 	}
 	
 	@Override
@@ -33,7 +40,14 @@ public class PhysicalClusterManager implements InfrastructureManager {
 	
 	@Override
 	public ExecutionUnit getExecutionUnit(){
-		return physicalNodes.pop();
+		if(physicalNodes.size() > 0){
+			LOG.debug("Returning 1 executionUnit, remaining: {}", physicalNodes.size()-1);
+			return physicalNodes.pop();
+		}
+		else{
+			LOG.error("No available executionUnits !!!");
+			return null;
+		}
 	}
 
 	@Override

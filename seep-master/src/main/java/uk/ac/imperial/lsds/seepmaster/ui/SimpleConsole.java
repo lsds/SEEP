@@ -63,32 +63,42 @@ public class SimpleConsole implements UI{
 	
 	@Override
 	public void start() {
+		working = true;
 		this.consoleOutputMessage();
+		LOG.info("Entering UI simpleConsole...");
 		while(working){
 			try{
 				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 				String option = br.readLine();
 				switch(option){
 				case "1":
+					LOG.info("Deploying query to nodes...");
 					qm.deployQueryToNodes();
+					LOG.info("Deploying query to nodes...OK");
 					break;
 				case "2":
+					LOG.info("Starting query...");
 					qm.startQuery();
+					LOG.info("Starting query...OK");
 					break;
 				case "3":
+					LOG.info("Stopping query...");
 					qm.stopQuery();
+					LOG.info("Stopping query...OK");
 					break;
 				case "100":
 					//
 					break;
 				default:
-					//
+					System.out.println("NOT RECOGNIZED");
+					consoleOutputMessage();
 				}
 			}
 			catch(IOException io){
 				
 			}
 		}
+		LOG.info("Exiting UI simpleConsole...");
 		
 //		LOG.info("-> Console, waiting for commands: ");
 //		try {
@@ -159,8 +169,7 @@ public class SimpleConsole implements UI{
 
 	@Override
 	public void stop() {
-		// TODO Auto-generated method stub
-		
+		this.working = false;
 	}
 	
 	private String getUserInput(String msg) throws IOException{

@@ -33,7 +33,6 @@ import uk.ac.imperial.lsds.seep.infrastructure.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.util.Utils;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterAPIImplementation;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterCommManager;
-import uk.ac.imperial.lsds.seepworker.infrastructure.NodeManager;
 
 
 public class Main {
@@ -92,13 +91,8 @@ public class Main {
 		wmcm.start();
 		
 		// bootstrap
-		String myIp = null;
-		try {
-			myIp = InetAddress.getLocalHost().toString();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		String myIp = Utils.getStringRepresentationOfLocalIp();
+		
 		System.out.println("about to call bootstrap");
 		api.bootstrap(masterConnection, myIp, myPort);
 		
