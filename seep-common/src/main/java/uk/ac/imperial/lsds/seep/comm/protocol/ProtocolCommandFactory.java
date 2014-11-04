@@ -22,4 +22,22 @@ public class ProtocolCommandFactory {
 		return c;
 	}
 	
+	public static Command buildStartRuntimeCommand(){
+		StartRuntimeCommand src = new StartRuntimeCommand();
+		Command c = new Command(src);
+		return c;
+	}
+	
+	public static Command buildStartQueryCommand(){
+		StartQueryCommand sqc = new StartQueryCommand();
+		Command c = new Command(sqc);
+		return c;
+	}
+	
+	public static Command buildStopQueryCommand(){
+		StopQueryCommand sqc = new StopQueryCommand();
+		Command c = new Command(sqc);
+		return c;
+	}
+	
 }

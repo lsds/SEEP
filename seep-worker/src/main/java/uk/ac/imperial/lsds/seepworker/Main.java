@@ -33,6 +33,8 @@ import uk.ac.imperial.lsds.seep.infrastructure.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.util.Utils;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterAPIImplementation;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterCommManager;
+import uk.ac.imperial.lsds.seepworker.comm.WorkerWorkerAPIImplementation;
+import uk.ac.imperial.lsds.seepworker.comm.WorkerWorkerCommManager;
 
 
 public class Main {
@@ -66,7 +68,6 @@ public class Main {
 	}
 	
 	private void executeWorker(WorkerConfig wc){
-		// TODO: Read parameters from properties
 		int masterPort = wc.getInt(WorkerConfig.MASTER_PORT);
 		InetAddress masterIp = null;
 		try {
@@ -84,11 +85,18 @@ public class Main {
 		
 		// Create workerMaster comm manager
 		Comm comm = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
+		
+		// Start master-worker communication manager
 		WorkerMasterAPIImplementation api = new WorkerMasterAPIImplementation(comm, wc);
 		RuntimeClassLoader rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
-		
 		WorkerMasterCommManager wmcm = new WorkerMasterCommManager(myPort, api, rcl);
 		wmcm.start();
+		
+		// Start worker-worker communication manager
+		WorkerWorkerAPIImplementation apiWorker = new WorkerWorkerAPIImplementation(comm, wc);
+		int wwPort = 0; // TODO: get this somehow...
+		WorkerWorkerCommManager wwcm = new WorkerWorkerCommManager(wwPort, apiWorker);
+		wwcm.start();
 		
 		// bootstrap
 		String myIp = Utils.getStringRepresentationOfLocalIp();

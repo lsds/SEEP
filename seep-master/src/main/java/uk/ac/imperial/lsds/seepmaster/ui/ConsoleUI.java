@@ -7,7 +7,7 @@ package uk.ac.imperial.lsds.seepmaster.ui;
  *
  */
 
-public class Console implements UI {
+public class ConsoleUI implements UI {
 
 	@Override
 	public void start() {

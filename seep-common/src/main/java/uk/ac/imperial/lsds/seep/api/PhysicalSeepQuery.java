@@ -82,8 +82,8 @@ public class PhysicalSeepQuery {
 		return null;
 	}
 	
-	public List<EndPoint> getMeshTopology(int euId){
-		List<EndPoint> meshTopology = new ArrayList<>();
+	public Set<EndPoint> getMeshTopology(int euId){
+		Set<EndPoint> meshTopology = new HashSet<>();
 		for(PhysicalOperator po : physicalOperators) {
 			if( (!isSource(po)) && (!isSink(po)) && po.getOperatorId() != euId){
 				meshTopology.add(po.getWrappingEndPoint());

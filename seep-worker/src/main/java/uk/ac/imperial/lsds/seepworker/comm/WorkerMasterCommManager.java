@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.seepworker.comm;
 
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,14 +13,12 @@ import java.net.URL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
-import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
 import uk.ac.imperial.lsds.seep.comm.KryoFactory;
 import uk.ac.imperial.lsds.seep.comm.protocol.CodeCommand;
 import uk.ac.imperial.lsds.seep.comm.protocol.Command;
 import uk.ac.imperial.lsds.seep.comm.protocol.ProtocolAPI;
 import uk.ac.imperial.lsds.seep.comm.protocol.QueryDeployCommand;
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.protocol.StartRuntimeCommand;
 import uk.ac.imperial.lsds.seep.infrastructure.ExtendedObjectInputStream;
 import uk.ac.imperial.lsds.seep.infrastructure.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.util.Utils;
@@ -71,7 +68,6 @@ public class WorkerMasterCommManager {
 		@Override
 		public void run() {
 			while(working){
-				ExtendedObjectInputStream ois = null;
 				Socket incomingSocket = null;
 				PrintWriter out = null;
 				try{
@@ -102,14 +98,20 @@ public class WorkerMasterCommManager {
 						LOG.info("RX QueryDeploy command");
 						QueryDeployCommand qdc = c.getQueryDeployCommand();
 						
-						//test
-						PhysicalSeepQuery psq = qdc.getQuery();
-						for(PhysicalOperator po : psq.getOperators()){
-							DataTuple a = null;
-							po.getSeepTask().processData(a);
-						}
-						System.out.println("QUERY: "+psq.toString());
-						
+//						//test
+//						PhysicalSeepQuery psq = qdc.getQuery();
+//						for(PhysicalOperator po : psq.getOperators()){
+//							DataTuple a = null;
+//							po.getSeepTask().processData(a);
+//						}
+//						System.out.println("QUERY: "+psq.toString());
+						api.handleQueryDeploy(qdc);
+						out.println("ack");
+					}
+					else if(cType == ProtocolAPI.STARTRUNTIME.type()){
+						LOG.info("RX StartRuntime command");
+						StartRuntimeCommand src = c.getStartRuntimeCommand();
+						api.handleStartRuntime(src);
 						out.println("ack");
 					}
 				}

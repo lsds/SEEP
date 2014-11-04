@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
@@ -258,13 +259,11 @@ public class NodeManager{
 					PhysicalSeepQuery query =(PhysicalSeepQuery)o;
 					PhysicalOperator po = query.getOperatorLivingInExecutionUnitId(myOwnId);
 					
-					List<EndPoint> meshTopology = query.getMeshTopology(myOwnId);
+					Set<EndPoint> meshTopology = query.getMeshTopology(myOwnId);
 					
 					// type mismatch here...
 //					core.pushStarTopology(meshTopology);
-					
-					
-					
+
 				}
 	           
 	            o = null;

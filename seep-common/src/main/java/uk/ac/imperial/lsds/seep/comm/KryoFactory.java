@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.seep.comm;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.protocol.ProtocolAPI;
+import uk.ac.imperial.lsds.seep.comm.protocol.WWProtocolAPI;
 
 import com.esotericsoftware.kryo.Kryo;
 
@@ -47,6 +48,14 @@ public class KryoFactory {
 			k.register(command.getClass(), command.type());
 		}
 		k.setClassLoader(cl);
+		return k;
+	}
+	
+	public static Kryo buildKryoForWorkerWorkerProtocol(){
+		Kryo k = new Kryo();
+		for(WWProtocolAPI command : WWProtocolAPI.values()){
+			k.register(command.getClass(), command.type());
+		}
 		return k;
 	}
 	

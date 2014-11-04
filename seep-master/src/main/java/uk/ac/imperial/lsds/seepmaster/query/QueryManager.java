@@ -201,25 +201,36 @@ public class QueryManager {
 		// Send data file to nodes
 		byte[] queryFile = Utils.readDataFromFile(pathToQuery);
 		LOG.info("Ready to send query file of size: {} bytes", queryFile.length);
-		//comm.send_object_sync("code", connections); // tell nodes we are sending code...
-		//comm.send_async(queryFile, connections); // send the actual code...
-		
 		Command code = ProtocolCommandFactory.buildCodeCommand(queryFile);
 		comm.send_object_sync(code, connections, k);
 		
+		// Send physical query to all nodes
 		Command queryDeploy = ProtocolCommandFactory.buildQueryDeployCommand(originalQuery);
 		comm.send_object_sync(queryDeploy, connections, k);
 		
-		//comm.send_object_async(originalQuery, connections); // send query to all of them...
-		//comm.send_object_sync("SET-RUNTIME", connections);
+		// Send start runtime command to all nodes to finish deployment
+		Command runtime = ProtocolCommandFactory.buildStartRuntimeCommand();
+		comm.send_object_sync(runtime, connections, k);
 	}
 	
 	public void startQuery(){
+		// TODO: take a look at the following two lines. Stateless is good to keep everything lean. Yet consider caching
+		Set<Integer> involvedEUId = originalQuery.getIdOfEUInvolved();
+		Set<Connection> connections = inf.getConnectionsTo(involvedEUId);
 		
+		// Send start query command
+		Command start = ProtocolCommandFactory.buildStartQueryCommand();
+		comm.send_object_sync(start, connections, k);
 	}
 	
 	public void stopQuery(){
+		// TODO: take a look at the following two lines. Stateless is good to keep everything lean. Yet consider caching
+		Set<Integer> involvedEUId = originalQuery.getIdOfEUInvolved();
+		Set<Connection> connections = inf.getConnectionsTo(involvedEUId);
 		
+		// Send start query command
+		Command stop = ProtocolCommandFactory.buildStopQueryCommand();
+		comm.send_object_sync(stop, connections, k);
 	}
 	
 	private int computeRequiredExecutionUnits(LogicalSeepQuery lsq){

@@ -40,6 +40,7 @@ public class MasterWorkerCommManager {
 		}
 		listener = new Thread(new CommMasterWorker());
 		listener.setName(CommMasterWorker.class.getName());
+		// TODO: set uncaughtexceptionhandler
 	}
 	
 	public void start(){

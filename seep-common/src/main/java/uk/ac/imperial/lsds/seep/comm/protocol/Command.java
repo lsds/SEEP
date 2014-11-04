@@ -8,6 +8,9 @@ public class Command {
 	private CrashCommand cc;
 	private CodeCommand coc;
 	private QueryDeployCommand qdc;
+	private StartRuntimeCommand src;
+	private StartQueryCommand sqc;
+	private StopQueryCommand stqc;
 	
 	public Command(){}
 	
@@ -26,8 +29,22 @@ public class Command {
 		else if(type == ProtocolAPI.QUERYDEPLOY.type()){
 			this.qdc = (QueryDeployCommand)ct;
 		}
+		else if(type == ProtocolAPI.STARTRUNTIME.type()){
+			this.src = (StartRuntimeCommand)ct;
+		}
+		else if(type == ProtocolAPI.STARTQUERY.type()){
+			this.sqc = (StartQueryCommand)ct;
+		}
+		else if(type == ProtocolAPI.STOPQUERY.type()){
+			this.stqc = (StopQueryCommand)ct;
+		}
 		else{
-			// TODO: throw error
+			try {
+				throw new Exception("NOT DEFINED CLASS HERE !!!");
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("ERROR: "+e.getMessage());
+			}
 		}
 	}
 	
@@ -49,5 +66,17 @@ public class Command {
 	
 	public QueryDeployCommand getQueryDeployCommand(){
 		return qdc;
+	}
+	
+	public StartRuntimeCommand getStartRuntimeCommand(){
+		return src;
+	}
+	
+	public StartQueryCommand getStartQueryCommand(){
+		return sqc;
+	}
+	
+	public StopQueryCommand getStopQueryCommand(){
+		return stqc;
 	}
 }

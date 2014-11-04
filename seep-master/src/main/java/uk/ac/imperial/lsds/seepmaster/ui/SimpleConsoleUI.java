@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seepmaster.infrastructure.master.InfrastructureManager;
 import uk.ac.imperial.lsds.seepmaster.query.QueryManager;
 
-public class SimpleConsole implements UI{
+public class SimpleConsoleUI implements UI{
 
-	final private Logger LOG = LoggerFactory.getLogger(SimpleConsole.class.getName());
+	final private Logger LOG = LoggerFactory.getLogger(SimpleConsoleUI.class.getName());
 	
 	private static String uiText;
 	private static String emptyText;
@@ -56,7 +56,7 @@ public class SimpleConsole implements UI{
 	private QueryManager qm;
 	private InfrastructureManager inf;
 	
-	public SimpleConsole(QueryManager qm, InfrastructureManager inf){
+	public SimpleConsoleUI(QueryManager qm, InfrastructureManager inf){
 		this.qm = qm;
 		this.inf = inf;
 	}

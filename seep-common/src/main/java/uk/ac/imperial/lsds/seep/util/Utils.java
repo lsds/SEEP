@@ -42,17 +42,6 @@ public class Utils {
 			return null;
 		}
 		return pathToCode;
-		
-//		if(pathToCode.exists()){
-//			LOG.info("-> Loading CODE from: {}", pathToCode.getAbsolutePath());
-//			loadCodeToRuntime(pathToCode);
-//			/**
-//			 * if we get all the names of the classes to load, we can iterate and load them now, right?
-//			 */
-//		}
-//		else{
-//			LOG.error("-> No access to the CODE");
-//		}
 	}
 	
 	public static byte[] readDataFromFile(String path){
@@ -78,11 +67,9 @@ public class Utils {
 			fis.close();
 		}
 		catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		finally{
@@ -90,7 +77,6 @@ public class Utils {
 				fis.close();
 			} 
 			catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

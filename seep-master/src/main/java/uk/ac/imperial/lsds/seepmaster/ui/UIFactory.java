@@ -15,7 +15,7 @@ public class UIFactory {
 	
 	public static UI createUI(int uiType, QueryManager qm, InfrastructureManager inf){
 		if(uiType == UIType.SIMPLECONSOLE.ofType()) {
-			return new SimpleConsole(qm, inf);
+			return new SimpleConsoleUI(qm, inf);
 		}
 		return null;
 	}
