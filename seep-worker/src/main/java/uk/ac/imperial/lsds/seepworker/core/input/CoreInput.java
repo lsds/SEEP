@@ -1,10 +1,18 @@
 package uk.ac.imperial.lsds.seepworker.core.input;
 
-import uk.ac.imperial.lsds.seepworker.core.Data;
+import java.util.List;
 
 
-public interface CoreInput {
+public class CoreInput {
 	
-	public Data pullData();
+	private List<InputAdapter> inputAdapters;
+	
+	public CoreInput(List<InputAdapter> inputAdapters){
+		this.inputAdapters = inputAdapters;
+	}
+	
+	public List<InputAdapter> getInputAdapters(){
+		return inputAdapters;
+	}
 	
 }

@@ -32,6 +32,9 @@ public class WorkerConfig extends Config {
     public static final String MASTER_RETRY_BACKOFF_MS = "master.retry.backoff.ms";
     private static final String MASTER_RETRY_BACKOFF_MS_DOC = "Time between retries when reconnecting to master";
     
+    public static final String ENGINE_TYPE = "engine.type";
+    private static final String ENGINE_TYPE_DOC = "Defines the type of processing engine that will process data"; 
+    
 	
 	static{
 		config = new ConfigDef().define(DEPLOYMENT_TARGET_TYPE, Type.INT, 0, Importance.HIGH, DEPLOYMENT_TARGET_TYPE_DOC)
@@ -39,7 +42,8 @@ public class WorkerConfig extends Config {
 				.define(MASTER_PORT, Type.INT, 3500, Importance.HIGH, MASTER_PORT_DOC)
 				.define(MASTER_IP, Type.STRING, Importance.HIGH, MASTER_IP_DOC)
 				.define(MASTER_CONNECTION_RETRIES, Type.INT, Integer.MAX_VALUE, Importance.LOW, MASTER_CONNECTION_RETRIES_DOC)
-				.define(MASTER_RETRY_BACKOFF_MS, Type.INT, 3000, Importance.LOW, MASTER_RETRY_BACKOFF_MS_DOC);
+				.define(MASTER_RETRY_BACKOFF_MS, Type.INT, 3000, Importance.LOW, MASTER_RETRY_BACKOFF_MS_DOC)
+				.define(ENGINE_TYPE, Type.INT, 0, Importance.MEDIUM, ENGINE_TYPE_DOC);
 	}
 	
 	public WorkerConfig(Map<? extends Object, ? extends Object> originals) {

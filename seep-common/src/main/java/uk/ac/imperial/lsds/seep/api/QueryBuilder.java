@@ -13,9 +13,13 @@ package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
 
+import uk.ac.imperial.lsds.seep.api.data.Schema.SchemaBuilder;
+
 public class QueryBuilder implements QueryAPI {
 	
 	private static LogicalSeepQuery qp = new LogicalSeepQuery();
+	
+	public SchemaBuilder schemaBuilder = SchemaBuilder.getInstance();
 	
 	public static LogicalSeepQuery build(){
 		return qp;
@@ -89,48 +93,4 @@ public class QueryBuilder implements QueryAPI {
 	public LogicalState newLogicalState(SeepState state, int ownerId) {
 		return qp.newLogicalState(state, ownerId);
 	}
-	
-//	public static Connectable newStatefulSource(OperatorCode op, int opId, StateWrapper s, List<String> attributes){
-//		return qp.newStatefulSource(op, opId, s, attributes);
-//	}
-//	
-//	public static Connectable newStatelessSource(OperatorCode op, int opId, List<String> attributes){
-//		return qp.newStatelessSource(op, opId, attributes);
-//	}
-//	
-//	public static Connectable newStatefulOperator(OperatorCode op, int opId, StateWrapper s, List<String> attributes){
-//		return qp.newStatefulOperator(op, opId, s, attributes);
-//	}
-//	
-//	public static Connectable newStatelessOperator(OperatorCode op, int opId, List<String> attributes){
-//		return qp.newStatelessOperator(op, opId, attributes);
-//	}
-//	
-//	public static Connectable newStatefulSink(OperatorCode op, int opId, StateWrapper s, List<String> attributes){
-//		return qp.newStatefulSink(op, opId, s, attributes);
-//	}
-//	
-//	public static Connectable newStatelessSink(OperatorCode op, int opId, List<String> attributes){
-//		return qp.newStatelessSink(op, opId, attributes);
-//	}
-//	
-//	public static Connectable newMultiOperator(Set<SubOperator> subOperators, int multiOpId, List<String> attributes){
-//		return qp.newMultiOperator(subOperators, multiOpId, attributes);
-//	}
-//	
-//	public static StateWrapper newCustomState(CustomState s, int ownerId, int checkpointInterval, String keyAttribute){
-//		return qp.newCustomState(s, ownerId, checkpointInterval, keyAttribute);
-//	}
-//	
-//	public static StateWrapper newLargeState(LargeState s, int ownerId, int checkpointInterval){
-//		return qp.newLargeState(s, ownerId, checkpointInterval);
-//	}
-//
-//	public static void scaleOut(int opToScaleOut, int numPartitions){
-//		qp.scaleOut(opToScaleOut, numPartitions);
-//	}
-//	
-//	public static void scaleOut(int opToScaleOut, int newOpId, Node newProvisionedNode){
-//		qp.scaleOut(opToScaleOut, newOpId, newProvisionedNode);
-//	}
 }

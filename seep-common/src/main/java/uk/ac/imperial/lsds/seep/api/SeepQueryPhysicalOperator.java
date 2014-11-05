@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
 
+import uk.ac.imperial.lsds.seep.api.data.Schema;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 
 public class SeepQueryPhysicalOperator implements PhysicalOperator{
@@ -14,6 +15,7 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 	private List<DownstreamConnection> downstreamConnections;
 	private List<UpstreamConnection> upstreamConnections;
 	private EndPoint ep;
+	
 	
 	private SeepQueryPhysicalOperator(int opId, String name, SeepTask seepTask, 
 									LogicalState state, List<DownstreamConnection> downstreamConnections, 
@@ -28,7 +30,6 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 		this.downstreamConnections = downstreamConnections;
 		this.upstreamConnections = upstreamConnections;
 		this.ep = ep;
-		
 	}
 	
 	public static SeepQueryPhysicalOperator createPhysicalOperatorFromLogicalOperatorAndEndPoint(int opId, Operator lo, EndPoint ep){
@@ -76,7 +77,7 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 	}
 
 	@Override
-	public void connectTo(Operator downstreamOperator, int streamId) {
+	public void connectTo(Operator downstreamOperator, int streamId, Schema schema) {
 		
 		replaceDownstream(downstreamOperator);
 		
@@ -101,8 +102,13 @@ public class SeepQueryPhysicalOperator implements PhysicalOperator{
 	}
 
 	@Override
-	public void connectTo(Operator downstreamOperator, int streamId,
-			ConnectionType connectionType) {
+	public void connectTo(Operator downstreamOperator, int streamId, Schema schema, ConnectionType connectionType) {
+		// TODO REPLACEMENT IN THIS CASE
+		
+	}
+	
+	@Override
+	public void connectTo(Operator downstreamOperator, int streamId, Schema schema, ConnectionType connectionType, DataOrigin dSrc) {
 		// TODO REPLACEMENT IN THIS CASE
 		
 	}

@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
 
+import uk.ac.imperial.lsds.seep.api.data.Schema;
+import uk.ac.imperial.lsds.seep.api.data.Type;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class BaseTest implements QueryComposer{
@@ -15,9 +17,17 @@ public class BaseTest implements QueryComposer{
 		// Declare sink
 		LogicalOperator snk = queryAPI.newStatelessSink(new Sink(), -2);
 		
+		Schema srcSchema = queryAPI.schemaBuilder.newField(Type.SHORT, "id").build();
+		Schema pSchema = queryAPI.schemaBuilder.newField(Type.SHORT, "id").newField(Type.BYTES, "payload").build();
+		
+		System.out.println("SRC Schema: ");
+		System.out.println(srcSchema.toString());
+		System.out.println("Pro Schema: ");
+		System.out.println(pSchema.toString());
+		
 		/** Connect operators **/
-		src.connectTo(p, 0);
-		p.connectTo(snk, 0);
+		src.connectTo(p, 0, srcSchema);
+		p.connectTo(snk, 0, pSchema);
 		
 		return QueryBuilder.build();
 	}

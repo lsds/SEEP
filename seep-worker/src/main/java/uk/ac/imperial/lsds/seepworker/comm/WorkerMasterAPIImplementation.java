@@ -2,10 +2,7 @@ package uk.ac.imperial.lsds.seepworker.comm;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
 import java.util.Set;
-
-import com.esotericsoftware.kryo.Kryo;
 
 import uk.ac.imperial.lsds.seep.api.PhysicalOperator;
 import uk.ac.imperial.lsds.seep.api.PhysicalSeepQuery;
@@ -19,9 +16,13 @@ import uk.ac.imperial.lsds.seep.comm.protocol.StartRuntimeCommand;
 import uk.ac.imperial.lsds.seep.infrastructure.EndPoint;
 import uk.ac.imperial.lsds.seep.util.Utils;
 import uk.ac.imperial.lsds.seepworker.WorkerConfig;
+import uk.ac.imperial.lsds.seepworker.core.Conductor;
+
+import com.esotericsoftware.kryo.Kryo;
 
 public class WorkerMasterAPIImplementation {
 
+	private Conductor c;
 	private Comm comm;
 	private Kryo k;
 	
@@ -30,7 +31,7 @@ public class WorkerMasterAPIImplementation {
 	private int retriesToMaster;
 	private int retryBackOffMs;
 	
-	public WorkerMasterAPIImplementation(Comm comm, WorkerConfig wc){
+	public WorkerMasterAPIImplementation(Comm comm, Conductor c, WorkerConfig wc){
 		this.comm = comm;
 		this.k = KryoFactory.buildKryoForMasterWorkerProtocol();
 		this.myPort = wc.getInt(WorkerConfig.LISTENING_PORT);

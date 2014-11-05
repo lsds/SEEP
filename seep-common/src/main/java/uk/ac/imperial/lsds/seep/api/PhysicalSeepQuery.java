@@ -32,7 +32,7 @@ public class PhysicalSeepQuery {
 			for(DownstreamConnection dc : o.downstreamConnections()) {
 				// this will replace a still logical connection with a physical one
 				// note that we don't need to update connectionType, this info is already there
-				o.connectTo(dc.getDownstreamOperator(), dc.getStreamId());
+				o.connectTo(dc.getDownstreamOperator(), dc.getStreamId(), dc.getSchema());
 			}
 		}
 		List<PhysicalOperator> pOps = new ArrayList<>(physicalOperators);

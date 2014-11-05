@@ -35,6 +35,7 @@ import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterAPIImplementation;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerMasterCommManager;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerWorkerAPIImplementation;
 import uk.ac.imperial.lsds.seepworker.comm.WorkerWorkerCommManager;
+import uk.ac.imperial.lsds.seepworker.core.Conductor;
 
 
 public class Main {
@@ -86,14 +87,17 @@ public class Main {
 		// Create workerMaster comm manager
 		Comm comm = new IOComm(new JavaSerializer(), Executors.newCachedThreadPool());
 		
+		// Create conductor
+		Conductor c = new Conductor(wc);
+		
 		// Start master-worker communication manager
-		WorkerMasterAPIImplementation api = new WorkerMasterAPIImplementation(comm, wc);
+		WorkerMasterAPIImplementation api = new WorkerMasterAPIImplementation(comm, c, wc);
 		RuntimeClassLoader rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 		WorkerMasterCommManager wmcm = new WorkerMasterCommManager(myPort, api, rcl);
 		wmcm.start();
 		
 		// Start worker-worker communication manager
-		WorkerWorkerAPIImplementation apiWorker = new WorkerWorkerAPIImplementation(comm, wc);
+		WorkerWorkerAPIImplementation apiWorker = new WorkerWorkerAPIImplementation(comm, c, wc);
 		int wwPort = 0; // TODO: get this somehow...
 		WorkerWorkerCommManager wwcm = new WorkerWorkerCommManager(wwPort, apiWorker);
 		wwcm.start();
