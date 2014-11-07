@@ -24,8 +24,11 @@ public class UT1 implements DriverProgram{
 	private static final double DELTA = 0.3;
 
 	public void main(){
+		//@Batch(origin="kafka://localhost:5201/?topic=5")
+		//@Schema(fieldname="userId", type=Type.INT)
 		Vector items = null; // get data somehow
 		train(items); // call function -> implies this is an entry point
+		//@Stream
 		int item = 5; // a simple item to classify;
 		test(item);
 	}

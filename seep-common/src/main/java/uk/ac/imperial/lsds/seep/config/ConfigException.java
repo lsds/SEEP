@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.seep.config;
 
-import uk.ac.imperial.lsds.seep.util.SeepException;
+import uk.ac.imperial.lsds.seep.errors.SeepException;
 
 /**
  * Thrown if the user supplies an invalid configuration

@@ -1,10 +1,8 @@
 package uk.ac.imperial.lsds.seep.api;
 
-import java.util.List;
-
 import uk.ac.imperial.lsds.seep.api.data.Schema;
+import uk.ac.imperial.lsds.seep.api.data.ITuple;
 import uk.ac.imperial.lsds.seep.api.data.Type;
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class BaseTest implements QueryComposer{
 
@@ -39,11 +37,11 @@ public class BaseTest implements QueryComposer{
 			// TODO Auto-generated method stub	
 		}
 		@Override
-		public void processData(DataTuple data) {
+		public void processData(ITuple data, API api) {
 			// TODO Auto-generated method stub	
 		}
 		@Override
-		public void processData(List<DataTuple> dataList) {
+		public void processDataGroup(ITuple dataList, API api) {
 			// TODO Auto-generated method stub	
 		}
 		@Override
@@ -58,11 +56,11 @@ public class BaseTest implements QueryComposer{
 			// TODO Auto-generated method stub	
 		}
 		@Override
-		public void processData(DataTuple data) {
+		public void processData(ITuple data, API api) {
 			// TODO Auto-generated method stub	
 		}
 		@Override
-		public void processData(List<DataTuple> dataList) {
+		public void processDataGroup(ITuple dataList, API api) {
 			// TODO Auto-generated method stub	
 		}
 		@Override
@@ -77,11 +75,11 @@ public class BaseTest implements QueryComposer{
 			// TODO Auto-generated method stub	
 		}
 		@Override
-		public void processData(DataTuple data) {
+		public void processData(ITuple data, API api) {
 			// TODO Auto-generated method stub	
 		}
 		@Override
-		public void processData(List<DataTuple> dataList) {
+		public void processDataGroup(ITuple dataList, API api) {
 			// TODO Auto-generated method stub	
 		}
 		@Override

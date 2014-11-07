@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.util;
+package uk.ac.imperial.lsds.seep.errors;
 
 public class SeepException extends RuntimeException{
 

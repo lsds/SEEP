@@ -273,7 +273,7 @@ public class Operator implements Serializable, OldEndPoint, Connectable, Callbac
 		 * refactoring
 		 */
 		//operatorCode.processData(data);
-		seepTask.processData(data);
+//		seepTask.processData(data);
 	}
 	
 	public void processData(ArrayList<DataTuple> dataList){
@@ -281,7 +281,7 @@ public class Operator implements Serializable, OldEndPoint, Connectable, Callbac
 		 * refactoring
 		 */
 		//operatorCode.processData(dataList);
-		seepTask.processData(dataList);
+//		seepTask.processData(dataList);
 	}
 	
 	public void setUp(){

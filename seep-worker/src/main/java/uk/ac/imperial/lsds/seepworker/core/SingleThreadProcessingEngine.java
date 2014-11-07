@@ -3,9 +3,10 @@ package uk.ac.imperial.lsds.seepworker.core;
 import java.util.Iterator;
 import java.util.List;
 
+import uk.ac.imperial.lsds.seep.api.API;
 import uk.ac.imperial.lsds.seep.api.SeepState;
 import uk.ac.imperial.lsds.seep.api.SeepTask;
-import uk.ac.imperial.lsds.seepworker.data.Data;
+import uk.ac.imperial.lsds.seep.api.data.ITuple;
 import uk.ac.imperial.lsds.seepworker.core.input.CoreInput;
 import uk.ac.imperial.lsds.seepworker.core.input.InputAdapter;
 import uk.ac.imperial.lsds.seepworker.core.input.InputAdapterReturnType;
@@ -68,14 +69,17 @@ public class SingleThreadProcessingEngine implements ProcessingEngine {
 			Iterator<InputAdapter> it = inputAdapters.iterator();
 			short one = InputAdapterReturnType.ONE.ofType();
 			short many = InputAdapterReturnType.MANY.ofType();
+			API api = new Collector(coreOutput.getOutputAdapters());
 			while(working){
 				while(it.hasNext()){
 					InputAdapter ia = it.next();
 					if(ia.rType() == one){
-						Data d = ia.pullDataItem();
+						ITuple d = ia.pullDataItem();
+						task.processData(d, api);
 					}
 					else if(ia.rType() == many){
-						List<Data> ld = ia.pullDataItems();
+						ITuple ld = ia.pullDataItems();
+						task.processDataGroup(ld, api);
 					}
 					if(!it.hasNext()){
 						it = inputAdapters.iterator();

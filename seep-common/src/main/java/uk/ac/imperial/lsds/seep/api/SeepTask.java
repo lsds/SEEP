@@ -1,14 +1,12 @@
 package uk.ac.imperial.lsds.seep.api;
 
-import java.util.List;
-
-import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.api.data.ITuple;
 
 public interface SeepTask {
 	
 	public void setUp();
-	public void processData(DataTuple data);
-	public void processData(List<DataTuple> dataList);
+	public void processData(ITuple data, API api); // consider moving this to external interfaces
+	public void processDataGroup(ITuple dataBatch, API api); // also change tuple with tagging ifaces
 	public void close();
 	
 }

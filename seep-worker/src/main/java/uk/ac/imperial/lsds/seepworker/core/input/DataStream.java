@@ -5,7 +5,7 @@ import java.util.List;
 import uk.ac.imperial.lsds.seep.api.DataOrigin;
 import uk.ac.imperial.lsds.seep.api.Operator;
 import uk.ac.imperial.lsds.seep.api.data.Schema;
-import uk.ac.imperial.lsds.seepworker.data.Data;
+import uk.ac.imperial.lsds.seep.api.data.ITuple;
 
 public class DataStream implements InputAdapter{
 
@@ -14,13 +14,13 @@ public class DataStream implements InputAdapter{
 	final private int streamId;
 	private DataOrigin dOrigin;
 	private Schema expectedSchema;
-	private Operator op;
+	private List<Operator> ops;
 	
-	public DataStream(int streamId, DataOrigin dataOrigin, Schema expectedSchema, Operator op){
+	public DataStream(int streamId, DataOrigin dataOrigin, Schema expectedSchema, List<Operator> ops) {
 		this.streamId = streamId;
 		this.dOrigin = dataOrigin;
 		this.expectedSchema = expectedSchema;
-		this.op = op;
+		this.ops = ops;
 	}
 
 	@Override
@@ -29,13 +29,13 @@ public class DataStream implements InputAdapter{
 	}
 
 	@Override
-	public Data pullDataItem() {
+	public ITuple pullDataItem() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public List<Data> pullDataItems() {
+	public ITuple pullDataItems() {
 		// TODO Auto-generated method stub
 		return null;
 	}
