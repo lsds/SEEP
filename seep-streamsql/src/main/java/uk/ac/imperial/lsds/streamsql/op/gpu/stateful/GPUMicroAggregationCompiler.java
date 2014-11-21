@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
 
-import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IValueExpression;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.GPUSelection;
 import uk.ac.imperial.lsds.streamsql.predicates.ComparisonPredicate;
 

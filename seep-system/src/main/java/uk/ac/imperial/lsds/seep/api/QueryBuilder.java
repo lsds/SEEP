@@ -12,17 +12,13 @@
 package uk.ac.imperial.lsds.seep.api;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -78,17 +74,5 @@ public class QueryBuilder {
     public static void withPolicyRules(PolicyRules rules) {
         qp.withPolicyRules(rules);
     }
-	
-	public static Connectable newMultiOperator(Set<ISubQueryConnectable> subOperators, int opId, List<String> attributes){
-		return qp.newMultiOperator(subOperators, opId, attributes);
-	}
-
-	public static IMicroOperatorConnectable newMicroOperator(IMicroOperatorCode op, int opId){
-		return qp.newMicroOperator(op, opId);
-	}
-
-	public static ISubQueryConnectable newSubQuery(Set<IMicroOperatorConnectable> microOperators, int opId, Map<Integer, IWindowDefinition> windowDefs){
-		return qp.newSubQuery(microOperators, opId, windowDefs);
-	}
 
 }

@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
 public class ORPredicate implements IPredicate {
@@ -12,20 +13,13 @@ public class ORPredicate implements IPredicate {
 	}
 
 	@Override
-	public boolean satisfied(MultiOpTuple tuple) {
+	public boolean satisfied(IQueryBuffer buffer, TupleSchema schema, int offset) {
 		for (IPredicate pred : predicates)
-			if (pred.satisfied(tuple))
+			if (pred.satisfied(buffer, schema, offset))
 				return true;
 		return false;
 	}
 
-	@Override
-	public boolean satisfied(MultiOpTuple firstTuple, MultiOpTuple secondTuple) {
-		for (IPredicate pred : predicates)
-			if (pred.satisfied(firstTuple,secondTuple))
-				return true;
-		return false;
-	}
 
 	@Override
 	public String toString() {
@@ -42,11 +36,5 @@ public class ORPredicate implements IPredicate {
 	public void accept(PredicateVisitor pv) {
 		pv.visit(this);
 	}
-
-	@Override
-	public IPredicate[] getInnerPredicates() {
-		return predicates;
-	}
-
 
 }

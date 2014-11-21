@@ -18,8 +18,8 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowT
 
 import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 
-import uk.ac.imperial.lsds.streamsql.expressions.Constant;
-import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.ColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.Constant;
 
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.GPUMicroAggregation;
 

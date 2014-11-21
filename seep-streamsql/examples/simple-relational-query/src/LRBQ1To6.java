@@ -13,10 +13,10 @@ import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition;
 import uk.ac.imperial.lsds.seep.operator.compose.window.WindowDefinition.WindowType;
-import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.Constant;
-import uk.ac.imperial.lsds.streamsql.expressions.Division;
-import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.ColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.Constant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IValueExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntDivision;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -47,7 +47,7 @@ public class LRBQ1To6 {
 		IValueExpression<PrimitiveType>[] projExpressions = new IValueExpression[] {
 				new ColumnReference<IntegerType>(0),
 				new ColumnReference<FloatType>(1),
-				new Division<IntegerType>(
+				new IntDivision<IntegerType>(
 						new ColumnReference<IntegerType>(4), 
 						new Constant<IntegerType>(new IntegerType(5280))),
 				new ColumnReference<IntegerType>(3),

@@ -1,19 +1,10 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu.stateless;
 
-import java.util.Arrays;
-import java.util.Map;
-
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
-
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
-
+import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
-
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class GPUSelection implements IStreamSQLOperator, IMicroOperatorCode {
@@ -43,5 +34,6 @@ public class GPUSelection implements IStreamSQLOperator, IMicroOperatorCode {
 	}
 	
 	@Override
-	public void processData(Map<Integer, IWindowBatch> windowBatches, IWindowAPI api) {}
+	public void processData(WindowBatch windowBatch, IWindowAPI api) {
+	}
 }

@@ -1,23 +1,31 @@
 package uk.ac.imperial.lsds.streamsql.visitors;
 
-import uk.ac.imperial.lsds.streamsql.expressions.Addition;
-import uk.ac.imperial.lsds.streamsql.expressions.ColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.Constant;
-import uk.ac.imperial.lsds.streamsql.expressions.Division;
-import uk.ac.imperial.lsds.streamsql.expressions.Multiplication;
-import uk.ac.imperial.lsds.streamsql.expressions.Subtraction;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntAddition;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntDivision;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntSubtraction;
 
 public interface ValueExpressionVisitor {
 
-	public void visit(Addition add);
+	public void visit(FloatConstant floatConstant);
 
-	public void visit(ColumnReference cr);
+	public void visit(IntAddition add);
 
-	public void visit(Division dvsn);
+	public void visit(IntColumnReference cr);
 
-	public void visit(Multiplication mult);
+	public void visit(IntDivision dvsn);
 
-	public void visit(Subtraction sub);
+	public void visit(IntMultiplication mult);
 
-	public void visit(Constant vs);
+	public void visit(IntSubtraction sub);
+
+	public void visit(IntConstant vs);
+
+	public void visit(FloatColumnReference cr);
+
+
 }

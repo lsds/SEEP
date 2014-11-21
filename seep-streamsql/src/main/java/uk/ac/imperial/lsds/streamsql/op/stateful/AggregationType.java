@@ -4,7 +4,7 @@ public enum AggregationType {
 
 	MAX, MIN, COUNT, SUM, AVG;
 	
-	public String asString(int s) {
+	public String asString(String s) {
 		return this.toString() + "(" + s + ")";
 	}
 

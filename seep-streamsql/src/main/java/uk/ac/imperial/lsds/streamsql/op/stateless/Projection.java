@@ -1,14 +1,14 @@
 package uk.ac.imperial.lsds.streamsql.op.stateless;
 
-import java.util.Map;
-
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.streamsql.expressions.IValueExpression;
+import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.WindowBatch;
+import uk.ac.imperial.lsds.streamsql.expressions.Expression;
+import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
@@ -16,39 +16,26 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	/*
 	 * Expressions for the extended projection
 	 */
-	private IValueExpression<PrimitiveType>[] expressions;
+	private Expression[] expressions;
 
+	private TupleSchema outSchema;
 
-	public Projection(IValueExpression<PrimitiveType>[] expressions) {
+	public Projection(Expression[] expressions) {
 		this.expressions = expressions;
+		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 	}
 
 	@SuppressWarnings("unchecked")
-	public Projection(IValueExpression<PrimitiveType> expression) {
-		this.expressions = (IValueExpression<PrimitiveType>[]) new IValueExpression[] {expression};
+	public Projection(Expression expression) {
+		this.expressions = (Expression[]) new Expression[] {expression};
+		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 	}
 
-	private MultiOpTuple copyProject(MultiOpTuple data) {
-		MultiOpTuple t = new MultiOpTuple();
-		t.values = new PrimitiveType[expressions.length];
-
-		/*
-		 * Add all the content as defined by the projection expressions
-		 */
-		for (int i = 0; i < expressions.length; i++) 
-			t.values[i] = expressions[i].eval(data);
-		
-		t.timestamp = data.timestamp;
-		t.instrumentation_ts = data.instrumentation_ts;
-		
-		return t;
-	}
-		
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Projection (");
-		for (IValueExpression<PrimitiveType> att : expressions)
+		for (Expression att : expressions)
 			sb.append(att.toString() + " ");
 		sb.append(")");
 		return sb.toString();
@@ -60,33 +47,48 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	}
 
 	@Override
-	public void processData(Map<Integer, IWindowBatch> windowBatches,
-			IWindowAPI api) {
+	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		
-		assert(windowBatches.keySet().size() == 1);
+		int[] startPointers = windowBatch.getWindowStartPointers();
+		int[] endPointers = windowBatch.getWindowEndPointers();
 		
-		IWindowBatch batch = windowBatches.values().iterator().next();
-		
-		int[] startPointers = batch.getWindowStartPointers();
-		int[] endPointers = batch.getWindowEndPointers();
+		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
+		TupleSchema schema = windowBatch.getSchema();
+
+		int outWindowOffset = 0;
+		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			int windowStart = startPointers[currentWindow];
-			int windowEnd = endPointers[currentWindow];
-			
-			// empty window?
-			if (windowStart == -1) {
-				api.outputWindowResult(new MultiOpTuple[0]);
-			}
-			else {
+			int inWindowStartOffset = startPointers[currentWindow];
+			int inWindowEndOffset = endPointers[currentWindow];
+
+			/*
+			 * If the window is empty, we skip it 
+			 */
+			if (inWindowStartOffset != -1) {
 				
-				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
-				
-				for (int i = 0; i < windowEnd-windowStart+1; i++) 
-					windowResult[i] = copyProject(batch.get(windowStart + i));
-				
-				api.outputWindowResult(windowResult);
+				startPointers[currentWindow] = outWindowOffset;
+				// for all the tuples in the window
+				while (inWindowStartOffset <= inWindowEndOffset) {
+					for (int i = 0; i < expressions.length; i++) 
+						outBuffer.put(expressions[i].evalAsByte(inBuffer, schema, inWindowStartOffset));
+
+					outWindowOffset += outSchema.getByteSizeOfTuple();
+					inWindowStartOffset += byteSizeOfTuple;
+				}
+				endPointers[currentWindow] = outWindowOffset;
 			}
 		}
+		
+		// release old buffer (will return Unbounded Buffers to the pool)
+		inBuffer.release();
+		// reuse window batch by setting the new buffer and the new schema for the data in this buffer
+		windowBatch.setBuffer(outBuffer);
+		windowBatch.setSchema(outSchema);
+		
+		api.outputWindowBatchResult(-1, windowBatch);
 	}
+
+
 }

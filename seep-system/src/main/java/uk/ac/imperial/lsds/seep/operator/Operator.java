@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -249,30 +248,11 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 	}
 	
 	public void processData(DataTuple data){
-		/*
-		 * If we have a multiOperator, the contained microOperators will create 
-		 * their own local copy of localApi
-		 */
-		if(operatorCode instanceof MultiOperator){
-			operatorCode.processData(data, null);
-		}
-		// If we host a single operator, then we pass distApi, so that it can communicate with other machines
-		else{
-			operatorCode.processData(data, distApi);
-		}
+		operatorCode.processData(data, distApi);
 	}
 	
 	public void processData(ArrayList<DataTuple> dataList){
-		/*
-		 * If we have a multiOperator, the contained microOperators will create 
-		 * their own local copy of localApi
-		 */
-		if(operatorCode instanceof MultiOperator){
-			operatorCode.processData(dataList, null);
-		}
-		else{
-			operatorCode.processData(dataList, distApi);
-		}
+		operatorCode.processData(dataList, distApi);
 	}
 	
 	public void setUp(){
