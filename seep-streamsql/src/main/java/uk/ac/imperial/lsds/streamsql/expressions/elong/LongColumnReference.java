@@ -1,15 +1,15 @@
-package uk.ac.imperial.lsds.streamsql.expressions.efloat;
+package uk.ac.imperial.lsds.streamsql.expressions.elong;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 
-public class FloatColumnReference implements FloatExpression {
+public class LongColumnReference implements LongExpression {
 
 	private int _column = -1;
 
-	public FloatColumnReference(int column) {
+	public LongColumnReference(int column) {
 		_column = column;
 	}
 
@@ -27,26 +27,23 @@ public class FloatColumnReference implements FloatExpression {
 	}
 
 	@Override
-	public float eval(IQueryBuffer buffer, ITupleSchema schema, int offset) {
-		return buffer.getFloat(offset + schema.getOffsetForAttribute(_column));
+	public long eval(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+		return buffer.getLong(offset + schema.getOffsetForAttribute(_column));
 	}
 	
 	@Override
 	public void appendByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
-		toBuffer.putFloat(eval(fromBuffer, schema, offset));
+		toBuffer.putLong(eval(fromBuffer, schema, offset));
 	}
 	
 	@Override
 	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
 			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(fromBuffer.array(), fromBufferOffset, toBuffer.array(), fromBufferOffset + schema.getOffsetForAttribute(_column), 4);
+		System.arraycopy(fromBuffer.array(), fromBufferOffset, toBuffer.array(), fromBufferOffset + schema.getOffsetForAttribute(_column), 8);
 	}
-
+	
 	@Override
 	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
-		return ExpressionsUtil.floatToByteArray(eval(buffer, schema, offset));
+		return ExpressionsUtil.longToByteArray(eval(buffer, schema, offset));
 	}
-	
-	
-
 }

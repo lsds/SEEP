@@ -5,6 +5,15 @@ import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 
 public interface Expression {
 
-	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer);
-
+	public void appendByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer);
+	
+	public void writeByteResult(
+			IQueryBuffer fromBuffer, 
+			ITupleSchema schema, 
+			int fromBufferOffset, 
+			IQueryBuffer toBuffer,
+			int toBufferOffset);
+	
+	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset);
+	
 }

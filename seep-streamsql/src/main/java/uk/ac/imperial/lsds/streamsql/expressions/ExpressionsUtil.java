@@ -25,6 +25,15 @@ public class ExpressionsUtil {
 	    		(byte)((bits >> 24) & 0xff)
 	    };
 	}
+
+
+	public static final byte[] longToByteArray(long value) {
+		byte[] b = new byte[8];
+		for (int i = 0; i < 8; ++i) {
+		  b[i] = (byte) (value >> (8 - i - 1 << 3));
+		}
+		return b;
+	}
 	
 	public static final ITupleSchema getTupleSchemaForExpressions(final Expression[] expressions) {
 		int[] offsets = new int[expressions.length]; 
@@ -45,5 +54,6 @@ public class ExpressionsUtil {
 		
 		return new TupleSchema(offsets, currentOffset);
 	}
+
 
 }

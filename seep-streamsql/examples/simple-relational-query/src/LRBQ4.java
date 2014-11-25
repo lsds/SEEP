@@ -25,7 +25,7 @@ public class LRBQ4 {
 	
 	public void setup() {
 		
-		// INPUT STREAM vehicleID, speed, highway, direction, position
+		// INPUT STREAM timestamp, vehicleID, speed, highway, direction, position
 		int[] offsets = new int[] { 0, 8, 12, 16, 20, 24, 28 };
 		int byteSize = 32;
 		ITupleSchema inputSchema = new TupleSchema(offsets, byteSize);
@@ -38,6 +38,8 @@ public class LRBQ4 {
 		 * Group By segNo, dir, hwy
 		 * Having Avg(speed) < 40
 		 */
+		// OUTPUT STREAM timestamp, segNo, dir, hwy, AVG(speed)
+		
 		Selection having = new Selection(
 				new FloatComparisonPredicate (
 						FloatComparisonPredicate.LESS_OP, 

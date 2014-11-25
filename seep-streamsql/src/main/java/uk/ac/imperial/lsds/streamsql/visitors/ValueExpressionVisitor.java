@@ -8,6 +8,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntDivision;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntSubtraction;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 
 public interface ValueExpressionVisitor {
 
@@ -27,5 +28,6 @@ public interface ValueExpressionVisitor {
 
 	public void visit(FloatColumnReference cr);
 
+	public void visit(LongColumnReference cr);
 
 }

@@ -7,6 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.WindowBatch;
+import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
@@ -14,7 +20,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorCode {
 
-	private int[] groupByAttributes;
+	private Expression[] groupByAttributes;
 
 	private FloatColumnReference aggregationAttribute;
 			
@@ -22,19 +28,21 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 	
 	private Selection havingSel;
 
+	private ITupleSchema outSchema;
+	
 	@SuppressWarnings("unchecked")
 	public MicroPaneAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, new int[0]);
+		this(aggregationType, aggregationAttribute, new Expression[0]);
 	}
 
-	public MicroPaneAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute, int[] groupByAttributes, Selection havingSel) {
+	public MicroPaneAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute, Expression[] groupByAttributes, Selection havingSel) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
 		this.havingSel = havingSel;
 	}
 
-	public MicroPaneAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute, int[] groupByAttributes) {
+	public MicroPaneAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute, Expression[] groupByAttributes) {
 		this(aggregationType, aggregationAttribute, groupByAttributes, null);
 	}
 
@@ -69,9 +77,9 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 		ov.visit(this);
 	}	
 
-	private PaneResult computeForPane(IWindowBatch batch, int currentPaneStart, int currentPaneEnd) {
+	private float computeForPane(WindowBatch batch, int currentPaneStart, int currentPaneEnd, Map<Integer, Map<Integer, Float>> paneResults) {
 
-		PaneResult paneResult = new PaneResult();
+		float paneResult = new PaneResult();
 		
 		Map<Integer, Integer> countInPartition = new HashMap<>();
 		
@@ -147,26 +155,15 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 		return paneResult;
 	}
 
-	private class PaneResult {
-		Map<Integer, PrimitiveType> values = new HashMap<>();
-		Map<Integer, MultiOpTuple> objects = new HashMap<>();
-	}
-	
-	
 	@Override
-	public void processData(Map<Integer, IWindowBatch> windowBatches,
-			IWindowAPI api) {
+	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		
-		assert(windowBatches.keySet().size() == 1);
-		
-		IWindowBatch batch = windowBatches.values().iterator().next();
-		
-		int[] startPointers = batch.getWindowStartPointers();
-		int[] endPointers = batch.getWindowEndPointers();
-		
-		PaneResult[] paneResults = new PaneResult[2*startPointers.length-1];
-		int[] paneOffsets = new int[2*startPointers.length];
+		int[] startPointers = windowBatch.getWindowStartPointers();
+		int[] endPointers = windowBatch.getWindowEndPointers();
 
+		Map<Integer, Map<Integer, Float>> paneAggResults = new HashMap<>();
+		int[] paneOffsets = new int[2*startPointers.length];
+		
 		int currentPane = 0;
 		int nextStart = 0;
 		int nextEnd = 0;
@@ -206,7 +203,7 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 			}
 			
 			if (currentOffset != -1) {
-				paneResults[currentPane] = computeForPane(batch, paneOffsets[currentPane], currentOffset);
+				computeForPane(windowBatch, paneOffsets[currentPane], currentOffset, paneAggResults);
 				currentPane++;
 				paneOffsets[currentPane] = currentOffset;
 				if (nextStart < startPointers.length) 
@@ -216,8 +213,6 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 					nextEnd++;
 			}
 		}
-		
-//		api.outputWindowResult(new MultiOpTuple[0]);
 
 		/*
 		 * Do the aggregation of panes for windows
@@ -226,14 +221,11 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 		case COUNT:
 		case SUM:
 		case AVG:
-			aggValues = new HashMap<>();;
-			countInPartition = new HashMap<>();;
-			objects = new HashMap<>();;
-			performIncrementalAggregation(batch, paneOffsets, paneResults, api);
+			performIncrementalAggregation(windowBatch, paneOffsets, paneAggResults, api);
 			break;
 		case MAX:
 		case MIN:
-			aggregateDataPerWindow(startPointers, endPointers, paneOffsets, paneResults, api);
+			aggregateDataPerWindow(windowBatch, startPointers, endPointers, paneOffsets, paneAggResults, api);
 			break;
 		default:
 			break;
@@ -241,40 +233,49 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 
 	}
 	
-	private void aggregateDataPerWindow(int[] startPointers, int[] endPointers, int[] paneOffsets, PaneResult[] paneResults,
+	private void aggregateDataPerWindow(
+			WindowBatch windowBatch, 
+			int[] startPointers, 
+			int[] endPointers, int[] paneOffsets, Map<Integer, Map<Integer, Float>> paneResults,
 			IWindowAPI api) {
 		
 		assert(this.aggregationType.equals(AggregationType.MAX)||this.aggregationType.equals(AggregationType.MIN));
 
-		Map<Integer, MultiOpTuple> objects = new HashMap<>();
-		Map<Integer, PrimitiveType> aggValues = new HashMap<>();
-		
+		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
+		ITupleSchema schema = windowBatch.getSchema();
+	
+		int outWindowOffset = 0;
+		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		int currentPane = 0;
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			int windowStart = startPointers[currentWindow];
-			int windowEnd = endPointers[currentWindow];
-			
-			// empty window?
-			if (windowStart == -1) {
-				api.outputWindowResult(new MultiOpTuple[0]);
-			}
-			else {
-				while (paneOffsets[currentPane] < windowStart)
+			int inWindowStartOffset = startPointers[currentWindow];
+			int inWindowEndOffset = endPointers[currentWindow];
+
+			/*
+			 * If the window is empty, we skip it 
+			 */
+			if (inWindowStartOffset != -1) {
+				
+				startPointers[currentWindow] = outWindowOffset;
+				
+				while (paneOffsets[currentPane] < inWindowStartOffset)
 					currentPane++;
 
 				int paneCount = 0;
-				while (paneOffsets[currentPane + paneCount + 1] < windowEnd)
+				while (paneOffsets[currentPane + paneCount + 1] < inWindowEndOffset)
 					paneCount++;
 				
+				Map<Integer, Float> aggValues = new HashMap<>();
 				for (int i = currentPane; i <= currentPane + paneCount; i++) {
-					for (Integer partitionKey : paneResults[i].values.keySet()) {
-						PrimitiveType newValue = paneResults[i].values.get(partitionKey);
-						objects.put(partitionKey, paneResults[i].objects.get(partitionKey));
+					for (Integer partitionKey : paneResults.get(i).keySet()) {
+						Float newValue = paneResults.get(i).get(partitionKey);
 						
 						if (aggValues.containsKey(partitionKey)) {
-							if (aggValues.get(partitionKey).compareTo(newValue) < 0 && this.aggregationType.equals(AggregationType.MAX))
+							if (aggValues.get(partitionKey).compareTo(newValue) < 0 && this.aggregationType == AggregationType.MAX)
 								aggValues.put(partitionKey, newValue);
-							if (aggValues.get(partitionKey).compareTo(newValue) > 0 && this.aggregationType.equals(AggregationType.MIN))
+							if (aggValues.get(partitionKey).compareTo(newValue) > 0 && this.aggregationType == AggregationType.MIN)
 								aggValues.put(partitionKey, newValue);
 						}
 						else
@@ -282,27 +283,42 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 					}
 				}
 
-				List<MultiOpTuple> windowResult = new ArrayList<>();
-						
+				boolean write = true;
 				for (Integer partitionKey : aggValues.keySet()) {
-					MultiOpTuple refTuple = objects.get(partitionKey);
-					MultiOpTuple tuple = prepareOutputTuple(refTuple, aggValues.get(partitionKey), refTuple.timestamp, refTuple.instrumentation_ts);
 					if (havingSel != null) {
-						if (havingSel.getPredicate().satisfied(tuple))
-							windowResult.add(tuple);
+						if (!havingSel.getPredicate().satisfied(tuple))
+							write = false;
 					}
-					else {
-						windowResult.add(tuple);
+
+					if (write) {
+
+						long timestamp = -1;
+						outBuffer.putLong(timestamp);
+						
+						for (int i = 0; i < this.groupByAttributes.length; i++)
+							this.groupByAttributes[i].writeByteResult(inBuffer, schema, , outBuffer);
+						
+						outBuffer.putFloat(aggValues.get(partitionKey));
+						outWindowOffset += outSchema.getByteSizeOfTuple();
 					}
+					write = true;
 				}
 				
-				api.outputWindowResult(windowResult.toArray(new MultiOpTuple[0]));			
-//				api.outputWindowResult(new MultiOpTuple[0]);						
-			}			
-		}		
+				
+			}
+		}
+		
+		// release old buffer (will return Unbounded Buffers to the pool)
+		inBuffer.release();
+		// reuse window batch by setting the new buffer and the new schema for the data in this buffer
+		windowBatch.setBuffer(outBuffer);
+		windowBatch.setSchema(outSchema);
+		
+		api.outputWindowBatchResult(-1, windowBatch);
+		
 	}
 	
-	private void performIncrementalAggregation(IWindowBatch batch, int[] paneOffsets, PaneResult[] paneResults,
+	private void performIncrementalAggregation(WindowBatch batch, int[] paneOffsets, Map<Integer, Map<Integer, Float>> paneResults,
 			IWindowAPI api) {
 		
 		assert(this.aggregationType.equals(AggregationType.AVG)||this.aggregationType.equals(AggregationType.COUNT)||this.aggregationType.equals(AggregationType.SUM));

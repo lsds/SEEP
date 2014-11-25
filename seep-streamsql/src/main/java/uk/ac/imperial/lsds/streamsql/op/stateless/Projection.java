@@ -58,9 +58,12 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		int outWindowOffset = 0;
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
+		int inWindowStartOffset;
+		int inWindowEndOffset;
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			int inWindowStartOffset = startPointers[currentWindow];
-			int inWindowEndOffset = endPointers[currentWindow];
+			inWindowStartOffset = startPointers[currentWindow];
+			inWindowEndOffset = endPointers[currentWindow];
 
 			/*
 			 * If the window is empty, we skip it 
@@ -71,7 +74,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 				// for all the tuples in the window
 				while (inWindowStartOffset <= inWindowEndOffset) {
 					for (int i = 0; i < expressions.length; i++) 
-						expressions[i].writeByteResult(inBuffer, schema, inWindowStartOffset,outBuffer);
+						expressions[i].appendByteResult(inBuffer, schema, inWindowStartOffset,outBuffer);
 
 					outWindowOffset += outSchema.getByteSizeOfTuple();
 					inWindowStartOffset += byteSizeOfTuple;
