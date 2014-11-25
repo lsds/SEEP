@@ -198,6 +198,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				}
 			}
 		}
+
+		// release window buffer (will return Unbounded Buffers to the pool)
+		windowBuffer.release();
 			
 		// release old buffer (will return Unbounded Buffers to the pool)
 		inBuffer.release();
