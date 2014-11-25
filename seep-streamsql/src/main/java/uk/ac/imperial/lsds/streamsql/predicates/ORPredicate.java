@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
 public class ORPredicate implements IPredicate {
@@ -13,7 +13,7 @@ public class ORPredicate implements IPredicate {
 	}
 
 	@Override
-	public boolean satisfied(IQueryBuffer buffer, TupleSchema schema, int offset) {
+	public boolean satisfied(IQueryBuffer buffer, ITupleSchema schema, int offset) {
 		for (IPredicate pred : predicates)
 			if (pred.satisfied(buffer, schema, offset))
 				return true;

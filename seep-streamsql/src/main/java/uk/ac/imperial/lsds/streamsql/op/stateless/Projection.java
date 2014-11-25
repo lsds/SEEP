@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.streamsql.op.stateless;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
@@ -18,16 +18,15 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	 */
 	private Expression[] expressions;
 
-	private TupleSchema outSchema;
+	private ITupleSchema outSchema;
 
 	public Projection(Expression[] expressions) {
 		this.expressions = expressions;
 		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 	}
 
-	@SuppressWarnings("unchecked")
 	public Projection(Expression expression) {
-		this.expressions = (Expression[]) new Expression[] {expression};
+		this.expressions = new Expression[] {expression};
 		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 	}
 
@@ -54,7 +53,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
-		TupleSchema schema = windowBatch.getSchema();
+		ITupleSchema schema = windowBatch.getSchema();
 
 		int outWindowOffset = 0;
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
@@ -72,7 +71,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 				// for all the tuples in the window
 				while (inWindowStartOffset <= inWindowEndOffset) {
 					for (int i = 0; i < expressions.length; i++) 
-						outBuffer.put(expressions[i].evalAsByte(inBuffer, schema, inWindowStartOffset));
+						expressions[i].writeByteResult(inBuffer, schema, inWindowStartOffset,outBuffer);
 
 					outWindowOffset += outSchema.getByteSizeOfTuple();
 					inWindowStartOffset += byteSizeOfTuple;

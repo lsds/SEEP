@@ -1,13 +1,30 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-public interface TupleSchema {
+public class TupleSchema implements ITupleSchema {
 
-//	int[] columnTypes;
+	private int[] offsets;
+	private int byteSize;
 	
-	public int getNumberOfAttributes();
+	public TupleSchema(int[] offsets, int byteSize) {
+		this.offsets = offsets;
+		this.byteSize = byteSize;
+	}
 	
-	public int getOffsetForAttribute(int index);
+	@Override
+	public int getNumberOfAttributes() {
+		return offsets.length;
+	}
 
-	public int getByteSizeOfTuple();
+	@Override
+	public int getOffsetForAttribute(int index) {
+		return offsets[index];
+	}
+
+	@Override
+	public int getByteSizeOfTuple() {
+		return byteSize;
+	}
+
+
 
 }

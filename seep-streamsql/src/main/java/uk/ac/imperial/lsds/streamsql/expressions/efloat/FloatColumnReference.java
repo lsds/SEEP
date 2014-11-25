@@ -1,8 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.expressions.efloat;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
-import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 
 public class FloatColumnReference implements FloatExpression {
@@ -27,12 +26,12 @@ public class FloatColumnReference implements FloatExpression {
 	}
 
 	@Override
-	public float eval(IQueryBuffer buffer, TupleSchema schema, int offset) {
+	public float eval(IQueryBuffer buffer, ITupleSchema schema, int offset) {
 		return buffer.getInt(offset + schema.getOffsetForAttribute(_column));
 	}
 	
 	@Override
-	public byte[] evalAsByte(IQueryBuffer buffer, TupleSchema schema, int offset) {
-		return ExpressionsUtil.floatToByteArray(eval(buffer, schema, offset));
+	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
+		toBuffer.putFloat(eval(fromBuffer, schema, offset));
 	}
 }

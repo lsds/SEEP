@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.expressions;
 
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
-import uk.ac.imperial.lsds.seep.multi.TupleSchemaImpl;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
@@ -26,7 +26,7 @@ public class ExpressionsUtil {
 	    };
 	}
 	
-	public static final TupleSchema getTupleSchemaForExpressions(final Expression[] expressions) {
+	public static final ITupleSchema getTupleSchemaForExpressions(final Expression[] expressions) {
 		int[] offsets = new int[expressions.length]; 
 		int currentOffset = 0;
 		for (int i = 0; i < expressions.length; i++) {
@@ -43,7 +43,7 @@ public class ExpressionsUtil {
 			}
 		}
 		
-		return new TupleSchemaImpl(offsets, currentOffset);
+		return new TupleSchema(offsets, currentOffset);
 	}
 
 }

@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 
 public class SubQuery {
@@ -17,14 +18,16 @@ public class SubQuery {
 	private SubQuery upstreamSubQuery = null;
 	private SubQuery downstreamSubQuery = null;
 	
-	private IQueryBuffer inputBuffer;
+	private TaskDispatcher inputDispatcher;
 	
 	private WindowDefinition windowDef;
+	private ITupleSchema schema;
 	
-	public SubQuery(int id, Set<MicroOperator> microOperators, WindowDefinition windowDef) {
+	public SubQuery(int id, Set<MicroOperator> microOperators, ITupleSchema schema, WindowDefinition windowDef) {
 		this.id = id;
 		this.microOperators = microOperators;
 		this.windowDef = windowDef;
+		this.schema = schema;
 		
 		for (MicroOperator o : this.microOperators) {
 			if (o.isMostUpstream())
@@ -32,6 +35,8 @@ public class SubQuery {
 			if (o.isMostDownstream())
 				mostDownstreamMicroOperator = o;
 		}
+		
+		this.inputDispatcher = new TaskDispatcher(this);
 	}
 	
 	public int getId() {
@@ -54,16 +59,36 @@ public class SubQuery {
 		return this.mostDownstreamMicroOperator;
 	}
 
-	public IQueryBuffer getInputBuffer() {
-		return inputBuffer;
-	}
-
 	public MultiOperator getParent() {
 		return parent;
 	}
 
 	public void setParent(MultiOperator parent) {
 		this.parent = parent;
+	}
+
+	public TaskDispatcher getInputDispatcher() {
+		return inputDispatcher;
+	}
+
+	public void setInputDispatcher(TaskDispatcher inputDispatcher) {
+		this.inputDispatcher = inputDispatcher;
+	}
+
+	public ExecutorService getExecutorService() {
+		return this.parent.getExecutorService();
+	}
+
+	public WindowDefinition getWindowDefinition() {
+		return this.windowDef;
+	}
+
+	public ITupleSchema getSchema() {
+		return this.schema;
+	}
+
+	public void setUp() {
+		this.inputDispatcher.setUp();
 	}
 	
 }

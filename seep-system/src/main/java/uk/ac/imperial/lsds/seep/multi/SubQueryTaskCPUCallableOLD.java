@@ -20,13 +20,13 @@ import uk.ac.imperial.lsds.seep.operator.compose.window.ArrayWindowBatch;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
 import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
 
-public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
+public class SubQueryTaskCPUCallableOLD  implements Runnable, IWindowAPI {
 		
 	/*
 	 * Input data for the actual execution of the task
 	 */
 	private ISubQueryConnectable subQueryConnectable;
-	private Map<Integer, IWindowBatch> windowBatches;
+	private Map<Integer, WindowBatch> windowBatches;
 
 	private ResultCollector collector;
 
@@ -34,15 +34,14 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 	 * State
 	 */
 	private IMicroOperatorConnectable currentOperator;
-	private Map<Integer, IWindowBatch> currentWindowBatchResults;
-	private IWindowBatch finalWindowBatchResult;
+	private WindowBatch currentWindowBatchResult;
 	private int mostDownstreamOperatorId;
 	private int currentOperatorId;
 
 	private long startTime, dt;
 	
 	
-	public SubQueryTaskCPUCallable(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices) {
+	public SubQueryTaskCPUCallableOLD(ISubQueryConnectable subQueryConnectable, Map<Integer, IWindowBatch> windowBatches, int logicalOrderID, Map<SubQueryBufferWindowWrapper, Integer> freeUpToIndices) {
 		this.subQueryConnectable = subQueryConnectable;
 		this.windowBatches= windowBatches;
 		this.collector = new ResultCollector(subQueryConnectable, logicalOrderID, freeUpToIndices);
@@ -178,17 +177,10 @@ public class SubQueryTaskCPUCallable  implements ISubQueryTask, IWindowAPI {
 	}
 
 	@Override
-	public void outputWindowBatchResult(IWindowBatch windowBatchResult) {
-		if (this.mostDownstreamOperatorId == this.currentOperatorId) 
-			this.finalWindowBatchResult = windowBatchResult;
-		else 
-			for (Integer streamId : this.currentOperator.getLocalDownstream().keySet()) 
-				outputWindowBatchResult(streamId, windowBatchResult);
+	public void outputWindowBatchResult(int streamID,
+			WindowBatch windowBatchResult) {
+		this.currentWindowBatchResult = windowBatchResult;
 	}
 
-	@Override
-	public void outputWindowBatchResult(int streamID,
-			IWindowBatch windowBatchResult) {
-		this.currentWindowBatchResults.put(streamID, windowBatchResult);
-	}
+
 }

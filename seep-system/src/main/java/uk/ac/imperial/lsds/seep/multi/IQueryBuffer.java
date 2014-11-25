@@ -7,8 +7,9 @@ public interface IQueryBuffer {
 	public int getInt (int offset);
 	public float getFloat (int offset);
 	public long getLong (int offset);
-	public byte [] getBytes(int offset, int length);
 	public byte [] array ();
+	public byte [] array (int offset, int length);
+	public void copyBytesTo(int offset, int length, IQueryBuffer toBuffer);
 	public ByteBuffer getByteBuffer ();
 	public int capacity ();
 	public int remaining ();
@@ -25,5 +26,5 @@ public interface IQueryBuffer {
 	public void resize (int size);
 	public void free (int offset);
 	
-	public void release();
+	public void release ();
 }

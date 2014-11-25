@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.seep.operator.compose.executor;
+package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.BlockingQueue;

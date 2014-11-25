@@ -28,7 +28,6 @@ public class MultiOperator {
 	private GPUExecutionContext gpu = null;
 	
 	/* Print statistics */
-	long target = 0L;
 	long tuples = 0L;
 	long start = 0L;
 	long dt;
@@ -41,15 +40,11 @@ public class MultiOperator {
 	// int panes_per_window = 300;
 	int max_tuples_per_pane; // = 2000 * Integer.valueOf(GLOBALS.valueFor("L"));
 
-	final private Logger LOG = LoggerFactory.getLogger(MultiOperator.class);
-	
-	private static final long serialVersionUID = 1L;
-
 	private final int id;
 	
 	private Set<SubQuery> subQueries;
 	
-	private IQueryBuffer mostUpstreamBuffer;
+	private TaskDispatcher mostUpstreamDispatcher;
 
 	private ExecutorService executorService;
 	
@@ -66,31 +61,13 @@ public class MultiOperator {
 		return GPU; 
 	}
 	
-	public long getTarget() { 
-		return target; 
-	}
-	
-	public void targetReached() {
-	/*	
-		dt = (System.currentTimeMillis() - start) / 1000.;
-		rate =  tuples / dt;
-		
-		System.out.println(String.format("%10d tuples processed", tuples));
-		System.out.println(String.format("%10.1f seconds", dt));
-		System.out.println(String.format("%10.1f tuples/s", rate));
-		
-		if (GPU) 
-			gpu.stats();
-	*/
-	}
-	
 	public void processData (byte[] values) {
 		if (tuples == 0) {
 			start = System.currentTimeMillis();
 			previous_tuples = 0;
 		}
 		
-		this.mostUpstreamBuffer.put(values);
+		this.mostUpstreamDispatcher.dispatch(values);
 		
 		tuples ++;
 		
@@ -134,12 +111,14 @@ public class MultiOperator {
 			// this.executorService = Executors.newFixedThreadPool(1);
 		}
 
-		target = (long)Math.floor((2999d - 300d) / Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"))) + 1; 
-//		target = 1;
+		for (SubQuery sb : this.subQueries) {
+			sb.setParent(this);
+			sb.setUp();
+		}
 		
 		for (SubQuery sb : this.subQueries)
 			if (sb.isMostUpstream())
-				this.mostUpstreamBuffer = sb.getInputBuffer();
+				this.mostUpstreamDispatcher = sb.getInputDispatcher();
 	}
 	
 	public int getMultiOpId(){

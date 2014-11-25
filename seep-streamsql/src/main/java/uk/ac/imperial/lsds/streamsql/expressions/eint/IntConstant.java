@@ -1,8 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.expressions.eint;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
-import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 
 public class IntConstant implements IntExpression {
@@ -26,12 +25,13 @@ public class IntConstant implements IntExpression {
 	}
 
 	@Override
-	public int eval(IQueryBuffer buffer, TupleSchema schema, int offset) {
+	public int eval(IQueryBuffer buffer, ITupleSchema schema, int offset) {
 		return _constant;
 	}
 
 	@Override
-	public byte[] evalAsByte(IQueryBuffer buffer, TupleSchema schema, int offset) {
-		return ExpressionsUtil.intToByteArray(eval(buffer, schema, offset));
+	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
+		toBuffer.putInt(eval(fromBuffer, schema, offset));
 	}
+
 }

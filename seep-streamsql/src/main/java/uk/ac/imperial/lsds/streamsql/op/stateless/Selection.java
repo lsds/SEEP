@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.streamsql.op.stateless;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
@@ -44,7 +44,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
-		TupleSchema schema = windowBatch.getSchema();
+		ITupleSchema schema = windowBatch.getSchema();
 
 		int outWindowOffset = 0;
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
@@ -62,7 +62,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 				// for all the tuples in the window
 				while (inWindowStartOffset <= inWindowEndOffset) {
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
-						outBuffer.put(inBuffer.getBytes(inWindowStartOffset, byteSizeOfTuple));
+						inBuffer.copyBytesTo(inWindowStartOffset, byteSizeOfTuple,outBuffer);
 						outWindowOffset += byteSizeOfTuple;
 					}
 					inWindowStartOffset += byteSizeOfTuple;

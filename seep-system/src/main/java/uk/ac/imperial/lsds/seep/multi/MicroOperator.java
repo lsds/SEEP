@@ -50,5 +50,9 @@ public class MicroOperator {
 	public IMicroOperatorCode getCode() {
 		return code;
 	}
+
+	public void process(WindowBatch windowBatch, IWindowAPI api) {
+		this.code.processData(windowBatch, api);
+	}
 	
 }

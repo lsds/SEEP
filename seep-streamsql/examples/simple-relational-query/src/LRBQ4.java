@@ -2,9 +2,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
@@ -24,7 +26,10 @@ public class LRBQ4 {
 	public void setup() {
 		
 		// INPUT STREAM vehicleID, speed, highway, direction, position
-
+		int[] offsets = new int[] { 0, 8, 12, 16, 20, 24, 28 };
+		int byteSize = 32;
+		ITupleSchema inputSchema = new TupleSchema(offsets, byteSize);
+		
 		/*
 		 * Query 4
 		 * 
@@ -46,7 +51,8 @@ public class LRBQ4 {
 				having
 		);
 
-		MicroOperator q2Agg = new MicroOperator(q2AggCode, 3);
+//		MicroOperator q2Agg = new MicroOperator(q2AggCode, 3);
+		MicroOperator q2Agg = new MicroOperator(having, 3);
 
 		IMicroOperatorCode q2ProjCode = new Projection(
 				new Expression[] {
@@ -63,7 +69,8 @@ public class LRBQ4 {
 		q2MicroOps.add(q2Proj);
 		q2MicroOps.add(q2Agg);
 
-		SubQuery sq1 = new SubQuery(10, q2MicroOps, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
+//		SubQuery sq1 = new SubQuery(10, q2MicroOps, inputSchema, new WindowDefinition(WindowType.RANGE_BASED, 300, 1));
+		SubQuery sq1 = new SubQuery(10, q2MicroOps, inputSchema, new WindowDefinition(WindowType.ROW_BASED, 1024, 1024));
 
 		Set<SubQuery> subQueries = new HashSet<>();
 		subQueries.add(sq1);

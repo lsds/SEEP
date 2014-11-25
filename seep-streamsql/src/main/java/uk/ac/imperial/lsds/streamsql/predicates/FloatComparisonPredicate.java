@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.predicates;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.visitors.PredicateVisitor;
 
@@ -108,7 +108,7 @@ public class FloatComparisonPredicate implements IPredicate {
 	}
 
 	@Override
-	public boolean satisfied(IQueryBuffer buffer, TupleSchema schema, int offset) {
+	public boolean satisfied(IQueryBuffer buffer, ITupleSchema schema, int offset) {
 		float val1 = v1.eval(buffer, schema, offset);
 		float val2 = v2.eval(buffer, schema, offset);
 
