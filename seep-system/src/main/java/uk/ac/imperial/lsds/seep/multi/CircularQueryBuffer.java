@@ -207,7 +207,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	}
 
 	@Override
-	public void copyBytesTo(int offset, int length, IQueryBuffer toBuffer) {
-		toBuffer.getByteBuffer().put(this.data, offset, length);
+	public void copy (int offset, int length, IQueryBuffer destination) {
+		destination.getByteBuffer().put(this.data, offset, length);
 	}
 }

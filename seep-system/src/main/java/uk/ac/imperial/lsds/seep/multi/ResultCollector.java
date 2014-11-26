@@ -5,7 +5,6 @@ public class ResultCollector {
 		int idx = taskid % handler.SLOTS;
 		int index;
 		int next;
-		/* int upto = -1; */
 		try {
 			
 			while (! handler.slots.compareAndSet(idx, 1, 0))
@@ -20,15 +19,11 @@ public class ResultCollector {
 			while (index > 0)
 			{
 				buffer.free (index);
-				/* upto = index; */
 				handler.slots.lazySet (handler.next, 1);
 				next = (handler.next + 1) % handler.SLOTS;
 				index = handler.offsets.getAndSet (next, -1);
 				handler.next = next;
 			}
-			/* if (upto < 0)
-				return ;
-			buffer.free(upto); */
 		} catch (Exception e) { e.printStackTrace(); } 
 	}
 }

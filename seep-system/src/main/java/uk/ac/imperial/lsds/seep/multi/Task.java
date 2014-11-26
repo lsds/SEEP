@@ -1,8 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
-import java.util.concurrent.Callable;
 
-
-public class Task implements Callable<Integer>, IWindowAPI {
+public class Task implements IWindowAPI {
 	
 	private WindowBatch batch;
 	private ResultHandler handler;
@@ -30,28 +28,31 @@ public class Task implements Callable<Integer>, IWindowAPI {
 		this.freeUpTo = freeUpTo;
 	}
 	
-	@Override
-	public Integer call () throws Exception {
+	public int run () {
 		IQueryBuffer buffer = batch.getBuffer();
+		int result = 0;
+		
 		int start = batch.getBatchStartPointer();
 		int end = batch.getBatchEndPointer();
 		int tupleSize = batch.getSchema().getByteSizeOfTuple();
-		int result = 0;
+		
 		for (int index = start; index < end; index += tupleSize) {
 			result += buffer.getLong(index);
 		}
-		
+		/*
 		query.getMostUpstreamMicroOperator().process(batch, this);
-		
+		*/
 		
 		/* System.out.println(String.format("[DBG] [Task %7d] %d", taskid, result)); */
+		
 		ResultCollector.free(handler, buffer, taskid, freeUpTo);
 		return result;
 	}
-
+	
 	@Override
-	public void outputWindowBatchResult(int streamID,
-			WindowBatch windowBatchResult) {
+	public void outputWindowBatchResult (int streamID, WindowBatch windowBatchResult) {
 		this.batch = windowBatchResult;
+		this.batch.getBuffer().release();
+        WindowBatchFactory.free(this.batch);
 	}
 }

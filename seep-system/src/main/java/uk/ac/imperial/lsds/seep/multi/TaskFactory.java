@@ -1,5 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
-import java.util.concurrent.Callable;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import uk.ac.imperial.lsds.seep.multi.Task;
@@ -25,8 +25,8 @@ public class TaskFactory {
 		return task;
 	}
 	
-	public static void free (Callable<Integer> callable) {
+	public static void free (Task task) {
 		/* The pool is ever growing based on peek demand */
-		pool.offer ((Task) callable);
+		pool.offer (task);
 	}
 }

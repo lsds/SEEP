@@ -3,7 +3,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public class ResultHandler {
 	
-	public static final int SLOTS = 1000000;
+	public final int SLOTS = Utils.TASKS;
 	
 	public AtomicIntegerArray slots;
 	public AtomicIntegerArray offsets;

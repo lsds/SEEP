@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-
 public class WindowDefinition {
 	
 	public enum WindowType { ROW_BASED , RANGE_BASED }

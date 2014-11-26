@@ -4,7 +4,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class WindowBatchFactory {
 	
 	private static final int   _pool_size = Utils.TASKS; /* Initial pool size */
-	private static final int _buffer_size = 1048576; /* 1MB */
 	
 	private static ConcurrentLinkedQueue<WindowBatch> pool = 
 		new ConcurrentLinkedQueue<WindowBatch>();

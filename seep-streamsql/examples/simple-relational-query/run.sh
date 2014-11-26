@@ -1,10 +1,6 @@
 #!/bin/bash
 
-DEFAULT_INPUT_FILE="datafile20seconds.dat"
-DEFAULT_EXEC_MODE="cpu"
-DEFAULT_L="1"
-DEFAULT_CLASS="LRBRunner"
-USAGE="usage: ./run.sh [cpu|gpu] [input filename] [L]"
+USAGE="usage: ./run.sh [class name]"
 
 # Classpath
 JCP="."
@@ -12,54 +8,23 @@ JCP=${JCP}:src
 JCP=${JCP}:lib/seep-streamsql-0.0.1-SNAPSHOT.jar
 JCP=${JCP}:lib/seep-system-0.0.1-SNAPSHOT.jar
 
-# Java library path
-API="/mnt/data/cccad3/akolious/aparapi-read-only"
-JLP="${API}/com.amd.aparapi.jni/dist"
+OPTS="-server -XX:+UseConcMarkSweepGC -XX:NewRatio=2 -Xms16g -Xmx16g -Xloggc:test-gc.out"
 
-# OPTS="-server -XX:+UseConcMarkSweepGC -Xms4g -Xmx8g"
-OPTS="-server -XX:+UseConcMarkSweepGC -Xms4g -Xmx10g -Xloggc:test-gc.out"
-
-if [ $# -gt 3 ]; then
-	echo $USAGE
-	exit 1
+if [ $# -gt 1 ]; then
+    echo $USAGE
+    exit 1
 fi
 
-# Set execution mode
-EXEC_MODE=$DEFAULT_EXEC_MODE
-[ $# -gt 0 ] && EXEC_MODE=$1
-if [ "$EXEC_MODE" != "cpu" -a "$EXEC_MODE" != "gpu" ]; then
-	echo $USAGE
-	exit 1
-fi
-# Do not load aparapi library for CPU execution
-[ "$EXEC_MODE" == "cpu" ] && JLP=""
+CLASS=$1
 
-# Select class
-CLASS=$DEFAULT_CLASS
-# [ "$EXEC_MODE" == "gpu" ] && CLASS="LRBGPURunner"
+java $OPTS -cp $JCP $CLASS # 2>&1 >test.out &
 
-# Set input file
-INPUT_FILE=$DEFAULT_INPUT_FILE
-[ $# -gt 1 ] && INPUT_FILE=$2
-if [ ! -f $INPUT_FILE ]; then
-	echo "error: ${INPUT_FILE} does not exist"
-	exit 1
-fi
-
-# Set L
-L=$DEFAULT_L
-[ $# -gt 2 ] && L=$3
-
-java -Djava.library.path=$JLP $OPTS -cp $JCP $CLASS $INPUT_FILE $L # 2>&1 >test.out &
 # seep_pid=$!
-
-# echo $(($(date +%s%N)/1000000)) >> test-cpu.out
-# top -b -n240 -d 1 | grep "Cpu" >> test-cpu.out
-
+# top -b -n120 -d 1 | grep "Cpu" >> test-cpu.out
 # kill -9 $seep_pid
 
 echo "Done."
-sleep 10
+sleep 1
 echo "Bye."
 
 exit 0

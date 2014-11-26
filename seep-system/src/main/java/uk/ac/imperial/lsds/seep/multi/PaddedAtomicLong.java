@@ -1,8 +1,9 @@
 package uk.ac.imperial.lsds.seep.multi;
 import java.util.concurrent.atomic.AtomicLong;
 
+@SuppressWarnings("serial")
 public class PaddedAtomicLong extends AtomicLong {
-	
+
 	public PaddedAtomicLong (final long value) {
 		super(value);
 	}

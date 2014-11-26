@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.SubQuery;
 
 public class MicroOperator {
 

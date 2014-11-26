@@ -18,7 +18,7 @@ public class ExpressionsUtil {
 	
 	public static final byte[] floatToByteArray(float value) {
 		int bits = Float.floatToIntBits(value);
-	    return new byte[] {
+	    return new byte [] {
 	    		(byte)(bits & 0xff),
 	    		(byte)((bits >> 8) & 0xff),
 	    		(byte)((bits >> 16) & 0xff),
