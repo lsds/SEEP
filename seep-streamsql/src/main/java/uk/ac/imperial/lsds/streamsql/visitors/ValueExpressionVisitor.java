@@ -29,5 +29,4 @@ public interface ValueExpressionVisitor {
 	public void visit(FloatColumnReference cr);
 
 	public void visit(LongColumnReference cr);
-
 }

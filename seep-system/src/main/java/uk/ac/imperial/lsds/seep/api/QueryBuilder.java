@@ -18,7 +18,6 @@ import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.OperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
 import uk.ac.imperial.lsds.seep.state.CustomState;
 import uk.ac.imperial.lsds.seep.state.LargeState;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;

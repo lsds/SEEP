@@ -1,132 +1,66 @@
-/*******************************************************************************
- * Copyright (c) 2014 Imperial College London
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * 
- * Contributors:
- *     Raul Castro Fernandez - initial API and implementation
- ******************************************************************************/
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
+
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.gpu.GPUExecutionContext;
-import uk.ac.imperial.lsds.seep.gpu.GPUExecutorService;
+import java.util.concurrent.Executor;
 
 public class MultiOperator {
 	
-	/* Simple flag to switch to the GPU executor service. */
-	private final boolean GPU = false;
-	private GPUExecutionContext gpu = null;
-	
-	/* Print statistics */
-	long tuples = 0L;
-	long start = 0L;
-	long dt;
-	double rate;
-	long dtuples, previous_tuples, current_time;
-	
-	/* GPU context static configuration */
-	int panes; // = 600;
- 	// int max_keys = 200;
-	// int panes_per_window = 300;
-	int max_tuples_per_pane; // = 2000 * Integer.valueOf(GLOBALS.valueFor("L"));
-
-	private final int id;
+	private static final int threads = Utils.THREADS;
+	private static final int queue_size = Utils.TASKS;
 	
 	private Set<SubQuery> subQueries;
+	private int id;
 	
-	private TaskDispatcher mostUpstreamDispatcher;
-
-	private ExecutorService executorService;
+	private TaskDispatcher  dispatcher;
+	private ConcurrentLinkedQueue<Task> _queue, queue;
+	private TaskProcessorPool workerPool;
+	private Executor executor;
 	
-	public MultiOperator(Set<SubQuery> subQueries, int multiOpId){
-		this.id = multiOpId;
+	public MultiOperator (Set<SubQuery> subQueries, int id) {
 		this.subQueries = subQueries;
+		this.id = id;
 	}
 	
-	public GPUExecutionContext getGPUContext() { 
-		return gpu; 
+	public void processData (byte [] values) {
+		
+		this.dispatcher.dispatch(values);
 	}
 	
-	public boolean isGPUEnabled() { 
-		return GPU; 
+	public void setup () {
+		
+		this._queue = new ConcurrentLinkedQueue<Task> ();
+		this.workerPool = new TaskProcessorPool (threads, _queue);
+		this.executor = Executors.newCachedThreadPool();
+		queue = workerPool.start(executor);
+		
+		for (SubQuery q : this.subQueries) {
+			q.setParent(this);
+			q.setup();
+			if (q.isMostUpstream())
+				this.dispatcher = q.getTaskDispatcher();
+		}
+		
+		Thread monitor = new Thread(new PerformanceMonitor(this));
+		monitor.setName("Monitor");
+		monitor.start();
 	}
 	
-	public void processData (byte[] values) {
-		if (tuples == 0) {
-			start = System.currentTimeMillis();
-			previous_tuples = 0;
-		}
-		
-		this.mostUpstreamDispatcher.dispatch(values);
-		
-		tuples ++;
-		
-		if (tuples % 60000000 == 0) {
-			current_time = System.currentTimeMillis();
-			dt = current_time - start;
-			dtuples = tuples - previous_tuples;
-			rate = (double) dtuples / ((double) dt / 1000.);
-			System.out.println(
-			String.format("[DBG] [MultiOperator] %13d tuples | %10d msec |%15.2f tuples/sec", tuples, dt, rate)
-			);
-			previous_tuples = tuples;
-			start = current_time;
-		}
-	}
-
-	public void setUp() {
-		
-		/*
-		 * Create the thread pool 
-		 */
-		int numberOfCores = Runtime.getRuntime().availableProcessors();
-		//TODO: think about tuning this selection
-		int numberOfCoresToUse = Math.max(numberOfCores, subQueries.size());
-		numberOfCoresToUse = Integer.valueOf(GLOBALS.valueFor("numcores"));
-		System.out.println(numberOfCoresToUse + " available processors");
-		
-		if (GPU) {
-			System.out.println("Launching GPU executor service...");
-			// gpu = new GPUExecutionContext(panes, max_keys, panes_per_window, max_tuples_per_pane);
-			panes = Integer.valueOf(GLOBALS.valueFor("subQueryWindowBatchCount"));
-			max_tuples_per_pane = 1024;
-			System.out.println(String.format("%d panes %d tuples/pane", panes, max_tuples_per_pane));
-			gpu = new GPUExecutionContext(panes, max_tuples_per_pane);
-		 	this.executorService = new GPUExecutorService(1000);
-		} else {
-			/* */
-			// this.executorService = new CPUExecutorService(3, 10000);
-			this.executorService = Executors.newFixedThreadPool(numberOfCoresToUse);
-			// this.executorService = new ThreadPoolExecutor(numberOfCoresToUse, numberOfCoresToUse, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(10000, true));
-			// this.executorService = Executors.newFixedThreadPool(1);
-		}
-
-		for (SubQuery sb : this.subQueries) {
-			sb.setParent(this);
-			sb.setUp();
-		}
-		
-		for (SubQuery sb : this.subQueries)
-			if (sb.isMostUpstream())
-				this.mostUpstreamDispatcher = sb.getInputDispatcher();
-	}
-	
-	public int getMultiOpId(){
+	public int getId () {
 		return id;
 	}
 	
-	public ExecutorService getExecutorService() {
-		return this.executorService;
+	public ConcurrentLinkedQueue<Task> getExecutorQueue () {
+		return this.queue;
 	}
 	
+	public int getExecutorQueueSize () {
+		return this.queue.size();
+	}
+	
+	public Set<SubQuery> getSubQueries () {
+		return this.subQueries;
+	}
 }

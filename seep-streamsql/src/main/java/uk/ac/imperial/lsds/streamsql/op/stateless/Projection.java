@@ -17,80 +17,82 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	 * Expressions for the extended projection
 	 */
 	private Expression[] expressions;
-
+	
 	private ITupleSchema outSchema;
-
-	public Projection(Expression[] expressions) {
+	
+	public Projection (Expression [] expressions) {
 		this.expressions = expressions;
 		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 	}
-
-	public Projection(Expression expression) {
-		this.expressions = new Expression[] {expression};
+	
+	public Projection (Expression expression) {
+		this.expressions = new Expression [] { expression };
 		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 	}
-
+	
 	@Override
-	public String toString() {
+	public String toString () {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Projection (");
-		for (Expression att : expressions)
-			sb.append(att.toString() + " ");
+		for (Expression attribute : expressions)
+			sb.append(attribute.toString() + " ");
 		sb.append(")");
 		return sb.toString();
 	}
-
+	
 	@Override
-	public void accept(OperatorVisitor ov) {
-		ov.visit(this);		
+	public void accept (OperatorVisitor visitor) {
+		visitor.visit(this);		
 	}
-
+	
 	@Override
-	public void processData(WindowBatch windowBatch, IWindowAPI api) {
+	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
-		int[] startPointers = windowBatch.getWindowStartPointers();
-		int[] endPointers = windowBatch.getWindowEndPointers();
+		windowBatch.initWindowPointers();
+		/* windowBatch.debug(); */
 		
-		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		int [] startPointers = windowBatch.getWindowStartPointers ();
+		int [] endPointers   = windowBatch.getWindowEndPointers ();
+		
+		IQueryBuffer inBuffer  = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
+		
 		ITupleSchema schema = windowBatch.getSchema();
-
-		int outWindowOffset = 0;
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
-		int inWindowStartOffset;
-		int inWindowEndOffset;
+		int outWindowOffset = 0;
 		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			inWindowStartOffset = startPointers[currentWindow];
-			inWindowEndOffset = endPointers[currentWindow];
-
+			
+			int inWindowStartOffset = startPointers[currentWindow];
+			int inWindowEndOffset = endPointers[currentWindow];
+			
 			/*
-			 * If the window is empty, we skip it 
+			 * If the window is empty, skip it 
 			 */
 			if (inWindowStartOffset != -1) {
 				
 				startPointers[currentWindow] = outWindowOffset;
-				// for all the tuples in the window
-				while (inWindowStartOffset <= inWindowEndOffset) {
-					for (int i = 0; i < expressions.length; i++) 
-						expressions[i].appendByteResult(inBuffer, schema, inWindowStartOffset,outBuffer);
-
-					outWindowOffset += outSchema.getByteSizeOfTuple();
+				/* For all the tuples in the window */
+				while (inWindowStartOffset < inWindowEndOffset) 
+				{
+					for (int i = 0; i < expressions.length; i++)
+					{
+						expressions[i].writeByteResult(inBuffer, schema, inWindowStartOffset, outBuffer);
+					}
+					outWindowOffset += outSchema.getByteSizeOfTuple ();
 					inWindowStartOffset += byteSizeOfTuple;
 				}
 				endPointers[currentWindow] = outWindowOffset;
 			}
 		}
 		
-		// release old buffer (will return Unbounded Buffers to the pool)
+		/* Return (unbounded) buffers to the pool */
 		inBuffer.release();
-		// reuse window batch by setting the new buffer and the new schema for the data in this buffer
+		/* Reuse window batch by setting the new buffer and the new schema for the data in this buffer */
 		windowBatch.setBuffer(outBuffer);
 		windowBatch.setSchema(outSchema);
 		
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
-
-
 }

@@ -58,6 +58,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	
 	/* The buffer is every growing based on peek demand */
 	
+	@SuppressWarnings("finally")
 	public int putInt (int value) { 
 		try {
 			buffer.putInt(value);
@@ -69,6 +70,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@SuppressWarnings("finally")
 	public int putFloat (float value) {
 		try {
 			buffer.putFloat(value);
@@ -80,6 +82,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@SuppressWarnings("finally")
 	public int putLong (long value) {
 		try {
 			buffer.putLong(value);
@@ -91,6 +94,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@SuppressWarnings("finally")
 	public int put (byte [] values) {
 		int size, size_;
 		try {

@@ -1,11 +1,10 @@
 package uk.ac.imperial.lsds.seep.multi;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TaskDispatcher {
 	
-	private ExecutorService executor;
+	private ConcurrentLinkedQueue<Task> workerQueue;
 	private IQueryBuffer buffer;
 	private WindowDefinition window;
 	private ITupleSchema schema;
@@ -31,7 +30,7 @@ public class TaskDispatcher {
 		
 		this.parent = parent;
 		this.buffer = new CircularQueryBuffer(Utils._CIRCULAR_BUFFER_);
-;		this.window = this.parent.getWindowDefinition();
+		this.window = this.parent.getWindowDefinition();
 		this.schema = this.parent.getSchema();
 		this.handler = new ResultHandler ();
 		
@@ -48,9 +47,8 @@ public class TaskDispatcher {
 		tupleSize = schema.getByteSizeOfTuple();
 	}
 	
-	public void setUp() {
-		this.executor = this.parent.getExecutorService();
-		
+	public void setup () {
+		this.workerQueue = this.parent.getExecutorQueue();
 	}
 	
 	public void dispatch (byte [] data) {
@@ -65,19 +63,10 @@ public class TaskDispatcher {
 	private void newTaskFor (long p, long q, long free) {
 		Task task;
 		WindowBatch batch;
-		try {
-			/* System.out.println(String.format("[%10d, %10d)", p, q)); */
-			batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema, (int) p, (int) q);
-			task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
-			executor.submit(task);
-		} catch (RejectedExecutionException e) {
-			/* Unless this executor's task pool size is smaller than
-			 * the number of batches that fit in the circular buffer
-			 * something is wrong, since the buffer should be full.
-			 */
-			e.printStackTrace(); 
-			System.exit(1);
-		}
+		/* System.out.println(String.format("[%10d, %10d)", p, q)); */
+		batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema, (int) p, (int) q);
+		task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
+		workerQueue.add(task);
 	}
 	
 	private void assemble (int index, int length) {
@@ -118,6 +107,10 @@ public class TaskDispatcher {
 		if (nextTask == Integer.MAX_VALUE)
 			nextTask = 0;
 		return id;
+	}
+	
+	public IQueryBuffer getBuffer () {
+		return this.buffer;
 	}
 }
 

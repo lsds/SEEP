@@ -63,11 +63,35 @@ public class WindowBatch {
 	}
 	
 	public void initWindowPointers () {
+		
 		if (initialised)
 			return ;
-		//TODO: Populate window start and end pointers 
+		
 		windowStartPointers = new int [batchSize];
 		windowEndPointers   = new int [batchSize];
+		
+		if (windowDefinition.isRowBased()) 
+		{
+			if (windowDefinition.isTumbling()) 
+			{
+				int window_ = (int) windowDefinition.getSize();
+				int tuple_ = schema.getByteSizeOfTuple ();
+				int bpw = window_ * tuple_;
+				
+				for (int i = 0; i < batchSize; i++)
+				{
+					windowStartPointers[i] = this.batchStartPointer + i * bpw;
+					windowEndPointers[i]   = windowStartPointers[i] + 1 * bpw;
+				}
+			} else
+			{
+				throw new UnsupportedOperationException("error: support for row-based sliding windows not yet implemented");
+			}
+		}
+		else
+		{
+			throw new UnsupportedOperationException("error: support for range-based windows not yet implemented");
+		}
 	}
 	
 	public void clear () {
@@ -129,9 +153,20 @@ public class WindowBatch {
 	public ITupleSchema getSchema () {
 		return this.schema;
 	}
+		
+	public WindowDefinition getWindowDefinition () {
+		return this.windowDefinition;
+	}
 	
 	public void setSchema (ITupleSchema schema) {
 		this.schema = schema;
+	}
+	
+	public void debug () {
+		for (int i = 0; i < this.batchSize; i++) {
+			System.out.println(String.format("[DBG] [Projection] window %3d starts at %10d ends at %10d", 
+				i, this.windowStartPointers[i], this.windowEndPointers[i]));
+		}
 	}
 }
 

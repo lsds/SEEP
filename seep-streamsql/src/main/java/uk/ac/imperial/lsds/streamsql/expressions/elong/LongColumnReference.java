@@ -2,7 +2,6 @@ package uk.ac.imperial.lsds.streamsql.expressions.elong;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
-import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 
 public class LongColumnReference implements LongExpression {
@@ -14,7 +13,7 @@ public class LongColumnReference implements LongExpression {
 	}
 
 	@Override
-	public void accept(ValueExpressionVisitor vev) {
+	public void accept (ValueExpressionVisitor vev) {
 		vev.visit(this);
 	}
 
@@ -32,18 +31,8 @@ public class LongColumnReference implements LongExpression {
 	}
 	
 	@Override
-	public void appendByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
+	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
 		toBuffer.putLong(eval(fromBuffer, schema, offset));
 	}
-	
-	@Override
-	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
-			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(fromBuffer.array(), fromBufferOffset, toBuffer.array(), fromBufferOffset + schema.getOffsetForAttribute(_column), 8);
-	}
-	
-	@Override
-	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
-		return ExpressionsUtil.longToByteArray(eval(buffer, schema, offset));
-	}
+
 }

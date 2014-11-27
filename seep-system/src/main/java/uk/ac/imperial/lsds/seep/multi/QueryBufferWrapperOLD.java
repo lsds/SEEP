@@ -1,15 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.IdentityHashMap;
-import java.util.Map;
-
-import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
-import uk.ac.imperial.lsds.seep.operator.compose.subquery.ISubQueryConnectable;
-
 public class QueryBufferWrapperOLD {
 	
 //	/*

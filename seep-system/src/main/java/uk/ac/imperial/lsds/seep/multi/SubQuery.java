@@ -1,32 +1,32 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 public class SubQuery {
 	
 	private int id;
 	
-	private Set<MicroOperator> microOperators;
+	private Set<MicroOperator> microOperators = null;
 	
-	private MicroOperator mostUpstreamMicroOperator;
-	private MicroOperator mostDownstreamMicroOperator;
+	private MicroOperator mostUpstreamMicroOperator = null;
+	private MicroOperator mostDownstreamMicroOperator = null;
 
 	private MultiOperator parent;
 	
 	private SubQuery upstreamSubQuery = null;
 	private SubQuery downstreamSubQuery = null;
 	
-	private TaskDispatcher inputDispatcher;
+	private TaskDispatcher dispatcher;
 	
-	private WindowDefinition windowDef;
+	private WindowDefinition window;
 	private ITupleSchema schema;
 	
-	public SubQuery(int id, Set<MicroOperator> microOperators, ITupleSchema schema, WindowDefinition windowDef) {
+	public SubQuery(int id, Set<MicroOperator> microOperators, ITupleSchema schema, WindowDefinition window) {
 		this.id = id;
 		this.microOperators = microOperators;
-		this.windowDef = windowDef;
+		this.window = window;
 		this.schema = schema;
 		
 		for (MicroOperator o : this.microOperators) {
@@ -36,59 +36,59 @@ public class SubQuery {
 				mostDownstreamMicroOperator = o;
 		}
 		
-		this.inputDispatcher = new TaskDispatcher(this);
+		this.dispatcher = new TaskDispatcher(this);
 	}
 	
-	public int getId() {
-		return id;
+	public int getId () {
+		return this.id;
 	}
 	
-	public boolean isMostUpstream() {
+	public boolean isMostUpstream () {
 		return (this.upstreamSubQuery == null);
 	}
-
-	public boolean isMostDownstream() {
+	
+	public boolean isMostDownstream () {
 		return (this.downstreamSubQuery == null);
 	}
-
-	public MicroOperator getMostUpstreamMicroOperator() {
+	
+	public MicroOperator getMostUpstreamMicroOperator () {
 		return this.mostUpstreamMicroOperator;
 	}
 	
-	public MicroOperator getMostDownstreamMicroOperator() {
+	public MicroOperator getMostDownstreamMicroOperator () {
 		return this.mostDownstreamMicroOperator;
 	}
-
-	public MultiOperator getParent() {
+	
+	public MultiOperator getParent () {
 		return parent;
 	}
-
-	public void setParent(MultiOperator parent) {
+	
+	public void setParent (MultiOperator parent) {
 		this.parent = parent;
 	}
 
-	public TaskDispatcher getInputDispatcher() {
-		return inputDispatcher;
+	public TaskDispatcher getTaskDispatcher () {
+		return dispatcher;
 	}
 
-	public void setInputDispatcher(TaskDispatcher inputDispatcher) {
-		this.inputDispatcher = inputDispatcher;
+	public void setTaskDispatcher (TaskDispatcher dispatcher) {
+		this.dispatcher = dispatcher;
 	}
 
-	public ExecutorService getExecutorService() {
-		return this.parent.getExecutorService();
+	public ConcurrentLinkedQueue<Task> getExecutorQueue () {
+		return this.parent.getExecutorQueue();
 	}
 
 	public WindowDefinition getWindowDefinition() {
-		return this.windowDef;
+		return this.window;
 	}
 
 	public ITupleSchema getSchema() {
 		return this.schema;
 	}
 
-	public void setUp() {
-		this.inputDispatcher.setUp();
+	public void setup() {
+		this.dispatcher.setup();
 	}
 	
 }
