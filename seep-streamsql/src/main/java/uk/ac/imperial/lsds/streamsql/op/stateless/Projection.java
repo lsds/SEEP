@@ -78,7 +78,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 				{
 					for (int i = 0; i < expressions.length; i++)
 					{
-						expressions[i].writeByteResult(inBuffer, schema, inWindowStartOffset, outBuffer);
+						expressions[i].appendByteResult(inBuffer, schema, inWindowStartOffset, outBuffer);
 					}
 					outWindowOffset += outSchema.getByteSizeOfTuple ();
 					inWindowStartOffset += byteSizeOfTuple;

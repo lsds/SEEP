@@ -62,7 +62,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 				// for all the tuples in the window
 				while (inWindowStartOffset <= inWindowEndOffset) {
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
-						inBuffer.copy(inWindowStartOffset, byteSizeOfTuple,outBuffer);
+						inBuffer.appendBytesTo(inWindowStartOffset, byteSizeOfTuple, outBuffer);
 						outWindowOffset += byteSizeOfTuple;
 					}
 					inWindowStartOffset += byteSizeOfTuple;
