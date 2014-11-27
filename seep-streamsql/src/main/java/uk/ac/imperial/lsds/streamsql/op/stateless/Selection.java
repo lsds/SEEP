@@ -46,7 +46,6 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 		ITupleSchema schema = windowBatch.getSchema();
 
-		int outWindowOffset = 0;
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
@@ -58,16 +57,15 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 			 */
 			if (inWindowStartOffset != -1) {
 				
-				startPointers[currentWindow] = outWindowOffset;
+				startPointers[currentWindow] = outBuffer.getByteBuffer().position();
 				// for all the tuples in the window
 				while (inWindowStartOffset <= inWindowEndOffset) {
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
 						inBuffer.appendBytesTo(inWindowStartOffset, byteSizeOfTuple, outBuffer);
-						outWindowOffset += byteSizeOfTuple;
 					}
 					inWindowStartOffset += byteSizeOfTuple;
 				}
-				endPointers[currentWindow] = outWindowOffset;
+				endPointers[currentWindow] = outBuffer.getByteBuffer().position();
 			}
 		}
 		
