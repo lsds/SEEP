@@ -65,7 +65,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 					}
 					inWindowStartOffset += byteSizeOfTuple;
 				}
-				endPointers[currentWindow] = outBuffer.getByteBuffer().position();
+				endPointers[currentWindow] = outBuffer.getByteBuffer().position() - 1;
 			}
 		}
 		

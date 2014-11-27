@@ -17,7 +17,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.op.stateful.MicroPaneAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
@@ -49,16 +49,20 @@ public class LRBQ4 {
 						FloatComparisonPredicate.LESS_OP, 
 						new FloatColumnReference(3), 
 						new FloatConstant(40f)));
+		
 				
-//		IMicroOperatorCode q2AggCode = new MicroPaneAggregation(
-//				AggregationType.AVG, 
-//				new FloatColumnReference(1),
-//				new int[] {2,3,4},
-//				having
-//		);
+		IMicroOperatorCode q2AggCode = new MicroAggregation(
+				AggregationType.AVG, 
+				new FloatColumnReference(1),
+				new Expression[] {
+					new IntColumnReference(2),
+					new IntColumnReference(3),
+					new IntColumnReference(4)
+				},
+				having
+		);
 
-//		MicroOperator q2Agg = new MicroOperator(q2AggCode, 3);
-		MicroOperator q2Agg = new MicroOperator(having, 3);
+		MicroOperator q2Agg = new MicroOperator(q2AggCode, 3);
 
 		IMicroOperatorCode q2ProjCode = new Projection(
 				new Expression[] {
