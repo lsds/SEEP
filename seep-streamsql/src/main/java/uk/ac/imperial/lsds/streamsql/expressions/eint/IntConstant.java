@@ -2,14 +2,18 @@ package uk.ac.imperial.lsds.streamsql.expressions.eint;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 
 public class IntConstant implements IntExpression {
 
 	private int _constant;
 
+	private byte[] _constantBytes;
+
 	public IntConstant(int constant) {
 		_constant = constant;
+		_constantBytes = ExpressionsUtil.intToByteArray(_constant);
 	}
 
 	@Override
@@ -30,8 +34,18 @@ public class IntConstant implements IntExpression {
 	}
 
 	@Override
-	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
-		toBuffer.putInt(eval(fromBuffer, schema, offset));
+	public void appendByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
+		toBuffer.putInt(_constant);
 	}
 
+	@Override
+	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
+			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
+		System.arraycopy(_constantBytes, 0, toBuffer.array(), toBufferOffset, 4);
+	}
+	
+	@Override
+	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+		return _constantBytes;
+	}
 }

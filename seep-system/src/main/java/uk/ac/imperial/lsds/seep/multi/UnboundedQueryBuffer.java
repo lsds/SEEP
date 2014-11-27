@@ -147,7 +147,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	}
 
 	@Override
-	public void copy (int offset, int length, IQueryBuffer destination) {
-		destination.getByteBuffer().put(this.buffer.array(), offset, length);
+	public void appendBytesTo(int offset, int length, IQueryBuffer toBuffer) {
+		toBuffer.getByteBuffer().put(this.buffer.array(), offset, length);
 	}
 }

@@ -9,7 +9,7 @@ public interface IQueryBuffer {
 	public long getLong (int offset);
 	public byte [] array ();
 	public byte [] array (int offset, int length);
-	public void copy (int offset, int length, IQueryBuffer destination);
+	public void appendBytesTo(int offset, int length, IQueryBuffer toBuffer);
 	public ByteBuffer getByteBuffer ();
 	public int capacity ();
 	public int remaining ();

@@ -1,91 +1,74 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IMicroOperatorCode;
-import uk.ac.imperial.lsds.seep.operator.compose.micro.IStatefulMicroOperator;
-import uk.ac.imperial.lsds.seep.operator.compose.multi.MultiOpTuple;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IMicroIncrementalComputation;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowAPI;
-import uk.ac.imperial.lsds.seep.operator.compose.window.IWindowBatch;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.ColumnReference;
+import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.WindowBatch;
+import uk.ac.imperial.lsds.streamsql.expressions.Expression;
+import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
-import uk.ac.imperial.lsds.streamsql.types.FloatType;
-import uk.ac.imperial.lsds.streamsql.types.IntegerType;
-import uk.ac.imperial.lsds.streamsql.types.PrimitiveType;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IMicroIncrementalComputation, IStatefulMicroOperator {
+public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode {
 
-	private int hashMultiplier;
+	private Expression[] groupByAttributes;
+	private ITupleSchema groupByAttributesSchema;
 	
-	private ColumnReference<PrimitiveType>[] groupByAttributes;
-
-	private ColumnReference<PrimitiveType> aggregationAttribute;
+	private FloatColumnReference aggregationAttribute;
 			
 	private AggregationType aggregationType;
 	
 	private Selection havingSel;
 	
-	/*
-	 * State used for incremental computation
-	 */
-	private Map<Integer, PrimitiveType> values = new HashMap<>();
-	private Map<Integer, Integer> countInPartition = new HashMap<>();
-	private Map<Integer, MultiOpTuple> objectStore = new HashMap<>();
-
-	private long lastTimestampInWindow = 0;
-	private long lastInstrumentationTimestampInWindow = 0;
+	private ITupleSchema outSchema;
+	
+	private LongColumnReference timestampReference = new LongColumnReference(0);
 	
 	@SuppressWarnings("unchecked")
-	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, (ColumnReference<PrimitiveType>[]) new ColumnReference[0], null);
+	public MicroAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute) {
+		this(aggregationType, aggregationAttribute, new Expression[0], null);
 	}
 
-	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes, Selection havingSel) {
-		this(aggregationType, aggregationAttribute, (ColumnReference<PrimitiveType>[]) new ColumnReference[0], null, 211);
-	}
-	
-	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes, Selection havingSel, int hashMultiplier) {
+	public MicroAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute, Expression[] groupByAttributes, Selection havingSel) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
 		this.havingSel = havingSel;
-		this.hashMultiplier = hashMultiplier;
+		
+		this.groupByAttributesSchema = ExpressionsUtil.getTupleSchemaForExpressions(this.groupByAttributes);
 	}
 
-	public MicroAggregation(AggregationType aggregationType, ColumnReference<PrimitiveType> aggregationAttribute, ColumnReference<PrimitiveType>[] groupByAttributes) {
+	public MicroAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute, Expression[] groupByAttributes) {
 		this(aggregationType, aggregationAttribute, groupByAttributes, null);
 	}
 
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
-		sb.append(aggregationType.asString(aggregationAttribute.getColumn()) + " ");
+		sb.append(aggregationType.asString(aggregationAttribute.toString()));
 		return sb.toString();
 	}
 	
-	private int getGroupByKey(MultiOpTuple tuple) {
-		int result = 1;
+	private int getGroupByKey(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+		ByteBuffer result = ByteBuffer.allocate(groupByAttributesSchema.getByteSizeOfTuple());
 		for (int i = 0; i < this.groupByAttributes.length; i++)
-			result = this.hashMultiplier * result + this.groupByAttributes[i].eval(tuple).hashCode();
-		
-		return result;
+			result.put(this.groupByAttributes[i].evalAsByteArray(buffer, schema, offset));
+		return result.hashCode();
 	}
-	
-//	private String getGroupByKey(MultiOpTuple tuple) {
-//		StringBuilder sb = new StringBuilder();
-//		
-//		for (int i = 0; i < this.groupByAttributes.length; i++) {
-//			sb.append(this.groupByAttributes[i].eval(tuple).hashCode());
-//			sb.append('@');
-//		}
-//		
-//		return sb.toString();
-//	}
 	
 	@Override
 	public void accept(OperatorVisitor ov) {
@@ -93,97 +76,154 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 	}	
 	
 	@Override
-	public void processData(Map<Integer, IWindowBatch> windowBatches,
+	public void processData(WindowBatch windowBatch,
 			IWindowAPI api) {
-		
-		assert(windowBatches.keySet().size() == 1);
 		
 		switch (aggregationType) {
 		case COUNT:
 		case SUM:
 		case AVG:
-			values = new HashMap<>();;
-			countInPartition = new HashMap<>();;
-			windowBatches.values().iterator().next().performIncrementalComputation(this, api);
+			processDataPerWindowIncrementally(windowBatch, api);
 			break;
 		case MAX:
 		case MIN:
-			processDataPerWindow(windowBatches, api);
+			processDataPerWindow(windowBatch, api);
 			break;
 		default:
 			break;
 		}
 	}
 
-	private void processDataPerWindow(Map<Integer, IWindowBatch> windowBatches,
+	private void processDataPerWindow(WindowBatch windowBatch,
 			IWindowAPI api) {
 		
-		assert(this.aggregationType.equals(AggregationType.MAX)||this.aggregationType.equals(AggregationType.MIN));
+		assert(this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);
+	
+		int[] startPointers = windowBatch.getWindowStartPointers();
+		int[] endPointers = windowBatch.getWindowEndPointers();
+
+		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		IQueryBuffer windowBuffer = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 		
-		IWindowBatch batch = windowBatches.values().iterator().next();
+		ITupleSchema inSchema = windowBatch.getSchema();
+		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
+		int byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
+
+		int outWindowOffset = 0;
 		
-		int[] startPointers = batch.getWindowStartPointers();
-		int[] endPointers = batch.getWindowEndPointers();
+		int inWindowStartOffset;
+		int inWindowEndOffset;
+		
+		int currentWindowBufferOffset = 0;
+		
+		Map<Integer, Integer> keyOffsets;
 		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			int windowStart = startPointers[currentWindow];
-			int windowEnd = endPointers[currentWindow];
+			inWindowStartOffset = startPointers[currentWindow];
+			inWindowEndOffset = endPointers[currentWindow];
 			
-			// empty window?
-			if (windowStart == -1) {
-				api.outputWindowResult(new MultiOpTuple[0]);
-			}
-			else {
+			/*
+			 * If the window is empty, we skip it 
+			 */
+			if (inWindowStartOffset != -1) {
 
-				Map<Integer, PrimitiveType> values = new HashMap<>();
-				Map<Integer, MultiOpTuple> objects = new HashMap<>();
-	
-				MultiOpTuple[] windowResult = new MultiOpTuple[windowEnd-windowStart+1];
+				outWindowOffset = inWindowStartOffset;
 				
-				for (int i = 0; i < windowEnd-windowStart+1; i++) {
+				keyOffsets = new HashMap<>();
+				
+				int key, keyOffset;
+				float newValue, oldValue;
+				// for all the tuples in the window
+				while (inWindowStartOffset <= inWindowEndOffset) {
 					
-					MultiOpTuple tuple = batch.get(windowStart + i);
-					int key = getGroupByKey(tuple);
-					objects.put(key, tuple);
-					
-					PrimitiveType newValue = (PrimitiveType) this.aggregationAttribute.eval(tuple);
-					
-					if (values.containsKey(key)) {
-						if (values.get(key).compareTo(newValue) < 0 && this.aggregationType.equals(AggregationType.MAX))
-							values.put(key, newValue);
-						if (values.get(key).compareTo(newValue) > 0 && this.aggregationType.equals(AggregationType.MIN))
-							values.put(key, newValue);
-					}
-					else
-						values.put(key, newValue);
-				}
-	
-				int keyCount = 0;
-				for (Integer partitionKey : values.keySet()) {
-					MultiOpTuple tuple = prepareOutputTuple(objects.get(partitionKey), values.get(partitionKey), batch.get(windowEnd-windowStart).timestamp, batch.get(windowEnd-windowStart).instrumentation_ts);
-					if (havingSel != null) {
-						if (havingSel.getPredicate().satisfied(tuple))
-							windowResult[keyCount++] = tuple;
+					// get the key 
+					key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset);
+					// get the value of the aggregation attribute in the current tuple
+					newValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
+
+					// check whether there is already an entry in the window buffer for this key
+					if (!keyOffsets.containsKey(key)) {
+						// record the offset for this key
+						keyOffsets.put(key, currentWindowBufferOffset);
+						// increment the current offset by size of tuple
+						currentWindowBufferOffset += byteSizeOfOutTuple;
+						
+						// copy timestamp
+						this.timestampReference.appendByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer);
+						// copy group-by attribute values
+						for (int i = 0; i < groupByAttributes.length; i++) 
+							this.groupByAttributes[i].appendByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer);
+						// write value for aggregation attribute 
+						this.aggregationAttribute.appendByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer);
 					}
 					else {
-						windowResult[keyCount++] = tuple;
+						// key exists already
+						keyOffset = keyOffsets.get(key);
+						// override timestamp
+						this.timestampReference.writeByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer, keyOffset);
+
+						// check whether new value for aggregation attribute shall be written
+						oldValue = this.aggregationAttribute.eval(windowBuffer, outSchema, keyOffset);
+						
+						if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
+								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
+							this.aggregationAttribute.writeByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer, keyOffset);
 					}
+					
+					inWindowStartOffset += byteSizeOfInTuple;
 				}
 				
-				if (havingSel != null) 
-					api.outputWindowResult(Arrays.copyOf(windowResult, keyCount));
-				else
-					api.outputWindowResult(windowResult);
-			}			
+				
+				/*
+				 * we got the aggregation result for the window, check whether we have a selection to apply for each of the partitions
+				 */
+				if (this.havingSel == null) {
+					for (Integer partitionOffset : keyOffsets.values()) 
+						outBuffer.getByteBuffer().put(windowBuffer.array(), partitionOffset, byteSizeOfOutTuple);
+					
+					startPointers[currentWindow] = outWindowOffset;
+					endPointers[currentWindow] = outWindowOffset + keyOffsets.size() * byteSizeOfOutTuple;
+				}
+				else {
+					int outCount = 0;
+					for (Integer partitionOffset : keyOffsets.values()) {
+						if (this.havingSel.getPredicate().satisfied(windowBuffer, outSchema, partitionOffset)) {
+							outBuffer.getByteBuffer().put(windowBuffer.array(), partitionOffset, byteSizeOfOutTuple);
+							outCount++;
+						}
+					}
+					startPointers[currentWindow] = outWindowOffset;
+					endPointers[currentWindow] = outWindowOffset + outCount * byteSizeOfOutTuple;
+				}
+			}
 		}
+
+		// release window buffer (will return Unbounded Buffers to the pool)
+		windowBuffer.release();
+			
+		// release old buffer (will return Unbounded Buffers to the pool)
+		inBuffer.release();
+		// reuse window batch by setting the new buffer and the new schema for the data in this buffer
+		windowBatch.setBuffer(outBuffer);
+		windowBatch.setSchema(outSchema);
+		
+		api.outputWindowBatchResult(-1, windowBatch);
 	}
 
-	
-	@Override
-	public void enteredWindow(MultiOpTuple tuple) {
-		assert(this.aggregationType.equals(AggregationType.COUNT)
-				||this.aggregationType.equals(AggregationType.SUM)
-				||this.aggregationType.equals(AggregationType.AVG));
+	private void processDataPerWindowIncrementally(WindowBatch windowBatch,
+			IWindowAPI api) {
+		
+		assert(this.aggregationType == AggregationType.COUNT
+				|| this.aggregationType == AggregationType.SUM
+				|| this.aggregationType == AggregationType.AVG);
+
+		
+		
+		
+	}
+
+	private void enteredWindow() {
 
 		int key = getGroupByKey(tuple);
 
@@ -220,12 +260,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		}
 	}
 
-	@Override
-	public void exitedWindow(MultiOpTuple tuple) {
-		
-		assert(this.aggregationType.equals(AggregationType.COUNT)
-				||this.aggregationType.equals(AggregationType.SUM)
-				||this.aggregationType.equals(AggregationType.AVG));
+	private void exitedWindow() {
 		
 		int key = getGroupByKey(tuple);
 		
@@ -258,23 +293,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 		}
 	}
 
-	private MultiOpTuple prepareOutputTuple(MultiOpTuple object, PrimitiveType partitionValue, long timestamp, long instrumentation_ts) {
-
-		PrimitiveType[] values = new PrimitiveType[this.groupByAttributes.length + 1];
-		for (int i = 0; i < this.groupByAttributes.length; i++)
-			values[i] = this.groupByAttributes[i].eval(object);
-		
-		values[values.length - 1] = partitionValue;
-		
-		return new MultiOpTuple(values, timestamp, instrumentation_ts);
-	}
-	
-	@Override
-	public void evaluateWindow(IWindowAPI api) {
-
-		assert(this.aggregationType.equals(AggregationType.COUNT)
-				||this.aggregationType.equals(AggregationType.SUM)
-				||this.aggregationType.equals(AggregationType.AVG));
+	private void evaluateWindow() {
 
 		MultiOpTuple[] windowResult = new MultiOpTuple[countInPartition.keySet().size()];
 
@@ -345,10 +364,4 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode,
 			break;
 		}
 	}
-
-	@Override
-	public IMicroOperatorCode getNewInstance() {
-		return new MicroAggregation(this.aggregationType, this.aggregationAttribute, this.groupByAttributes, this.havingSel, this.hashMultiplier);
-	}
-
 }
