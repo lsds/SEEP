@@ -12,6 +12,10 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntAddition;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroPaneAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -58,9 +62,11 @@ public class LRBQ4 {
 
 		IMicroOperatorCode q2ProjCode = new Projection(
 				new Expression[] {
-				new FloatColumnReference(0),
 				new FloatColumnReference(1),
-				new FloatColumnReference(2)
+				new IntAddition((IntExpression[])new Expression[] { 
+						new IntColumnReference(5), new IntConstant(2) } ),
+				new FloatColumnReference(2),
+				new FloatColumnReference(3)
 				});
 		
 		MicroOperator q2Proj = new MicroOperator(q2ProjCode, 5); 

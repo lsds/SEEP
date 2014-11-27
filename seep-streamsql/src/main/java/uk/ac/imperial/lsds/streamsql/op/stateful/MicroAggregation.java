@@ -220,10 +220,93 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		
 		
+		int[] startPointers = windowBatch.getWindowStartPointers();
+		int[] endPointers = windowBatch.getWindowEndPointers();
+
+		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		IQueryBuffer outBuffer = windowBatch.getBuffer();
+		IQueryBuffer windowBuffer = UnboundedQueryBufferFactory.newInstance();
 		
+		ITupleSchema inSchema = windowBatch.getSchema();
+		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
+		int byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
+
+		int outWindowOffset = 0;
+		
+		int inWindowStartOffset;
+		int inWindowEndOffset;
+		
+		int currentWindowBufferOffset = 0;
+		
+		int prevWindowStart = -1;
+		int prevWindowEnd = -1;
+		
+		Map<Integer, Integer> keyOffsets = new HashMap<>();
+		
+		int windowTupleCount = 0;
+		
+		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+			inWindowStartOffset = startPointers[currentWindow];
+			inWindowEndOffset = endPointers[currentWindow];
+
+			// empty window?
+			if (inWindowStartOffset == -1) {
+				if (prevWindowStart != -1) {
+					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
+						exitedWindow(inBuffer, i, windowBuffer, keyOffsets);
+						windowTupleCount--;
+					}
+				}
+				
+				evaluateWindow(api, windowBuffer, keyOffsets, outBuffer, startPointers, endPointers, currentWindow, windowTupleCount);
+			}
+			else {
+				/*
+				 * Tuples in current window that have not been in the previous window
+				 */
+				if (prevWindowStart != -1) {
+					for (int i = prevWindowEnd; i <= inWindowEndOffset; i += byteSizeOfInTuple) {
+						enteredWindow(inBuffer, i, windowBuffer, keyOffsets);
+						windowTupleCount++;
+					}
+				}
+				else {
+					for (int i = inWindowStartOffset; i <= inWindowEndOffset; i += byteSizeOfInTuple) {
+						enteredWindow(inBuffer, i, windowBuffer, keyOffsets);
+						windowTupleCount++;
+					}
+				}
+
+				/*
+				 * Tuples in previous window that are not in current window
+				 */
+				if (prevWindowStart != -1) {
+					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
+						exitedWindow(inBuffer, i, windowBuffer, keyOffsets);
+						windowTupleCount--;
+					}
+				}
+			
+				evaluateWindow(api, windowBuffer, keyOffsets, outBuffer, startPointers, endPointers, currentWindow, windowTupleCount);
+			
+				prevWindowStart = inWindowStartOffset;
+				prevWindowEnd = inWindowEndOffset;
+			}
+		}
+		
+		// release window buffer (will return Unbounded Buffers to the pool)
+		windowBuffer.release();
+			
+		// release old buffer (will return Unbounded Buffers to the pool)
+		inBuffer.release();
+		// reuse window batch by setting the new buffer and the new schema for the data in this buffer
+		windowBatch.setBuffer(outBuffer);
+		windowBatch.setSchema(outSchema);
+		
+		api.outputWindowBatchResult(-1, windowBatch);
 	}
 
-	private void enteredWindow() {
+	private void enteredWindow(IQueryBuffer inBuffer, int removeOffset, IQueryBuffer windowBuffer, Map<Integer, Integer> keyOffsets)  {
 
 		int key = getGroupByKey(tuple);
 
@@ -260,7 +343,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		}
 	}
 
-	private void exitedWindow() {
+	private void exitedWindow(IQueryBuffer inBuffer, int removeOffset, IQueryBuffer windowBuffer, Map<Integer, Integer> keyOffsets) {
 		
 		int key = getGroupByKey(tuple);
 		
@@ -293,10 +376,39 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		}
 	}
 
-	private void evaluateWindow() {
+	private void evaluateWindow(
+			IWindowAPI api, 
+			IQueryBuffer windowBuffer, 
+			Map<Integer, Integer> keyOffsets, 
+			IQueryBuffer outBuffer, 
+			int[] startPointers, 
+			int[] endPointers, 
+			int currentWindow,
+			int windowTupleCount
+			) {
 
-		MultiOpTuple[] windowResult = new MultiOpTuple[countInPartition.keySet().size()];
-
+		
+		if (this.havingSel == null) {
+			for (Integer partitionOffset : keyOffsets.values()) 
+				outBuffer.getByteBuffer().put(windowBuffer.array(), partitionOffset, byteSizeOfOutTuple);
+			
+			startPointers[currentWindow] = outWindowOffset;
+			endPointers[currentWindow] = outWindowOffset + keyOffsets.size() * byteSizeOfOutTuple;
+		}
+		else {
+			int outCount = 0;
+			for (Integer partitionOffset : keyOffsets.values()) {
+				if (this.havingSel.getPredicate().satisfied(windowBuffer, outSchema, partitionOffset)) {
+					outBuffer.getByteBuffer().put(windowBuffer.array(), partitionOffset, byteSizeOfOutTuple);
+					outCount++;
+				}
+			}
+			startPointers[currentWindow] = outWindowOffset;
+			endPointers[currentWindow] = outWindowOffset + outCount * byteSizeOfOutTuple;
+		}
+		
+		
+		
 		switch (aggregationType) {
 		case AVG:
 			int keyCount = 0;
