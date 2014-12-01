@@ -25,7 +25,7 @@ public class KernelInvocationHandler <T extends OpenCL<T>>
 	}
 	
 	@Override
-	public Object invoke(Object proxy, Method method, Object[] args)
+	public Object invoke(Object proxy, Method method, Object [] args)
 		throws Throwable {
 		String name; /* Method name */
 		OpenCLKernel k = null;
