@@ -35,7 +35,7 @@ public class TestProjectionKernel {
 			schema,
 			filename
 		);
-		System.out.println(String.format("[DBG] %s", projectionCode));
+		/* System.out.println(String.format("[DBG] %s", projectionCode)); */
 		
 		IQueryBuffer buffer = new UnboundedQueryBuffer(Utils.BUNDLE);
 		while (buffer.hasRemaining())

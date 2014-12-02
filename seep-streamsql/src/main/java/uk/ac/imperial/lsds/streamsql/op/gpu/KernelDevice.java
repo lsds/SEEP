@@ -33,6 +33,7 @@ public class KernelDevice {
 		return device;
 	}
 	
+	@Override
 	public String toString() {
 		return device.toString();
 	}
@@ -94,7 +95,9 @@ public class KernelDevice {
 					
 				} else
 				if (a instanceof Arg) {
+					
 					name = ((Arg) a).value();
+					
 					bits |= OpenCLArgDescriptor.ARG_ISARG_BIT;
 				}
 			}

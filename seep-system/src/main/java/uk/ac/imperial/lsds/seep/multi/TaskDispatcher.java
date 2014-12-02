@@ -21,8 +21,10 @@ public class TaskDispatcher {
 	/* Total number of tuples (rows) processed (currently, monotonically increasing) */
 	long rowCount = 0L;
 	/* Temporary pointers */
-	long p, q;
+	long p, q, f;
 	long next_, _next; /* Next batch start and end pointers */
+	long offset;
+	long mask;
 	
 	int tupleSize;
 	
@@ -39,10 +41,16 @@ public class TaskDispatcher {
 		if (window.isRowBased()) 
 		{
 			tpb = ppb * window.getPaneSize();
+			if (window.isTumbling())
+				offset = tpb;
+			else
+				offset = Utils.BATCH * window.getSlide();
 		}
 		p = q =  0L;
 		next_ =  0L;
 		_next = tpb;
+		
+		mask = buffer.capacity() - 1;
 		
 		tupleSize = schema.getByteSizeOfTuple();
 	}
@@ -75,18 +83,19 @@ public class TaskDispatcher {
 		if (window.isRowBased()) {
 			/* Number of rows added */
 			int rows = length / tupleSize;
-			if (window.isTumbling()) {
-				while ((rowCount + rows) >= _next) {
-					p = (next_ * tupleSize) & (buffer.capacity() - 1);
-					q = (_next * tupleSize) & (buffer.capacity() - 1);
-					q = (q == 0) ? buffer.capacity() : q;
-					/* Dispatch task */
-					this.newTaskFor (p, q, q - 1);
-					next_ += tpb;
-					_next += tpb;
-				}
-			} else {
-				throw new UnsupportedOperationException("error: support for row-based sliding windows not yet implemented");
+			while ((rowCount + rows) >= _next) {
+				/* Set start and end pointers for batch */
+				p = (next_ * tupleSize) & mask;
+				q = (_next * tupleSize) & mask;
+				q = (q == 0) ? buffer.capacity() : q;
+				/* Set free pointer */
+				f = (p + (offset * tupleSize)) & mask;
+				f = (f == 0) ? buffer.capacity() : f;
+				f--;
+				/* Dispatch task */
+				this.newTaskFor (p, q, f);
+				next_ += offset;
+				_next += offset;
 			}
 			rowCount += rows;
 		} else

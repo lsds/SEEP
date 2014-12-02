@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.GlobalReadOnlyArgument;
 import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.GlobalWriteOnlyArgument;
 import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.KernelArgument;
+import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.LocalArgument;
 
 public class KernelCodeGenerator {
 
@@ -162,6 +163,14 @@ public class KernelCodeGenerator {
 		KernelAttribute _output = new KernelAttribute("output", byte [].class);
 		_output.addAnnotation (new GlobalWriteOnlyArgument("output"));
 		kernel.addAttribute(_output);
+		
+		KernelAttribute __input = new KernelAttribute("_input", byte [].class);
+		__input.addAnnotation (new LocalArgument("_input"));
+		kernel.addAttribute(__input);
+		
+		KernelAttribute __output = new KernelAttribute("_output", byte [].class);
+		__output.addAnnotation (new LocalArgument("_output"));
+		kernel.addAttribute(__output);
 		
 		return kernel;
 	}
