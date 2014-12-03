@@ -4,6 +4,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TaskDispatcher {
 	
+	private static final int _undefined = -1;
+	
 	private ConcurrentLinkedQueue<Task> workerQueue;
 	private IQueryBuffer buffer;
 	private WindowDefinition window;
@@ -15,8 +17,8 @@ public class TaskDispatcher {
 	
 	/* Some constants for calculating window batches */
 	
-	long ppb = 0L; /* Panes/batch  */
-	long tpb = 0L; /* Tuples/batch */
+	long ppb = 0L; /* Panes/batch */
+	long tpb = 0L; /* Tuples/batch or time units/batch */
 	
 	/* Total number of tuples (rows) processed 
 	 * (currently, monotonically increasing) */
@@ -27,7 +29,26 @@ public class TaskDispatcher {
 	long offset;
 	long mask;
 	
+	/* First and last timestamp of a bulk insert */
+	long start, end;
+	
 	int tupleSize;
+	
+	int [][] batches;
+	static final int _START = 0;
+	static final int   _END = 1;
+	static final int  _FREE = 2;
+	int b; /* Next batch to  open */
+	int d; /* Next batch to close */
+	
+	int previous; /* The previous batch opened */
+	
+	/* Temporary values */
+	long tmp;
+	int position;
+	
+	/* The last tuple that we have found in search of opening a window batch */
+	int current;
 	
 	public TaskDispatcher (SubQuery parent) {
 		
@@ -40,14 +61,14 @@ public class TaskDispatcher {
 		/* Initialise constants */
 		ppb = window.panesPerSlide() * (Utils.BATCH - 1) + 
 				window.numberOfPanes();
-		if (window.isRowBased()) 
-		{
-			tpb = ppb * window.getPaneSize();
-			if (window.isTumbling())
-				offset = tpb;
-			else
-				offset = Utils.BATCH * window.getSlide();
-		}
+		
+		tpb = ppb * window.getPaneSize();
+		
+		if (window.isTumbling())
+			offset = tpb;
+		else
+			offset = Utils.BATCH * window.getSlide();
+		
 		p = q =  0L;
 		next_ =  0L;
 		_next = tpb;
@@ -55,6 +76,14 @@ public class TaskDispatcher {
 		mask = buffer.capacity() - 1;
 		
 		tupleSize = schema.getByteSizeOfTuple();
+		
+		batches = new int [Utils._BATCH_RECORDS][3];
+		/* Initialise state */
+		for (int i = 0; i < Utils._BATCH_RECORDS; i++)
+			batches[i][_START] = _undefined;
+		b = d = 0;
+		
+		previous = -1;
 	}
 	
 	public void setup () {
@@ -70,21 +99,31 @@ public class TaskDispatcher {
 		assemble (idx, data.length);
 	}
 	
-	private void newTaskFor (long p, long q, long free) {
+	private void newTaskFor (long p, long q, long free, long t_, long _t) {
 		Task task;
 		WindowBatch batch;
-		/* System.out.println(String.format("[%10d, %10d)", p, q)); */
-		batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema, (int) p, (int) q);
+		
+		System.out.println(
+				String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
+						p, q, free, t_, _t));
+		
+		batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema);
+		if (buffer.getLong((int) p) > _t)
+			batch.unpack();
+		else
+			batch.pack((int) p, (int) q);
+		batch.setRange(t_, _t);
 		task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
-		workerQueue.add(task);
+		workerQueue.add(task); 
 	}
 	
 	private void assemble (int index, int length) {
-		
+		/* Number of rows added */
+		int rows = length / tupleSize;
+		/* Index of the last tuple inserted in the circular buffer */
+		int _index = (int) ((index + length - tupleSize) & mask);
 		
 		if (window.isRowBased()) {
-			/* Number of rows added */
-			int rows = length / tupleSize;
 			while ((rowCount + rows) >= _next) {
 				/* Set start and end pointers for batch */
 				p = (next_ * tupleSize) & mask;
@@ -95,56 +134,141 @@ public class TaskDispatcher {
 				f = (f == 0) ? buffer.capacity() : f;
 				f--;
 				/* Dispatch task */
-				this.newTaskFor (p, q, f);
+				this.newTaskFor (p, q, f, _undefined, _undefined);
 				next_ += offset;
 				_next += offset;
 			}
-			rowCount += rows;
 		} else
 		if (window.isRangeBased()) {
-			if (window.isTumbling()) {
+			/* Get the timestamp of the first and last tuple inserted */
+			start = buffer.getLong( index);
+			end   = buffer.getLong(_index);
+			/* Open one or more window batches */
+			current = 0;
+			while (end >= next_) {
+				/* Let's assume that we insert a sequence a tuples, marked 'x'
+				 * whose timestamps are 1, 2, 2, and 8.
+				 * 
+				 * The slide of the window is 1, so we wish to open windows at
+				 * times 1, 2, 3, and so on.
+				 * 
+				 * For t = 1 and t = 2, everything is fine. For t = 3, though,
+				 * there is no tuple with such timestamp.
+				 * 
+				 * When does the batch open? It may open at time 4, 5, 6...So,
+				 * one way is to search for t + 1, t + 2, and so on, until we
+				 * find the next tuple with a timestamp greater than t = 3.
+				 * 
+				 * x---xx-----------------x---------------------> t
+				 * 
+				 * |--|--|--|--|--|--|
+				 * 1                 7
+				 *    |--|--|--|--|--|--|
+				 *    2                 8
+				 *       |--|--|--|--|--|--|
+				 *       3                 9
+				 */
+				tmp = next_;
+				while ((position = firstOccurenceOf (tmp, current, rows, index)) < 0)
+					tmp ++;
+				/* Set the start pointer for this window batch */
+				batches[b][_START] = position;
+				/* 
+				 * Set the free pointer for the previous window batch, if any. 
+				 * If position is 0, then the free pointer should point at the 
+				 * end of the buffer, otherwise `position--` will be negative.
+				 */
+				position = (position == 0) ? buffer.capacity() : position;
+				position --;
+				if (previous >= 0)
+					batches[previous][_FREE] = position;
+				/* Set counters for the next batch to open */
+				previous = b;
+				b = incrementAndGet(b, true);
+				next_ += offset;
+			}
+			/* Should we close old batches? 
+			 * 
+			 * If a window batch close at time `t`, we are looking for the
+			 * first element whose timestamp is greater than `t`.
+			 *  
+			 */
+			current = 0;
+			while (end >= (_next + 1)) {
 				
-			} else {
-				throw new UnsupportedOperationException("error: support for range-based sliding windows not yet implemented");
+				tmp = _next + 1;
+				while ((position = firstOccurenceOf (tmp, current, rows, index)) < 0)
+					tmp ++;
+				
+				/* Set the end pointer for this window batch */
+				batches[d][_END] = position;
+				/* Dispatch a task */
+				this.newTaskFor (
+						batches[d][_START], 
+						batches[d][  _END], 
+						batches[d][ _FREE], 
+						_next - tpb, _next
+						);
+				batches[d][_START] = _undefined;
+				/* Set counters for the next batch to close */
+				d = incrementAndGet(d, false);
+				_next += offset;
 			}
 		} else
 		{
 			throw new UnsupportedOperationException("error: window is neither row-based nor range-based");
 		}
+		rowCount += rows;
 	}
 	
-	private int firstOccurenceOf (long t, int start, int end) {
-		return scanLeft(t, binarySearch (t, start, end));
+	private int incrementAndGet (int x, boolean check) {
+		int value = ++x & (Utils._BATCH_RECORDS - 1);
+		/* We treat `batches` as an unsafe circular buffer. But, without 
+		 * sufficient capacity, we may ovewrite the pointers of a window 
+		 * batch that is currently open.
+		 */
+		if (check)
+			if (batches[value][_START] >= 0)
+				throw new IllegalStateException(String.format("error: batch %d is current open", value));
+		return value;
 	}
 	
-	private int lastOccurenceOf (long t, int start, int end) {
-		return scanRight(t, binarySearch(t, start, end));
+	
+	private int firstOccurenceOf (long t, int start, int end, int offset) {
+		int position;
+		if ((position = binarySearch(t, start, end, offset)) < 0)
+			return -1;
+		return scanLeft (t, position, offset);
 	}
 	
-	private int scan (long t, int index, boolean left) {
-		while (buffer.getLong(index) == t) {
-			if (left)
-				index -= schema.getByteSizeOfTuple();
-			else
-				index += schema.getByteSizeOfTuple();
+	private int scanLeft (long t, int index, int offset) {
+		/*
+		 * The `index` points to the location in the byte buffer of a tuple 
+		 * whose timestamp is `t`. But, is this tuple the first one?
+		 */
+		while (index >= offset && buffer.getLong(index) == t) {
+			index -= tupleSize;
 		}
+		index += tupleSize;
 		return index;
 	}
 	
-	private int scanRight (long t, int index) {
-		return scan (t, index, false);
-	}
-	
-	private int scanLeft (long t, int index) {
-		return scan (t, index, true);
-	}
-	
-	private int binarySearch (long t, int start, int end) {
+	private int binarySearch (long t, int start, int end, int offset) {
+		/*
+		 * The `start` and `end` pointers represent tuple and not byte indices
+		 */
 		while (start <= end) {
 			int m = start + (end - start) / 2;
-			if (t < buffer.getLong(m)) end = m - 1;
-			else if (t > buffer.getLong(m)) start = m + 1;
-			else return m;
+			int y = (int) ((offset + m * tupleSize) & mask);
+			if (t < buffer.getLong(y)) 
+				end = m - 1;
+			else 
+			if (t > buffer.getLong(y))
+				start = m + 1;
+			else {
+				this.current = m;
+				return y;
+			}
 		}
 		return -1;
 	}

@@ -17,49 +17,76 @@ public class WindowBatch {
 	
 	private int [] windowStartPointers;
 	private int [] windowEndPointers;
+	
 	private boolean initialised = false;
 	
+	/* Expected timestamps, based on range and slide of window definition */
+	private long batchStartTime;
+	private long batchEndTime;
+	
 	public WindowBatch () {
-		this(0, null, null, null, 0, 0);
+		this(0, null, null, null);
 	}
 	
 	public WindowBatch (int batchSize, 
                         IQueryBuffer buffer, 
                         WindowDefinition windowDefinition, 
-                        ITupleSchema schema, 
-                        int batchStartPointer, 
-                        int batchEndPointer) {
+                        ITupleSchema schema) {
 		
 		this.batchSize = batchSize;
 		this.buffer = buffer;
 		this.windowDefinition = windowDefinition;
 		this.schema = schema;
-		this.batchStartPointer = batchStartPointer;
-		this.batchEndPointer = batchEndPointer;
+		
+		this.batchStartPointer = -1;
+		this.batchEndPointer = -1;
 		this.windowStartPointers = null;
 		this.windowEndPointers = null;
+		
+		this.initialised = false;
+		
+		this.batchStartTime = -1;
+		this.batchEndTime = -1;
 	}
 	
 	public void set (int batchSize, 
                      IQueryBuffer buffer, 
                      WindowDefinition windowDefinition, 
-                     ITupleSchema schema, 
-                     int batchStartPointer, 
-                     int batchEndPointer) {
+                     ITupleSchema schema) {
 		
 		this.batchSize = batchSize;
 		this.buffer = buffer;
 		this.windowDefinition = windowDefinition;
 		this.schema = schema;
-		this.batchStartPointer = batchStartPointer;
-		this.batchEndPointer = batchEndPointer;
+		
+		this.batchStartPointer = -1;
+		this.batchEndPointer = -1;
 		this.windowStartPointers = null;
 		this.windowEndPointers = null;
+		
+		this.initialised = false;
+		
+		this.batchStartTime = -1;
+		this.batchEndTime = -1;
 	}
 	
+	public void pack (int batchStartPointer, int batchEndPointer) {
+		this.batchStartPointer = batchStartPointer;
+		this.batchEndPointer = batchEndPointer;
+	}
+	
+	public void unpack () {
+		this.batchStartPointer = -1;
+		this.batchEndPointer = -1;
+	}
 	
 	public int getBatchSize () {
 		return this.batchSize;
+	}
+	
+	public void setRange (long batchStartTime, long batchEndTime) {
+		this.batchStartTime = batchStartTime;
+		this.batchEndTime = batchEndTime;
 	}
 	
 	public void initWindowPointers () {
@@ -97,6 +124,7 @@ public class WindowBatch {
 	public void clear () {
 		initialised = false;
 		windowStartPointers = windowEndPointers = null;
+		batchStartTime = batchEndTime = -1;
 	}
 	
 	public int getInt (int offset, int attribute) {

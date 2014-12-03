@@ -42,7 +42,7 @@ public class TestProjectionKernel {
 			buffer.putInt(1);
 		buffer.close();
 		
-		WindowBatch batch = new WindowBatch(1, buffer, window, schema, 0, Utils.BUNDLE);
+		WindowBatch batch = new WindowBatch(1, buffer, window, schema);
 		
 		projectionCode.processData(batch, null);
 		

@@ -30,29 +30,31 @@ public class TestTimeBasedSlidingWindow {
 		
 		byte [] data = new byte [Utils.BUNDLE];
 		ByteBuffer b = ByteBuffer.wrap(data);
-		long timestamp = 0L;
+		long timestamp = -1L;
 		long tuples = 0L;
 		/* Utils.BUNDLE holds 32,768 tuples; or, 
 		 * given 32KB/s, 32 seconds of data */
 		long tps = 1024L;
 		while (b.hasRemaining()) {
-			b.putLong(timestamp);
-			for (int i = 0; i < Utils._TUPLE_ - Long.SIZE; i += Integer.SIZE)
-				b.putInt(1);
-			if (++tuples % tps == 0)
+			if (tuples++ % tps == 0)
 				timestamp += 1;
+			b.putLong(timestamp);
+			/* Fill in tuple, assuming the remaining 
+			 * tuples attributes are all integers */
+			for (int i = 0; i < Utils.OFFSETS.length - 1; i += 1)
+				b.putInt(1);
 		}
-		assert (timestamp == 32);
-		timestamp --;
+		timestamp ++;
 		b.flip();
 		try {
-			while (true) {
+			// while (true) {
 				operator.processData (data);
-				b.clear();
 				/* Increment timestamps */
 				for (int i = 0; i < Utils.BUNDLE; i += Utils._TUPLE_)
 					b.putLong(i, b.getLong(i) + timestamp);
-			}
+				b.clear();
+				operator.processData (data);
+			// }
 		} catch (Exception e) { 
 			e.printStackTrace(); 
 			System.exit(1);

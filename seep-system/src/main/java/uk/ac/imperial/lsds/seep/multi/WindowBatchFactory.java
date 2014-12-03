@@ -14,11 +14,11 @@ public class WindowBatchFactory {
 			pool.add (new WindowBatch());
 	}
 	
-	public static WindowBatch newInstance (int size, IQueryBuffer buffer, WindowDefinition window, ITupleSchema schema, int start, int end) {
+	public static WindowBatch newInstance (int size, IQueryBuffer buffer, WindowDefinition window, ITupleSchema schema) {
 		WindowBatch batch = pool.poll();
 		if (batch == null)
-			return new WindowBatch(size, buffer, window, schema, start, end);
-		batch.set(size, buffer, window, schema, start, end);
+			return new WindowBatch(size, buffer, window, schema);
+		batch.set(size, buffer, window, schema);
 		return batch;
 	}
 	
