@@ -18,7 +18,8 @@ public class TaskDispatcher {
 	long ppb = 0L; /* Panes/batch  */
 	long tpb = 0L; /* Tuples/batch */
 	
-	/* Total number of tuples (rows) processed (currently, monotonically increasing) */
+	/* Total number of tuples (rows) processed 
+	 * (currently, monotonically increasing) */
 	long rowCount = 0L;
 	/* Temporary pointers */
 	long p, q, f;
@@ -37,7 +38,8 @@ public class TaskDispatcher {
 		this.handler = new ResultHandler ();
 		
 		/* Initialise constants */
-		ppb = window.panesPerSlide() * (Utils.BATCH - 1) + window.numberOfPanes();
+		ppb = window.panesPerSlide() * (Utils.BATCH - 1) + 
+				window.numberOfPanes();
 		if (window.isRowBased()) 
 		{
 			tpb = ppb * window.getPaneSize();
@@ -109,6 +111,42 @@ public class TaskDispatcher {
 		{
 			throw new UnsupportedOperationException("error: window is neither row-based nor range-based");
 		}
+	}
+	
+	private int firstOccurenceOf (long t, int start, int end) {
+		return scanLeft(t, binarySearch (t, start, end));
+	}
+	
+	private int lastOccurenceOf (long t, int start, int end) {
+		return scanRight(t, binarySearch(t, start, end));
+	}
+	
+	private int scan (long t, int index, boolean left) {
+		while (buffer.getLong(index) == t) {
+			if (left)
+				index -= schema.getByteSizeOfTuple();
+			else
+				index += schema.getByteSizeOfTuple();
+		}
+		return index;
+	}
+	
+	private int scanRight (long t, int index) {
+		return scan (t, index, false);
+	}
+	
+	private int scanLeft (long t, int index) {
+		return scan (t, index, true);
+	}
+	
+	private int binarySearch (long t, int start, int end) {
+		while (start <= end) {
+			int m = start + (end - start) / 2;
+			if (t < buffer.getLong(m)) end = m - 1;
+			else if (t > buffer.getLong(m)) start = m + 1;
+			else return m;
+		}
+		return -1;
 	}
 	
 	private int getTaskNumber () {

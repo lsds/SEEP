@@ -14,5 +14,6 @@ public class Utils {
 	public static int BATCH =      1;
 	public static int RANGE =  65536;
 	public static int SLIDE =  65536;
-	public static WindowDefinition.WindowType TYPE = WindowDefinition.WindowType.ROW_BASED;
+	public static WindowDefinition.WindowType TYPE = 
+			WindowDefinition.WindowType.RANGE_BASED;
 }

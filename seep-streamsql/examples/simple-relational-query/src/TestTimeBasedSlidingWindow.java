@@ -15,7 +15,7 @@ public class TestTimeBasedSlidingWindow {
 	public static void main(String [] args) {
 		
 		WindowDefinition window = 
-			new WindowDefinition (WindowDefinition.WindowType.ROW_BASED, Utils.RANGE, Utils.SLIDE);
+			new WindowDefinition (Utils.TYPE, Utils.RANGE, Utils.SLIDE);
 		
 		ITupleSchema schema = new TupleSchema (Utils.OFFSETS, Utils._TUPLE_);
 		
@@ -32,20 +32,26 @@ public class TestTimeBasedSlidingWindow {
 		ByteBuffer b = ByteBuffer.wrap(data);
 		long timestamp = 0L;
 		long tuples = 0L;
+		/* Utils.BUNDLE holds 32,768 tuples; or, 
+		 * given 32KB/s, 32 seconds of data */
+		long tps = 1024L;
 		while (b.hasRemaining()) {
 			b.putLong(timestamp);
 			for (int i = 0; i < Utils._TUPLE_ - Long.SIZE; i += Integer.SIZE)
 				b.putInt(1);
-			if (++tuples % 1024 == 0)
+			if (++tuples % tps == 0)
 				timestamp += 1;
 		}
+		assert (timestamp == 32);
+		timestamp --;
 		b.flip();
 		try {
 			while (true) {
 				operator.processData (data);
-				b.reset();
+				b.clear();
 				/* Increment timestamps */
-				/* ... */
+				for (int i = 0; i < Utils.BUNDLE; i += Utils._TUPLE_)
+					b.putLong(i, b.getLong(i) + timestamp);
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 
