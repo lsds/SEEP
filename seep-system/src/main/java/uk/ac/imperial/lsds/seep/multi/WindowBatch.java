@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.Arrays;
+
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -94,30 +96,47 @@ public class WindowBatch {
 		if (initialised)
 			return ;
 		
+		initialised = true;
+		
 		windowStartPointers = new int [batchSize];
 		windowEndPointers   = new int [batchSize];
 		
+		Arrays.fill(windowStartPointers, -1);
+		Arrays.fill(windowEndPointers,   -1);
+		
+		if (batchStartPointer < 0 && batchEndPointer < 0)
+			return ;
+		
+		int tuple_ = schema.getByteSizeOfTuple ();
+		int window_ = (int) windowDefinition.getSize();
+		int slide_ = (int) windowDefinition.getSlide();
+		
 		if (windowDefinition.isRowBased()) 
 		{
-			if (windowDefinition.isTumbling()) 
-			{
-				int window_ = (int) windowDefinition.getSize();
-				int tuple_ = schema.getByteSizeOfTuple ();
-				int bpw = window_ * tuple_;
-				
-				for (int i = 0; i < batchSize; i++)
-				{
-					windowStartPointers[i] = this.batchStartPointer + i * bpw;
-					windowEndPointers[i]   = windowStartPointers[i] + 1 * bpw;
-				}
-			} else
-			{
-				throw new UnsupportedOperationException("error: support for row-based sliding windows not yet implemented");
+			/* Bytes/window */
+			int bpw = tuple_ * window_;
+			
+			int offset  = schema.getByteSizeOfTuple (); /* In bytes */
+			if (windowDefinition.isTumbling())
+				offset *= window_;
+			else
+				offset *= slide_;
+			
+			windowStartPointers [0] = batchStartPointer;
+			windowEndPointers   [0] = windowStartPointers[0] + bpw;
+			
+			for (int i = 1; i < batchSize; i++) {
+				windowStartPointers [i] = windowStartPointers [i - 1] + offset;
+				windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
 			}
 		}
 		else
 		{
-			throw new UnsupportedOperationException("error: support for range-based windows not yet implemented");
+			/* Fill-in range-based windows */
+			for (int i = batchStartPointer; i < batchEndPointer; i += tuple_) {
+				long t = buffer.getLong(i);
+				/* */
+			}
 		}
 	}
 	

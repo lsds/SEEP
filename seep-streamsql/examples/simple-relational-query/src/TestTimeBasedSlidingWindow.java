@@ -47,14 +47,13 @@ public class TestTimeBasedSlidingWindow {
 		timestamp ++;
 		b.flip();
 		try {
-			// while (true) {
+			while (true) {
 				operator.processData (data);
 				/* Increment timestamps */
 				for (int i = 0; i < Utils.BUNDLE; i += Utils._TUPLE_)
 					b.putLong(i, b.getLong(i) + timestamp);
 				b.clear();
-				operator.processData (data);
-			// }
+			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 
 			System.exit(1);

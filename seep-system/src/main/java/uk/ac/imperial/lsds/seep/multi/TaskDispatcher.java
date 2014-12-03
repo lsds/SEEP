@@ -171,6 +171,7 @@ public class TaskDispatcher {
 				tmp = next_;
 				while ((position = firstOccurenceOf (tmp, current, rows, index)) < 0)
 					tmp ++;
+				
 				/* Set the start pointer for this window batch */
 				batches[b][_START] = position;
 				/* 
@@ -259,6 +260,7 @@ public class TaskDispatcher {
 		 */
 		while (start <= end) {
 			int m = start + (end - start) / 2;
+			/* Normalize tuple offset in byte buffer */
 			int y = (int) ((offset + m * tupleSize) & mask);
 			if (t < buffer.getLong(y)) 
 				end = m - 1;
