@@ -13,8 +13,8 @@ public class Utils {
 	public static int _TUPLE_ = 32;
 	public static int [] OFFSETS = { 0, 8, 12, 16, 20, 24, 28 };
 	
-	public static int BATCH =  100;
-	public static int RANGE =  300; /* 65536 */
+	public static int BATCH =   10;
+	public static int RANGE =   10; /* 65536 */
 	public static int SLIDE =    1;
 	public static WindowDefinition.WindowType TYPE = 
 			WindowDefinition.WindowType.RANGE_BASED;

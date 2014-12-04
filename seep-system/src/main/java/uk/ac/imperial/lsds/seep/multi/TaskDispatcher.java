@@ -113,6 +113,8 @@ public class TaskDispatcher {
 		else
 			batch.pack((int) p, (int) q);
 		batch.setRange(t_, _t);
+		batch.initWindowPointers();
+		/* batch.debug(); */
 		task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
 		workerQueue.add(task); 
 	}

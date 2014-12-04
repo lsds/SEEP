@@ -111,8 +111,8 @@ public class WindowBatch {
 		int window_ = (int) windowDefinition.getSize();
 		int slide_ = (int) windowDefinition.getSlide();
 		
-		if (windowDefinition.isRowBased()) 
-		{
+		if (windowDefinition.isRowBased()) {
+			
 			/* Bytes/window */
 			int bpw = tuple_ * window_;
 			
@@ -129,14 +129,36 @@ public class WindowBatch {
 				windowStartPointers [i] = windowStartPointers [i - 1] + offset;
 				windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
 			}
-		}
-		else
-		{
-			/* Fill-in range-based windows */
-			for (int i = batchStartPointer; i < batchEndPointer; i += tuple_) {
+		} else { /* Fill-in range-based windows */
+			
+			int p = 0; /* Current opened window */ 
+			int q = 0; /* Current closed window */
+			
+			this.windowStartPointers[p] = this.batchStartPointer;
+			
+			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
 				long t = buffer.getLong(i);
-				/* */
-			}
+				/* 
+				 * Should we open new windows? 
+				 */
+				boolean open = false;
+				while (t - slide_ >= this.batchStartTime + p * slide_) {
+					p ++;
+					open |= true;
+				}
+				if (open && p < this.batchSize)
+					this.windowStartPointers[p] = i;
+				/* 
+				 * Should be close old windows? 
+				 */
+				boolean close = true;
+				while (t > this.batchStartTime + q * slide_ + window_) {
+					if (close)
+						this.windowEndPointers[q] = i;
+					close = false;
+					q ++;
+				}
+			} /* End of batch */
 		}
 	}
 	
@@ -209,10 +231,18 @@ public class WindowBatch {
 		this.schema = schema;
 	}
 	
+	/* 
+	 * Print statistics for every window in batch 
+	 */
 	public void debug () {
 		for (int i = 0; i < this.batchSize; i++) {
-			System.out.println(String.format("[DBG] [Projection] window %3d starts at %10d ends at %10d", 
-				i, this.windowStartPointers[i], this.windowEndPointers[i]));
+			
+			int start = this.windowStartPointers[i];
+			int end = this.windowEndPointers[i];
+			int bytes = end - start;
+			int tuples = bytes / schema.getByteSizeOfTuple();
+			
+			System.out.println(String.format("[DBG] window %3d starts at %10d ends at %10d %10d bytes %10d tuples", i, start, end, bytes, tuples));
 		}
 	}
 }
