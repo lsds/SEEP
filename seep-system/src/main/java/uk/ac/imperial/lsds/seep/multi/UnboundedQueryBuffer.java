@@ -12,52 +12,69 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		buffer = ByteBuffer.allocate(size); 
 	}
 	
+	@Override
 	public int getInt (int offset) { 
 		return buffer.getInt(offset); 
 	}
 	
+	@Override
 	public float getFloat (int offset) { 
 		return buffer.getFloat(offset); 
 	}
 	
+	@Override
 	public long getLong (int offset) { 
 		return buffer.getLong(offset); 
 	}
 	
+	@Override
 	public byte [] array () { 
 		return buffer.array(); 
 	}
 	
+	@Override
 	public ByteBuffer getByteBuffer () { 
 		return buffer; 
 	}
 	
+	@Override
 	public int capacity () { 
 		return buffer.capacity(); 
 	}
 	
+	@Override
 	public int remaining () { 
 		return buffer.remaining(); 
 	}
 	
+	@Override
 	public boolean hasRemaining () { 
 		return buffer.hasRemaining(); 
 	}
 	
+	@Override
+	public int position() {
+		return buffer.position();
+	}
+	
+	@Override
 	public int limit () { 
 		return buffer.limit(); 
 	}
 	
+	@Override
 	public void close () { 
 		buffer.flip(); 
 	}
 	
+	@Override
 	public void clear () {
 		buffer.clear();
 	}
 	
 	/* The buffer is every growing based on peek demand */
 	
+	@Override
 	@SuppressWarnings("finally")
 	public int putInt (int value) { 
 		try {
@@ -70,6 +87,13 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@Override
+	public int putInt (int index, int value) {
+		buffer.putInt(index, value);
+		return 0;
+	}
+	
+	@Override
 	@SuppressWarnings("finally")
 	public int putFloat (float value) {
 		try {
@@ -82,6 +106,13 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@Override
+	public int putFloat(int index, float value) {
+		buffer.putFloat(index, value);
+		return 0;
+	}
+	
+	@Override
 	@SuppressWarnings("finally")
 	public int putLong (long value) {
 		try {
@@ -94,6 +125,13 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@Override
+	public int putLong(int index, long value) {
+		buffer.putLong(index, value);
+		return 0;
+	}
+	
+	@Override
 	@SuppressWarnings("finally")
 	public int put (byte [] values) {
 		int size, size_;
@@ -109,15 +147,32 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		}
 	}
 	
+	@Override
+	public int put(byte [] source, int offset, int length) {
+		
+		/* Check bounds and normalise indices of source byte array */
+		
+		buffer.put(source, offset, length);
+		return 0;
+	}
+	
+	@Override
 	public int put (IQueryBuffer buffer) {
 		return buffer.put(buffer.array());
 	}
 	
+	@Override
+	public int put (IQueryBuffer source, int offset, int length) {
+		return put (source.array(), offset, length);
+	}
+	
+	@Override
 	public void resize () {
 		int size = buffer.capacity();
 		resize (size + size);
 	}
 	
+	@Override
 	public void resize (int size) {
 		if (size <= buffer.capacity())
 			return ;
@@ -129,6 +184,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		buffer.position(offset);
 	}
 	
+	@Override
 	public void free (int index) {
 		throw new UnsupportedOperationException
 		("error: cannot free bytes in an unbounded buffer");
@@ -140,14 +196,17 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	}
 
 	@Override
-	public byte[] array(int offset, int length) {
+	public byte [] array (int offset, int length) {
 		byte [] result = new byte [length];
 		System.arraycopy(buffer.array(), offset, result, 0, length);
 		return result;
 	}
 
 	@Override
-	public void appendBytesTo(int offset, int length, IQueryBuffer toBuffer) {
-		toBuffer.getByteBuffer().put(this.buffer.array(), offset, length);
+	public void appendBytesTo (int offset, int length, IQueryBuffer toBuffer) {
+		
+		/* Check bounds and normalise indices of this byte array */
+		
+		toBuffer.put(this.buffer.array(), offset, length);
 	}
 }

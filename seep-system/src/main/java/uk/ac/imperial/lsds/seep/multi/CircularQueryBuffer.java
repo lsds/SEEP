@@ -64,17 +64,20 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return buffer.getLong(offset);
 	}
 	
+	@Override
 	public byte [] array () {
 		return data;
 	}
 	
 	/* Avoid using this function, as it creates intermediate byte [] objects */
+	@Override
 	public byte [] array (int offset, int length) {
 		byte [] result = new byte [length];
 		System.arraycopy(data, offset, result, 0, length);
 		return result;
 	}
 	
+	@Override
 	public ByteBuffer getByteBuffer () {
 		return buffer;
 	}
@@ -124,12 +127,27 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	}
 	
 	@Override
+	public int putInt (int index, int value) {
+		throw new UnsupportedOperationException("error: cannot put int to a circular buffer");
+	}
+	
+	@Override
 	public int putFloat (float value) {
 		throw new UnsupportedOperationException("error: cannot put float to a circular buffer");
 	}
 	
 	@Override
+	public int putFloat (int index, float value) {
+		throw new UnsupportedOperationException("error: cannot put float to a circular buffer");
+	}
+	
+	@Override
 	public int putLong (long value) {
+		throw new UnsupportedOperationException("error: cannot put long to a circular buffer");
+	}
+	
+	@Override
+	public int putLong (int index, long value) {
 		throw new UnsupportedOperationException("error: cannot put long to a circular buffer");
 	}
 	
@@ -168,8 +186,18 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	}
 	
 	@Override
+	public int put (byte[] source, int offset, int length) {
+		return 0;
+	}
+	
+	@Override
 	public int put (IQueryBuffer buffer) {
 		return put (buffer.array());
+	}
+	
+	@Override
+	public int put (IQueryBuffer source, int offset, int length) {
+		return 0;
 	}
 	
 	@Override
@@ -225,39 +253,12 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	}
 
 	@Override
-	public void appendBytesTo(int offset, int length, IQueryBuffer toBuffer) {
+	public void appendBytesTo (int offset, int length, IQueryBuffer toBuffer) {
 		toBuffer.getByteBuffer().put(this.data, offset, length);
 	}
 
 	@Override
-	public int position() {
+	public int position () {
 		throw new UnsupportedOperationException("error: cannot get position from a circular buffer");
 	}
-
-	@Override
-	public int put(byte[] source, int offset, int length) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public int put(IQueryBuffer source, int offset, int length) {
-		return put(source.array(), offset, length);
-	}
-
-	@Override
-	public void putFloat(int index, float value) {
-		buffer.putFloat(normalise(index),value);
-	}
-
-	@Override
-	public void putInt(int index, int value) {
-		buffer.putInt(normalise(index),value);
-	}
-
-	@Override
-	public void putLong(int index, long value) {
-		buffer.putLong(normalise(index),value);
-	}
-	
 }
