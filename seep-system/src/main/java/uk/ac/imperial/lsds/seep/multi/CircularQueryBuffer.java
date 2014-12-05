@@ -51,17 +51,17 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	
 	@Override
 	public int getInt (int offset) {
-		return buffer.getInt(offset);
+		return buffer.getInt(normalise(offset));
 	}
 	
 	@Override
 	public float getFloat (int offset) {
-		return buffer.getFloat(offset);
+		return buffer.getFloat(normalise(offset));
 	}
 	
 	@Override
 	public long getLong (int offset) {
-		return buffer.getLong(offset);
+		return buffer.getLong(normalise(offset));
 	}
 	
 	@Override

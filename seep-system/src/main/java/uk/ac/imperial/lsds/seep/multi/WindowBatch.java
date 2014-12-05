@@ -72,14 +72,18 @@ public class WindowBatch {
 		this.batchEndTime = -1;
 	}
 	
-	public void pack (int batchStartPointer, int batchEndPointer) {
+	public void setBatchPointers (int batchStartPointer, int batchEndPointer) {
 		this.batchStartPointer = batchStartPointer;
 		this.batchEndPointer = batchEndPointer;
 	}
 	
-	public void unpack () {
+	public void cancel () {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
+	}
+	
+	public boolean isEmpty () {
+		return (this.batchStartPointer == -1) && (this.batchEndPointer == -1);
 	}
 	
 	public int getBatchSize () {
@@ -152,7 +156,7 @@ public class WindowBatch {
 				 * Should be close old windows? 
 				 */
 				boolean close = true;
-				while (t > this.batchStartTime + q * slide_ + window_) {
+				while (t > this.batchStartTime + q * slide_ + window_ - 1) {
 					if (close)
 						this.windowEndPointers[q] = i;
 					close = false;

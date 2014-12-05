@@ -46,8 +46,9 @@ public class TestTimeBasedSlidingWindow {
 		}
 		timestamp ++;
 		b.flip();
+		long count = 0;
 		try {
-			while (true) {
+			while (count++ < 3) {
 				operator.processData (data);
 				/* Increment timestamps */
 				for (int i = 0; i < Utils.BUNDLE; i += Utils._TUPLE_)

@@ -71,7 +71,7 @@ public class TaskDispatcher {
 		
 		p = q =  0L;
 		next_ =  0L;
-		_next = tpb;
+		_next = tpb - 1;
 		
 		mask = buffer.capacity() - 1;
 		
@@ -104,17 +104,25 @@ public class TaskDispatcher {
 		WindowBatch batch;
 		
 		/* System.out.println(
-				String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
-						p, q, free, t_, _t)); */
+			String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
+					p, q, free, t_, _t)); */
+		
+		if (q <= p)
+			q += buffer.capacity();
 		
 		batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema);
-		if (buffer.getLong((int) p) > _t)
-			batch.unpack();
-		else
-			batch.pack((int) p, (int) q); /* TODO: Make sure that q > p */
-		batch.setRange(t_, _t);
-		/* batch.initWindowPointers(); */
-		/* batch.debug(); */
+		if (window.isRangeBased()) {
+			if (buffer.getLong((int) p) > _t)
+				batch.cancel();
+			else
+				batch.setBatchPointers((int) p, (int) q);
+			batch.setRange(t_, _t);
+		} else
+			batch.setBatchPointers((int) p, (int) q);
+		
+		/* batch.initWindowPointers();
+		batch.debug(); */
+		
 		task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
 		workerQueue.add(task); 
 	}
@@ -126,6 +134,7 @@ public class TaskDispatcher {
 		int _index = (int) ((index + length - tupleSize) & mask);
 		
 		if (window.isRowBased()) {
+			_next ++;
 			while ((rowCount + rows) >= _next) {
 				/* Set start and end pointers for batch */
 				p = (next_ * tupleSize) & mask;
@@ -210,7 +219,7 @@ public class TaskDispatcher {
 						batches[d][_START], 
 						batches[d][  _END], 
 						batches[d][ _FREE], 
-						_next - tpb, _next
+						_next - tpb + 1, _next
 						);
 				batches[d][_START] = _undefined;
 				/* Set counters for the next batch to close */
