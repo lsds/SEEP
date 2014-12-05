@@ -34,7 +34,7 @@ public class TestTimeBasedSlidingWindow {
 		long tuples = 0L;
 		/* Utils.BUNDLE holds 32,768 tuples; or, 
 		 * given 32KB/s, 32 seconds of data */
-		long tps = 1024L;
+		long tps = 1L;
 		while (b.hasRemaining()) {
 			if (tuples++ % tps == 0)
 				timestamp += 1;
@@ -46,14 +46,15 @@ public class TestTimeBasedSlidingWindow {
 		}
 		timestamp ++;
 		b.flip();
-		long count = 0;
 		try {
-			while (count++ < 3) {
+			while (true) {
 				operator.processData (data);
 				/* Increment timestamps */
+				/*
 				for (int i = 0; i < Utils.BUNDLE; i += Utils._TUPLE_)
 					b.putLong(i, b.getLong(i) + timestamp);
 				b.clear();
+				*/
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

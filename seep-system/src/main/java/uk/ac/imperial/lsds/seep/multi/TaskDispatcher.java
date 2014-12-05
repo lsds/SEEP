@@ -134,10 +134,9 @@ public class TaskDispatcher {
 		int _index = (int) ((index + length - tupleSize) & mask);
 		
 		if (window.isRowBased()) {
-			_next ++;
-			while ((rowCount + rows) >= _next) {
+			while ((rowCount + rows) >= _next + 1) {
 				/* Set start and end pointers for batch */
-				p = (next_ * tupleSize) & mask;
+				p = ((next_ + 1) * tupleSize) & mask;
 				q = (_next * tupleSize) & mask;
 				q = (q == 0) ? buffer.capacity() : q;
 				/* Set free pointer */

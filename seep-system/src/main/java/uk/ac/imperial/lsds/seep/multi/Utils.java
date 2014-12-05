@@ -8,9 +8,9 @@ public class Utils {
 	 */
 	public static int _BATCH_RECORDS = 1024;
 	
-	public static int BUNDLE = 524288;
+	public static int BUNDLE = 1048576;
 	
-	public static int _CIRCULAR_BUFFER_ = 1048576;
+	public static int _CIRCULAR_BUFFER_ = 1073741824;
 	
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
 	public static int TASKS = 1000000;
@@ -18,9 +18,9 @@ public class Utils {
 	public static int _TUPLE_ = 32;
 	public static int [] OFFSETS = { 0, 8, 12, 16, 20, 24, 28 };
 	
-	public static int BATCH =  1;
-	public static int RANGE = 10;
-	public static int SLIDE =  1;
+	public static int BATCH =     1;
+	public static int RANGE = 16384;
+	public static int SLIDE = 16384;
 	public static WindowDefinition.WindowType TYPE = 
-			WindowDefinition.WindowType.RANGE_BASED;
+			WindowDefinition.WindowType.ROW_BASED;
 }
