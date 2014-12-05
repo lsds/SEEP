@@ -70,7 +70,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 			 */
 			if (inWindowStartOffset != -1) {
 				
-				startPointers[currentWindow] = outBuffer.getByteBuffer().position();
+				startPointers[currentWindow] = outBuffer.position();
 				/* For all the tuples in the window */
 				while (inWindowStartOffset < inWindowEndOffset) {
 					for (int i = 0; i < expressions.length; i++) {
@@ -78,7 +78,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 					}
 					inWindowStartOffset += byteSizeOfTuple;
 				}
-				endPointers[currentWindow] = outBuffer.getByteBuffer().position() - 1;
+				endPointers[currentWindow] = outBuffer.position() - 1;
 			}
 		}
 		

@@ -57,7 +57,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 			 */
 			if (inWindowStartOffset != -1) {
 				
-				startPointers[currentWindow] = outBuffer.getByteBuffer().position();
+				startPointers[currentWindow] = outBuffer.position();
 				// for all the tuples in the window
 				while (inWindowStartOffset <= inWindowEndOffset) {
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
@@ -65,7 +65,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 					}
 					inWindowStartOffset += byteSizeOfTuple;
 				}
-				endPointers[currentWindow] = outBuffer.getByteBuffer().position() - 1;
+				endPointers[currentWindow] = outBuffer.position() - 1;
 			}
 		}
 		

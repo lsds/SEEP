@@ -46,7 +46,11 @@ public class Task implements IWindowAPI {
 		/* System.out.println(String.format("[DBG] [Task %7d] %d", taskid, result)); */
 		
 		ResultCollector.free(handler, buffer, taskid, freeUpTo);
-		return result;
+		
+		this.batch.getBuffer().release();
+        WindowBatchFactory.free(this.batch);
+		
+        return result;
 	}
 	
 	@Override

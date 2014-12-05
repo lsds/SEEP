@@ -103,17 +103,17 @@ public class TaskDispatcher {
 		Task task;
 		WindowBatch batch;
 		
-		System.out.println(
+		/* System.out.println(
 				String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
-						p, q, free, t_, _t));
+						p, q, free, t_, _t)); */
 		
 		batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema);
 		if (buffer.getLong((int) p) > _t)
 			batch.unpack();
 		else
-			batch.pack((int) p, (int) q);
+			batch.pack((int) p, (int) q); /* TODO: Make sure that q > p */
 		batch.setRange(t_, _t);
-		batch.initWindowPointers();
+		/* batch.initWindowPointers(); */
 		/* batch.debug(); */
 		task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
 		workerQueue.add(task); 

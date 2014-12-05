@@ -49,14 +49,17 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		h = new PaddedLong (0L);
 	}
 	
+	@Override
 	public int getInt (int offset) {
 		return buffer.getInt(offset);
 	}
 	
+	@Override
 	public float getFloat (int offset) {
 		return buffer.getFloat(offset);
 	}
 	
+	@Override
 	public long getLong (int offset) {
 		return buffer.getLong(offset);
 	}
@@ -76,10 +79,12 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return buffer;
 	}
 	
+	@Override
 	public int capacity () {
 		return size;
 	}
 	
+	@Override
 	public int remaining () {
 		long tail = end.get();
 		long head = start.get();
@@ -89,6 +94,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			return size - (int) (tail - head);
 	}
 	
+	@Override
 	public boolean hasRemaining () {
 		return (remaining() > 0);
 	}
@@ -97,30 +103,37 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return (remaining() >= length);
 	}
 	
+	@Override
 	public int limit () {
 		return size;
 	}
 	
+	@Override
 	public void close () {
 		return ;
 	}
 	
+	@Override
 	public void clear () {
 		return ;
 	}
 	
+	@Override
 	public int putInt (int value) {
 		throw new UnsupportedOperationException("error: cannot put int to a circular buffer");
 	}
 	
+	@Override
 	public int putFloat (float value) {
 		throw new UnsupportedOperationException("error: cannot put float to a circular buffer");
 	}
 	
+	@Override
 	public int putLong (long value) {
 		throw new UnsupportedOperationException("error: cannot put long to a circular buffer");
 	}
 	
+	@Override
 	public int put (byte [] values) {
 		
 		if (values == null)
@@ -154,18 +167,22 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return index;
 	}
 	
+	@Override
 	public int put (IQueryBuffer buffer) {
 		return put (buffer.array());
 	}
 	
+	@Override
 	public void resize () {
 		resize (this.size + this.size);
 	}
 	
+	@Override
 	public void resize (int size_) {
 		throw new UnsupportedOperationException("error: cannot resize a circular buffer");
 	}
 	
+	@Override
 	public void free (int offset) {
 		final long _start = start.get();
 		final int index = normalise (_start);
@@ -181,6 +198,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		start.lazySet(_start + bytes);
 	}
 	
+	@Override
 	public void release () {
 		return ;
 	}
@@ -210,4 +228,36 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	public void appendBytesTo(int offset, int length, IQueryBuffer toBuffer) {
 		toBuffer.getByteBuffer().put(this.data, offset, length);
 	}
+
+	@Override
+	public int position() {
+		throw new UnsupportedOperationException("error: cannot get position from a circular buffer");
+	}
+
+	@Override
+	public int put(byte[] source, int offset, int length) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int put(IQueryBuffer source, int offset, int length) {
+		return put(source.array(), offset, length);
+	}
+
+	@Override
+	public void putFloat(int index, float value) {
+		buffer.putFloat(normalise(index),value);
+	}
+
+	@Override
+	public void putInt(int index, int value) {
+		buffer.putInt(normalise(index),value);
+	}
+
+	@Override
+	public void putLong(int index, long value) {
+		buffer.putLong(normalise(index),value);
+	}
+	
 }

@@ -41,7 +41,8 @@ public class FloatConstant implements FloatExpression {
 	@Override
 	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
 			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(_constantBytes, 0, toBuffer.array(), toBufferOffset, 4);
+//		System.arraycopy(_constantBytes, 0, toBuffer.array(), toBufferOffset, 4);
+		toBuffer.put(_constantBytes, toBufferOffset, 4);
 	}
 
 	@Override
