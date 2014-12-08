@@ -253,10 +253,21 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	}
 
 	@Override
-	public void appendBytesTo (int offset, int length, IQueryBuffer toBuffer) {
-		toBuffer.getByteBuffer().put(this.data, offset, length);
+	public void appendBytesTo (int offset, int length, IQueryBuffer destination) {
+		destination.getByteBuffer().put(this.data, offset, length);
 	}
-
+	
+	@Override
+	public void appendBytesTo (int start, int end, byte [] destination) {
+		if (end > start) {
+			System.arraycopy(this.data, start, destination, 0, end - start);
+		} else {
+			/* Copy in two parts */
+			System.arraycopy(this.data, start, destination, 0, this.size - start);
+			System.arraycopy(this.data, 0, destination, 0, end);
+		}
+	}
+	
 	@Override
 	public int position () {
 		throw new UnsupportedOperationException("error: cannot get position from a circular buffer");

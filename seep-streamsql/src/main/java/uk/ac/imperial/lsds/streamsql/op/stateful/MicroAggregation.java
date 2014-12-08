@@ -110,7 +110,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			break;
 		}
 	}
-
+	
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {
 
 		assert (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);

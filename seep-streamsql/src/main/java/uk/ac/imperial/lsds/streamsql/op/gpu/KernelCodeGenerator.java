@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.GlobalReadOnlyArgument;
 import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.GlobalWriteOnlyArgument;
@@ -12,47 +14,81 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.LocalArgument;
 
 public class KernelCodeGenerator {
 
-	public static Kernel getSelection () {
+	public static List<Kernel> getSelection () {
+		return null;
+	}
+	
+	public static List<Kernel> getSelection (String filename) {
 		
-		StringBuilder s = new StringBuilder();
+		List<Kernel> kernels = new ArrayList<Kernel>();
 		
-		/* Preamble */
+		String source = load (filename);
+		Kernel selectKernel = new Kernel ("selectKernel", source);
+		/* The `compact` kernel function is already included in `source` */
+		Kernel compactKernel = new Kernel ("compactKernel", "");
 		
-		/* Signature */
-		s.append("__kernel void select (\n");
-		s.append("\tconst int tuples,\n");
-		s.append("\tconst int  bytes,\n");
-		s.append("\t__global const uchar*  input,\n");
-		s.append("\t__global uchar* output\n");
-		s.append(") {\n");
+		/* Create arguments for select kernel */
 		
-		/* Main body */
-		
-		/* Footer */
-		s.append("\treturn ;\n");
-		s.append("}\n");
-		
-		Kernel kernel = new Kernel ("select", s.toString());
-		
-		/* Create arguments */
+		KernelAttribute _size = new KernelAttribute("size", int.class);
+		_size.addAnnotation (new KernelArgument("size"));
+		selectKernel.addAttribute(_size);
 		
 		KernelAttribute _tuples = new KernelAttribute("tuples", int.class);
 		_tuples.addAnnotation (new KernelArgument("tuples"));
-		kernel.addAttribute(_tuples);
+		selectKernel.addAttribute(_tuples);
 		
-		KernelAttribute _bytes = new KernelAttribute("bytes", int.class);
-		_bytes.addAnnotation (new KernelArgument("bytes"));
-		kernel.addAttribute(_bytes);
+		KernelAttribute __bundle = new KernelAttribute("_bundle", int.class);
+		__bundle.addAnnotation (new KernelArgument("_bundle"));
+		selectKernel.addAttribute(__bundle);
+		
+		KernelAttribute _bundles = new KernelAttribute("bundles", int.class);
+		_bundles.addAnnotation (new KernelArgument("bundles"));
+		selectKernel.addAttribute(_bundles);
 		
 		KernelAttribute _input = new KernelAttribute("input", byte [].class);
 		_input.addAnnotation (new GlobalReadOnlyArgument("input"));
-		kernel.addAttribute(_input);
+		selectKernel.addAttribute(_input);
+		
+		KernelAttribute _flags = new KernelAttribute("flags", int [].class);
+		_flags.addAnnotation (new GlobalWriteOnlyArgument("flags"));
+		selectKernel.addAttribute(_flags);
+		
+		KernelAttribute _offsets = new KernelAttribute("offsets", int [].class);
+		_offsets.addAnnotation (new GlobalWriteOnlyArgument("offsets"));
+		selectKernel.addAttribute(_offsets);
+		
+		KernelAttribute _buffer = new KernelAttribute("buffer", int [].class);
+		_buffer.addAnnotation (new LocalArgument("buffer"));
+		selectKernel.addAttribute(_buffer);
+		
+		/* Create arguments for compact kernel */
+		
+		compactKernel.addAttribute(_size); /* Common attributes */
+		compactKernel.addAttribute(_tuples);
+		compactKernel.addAttribute(__bundle);
+		compactKernel.addAttribute(_bundles);
+		compactKernel.addAttribute(_input);
+		
+		KernelAttribute __flags = new KernelAttribute("flags", int [].class);
+		__flags.addAnnotation (new GlobalReadOnlyArgument("flags"));
+		compactKernel.addAttribute(__flags);
+		
+		KernelAttribute __offsets = new KernelAttribute("offsets", int [].class);
+		__offsets.addAnnotation (new GlobalReadOnlyArgument("offsets"));
+		compactKernel.addAttribute(__offsets);
+		
+		KernelAttribute _pivots = new KernelAttribute("pivots", int [].class);
+		_pivots.addAnnotation (new GlobalReadOnlyArgument("pivots"));
+		compactKernel.addAttribute(_pivots);
 		
 		KernelAttribute _output = new KernelAttribute("output", byte [].class);
 		_output.addAnnotation (new GlobalWriteOnlyArgument("output"));
-		kernel.addAttribute(_output);
+		compactKernel.addAttribute(_output);
 		
-		return kernel;
+		kernels.add( selectKernel);
+		kernels.add(compactKernel);
+		
+		return kernels;
 	}
 	
 	public static Kernel getProjection () {
@@ -139,6 +175,10 @@ public class KernelCodeGenerator {
 		kernel.addAttribute(_output);
 		
 		return kernel;
+	}
+	
+	public static Kernel getMicroAggregation (String filename) {
+		return null;
 	}
 
 	public static Kernel getProjection (String filename) {

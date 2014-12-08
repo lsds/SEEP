@@ -209,4 +209,10 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		
 		toBuffer.put(this.buffer.array(), offset, length);
 	}
+
+	@Override
+	public void appendBytesTo(int start, int end, byte[] destination) {
+		
+		System.arraycopy(this.buffer.array(), start, destination, 0, end - start);
+	}
 }

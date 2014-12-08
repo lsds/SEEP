@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu;
 
+import com.amd.aparapi.device.Device;
 import com.amd.aparapi.device.OpenCLDevice;
 
 import java.lang.annotation.Annotation;
@@ -12,7 +13,6 @@ import java.util.Map;
 import com.amd.aparapi.internal.opencl.OpenCLArgDescriptor;
 import com.amd.aparapi.internal.opencl.OpenCLProgram;
 import com.amd.aparapi.internal.opencl.OpenCLKernel;
-
 import com.amd.aparapi.opencl.OpenCL;
 import com.amd.aparapi.opencl.OpenCL.Arg;
 import com.amd.aparapi.opencl.OpenCL.Local;
@@ -23,10 +23,17 @@ import com.amd.aparapi.opencl.OpenCL.GlobalWriteOnly;
 
 public class KernelDevice {
 	
+	private Device dev;
 	private OpenCLDevice device;
 	
-	public KernelDevice (OpenCLDevice device) {
-		this.device = device;
+	public KernelDevice () {
+		this.dev = Device.best();
+		if (! (this.dev instanceof OpenCLDevice)) 
+		{
+			throw new IllegalStateException("error: OpenCL device not found");
+		}
+		this.device = (OpenCLDevice) dev;
+		System.out.println(device);
 	}
 	
 	public OpenCLDevice getDevice () { 

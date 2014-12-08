@@ -16,17 +16,42 @@ public class KernelStatistics {
 	private long Bw;
 
 	private static final double _1GB = 1073741824.;
+	
+	private int  _input_; /* Default input and output sizes */
+	private int _output_;
 
-	private String name = "default"; /* Kernel name */
-
-	public KernelStatistics() {
-		reset();
+	private String name; /* Kernel name */
+	
+	public KernelStatistics (String name, int _input_, int _output_) {
+		this.name = name;
+		
+		this._input_  =  _input_;
+		this._output_ = _output_;
+		/* Reset counters */
+		reset ();
 	}
-
-	private void reset() {
+	
+	public KernelStatistics (String name) {
+		this(name, 0, 0);
+	}
+	
+	public KernelStatistics () {
+		this("default", 0, 0);
+	}
+	
+	public String getName () {
+		return this.name;
+	}
+	
+	private void reset () {
 		this.runs = 0L;
 		this.Tr = this.Tw = this.Tx = 0L;
 		this.Br = this.Bw = 0L;
+	}
+	
+	public void collect (List<ProfileInfo> info) {
+		
+		this.collect(info, _input_, _output_);
 	}
 
 	public void collect (List<ProfileInfo> info, int input, int output) {
@@ -45,8 +70,7 @@ public class KernelStatistics {
 			} else if (type.equals("W")) {
 				Tw += dt;
 			} else {
-				throw new IllegalArgumentException(
-						"error: unknown measurement type");
+				throw new IllegalArgumentException("error: unknown measurement type");
 			}
 		}
 	}
@@ -63,7 +87,7 @@ public class KernelStatistics {
 	
 	public void print () {
 		System.out.println(String.format(
-		"[DBG] [GPU] %10s R %5.1f usec/call %10.3f GB/s W %5.1f usec/call %10.3f GB/s X %5.1f usec/call %10.3f GB/s", 
+		"[DBG] [GPU] %15s R %5.1f usec/call %10.3f GB/s W %5.1f usec/call %10.3f GB/s X %5.1f usec/call %10.3f GB/s", 
 		name, time (Tr), rate(Br, Tr), time (Tw), rate(Bw, Tw), time (Tx), rate(Br + Bw, Tx)));
 	}
 }
