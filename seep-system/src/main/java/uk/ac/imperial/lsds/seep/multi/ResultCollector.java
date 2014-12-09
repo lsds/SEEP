@@ -2,8 +2,8 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class ResultCollector {
 
-	public static void free(ResultHandler handler, IQueryBuffer buffer,
-			int taskid, int offset) {
+	public static void forwardAndFree(ResultHandler handler, SubQuery query,
+			IQueryBuffer buffer, int taskid, int offset) {
 		int idx = taskid % handler.SLOTS;
 		int index;
 		int next;
@@ -22,8 +22,11 @@ public class ResultCollector {
 			index = handler.offsets.getAndSet(handler.next, -1);
 			while (index > 0) {
 				/*
-				 * Do the actual result forwarding here
+				 * Do the actual result forwarding
 				 */
+				if (query.getDownstreamSubQuery() != null)
+					query.getDownstreamSubQuery().getTaskDispatcher()
+							.dispatch(handler.results.get(index).array());
 
 				buffer.free(index);
 				handler.slots.lazySet(handler.next, 1);

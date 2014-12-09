@@ -6,11 +6,17 @@ import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 
 public class IntAddition implements IntExpression {
-	
-	private IntExpression[] expressions = null;
+
+	private IntExpression[]	expressions	= null;
 
 	public IntAddition(IntExpression[] expressions) {
 		this.expressions = expressions;
+	}
+
+	public IntAddition(IntExpression exp1, IntExpression exp2) {
+		this.expressions = new IntExpression[2];
+		this.expressions[0] = exp1;
+		this.expressions[1] = exp2;
 	}
 
 	@Override
@@ -37,21 +43,25 @@ public class IntAddition implements IntExpression {
 		}
 		return result;
 	}
-	
+
 	@Override
-	public void appendByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int offset, IQueryBuffer toBuffer) {
+	public void appendByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
+			int offset, IQueryBuffer toBuffer) {
 		toBuffer.putInt(eval(fromBuffer, schema, offset));
 	}
 
 	@Override
 	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
 			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(fromBuffer.array(), fromBufferOffset, ExpressionsUtil.intToByteArray(eval(fromBuffer, schema, fromBufferOffset)), 0, 4);
+		System.arraycopy(fromBuffer.array(), fromBufferOffset, ExpressionsUtil
+				.intToByteArray(eval(fromBuffer, schema, fromBufferOffset)), 0,
+				4);
 
 	}
-	
+
 	@Override
-	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset) {
 		return ExpressionsUtil.intToByteArray(eval(buffer, schema, offset));
 	}
 
