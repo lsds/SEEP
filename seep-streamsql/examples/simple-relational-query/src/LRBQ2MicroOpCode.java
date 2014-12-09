@@ -6,30 +6,14 @@ import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
-import uk.ac.imperial.lsds.streamsql.expressions.Expression;
-import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 
 public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 
 	private IntColumnReference vehicleAttribute;
 
-	private ITupleSchema outSchema;
-	private int byteSizeOfOutTuple;
-
 	public LRBQ2MicroOpCode() {
 		this.vehicleAttribute = new IntColumnReference(3);
-
-		Expression[] tmpAllOutAttributes = new Expression[4];
-		tmpAllOutAttributes[0] = new LongColumnReference(0);
-		tmpAllOutAttributes[1] = new IntColumnReference(1);
-		tmpAllOutAttributes[2] = new IntColumnReference(2);
-		tmpAllOutAttributes[3] = new IntColumnReference(3);
-
-		this.outSchema = ExpressionsUtil
-				.getTupleSchemaForExpressions(tmpAllOutAttributes);
-		this.byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
 	}
 
 	@Override
@@ -65,7 +49,8 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 				}
 
 				evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec,
-						outBuffer, startPointers, endPointers, currentWindow);
+						outBuffer, startPointers, endPointers, currentWindow,
+						byteSizeOfInTuple);
 
 			} else {
 
@@ -101,7 +86,8 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 				}
 
 				evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec,
-						outBuffer, startPointers, endPointers, currentWindow);
+						outBuffer, startPointers, endPointers, currentWindow,
+						byteSizeOfInTuple);
 
 				prevWindowStart = inWindowStartOffset;
 				prevWindowEnd = inWindowEndOffset;
@@ -138,7 +124,7 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 	private void evaluateWindow(IWindowAPI api, IQueryBuffer inBuffer,
 			Map<Integer, Integer> lastPerVehicleInLast30Sec,
 			IQueryBuffer outBuffer, int[] startPointers, int[] endPointers,
-			int currentWindow) {
+			int currentWindow, int byteSizeOfTuple) {
 
 		if (lastPerVehicleInLast30Sec.keySet().isEmpty()) {
 			startPointers[currentWindow] = -1;
@@ -147,7 +133,7 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 			startPointers[currentWindow] = outBuffer.position();
 			for (Integer key : lastPerVehicleInLast30Sec.keySet()) {
 				int partitionOffset = lastPerVehicleInLast30Sec.get(key);
-				outBuffer.put(inBuffer, partitionOffset, byteSizeOfOutTuple);
+				outBuffer.put(inBuffer, partitionOffset, byteSizeOfTuple);
 			}
 
 			endPointers[currentWindow] = outBuffer.position() - 1;
