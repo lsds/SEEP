@@ -8,20 +8,17 @@ import com.amd.aparapi.Range;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
-
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-
 import uk.ac.imperial.lsds.streamsql.op.gpu.Kernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelDevice;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelOperator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.OperatorStatistics;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelInvocationHandler;
-
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
-
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
@@ -35,7 +32,7 @@ public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	 * This size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_size = 1048576;
+	private static final int _default_size = Utils._GPU_INPUT_;
 	/*
 	 * Operator configuration parameters
 	 */
@@ -178,8 +175,9 @@ public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		/* Execute `select & scan` kernel */
 		handler.call("selectKernel", args0);
-		/* Collect measurements */
-		statistics.collect("selectKernel", this.operator.getProfileInfo());
+		
+		/* Collect measurements
+		 * statistics.collect("selectKernel", this.operator.getProfileInfo()); */
 		
 		/* Populate `sum` array with an inclusive scan 
 		 * 
@@ -195,10 +193,11 @@ public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		/* Compact results, based on scan results */
 		handler.call("compactKernel", args1);
-		/* Collect measurements */
-		statistics.collect("compactKernel", this.operator.getProfileInfo());
-		/* Debug mode */
-		statistics.print();
+		
+		/* Collect measurements
+		 * statistics.collect("compactKernel", this.operator.getProfileInfo());
+		 * Debug mode
+		 * statistics.print(); */
 	}
 	
 	public byte[] getOutput() {

@@ -1,10 +1,8 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu;
 
 import java.lang.IllegalArgumentException;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-
 import java.util.Map;
 
 import com.amd.aparapi.internal.opencl.OpenCLKernel;
@@ -18,10 +16,14 @@ public class KernelInvocationHandler <T extends OpenCL<T>>
 	private final OpenCLProgram program;
 	private boolean disposed = false;
 	
+	OpenCLKernel projectKernel = null;
+	
 	public KernelInvocationHandler (OpenCLProgram program, Map<String, OpenCLKernel> map) {
 		this.program = program;
 		this.map = map;
 		this.disposed = false;
+		
+		/* this.projectKernel = map.get("project"); */
 	}
 	
 	@Override
@@ -41,7 +43,7 @@ public class KernelInvocationHandler <T extends OpenCL<T>>
 				disposed = true;
 			} else 
 			if (name.equals("getProfileInfo")) {
-				proxy = (Object) program.getProfileInfo();
+				proxy = program.getProfileInfo();
 			} else {
 				throw new IllegalArgumentException
 				(String.format("error: unsupported method %s", name));
@@ -64,7 +66,15 @@ public class KernelInvocationHandler <T extends OpenCL<T>>
 	public void call (String name, Object [] args) {
 		OpenCLKernel kernel = map.get(name);
 		if (kernel == null)
-			throw new IllegalArgumentException(String.format("error: method %s does not exist", name));
+		 	throw new IllegalArgumentException(String.format("error: method %s does not exist", name));
 		kernel.invoke(args);
     }
+	
+	public void invokeProjectionKernelOperator(Object [] args) {
+		projectKernel.invokeProjectionKernelOperator(args);
+	}
+	
+	public void configureProjectionKernelOperator(Object[] args) {
+		projectKernel.configureProjectionKernelOperator(args);
+	}
 }

@@ -39,6 +39,8 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		
+		windowBatch.initWindowPointers();
+		
 		int[] startPointers = windowBatch.getWindowStartPointers();
 		int[] endPointers = windowBatch.getWindowEndPointers();
 		
@@ -59,9 +61,12 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 				
 				startPointers[currentWindow] = outBuffer.position();
 				// for all the tuples in the window
-				while (inWindowStartOffset <= inWindowEndOffset) {
+				while (inWindowStartOffset < inWindowEndOffset) {
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
 						inBuffer.appendBytesTo(inWindowStartOffset, byteSizeOfTuple, outBuffer);
+					} else {
+						System.err.println("Unexpected error");
+						System.exit(1);
 					}
 					inWindowStartOffset += byteSizeOfTuple;
 				}

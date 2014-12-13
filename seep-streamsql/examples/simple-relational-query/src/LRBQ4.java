@@ -7,6 +7,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
@@ -71,7 +72,7 @@ public class LRBQ4 {
 		// SubQuery sq1 = new SubQuery(10, q2MicroOps, inputSchema, new
 		// WindowDefinition(WindowType.RANGE_BASED, 300, 1));
 		SubQuery sq4 = new SubQuery(40, q2MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024));
+				new WindowDefinition(WindowType.ROW_BASED, Utils.RANGE, Utils.SLIDE));
 
 		Set<SubQuery> subQueries = new HashSet<>();
 		subQueries.add(sq4);

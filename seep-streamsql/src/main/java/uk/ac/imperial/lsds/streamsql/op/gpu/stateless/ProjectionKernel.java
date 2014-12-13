@@ -1,21 +1,20 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu.stateless;
 
 import java.lang.reflect.Proxy;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
-
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
-
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
-
 import uk.ac.imperial.lsds.streamsql.op.gpu.Kernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelDevice;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelOperator;
@@ -31,7 +30,8 @@ public class ProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	 * This size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_size = 1048576;
+	private static final int _default_input_size = Utils._GPU_INPUT_;
+	private static final int _default_output_size = Utils._GPU_OUTPUT_;
 	
 	private Expression[] expressions;
 	private ITupleSchema inputSchema, outputSchema;
@@ -63,7 +63,7 @@ public class ProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		this.filename = filename;
 		
 		this.statistics = 
-			new KernelStatistics("project", _default_size, _default_size);
+			new KernelStatistics("project", _default_input_size, _default_output_size);
 		
 		setup();
 	}
@@ -85,14 +85,14 @@ public class ProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		this.handler = (KernelInvocationHandler<KernelOperator>) Proxy.getInvocationHandler(operator);
 		
 		/* Configure kernel arguments */
-		this.tuples = _default_size / inputSchema.getByteSizeOfTuple();
+		this.tuples = _default_input_size / inputSchema.getByteSizeOfTuple();
 		
 		this._thread_group_ = 128;
 
 		this.range = Range.create(this.tuples, _thread_group_);
 		
-		this.input  = new byte[_default_size];
-		this.output = new byte[_default_size];
+		this.input  = new byte[ _default_input_size];
+		this.output = new byte[_default_output_size];
 		
 		this._input  = new byte [(_thread_group_) * inputSchema.getByteSizeOfTuple()];
 		this._output = new byte [(_thread_group_) * inputSchema.getByteSizeOfTuple()];
@@ -101,11 +101,13 @@ public class ProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		args = new Object[7];
 		args[0] = range;
 		args[1] = tuples;
-		args[2] = _default_size; /* #bytes */
+		args[2] = _default_input_size; /* #bytes */
 		args[3] = input;
 		args[4] = output;
 		args[5] = _input;
 		args[6] = _output;
+		
+		/* handler.configureProjectionKernelOperator(args); */
 	}
 	
 	public byte[] getOutput() {
@@ -134,13 +136,30 @@ public class ProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		/* Copy input */
-		System.arraycopy(windowBatch.getBuffer().array(), 0, input, 0, windowBatch.getBuffer().capacity());
+		windowBatch.getBuffer().appendBytesTo(
+				windowBatch.getBatchStartPointer(), 
+				windowBatch.getBatchEndPointer(), 
+				input);
+		
 		/* Execute kernel */
 		handler.call("project", args);
-		/* Collect measurements */
-		statistics.collect(this.operator.getProfileInfo());
-		/* Debug mode */
-		statistics.print();
+		
+		/*
+		 * long start = System.nanoTime();
+		 * handler.invokeProjectionKernelOperator (args);
+		 * long dt = System.nanoTime() - start;
+		 * System.out.println("dt = " + dt + " ns");
+		 */
+		
+		/* Collect measurements
+		 * statistics.collect(this.operator.getProfileInfo());
+		 * statistics.print(); 
+		 */
+		
+		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
+		outputBuffer.put(output);
+		windowBatch.setBuffer(outputBuffer);
+		api.outputWindowBatchResult(-1, windowBatch);
 	}
 	
 	@Override

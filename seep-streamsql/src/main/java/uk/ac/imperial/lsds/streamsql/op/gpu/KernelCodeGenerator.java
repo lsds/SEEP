@@ -180,7 +180,7 @@ public class KernelCodeGenerator {
 	public static Kernel getMicroAggregation (String filename) {
 		return null;
 	}
-
+	
 	public static Kernel getProjection (String filename) {
 		
 		String source = load (filename);

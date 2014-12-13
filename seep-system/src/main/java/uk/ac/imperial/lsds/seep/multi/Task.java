@@ -7,7 +7,13 @@ public class Task implements IWindowAPI {
 	private int taskid;
 	private int freeUpTo;
 	private SubQuery query;
-
+	
+	private boolean GPU = false;
+	
+	public void setGPU(boolean GPU) {
+		this.GPU = GPU;
+	}
+	
 	public Task() {
 		this(null, null, null, 0, 0);
 	}
@@ -32,38 +38,22 @@ public class Task implements IWindowAPI {
 
 	public int run() {
 		IQueryBuffer buffer = batch.getBuffer();
-		int result = 0;
-
-		int start = batch.getBatchStartPointer();
-		int end = batch.getBatchEndPointer();
-		int tupleSize = batch.getSchema().getByteSizeOfTuple();
-
-		for (int index = start; index < end; index += tupleSize) {
-			result += buffer.getLong(index);
-		}
-		/*
-		 * query.getMostUpstreamMicroOperator().process(batch, this);
-		 */
-
-		/*
-		 * System.out.println(String.format("[DBG] [Task %7d] %d", taskid,
-		 * result));
-		 */
-
+		
+		query.getMostUpstreamMicroOperator().process(batch, this, GPU);
+		
 		ResultCollector
 				.forwardAndFree(handler, query, buffer, taskid, freeUpTo);
 
 		this.batch.getBuffer().release();
 		WindowBatchFactory.free(this.batch);
 
-		return result;
+		return 0;
 	}
 
 	@Override
 	public void outputWindowBatchResult(int streamID,
 			WindowBatch windowBatchResult) {
 		this.batch = windowBatchResult;
-		this.batch.getBuffer().release();
-		WindowBatchFactory.free(this.batch);
+		/* Control returns to run() method */
 	}
 }
