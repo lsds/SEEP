@@ -11,7 +11,7 @@ public class ANDPredicate implements IPredicate {
 	public ANDPredicate(IPredicate... predicates) {
 		this.predicates = predicates;
 	}
-
+	
 	@Override
 	public boolean satisfied(IQueryBuffer buffer, ITupleSchema schema, int offset) {
 		for (IPredicate pred : predicates)
@@ -19,7 +19,7 @@ public class ANDPredicate implements IPredicate {
 				return false;
 		return true;
 	}
-
+	
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();

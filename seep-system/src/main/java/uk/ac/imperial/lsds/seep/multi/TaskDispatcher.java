@@ -6,7 +6,7 @@ public class TaskDispatcher {
 	
 	private static final int _undefined = -1;
 	
-	private ConcurrentLinkedQueue<Task> workerQueue;
+	private ConcurrentLinkedQueue<Task> workerQueue, _workerQueue;
 	private IQueryBuffer buffer;
 	private WindowDefinition window;
 	private ITupleSchema schema;
@@ -87,7 +87,10 @@ public class TaskDispatcher {
 	}
 	
 	public void setup () {
+		/* The default task queue for either CPU or GPU executor */
 		this.workerQueue = this.parent.getExecutorQueue();
+		if (Utils.HYBRID)
+			this._workerQueue = this.parent.getGPUExecutorQueue();
 	}
 	
 	public void dispatch (byte [] data) {
@@ -102,6 +105,7 @@ public class TaskDispatcher {
 	private void newTaskFor (long p, long q, long free, long t_, long _t) {
 		Task task;
 		WindowBatch batch;
+		int taskid;
 		
 		/* System.out.println(
 			String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
@@ -123,8 +127,27 @@ public class TaskDispatcher {
 		/* batch.initWindowPointers();
 		batch.debug(); */
 		
-		task = TaskFactory.newInstance(parent, batch, handler, this.getTaskNumber(), (int) free);
-		workerQueue.add(task); 
+		taskid = this.getTaskNumber();
+		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
+		
+		if (Utils.HYBRID) {
+			/* Round-robin submission to CPU and GPU executors */
+			/* if (taskid % 3 == 0) {
+				task.setGPU(true);
+				_workerQueue.add(task);
+			} else {
+				workerQueue.add(task);
+			}
+			*/
+			if (workerQueue.size() < _workerQueue.size())
+				workerQueue.add(task);
+			else {
+				task.setGPU(true);
+				_workerQueue.add(task);
+			}
+		} else {
+			workerQueue.add(task);
+		}
 	}
 	
 	private void assemble (int index, int length) {

@@ -78,7 +78,11 @@ public class SubQuery {
 	public ConcurrentLinkedQueue<Task> getExecutorQueue() {
 		return this.parent.getExecutorQueue();
 	}
-
+	
+	public ConcurrentLinkedQueue<Task> getGPUExecutorQueue() {
+		return this.parent.getGPUExecutorQueue();
+	}
+	
 	public WindowDefinition getWindowDefinition() {
 		return this.window;
 	}
@@ -111,5 +115,4 @@ public class SubQuery {
 	public void setDownstreamSubQuery(SubQuery downstreamSubQuery) {
 		this.downstreamSubQuery = downstreamSubQuery;
 	}
-
 }

@@ -12,6 +12,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 
 public class TestProjection {
@@ -25,6 +26,7 @@ public class TestProjection {
 		
 		IMicroOperatorCode projectionCode = new Projection (
 			new Expression [] {
+				new LongColumnReference(0),
 				new IntColumnReference(1),
 				new IntColumnReference(2),
 				new IntColumnReference(3),

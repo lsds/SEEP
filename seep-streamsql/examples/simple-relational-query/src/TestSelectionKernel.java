@@ -1,8 +1,14 @@
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.MicroOperator;
+import uk.ac.imperial.lsds.seep.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.Utils;
@@ -31,22 +37,32 @@ public class TestSelectionKernel {
 		);
 		/* System.out.println(String.format("[DBG] %s", selectionCode)); */
 		
-		IQueryBuffer buffer = new UnboundedQueryBuffer(Utils.BUNDLE);
-		/* Populate input data */
-		buffer.getByteBuffer().order(ByteOrder.LITTLE_ENDIAN);
-		while (buffer.getByteBuffer().hasRemaining())
-			buffer.getByteBuffer().putInt(1);
-		buffer.close();
-		WindowBatch batch = new WindowBatch(1, buffer, window, schema);
-		batch.setBatchPointers(0, buffer.capacity());
+		MicroOperator uoperator = new MicroOperator (selectionCode, null, 1);
 		
-		selectionCode.processData(batch, null);
+		/* Query */
+		Set<MicroOperator> operators = new HashSet<MicroOperator>();
+		operators.add(uoperator);
 		
-		byte [] output = selectionCode.getOutput();
-		if (Arrays.equals(buffer.array(), output)) {
-			System.out.println("OK");
-		} else {
-			System.out.println("Error");
+		Set<SubQuery> queries = new HashSet<SubQuery>();
+		SubQuery query = new SubQuery (0, operators, schema, window);
+		queries.add(query);
+		
+		MultiOperator operator = new MultiOperator(queries, 0);
+		operator.setup();
+		
+		byte [] data = new byte [Utils.BUNDLE];
+		ByteBuffer b = ByteBuffer.wrap(data);
+		b.order(ByteOrder.LITTLE_ENDIAN);
+		while (b.hasRemaining())
+			b.putInt(1);
+		try {
+			while (true) {
+				operator.processData (data);
+				/* Thread.sleep(1000L); */
+			}
+		} catch (Exception e) { 
+			e.printStackTrace(); 
+			System.exit(1);
 		}
 	}
 }

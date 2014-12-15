@@ -101,7 +101,25 @@ inline int predicate
 	__global input_t *p
 )
 {
+	/*
+	if (
+		p->tuple._1 > p->tuple._2 - 1 &&
+		p->tuple._2 < p->tuple._2 + 1 &&
+		p->tuple._3 > p->tuple._4 - 1 &&
+		p->tuple._3 < p->tuple._4 + 1
+	) return 1;
+	else return 0;
+	*/
+
+	#pragma unroll
+	for (int i = 0; i < 20; i++)
+		if (p->tuple._1 > 2 + i)
+			return 0;
 	return 1;
+
+	// if (p->tuple._1 >= 2)
+	// 	return 0;
+	// return 1;
 }
 
 __kernel void selectKernel

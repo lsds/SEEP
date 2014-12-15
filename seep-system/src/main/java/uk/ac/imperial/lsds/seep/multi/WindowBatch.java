@@ -215,6 +215,14 @@ public class WindowBatch {
 		return this.batchEndPointer;
 	}
 	
+	public long getBatchStartTime () {
+		return this.batchStartTime;
+	}
+	
+	public long getBatchEndTime () {
+		return this.batchEndTime;
+	}
+	
 	public void setBuffer (IQueryBuffer buffer) {
 		this.buffer = buffer;
 	}

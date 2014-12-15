@@ -6,7 +6,9 @@ import java.util.Comparator;
 import java.util.Collections;
 
 public class PerformanceMonitor implements Runnable {
-		
+	
+	int counter = 0;
+	
 	private long time, _time = 0L;
 	private long dt;
 		
@@ -18,6 +20,7 @@ public class PerformanceMonitor implements Runnable {
 	static final Comparator<SubQuery> ordering = 
 		new Comparator<SubQuery>() {
 			
+		@Override
 		public int compare(SubQuery q, SubQuery p) {
 			return (q.getId() < p.getId()) ? -1 : 1;
 		}
@@ -38,6 +41,7 @@ public class PerformanceMonitor implements Runnable {
 		}
 	}
 		
+	@Override
 	public void run () {
 		while (true) {
 			
@@ -53,8 +57,15 @@ public class PerformanceMonitor implements Runnable {
 			for (int i = 0; i < size; i++)
 				b.append(measurements[i].info(dt));
 			b.append(String.format(" q %6d", operator.getExecutorQueueSize()));
+			if (Utils.HYBRID)
+				b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize()));
 			System.out.println(b);
 			_time = time;
+			
+			if (counter++ > 60) {
+				System.out.println("Done.");
+				break;
+			}
 		}
 	}
 		
@@ -72,6 +83,7 @@ public class PerformanceMonitor implements Runnable {
 			this.buffer = buffer;	
 		}
 			
+		@Override
 		public String toString () {
 			return null;
 		}
@@ -80,8 +92,8 @@ public class PerformanceMonitor implements Runnable {
 			String s = "";
 			bytes = buffer.getBytesProcessed();
 			if (_bytes > 0) {
-				Dt = ((double) delta / 1000.0);
-				MB = (double) (bytes - _bytes) / _1MB_;
+				Dt = (delta / 1000.0);
+				MB = (bytes - _bytes) / _1MB_;
 				MBps = MB / Dt;
 				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps", id, MBps, ((MBps / 1024.) * 8.));
 			}

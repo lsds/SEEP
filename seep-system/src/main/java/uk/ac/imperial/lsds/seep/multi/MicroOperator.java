@@ -11,13 +11,19 @@ public class MicroOperator {
 	private MicroOperator localDownstream;
 	private MicroOperator localUpstream;
 	
-	private IMicroOperatorCode code;
+	private IMicroOperatorCode cpuCode;
+	private IMicroOperatorCode gpuCode;
 
-	public MicroOperator(IMicroOperatorCode code, int id) {
-		this.code = code;
+	public MicroOperator(IMicroOperatorCode cpuCode, IMicroOperatorCode gpuCode, int id) {
+		this.cpuCode = cpuCode;
+		this.gpuCode = gpuCode;
 		this.id = id;
 	}
-
+	
+	public MicroOperator(IMicroOperatorCode cpuCode, int id) {
+		this(cpuCode, null, id);
+	}
+	
 	public void setParentSubQuery(SubQuery parent) {
 		this.parent = parent;
 	}
@@ -47,12 +53,11 @@ public class MicroOperator {
 		return id;
 	}
 
-	public IMicroOperatorCode getCode() {
-		return code;
-	}
-
-	public void process(WindowBatch windowBatch, IWindowAPI api) {
-		this.code.processData(windowBatch, api);
+	public void process(WindowBatch windowBatch, IWindowAPI api, boolean GPU) {
+		if (GPU)
+			this.gpuCode.processData(windowBatch, api);
+		else
+			this.cpuCode.processData(windowBatch, api);
 	}
 	
 }
