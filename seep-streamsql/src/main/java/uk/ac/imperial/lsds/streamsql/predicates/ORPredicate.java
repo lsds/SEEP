@@ -37,4 +37,14 @@ public class ORPredicate implements IPredicate {
 		pv.visit(this);
 	}
 
+	@Override
+	public boolean satisfied(IQueryBuffer firstBuffer,
+			ITupleSchema firstSchema, int firstOffset,
+			IQueryBuffer secondBuffer, ITupleSchema secondSchema,
+			int secondOffset) {
+		for (IPredicate pred : predicates)
+			if (pred.satisfied(firstBuffer, firstSchema, firstOffset, secondBuffer, secondSchema, secondOffset))
+				return true;
+		return false;	}
+
 }

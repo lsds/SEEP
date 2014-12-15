@@ -8,6 +8,9 @@ public interface IPredicate {
 	
 	public boolean satisfied(IQueryBuffer buffer, ITupleSchema schema, int offset);
 
+	public boolean satisfied(IQueryBuffer firstBuffer, ITupleSchema firstSchema, int firstOffset, 
+			IQueryBuffer secondBuffer, ITupleSchema secondSchema, int secondOffset);
+
 	public void accept(PredicateVisitor pv);
 
 	@Override

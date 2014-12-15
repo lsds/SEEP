@@ -129,4 +129,30 @@ public class FloatComparisonPredicate implements IPredicate {
 				throw new RuntimeException("Unsupported operation " + this.comparisonOperation);
 		}
 	}
+
+	@Override
+	public boolean satisfied(IQueryBuffer firstBuffer,
+			ITupleSchema firstSchema, int firstOffset,
+			IQueryBuffer secondBuffer, ITupleSchema secondSchema,
+			int secondOffset) {
+		float val1 = v1.eval(firstBuffer, firstSchema, firstOffset);
+		float val2 = v2.eval(secondBuffer, secondSchema, secondOffset);
+
+		switch (this.comparisonOperation) {
+			case EQUAL_OP:
+				return val1 == val2;
+			case NONEQUAL_OP:
+				return val1 != val2;
+			case LESS_OP:
+				return val1 < val2;
+			case NONLESS_OP:
+				return val1 >= val2;
+			case GREATER_OP:
+				return val1 > val2;
+			case NONGREATER_OP:
+				return val1 <= val2;
+			default:
+				throw new RuntimeException("Unsupported operation " + this.comparisonOperation);
+		}
+	}
 }
