@@ -5,22 +5,22 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SubQuery {
 
-	private int id;
+	private int					id;
 
-	private Set<MicroOperator> microOperators = null;
+	private Set<MicroOperator>	microOperators				= null;
 
-	private MicroOperator mostUpstreamMicroOperator = null;
-	private MicroOperator mostDownstreamMicroOperator = null;
+	private MicroOperator		mostUpstreamMicroOperator	= null;
+	private MicroOperator		mostDownstreamMicroOperator	= null;
 
-	private MultiOperator parent;
+	private MultiOperator		parent;
 
-	private SubQuery upstreamSubQuery = null;
-	private SubQuery downstreamSubQuery = null;
+	private SubQuery			upstreamSubQuery			= null;
+	private SubQuery			downstreamSubQuery			= null;
 
-	private TaskDispatcher dispatcher;
+	private TaskDispatcher		dispatcher;
 
-	private WindowDefinition window;
-	private ITupleSchema schema;
+	private WindowDefinition	window;
+	private ITupleSchema		schema;
 
 	public SubQuery(int id, Set<MicroOperator> microOperators,
 			ITupleSchema schema, WindowDefinition window) {
@@ -75,14 +75,14 @@ public class SubQuery {
 		this.dispatcher = dispatcher;
 	}
 
-	public ConcurrentLinkedQueue<Task> getExecutorQueue() {
+	public ConcurrentLinkedQueue<ITask> getExecutorQueue() {
 		return this.parent.getExecutorQueue();
 	}
-	
-	public ConcurrentLinkedQueue<Task> getGPUExecutorQueue() {
+
+	public ConcurrentLinkedQueue<ITask> getGPUExecutorQueue() {
 		return this.parent.getGPUExecutorQueue();
 	}
-	
+
 	public WindowDefinition getWindowDefinition() {
 		return this.window;
 	}

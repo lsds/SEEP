@@ -18,4 +18,11 @@ public class Noop implements IMicroOperatorCode {
 		windowBatch.setBuffer(outputBuffer);
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
+
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("NOOP is single input operator and does not operate on two streams");
+		
+	}
 }

@@ -5,22 +5,23 @@ import java.util.concurrent.Executor;
 
 public class TaskProcessorPool {
 
-	private int workers;
-	private ConcurrentLinkedQueue<Task> queue;
-	private TaskProcessor [] processor;
-	
-	public TaskProcessorPool (int workers, final ConcurrentLinkedQueue<Task> queue) {
+	private int								workers;
+	private ConcurrentLinkedQueue<ITask>	queue;
+	private TaskProcessor[]					processor;
+
+	public TaskProcessorPool(int workers,
+			final ConcurrentLinkedQueue<ITask> queue) {
 		this.workers = workers;
 		this.queue = queue;
 		System.out.println(String.format("[DBG] %d threads", this.workers));
-		this.processor = new TaskProcessor [workers];
+		this.processor = new TaskProcessor[workers];
 		for (int i = 0; i < workers; i++)
-			this.processor[i] = new TaskProcessor (queue);
+			this.processor[i] = new TaskProcessor(queue);
 	}
-	
-	public ConcurrentLinkedQueue<Task> start (Executor executor) {
+
+	public ConcurrentLinkedQueue<ITask> start(Executor executor) {
 		for (int i = 0; i < workers; i++)
-			executor.execute (this.processor[i]);
+			executor.execute(this.processor[i]);
 		return queue;
 	}
 }

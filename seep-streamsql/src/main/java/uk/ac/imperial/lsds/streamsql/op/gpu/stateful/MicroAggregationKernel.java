@@ -5,12 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import com.amd.aparapi.Range;
-
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
-import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
@@ -25,6 +23,8 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.KernelOperator;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
+
+import com.amd.aparapi.Range;
 
 public class MicroAggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
@@ -310,4 +310,11 @@ public class MicroAggregationKernel implements IStreamSQLOperator, IMicroOperato
 		sb.append(type.asString(_the_aggregate.toString()));
 		return sb.toString();
 	}
+	
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("MicroAggregationKernel is single input operator and does not operate on two streams");
+	}
+
 }

@@ -33,6 +33,12 @@ public class MicroPaneAggregation implements IStreamSQLOperator, IMicroOperatorC
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("MicroAggregation is single input operator and does not operate on two streams");
+	}
 	
 //	@SuppressWarnings("unchecked")
 //	public MicroPaneAggregation(AggregationType aggregationType, FloatColumnReference aggregationAttribute) {

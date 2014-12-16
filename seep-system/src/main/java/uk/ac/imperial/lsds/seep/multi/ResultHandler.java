@@ -7,6 +7,8 @@ public class ResultHandler {
 
 	public final int SLOTS = Utils.TASKS;
 
+	public IQueryBuffer freeBuffer;
+	
 	public AtomicReferenceArray<IQueryBuffer> results = new AtomicReferenceArray<>(
 			SLOTS);
 
@@ -14,7 +16,8 @@ public class ResultHandler {
 	public AtomicIntegerArray offsets;
 	public int next;
 
-	public ResultHandler() {
+	public ResultHandler(IQueryBuffer freeBuffer) {
+		this.freeBuffer = freeBuffer;
 		slots = new AtomicIntegerArray(SLOTS);
 		offsets = new AtomicIntegerArray(SLOTS);
 		for (int i = 0; i < SLOTS; i++) {

@@ -6,7 +6,7 @@ public class TaskDispatcher {
 	
 	private static final int _undefined = -1;
 	
-	private ConcurrentLinkedQueue<Task> workerQueue, _workerQueue;
+	private ConcurrentLinkedQueue<ITask> workerQueue, _workerQueue;
 	private IQueryBuffer buffer;
 	private WindowDefinition window;
 	private ITupleSchema schema;
@@ -56,7 +56,7 @@ public class TaskDispatcher {
 		this.buffer = new CircularQueryBuffer(Utils._CIRCULAR_BUFFER_);
 		this.window = this.parent.getWindowDefinition();
 		this.schema = this.parent.getSchema();
-		this.handler = new ResultHandler ();
+		this.handler = new ResultHandler (this.buffer);
 		
 		/* Initialise constants */
 		ppb = window.panesPerSlide() * (Utils.BATCH - 1) + 

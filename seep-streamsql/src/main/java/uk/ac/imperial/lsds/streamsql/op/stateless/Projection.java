@@ -2,8 +2,8 @@ package uk.ac.imperial.lsds.streamsql.op.stateless;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
-import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
@@ -89,5 +89,11 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		windowBatch.setSchema(outSchema);
 		
 		api.outputWindowBatchResult(-1, windowBatch);
+	}
+
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("Projection is single input operator and does not operate on two streams");
 	}
 }

@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.streamsql.op.stateful;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.multi.IJoinMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
@@ -14,7 +14,7 @@ import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class ThetaJoin implements IStreamSQLOperator, IJoinMicroOperatorCode {
+public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private static Logger	LOG			= LoggerFactory
 												.getLogger(ThetaJoin.class);
@@ -124,5 +124,10 @@ public class ThetaJoin implements IStreamSQLOperator, IJoinMicroOperatorCode {
 
 		api.outputWindowBatchResult(-1, firstWindowBatch);
 
+	}
+
+	@Override
+	public void processData(WindowBatch windowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("ThetaJoin is multi input operator and does not operator on a single stream");
 	}
 }

@@ -4,22 +4,22 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
 
-import com.amd.aparapi.Range;
-
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
-import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.Kernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelDevice;
+import uk.ac.imperial.lsds.streamsql.op.gpu.KernelInvocationHandler;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelOperator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.OperatorStatistics;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelInvocationHandler;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
+
+import com.amd.aparapi.Range;
 
 public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
@@ -217,4 +217,11 @@ public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		sb.append(")");
 		return sb.toString();
 	}
+	
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("SelectionKernel is single input operator and does not operate on two streams");
+	}
+
 }

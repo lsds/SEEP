@@ -139,4 +139,10 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 			endPointers[currentWindow] = outBuffer.position() - 1;
 		}
 	}
+
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("LRBQ2 is a single input operator and does not operate on two streams");
+	}
 }

@@ -523,4 +523,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			}
 		}
 	}
+
+	@Override
+	public void processData(WindowBatch firstWindowBatch,
+			WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("MicroAggregation is single input operator and does not operate on two streams");
+	}
+
 }
