@@ -93,7 +93,7 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 			statement.destroy();
 		}
 		
-		log.info("Creating ESPER query...");
+		log.debug("Creating ESPER query...");
 		
 		/*
 		 * Build the ESPER statement
@@ -118,7 +118,7 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		});
 		
 		initialised = true;
-		log.info("Done with init: {}", this.esperQuery);
+		log.debug("Done with init: {}", this.esperQuery);
 	}
 
 	
@@ -136,14 +136,14 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 		if (this.typesPerStream != null) {
 			for (String stream : this.typesPerStream.keySet()) {
 				Map<String, Object> currentTypes = this.typesPerStream.get(stream);
-				log.info("Registering data items as '{}' in esper queries...", stream);
+				log.debug("Registering data items as '{}' in esper queries...", stream);
 				for (String key : currentTypes.keySet()) {
 					Class<?> clazz = (Class<?>) currentTypes.get(key);
-					log.info("  * registering type '{}' for key '{}'",
+					log.debug("  * registering type '{}' for key '{}'",
 							clazz.getName(), key);
 				}
 				configuration.addEventType(stream, currentTypes);
-				log.info("{} attributes registered.", currentTypes.size());
+				log.debug("{} attributes registered.", currentTypes.size());
 			}
 		}
 		
@@ -205,7 +205,7 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 			}
 		}
 		
-		log.info("Match cache size: {}", this.matchCache.size());
+		log.debug("Match cache size: {}", this.matchCache.size());
 		
 		api.send(outTuple);
 	}
@@ -303,7 +303,7 @@ public class EsperSingleQueryOperator implements StatelessOperator {
 	}
 
 	public void initWithNewEsperQuery(String query) {
-		log.info("init with new esper query: {}", query);
+		log.debug("init with new esper query: {}", query);
 		initialised = false;
 		this.esperQuery = query;
 		NodeManager.restAPIRegistry.put("/query", new RestAPIEsperGetQueryDesc(this));
