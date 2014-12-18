@@ -3,6 +3,8 @@ package uk.ac.imperial.lsds.seep.multi;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import uk.ac.imperial.lsds.seep.multi.join.JoinTaskDispatcher;
+
 public class SubQuery {
 
 	private int					id;
@@ -17,17 +19,20 @@ public class SubQuery {
 	private SubQuery			upstreamSubQuery			= null;
 	private SubQuery			downstreamSubQuery			= null;
 
-	private TaskDispatcher		dispatcher;
+	private ITaskDispatcher		dispatcher;
 
-	private WindowDefinition	window;
-	private ITupleSchema		schema;
+	private WindowDefinition	firstWindow;
+	private ITupleSchema		firstSchema;
+
+	private WindowDefinition	secondWindow;
+	private ITupleSchema		secondSchema;
 
 	public SubQuery(int id, Set<MicroOperator> microOperators,
 			ITupleSchema schema, WindowDefinition window) {
 		this.id = id;
 		this.microOperators = microOperators;
-		this.window = window;
-		this.schema = schema;
+		this.firstWindow = window;
+		this.firstSchema = schema;
 
 		for (MicroOperator o : this.microOperators) {
 			if (o.isMostUpstream())
@@ -37,6 +42,18 @@ public class SubQuery {
 		}
 
 		this.dispatcher = new TaskDispatcher(this);
+	}
+
+	public SubQuery(int id, Set<MicroOperator> microOperators,
+			ITupleSchema firstSchema, WindowDefinition firstWindow,
+			ITupleSchema secondSchema, WindowDefinition secondWindow) {
+		
+		this(id, microOperators, firstSchema, firstWindow);
+		
+		this.secondWindow = secondWindow;
+		this.secondSchema = secondSchema;
+
+		this.dispatcher = new JoinTaskDispatcher(this);
 	}
 
 	public int getId() {
@@ -67,7 +84,7 @@ public class SubQuery {
 		this.parent = parent;
 	}
 
-	public TaskDispatcher getTaskDispatcher() {
+	public ITaskDispatcher getTaskDispatcher() {
 		return dispatcher;
 	}
 
@@ -84,11 +101,11 @@ public class SubQuery {
 	}
 
 	public WindowDefinition getWindowDefinition() {
-		return this.window;
+		return this.firstWindow;
 	}
 
 	public ITupleSchema getSchema() {
-		return this.schema;
+		return this.firstSchema;
 	}
 
 	public void setup() {
@@ -114,5 +131,13 @@ public class SubQuery {
 
 	public void setDownstreamSubQuery(SubQuery downstreamSubQuery) {
 		this.downstreamSubQuery = downstreamSubQuery;
+	}
+
+	public WindowDefinition getSecondWindowDefinition() {
+		return secondWindow;
+	}
+
+	public ITupleSchema getSecondSchema() {
+		return secondSchema;
 	}
 }

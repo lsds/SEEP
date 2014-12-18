@@ -12,7 +12,7 @@ public class MultiOperator {
 	private Set<SubQuery>	subQueries;
 	private int				id;
 
-	private TaskDispatcher	dispatcher;
+	private ITaskDispatcher	dispatcher;
 	private ConcurrentLinkedQueue<ITask>	queue, _queue;
 	private TaskProcessorPool				workerPool, _workerPool;
 	private Executor						executor, _executor;

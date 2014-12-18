@@ -51,8 +51,21 @@ public class JoinTask implements ITask {
 		this.secondFreeUpTo = secondFreeUpTo;
 	}
 
+	private void initJoinWindowBatches() {
+		
+		
+		
+		
+	}
+	
+	
 	@Override
 	public int run() {
+		
+		/*
+		 * Initialise the identification of pairs of tuples to join
+		 */
+		initJoinWindowBatches();
 		
 		MicroOperator next = query.getMostUpstreamMicroOperator();
 		

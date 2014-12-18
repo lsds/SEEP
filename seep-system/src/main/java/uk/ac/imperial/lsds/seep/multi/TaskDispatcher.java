@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class TaskDispatcher {
+public class TaskDispatcher implements ITaskDispatcher {
 	
 	private static final int _undefined = -1;
 	
@@ -86,6 +86,7 @@ public class TaskDispatcher {
 		previous = -1;
 	}
 	
+	@Override
 	public void setup () {
 		/* The default task queue for either CPU or GPU executor */
 		this.workerQueue = this.parent.getExecutorQueue();
@@ -93,6 +94,7 @@ public class TaskDispatcher {
 			this._workerQueue = this.parent.getGPUExecutorQueue();
 	}
 	
+	@Override
 	public void dispatch (byte [] data) {
 		int idx;
 		while ((idx = buffer.put(data)) < 0) {
@@ -315,8 +317,19 @@ public class TaskDispatcher {
 		return id;
 	}
 	
+	@Override
 	public IQueryBuffer getBuffer () {
 		return this.buffer;
+	}
+
+	@Override
+	public void dispatchSecond(byte[] data) {
+		throw new UnsupportedOperationException("Cannot dispatch to second buffer since this is a single-input dispatcher");
+	}
+
+	@Override
+	public IQueryBuffer getSecondBuffer() {
+		throw new UnsupportedOperationException("Cannot get second buffer since this is a single-input dispatcher");
 	}
 }
 

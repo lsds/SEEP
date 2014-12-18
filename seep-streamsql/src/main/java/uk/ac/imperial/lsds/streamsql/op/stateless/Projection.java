@@ -48,9 +48,6 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
-		windowBatch.initWindowPointers();
-		/* windowBatch.debug(); */
-		
 		int [] startPointers = windowBatch.getWindowStartPointers ();
 		int [] endPointers   = windowBatch.getWindowEndPointers ();
 		
