@@ -53,8 +53,49 @@ public class JoinTask implements ITask {
 
 	private void initJoinWindowBatches() {
 		
+		int firstCurrentIndex = firstBatch.getBatchStartPointer();
+		int secondCurrentIndex = secondBatch.getBatchStartPointer();
+
+		int firstEndIndex = firstBatch.getBatchEndPointer();
+		int secondEndIndex = secondBatch.getBatchEndPointer();
+
+		long firstCurrentIndexTime = firstBatch.getLong(firstCurrentIndex, 0);
+		long secondCurrentIndexTime = secondBatch.getLong(secondCurrentIndex, 0);
+		
+		int firstCurrentWindowStart = firstCurrentIndex;
+		int firstCurrentWindowEnd = firstCurrentIndex;
+		
+		int secondCurrentWindowStart = secondCurrentIndex;
+		int secondCurrentWindowEnd = secondCurrentIndex;
+		
+		int firstByteSize = firstBatch.getSchema().getByteSizeOfTuple();
+		int secondByteSize = secondBatch.getSchema().getByteSizeOfTuple();
 		
 		
+		while (firstCurrentIndex < firstEndIndex || secondCurrentIndex < secondEndIndex) {
+
+			/*
+			 * Move in first batch?
+			 */
+			if (firstCurrentIndexTime < secondCurrentIndexTime) {
+				/*
+				 * Scan window
+				 */
+				
+				
+				
+				firstCurrentIndex += firstByteSize;
+			}
+			/*
+			 * Move in second batch!
+			 */
+			else {
+				
+			}
+			
+			
+			
+		}
 		
 	}
 	
