@@ -96,6 +96,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 
+		/*
+		 * Make sure the batch is initialised
+		 */
+		windowBatch.initWindowPointers();
+
 		switch (aggregationType) {
 		case COUNT:
 		case SUM:
@@ -114,6 +119,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {
 
 		assert (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);
+
+		/*
+		 * Make sure the batch is initialised
+		 */
+		windowBatch.initWindowPointers();
 
 		int[] startPointers = windowBatch.getWindowStartPointers();
 		int[] endPointers = windowBatch.getWindowEndPointers();
@@ -255,8 +265,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowEnd = -1;
 
 		Map<Integer, Integer> keyOffsets = new HashMap<>();
-
-		// TODO: WE NEED TO HAVE THAT PER VEHICLE
 		Map<Integer, Integer> windowTupleCount = new HashMap<>();
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {

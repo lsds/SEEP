@@ -39,6 +39,11 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		
+		/*
+		 * Make sure the batch is initialised
+		 */
+		windowBatch.initWindowPointers();
+
 		int[] startPointers = windowBatch.getWindowStartPointers();
 		int[] endPointers = windowBatch.getWindowEndPointers();
 		

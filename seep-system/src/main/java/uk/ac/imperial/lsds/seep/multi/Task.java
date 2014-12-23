@@ -39,11 +39,6 @@ public class Task implements ITask {
 	@Override
 	public int run() {
 		
-		/*
-		 * Make sure the batch is initialised
-		 */
-		this.batch.initWindowPointers();
-		
 		MicroOperator next = query.getMostUpstreamMicroOperator();
 
 		while (next != null) {
