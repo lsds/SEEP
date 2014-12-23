@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu;
 
-import java.lang.IllegalArgumentException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -70,11 +69,4 @@ public class KernelInvocationHandler <T extends OpenCL<T>>
 		kernel.invoke(args);
     }
 	
-	public void invokeProjectionKernelOperator(Object [] args) {
-		projectKernel.invokeProjectionKernelOperator(args);
-	}
-	
-	public void configureProjectionKernelOperator(Object[] args) {
-		projectKernel.configureProjectionKernelOperator(args);
-	}
 }
