@@ -257,5 +257,13 @@ public class WindowBatch {
 			System.out.println(String.format("[DBG] window %3d starts at %10d ends at %10d %10d bytes %10d tuples", i, start, end, bytes, tuples));
 		}
 	}
+
+	public void setWindowStartPointers(int[] windowStartPointers) {
+		this.windowStartPointers = windowStartPointers;
+	}
+
+	public void setWindowEndPointers(int[] windowEndPointers) {
+		this.windowEndPointers = windowEndPointers;
+	}
 }
 
