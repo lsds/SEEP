@@ -75,15 +75,15 @@ public class CoreRE {
 	private DataStructureAdapter dsa;
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
-	private ControlDispatcher controlDispatcher;
-	
-        //private OutputQueue outputQueue;
-        private ArrayList<OutputQueue> outputQueueList ;
-        
-        
-	private OutgoingDataHandlerWorker odhw = null;
-	
-	private Thread controlH = null;
+    private ControlDispatcher controlDispatcher;
+
+    //private OutputQueue outputQueue;
+    private ArrayList<OutputQueue> outputQueueList ;
+
+
+    private OutgoingDataHandlerWorker odhw = null;
+
+    private Thread controlH = null;
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
@@ -196,7 +196,7 @@ public class CoreRE {
 		// Backup worker
 		bh = new BackupHandler(this, inBT);
 		backupH = new Thread(bh, "backupHandlerT");
-		backupH.start();
+		//backupH.start();
 	}
 	
 	public void setRuntime(){

@@ -159,10 +159,10 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
-                
-                int numCores = Runtime.getRuntime().availableProcessors() ;
-		int numThreads = (numCores - 2) > 1 ? (numCores-2) : 1;
-                poolOfThreads = Executors.newFixedThreadPool( numThreads ) ;
+
+        int numCores = Runtime.getRuntime().availableProcessors() ;
+        int numThreads = (numCores - 1) > 1 ? (numCores-1) : 1;
+        poolOfThreads = Executors.newFixedThreadPool( numThreads ) ;
 	}
 	
 	public void setKeySpaceBounds(int minBound, int maxBound){

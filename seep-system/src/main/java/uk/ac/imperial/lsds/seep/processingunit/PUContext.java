@@ -245,24 +245,9 @@ public class PUContext {
 				LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
                                 //System.out.println("ip = " + ip.toString() + "port = " + portD);
 				socketD = new Socket(ip, portD);
-                                
-                                System.out.println("Default time-out:::" + "ip =" + ip.toString() + " port = " + portD + " ::: is " + socketD.getSoTimeout());
-                                socketD.setSoTimeout(100);
-                                System.out.println("After-set time-out:::" + "ip =" + ip.toString() + " port = " + portD + " ::: is " + socketD.getSoTimeout());
-				System.out.println("Default keep-alive flag: " + socketD.getKeepAlive());
-                                socketD.setKeepAlive(true);
-                                System.out.println("After-set keep-alive flag:::" + "ip =" + ip.toString() + " port = " + portD + " ::: is " + socketD.getKeepAlive());
-                                
-                                
                                 if(portC != 0){
 					socketC = new Socket(ip, portC);
 				}
-                                System.out.println("SO_SNDBUF default = " + socketD.getSendBufferSize());
-                                int so_sndBuf = Integer.parseInt(GLOBALS.valueFor("socketSndBufSize")); 
-                                if(so_sndBuf > 0){
-                                    socketD.setSendBufferSize(so_sndBuf);
-                                }
-                                
 				Buffer buffer = new Buffer();
 				
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
@@ -274,7 +259,7 @@ public class PUContext {
 			else if(type.equals("up")){
 				LOG.debug("-> Trying remote upstream conn to: {}/{}", ip.toString(), portC);
 				socketC = new Socket(ip, portC);
-				socketBlind = new Socket(ip, blindPort);
+				//socketBlind = new Socket(ip, blindPort);
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
 				upstreamTypeConnection.add(con);
 				remoteUpstream.add(con);
@@ -353,7 +338,8 @@ public class PUContext {
 				int upControlPort = CONTROL_SOCKET + ep.getOperatorId();
 				try{
 					Socket controlS = new Socket(newIp, upControlPort);
-					Socket blindS = new Socket(newIp, blindPort);
+					//Socket blindS = new Socket(newIp, blindPort);
+                    Socket blindS = null ;
 					int index = opToReconfigure.getOpContext().getUpOpIndexFromOpId(opId);
 					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, null, controlS, blindS, null);
 					upstreamTypeConnection.set(index, cci);

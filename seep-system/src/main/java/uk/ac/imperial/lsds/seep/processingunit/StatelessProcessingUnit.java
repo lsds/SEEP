@@ -63,17 +63,17 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	//Multi-core support
 	private Executor pool;
 	private boolean multiCoreEnabled;
-	
-	public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
-		this.owner = owner;
-		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
-                
-		this.multiCoreEnabled = multiCoreEnabled;
-                
-                int numCores = Runtime.getRuntime().availableProcessors() ;
-		int numThreads = (numCores - 2) > 1 ? (numCores-2) : 1;
-                poolOfThreads = Executors.newFixedThreadPool( numThreads ) ;
-	}
+
+    public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
+        this.owner = owner;
+        ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
+
+        this.multiCoreEnabled = multiCoreEnabled;
+
+        int numCores = Runtime.getRuntime().availableProcessors() ;
+        int numThreads = (numCores - 1) > 1 ? (numCores-1) : 1;
+        poolOfThreads = Executors.newFixedThreadPool( numThreads ) ;
+    }
 
     public PUContext getPUContext() {
         return ctx;
@@ -260,7 +260,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
         for (int i = 0; i < targets.size(); i++) {
             int target = targets.get(i);
             
-            System.out.println("SEND TO target: "+target);
+            //System.out.println("SEND TO target: "+target);
             
             try {
                 //System.out.println("SEND TO: "+target+" SIZE: "+ctx.getDownstreamTypeConnection().size()+" targetSize: "+targets.size());
@@ -312,7 +312,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
             Future f = poolOfThreads.submit(new Runnable() {
                 public void run() {
                     
-                    System.out.println("Threadpool sends to " + target);
+                    //System.out.println("Threadpool sends to " + target);
                     
                     EndPoint dest = ctx.getDownstreamTypeConnection().elementAt(target);
 

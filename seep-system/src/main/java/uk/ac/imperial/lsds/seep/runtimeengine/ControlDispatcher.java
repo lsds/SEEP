@@ -210,20 +210,20 @@ public class ControlDispatcher {
 //		System.out.println("% Send : "+(stopSend-startSend));
 	}
 	
-	public void sendUpstream_blind_metadata(int data, int index){
-		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
-		try{
-			DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-			dos.writeInt(data);
-			dos.flush();
-			dos.close();
-		}
-		catch(IOException io){
-			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
-			io.printStackTrace();
-		}
-	}
+//	public void sendUpstream_blind_metadata(int data, int index){
+//		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
+//		Socket socket = ((SynchronousCommunicationChannel) obj).reOpenBlindSocket();
+//		try{
+//			DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+//			dos.writeInt(data);
+//			dos.flush();
+//			dos.close();
+//		}
+//		catch(IOException io){
+//			LOG.error("-> Dispatcher. While sending control msg "+io.getMessage());
+//			io.printStackTrace();
+//		}
+//	}
 	
 	public void sendDownstream(ControlTuple ct, int index){
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);

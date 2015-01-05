@@ -34,7 +34,7 @@ public class Barrier implements DataStructureI {
 
     private long lastTimestamp = 0;
     private int repetitions = 0;
-    private int repetitionsANN = 0;
+    private int repetitions2 = 0;
     private long cummulatedTime = 0;
     private long cummulatedBarrierTime = 0;
     private long barrierTimeEachPhase;
@@ -62,18 +62,17 @@ public class Barrier implements DataStructureI {
                 } else {
                     lastTimestamp = now;
                 }
-                
-                
+
+
                 //Time barrier waiting time
-                
-                repetitionsANN++;
+
+                repetitions2++;
                 cummulatedBarrierTime += (System.nanoTime() - barrierTimeEachPhase);
 
-                if (repetitionsANN % 1000 == 0) {
-                    System.out.println("Repetitions = " + repetitionsANN
-                            + ", Accum barrier time: " + df.format(((double) (cummulatedBarrierTime / 1000000000.0))) + " s");
+                if (repetitions2 % 1000 == 0) {
+                    System.out.println("Repetitions = " + repetitions2
+                            + ", Accum barrier time: " + df.format(((cummulatedBarrierTime / 1000000000.0))) + " s");
                 }
-                
                 
                 ArrayList<DataTuple> copy = new ArrayList<DataTuple>(data);
                 data.clear();
@@ -120,9 +119,9 @@ public class Barrier implements DataStructureI {
         synchronized (data) {
             data.add(dt);
 
-                        if( (data.size() == 1) ){
-                            barrierTimeEachPhase = System.nanoTime();
-                        }
+            if( (data.size() == 1) ){
+                barrierTimeEachPhase = System.nanoTime();
+            }
         }
         try {
             // And wait on the barrier

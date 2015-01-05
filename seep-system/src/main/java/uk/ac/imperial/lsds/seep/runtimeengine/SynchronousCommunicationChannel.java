@@ -34,7 +34,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
-	private Socket blindSocket;
+	//private Socket blindSocket;
 	private Buffer buffer;
 	
 	private Output output = null;
@@ -57,7 +57,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
 		this.downstreamControlSocket = downstreamSocketC;
-		this.blindSocket = blindSocket;
+		//this.blindSocket = blindSocket;
 		this.buffer = buffer;
 		try {
 			/// \fixme{this must be fixed, different CONSTRUCTORS, please...}
@@ -83,22 +83,22 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return downstreamControlSocket;
 	}
 	
-	public Socket getBlindSocket(){
-		return blindSocket;
-	}
+//	public Socket getBlindSocket(){
+//		return blindSocket;
+//	}
 	
-	public Socket reOpenBlindSocket(){
-		InetAddress ip = blindSocket.getInetAddress();
-		int port = blindSocket.getPort();
-		try {
-			blindSocket = new Socket(ip, port);
-		} 
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return blindSocket;
-	}
+//	public Socket reOpenBlindSocket(){
+//		InetAddress ip = blindSocket.getInetAddress();
+//		int port = blindSocket.getPort();
+//		try {
+//			blindSocket = new Socket(ip, port);
+//		}
+//		catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		return blindSocket;
+//	}
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;

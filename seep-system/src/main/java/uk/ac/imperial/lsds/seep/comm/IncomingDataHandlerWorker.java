@@ -56,19 +56,6 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.idxMapper = idxMapper;
 		this.dsa = dsa;
 		this.k = initializeKryo();
-            try {                
-                //int size = upstreamSocket.getReceiveBufferSize();
-                //System.out.println("Default socketRcvBufSize = " + size);
-                int so_rcvBuf = Integer.parseInt(GLOBALS.valueFor("socketRcvBufSize"));
-                if(so_rcvBuf > 0){
-                    upstreamSocket.setReceiveBufferSize(so_rcvBuf);
-                }
-                
-            } catch (SocketException ex) {
-                java.util.logging.Logger.getLogger(IncomingDataHandlerWorker.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            
-            
 	}
 	
 	private Kryo initializeKryo(){
@@ -127,14 +114,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
                         
-                        int inputStreamBufSize = Integer.parseInt(GLOBALS.valueFor("inputStreamBufSize"));
-                        BufferedInputStream bis ;
-                        if(inputStreamBufSize < 0){
-                            bis = new BufferedInputStream(is); 
-                        }else{
-                            bis = new BufferedInputStream(is, inputStreamBufSize); 
-                        }
-			
+                        BufferedInputStream bis = new BufferedInputStream(is); 
                         Input i = new Input(bis);
 			BatchTuplePayload batchTuplePayload = null;
 

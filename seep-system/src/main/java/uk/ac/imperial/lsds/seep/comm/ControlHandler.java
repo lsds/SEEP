@@ -12,6 +12,7 @@ package uk.ac.imperial.lsds.seep.comm;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -69,8 +70,10 @@ public class ControlHandler implements Runnable{
 		ServerSocket controlServerSocket = null;
 		try{
 			//Establish listening port
-    		controlServerSocket = new ServerSocket(connPort);
+    		controlServerSocket = new ServerSocket();
 			controlServerSocket.setReuseAddress(true);
+            controlServerSocket.bind(new InetSocketAddress(connPort));
+
 			LOG.info("-> ControlHandler listening on port: {}", connPort);
 			//while goOn is active
 			while(goOn){
