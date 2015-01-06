@@ -2,7 +2,17 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class WindowDefinition {
 	
-	public enum WindowType { ROW_BASED , RANGE_BASED }
+	public enum WindowType { 
+		ROW_BASED , RANGE_BASED; 
+		public static WindowType fromString(String s) {
+			if (s.toLowerCase().contains("row"))
+				return ROW_BASED;
+			else if (s.toLowerCase().contains("range"))
+				return RANGE_BASED;
+			else
+				return null;
+		}
+	}
 	
 	private WindowType type;
 	private long size;
