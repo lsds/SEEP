@@ -37,9 +37,9 @@ public class FloatColumnReference implements FloatExpression {
 	}
 	
 	@Override
-	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
+	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema fromSchema,
 			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(fromBuffer.array(), fromBufferOffset, toBuffer.array(), fromBufferOffset + schema.getOffsetForAttribute(_column), 4);
+		System.arraycopy(fromBuffer.array(), fromBufferOffset + fromSchema.getOffsetForAttribute(_column), toBuffer.array(), toBufferOffset, 4);
 	}
 
 	@Override

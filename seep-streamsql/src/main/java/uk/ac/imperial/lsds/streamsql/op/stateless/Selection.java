@@ -67,10 +67,11 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 				while (inWindowStartOffset < inWindowEndOffset) {
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
 						inBuffer.appendBytesTo(inWindowStartOffset, byteSizeOfTuple, outBuffer);
-					} else {
-						System.err.println("Unexpected error");
-						System.exit(1);
-					}
+					} 
+//					else {
+//						System.err.println("Unexpected error");
+//						System.exit(1);
+//					}
 					inWindowStartOffset += byteSizeOfTuple;
 				}
 				endPointers[currentWindow] = outBuffer.position() - 1;

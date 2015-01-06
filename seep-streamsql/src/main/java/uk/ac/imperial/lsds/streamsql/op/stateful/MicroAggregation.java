@@ -36,7 +36,18 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 	public MicroAggregation(AggregationType aggregationType,
 			FloatColumnReference aggregationAttribute) {
-		this(aggregationType, aggregationAttribute, new Expression[0], null);
+
+		this.aggregationType = aggregationType;
+		this.aggregationAttribute = aggregationAttribute;
+		this.groupByAttributes = new Expression[0];
+		this.havingSel = null;
+
+		Expression[] tmpAllOutAttributes = new Expression[2];
+		tmpAllOutAttributes[0] = this.timestampReference;
+		tmpAllOutAttributes[1] = this.aggregationAttribute;
+		this.outSchema = ExpressionsUtil
+				.getTupleSchemaForExpressions(tmpAllOutAttributes);
+		this.byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
 	}
 
 	public MicroAggregation(AggregationType aggregationType,
@@ -46,9 +57,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
 		this.havingSel = havingSel;
-
-		// this.groupByAttributesSchema = ExpressionsUtil
-		// .getTupleSchemaForExpressions(this.groupByAttributes);
 
 		Expression[] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
 		tmpAllOutAttributes[0] = this.timestampReference;
@@ -168,6 +176,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					// check whether there is already an entry in the window
 					// buffer for this key
 					if (!keyOffsets.containsKey(key)) {
+						
+						keyOffset = windowBuffer.position();
+						
 						// copy timestamp
 						this.timestampReference.appendByteResult(inBuffer,
 								inSchema, inWindowStartOffset, windowBuffer);
@@ -181,7 +192,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 								inSchema, inWindowStartOffset, windowBuffer);
 
 						// record the offset for this key
-						keyOffsets.put(key, windowBuffer.position());
+						keyOffsets.put(key, keyOffset);
 
 					} else {
 						// key exists already
@@ -200,7 +211,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
 							this.aggregationAttribute.writeByteResult(inBuffer,
 									inSchema, inWindowStartOffset,
-									windowBuffer, keyOffset);
+									windowBuffer, keyOffset + outSchema.getOffsetForAttribute(1));
 					}
 
 					inWindowStartOffset += byteSizeOfInTuple;
@@ -252,7 +263,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int[] endPointers = windowBatch.getWindowEndPointers();
 
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
-		IQueryBuffer outBuffer = windowBatch.getBuffer();
+		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 		IQueryBuffer windowBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		ITupleSchema inSchema = windowBatch.getSchema();
@@ -346,22 +357,25 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			float currentValue = windowBuffer
 					.getFloat(currentValuePositionInWindowBuffer);
 
-			if (this.aggregationType == AggregationType.COUNT)
+			if (this.aggregationType == AggregationType.COUNT) {
 				currentValue += 1;
-			else if (this.aggregationType == AggregationType.SUM
-					|| this.aggregationType == AggregationType.AVG)
+				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+			}
+			else if (this.aggregationType == AggregationType.SUM) {
 				currentValue += this.aggregationAttribute.eval(inBuffer,
 						inSchema, enterOffset);
-
-//			System.arraycopy(ExpressionsUtil.floatToByteArray(currentValue), 0,
-//					windowBuffer.array(), currentValuePositionInWindowBuffer,
-//					this.aggregationAttributeByteLength);
-			windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-
-
-			windowTupleCount.put(key, windowTupleCount.get(key) + 1);
+				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+			}
+			else if (this.aggregationType == AggregationType.AVG) {
+				currentValue += this.aggregationAttribute.eval(inBuffer,
+						inSchema, enterOffset);
+				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+				windowTupleCount.put(key, windowTupleCount.get(key) + 1);
+			}
 		} else {
 
+			int keyOffset = windowBuffer.position();
+			
 			// copy timestamp
 			this.timestampReference.appendByteResult(inBuffer, inSchema,
 					enterOffset, windowBuffer);
@@ -370,16 +384,20 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				this.groupByAttributes[i].appendByteResult(inBuffer, inSchema,
 						enterOffset, windowBuffer);
 			// write value for aggregation attribute
-			if (this.aggregationType == AggregationType.COUNT)
+			if (this.aggregationType == AggregationType.COUNT) {
 				windowBuffer.putFloat(1f);
-			else if (this.aggregationType == AggregationType.SUM
-					|| this.aggregationType == AggregationType.AVG)
+			}
+			else if (this.aggregationType == AggregationType.SUM) {
 				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
 						enterOffset, windowBuffer);
-
+			}
+			else if (this.aggregationType == AggregationType.AVG) {
+				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
+						enterOffset, windowBuffer);
+				windowTupleCount.put(key, 1);
+			}
 			// record the offset for this key
-			keyOffsets.put(key, windowBuffer.position());
-			windowTupleCount.put(key, 1);
+			keyOffsets.put(key, keyOffset);
 		}
 	}
 
@@ -397,13 +415,23 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			float currentValue = windowBuffer
 					.getFloat(currentValuePositionInWindowBuffer);
 
-			if (this.aggregationType == AggregationType.COUNT)
+			if (this.aggregationType == AggregationType.COUNT) {
 				currentValue -= 1;
-			else if (this.aggregationType == AggregationType.SUM
-					|| this.aggregationType == AggregationType.AVG)
+			}
+			else if (this.aggregationType == AggregationType.SUM) {
 				currentValue -= this.aggregationAttribute.eval(inBuffer,
 						inSchema, removeOffset);
-
+			}
+			else if (this.aggregationType == AggregationType.AVG) {
+				currentValue -= this.aggregationAttribute.eval(inBuffer,
+						inSchema, removeOffset);
+				
+				int tupleCount = windowTupleCount.get(key);
+				if (tupleCount > 1)
+					windowTupleCount.put(key, tupleCount - 1);
+				else
+					windowTupleCount.remove(key);
+			}
 			// is the partition empty? (check with 0.0001 because of floating
 			// point inaccuracy)
 			if (currentValue < 0.0001) {
@@ -412,20 +440,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				keyOffsets.remove(key);
 			} else {
 				// write new current value
-//				System.arraycopy(
-//						ExpressionsUtil.floatToByteArray(currentValue), 0,
-//						windowBuffer.array(),
-//						currentValuePositionInWindowBuffer,
-//						this.aggregationAttributeByteLength);
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-
 			}
-			int tupleCount = windowTupleCount.get(key);
-			if (tupleCount > 1)
-				windowTupleCount.put(key, tupleCount - 1);
-			else
-				windowTupleCount.remove(key);
-
 		} else {
 			throw new IllegalArgumentException(
 					"Cannot remove tuple from window since it ");
@@ -461,9 +477,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						float avg = outBuffer
 								.getFloat(countPositionInOutBuffer)
 								/ windowTupleCount.get(key);
-//						System.arraycopy(ExpressionsUtil.floatToByteArray(avg),
-//								0, outBuffer.array(), countPositionInOutBuffer,
-//								this.aggregationAttributeByteLength);
 						outBuffer.putFloat(countPositionInOutBuffer, avg);
 					}
 				}
@@ -493,10 +506,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						count = windowBuffer
 								.getFloat(countPositionInWindowBuffer);
 						float avg = count / windowTupleCount.get(key);
-//						System.arraycopy(ExpressionsUtil.floatToByteArray(avg),
-//								0, windowBuffer.array(),
-//								countPositionInWindowBuffer,
-//								this.aggregationAttributeByteLength);
 						windowBuffer.putFloat(countPositionInWindowBuffer, avg);
 
 					}
@@ -510,11 +519,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						int countPositionInWindowBuffer = partitionOffset
 								+ this.byteSizeOfOutTuple
 								- this.aggregationAttributeByteLength;
-//						System.arraycopy(
-//								ExpressionsUtil.floatToByteArray(count), 0,
-//								windowBuffer.array(),
-//								countPositionInWindowBuffer,
-//								this.aggregationAttributeByteLength);
 						windowBuffer.putFloat(countPositionInWindowBuffer, count);
 
 					}
