@@ -1,6 +1,7 @@
 package synth;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -13,19 +14,16 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntAddition;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
-import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 
-public class TestProjectionArithmeticOp {
+public class TestAggregationGroupBy {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 8) {
+		if (args.length != 9) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -34,7 +32,8 @@ public class TestProjectionArithmeticOp {
 			System.err.println("\t- window size ");
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
-			System.err.println("\t- nesting depth of arithmetic expression");
+			System.err.println("\t- aggregation type ('avg', 'sum', 'count', 'max', 'min')");
+			System.err.println("\t- number of groups");
 			System.exit(-1);
 		}
 		
@@ -56,11 +55,11 @@ public class TestProjectionArithmeticOp {
 		long windowRange      = Long.parseLong(args[4]);
 		long windowSlide      = Long.parseLong(args[5]);
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
-		int nestingDepth = Integer.parseInt(args[7]);
+		AggregationType aggregationType = AggregationType.fromString(args[7]);
+		int numberOfGroups              = Integer.parseInt(args[8]);
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
-		
 		
 		int[] offsets = new int[numberOfAttributesInSchema + 1];
 		// first attribute is timestamp
@@ -77,26 +76,22 @@ public class TestProjectionArithmeticOp {
 			byteSize *= 2;
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
+				
+		Expression[] groupBy = new Expression[] {
+			new IntColumnReference(2)
+		};
 		
-		Expression [] expression = new Expression [2];
-		// always include the timestamp
-		expression[0] = new LongColumnReference(0);
-		
-		IntExpression ex = new IntColumnReference(1);
-		
-		for (int i = 0; i < nestingDepth; i++) {
-			ex = new IntAddition(new IntMultiplication(new IntConstant(3), ex), new IntConstant(1));
-		}
-		
-		expression[1] = ex;
-		
-		IMicroOperatorCode projectionCode = new Projection (expression);
-		System.out.println(String.format("[DBG] %s", projectionCode));
+		IMicroOperatorCode selectionCode = new MicroAggregation(
+				aggregationType,
+				new FloatColumnReference(1),
+				groupBy
+				);
+		System.out.println(String.format("[DBG] %s", selectionCode));
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (projectionCode, 1);
+		MicroOperator uoperator = new MicroOperator (selectionCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
@@ -114,9 +109,18 @@ public class TestProjectionArithmeticOp {
 		ByteBuffer b = ByteBuffer.wrap(data);
 		
 		// fill the buffer
+		Random r = new Random();
+		int g = 0;
 		while (b.hasRemaining()) {
+			// timestamp
 			b.putLong(1);
-			for (int i = 8; i < byteSize; i += 4)
+			// attribute, which will be aggregated
+			b.putFloat(r.nextFloat());
+			// attribute, which will be used for grouping
+			b.putInt(g++);
+			g = g % numberOfGroups;
+			
+			for (int i = 16; i < byteSize; i += 4)
 				b.putInt(1);
 		}
 		

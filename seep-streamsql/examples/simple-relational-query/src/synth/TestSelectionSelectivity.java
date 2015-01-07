@@ -9,6 +9,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
@@ -21,8 +22,11 @@ public class TestSelectionSelectivity {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 5) {
+		if (args.length != 8) {
 			System.err.println("Incorrect number of parameters, we need:");
+			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
+			System.err.println("\t- number of CPU threads");
+			System.err.println("\t- numbers of windows in window batch");
 			System.err.println("\t- window type ('row', 'range')");
 			System.err.println("\t- window size ");
 			System.err.println("\t- window slide");
@@ -32,13 +36,24 @@ public class TestSelectionSelectivity {
 		}
 		
 		/*
+		 * Set up configuration of system
+		 */
+		if (args[0].toLowerCase().contains("cpu") || args[0].toLowerCase().contains("hybrid"))
+			Utils.CPU = true;
+		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
+			Utils.GPU = true;
+		
+		Utils.THREADS = Integer.parseInt(args[1]);
+		Utils.BATCH = Integer.parseInt(args[2]);
+		
+		/*
 		 * Set up configuration of query
 		 */
-		WindowType windowType = WindowType.fromString(args[0]);
-		long windowRange      = Long.parseLong(args[1]);
-		long windowSlide      = Long.parseLong(args[2]);
-		int numberOfAttributesInSchema  = Integer.parseInt(args[3]);
-		int numberOfComparisons         = Integer.parseInt(args[4]);
+		WindowType windowType = WindowType.fromString(args[3]);
+		long windowRange      = Long.parseLong(args[4]);
+		long windowSlide      = Long.parseLong(args[5]);
+		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
+		int selectivity                 = Integer.parseInt(args[7]);
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -63,7 +78,7 @@ public class TestSelectionSelectivity {
 		IPredicate predicate =  new IntComparisonPredicate(
 						IntComparisonPredicate.LESS_OP, 
 						new IntColumnReference(1),
-						new IntConstant(numberOfComparisons));
+						new IntConstant(selectivity));
 				
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
@@ -94,7 +109,7 @@ public class TestSelectionSelectivity {
 			b.putLong(1);
 			b.putInt(value);
 			value = (value + 1) % 100; 
-			for (int i = 1; i < numberOfAttributesInSchema; i++)
+			for (int i = 12; i < byteSize; i += 4)
 				b.putInt(1);
 		}
 		

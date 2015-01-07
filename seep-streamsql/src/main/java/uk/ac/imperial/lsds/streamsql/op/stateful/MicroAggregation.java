@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -87,12 +88,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			int offset) {
 		int result = 1;
 
-		for (int i = 0; i < this.groupByAttributes.length; i++)
+		for (int i = 0; i < this.groupByAttributes.length; i++) {
 			result = 31
 					* result
-					+ this.groupByAttributes[i].evalAsByteArray(buffer, schema,
-							offset).hashCode();
-
+					+ Arrays.hashCode(this.groupByAttributes[i].evalAsByteArray(buffer, schema,
+							offset));
+		}
 		return result;
 	}
 
@@ -300,12 +301,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				 * window
 				 */
 				if (prevWindowStart != -1) {
-					for (int i = prevWindowEnd; i <= inWindowEndOffset; i += byteSizeOfInTuple) {
+					for (int i = prevWindowEnd; i < inWindowEndOffset; i += byteSizeOfInTuple) {
 						enteredWindow(inBuffer, inSchema, i, windowBuffer,
 								keyOffsets, windowTupleCount);
 					}
 				} else {
-					for (int i = inWindowStartOffset; i <= inWindowEndOffset; i += byteSizeOfInTuple) {
+					for (int i = inWindowStartOffset; i < inWindowEndOffset; i += byteSizeOfInTuple) {
 						enteredWindow(inBuffer, inSchema, i, windowBuffer,
 								keyOffsets, windowTupleCount);
 					}
@@ -444,7 +445,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			}
 		} else {
 			throw new IllegalArgumentException(
-					"Cannot remove tuple from window since it ");
+					"Cannot remove tuple from window since it is not part of the window");
 		}
 	}
 
