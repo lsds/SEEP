@@ -72,6 +72,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 //						System.err.println("Unexpected error");
 //						System.exit(1);
 //					}
+					outBuffer.put(schema.getDummyContent());
 					inWindowStartOffset += byteSizeOfTuple;
 				}
 				endPointers[currentWindow] = outBuffer.position() - 1;

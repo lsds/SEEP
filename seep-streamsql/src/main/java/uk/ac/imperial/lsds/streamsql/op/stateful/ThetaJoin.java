@@ -65,6 +65,10 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		long secondCurrentIndexTime;
 		long secondStartTime;
 		
+		if (outSchema == null)
+			outSchema = ExpressionsUtil.mergeTupleSchemas(firstInSchema,
+					secondInSchema);
+		
 		/*
 		 * TEMPORARY:
 		 * arrays that hold for each tuple in the first batch, the start and end indices of the range 
@@ -111,6 +115,9 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 								firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
 						secondInBuffer.appendBytesTo(
 								i, secondByteSizeOfInTuple, outBuffer);
+						
+						// write dummy content if needed
+						outBuffer.put(outSchema.getDummyContent());
 					}
 				}
 				
@@ -175,6 +182,10 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 								i, firstByteSizeOfInTuple, outBuffer);
 						secondInBuffer.appendBytesTo(
 								secondCurrentIndex, secondByteSizeOfInTuple, outBuffer);
+						
+						// write dummy content if needed
+						outBuffer.put(outSchema.getDummyContent());
+
 					}
 				}
 				
@@ -222,9 +233,6 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		// reuse the first window batch by setting the new buffer and the new
 		// schema for the data in this buffer
 		firstWindowBatch.setBuffer(outBuffer);
-		if (outSchema == null)
-			outSchema = ExpressionsUtil.mergeTupleSchemas(firstInSchema,
-					secondInSchema);
 		firstWindowBatch.setSchema(outSchema);
 
 		// reset window pointers

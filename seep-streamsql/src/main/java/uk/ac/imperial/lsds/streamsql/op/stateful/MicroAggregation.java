@@ -191,6 +191,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						// write value for aggregation attribute
 						this.aggregationAttribute.appendByteResult(inBuffer,
 								inSchema, inWindowStartOffset, windowBuffer);
+						
+						// write dummy content if needed 
+						windowBuffer.put(outSchema.getDummyContent());
 
 						// record the offset for this key
 						keyOffsets.put(key, keyOffset);
@@ -380,10 +383,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			// copy timestamp
 			this.timestampReference.appendByteResult(inBuffer, inSchema,
 					enterOffset, windowBuffer);
+			
 			// copy group-by attribute values
 			for (int i = 0; i < groupByAttributes.length; i++)
 				this.groupByAttributes[i].appendByteResult(inBuffer, inSchema,
 						enterOffset, windowBuffer);
+			
 			// write value for aggregation attribute
 			if (this.aggregationType == AggregationType.COUNT) {
 				windowBuffer.putFloat(1f);
@@ -397,6 +402,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						enterOffset, windowBuffer);
 				windowTupleCount.put(key, 1);
 			}
+			
+			// write dummy content if needed 
+			windowBuffer.put(outSchema.getDummyContent());
+
 			// record the offset for this key
 			keyOffsets.put(key, keyOffset);
 		}

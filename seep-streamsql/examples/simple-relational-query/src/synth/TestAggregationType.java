@@ -62,15 +62,11 @@ public class TestAggregationType {
 		// first attribute is timestamp
 		offsets[0] = 0;
 
-		int o = 8;
+		int byteSize = 8;
 		for (int i = 1; i < numberOfAttributesInSchema + 1; i++) {
-			offsets[i] = o;
-			o += 4;
+			offsets[i] = byteSize;
+			byteSize += 4;
 		}
-		
-		int byteSize = 1;
-		while (o > byteSize)
-			byteSize *= 2;
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 				
@@ -96,7 +92,8 @@ public class TestAggregationType {
 		 * Set up the stream
 		 */
 		// yields 1MB for byteSize = 32 
-		int bufferBundle = byteSize * 32768;
+		int actualByteSize = schema.getByteSizeOfTuple();
+		int bufferBundle = actualByteSize * 32768;
 		byte [] data = new byte [bufferBundle];
 		ByteBuffer b = ByteBuffer.wrap(data);
 		
@@ -105,7 +102,7 @@ public class TestAggregationType {
 		while (b.hasRemaining()) {
 			b.putLong(1);
 			b.putFloat(r.nextFloat());
-			for (int i = 12; i < byteSize; i += 4)
+			for (int i = 12; i < actualByteSize; i += 4)
 				b.putInt(1);
 		}
 		

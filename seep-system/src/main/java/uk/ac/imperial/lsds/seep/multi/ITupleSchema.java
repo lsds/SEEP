@@ -8,4 +8,6 @@ public interface ITupleSchema {
 
 	public int getByteSizeOfTuple();
 
+	public byte[] getDummyContent();
+
 }
