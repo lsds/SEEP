@@ -59,6 +59,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		this.handler = new ResultHandler (this.buffer);
 		
 		/* Initialise constants */
+		System.out.println(String.format("[DBG] %d panes/slide %d panes/window", window.panesPerSlide(), window.numberOfPanes()));
 		ppb = window.panesPerSlide() * (Utils.BATCH - 1) + 
 				window.numberOfPanes();
 		
@@ -161,17 +162,23 @@ public class TaskDispatcher implements ITaskDispatcher {
 		if (window.isRowBased()) {
 			while ((rowCount + rows) >= _next + 1) {
 				/* Set start and end pointers for batch */
-				p = ((next_ + 1) * tupleSize) & mask;
-				q = (_next * tupleSize) & mask;
+				p = ((next_) * tupleSize) & mask;
+				q = ((_next + 1) * tupleSize) & mask;
 				q = (q == 0) ? buffer.capacity() : q;
 				/* Set free pointer */
-				f = (p + (offset * tupleSize)) & mask;
+				if (window.isTumbling())
+					f = (p + (offset * tupleSize)) & mask;
+				else
+					f = (p + ((offset - 1) * tupleSize)) & mask;
 				f = (f == 0) ? buffer.capacity() : f;
 				f--;
 				/* Dispatch task */
 				this.newTaskFor (p, q, f, _undefined, _undefined);
-				next_ += offset;
-				_next += offset;
+				if (window.isTumbling())
+					next_ += offset;
+				else
+					next_ += (offset - 1);
+				_next += tpb;
 			}
 		} else
 		if (window.isRangeBased()) {

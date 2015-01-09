@@ -5,14 +5,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import uk.ac.imperial.lsds.seep.multi.TupleSchema;
-import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.streamsql.op.gpu.GPU;
 
+/*
 import sun.nio.ch.DirectBuffer;
 import sun.misc.Unsafe;
-
 import java.lang.reflect.Field;
+*/
 
 public class TestJNI {
 	
@@ -31,7 +30,8 @@ public class TestJNI {
 		return null;
 	}
 	
-	public static Unsafe getUnsafeMemory() {
+	/*
+	public static Unsafe getUnsafeMemory () {
 		try {
 			Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
 			theUnsafe.setAccessible(true);
@@ -40,6 +40,7 @@ public class TestJNI {
 			throw new AssertionError(e);
 		}
 	}
+	*/
 	
 	public static void main (String [] args) {
 		
@@ -54,7 +55,7 @@ public class TestJNI {
 		byte [] inputArray = input.array();
 		byte [] outputArray = output.array();
 		
-		Unsafe unsafe = getUnsafeMemory();
+		/* Unsafe unsafe = getUnsafeMemory (); */
 		
 		int tuples = _default_size / 32;
 		int threads = tuples;
@@ -66,6 +67,9 @@ public class TestJNI {
 		System.out.println(String.format("[DBG] %10d threads", threads));
 		System.out.println(String.format("[DBG] %10d threads/group", threadsPerGroup));
 		
+		GPU.getInstance().setInputDataBuffer(inputArray);
+		GPU.getInstance().setOutputDataBuffer(outputArray);
+		
 		GPU.getInstance().getPlatform();
 		GPU.getInstance().getDevice();
 		GPU.getInstance().createContext();
@@ -74,7 +78,11 @@ public class TestJNI {
 		GPU.getInstance().createKernel("project");
 		long inputAddr = GPU.getInstance().createInputBuffer(_default_size);
 		long outputAddr = GPU.getInstance().createOutputBuffer(_default_size);
-		GPU.getInstance().setKernelArgs(tuples, localSize, false);
+		
+		System.out.println("inputAddr = " + inputAddr);
+		System.out.println("outputAddr = " + outputAddr);
+		
+		GPU.getInstance().setProjectionKernelArgs(tuples, localSize, false);
 		
 		int iterations = 10000;
 		double dt, rate = 0.;
@@ -85,10 +93,14 @@ public class TestJNI {
 		/* Start experiment */
 		_t = System.nanoTime();
 		for (int i = 0; i < iterations; i++) {
+			/* 
+			 * Data movement is now handled by the JNI/C GPU code.
+			 * 
+			 * unsafe.copyMemory(inputArray, Unsafe.ARRAY_BYTE_BASE_OFFSET, null, inputAddr, _default_size); 
+			 */
+			GPU.getInstance().invokeKernel(threads, threadsPerGroup, true, false);
 			
-			unsafe.copyMemory(inputArray, Unsafe.ARRAY_BYTE_BASE_OFFSET, null, inputAddr, _default_size);
-			// GPU.getInstance().invokeKernel(threads, threadsPerGroup, true, false);
-			unsafe.copyMemory(null, outputAddr, outputArray, Unsafe.ARRAY_BYTE_BASE_OFFSET, _default_size);
+			/* unsafe.copyMemory(null, outputAddr, outputArray, Unsafe.ARRAY_BYTE_BASE_OFFSET, _default_size); */
 			
 			count += 1;
 			bytes += _default_size;

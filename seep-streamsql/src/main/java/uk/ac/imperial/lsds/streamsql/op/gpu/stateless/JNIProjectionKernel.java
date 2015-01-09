@@ -106,7 +106,7 @@ public class JNIProjectionKernel implements IStreamSQLOperator, IMicroOperatorCo
 		GPU.getInstance().createKernel("project");
 		inputAddr = GPU.getInstance().createInputBuffer(_default_input_size);
 		outputAddr = GPU.getInstance().createOutputBuffer(_default_output_size);
-		GPU.getInstance().setKernelArgs(tuples, localSize, false);
+		GPU.getInstance().setProjectionKernelArgs(tuples, localSize, false);
 	}
 	
 	@Override

@@ -12,7 +12,7 @@ public class IntColumnReference implements IntExpression {
 	public IntColumnReference(int column) {
 		_column = column;
 	}
-
+	
 	@Override
 	public void accept(ValueExpressionVisitor vev) {
 		vev.visit(this);

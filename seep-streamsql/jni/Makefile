@@ -16,10 +16,10 @@ LIBS = -lOpenCL
 
 all: GPU.so
 
-GPU.so: GPU.o timer.o log.o
-	$(CC) -shared -o GPU.so GPU.o timer.o log.o $(LIBS)
+GPU.so: GPU.o timer.o openclerrorcode.o
+	$(CC) -shared -o GPU.so GPU.o timer.o openclerrorcode.o $(LIBS)
 
-GPU.o: GPU.c uk_ac_imperial_lsds_streamsql_op_gpu_GPU.h timer.h log.h
+GPU.o: GPU.c uk_ac_imperial_lsds_streamsql_op_gpu_GPU.h timer.h openclerrorcode.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 uk_ac_imperial_lsds_streamsql_op_gpu_GPU.h:
@@ -27,7 +27,7 @@ uk_ac_imperial_lsds_streamsql_op_gpu_GPU.h:
 
 timer.o: timer.c timer.h
 
-log.o: log.c log.h
+openclerrorcode.o: openclerrorcode.c openclerrorcode.h
 
 clean:
 	rm -f *.o *.so

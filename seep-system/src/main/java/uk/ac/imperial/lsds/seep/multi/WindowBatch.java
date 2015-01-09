@@ -265,5 +265,12 @@ public class WindowBatch {
 	public void setWindowEndPointers(int[] windowEndPointers) {
 		this.windowEndPointers = windowEndPointers;
 	}
+
+	public void normalizeWindowPointers() {
+		for (int i = 0; i < batchSize; i++) {
+			windowStartPointers[i] -= batchStartPointer;
+			windowEndPointers  [i] -= batchStartPointer;
+		}
+	}
 }
 
