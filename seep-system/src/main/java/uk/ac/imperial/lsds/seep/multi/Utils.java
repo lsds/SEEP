@@ -10,7 +10,7 @@ public class Utils {
 	
 	public static int BUNDLE = 1048576;
 	
-	public static int _CIRCULAR_BUFFER_ = 1073741824;
+	public static int _CIRCULAR_BUFFER_ = 2 * BUNDLE; //1073741824;
 	
 	public static int _UNBOUNDED_BUFFER_ = Integer.parseInt(Globals.valueFor("intermediate"));
 	

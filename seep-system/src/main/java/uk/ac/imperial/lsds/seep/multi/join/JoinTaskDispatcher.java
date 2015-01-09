@@ -34,6 +34,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private int firstTupleSize;
 	private long firstNextTime;
 	private long firstEndTime;
+	private int firstMask;
 
 	private long secondNextTime;
 	private long secondEndTime;
@@ -42,6 +43,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private int secondNextIndex      = 0;
 	private int secondEndIndex       = 0;
 	private int secondToProcessCount = 0;
+	private int secondMask;
 	
 	private Object lock = new Object();
 
@@ -59,6 +61,10 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		this.firstTupleSize = firstSchema.getByteSizeOfTuple();
 		this.secondTupleSize = secondSchema.getByteSizeOfTuple();
+		
+		this.firstMask = this.firstBuffer.capacity() - 1;
+		this.secondMask = this.secondBuffer.capacity() - 1;
+
 	}
 	
 	@Override
@@ -78,7 +84,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		while ((this.firstEndIndex = firstBuffer.put(data)) < 0) 
 			Thread.yield();
 
-		this.firstEndIndex += data.length;
+		this.firstEndIndex += data.length - firstTupleSize;
 		
 		synchronized (lock) {
 			if (firstEndIndex < firstStartIndex)
@@ -93,8 +99,9 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 */
 			if (firstWindow.isRowBased()) {
 				
-				if (firstEndIndex < firstNextIndex)
-					firstEndIndex += firstBuffer.capacity();
+				// the following is not needed
+//				if (firstEndIndex < firstNextIndex)
+//					firstEndIndex += firstBuffer.capacity();
 				
 				while ((firstNextIndex + firstWindow.getSize() * firstTupleSize) < firstEndIndex)
 					firstNextIndex += firstTupleSize * firstWindow.getSlide();
@@ -128,7 +135,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		while ((this.secondEndIndex = secondBuffer.put(data)) < 0) 
 			Thread.yield();
 
-		this.secondEndIndex += data.length;
+		this.secondEndIndex += data.length - secondTupleSize;
 
 		synchronized (lock) {
 			if (secondEndIndex < secondStartIndex)
@@ -143,8 +150,9 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 */
 			if (secondWindow.isRowBased()) {
 				
-				if (secondEndIndex < secondNextIndex)
-					secondEndIndex += secondBuffer.capacity();
+				// the following is not needed
+//				if (secondEndIndex < secondNextIndex)
+//					secondEndIndex += secondBuffer.capacity();
 				
 				while ((secondNextIndex + secondWindow.getSize() * secondTupleSize) < secondEndIndex)
 					secondNextIndex += secondTupleSize * secondWindow.getSlide();
@@ -178,10 +186,13 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
 		
 		int taskid = this.getTaskNumber();
-		int firstFree = firstNextIndex - firstTupleSize;
-		int secondFree = secondNextIndex - secondTupleSize;
+		int firstFree = (firstNextIndex - firstTupleSize) & firstMask;
+		int secondFree = (secondNextIndex - secondTupleSize) & secondMask;
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);
-		
+
+//		System.out.println(String.format("[DBG] FIRST  window batch starts at %10d ends at %10d free at %10d", firstStartIndex, firstEndIndex, firstFree));
+//		System.out.println(String.format("[DBG] SECOND window batch starts at %10d ends at %10d free at %10d", secondStartIndex, secondEndIndex, secondFree));
+
 		if (Utils.HYBRID) {
 			/* Round-robin submission to CPU and GPU executors */
 			/* if (taskid % 3 == 0) {
@@ -211,6 +222,11 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		/*
 		 * Second, move the start-pointer for the next task to the next-pointer
 		 */
+		if (secondNextIndex > secondMask)
+			secondNextIndex = secondNextIndex & secondMask;
+		if (firstNextIndex > firstMask)
+			firstNextIndex = firstNextIndex & firstMask;
+		
 		secondStartIndex = secondNextIndex;
 		firstStartIndex = firstNextIndex;
 	}

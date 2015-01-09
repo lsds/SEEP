@@ -131,8 +131,8 @@ public class TestJoinPredComp {
 		int firstActualByteSize  = firstSchema.getByteSizeOfTuple();
 		int secondActualByteSize = secondSchema.getByteSizeOfTuple();
 		// 32768 yields 1MB for byteSize = 32 
-		int firstBufferBundle = firstActualByteSize * 1000;
-		int secondBufferBundle = secondActualByteSize * 1000;
+		int firstBufferBundle = firstActualByteSize * 500;
+		int secondBufferBundle = secondActualByteSize * 500;
 		byte [] firstData = new byte [firstBufferBundle];
 		byte [] secondData = new byte [secondBufferBundle];
 		ByteBuffer firstB = ByteBuffer.wrap(firstData);
