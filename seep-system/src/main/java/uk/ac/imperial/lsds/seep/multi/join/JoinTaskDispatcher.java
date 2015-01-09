@@ -78,8 +78,10 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		while ((this.firstEndIndex = firstBuffer.put(data)) < 0) 
 			Thread.yield();
 
+		this.firstEndIndex += data.length;
+		
 		synchronized (lock) {
-			if (firstEndIndex <= firstStartIndex)
+			if (firstEndIndex < firstStartIndex)
 				firstEndIndex += firstBuffer.capacity();
 			
 			firstToProcessCount += (firstEndIndex - firstStartIndex) / this.firstTupleSize;
@@ -91,7 +93,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 */
 			if (firstWindow.isRowBased()) {
 				
-				if (firstEndIndex <= firstNextIndex)
+				if (firstEndIndex < firstNextIndex)
 					firstEndIndex += firstBuffer.capacity();
 				
 				while ((firstNextIndex + firstWindow.getSize() * firstTupleSize) < firstEndIndex)
@@ -126,8 +128,10 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		while ((this.secondEndIndex = secondBuffer.put(data)) < 0) 
 			Thread.yield();
 
+		this.secondEndIndex += data.length;
+
 		synchronized (lock) {
-			if (secondEndIndex <= secondStartIndex)
+			if (secondEndIndex < secondStartIndex)
 				secondEndIndex += secondBuffer.capacity();
 			
 			secondToProcessCount += (secondEndIndex - secondStartIndex) / this.secondTupleSize;
@@ -137,9 +141,9 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 * window in this buffer that has not yet been closed. If we grab 
 			 * the data to create a task, the start-pointer will be set to this next-pointer
 			 */
-			if (firstWindow.isRowBased()) {
+			if (secondWindow.isRowBased()) {
 				
-				if (secondEndIndex <= secondNextIndex)
+				if (secondEndIndex < secondNextIndex)
 					secondEndIndex += secondBuffer.capacity();
 				
 				while ((secondNextIndex + secondWindow.getSize() * secondTupleSize) < secondEndIndex)

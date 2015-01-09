@@ -21,7 +21,7 @@ public class TupleSchema implements ITupleSchema {
 			 * Expand size if needed to ensure that byte size 
 			 * is power of two
 			 */
-			if ((contentByteSize & (contentByteSize - 1)) == 0) {
+			if ((contentByteSize & (contentByteSize - 1)) != 0) {
 				
 				this.byteSize = 1;
 				while (this.contentByteSize > this.byteSize)

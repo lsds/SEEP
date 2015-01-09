@@ -173,7 +173,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			int left  = values.length - (size - index);
 			System.arraycopy(values, 0, data, index, right);
 			System.arraycopy(values, size - index, data, 0, left);
-			System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left));
+			//System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left));
 		} else {
 			System.arraycopy(values, 0, data, index, values.length);
 		}

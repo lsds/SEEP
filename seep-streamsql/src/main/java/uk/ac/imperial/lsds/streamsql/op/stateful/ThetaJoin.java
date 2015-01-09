@@ -78,7 +78,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		int[] __endPointersInSecond = new int[(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple];
 		int __firstTupleIndex = 0;
 
-		while (firstCurrentIndex <= firstEndIndex && secondCurrentIndex <= secondEndIndex) {
+		while (firstCurrentIndex < firstEndIndex || secondCurrentIndex < secondEndIndex) {
 
 			/*
 			 * Get timestamps of currently processed tuples in either batch
@@ -89,7 +89,8 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 			/*
 			 * Move in first batch?
 			 */
-			if (firstCurrentIndexTime < secondCurrentIndexTime) {
+			if (firstCurrentIndexTime < secondCurrentIndexTime 
+					|| (firstCurrentIndexTime == secondCurrentIndexTime && secondCurrentIndex >= secondEndIndex)) {
 				
 				/*
 				 * TEMPORARY:
@@ -107,7 +108,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				/*
 				 * Scan second window
 				 */
-				for (int i = secondCurrentWindowStart; i <= secondCurrentWindowEnd; i += secondByteSizeOfInTuple) {
+				for (int i = secondCurrentWindowStart; i < secondCurrentWindowEnd; i += secondByteSizeOfInTuple) {
 					if (predicate.satisfied(firstInBuffer, firstInSchema,
 							firstCurrentIndex, secondInBuffer,
 							secondInSchema, i)) {
@@ -174,7 +175,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				/*
 				 * Scan first window
 				 */
-				for (int i = firstCurrentWindowStart; i <= firstCurrentWindowEnd; i += firstByteSizeOfInTuple) {
+				for (int i = firstCurrentWindowStart; i < firstCurrentWindowEnd; i += firstByteSizeOfInTuple) {
 					if (predicate.satisfied(firstInBuffer, firstInSchema,
 							i, secondInBuffer,
 							secondInSchema, secondCurrentIndex)) {

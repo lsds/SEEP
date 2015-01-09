@@ -27,6 +27,11 @@ public class MultiOperator {
 		this.dispatcher.dispatch(values);
 	}
 
+	public void processDataSecond(byte[] values) {
+
+		this.dispatcher.dispatchSecond(values);
+	}
+
 	public void setup() {
 
 		if (Utils.HYBRID) {

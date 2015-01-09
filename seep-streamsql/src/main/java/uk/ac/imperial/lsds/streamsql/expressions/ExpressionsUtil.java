@@ -55,11 +55,11 @@ public class ExpressionsUtil {
 		for (int i = 0; i < first.getNumberOfAttributes(); i++)
 			offsets[i] = first.getOffsetForAttribute(i);
 
+		int last = first.getByteSizeOfTuple() - first.getDummyContent().length;
 		for (int i = 0; i < second.getNumberOfAttributes(); i++)
-			offsets[i + first.getNumberOfAttributes()] = second
-					.getOffsetForAttribute(i);
+			offsets[i + first.getNumberOfAttributes()] = last + second.getOffsetForAttribute(i);
 
-		return new TupleSchema(offsets, first.getByteSizeOfTuple()
-				+ second.getByteSizeOfTuple());
+		return new TupleSchema(offsets, first.getByteSizeOfTuple() - first.getDummyContent().length
+				+ second.getByteSizeOfTuple() - second.getDummyContent().length);
 	}
 }
