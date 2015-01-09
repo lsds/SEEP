@@ -19,6 +19,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 
 public class TestProjectionArithmeticOp {
@@ -88,11 +89,12 @@ public class TestProjectionArithmeticOp {
 		
 		IMicroOperatorCode projectionCode = new Projection (expression);
 		System.out.println(String.format("[DBG] %s", projectionCode));
+		IMicroOperatorCode gpuProjectionCode = new ProjectionKernel(expression);
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (projectionCode, 1);
+		MicroOperator uoperator = new MicroOperator (projectionCode, gpuProjectionCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();

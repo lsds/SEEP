@@ -14,6 +14,7 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.SelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
@@ -78,11 +79,12 @@ public class TestSelectionSelectivity {
 				
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
+		IMicroOperatorCode gpuSelectionCode = new SelectionKernel(predicate);
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (selectionCode, 1);
+		MicroOperator uoperator = new MicroOperator (selectionCode, gpuSelectionCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();

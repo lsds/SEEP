@@ -14,6 +14,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.MicroAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 
@@ -70,16 +71,20 @@ public class TestAggregationType {
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 				
-		IMicroOperatorCode selectionCode = new MicroAggregation(
+		IMicroOperatorCode aggCode = new MicroAggregation(
 				aggregationType,
 				new FloatColumnReference(1)
 				);
-		System.out.println(String.format("[DBG] %s", selectionCode));
+		System.out.println(String.format("[DBG] %s", aggCode));
+		IMicroOperatorCode gpuAggCode = new MicroAggregationKernel(
+				aggregationType,
+				new FloatColumnReference(1)
+				);
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (selectionCode, 1);
+		MicroOperator uoperator = new MicroOperator (aggCode, gpuAggCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
