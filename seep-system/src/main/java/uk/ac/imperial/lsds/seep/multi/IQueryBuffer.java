@@ -15,6 +15,7 @@ public interface IQueryBuffer {
 	public int capacity ();
 	public int remaining ();
 	public boolean hasRemaining ();
+	public void position (int index);
 	public int position ();
 	public int limit ();
 	public void close ();

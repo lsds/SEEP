@@ -1,5 +1,7 @@
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -50,12 +52,21 @@ public class TestReductionKernel {
 		
 		byte [] data = new byte [Utils.BUNDLE];
 		ByteBuffer b = ByteBuffer.wrap(data);
-		while (b.hasRemaining())
-			b.putInt(1);
+		b.order(ByteOrder.LITTLE_ENDIAN);
+		Random r = new Random();
+		while (b.hasRemaining()) {
+			b.putLong(1);
+			int value = r.nextInt(100);
+			if (value == 0)
+				value = 100;
+			b.putFloat(value);
+			for (int i = 12; i < schema.getByteSizeOfTuple(); i += 4)
+				b.putInt(1);
+		}
 		try {
 			while (true) {
 				operator.processData (data);
-				Thread.sleep(100L);
+				/* Thread.sleep(100L); */
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

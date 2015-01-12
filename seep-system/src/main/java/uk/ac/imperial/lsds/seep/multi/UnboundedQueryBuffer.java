@@ -215,4 +215,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		
 		System.arraycopy(this.buffer.array(), start, destination, 0, end - start);
 	}
+
+	@Override
+	public void position(int index) {
+		this.buffer.position(index);
+	}
 }

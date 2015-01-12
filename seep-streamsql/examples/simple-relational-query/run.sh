@@ -17,7 +17,7 @@ OPTS="-server -XX:+UseConcMarkSweepGC -XX:NewRatio=2 -Xms8g -Xmx8g -Xloggc:test-
 
 CLASS=$1
 
-valgrind --leak-check=full java $OPTS -Djava.library.path="/mnt/data/cccad3/akolious/aparapi/com.amd.aparapi.jni/dist" -cp $JCP $CLASS $2 # 2>&1 >test.out &
+valgrind --error-limit=no --leak-check=full --show-reachable=yes java $OPTS -Djava.library.path="/mnt/data/cccad3/akolious/aparapi/com.amd.aparapi.jni/dist" -cp $JCP $CLASS $2 # 2>&1 >test.out &
 
 # seep_pid=$!
 # top -b -n120 -d 1 | grep "Cpu" >> test-cpu.out

@@ -49,6 +49,12 @@ static cl_event writeEventPtrs [2];
 
 static int ndx = 0; /* Index into *Ptrs[] */
 
+typedef struct output_tuple_t {
+	long t;
+	float v;
+	int p;
+} output_t;
+
 static struct input_buffer_t {
 	jbyte *mappedInputBufferPtr;
 	cl_mem pinnedInputBufferPtr;
@@ -168,6 +174,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_createProgr
 	/* Get compiler info (or error) */
 	clGetProgramBuildInfo (program, device, CL_PROGRAM_BUILD_LOG, sizeof(blog), blog, &len);
 	printf("%s\n", blog);
+	fflush(stdout);
 	/* Free source */
 	(*env)->ReleaseStringUTFChars(env, source, _source);
 	return error;
@@ -237,7 +244,6 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_setReductio
 	size_t _size = (size_t) size; /* Size of local memory */
 	if (overlap)
 		_size /= 2;
-	printf("local size is %zu\n", _size);
 
 	/* Configure the two kernels */
 	int i;
@@ -1073,13 +1079,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 	cl_event w3_event;
 	cl_event  x_event;
 	cl_event  r_event;
+
 	/* Clear GPU command queue */
 	clFinish(commandQueue[0]);
 
 	jclass class = (*env)->GetObjectClass (env, object);
-	jmethodID writeInputBufferMethod = (*env)->GetMethodID(env, class,  "inputDataMovementCallback",  "(J)V");
+	jmethodID writeInputBufferMethod = (*env)->GetMethodID(env, class,  "inputFromCircularBufferDataMovementCallback",  "(J)V");
 	if (! writeInputBufferMethod) {
-		fprintf(stderr, "error: failed to acquire pointer to function `void inputDataMovementCallback (long)`\n");
+		fprintf(stderr, "error: failed to acquire pointer to function `void inputFromCircularBufferDataMovementCallback (long)`\n");
 		return -1;
 	}
 	jmethodID writeStartPointersMethod = (*env)->GetMethodID(env, class,  "windowStartPointersDataMovementCallback",  "(JI)V");
@@ -1110,6 +1117,11 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 
 	(*env)->CallVoidMethod(env, object, writeStartPointersMethod, (long) mappedWindowStartPointersBuffer, _startPointers);
 	(*env)->CallVoidMethod(env, object, writeEndPointersMethod, (long) mappedWindowEndPointersBuffer, _endPointers);
+	/* Debugging */
+	// if (mappedWindowEndPointersBuffer[0] != 32768 && mappedWindowEndPointersBuffer[32] != 1048576) {
+	//	fprintf(stderr, "error: invalid window end pointers\n");
+	//	return -1;
+	//}
 
 	/* Write input */
 	error = clEnqueueWriteBuffer (commandQueue[0], inputBuffer, CL_FALSE, 0, _input,
@@ -1120,7 +1132,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 	}
 	error = clWaitForEvents(1, &w1_event);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "error (%d: %s): write event failed\n", error, getErrorMessage(error));
+		fprintf(stderr, "error (%d: %s): write 1 event failed\n", error, getErrorMessage(error));
 		return -1;
 	}
 	/* Write start and end pointers */
@@ -1132,7 +1144,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 	}
 	error = clWaitForEvents(1, &w2_event);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "error (%d: %s): write event failed\n", error, getErrorMessage(error));
+		fprintf(stderr, "error (%d: %s): write 2 event failed\n", error, getErrorMessage(error));
 		return -1;
 	}
 	error = clEnqueueWriteBuffer (commandQueue[0], windowEndPointersBuffer, CL_FALSE, 0, _endPointers,
@@ -1143,7 +1155,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 	}
 	error = clWaitForEvents(1, &w3_event);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "error (%d: %s): write event failed\n", error, getErrorMessage(error));
+		fprintf(stderr, "error (%d: %s): write 3 event failed\n", error, getErrorMessage(error));
 		return -1;
 	}
 	/* Enqueue kernel command */
@@ -1171,15 +1183,25 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 		return -1;
 	}
 
+	/* Debugging */
+	/**/
+	/* output_t *values = (output_t *) &mappedOutputBuffer[0];
+	int i;
+	for (i = 0; i < (_output / sizeof(output_t)); i++)
+		printf("[DBG] [JNI] output %2d v %5.1f\n", i, values[i].v);
+	fflush(stdout); */
+	/**/
+
 	/* Copy data across the JNI boundary */
-	(*env)->CallVoidMethod(env, object, readOutputBufferMethod, (long) mappedOutputBuffer, _output);
+
+	(*env)->CallVoidMethod(env, object, readOutputBufferMethod, (long) mappedOutputBuffer, _output, 0);
 
 	if (profile) {
 		dt = timer_getElapsedTime(timer);
 		clPrintEventProfilingInfo(w1_event, "W0_1");
 		clPrintEventProfilingInfo(w2_event, "W0_2");
 		clPrintEventProfilingInfo(w3_event, "W0_3");
-		clPrintEventProfilingInfo( x_event, "X0"  );
+		// clPrintEventProfilingInfo( x_event, "X0"  );
 		clPrintEventProfilingInfo( r_event, "R0"  );
 		printf("T=%llu usec\n", dt);
 		timer_free(timer);
@@ -1187,7 +1209,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_GPU_invokeReduc
 	clReleaseEvent (w1_event);
 	clReleaseEvent (w2_event);
 	clReleaseEvent (w3_event);
-	clReleaseEvent ( x_event);
+	// clReleaseEvent ( x_event);
 	clReleaseEvent ( r_event);
 	return 0;
 }

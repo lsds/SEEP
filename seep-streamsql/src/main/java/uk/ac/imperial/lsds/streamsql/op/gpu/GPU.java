@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.streamsql.op.gpu;
 import java.lang.reflect.Field;
 
 import sun.misc.Unsafe;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 
 @SuppressWarnings("restriction")
 public class GPU {
@@ -16,8 +17,6 @@ public class GPU {
 
 	private int [] startPointers;
 	private int [] endPointers;
-	
-	private long runs = 0L;
 	
 	private static Unsafe unsafe;
 	
@@ -52,14 +51,6 @@ public class GPU {
 		this.endPointer = inputArray.length;
 	}
 	
-	public void inc () {
-		runs += 1;
-	}
-	
-	public void debug() {
-		System.out.println(String.format("[DBG] [GPU] %d runs", runs));
-	}
-	
 	public void setInputDataBuffer(byte [] inputArray, int startPointer, int endPointer) {
 		this.inputArray = inputArray;
 		
@@ -89,9 +80,9 @@ public class GPU {
 			);
 	}
 	
-	public void inputDataMovementCallback (long inputAddr) {
+	public void inputFromCircularBufferDataMovementCallback (long inputAddr) {
 		/* System.out.println(String.format("[DBG] inputDataMovementCallback (%d) input data size %d start %d end %d", 
-				inputAddr, this.inputArray.length, this.startPointer, this.endPointer)); */
+		 	inputAddr, this.inputArray.length, this.startPointer, this.endPointer)); */
 		if (endPointer > startPointer) {
 			unsafe.copyMemory (
 				this.inputArray, 
@@ -122,6 +113,7 @@ public class GPU {
 	}
 	
 	public void windowStartPointersDataMovementCallback (long inputAddr, int size) {
+		// System.out.println(String.format("[DBG] windowStartPointersDataMovementCallback (%d)", size));
 		unsafe.copyMemory (
 				startPointers, 
 				Unsafe.ARRAY_INT_BASE_OFFSET, 
@@ -132,8 +124,9 @@ public class GPU {
 	}
 	
 	public void windowEndPointersDataMovementCallback (long inputAddr, int size) {
+		// System.out.println(String.format("[DBG] windowEndPointersDataMovementCallback (%d, %d)", inputAddr, size));
 		unsafe.copyMemory (
-				endPointers, 
+				endPointers,
 				Unsafe.ARRAY_INT_BASE_OFFSET, 
 				null, 
 				inputAddr, 

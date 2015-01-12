@@ -59,7 +59,7 @@ public class TestSelection {
 		);
 		*/
 		
-		IPredicate [] predicates = new IPredicate [20];
+		IPredicate [] predicates = new IPredicate [1];
 		for (int i = 0; i < predicates.length; i++) {
 			int j = i % 6 + 1;
 			predicates[i] = new IntComparisonPredicate(IntComparisonPredicate.LESS_OP, new IntColumnReference(j), new IntConstant(i + 2));

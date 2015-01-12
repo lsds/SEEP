@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -33,8 +34,8 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	/*
 	 * Operator configuration parameters
 	 */
-	private static final int THREADS_PER_GROUP = 128;
-	private static final int TUPLES_PER_THREAD = 4;
+	private static final int THREADS_PER_GROUP = 256;
+	private static final int TUPLES_PER_THREAD = 1;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
@@ -52,6 +53,9 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private int threads, groups;
 
 	int outputSize, localSize;
+	
+	public static int [] windowStartPointers = new int [32];
+	public static int []   windowEndPointers = new int [32];
 	
 	private String load (String filename) {
 		File file = new File(filename);
@@ -102,12 +106,14 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	public void setup () {
 		
 		this.tuples = _default_input_size / inputSchema.getByteSizeOfTuple();
+		/* We assign 1 group per window? */
+		this.groups = this.batchSize;
+		this.threads = groups * THREADS_PER_GROUP;
 		
-		this.threads = tuples / TUPLES_PER_THREAD;
-		this.groups = threads / THREADS_PER_GROUP;
+		this.localSize = (THREADS_PER_GROUP) * 4; // * this.outputSchema.getByteSizeOfTuple();
 		
-		this.localSize = (THREADS_PER_GROUP) * this.outputSchema.getByteSizeOfTuple();
-		this.outputSize = this.outputSchema.getByteSizeOfTuple() * groups;
+		// this.outputSize = this.outputSchema.getByteSizeOfTuple() * groups;
+		this.outputSize = 4 * groups;
 		
 		System.out.println(String.format("[DBG] %6d tuples", tuples));
 		System.out.println(String.format("[DBG] %6d threads", threads));
@@ -132,6 +138,9 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		GPU.getInstance().createInputBuffer(_default_input_size);
 		GPU.getInstance().createOutputBuffer(outputSize);
 		
+		// windowStartPointers = new int [batchSize];
+		// windowEndPointers   = new int [batchSize];
+		
 		GPU.getInstance().createWindowStartPointersBuffer(batchSize);
 		GPU.getInstance().createWindowEndPointersBuffer(batchSize);
 		
@@ -147,13 +156,21 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		return sb.toString();
 	}
 	
+	private void normalizeWindowPointers (int offset) {
+		for (int i = 0; i < batchSize; i++) {
+			windowStartPointers[i] -= offset;
+			windowEndPointers  [i] -= offset;
+		}
+	}
+	
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		windowBatch.initWindowPointers();
-		// windowBatch.normalizeWindowPointers();
-		windowBatch.debug();
+		
+		windowBatch.initWindowPointers(windowStartPointers, windowEndPointers);
+		normalizeWindowPointers (windowBatch.getBatchStartPointer());
+		/* windowBatch.debug(); */
 		
 		/* 
 		 * We copy input directly from the circular buffer to the zero-copy
@@ -165,21 +182,34 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		 *	input);
 		 */
 		
-//		GPU.getInstance().setInputDataBuffer(windowBatch.getBuffer().array(), windowBatch.getBatchStartPointer(), windowBatch.getBatchEndPointer());
-//		
-//		GPU.getInstance().setWindowStartPointersBuffer(windowBatch.getWindowStartPointers());
-//		GPU.getInstance().setWindowEndPointersBuffer(windowBatch.getWindowEndPointers());
-//		
-//		GPU.getInstance().setOutputDataBuffer(outputBuffer.array());
-//		/* Execute kernel */
-//		GPU.getInstance().invokeReductionOperatorKernel(threads, THREADS_PER_GROUP, false);
+		GPU.getInstance().setInputDataBuffer(windowBatch.getBuffer().array(), windowBatch.getBatchStartPointer(), windowBatch.getBatchEndPointer());
+		
+		GPU.getInstance().setWindowStartPointersBuffer(windowStartPointers); // (windowBatch.getWindowStartPointers());
+		GPU.getInstance().setWindowEndPointersBuffer(windowEndPointers); // (windowBatch.getWindowEndPointers());
+		
+		GPU.getInstance().setOutputDataBuffer(outputBuffer.array());
+		/* Execute kernel */
+		GPU.getInstance().invokeReductionOperatorKernel(threads, THREADS_PER_GROUP, false);
+		
+		outputBuffer.position(this.outputSize);
+		/*
+		 * Debugging code
+		 * 
+		outputBuffer.getByteBuffer().order(ByteOrder.LITTLE_ENDIAN);
+		outputBuffer.close();
+		System.out.println(String.format("[DBG] [ReductionKernel] output buffer position %d limit %d", outputBuffer.position(), outputBuffer.limit()));
+		int count = 0;
+		while (outputBuffer.hasRemaining()) {
+			int v = outputBuffer.getByteBuffer().getInt();
+			System.out.println(String.format("[DBG] [ReductionKernel] value [%3d] = %d", count, v));
+			count ++;
+		}
+		System.out.println(String.format("[DBG] [ReductionKernel] %d output tuples returned", count));
+		*/
+		// System.exit(1);
 		
 		windowBatch.setBuffer(outputBuffer);
 		api.outputWindowBatchResult(-1, windowBatch);
-		
-		// System.exit(1);
-		// GPU.getInstance().inc();
-		// GPU.getInstance().debug();
 	}
 	
 	@Override

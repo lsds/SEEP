@@ -273,4 +273,9 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	public int position () {
 		throw new UnsupportedOperationException("error: cannot get position from a circular buffer");
 	}
+
+	@Override
+	public void position(int index) {
+		throw new UnsupportedOperationException("error: cannot set position to a circular buffer");
+	}
 }

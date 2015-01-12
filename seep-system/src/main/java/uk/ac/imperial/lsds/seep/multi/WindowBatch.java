@@ -95,12 +95,75 @@ public class WindowBatch {
 		this.batchEndTime = batchEndTime;
 	}
 	
-	public void initWindowPointers () {
+	public void initWindowPointers (int [] windowStartPointers, int [] windowEndPointers) {
 		
 		if (initialised)
 			return ;
 		
 		initialised = true;
+		
+		Arrays.fill(windowStartPointers, -1);
+		Arrays.fill(windowEndPointers,   -1);
+		
+		if (batchStartPointer < 0 && batchEndPointer < 0)
+			return ;
+		
+		int tuple_ = schema.getByteSizeOfTuple ();
+		int window_ = (int) windowDefinition.getSize();
+		int slide_ = (int) windowDefinition.getSlide();
+		
+		if (windowDefinition.isRowBased()) {
+			
+			/* Bytes/window */
+			int bpw = tuple_ * window_;
+			
+			int offset  = schema.getByteSizeOfTuple (); /* In bytes */
+			if (windowDefinition.isTumbling())
+				offset *= window_;
+			else
+				offset *= slide_;
+			
+			windowStartPointers [0] = batchStartPointer;
+			windowEndPointers   [0] = windowStartPointers[0] + bpw;
+			
+			for (int i = 1; i < batchSize; i++) {
+				windowStartPointers [i] = windowStartPointers [i - 1] + offset;
+				windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
+			}
+		} else { /* Fill-in range-based windows */
+			
+			int p = 0; /* Current opened window */ 
+			int q = 0; /* Current closed window */
+			
+			this.windowStartPointers[p] = this.batchStartPointer;
+			
+			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
+				long t = buffer.getLong(i);
+				/* 
+				 * Should we open new windows? 
+				 */
+				boolean open = false;
+				while (t - slide_ >= this.batchStartTime + p * slide_) {
+					p ++;
+					open |= true;
+				}
+				if (open && p < this.batchSize)
+					this.windowStartPointers[p] = i;
+				/* 
+				 * Should be close old windows? 
+				 */
+				boolean close = true;
+				while (t > this.batchStartTime + q * slide_ + window_ - 1) {
+					if (close)
+						this.windowEndPointers[q] = i;
+					close = false;
+					q ++;
+				}
+			} /* End of batch */
+		}
+	}
+	
+	public void initWindowPointers () {
 		
 		windowStartPointers = new int [batchSize];
 		windowEndPointers   = new int [batchSize];
