@@ -87,26 +87,26 @@ int gpu_query_setInput (gpuQueryP q, int ndx, int size) {
 	return 0;
 }
 
-int gpu_query_setOutput (gpuQueryP q, int ndx, int size) {
+int gpu_query_setOutput (gpuQueryP q, int ndx, int size, int writeOnly) {
 	if (! q)
 		return -1;
 	if (ndx < 0 || ndx > q->contexts[0]->kernelOutput.count)
 		return -1;
 	int i;
 	for (i = 0; i < DEPTH; i++)
-		gpu_context_setOutput (q->contexts[i], ndx, size);
+		gpu_context_setOutput (q->contexts[i], ndx, size, writeOnly);
 	return 0;
 }
 
-int gpu_query_setKernel (gpuQueryP q, int ndx,
-		const char * name, void (*callback)(cl_kernel, gpuContextP)) {
+int gpu_query_setKernel (gpuQueryP q, int ndx, const char * name,
+		void (*callback)(cl_kernel, gpuContextP, int *), int *args) {
 	if (! q)
 		return -1;
 	if (ndx < 0 || ndx > q->contexts[0]->kernel.count)
 		return -1;
 	int i;
 	for (i = 0; i < DEPTH; i++)
-		gpu_context_setKernel (q->contexts[i], ndx, name, callback);
+		gpu_context_setKernel (q->contexts[i], ndx, name, callback, args);
 	return 0;
 }
 

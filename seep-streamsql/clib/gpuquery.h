@@ -24,10 +24,10 @@ gpuContextP gpu_context_switch (gpuQueryP);
 
 int gpu_query_setInput (gpuQueryP, int, int);
 
-int gpu_query_setOutput (gpuQueryP, int, int);
+int gpu_query_setOutput (gpuQueryP, int, int, int);
 
 int gpu_query_setKernel (gpuQueryP, int,
-		const char *, void (*callback)(cl_kernel, gpuContextP));
+		const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
 
 /* Execute task */
 int gpu_query_exec (gpuQueryP, void *, void *, size_t, size_t);

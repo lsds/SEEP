@@ -33,7 +33,7 @@ typedef union {
 	int4 vectors [OUTPUT_VECTOR_SIZE];
 } output_t;
 
-__kernel void project (
+__kernel void projectKernel (
 	const int tuples,
 	const int bytes,
 	__global const uchar *input,

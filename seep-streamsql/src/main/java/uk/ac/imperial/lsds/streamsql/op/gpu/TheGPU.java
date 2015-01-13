@@ -7,7 +7,7 @@ import sun.misc.Unsafe;
 @SuppressWarnings("restriction")
 public class TheGPU {
 	
-	private static final String library = "/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib/GPU.so";
+	private static final String library = "/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib/libGPU.so";
 	
 	private static final TheGPU instance = new TheGPU ();
 	
@@ -47,17 +47,17 @@ public class TheGPU {
 		this.outputArray = outputArray;
 	}
 	
-	public void inputDataMovementCallback (long inputAddr, int size) {
+	public void inputDataMovementCallback (int qid, int ndx, long inputAddr, int size, int offset) {
 		theUnsafe.copyMemory (
 				inputArray, 
-				Unsafe.ARRAY_BYTE_BASE_OFFSET, 
+				Unsafe.ARRAY_BYTE_BASE_OFFSET + offset, 
 				null, 
 				inputAddr, 
 				size
 			);
 	}
 	
-	public void outputDataMovementCallback (long outputAddr, int size, int offset) {
+	public void outputDataMovementCallback (int qid, int ndx, long outputAddr, int size, int offset) {
 		theUnsafe.copyMemory(
 				null, 
 				outputAddr, 
@@ -70,12 +70,12 @@ public class TheGPU {
 	public native int init ();
 	public native int getQuery (String source, int kernels, int inputs, int outputs);
 	public native int setInput (int queryId, int index, int size);
-	public native int setOutput (int queryId, int index, int size);
+	public native int setOutput (int queryId, int index, int size, int writeOnly);
 	public native int execute (int queryId, int threads, int threadsPerGroup);
 	public native int free ();
 	/* Operator-specific function calls */
-	public native int setKernelIdentity   (int queryId);
-	public native int setKernelProjection (int queryId);
-	public native int setKernelSelection  (int queryId);
-	public native int setKernelReduction  (int queryId);
+	public native int setKernelDummy   (int queryId, int [] args);
+	public native int setKernelProject (int queryId, int [] args);
+	public native int setKernelSelect  (int queryId, int [] args);
+	public native int setKernelReduce  (int queryId, int [] args);
 }

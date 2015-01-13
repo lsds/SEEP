@@ -71,7 +71,7 @@ void gpu_context_free (gpuContextP q) {
 }
 
 void gpu_context_setKernel (gpuContextP q, int ndx,
-		const char *name, void (*callback)(cl_kernel, gpuContextP)) {
+		const char *name, void (*callback)(cl_kernel, gpuContextP, int *), int *args) {
 	if (ndx < 0 || ndx >= q->kernel.count)
 		return;
 	int error = 0;
@@ -83,7 +83,7 @@ void gpu_context_setKernel (gpuContextP q, int ndx,
 			fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 			exit (1);
 		} else {
-			(*callback) (q->kernel.kernels[ndx]->kernel[i], q);
+			(*callback) (q->kernel.kernels[ndx]->kernel[i], q, args);
 		}
 	}
 	return;
@@ -95,10 +95,11 @@ void gpu_context_setInput (gpuContextP q, int ndx, int size) {
 	q->kernelInput.inputs[ndx] = getInputBuffer (q->context, q->queue[0], size); 
 }
 
-void gpu_context_setOutput (gpuContextP q, int ndx, int size) {
+void gpu_context_setOutput (gpuContextP q, int ndx, int size, int writeOnly) {
 	if (ndx < 0 || ndx >= q->kernelOutput.count)
 		return;
-	q->kernelOutput.outputs[ndx] = getOutputBuffer (q->context, q->queue[0], size);
+	q->kernelOutput.outputs[ndx] = getOutputBuffer (q->context, q->queue[0],
+			size, writeOnly);
 }
 
 static int getEventReferenceCount (cl_event event) {
@@ -201,6 +202,7 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		exit (1);
 	}
 
+
 	/* Flush command queues */
 	gpu_context_flush (q);
 	q->scheduled ++;
@@ -212,3 +214,4 @@ void gpu_context_readOutput (gpuContextP q, void *output) {
 	memcpy (output, q->kernelOutput.outputs[0]->mapped_buffer, q->kernelOutput.outputs[0]->size);
 	return;
 }
+

@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue, int size) {
+outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
+		int size, int writeOnly) {
 	outputBufferP p = malloc(sizeof(output_buffer_t));
 	if (! p) {
 		fprintf(stderr, "fatal error: out of memory\n");
@@ -14,10 +15,15 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue, int s
 	}
 	p->size = size;
 	int error;
+	cl_mem_flags flags;
+	if (writeOnly)
+		flags = CL_MEM_WRITE_ONLY;
+	else
+		flags = CL_MEM_READ_WRITE;
 	/* Set p->device_buffer */
 	p->device_buffer = clCreateBuffer (
 		context, 
-		CL_MEM_WRITE_ONLY, 
+		flags,
 		p->size, 
 		NULL, 
 		&error);

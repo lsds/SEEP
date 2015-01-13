@@ -11,7 +11,7 @@ typedef struct output_buffer {
 	void  *mapped_buffer;
 } output_buffer_t;
 
-outputBufferP getOutputBuffer (cl_context, cl_command_queue, int);
+outputBufferP getOutputBuffer (cl_context, cl_command_queue, int, int);
 
 void freeOutputBuffer (outputBufferP, cl_command_queue);
 

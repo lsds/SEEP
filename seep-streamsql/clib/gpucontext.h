@@ -46,14 +46,12 @@ gpuContextP gpu_context (cl_device_id, cl_context, cl_program, int, int, int);
 
 void gpu_context_free (gpuContextP);
 
-// void gpu_context_setKernel (gpuContextP, int, (*setKernelArguments(cl_kernel *)));
-
 void gpu_context_setInput (gpuContextP, int, int);
 
-void gpu_context_setOutput (gpuContextP, int, int);
+void gpu_context_setOutput (gpuContextP, int, int, int);
 
 void gpu_context_setKernel (gpuContextP, int,
-		const char *, void (*callback)(cl_kernel, gpuContextP));
+		const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
 
 void gpu_context_waitForReadEvent (gpuContextP);
 

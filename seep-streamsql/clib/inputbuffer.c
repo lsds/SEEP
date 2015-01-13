@@ -17,7 +17,7 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, int siz
 	/* Set p->device_buffer */
 	p->device_buffer = clCreateBuffer (
 		context, 
-		CL_MEM_READ_ONLY, 
+		CL_MEM_READ_ONLY,
 		p->size, 
 		NULL, 
 		&error);

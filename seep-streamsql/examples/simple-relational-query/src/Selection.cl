@@ -111,15 +111,16 @@ inline int predicate
 	else return 0;
 	*/
 
-	#pragma unroll
-	for (int i = 0; i < 20; i++)
-		if (p->tuple._1 > 2 + i)
-			return 0;
-	return 1;
+	// #pragma unroll
+	// for (int i = 0; i < 20; i++)
+	//	if (p->tuple._1 > 2 + i)
+	//		return 0;
+	// return 1;
 
 	// if (p->tuple._1 >= 2)
 	// 	return 0;
 	// return 1;
+	return 1;
 }
 
 __kernel void selectKernel
@@ -189,9 +190,9 @@ __kernel void compactKernel
 	const int _bundle, /* bundle size */
 	const int bundles, /* # bundles */
 	__global const uchar *input,
-	__global const int *flags,
-	__global const int *offsets,
-	__global const int *pivots,
+	__global int *flags,
+	__global int *offsets,
+	__global int *pivots,
 	__global uchar *output
 )
 {
