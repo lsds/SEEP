@@ -72,4 +72,40 @@ char *getErrorMessage (int error) {
 	}
 }
 
+char *getCommandType (cl_command_type type) {
+
+	switch (type) {
+	case CL_COMMAND_NDRANGE_KERNEL:       return "CL_COMMAND_NDRANGE_KERNEL";
+	case CL_COMMAND_TASK:                 return "CL_COMMAND_TASK";
+	case CL_COMMAND_NATIVE_KERNEL:        return "CL_COMMAND_NATIVE_KERNEL";
+	case CL_COMMAND_READ_BUFFER:          return "CL_COMMAND_READ_BUFFER";
+	case CL_COMMAND_WRITE_BUFFER:         return "CL_COMMAND_WRITE_BUFFER";
+	case CL_COMMAND_COPY_BUFFER:          return "CL_COMMAND_COPY_BUFFER";
+	case CL_COMMAND_READ_IMAGE:           return "CL_COMMAND_READ_IMAGE";
+	case CL_COMMAND_WRITE_IMAGE:          return "CL_COMMAND_WRITE_IMAGE";
+	case CL_COMMAND_COPY_IMAGE:           return "CL_COMMAND_COPY_IMAGE";
+	case CL_COMMAND_COPY_BUFFER_TO_IMAGE: return "CL_COMMAND_COPY_BUFFER_TO_IMAGE";
+	case CL_COMMAND_COPY_IMAGE_TO_BUFFER: return "CL_COMMAND_COPY_IMAGE_TO_BUFFER";
+	case CL_COMMAND_MAP_BUFFER:           return "CL_COMMAND_MAP_BUFFER";
+	case CL_COMMAND_MAP_IMAGE:            return "CL_COMMAND_MAP_IMAGE";
+	case CL_COMMAND_UNMAP_MEM_OBJECT:     return "CL_COMMAND_UNMAP_MEM_OBJECT";
+	case CL_COMMAND_MARKER:               return "CL_COMMAND_MARKER";
+	case CL_COMMAND_ACQUIRE_GL_OBJECTS:   return "CL_COMMAND_ACQUIRE_GL_OBJECTS";
+	case CL_COMMAND_RELEASE_GL_OBJECTS:   return "CL_COMMAND_RELEASE_GL_OBJECTS";
+	default:
+		return "unknown command type";
+	}
+}
+
+char *getCommandExecutionStatus (int status) {
+	switch (status) {
+	case CL_QUEUED:    return "CL_QUEUED";
+	case CL_SUBMITTED: return "CL_SUBMITTED";
+	case CL_RUNNING:   return "CL_RUNNING";
+	case CL_COMPLETE:  return "CL_COMPLETE";
+	default:
+		return "unknown command status";
+	}
+}
+
 

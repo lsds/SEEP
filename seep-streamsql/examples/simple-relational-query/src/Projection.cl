@@ -1,7 +1,7 @@
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
 
 #define  INPUT_VECTOR_SIZE 2
-#define OUTPUT_VECTOR_SIZE 2
+#define OUTPUT_VECTOR_SIZE 1
 
 typedef struct {
 	long t;
@@ -22,10 +22,10 @@ typedef struct {
 	long t;
 	int _1;
 	int _2;
-	int _3;
-	int _4;
-	int _5;
-	int _6;
+	// int _3;
+	// int _4;
+	// int _5;
+	// int _6;
 } output_tuple_t  __attribute__((aligned(1)));
 
 typedef union {
@@ -49,7 +49,9 @@ __kernel void projectKernel (
 	int output_idx = gid * lgs * sizeof(output_t);
 
 	/* Cache data into local memory */
-	async_work_group_copy ((__local int4*) _input, (const __global int4*) &input[input_idx], INPUT_VECTOR_SIZE * lgs, 0);
+	event_t e =
+		async_work_group_copy ((__local int4*) _input, (const __global int4*) &input[input_idx], INPUT_VECTOR_SIZE * lgs, 0);
+	wait_group_events (1, &e);
 
 	__local  input_t* p = (__local  input_t*) &_input [lid * sizeof( input_t)];
 	__local output_t* q = (__local output_t*) &_output[lid * sizeof(output_t)];
@@ -57,14 +59,14 @@ __kernel void projectKernel (
 	q->tuple. t = p->tuple. t;
 	q->tuple._1 = p->tuple._1;
 	q->tuple._2 = p->tuple._2;
-	q->tuple._3 = p->tuple._3;
-	q->tuple._4 = p->tuple._4;
-	q->tuple._5 = p->tuple._5;
-	q->tuple._6 = p->tuple._6;
+	// q->tuple._3 = p->tuple._3;
+	// q->tuple._4 = p->tuple._4;
+	// q->tuple._5 = p->tuple._5;
+	// q->tuple._6 = p->tuple._6;
 
-	/* Write results in main memory */
-	barrier (CLK_LOCAL_MEM_FENCE);
-	async_work_group_copy ((__global int4*) &output[output_idx], (__local int4*) _input, OUTPUT_VECTOR_SIZE * lgs, 0);
+//	/* Write results in main memory */
+//	barrier (CLK_LOCAL_MEM_FENCE);
+//	async_work_group_copy ((__global int4*) &output[output_idx], (__local int4*) _input, OUTPUT_VECTOR_SIZE * lgs, 0);
 
 	return ;
 }

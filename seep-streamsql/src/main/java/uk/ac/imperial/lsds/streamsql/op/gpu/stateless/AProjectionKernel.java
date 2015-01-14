@@ -148,8 +148,8 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().execute(qid, threads, _thread_group_);
 		
 		windowBatch.setBuffer(outputBuffer);
-		// windowBatch.setTaskId(secondLast);
-		// windowBatch.setFreeOffset(secondLastFree);
+		windowBatch.setTaskId(secondLast);
+		windowBatch.setFreeOffset(secondLastFree);
 		secondLast = last;
 		last = tmp;
 		secondLastFree = lastFree;

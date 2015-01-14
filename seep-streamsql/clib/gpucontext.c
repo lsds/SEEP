@@ -124,10 +124,46 @@ static int getEventReferenceCount (cl_event event) {
 		return (int) count;
 }
 
+static char *getEventCommandStatus (cl_event event) {
+	int error = 0;
+	cl_int status;
+	error = clGetEventInfo (
+		event,
+		CL_EVENT_COMMAND_EXECUTION_STATUS,
+		sizeof(cl_int),
+		(void *) &status,
+		NULL);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		return getCommandExecutionStatus(-1);
+	} else
+		return getCommandExecutionStatus(status);
+}
+
+static char *getEventCommandType (cl_event event) {
+	int error = 0;
+	cl_command_type type;
+	error = clGetEventInfo (
+		event,
+		CL_EVENT_COMMAND_TYPE,
+		sizeof(cl_command_type),
+		(void *) &type,
+		NULL);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		return getCommandType(-1);
+	} else
+		return getCommandType(type);
+}
+
 void gpu_context_waitForReadEvent (gpuContextP q) {
 	if (q->scheduled < 1)
 		return;
-	dbg("[DBG] %d read event references\n", getEventReferenceCount (q->read_event));
+	dbg("[DBG] read : %2d references, command %30s status %20s \n",
+			getEventReferenceCount (q->read_event),
+			getEventCommandType    (q->read_event),
+			getEventCommandStatus  (q->read_event)
+			);
 	/* Wait for read event */
 	int error = clWaitForEvents(1, &(q->read_event));
 	if (error != CL_SUCCESS) {
@@ -141,7 +177,11 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 void gpu_context_waitForWriteEvent (gpuContextP q) {
 	if (q->scheduled < 1)
 		return;
-	dbg("[DBG] %d write event references\n", getEventReferenceCount (q->write_event));
+	dbg("[DBG] write: %2d references, command %30s status %20s \n",
+			getEventReferenceCount (q->write_event),
+			getEventCommandType    (q->write_event),
+			getEventCommandStatus  (q->write_event)
+			);
 	/* Wait for write event */
 	int error = clWaitForEvents(1, &(q->write_event));
 	if (error != CL_SUCCESS) {

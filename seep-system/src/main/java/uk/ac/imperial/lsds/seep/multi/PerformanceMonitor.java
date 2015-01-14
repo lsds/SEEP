@@ -40,7 +40,7 @@ public class PerformanceMonitor implements Runnable {
 				new Measurement (query.getId(), (CircularQueryBuffer) query.getTaskDispatcher().getBuffer());
 		}
 	}
-		
+	
 	@Override
 	public void run () {
 		while (true) {
