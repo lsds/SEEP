@@ -27,8 +27,8 @@ GPU.o: GPU.c uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU.h timer.h openclerrorco
 uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU.h:
 	javah -classpath $(CLASS_PATH) uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU
 	
-# test: test.c
-#	$(CC) $(CFLAGS) test.c -o test $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
+test: test.c
+	$(CC) $(CFLAGS) test.c -o test $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
 
 timer.o: timer.c timer.h
 

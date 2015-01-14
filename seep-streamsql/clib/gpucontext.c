@@ -55,13 +55,19 @@ gpuContextP gpu_context (
 
 void gpu_context_free (gpuContextP q) {
 	if (q) {
-
-		/* Free input */
-
-		/* Free output */
-
-		/* Free kernel */
-
+		int i;
+		/* Free input(s) */
+		for (i = 0; i < q->kernelInput.count; i++)
+			freeInputBuffer(q->kernelInput.inputs[i], q->queue[0]);
+		/* Free output(s) */
+		for (i = 0; i < q->kernelOutput.count; i++)
+			freeOutputBuffer(q->kernelOutput.outputs[i], q->queue[0]);
+		/* Free kernel(s) */
+		for (i = 0; i < q->kernel.count; i++) {
+			clReleaseKernel(q->kernel.kernels[i]->kernel[0]);
+			clReleaseKernel(q->kernel.kernels[i]->kernel[1]);
+			free (q->kernel.kernels[i]);
+		}
 		if (q->queue[0])
 			clReleaseCommandQueue(q->queue[0]);
 		if (q->queue[1])
@@ -128,7 +134,7 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	clRetainEvent(q->read_event);
+	clReleaseEvent(q->read_event);
 	return ;
 }
 
@@ -142,7 +148,7 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	clRetainEvent(q->write_event);
+	clReleaseEvent(q->write_event);
 	return ;
 }
 

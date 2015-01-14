@@ -28,6 +28,6 @@ int gpu_setOutput (int, int, int, int);
 int gpu_setKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *), int *);
 
 /* Execute task */
-int gpu_execute (int, size_t, size_t, queryOperatorP, JNIEnv *, jobject);
+int gpu_exec (int, size_t, size_t, queryOperatorP, JNIEnv *, jobject);
 
 #endif /* SEEP_GPU_H_ */
