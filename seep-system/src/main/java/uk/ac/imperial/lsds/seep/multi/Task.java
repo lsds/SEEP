@@ -45,9 +45,11 @@ public class Task implements ITask {
 			next.process(this.batch, this, GPU);
 			next = next.getLocalDownstream();
 		}
-
+		
+		// System.out.println (String.format("[DBG] free task %4d", this.batch.getTaskId()));
+		
 		ResultCollector.forwardAndFree(handler, query, this.batch.getBuffer(),
-				taskid, freeUpTo);
+				this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
 
 		this.batch.getBuffer().release();
 		WindowBatchFactory.free(this.batch);
@@ -61,7 +63,7 @@ public class Task implements ITask {
 		this.batch = windowBatchResult;
 		/* Control returns to run() method */
 	}
-
+	
 	@Override
 	public void free() {
 		TaskFactory.free(this);

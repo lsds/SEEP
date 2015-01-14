@@ -179,15 +179,17 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	
 	private void createTask() {
 		
-		WindowBatch firstBatch = WindowBatchFactory.newInstance(Utils.BATCH, firstBuffer, firstWindow, firstSchema);
-		WindowBatch secondBatch = WindowBatchFactory.newInstance(Utils.BATCH, secondBuffer, secondWindow, secondSchema);
+		int taskid = this.getTaskNumber();
+		
+		int firstFree = (firstNextIndex - firstTupleSize) & firstMask;
+		int secondFree = (secondNextIndex - secondTupleSize) & secondMask;
+		
+		WindowBatch firstBatch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, firstFree, firstBuffer, firstWindow, firstSchema);
+		WindowBatch secondBatch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, secondFree, secondBuffer, secondWindow, secondSchema);
 	
 		firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
 		secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
 		
-		int taskid = this.getTaskNumber();
-		int firstFree = (firstNextIndex - firstTupleSize) & firstMask;
-		int secondFree = (secondNextIndex - secondTupleSize) & secondMask;
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);
 
 //		System.out.println(String.format("[DBG] FIRST  window batch starts at %10d ends at %10d free at %10d", firstStartIndex, firstEndIndex, firstFree));

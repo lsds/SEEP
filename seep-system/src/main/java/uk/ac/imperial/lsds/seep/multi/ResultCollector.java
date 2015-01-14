@@ -5,7 +5,11 @@ import uk.ac.imperial.lsds.seep.multi.join.JoinResultHandler;
 public class ResultCollector {
 
 	public static void forwardAndFree(ResultHandler handler, SubQuery query,
-			IQueryBuffer buffer, int taskid, int freeOffset) {
+			IQueryBuffer buffer, int taskid, int freeOffset, boolean GPU) {
+		
+		if (taskid < 0) /* Invalid task id */
+			return ;
+		
 		int idx = taskid % handler.SLOTS;
 		int index;
 		int next;
@@ -22,20 +26,26 @@ public class ResultCollector {
 			handler.offsets.set(idx, freeOffset);
 			handler.results.set(idx, buffer);
 			index = handler.offsets.getAndSet(handler.next, -1);
-			while (index > 0) {
+			int count = 0;
+			while (index >= 0) {
 				/*
 				 * Do the actual result forwarding
 				 */
 				if (query.getDownstreamSubQuery() != null)
 					query.getDownstreamSubQuery().getTaskDispatcher()
 							.dispatch(handler.results.get(index).array());
-
+				
+				count ++;
+				
 				handler.freeBuffer.free(index);
 				handler.slots.lazySet(handler.next, 1);
 				next = (handler.next + 1) % handler.SLOTS;
 				index = handler.offsets.getAndSet(next, -1);
 				handler.next = next;
 			}
+			// if (count > 0 && (! GPU))
+			// 	System.out.println (String.format("[DBG] task %4d count %10d", taskid, count));
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

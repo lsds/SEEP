@@ -118,7 +118,9 @@ gpuContextP gpu_context_switch (gpuQueryP p) {
 	return p->contexts[idx];
 }
 
-int gpu_query_exec (gpuQueryP q, void *input, void *output, size_t threads, size_t threadsPerGroup) {
+int gpu_query_exec (gpuQueryP q, size_t threads, size_t threadsPerGroup,
+		queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
+
 	if (! q)
 		return -1;
 	gpuContextP p = gpu_context_switch (q);
@@ -127,54 +129,16 @@ int gpu_query_exec (gpuQueryP q, void *input, void *output, size_t threads, size
 	gpu_context_waitForWriteEvent (p);
 
 	/* Write input */
-	gpu_context_writeInput (p, input);
+	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 
 	/* Wait for read event */
 	gpu_context_waitForReadEvent (p);
 
 	/* Read output */
-	gpu_context_readOutput (p, output);
+	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
 	/* Submit task */
 	gpu_context_submitTask (p, threads, threadsPerGroup);
 
 	return 0;
 }
-
-//void gpu_exec () { /* Execute task within current context */
-//
-//	gpuContextP q = contexts[current_context];
-//	gpu_context_switch (q);
-//	/*
-//	*/
-//
-//	/* Wait for write event */
-//	wait_for_event (q->write_event);
-//	/*
-//	Make sure the write_event is not queried until
-//	the second invocation.
-//	*/
-//
-//	/* Write input */
-//	write_input (q->theInput);
-//	/*
-//	This is a callback to Java. The query operator holds pointers
-//	*/
-//
-//	/* Start task */
-//	submit_task ();
-//
-//	/*
-//	Tasks can be submitted before we read because, although
-//	it is a requirement to finish the execution of the previous
-//	task before the new one begins, the task flow blocks on
-//	clWaitForEvent (q->read_event), not clFinish(q->commandQueue).
-//	*/
-//	/* Wait for read event */
-//	wait_for_event (q->read_event);
-//
-//	/* Read output */
-//	read_output (q->theOutput);
-//}
-
-

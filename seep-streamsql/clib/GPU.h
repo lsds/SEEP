@@ -6,6 +6,14 @@
 
 #include <jni.h>
 
+typedef struct query_operator *queryOperatorP;
+typedef struct query_operator {
+	/* void (*setKernels) (cl_kernel, gpuContextP, int *); */
+	void (*writeInput) (gpuContextP, JNIEnv *, jobject, int, int, int);
+	void (*readOutput) (gpuContextP, JNIEnv *, jobject, int, int, int);
+	void (*execKernel) ();
+} query_operator_t;
+
 void gpu_init ();
 
 void gpu_free ();
@@ -17,14 +25,9 @@ int gpu_setInput (int, int, int);
 
 int gpu_setOutput (int, int, int, int);
 
-int gpu_setKernel (int, int, const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
+int gpu_setKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *), int *);
 
 /* Execute task */
-int gpu_exec (int, void *, void *, size_t, size_t);
-
-int gpu_execute (int, size_t, size_t,
-		void (*write_callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
-		void  (*read_callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
-		JNIenv *, jobject);
+int gpu_execute (int, size_t, size_t, queryOperatorP, JNIEnv *, jobject);
 
 #endif /* SEEP_GPU_H_ */

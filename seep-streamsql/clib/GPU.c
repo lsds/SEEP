@@ -29,8 +29,8 @@ void callback_setKernelReduce  (cl_kernel, gpuContextP, int *);
 void callback_setKernelSelect  (cl_kernel, gpuContextP, int *);
 void callback_setKernelCompact (cl_kernel, gpuContextP, int *);
 
-void callback_writeInput ();
-void callback_writeInput ();
+void callback_writeInput (gpuContextP, JNIEnv *, jobject, int, int, int);
+void callback_readOutput (gpuContextP, JNIEnv *, jobject, int, int, int);
 
 static void setPlatform () {
 	int error = 0;
@@ -125,31 +125,21 @@ int gpu_setKernel (int qid, int ndx, const char *name,
 	return gpu_query_setKernel (p, ndx, name, callback, args);
 }
 
-int gpu_exec (int qid, void *input, void *output, size_t threads, size_t threadsPerGroup) {
+int gpu_exec (int qid, size_t threads, size_t threadsPerGroup,
+		queryOperatorP operator, JNIEnv *env, jobject obj) {
 	if (qid < 0 || qid >= Q)
 		return -1;
 	gpuQueryP p = queries[qid];
-	return gpu_query_exec (p, input, output, threads, threadsPerGroup);
-}
-
-int gpu_execute (int qid, size_t threads, size_t threadsPerGroup,
-		void (*write_callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
-		void  (*read_callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
-		JNIenv *env, jobject obj) {
-	if (qid < 0 || qid >= Q)
-		return -1;
-	gpuQueryP p = queries[qid];
-	return gpu_query_execute (p, threads, threadsPerGroup,
-			write_callback, read_callback, env, obj, qid);
+	return gpu_query_exec (p, threads, threadsPerGroup, operator, env, obj, qid);
 }
 
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_init
-(JNIEnv *env, jobject obj) {
+(JNIEnv *env, jobject obj, jint N) {
 
 	(void) env;
 	(void) obj;
 
-	gpu_init ();
+	gpu_init (N);
 
 	return 0;
 }
@@ -197,20 +187,21 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_free
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_execute
 (JNIEnv *env, jobject obj, jint qid, jint threads, jint threadsPerGroup) {
 
-	jclass class = (*env)->GetObjectClass (env, obj);
-
-	jmethodID writeMethod = (*env)->GetMethodID (env, class,
-			"inputDataMovementCallback",  "(IIJII)V");
-	if (! writeMethod) {
-		fprintf(stderr, "JNI error: failed to acquire write method pointer\n");
+	/* Create operator */
+	queryOperatorP operator = (queryOperatorP) malloc (sizeof(query_operator_t));
+	if (! operator) {
+		fprintf(stderr, "fatal error: out of memory\n");
 		exit(1);
 	}
-	jmethodID readMethod = (*env)->GetMethodID (env, class,
-			"outputDataMovementCallback", "(IIJII)V");
-	if (! readMethod) {
-		fprintf(stderr, "JNI error: failed to acquire read method pointer\n");
-		exit(1);
-	}
+	/* Currently, we assume the same execution pattern for all queries */
+	operator->writeInput = callback_writeInput;
+	operator->readOutput = callback_readOutput;
+	operator->execKernel = NULL;
+	gpu_exec (qid, (size_t) threads, (size_t) threadsPerGroup, operator, env, obj);
+	/* Free operator */
+	if (operator)
+		free (operator);
+	return 0;
 }
 
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelDummy
@@ -260,7 +251,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKerne
 }
 
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelReduce
-(JNIEnv *env, jobject obj, jint qid, jintArray args) {
+(JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) obj;
 
@@ -277,7 +268,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKerne
 
 void callback_setKernelDummy (cl_kernel kernel, gpuContextP context, int *constants) {
 
-	(void *) &constants[0];
+	(void) constants;
 
 	int error = 0;
 	error |= clSetKernelArg (
@@ -476,7 +467,6 @@ void callback_setKernelCompact (cl_kernel kernel, gpuContextP context, int *cons
 	int      tuples = constants[1];
 	int     _bundle = constants[2];
 	int     bundles = constants[3];
-	int buffer_size = constants[4]; /* Local buffer memory size */
 
 	int error = 0;
 	/* Set constant arguments */
@@ -519,7 +509,15 @@ void callback_setKernelCompact (cl_kernel kernel, gpuContextP context, int *cons
 }
 
 void callback_writeInput (gpuContextP context,
-		JNIEnv *env, jobject obj, jmethodID method, int qid, int ndx, int offset) {
+		JNIEnv *env, jobject obj, int qid, int ndx, int offset) {
+
+	jclass class = (*env)->GetObjectClass (env, obj);
+	jmethodID method = (*env)->GetMethodID (env, class,
+			"inputDataMovementCallback",  "(IIJII)V");
+	if (! method) {
+		fprintf(stderr, "JNI error: failed to acquire write method pointer\n");
+		exit(1);
+	}
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
 			env, obj, method,
@@ -528,11 +526,21 @@ void callback_writeInput (gpuContextP context,
 			(long) (context->kernelInput.inputs[ndx]->mapped_buffer),
 			context->kernelInput.inputs[ndx]->size,
 			offset);
+
+	(*env)->DeleteLocalRef(env, class);
 	return ;
 }
 
 void callback_readOutput (gpuContextP context,
-		JNIEnv *env, jobject obj, jmethodID method, int qid, int ndx, int offset) {
+		JNIEnv *env, jobject obj, int qid, int ndx, int offset) {
+
+	jclass class = (*env)->GetObjectClass (env, obj);
+	jmethodID method = (*env)->GetMethodID (env, class,
+			"outputDataMovementCallback", "(IIJII)V");
+	if (! method) {
+		fprintf(stderr, "JNI error: failed to acquire read method pointer\n");
+		exit(1);
+	}
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
 			env, obj, method,
@@ -541,5 +549,7 @@ void callback_readOutput (gpuContextP context,
 			(long) (context->kernelOutput.outputs[ndx]->mapped_buffer),
 			context->kernelInput.inputs[ndx]->size,
 			offset);
+
+	(*env)->DeleteLocalRef(env, class);
 	return;
 }

@@ -14,6 +14,9 @@ public class WindowBatch {
 	private WindowDefinition windowDefinition;
 	private ITupleSchema schema;
 	
+	private int taskId;
+	private int freeOffset;
+	
 	private int batchStartPointer;
 	private int batchEndPointer;
 	
@@ -27,15 +30,19 @@ public class WindowBatch {
 	private long batchEndTime;
 	
 	public WindowBatch () {
-		this(0, null, null, null);
+		this(0, 0, 0, null, null, null);
 	}
 	
 	public WindowBatch (int batchSize, 
+                        int taskId,
+                        int freeOffset,
                         IQueryBuffer buffer, 
                         WindowDefinition windowDefinition, 
                         ITupleSchema schema) {
 		
 		this.batchSize = batchSize;
+		this.taskId = taskId;
+		this.freeOffset = freeOffset;
 		this.buffer = buffer;
 		this.windowDefinition = windowDefinition;
 		this.schema = schema;
@@ -52,11 +59,15 @@ public class WindowBatch {
 	}
 	
 	public void set (int batchSize, 
+                     int taskId,
+                     int freeOffset,
                      IQueryBuffer buffer, 
                      WindowDefinition windowDefinition, 
                      ITupleSchema schema) {
 		
 		this.batchSize = batchSize;
+		this.taskId = taskId;
+		this.freeOffset = freeOffset;
 		this.buffer = buffer;
 		this.windowDefinition = windowDefinition;
 		this.schema = schema;
@@ -70,6 +81,22 @@ public class WindowBatch {
 		
 		this.batchStartTime = -1;
 		this.batchEndTime = -1;
+	}
+	
+	public void setTaskId (int taskId) {
+		this.taskId = taskId;
+	}
+	
+	public int getTaskId () {
+		return this.taskId;
+	}
+
+	public int getFreeOffset () {
+		return freeOffset;
+	}
+	
+	public void setFreeOffset (int freeOffset) {
+		this.freeOffset = freeOffset;
 	}
 	
 	public void setBatchPointers (int batchStartPointer, int batchEndPointer) {

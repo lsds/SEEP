@@ -128,6 +128,7 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	clRetainEvent(q->read_event);
 	return ;
 }
 
@@ -141,6 +142,7 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	clRetainEvent(q->write_event);
 	return ;
 }
 
@@ -152,11 +154,6 @@ void gpu_context_flush (gpuContextP q) {
 void gpu_context_finish (gpuContextP q) {
 	clFinish (q->queue[0]);
 	clFinish (q->queue[1]);
-}
-
-void gpu_context_writeInput (gpuContextP q, void *input) {
-	memcpy (q->kernelInput.inputs[0]->mapped_buffer, input, q->kernelInput.inputs[0]->size);
-	return;
 }
 
 void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGroup) {
@@ -202,16 +199,25 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		exit (1);
 	}
 
-
 	/* Flush command queues */
 	gpu_context_flush (q);
-	q->scheduled ++;
+	q->scheduled = 1;
 
 	return;
 }
 
-void gpu_context_readOutput (gpuContextP q, void *output) {
-	memcpy (output, q->kernelOutput.outputs[0]->mapped_buffer, q->kernelOutput.outputs[0]->size);
+void gpu_context_writeInput (gpuContextP q,
+		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
+		JNIEnv *env, jobject obj, int qid) {
+
+	(*callback) (q, env, obj, qid, 0, 0);
 	return;
 }
 
+void gpu_context_readOutput (gpuContextP q,
+		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
+		JNIEnv *env, jobject obj, int qid) {
+
+	(*callback) (q, env, obj, qid, 0, 0);
+	return;
+}

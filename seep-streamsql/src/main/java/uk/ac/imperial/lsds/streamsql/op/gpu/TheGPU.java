@@ -37,10 +37,19 @@ public class TheGPU {
 	public static TheGPU getInstance () { return instance; }
 	
 	private byte [] inputArray;
+	private int start;
+	private int end;
+	
 	private byte [] outputArray;
 	
 	public void setInputBuffer (byte [] inputArray) {
+		setInputBuffer (inputArray, 0, inputArray.length);
+	}
+	
+	public void setInputBuffer(byte [] inputArray, int start, int end) {
 		this.inputArray = inputArray;
+		this.start = start;
+		this.end = end;
 	}
 	
 	public void setOutputBuffer (byte [] outputArray) {
@@ -48,6 +57,7 @@ public class TheGPU {
 	}
 	
 	public void inputDataMovementCallback (int qid, int ndx, long inputAddr, int size, int offset) {
+		
 		theUnsafe.copyMemory (
 				inputArray, 
 				Unsafe.ARRAY_BYTE_BASE_OFFSET + offset, 
@@ -55,6 +65,25 @@ public class TheGPU {
 				inputAddr, 
 				size
 			);
+		/*
+		if (end > start) {
+			theUnsafe.copyMemory (
+				this.inputArray, 
+				Unsafe.ARRAY_BYTE_BASE_OFFSET + start, 
+				null, 
+				inputAddr, 
+				end - start
+			);
+		} else {
+			//
+			// TODO: copy in two parts: 
+			// 1) from start, `size - start` bytes; and
+			// 2) from 0, `end` bytes
+			//
+			System.err.println("Fatal error.");
+			System.exit(1);
+		}
+		*/
 	}
 	
 	public void outputDataMovementCallback (int qid, int ndx, long outputAddr, int size, int offset) {
@@ -67,7 +96,7 @@ public class TheGPU {
 			);
 	}
 	
-	public native int init ();
+	public native int init (int N);
 	public native int getQuery (String source, int kernels, int inputs, int outputs);
 	public native int setInput (int queryId, int index, int size);
 	public native int setOutput (int queryId, int index, int size, int writeOnly);

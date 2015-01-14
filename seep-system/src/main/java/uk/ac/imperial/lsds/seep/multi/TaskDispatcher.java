@@ -110,14 +110,16 @@ public class TaskDispatcher implements ITaskDispatcher {
 		WindowBatch batch;
 		int taskid;
 		
-		/* System.out.println(
-			String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
-					p, q, free, t_, _t)); */
+//		 System.out.println(
+//			String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
+//					p, q, free, t_, _t)); 
 		
 		if (q <= p)
 			q += buffer.capacity();
 		
-		batch = WindowBatchFactory.newInstance(Utils.BATCH, buffer, window, schema);
+		taskid = this.getTaskNumber();
+		
+		batch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, (int) free, buffer, window, schema);
 		if (window.isRangeBased()) {
 			if (buffer.getLong((int) p) > _t)
 				batch.cancel();
@@ -127,27 +129,30 @@ public class TaskDispatcher implements ITaskDispatcher {
 		} else
 			batch.setBatchPointers((int) p, (int) q);
 		
+		
 		/* batch.initWindowPointers();
 		batch.debug(); */
 		
-		taskid = this.getTaskNumber();
 		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
 		
 		if (Utils.HYBRID) {
 			/* Round-robin submission to CPU and GPU executors */
-			/* if (taskid % 3 == 0) {
+			/*
+			if ((taskid * 10) % 21 == 0) {
+				workerQueue.add(task);
+			} else {
 				task.setGPU(true);
 				_workerQueue.add(task);
-			} else {
-				workerQueue.add(task);
 			}
 			*/
+			
 			if (workerQueue.size() < _workerQueue.size())
 				workerQueue.add(task);
 			else {
 				task.setGPU(true);
 				_workerQueue.add(task);
 			}
+			
 		} else {
 			workerQueue.add(task);
 		}

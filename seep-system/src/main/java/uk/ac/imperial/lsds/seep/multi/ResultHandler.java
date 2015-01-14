@@ -20,6 +20,7 @@ public class ResultHandler {
 		this.freeBuffer = freeBuffer;
 		slots = new AtomicIntegerArray(SLOTS);
 		offsets = new AtomicIntegerArray(SLOTS);
+		next = 0;
 		for (int i = 0; i < SLOTS; i++) {
 			slots.set(i, 1);
 			offsets.set(i, -1);

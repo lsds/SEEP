@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
  * Method:    init
- * Signature: ()I
+ * Signature: (I)I
  */
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_init
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jint);
 
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
@@ -34,10 +34,10 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setInput
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
  * Method:    setOutput
- * Signature: (III)I
+ * Signature: (IIII)I
  */
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setOutput
-  (JNIEnv *, jobject, jint, jint, jint);
+  (JNIEnv *, jobject, jint, jint, jint, jint);
 
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
@@ -57,35 +57,35 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_free
 
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
- * Method:    setKernelIdentity
- * Signature: (I)I
+ * Method:    setKernelDummy
+ * Signature: (I[I)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelIdentity
-  (JNIEnv *, jobject, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelDummy
+  (JNIEnv *, jobject, jint, jintArray);
 
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
- * Method:    setKernelProjection
- * Signature: (I)I
+ * Method:    setKernelProject
+ * Signature: (I[I)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelProjection
-  (JNIEnv *, jobject, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelProject
+  (JNIEnv *, jobject, jint, jintArray);
 
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
- * Method:    setKernelSelection
- * Signature: (I)I
+ * Method:    setKernelSelect
+ * Signature: (I[I)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelSelection
-  (JNIEnv *, jobject, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelSelect
+  (JNIEnv *, jobject, jint, jintArray);
 
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
- * Method:    setKernelReduction
- * Signature: (I)I
+ * Method:    setKernelReduce
+ * Signature: (I[I)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelReduction
-  (JNIEnv *, jobject, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelReduce
+  (JNIEnv *, jobject, jint, jintArray);
 
 #ifdef __cplusplus
 }

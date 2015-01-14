@@ -6,6 +6,8 @@
 #include "inputbuffer.h"
 #include "outputbuffer.h"
 
+#include <jni.h>
+
 #include <CL/cl.h>
 
 typedef struct gpu_kernel_input {
@@ -61,10 +63,14 @@ void gpu_context_flush (gpuContextP);
 
 void gpu_context_finish (gpuContextP);
 
-void gpu_context_writeInput (gpuContextP, void *);
-
 void gpu_context_submitTask (gpuContextP, size_t, size_t);
 
-void gpu_context_readOutput (gpuContextP, void *);
+void gpu_context_writeInput (gpuContextP,
+		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
+		JNIEnv *, jobject, int);
+
+void gpu_context_readOutput (gpuContextP,
+		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
+		JNIEnv *, jobject, int);
 
 #endif /* __GPU_CONTEXT_H_ */

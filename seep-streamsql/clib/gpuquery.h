@@ -3,6 +3,10 @@
 
 #include "gpucontext.h"
 
+#include "GPU.h"
+
+#include <jni.h>
+
 typedef struct gpu_query *gpuQueryP;
 typedef struct gpu_query {
 	
@@ -30,6 +34,7 @@ int gpu_query_setKernel (gpuQueryP, int,
 		const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
 
 /* Execute task */
-int gpu_query_exec (gpuQueryP, void *, void *, size_t, size_t);
+int gpu_query_exec (gpuQueryP, size_t, size_t, queryOperatorP,
+		JNIEnv *, jobject, int);
 
 #endif /* __GPU_QUERY_H_ */
