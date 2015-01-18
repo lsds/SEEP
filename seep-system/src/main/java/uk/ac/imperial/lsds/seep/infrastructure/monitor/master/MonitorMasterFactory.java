@@ -54,4 +54,9 @@ public class MonitorMasterFactory implements Factory<MonitorMaster> {
                             = new SeepInfrastructureAdaptor(infrastructure);
         return new MonitorMaster(adaptor, rules, masterPort);
     }
+
+    @Override
+    public MonitorMaster create(Object... args) {
+        return create();
+    }
 }

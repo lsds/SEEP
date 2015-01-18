@@ -200,7 +200,9 @@ public class PolicyRuleEvaluator
             // works based on the assumption that metrics readings are offered 
             // with always increasing timestamps.
             if(readingAge.toStandardSeconds()
-                        .isLessThan(maximumAge.toStandardSeconds())) {
+                        .isLessThan(maximumAge.toStandardSeconds()) 
+                || readingAge.toStandardSeconds()
+                        .equals(maximumAge.toStandardSeconds())) {
                 done = true;
             } else {
                 pastReadings.poll();
