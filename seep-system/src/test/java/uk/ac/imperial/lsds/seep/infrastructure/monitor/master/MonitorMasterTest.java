@@ -15,6 +15,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.comm.serialization.MetricsDeserializer;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.PolicyRules;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.evaluate.AbstractEvaluator;
@@ -46,6 +47,7 @@ public class MonitorMasterTest {
     }
     
     @Test
+    @Ignore
     public void testStartSlaveConnect() throws InterruptedException {
         System.out.println("testStartSlaveConnect");
         

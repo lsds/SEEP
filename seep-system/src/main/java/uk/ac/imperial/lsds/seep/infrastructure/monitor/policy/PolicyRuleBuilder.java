@@ -10,16 +10,23 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.infrastructure.monitor.policy;
 
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.Builder;
 import java.util.ArrayList;
 import java.util.List;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.Builder;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.action.Action;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.action.ScaleInAction;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.action.ScaleOutAction;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricName;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.operator.Operator;
-import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.scale.factor.ScaleFactor;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.scale.constraint.ScaleConstraint;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.scale.factor.ScaleFactor;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.ActionSyntax;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.GuardTimeThresholdSyntax;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.MetricSyntax;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.MetricThresholdSyntax;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.ScaleConstraintSyntax;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.ScaleFactorSyntax;
+import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.syntax.TimeThresholdSyntax;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.threshold.MetricThreshold;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.threshold.TimeThreshold;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.trigger.ActionTrigger;
@@ -28,7 +35,9 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.trigger.ActionTrig
  * 
  * @author mrouaux
  */
-public class PolicyRuleBuilder implements Builder<PolicyRule> {
+public class PolicyRuleBuilder implements Builder<PolicyRule>,
+    ActionSyntax, MetricSyntax, MetricThresholdSyntax, TimeThresholdSyntax,
+        ScaleConstraintSyntax, ScaleFactorSyntax, GuardTimeThresholdSyntax {
 	
     /**
      * Listener to notify others when the builder creates a new PolicyRule instance.
@@ -102,48 +111,57 @@ public class PolicyRuleBuilder implements Builder<PolicyRule> {
         this.scaleConstraint = null;
 	}
 
+    @Override
 	public PolicyRuleBuilder scaleIn(final Operator operator) {
 		this.action = new ScaleInAction();
         this.operator = operator;
 		return this;
 	}
 	
+    @Override
 	public PolicyRuleBuilder scaleOut(final Operator operator) {
 		this.action = new ScaleOutAction();
         this.operator = operator;
 		return this;		
 	}
     
+    @Override
 	public PolicyRuleBuilder by(final ScaleFactor scaleFactor) {
 		this.scaleFactor = scaleFactor;
 		return this;
 	}
 	
+    @Override
 	public PolicyRuleBuilder butNeverBelow(final ScaleConstraint scaleConstraint) {
 		this.scaleConstraint = scaleConstraint;
 		return this;
 	}
 	
+    @Override
 	public PolicyRuleBuilder butNeverAbove(final ScaleConstraint scaleConstraint) {
 		this.scaleConstraint = scaleConstraint;
 		return this;
 	}
     
+    @Override
     public PolicyRuleBuilder when(MetricName metricName) {
         this.triggerMetricName = metricName;
         return this;
     }
     
+    @Override
     public PolicyRuleBuilder and(MetricName metricName) {
         this.triggerMetricName = metricName;
         return this;
     }
 
+    @Override
     public PolicyRuleBuilder is(MetricThreshold metricThreshold) {
         this.triggerMetricThreshold = metricThreshold;
         return this;
     }
     
+    @Override
     public PolicyRuleBuilder forAtLeast(TimeThreshold timeThreshold) {
         this.triggerTimeThreshold = timeThreshold;
         
@@ -158,11 +176,13 @@ public class PolicyRuleBuilder implements Builder<PolicyRule> {
         return this;
     }
 	
+    @Override
     public PolicyRuleBuilder withNoScaleInSince(TimeThreshold scaleGuardTime) {
         this.scaleGuardTime = scaleGuardTime;
         return this;
     }
 
+    @Override
     public PolicyRuleBuilder withNoScaleOutSince(TimeThreshold scaleGuardTime) {
         this.scaleGuardTime = scaleGuardTime;
         return this;

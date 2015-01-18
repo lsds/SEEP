@@ -79,8 +79,8 @@ public class ActionTriggerTest {
     }
     
     @Test
-    public void testTriggerWithSingleReadingTimeTrueAndValueTrue() {
-        System.out.println("testTriggerWithSingleReadingTimeTrueAndValueTrue");
+    public void testTriggerWithSingleReading() {
+        System.out.println("testTriggerWithSingleReading");
         
         List<MetricReading> readings = new ArrayList<MetricReading>();
         MetricReading r1 = createFakeReading(
@@ -92,11 +92,11 @@ public class ActionTriggerTest {
 
         when(mockTimeReference.now()).thenReturn(currentTime);
         
-        when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
-                    .thenReturn(Boolean.TRUE);
-                
-        when(mockValueThreshold.evaluate(eq(r1.getValues().get(MetricName.CPU_UTILIZATION))))
-                    .thenReturn(Boolean.TRUE);
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(1));
+        
+        verify(mockTimeThreshold, times(0)).evaluate(any(Period.class));
+        verify(mockValueThreshold, times(0)).evaluate(any(MetricValue.class));
         
         ActionTrigger trigger = new ActionTrigger(
                                         mockValueThreshold,
@@ -104,8 +104,8 @@ public class ActionTriggerTest {
                                         MetricName.CPU_UTILIZATION);
         trigger.evaluate(readings, mockTimeReference);
         
-        assertTrue("Trigger should have fired", trigger.isFired());
-        assertTrue("Trigger state should have changed ", trigger.hasChanged());
+        assertFalse("Trigger shouldn't have fired", trigger.isFired());
+        assertFalse("Trigger state shouldn't have changed ", trigger.hasChanged());
     }
 
     @Test
@@ -121,6 +121,9 @@ public class ActionTriggerTest {
         Instant currentTime = createInstant(2013, 12, 29, 10, 33, 0);
 
         when(mockTimeReference.now()).thenReturn(currentTime);
+        
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(1));
         
         when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
                     .thenReturn(Boolean.TRUE);
@@ -151,7 +154,10 @@ public class ActionTriggerTest {
         Instant currentTime = createInstant(2013, 12, 29, 10, 33, 0);
 
         when(mockTimeReference.now()).thenReturn(currentTime);
-        
+
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(1));
+
         when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
                     .thenReturn(Boolean.FALSE);
                 
@@ -195,6 +201,8 @@ public class ActionTriggerTest {
         when(mockTimeReference.now()).thenReturn(currentTime);
         
         // Mock expectations for time threshold
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(1));
         when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
                     .thenReturn(Boolean.TRUE);
         when(mockTimeThreshold.evaluate(eq(new Period(r2.getTimestamp(), currentTime))))
@@ -247,6 +255,8 @@ public class ActionTriggerTest {
         when(mockTimeReference.now()).thenReturn(currentTime);
         
         // Mock expectations for time threshold
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(1));        
         when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
                     .thenReturn(Boolean.TRUE);
         when(mockTimeThreshold.evaluate(eq(new Period(r2.getTimestamp(), currentTime))))
@@ -303,9 +313,10 @@ public class ActionTriggerTest {
         when(mockTimeReference.now()).thenReturn(currentTime);
         
         // Mock expectations for time threshold
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(5));
         when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
-                    .thenReturn(Boolean.FALSE);
-        
+                    .thenReturn(Boolean.FALSE);        
         when(mockTimeThreshold.evaluate(eq(new Period(r2.getTimestamp(), currentTime))))
                     .thenReturn(Boolean.TRUE);
         when(mockTimeThreshold.evaluate(eq(new Period(r3.getTimestamp(), currentTime))))
@@ -358,6 +369,8 @@ public class ActionTriggerTest {
         when(mockTimeReference.now()).thenReturn(currentTime);
         
         // Mock expectations for time threshold
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(1));
         when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
                     .thenReturn(Boolean.TRUE);
         when(mockTimeThreshold.evaluate(eq(new Period(r2.getTimestamp(), currentTime))))
@@ -382,4 +395,112 @@ public class ActionTriggerTest {
         assertFalse("Trigger shouldn't have fired", trigger.isFired());
         assertFalse("Trigger state shouldn't have changed ", trigger.hasChanged());
     }
+    
+    @Test
+    public void testTriggerWithNotEnoughReadings() {
+        System.out.println("testTriggerWithNotEnoughReadings");
+        
+        List<MetricReading> readings = new ArrayList<MetricReading>();
+ 
+        MetricReading r1 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 30, 0),
+                                MetricName.CPU_UTILIZATION, percent(50));
+        
+        MetricReading r2 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 31, 0),
+                                MetricName.CPU_UTILIZATION, percent(60));
+        
+        MetricReading r3 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 31, 30),
+                                MetricName.CPU_UTILIZATION, percent(70));
+        
+        readings.add(r1);
+        readings.add(r2);
+        readings.add(r3);
+        
+        Instant currentTime = createInstant(2013, 12, 29, 10, 33, 0);
+
+        when(mockTimeReference.now()).thenReturn(currentTime);
+        
+        // Mock expectations for time threshold
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(2));
+        
+        verify(mockTimeThreshold, times(0)).evaluate(any(Period.class));
+        
+        // Mock expectations for value threshold
+        verify(mockValueThreshold, times(0)).evaluate(any(MetricValue.class));
+        
+        ActionTrigger trigger = new ActionTrigger(
+                                        mockValueThreshold,
+                                        mockTimeThreshold,
+                                        MetricName.CPU_UTILIZATION);
+        
+        trigger.evaluate(readings, mockTimeReference);
+        assertFalse("Trigger shouldn't have fired", trigger.isFired());
+        assertFalse("Trigger state shouldn't have changed ", trigger.hasChanged());
+    }
+    
+    @Test
+    public void testTriggerWithMultipleReadingsTimeTrueAndValueTrueWithinThreshold() {
+        System.out.println("testTriggerWithMultipleReadingsTimeTrueAndValueTrueWithinThreshold");
+        
+        List<MetricReading> readings = new ArrayList<MetricReading>();
+ 
+        MetricReading r1 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 30, 0),
+                                MetricName.CPU_UTILIZATION, percent(50));
+        
+        MetricReading r2 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 31, 0),
+                                MetricName.CPU_UTILIZATION, percent(60));
+        
+        MetricReading r3 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 31, 30),
+                                MetricName.CPU_UTILIZATION, percent(70));
+        
+        MetricReading r4 = createFakeReading(
+                                createInstant(2013, 12, 29, 10, 31, 48),
+                                MetricName.CPU_UTILIZATION, percent(60));        
+        readings.add(r1);
+        readings.add(r2);
+        readings.add(r3);
+        readings.add(r4);
+        
+        Instant currentTime = createInstant(2013, 12, 29, 10, 33, 0);
+
+        when(mockTimeReference.now()).thenReturn(currentTime);
+        
+        // Mock expectations for time threshold
+        when(mockTimeThreshold.toPeriod())
+                    .thenReturn(new Period().withMinutes(2));
+        when(mockTimeThreshold.evaluate(eq(new Period(r1.getTimestamp(), currentTime))))
+                    .thenReturn(Boolean.TRUE);
+        when(mockTimeThreshold.evaluate(eq(new Period(r2.getTimestamp(), currentTime))))
+                    .thenReturn(Boolean.TRUE);
+        when(mockTimeThreshold.evaluate(eq(new Period(r3.getTimestamp(), currentTime))))
+                    .thenReturn(Boolean.TRUE);
+        when(mockTimeThreshold.evaluate(eq(new Period(r4.getTimestamp(), currentTime))))
+                    .thenReturn(Boolean.TRUE);
+        
+        // Mock expectations for value threshold
+        when(mockValueThreshold.evaluate(eq(r1.getValues().get(MetricName.CPU_UTILIZATION))))
+                    .thenReturn(Boolean.TRUE);
+        when(mockValueThreshold.evaluate(eq(r2.getValues().get(MetricName.CPU_UTILIZATION))))
+                    .thenReturn(Boolean.TRUE);
+        when(mockValueThreshold.evaluate(eq(r3.getValues().get(MetricName.CPU_UTILIZATION))))
+                    .thenReturn(Boolean.TRUE);
+        when(mockValueThreshold.evaluate(eq(r4.getValues().get(MetricName.CPU_UTILIZATION))))
+                    .thenReturn(Boolean.TRUE);
+        
+        ActionTrigger trigger = new ActionTrigger(
+                                        mockValueThreshold,
+                                        mockTimeThreshold,
+                                        MetricName.CPU_UTILIZATION);
+        trigger.evaluate(readings, mockTimeReference);
+        
+        assertTrue("Trigger should have fired", trigger.isFired());
+        assertTrue("Trigger state should have changed ", trigger.hasChanged());
+    }
+
 }

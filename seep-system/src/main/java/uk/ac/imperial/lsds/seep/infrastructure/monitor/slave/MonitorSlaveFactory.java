@@ -37,4 +37,15 @@ public class MonitorSlaveFactory implements Factory<MonitorSlave> {
     public MonitorSlave create() {
         return new MonitorSlave(operatorId, masterHost, masterPort, freqSeconds);
     }
+    
+    @Override
+    public MonitorSlave create(Object...args) {
+        // Use host address from arguments to factory method
+        if (args.length > 0) {
+            this.masterHost = ((args[0] instanceof String) && (args[0] != null))?
+                    (String)args[0] : GLOBALS.valueFor("mainAddr");
+        }
+        
+        return create();
+    }
 }

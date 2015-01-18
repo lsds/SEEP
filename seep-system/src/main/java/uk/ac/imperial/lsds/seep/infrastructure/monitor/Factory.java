@@ -23,4 +23,6 @@ public interface Factory<T> {
     
     T create();
     
+    T create(Object...args);
+    
 }

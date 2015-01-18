@@ -13,8 +13,10 @@ package uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.trigger;
 import java.util.List;
 import java.util.Objects;
 import org.joda.time.Period;
+import org.joda.time.Seconds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricName;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricValue;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.threshold.MetricThreshold;
@@ -82,36 +84,64 @@ public class ActionTrigger {
 
         // Determine the new state of the trigger depending on the result of
         // evaluating boh thresholds. Need to mark flag if state changes.
-        ActionTriggerState pastTriggerState = triggerState;        
+        ActionTriggerState pastTriggerState = triggerState;
         
-        int i = 0;
-        for(MetricReading r : readings) {
-            Period metricPeriod = new Period(r.getTimestamp(), time.now());
-            MetricValue metricValue = r.getValues().get(metricName);
+        boolean enoughReadings = true;
+        
+        // Check that we have enough readings to cover the entire time threshold
+        if ((readings != null) && (readings.size() > 0)) {
+            MetricReading mostRecentReading = readings.get(readings.size() - 1);
+            MetricReading leastRecentReading = readings.get(0);
+        
+            logger.info("Most recent reading [" + mostRecentReading.getTimestamp() + "]");
+            logger.info("Least recent reading [" + leastRecentReading.getTimestamp() + "]");
             
-            logger.info("Evaluating reading[" + i + "] value["
-                        + metricValue.toString() + "] period["
-                        + metricPeriod.toString() + "]");
-
-            // We evaluate the time threshold first, simple optimisation to be
-            // able to abort the iteration sooner (readings are guaranteed to be
-            // sorted by time of reception, from most recent to least recenet).
-            if(timeThreshold.evaluate(metricPeriod)) {
-                triggerState = valueThreshold.evaluate(metricValue)? 
-                                        ActionTriggerState.FIRED:
-                                        ActionTriggerState.NON_FIRED;
-
-                // If there is a reading within the time threshold for which
-                // the value evaluates to false (trigger is non-fired), then
-                // we can break from the evaluation loop.
-                if(triggerState.equals(ActionTriggerState.NON_FIRED)) {
-                    break;
-                }
+            Period readingsPeriod = new Period(
+                        leastRecentReading.getTimestamp(), 
+                        mostRecentReading.getTimestamp());
+            
+            int toleranceSeconds = new Double(0.1 
+                * timeThreshold.toPeriod().toStandardSeconds().getSeconds()).intValue();
+            
+            if (readingsPeriod.toStandardSeconds().isLessThan(
+                    timeThreshold.toPeriod().toStandardSeconds().minus(toleranceSeconds))) {
+                
+                logger.info("Not enough readings, only for last period[" + readingsPeriod + "]");
+                enoughReadings = false;
             }
-            
-            i++;
         }
         
+        // If we have enough readings, then we evaluate in detail
+        if (enoughReadings) {
+            int i = 0;
+            for(MetricReading r : readings) {
+                Period metricPeriod = new Period(r.getTimestamp(), time.now());
+                MetricValue metricValue = r.getValues().get(metricName);
+
+                logger.info("Evaluating reading[" + i + "] value["
+                            + metricValue.toString() + "] period["
+                            + metricPeriod.toString() + "]");
+
+                // We evaluate the time threshold first, simple optimisation to be
+                // able to abort the iteration sooner (readings are guaranteed to be
+                // sorted by time of reception, from most recent to least recent).
+                if(timeThreshold.evaluate(metricPeriod)) {
+                    triggerState = valueThreshold.evaluate(metricValue)? 
+                                            ActionTriggerState.FIRED:
+                                            ActionTriggerState.NON_FIRED;
+
+                    // If there is a reading within the time threshold for which
+                    // the value evaluates to false (trigger is non-fired), then
+                    // we can break from the evaluation loop.
+                    if(triggerState.equals(ActionTriggerState.NON_FIRED)) {
+                        break;
+                    }
+                }
+
+                i++;
+            }
+        }
+
         stateChanged = (triggerState != pastTriggerState);
         logger.info("New trigger state is [" + triggerState.toString() 
                             + "] changed[" + stateChanged + "]");

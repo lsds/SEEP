@@ -17,6 +17,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 import static org.hamcrest.Matchers.equalTo;
+import org.junit.Ignore;
 
 /**
  *
@@ -44,6 +45,7 @@ public class MonitorSlaveTest {
     }
     
     @Test
+    @Ignore
     public void testSlaveConnectToMaster() throws IOException, InterruptedException {
         System.out.println("testSlaveConnectToMaster");
         
