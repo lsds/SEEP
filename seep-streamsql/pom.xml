@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>seep</artifactId>
+    <groupId>uk.ac.imperial.lsds.seep</groupId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>..</relativePath>
+  </parent>
+  <artifactId>seep-streamsql</artifactId>
+  <name>seep-streamsql</name>
+  <dependencies>
+  	<dependency>
+  		<groupId>org.slf4j</groupId>
+  		<artifactId>slf4j-api</artifactId>
+  		<version>1.7.5</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.github.jsqlparser</groupId>
+  		<artifactId>jsqlparser</artifactId>
+  		<version>0.9</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>uk.ac.imperial.lsds.seep</groupId>
+  		<artifactId>seep-system</artifactId>
+  		<version>0.0.1-SNAPSHOT</version>
+  	</dependency>
+  </dependencies>
+  <properties>
+  	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+</project>
