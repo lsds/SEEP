@@ -161,11 +161,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (inWindowStartOffset != -1) {
 
 				keyOffsets = new HashMap<>();
+				windowBuffer.position(0);
 
 				int key, keyOffset;
 				float newValue, oldValue;
 				// for all the tuples in the window
-				while (inWindowStartOffset <= inWindowEndOffset) {
+				while (inWindowStartOffset < inWindowEndOffset) {
 
 					// get the key
 					key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset);
@@ -201,11 +202,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					} else {
 						// key exists already
 						keyOffset = keyOffsets.get(key);
+						
+						int inWindowStartOffsetNormed = inWindowStartOffset % inBuffer.capacity();
+						
 						// override timestamp
 						this.timestampReference.writeByteResult(inBuffer,
-								inSchema, inWindowStartOffset, windowBuffer,
+								inSchema, inWindowStartOffsetNormed, windowBuffer,
 								keyOffset);
-						
+
 						// check whether new value for aggregation attribute
 						// shall be written
 						oldValue = this.aggregationAttribute.eval(windowBuffer,
@@ -214,7 +218,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
 								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
 							this.aggregationAttribute.writeByteResult(inBuffer,
-									inSchema, inWindowStartOffset,
+									inSchema, inWindowStartOffsetNormed,
 									windowBuffer, keyOffset + outSchema.getOffsetForAttribute(1));
 					}
 
