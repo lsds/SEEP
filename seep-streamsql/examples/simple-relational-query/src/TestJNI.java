@@ -5,7 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import uk.ac.imperial.lsds.streamsql.op.gpu.GPU;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.GPU;
 
 /*
 import sun.nio.ch.DirectBuffer;

@@ -5,4 +5,6 @@ public interface ITask extends IWindowAPI {
 	public int run();
 
 	public void free();
+	
+	public void setGPU (boolean GPU);
 }

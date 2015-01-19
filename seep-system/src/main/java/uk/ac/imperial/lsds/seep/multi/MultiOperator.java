@@ -34,28 +34,28 @@ public class MultiOperator {
 
 	public void setup() {
 
-		if (Utils.HYBRID) {
-			/*
-			 * Allocate one thread for the GPU executor service, and the
-			 * remaining threads to the CPU executor service.
-			 */
-			if (threads < 2) {
-				throw new IllegalArgumentException(
-						"error: insufficient number of threads for hybrid execution mode");
-			}
-			/*
-			 * Allocate one out of `threads` workers to the GPU.
-			 */
-			this._queue = new ConcurrentLinkedQueue<ITask>();
-			this._workerPool = new TaskProcessorPool(1, _queue);
-			this._executor = Executors.newCachedThreadPool();
-			this._queue = _workerPool.start(_executor);
-
-			threads--;
-		}
+//		if (Utils.HYBRID) {
+//			/*
+//			 * Allocate one thread for the GPU executor service, and the
+//			 * remaining threads to the CPU executor service.
+//			 */
+//			if (threads < 2) {
+//				throw new IllegalArgumentException(
+//						"error: insufficient number of threads for hybrid execution mode");
+//			}
+//			/*
+//			 * Allocate one out of `threads` workers to the GPU.
+//			 */
+//			this._queue = new ConcurrentLinkedQueue<ITask>();
+//			this._workerPool = new TaskProcessorPool(1, _queue);
+//			this._executor = Executors.newCachedThreadPool();
+//			this._queue = _workerPool.start(_executor);
+//
+//			threads--;
+//		}
 
 		this.queue = new ConcurrentLinkedQueue<ITask>();
-		this.workerPool = new TaskProcessorPool(threads, queue);
+		this.workerPool = new TaskProcessorPool(threads, queue, Utils.HYBRID);
 		this.executor = Executors.newCachedThreadPool();
 		this.queue = workerPool.start(executor);
 

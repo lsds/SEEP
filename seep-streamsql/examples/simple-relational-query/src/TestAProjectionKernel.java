@@ -30,7 +30,7 @@ public class TestAProjectionKernel {
 			new Expression [] {
 				new LongColumnReference(0),
 				new IntColumnReference (1),
-				new IntColumnReference (2), //,
+				new IntColumnReference (2),
 				new IntColumnReference (3),
 				new IntColumnReference (4),
 				new IntColumnReference (5),
@@ -41,6 +41,8 @@ public class TestAProjectionKernel {
 		);
 		
 		System.out.println(String.format("[DBG] %s", projectionCode));
+		
+		
 		
 		MicroOperator uoperator = new MicroOperator (projectionCode, 1);
 		
@@ -64,7 +66,7 @@ public class TestAProjectionKernel {
 		try {
 			while (true) {
 				operator.processData (data);
-				// Thread.sleep(100L);
+				/* Thread.sleep(100L); */
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

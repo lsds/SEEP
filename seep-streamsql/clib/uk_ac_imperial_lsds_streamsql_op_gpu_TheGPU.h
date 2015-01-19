@@ -7,6 +7,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#undef uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_MAX_QUERIES
+#define uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_MAX_QUERIES 2L
+#undef uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_MAX_BUFFERS
+#define uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_MAX_BUFFERS 4L
 /*
  * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
  * Method:    init

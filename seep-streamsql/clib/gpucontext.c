@@ -50,6 +50,8 @@ gpuContextP gpu_context (
 		exit (1);
 	}
 	q->scheduled = 0; /* No read or write events scheduled */
+	q->readCount = 0;
+	q->writeCount = 0;
 	return q;
 }
 
@@ -108,6 +110,7 @@ void gpu_context_setOutput (gpuContextP q, int ndx, int size, int writeOnly) {
 			size, writeOnly);
 }
 
+#ifdef GPU_VERBOSE
 static int getEventReferenceCount (cl_event event) {
 	int error = 0;
 	cl_uint count = 0;
@@ -155,6 +158,7 @@ static char *getEventCommandType (cl_event event) {
 	} else
 		return getCommandType(type);
 }
+#endif
 
 void gpu_context_waitForReadEvent (gpuContextP q) {
 	if (q->scheduled < 1)
@@ -170,7 +174,21 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	q->readCount -= 1;
 	clReleaseEvent(q->read_event);
+	return ;
+}
+
+void gpu_context_waitForExecEvent (gpuContextP q) {
+	if (q->scheduled < 1)
+		return;
+	/* Wait for execute event */
+	int error = clWaitForEvents(1, &(q->exec_event));
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+	clReleaseEvent(q->exec_event);
 	return ;
 }
 
@@ -188,18 +206,32 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	q->writeCount -= 1;
 	clReleaseEvent(q->write_event);
 	return ;
 }
 
 void gpu_context_flush (gpuContextP q) {
-	clFlush (q->queue[0]);
-	clFlush (q->queue[1]);
+	int error = 0;
+	error |= clFlush (q->queue[0]);
+	error |= clFlush (q->queue[1]);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
 }
 
 void gpu_context_finish (gpuContextP q) {
-	clFinish (q->queue[0]);
-	clFinish (q->queue[1]);
+	if (q->scheduled < 1)
+		return;
+	/* There are tasks scheduled */
+	int error = 0;
+	error |= clFinish (q->queue[0]);
+	error |= clFinish (q->queue[1]);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
 }
 
 void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGroup) {
@@ -218,6 +250,8 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	q->writeCount += 1;
+
 	/* Execute */
 	error = clEnqueueNDRangeKernel (
 		q->queue[0],
@@ -227,10 +261,23 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		&threads,
 		&threadsPerGroup,
 		0, NULL, NULL);
+
+	/* Execute and get event notification */
+	/*
+	error = clEnqueueNDRangeKernel (
+		q->queue[0],
+		q->kernel.kernels[0]->kernel[0],
+		1,
+		NULL,
+		&threads,
+		&threadsPerGroup,
+		0, NULL, &q->exec_event);
+	*/
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+
 	/* Read */
 	error = clEnqueueReadBuffer (
 		q->queue[0],
@@ -244,6 +291,7 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	q->readCount += 1;
 
 	/* Flush command queues */
 	gpu_context_flush (q);
@@ -255,15 +303,17 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 void gpu_context_writeInput (gpuContextP q,
 		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
 		JNIEnv *env, jobject obj, int qid) {
-
-	(*callback) (q, env, obj, qid, 0, 0);
+	int idx;
+	for (idx = 0; idx < q->kernelInput.count; idx++)
+		(*callback) (q, env, obj, qid, idx, 0);
 	return;
 }
 
 void gpu_context_readOutput (gpuContextP q,
 		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
 		JNIEnv *env, jobject obj, int qid) {
-
-	(*callback) (q, env, obj, qid, 0, 0);
+	int idx;
+	for (idx = 0; idx < q->kernelOutput.count; idx++)
+		(*callback) (q, env, obj, qid, idx, 0);
 	return;
 }

@@ -41,7 +41,10 @@ typedef struct gpu_context {
 	cl_command_queue queue [2];
 	int scheduled;
 	cl_event read_event;
+	cl_event exec_event;
 	cl_event write_event;
+	long long readCount;
+	long long writeCount;
 } gpu_context_t;
 
 gpuContextP gpu_context (cl_device_id, cl_context, cl_program, int, int, int);
@@ -58,6 +61,8 @@ void gpu_context_setKernel (gpuContextP, int,
 void gpu_context_waitForReadEvent (gpuContextP);
 
 void gpu_context_waitForWriteEvent (gpuContextP);
+
+void gpu_context_waitForExecEvent (gpuContextP);
 
 void gpu_context_flush (gpuContextP);
 

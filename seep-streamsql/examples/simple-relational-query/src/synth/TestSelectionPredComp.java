@@ -14,7 +14,7 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.SelectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.SelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;

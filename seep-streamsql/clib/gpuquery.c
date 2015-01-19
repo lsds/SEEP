@@ -111,34 +111,49 @@ int gpu_query_setKernel (gpuQueryP q, int ndx, const char * name,
 }
 
 gpuContextP gpu_context_switch (gpuQueryP p) {
-	if (! p)
+	if (! p) {
+		fprintf (stderr, "error: null query\n");
 		return NULL;
-	int idx = (++p->ndx) % DEPTH;
-	dbg ("[DBG] switch to context %d\n", idx);
-	return p->contexts[idx];
+	}
+#ifdef GPU_VERBOSE
+	int current = (p->ndx) % DEPTH;
+#endif
+	int next = (++p->ndx) % DEPTH;
+#ifdef GPU_VERBOSE
+	if (current >= 0)
+		dbg ("[DBG] switch from %d (%lld read(s), %lld write(s)) to context %d\n",
+			current, p->contexts[current]->readCount, p->contexts[current]->writeCount, next);
+#endif
+	return p->contexts[next];
 }
 
 int gpu_query_exec (gpuQueryP q, size_t threads, size_t threadsPerGroup,
 		queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
-
 	if (! q)
 		return -1;
 	gpuContextP p = gpu_context_switch (q);
-
+	
+	gpu_context_finish (p);
+	
 	/* Wait for write event */
 	gpu_context_waitForWriteEvent (p);
 
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 
+	/* Wait for execute event */
+	/* gpu_context_waitForExecEvent (p); */
+
 	/* Wait for read event */
 	gpu_context_waitForReadEvent (p);
-
+	
 	/* Read output */
 	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
 	/* Submit task */
 	gpu_context_submitTask (p, threads, threadsPerGroup);
+	
+	gpu_context_flush (p);
 
 	return 0;
 }

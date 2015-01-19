@@ -1,8 +1,8 @@
 #ifndef __GPU_DEBUG_H_
 #define __GPU_DEBUG_H_
 
-// #undef GPU_VERBOSE
-#define GPU_VERBOSE
+#undef GPU_VERBOSE
+// #define GPU_VERBOSE
 
 #undef dbg
 #ifdef GPU_VERBOSE

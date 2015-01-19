@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful;
 
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -15,11 +15,11 @@ import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.Kernel;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelDevice;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelInvocationHandler;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelOperator;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.Kernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelCodeGenerator;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelDevice;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelInvocationHandler;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelOperator;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;

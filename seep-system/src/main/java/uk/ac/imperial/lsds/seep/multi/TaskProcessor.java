@@ -4,10 +4,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TaskProcessor implements Runnable {
 
-	ConcurrentLinkedQueue<ITask>	queue;
+	ConcurrentLinkedQueue<ITask> queue;
+	boolean GPU;
 
-	public TaskProcessor(ConcurrentLinkedQueue<ITask> queue) {
+	public TaskProcessor(ConcurrentLinkedQueue<ITask> queue, boolean GPU) {
 		this.queue = queue;
+		this.GPU = GPU;
 	}
 
 	@Override
@@ -20,6 +22,7 @@ public class TaskProcessor implements Runnable {
 					/* LockSupport.parkNanos(1L); */
 					Thread.yield();
 				}
+				task.setGPU(GPU);
 				task.run();
 
 			} catch (Exception e) {

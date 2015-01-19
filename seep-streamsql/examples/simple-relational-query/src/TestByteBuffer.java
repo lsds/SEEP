@@ -7,7 +7,7 @@ import java.nio.file.Files;
 
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
-import uk.ac.imperial.lsds.streamsql.op.gpu.GPU;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.GPU;
 
 public class TestByteBuffer {
 	

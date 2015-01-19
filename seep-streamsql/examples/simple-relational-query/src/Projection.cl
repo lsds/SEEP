@@ -4,7 +4,7 @@
 #define OUTPUT_VECTOR_SIZE 1
 
 typedef struct {
-	long t;
+	long _t;
 	int _1;
 	int _2;
 	int _3;
@@ -19,7 +19,7 @@ typedef union {
 } input_t;
 
 typedef struct {
-	long t;
+	long _t;
 	int _1;
 	int _2;
 	// int _3;
@@ -49,14 +49,29 @@ __kernel void projectKernel (
 	int output_idx = gid * lgs * sizeof(output_t);
 
 	/* Cache data into local memory */
-	event_t e =
-		async_work_group_copy ((__local int4*) _input, (const __global int4*) &input[input_idx], INPUT_VECTOR_SIZE * lgs, 0);
+	// event_t e =
+	// 	async_work_group_copy ((__local int4*) &_input[0], (const __global int4*) &input[input_idx], INPUT_VECTOR_SIZE * lgs, (event_t) 0);
+	int i = 0;
+	// for (i = 0; i < INPUT_VECTOR_SIZE; i++) {
+		barrier (CLK_LOCAL_MEM_FENCE);
+		int g_idx = i * lgs * sizeof( input_t) + input_idx;
+		int l_idx = i * lgs * sizeof( input_t);
+		event_t e = async_work_group_copy ((__local int4*) &_input[l_idx], (const __global int4*) &input[g_idx], 2 * lgs, (event_t) 0);
+	// }
+	// event_t e =
+	//		async_work_group_copy ((__local int4*) &_input[0], (const __global int4*) &input[input_idx], lgs, (event_t) 0);
 	wait_group_events (1, &e);
+	// }
+
+
 
 	__local  input_t* p = (__local  input_t*) &_input [lid * sizeof( input_t)];
 	__local output_t* q = (__local output_t*) &_output[lid * sizeof(output_t)];
+// 	q->tuple._t = 0;
+//	q->tuple._1 = 0;
+//	q->tuple._2 = 0;
 
-	q->tuple. t = p->tuple. t;
+	q->tuple._t = p->tuple._t;
 	q->tuple._1 = p->tuple._1;
 	q->tuple._2 = p->tuple._2;
 	// q->tuple._3 = p->tuple._3;
@@ -64,9 +79,13 @@ __kernel void projectKernel (
 	// q->tuple._5 = p->tuple._5;
 	// q->tuple._6 = p->tuple._6;
 
-//	/* Write results in main memory */
-//	barrier (CLK_LOCAL_MEM_FENCE);
-//	async_work_group_copy ((__global int4*) &output[output_idx], (__local int4*) _input, OUTPUT_VECTOR_SIZE * lgs, 0);
+	/* Write results in main memory */
+	barrier (CLK_LOCAL_MEM_FENCE);
+	// event_t g =
+	// 	async_work_group_copy ((__global int4*) &output[output_idx], (__local int4*) &_output[0], OUTPUT_VECTOR_SIZE * lgs, (event_t) 0);
+	event_t g =
+		async_work_group_copy ((__global int4*) &output[output_idx], (__local int4*) &_output[0], lgs, (event_t) 0);
+	wait_group_events (1, &g);
 
 	return ;
 }

@@ -1,5 +1,7 @@
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -10,13 +12,12 @@ import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
-import uk.ac.imperial.lsds.streamsql.expressions.Expression;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
-import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 
-public class TestAHybrid {
+public class TestHybridReduction {
 
 	public static void main(String [] args) {
 		
@@ -27,26 +28,23 @@ public class TestAHybrid {
 		
 		ITupleSchema schema = new TupleSchema (Utils.OFFSETS, Utils._TUPLE_);
 		
-		IMicroOperatorCode projectionCPUCode = new Projection (
-			new Expression [] {
-				new LongColumnReference(0),
-				new IntColumnReference(1),
-				new IntColumnReference(2),
-				new IntColumnReference(3),
-				new IntColumnReference(4),
-				new IntColumnReference(5),
-				new IntColumnReference(6)
-			}
+		ReductionKernel gpuReductionCode = new ReductionKernel (
+			AggregationType.MIN, 
+			new FloatColumnReference(1),
+			schema
+		);
+		gpuReductionCode.setSource(filename);
+		gpuReductionCode.setBatchSize(Utils.BATCH);
+		gpuReductionCode.setup();
+		
+		IMicroOperatorCode cpuReductionCode = new MicroAggregation(
+			AggregationType.SUM,
+			new FloatColumnReference(1)
 		);
 		
-		IMicroOperatorCode projectionGPUCode = new ProjectionKernel (
-			new Expression [] {
-			},
-			schema,
-			filename
-		);
+		System.out.println(String.format("[DBG] %s",gpuReductionCode));
 		
-		MicroOperator uoperator = new MicroOperator (projectionCPUCode, projectionGPUCode, 1);
+		MicroOperator uoperator = new MicroOperator (cpuReductionCode, gpuReductionCode, 1);
 		
 		/* Query */
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
@@ -55,18 +53,27 @@ public class TestAHybrid {
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		SubQuery query = new SubQuery (0, operators, schema, window);
 		queries.add(query);
-			
+		
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
 		
 		byte [] data = new byte [Utils.BUNDLE];
 		ByteBuffer b = ByteBuffer.wrap(data);
-		while (b.hasRemaining())
-			b.putInt(1);
+		// b.order(ByteOrder.LITTLE_ENDIAN);
+		Random r = new Random();
+		while (b.hasRemaining()) {
+			b.putLong(1);
+			int value = r.nextInt(100);
+			if (value == 0)
+				value = 100;
+			b.putFloat(value);
+			for (int i = 12; i < schema.getByteSizeOfTuple(); i += 4)
+				b.putInt(1);
+		}
 		try {
 			while (true) {
 				operator.processData (data);
-				/* Thread.sleep(1000L); */
+				/* Thread.sleep(100L); */
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

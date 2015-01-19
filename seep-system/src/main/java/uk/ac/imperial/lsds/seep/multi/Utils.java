@@ -20,7 +20,7 @@ public class Utils {
 	public static int _TUPLE_ = 32;
 	public static int [] OFFSETS = { 0, 8, 12, 16, 20, 24, 28 };
 	
-	public static int JOIN_BATCH = 10000;	
+	public static int JOIN_BATCH = 10000;
 	public static int BATCH = Integer.parseInt(Globals.valueFor("batch"));
 	public static int RANGE = Integer.parseInt(Globals.valueFor("range"));
 	public static int SLIDE = Integer.parseInt(Globals.valueFor("slide"));

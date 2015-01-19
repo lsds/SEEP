@@ -16,8 +16,8 @@ import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.JNIProjectionKernel;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ProjectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.JNIProjectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
 
 public class TestJNIProjectionKernel {
 

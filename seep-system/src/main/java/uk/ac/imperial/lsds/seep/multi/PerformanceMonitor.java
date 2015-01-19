@@ -57,8 +57,8 @@ public class PerformanceMonitor implements Runnable {
 			for (int i = 0; i < size; i++)
 				b.append(measurements[i].info(dt));
 			b.append(String.format(" q %6d", operator.getExecutorQueueSize()));
-			if (Utils.HYBRID)
-				b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize()));
+			// if (Utils.HYBRID)
+			//	b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize()));
 			System.out.println(b);
 			_time = time;
 			

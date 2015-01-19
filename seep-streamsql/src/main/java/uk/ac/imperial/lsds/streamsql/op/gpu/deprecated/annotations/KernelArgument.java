@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu.annotations;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.annotations;
 
 import com.amd.aparapi.opencl.OpenCL.Arg;
 

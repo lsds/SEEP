@@ -547,7 +547,7 @@ void callback_readOutput (gpuContextP context,
 			qid,
 			ndx,
 			(long) (context->kernelOutput.outputs[ndx]->mapped_buffer),
-			context->kernelInput.inputs[ndx]->size,
+			context->kernelOutput.outputs[ndx]->size,
 			offset);
 
 	(*env)->DeleteLocalRef(env, class);

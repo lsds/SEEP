@@ -1,9 +1,8 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated;
 
 import java.lang.reflect.Field;
 
 import sun.misc.Unsafe;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 
 @SuppressWarnings("restriction")
 public class GPU {

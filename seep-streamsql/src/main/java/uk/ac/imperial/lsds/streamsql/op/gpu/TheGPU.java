@@ -7,6 +7,9 @@ import sun.misc.Unsafe;
 @SuppressWarnings("restriction")
 public class TheGPU {
 	
+	private static final int MAX_QUERIES = 2;
+	private static final int MAX_BUFFERS = 4;
+	
 	private static final String library = "/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib/libGPU.so";
 	
 	private static final TheGPU instance = new TheGPU ();
@@ -36,30 +39,45 @@ public class TheGPU {
 	
 	public static TheGPU getInstance () { return instance; }
 	
-	private byte [] inputArray;
-	private int start;
-	private int end;
+	private byte [][][] inputArray;
+	private int  [][] start;
+	private int  [][] end;
 	
-	private byte [] outputArray;
+	private byte [][][] outputArray;
 	
-	public void setInputBuffer (byte [] inputArray) {
-		setInputBuffer (inputArray, 0, inputArray.length);
+	public TheGPU () {
+		inputArray  = new byte [MAX_QUERIES][MAX_BUFFERS][];
+		
+		start = new int [MAX_QUERIES][MAX_BUFFERS];
+		end   = new int [MAX_QUERIES][MAX_BUFFERS];
+		
+		outputArray = new byte [MAX_QUERIES][MAX_BUFFERS][];
 	}
 	
-	public void setInputBuffer(byte [] inputArray, int start, int end) {
-		this.inputArray = inputArray;
-		this.start = start;
-		this.end = end;
+	public void setInputBuffer (int qid, int ndx, byte [] inputArray) {
+		setInputBuffer (qid, ndx, inputArray, 0, inputArray.length);
 	}
 	
-	public void setOutputBuffer (byte [] outputArray) {
-		this.outputArray = outputArray;
+	public void setInputBuffer (int qid, int ndx, byte [] inputArray, int start, int end) {
+		/* Check bounds */
+		if (qid < 0 || qid >= MAX_QUERIES)
+			throw new IllegalArgumentException ("error: invalid query id");
+		if (ndx < 0 || ndx >= MAX_BUFFERS)
+			throw new IllegalArgumentException ("error: invalid buffer id");
+		
+		this.inputArray[qid][ndx] = inputArray;
+		this.start[qid][ndx] = start;
+		this.end[qid][ndx] = end;
+	}
+	
+	public void setOutputBuffer (int qid, int ndx, byte [] outputArray) {
+		this.outputArray[qid][ndx] = outputArray;
 	}
 	
 	public void inputDataMovementCallback (int qid, int ndx, long inputAddr, int size, int offset) {
 		
 		theUnsafe.copyMemory (
-				inputArray, 
+				inputArray[qid][ndx], 
 				Unsafe.ARRAY_BYTE_BASE_OFFSET + offset, 
 				null, 
 				inputAddr, 
@@ -90,7 +108,7 @@ public class TheGPU {
 		theUnsafe.copyMemory(
 				null, 
 				outputAddr, 
-				outputArray, 
+				outputArray[qid][ndx], 
 				Unsafe.ARRAY_BYTE_BASE_OFFSET + offset, 
 				size
 			);

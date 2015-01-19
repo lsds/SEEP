@@ -205,7 +205,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						this.timestampReference.writeByteResult(inBuffer,
 								inSchema, inWindowStartOffset, windowBuffer,
 								keyOffset);
-
+						
 						// check whether new value for aggregation attribute
 						// shall be written
 						oldValue = this.aggregationAttribute.eval(windowBuffer,
@@ -457,7 +457,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					"Cannot remove tuple from window since it is not part of the window");
 		}
 	}
-
+	
 	private void evaluateWindow(IWindowAPI api, IQueryBuffer windowBuffer,
 			Map<Integer, Integer> keyOffsets, IQueryBuffer outBuffer,
 			int[] startPointers, int[] endPointers, int currentWindow,

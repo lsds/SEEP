@@ -91,8 +91,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public void setup () {
 		/* The default task queue for either CPU or GPU executor */
 		this.workerQueue = this.parent.getExecutorQueue();
-		if (Utils.HYBRID)
-			this._workerQueue = this.parent.getGPUExecutorQueue();
+		// if (Utils.HYBRID)
+		//	this._workerQueue = this.parent.getGPUExecutorQueue();
 	}
 	
 	@Override
@@ -135,7 +135,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
 		
-		if (Utils.HYBRID) {
+		// if (Utils.HYBRID) {
 			/* Round-robin submission to CPU and GPU executors */
 			/*
 			if ((taskid * 10) % 21 == 0) {
@@ -146,16 +146,16 @@ public class TaskDispatcher implements ITaskDispatcher {
 			}
 			*/
 			
-			if (workerQueue.size() < _workerQueue.size())
-				workerQueue.add(task);
-			else {
-				task.setGPU(true);
-				_workerQueue.add(task);
-			}
+			// if (workerQueue.size() < _workerQueue.size())
+			// 	workerQueue.add(task);
+			// else {
+			//	task.setGPU(true);
+			//	_workerQueue.add(task);
+			//}
 			
-		} else {
-			workerQueue.add(task);
-		}
+		//} else {
+		workerQueue.add(task);
+		//	}
 	}
 	
 	private void assemble (int index, int length) {
@@ -341,7 +341,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 
 	@Override
 	public IQueryBuffer getSecondBuffer() {
-		throw new UnsupportedOperationException("Cannot get second buffer since this is a single-input dispatcher");
+		/* throw new UnsupportedOperationException("Cannot get second buffer since this is a single-input dispatcher"); */
+		return null;
 	}
 }
 

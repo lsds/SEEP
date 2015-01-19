@@ -32,6 +32,9 @@ test: test.c libGPU.so
 
 test_project: test_project.c libGPU.so
 	$(CC) $(CFLAGS) test_project.c -o test_project $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
+	
+test_reduce: test_reduce.c libGPU.so
+	$(CC) $(CFLAGS) test_reduce.c -o test_reduce $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
 
 timer.o: timer.c timer.h
 

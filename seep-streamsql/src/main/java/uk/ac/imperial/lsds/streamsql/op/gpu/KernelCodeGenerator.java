@@ -4,215 +4,113 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 
-import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.GlobalReadOnlyArgument;
-import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.GlobalWriteOnlyArgument;
-import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.KernelArgument;
-import uk.ac.imperial.lsds.streamsql.op.gpu.annotations.LocalArgument;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
 public class KernelCodeGenerator {
-
-	public static List<Kernel> getSelection () {
+	
+	public static String getProjection (ITupleSchema input, ITupleSchema output, String filename) {
+		StringBuilder b = new StringBuilder ();
+		b.append(getHeader (input, output));
+		b.append("\n");
+		b.append(getProjectionFunctor(input, output));
+		b.append("\n");
+		b.append(getProjectionKernel(filename));
+		b.append("\n");
+		return b.toString();
+	}
+	
+	public static String getHeader (ITupleSchema input, ITupleSchema output) {
+		StringBuilder b = new StringBuilder ();
+		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
+		b.append("\n");
+		int  _input_vector_size = getVectorSize ( input);
+		int _output_vector_size = getVectorSize (output);
+		b.append(String.format("#define  INPUT_VECTOR_SIZE %d\n",  _input_vector_size));
+		b.append(String.format("#define OUTPUT_VECTOR_SIZE %d\n", _output_vector_size));
+		b.append("\n");
+		b.append( getInputHeader( input,  _input_vector_size));
+		b.append(getOutputHeader(output, _output_vector_size));
+		b.append("\n");
+		return b.toString();
+	}
+	
+	private static int getVectorSize (ITupleSchema schema) {
+		int result;
+		int scalar = 16; /* Vector type is uchar{N}   */
+		if (schema.getByteSizeOfTuple() % scalar != 0)
+			scalar /= 2;
+		result = schema.getByteSizeOfTuple() / scalar;
+		return result;
+	}
+	
+	private static String getInputHeader (ITupleSchema schema, int vectors) {
+		StringBuilder b = new StringBuilder ();
+		b.append("typedef struct {\n");
+		b.append("\tlong t;\n");
+		for (int i = 1; i < schema.getNumberOfAttributes(); i++)
+			b.append(String.format("\tint _%d;\n", i));
+		if (schema.getDummyContent().length > 0)
+			b.append(String.format("\tuchar padding[%d];\n", 
+				schema.getDummyContent().length));
+		b.append("} input_tuple_t __attribute__((aligned(1)));\n");
+		b.append("\n");
+		b.append("typedef union {\n");
+		b.append("\tinput_tuple_t tuple;\n");
+		b.append(String.format("\tuchar16 vectors[%d];\n", vectors));
+		b.append("} input_t;\n");
+		return b.toString();
+	}
+	
+	private static String getOutputHeader (ITupleSchema schema, int vectors) {
+		StringBuilder b = new StringBuilder ();
+		b.append("typedef struct {\n");
+		b.append("\tlong t;\n");
+		for (int i = 1; i < schema.getNumberOfAttributes(); i++)
+			b.append(String.format("\tint _%d;\n", i));
+		if (schema.getDummyContent().length > 0)
+			b.append(String.format("\tuchar padding[%d];\n", 
+				schema.getDummyContent().length));
+		b.append("} output_tuple_t __attribute__((aligned(1)));\n");
+		b.append("\n");
+		b.append("typedef union {\n");
+		b.append("\toutput_tuple_t tuple;\n");
+		b.append(String.format("\tuchar16 vectors[%d];\n", vectors));
+		b.append("} output_t;\n");
+		return b.toString();
+	}
+	
+	public static String getFooter () {
 		return null;
 	}
 	
-	public static List<Kernel> getSelection (String filename) {
-		
-		List<Kernel> kernels = new ArrayList<Kernel>();
-		
-		String source = load (filename);
-		Kernel selectKernel = new Kernel ("selectKernel", source);
-		/* The `compact` kernel function is already included in `source` */
-		Kernel compactKernel = new Kernel ("compactKernel", "");
-		
-		/* Create arguments for select kernel */
-		
-		KernelAttribute _size = new KernelAttribute("size", int.class);
-		_size.addAnnotation (new KernelArgument("size"));
-		selectKernel.addAttribute(_size);
-		
-		KernelAttribute _tuples = new KernelAttribute("tuples", int.class);
-		_tuples.addAnnotation (new KernelArgument("tuples"));
-		selectKernel.addAttribute(_tuples);
-		
-		KernelAttribute __bundle = new KernelAttribute("_bundle", int.class);
-		__bundle.addAnnotation (new KernelArgument("_bundle"));
-		selectKernel.addAttribute(__bundle);
-		
-		KernelAttribute _bundles = new KernelAttribute("bundles", int.class);
-		_bundles.addAnnotation (new KernelArgument("bundles"));
-		selectKernel.addAttribute(_bundles);
-		
-		KernelAttribute _input = new KernelAttribute("input", byte [].class);
-		_input.addAnnotation (new GlobalReadOnlyArgument("input"));
-		selectKernel.addAttribute(_input);
-		
-		KernelAttribute _flags = new KernelAttribute("flags", int [].class);
-		_flags.addAnnotation (new GlobalWriteOnlyArgument("flags"));
-		selectKernel.addAttribute(_flags);
-		
-		KernelAttribute _offsets = new KernelAttribute("offsets", int [].class);
-		_offsets.addAnnotation (new GlobalWriteOnlyArgument("offsets"));
-		selectKernel.addAttribute(_offsets);
-		
-		KernelAttribute _buffer = new KernelAttribute("buffer", int [].class);
-		_buffer.addAnnotation (new LocalArgument("buffer"));
-		selectKernel.addAttribute(_buffer);
-		
-		/* Create arguments for compact kernel */
-		
-		compactKernel.addAttribute(_size); /* Common attributes */
-		compactKernel.addAttribute(_tuples);
-		compactKernel.addAttribute(__bundle);
-		compactKernel.addAttribute(_bundles);
-		compactKernel.addAttribute(_input);
-		
-		KernelAttribute __flags = new KernelAttribute("flags", int [].class);
-		__flags.addAnnotation (new GlobalReadOnlyArgument("flags"));
-		compactKernel.addAttribute(__flags);
-		
-		KernelAttribute __offsets = new KernelAttribute("offsets", int [].class);
-		__offsets.addAnnotation (new GlobalReadOnlyArgument("offsets"));
-		compactKernel.addAttribute(__offsets);
-		
-		KernelAttribute _pivots = new KernelAttribute("pivots", int [].class);
-		_pivots.addAnnotation (new GlobalReadOnlyArgument("pivots"));
-		compactKernel.addAttribute(_pivots);
-		
-		KernelAttribute _output = new KernelAttribute("output", byte [].class);
-		_output.addAnnotation (new GlobalWriteOnlyArgument("output"));
-		compactKernel.addAttribute(_output);
-		
-		kernels.add( selectKernel);
-		kernels.add(compactKernel);
-		
-		return kernels;
-	}
-	
-	public static Kernel getProjection () {
-		
-		StringBuilder s = new StringBuilder();
-		
-		/* Preamble */
-		
-		/* Signature */
-		s.append("__kernel void project (\n");
-		s.append("\tconst int tuples,\n");
-		s.append("\tconst int  bytes,\n");
-		s.append("\t__global const uchar*  input,\n");
-		s.append("\t__global uchar* output\n");
-		s.append(") {\n");
-		
-		/* Main body */
-		
-		/* Footer */
-		s.append("\treturn ;\n");
-		s.append("}\n");
-		
-		Kernel kernel = new Kernel ("project", s.toString());
-		
-		/* Create arguments */
-		
-		KernelAttribute _tuples = new KernelAttribute("tuples", int.class);
-		_tuples.addAnnotation (new KernelArgument("tuples"));
-		kernel.addAttribute(_tuples);
-		
-		KernelAttribute _bytes = new KernelAttribute("bytes", int.class);
-		_bytes.addAnnotation (new KernelArgument("bytes"));
-		kernel.addAttribute(_bytes);
-		
-		KernelAttribute _input = new KernelAttribute("input", byte [].class);
-		_input.addAnnotation (new GlobalReadOnlyArgument("input"));
-		kernel.addAttribute(_input);
-		
-		KernelAttribute _output = new KernelAttribute("output", byte [].class);
-		_output.addAnnotation (new GlobalWriteOnlyArgument("output"));
-		kernel.addAttribute(_output);
-		
-		return kernel;
-	}
-	
-	public static Kernel getMicroAggregation () {
-		
-		StringBuilder s = new StringBuilder();
-		
-		/* Preamble */
-		
-		/* Signature */
-		s.append("__kernel void aggregate (\n");
-		s.append("\tconst int tuples,\n");
-		s.append("\tconst int  bytes,\n");
-		s.append("\t__global const uchar* input,\n");
-		s.append("\t__global uchar* output\n");
-		s.append(") {\n");
-		
-		/* Main body */
-		
-		/* Footer */
-		s.append("\treturn ;\n");
-		s.append("}\n");
-		
-		Kernel kernel = new Kernel ("aggregate", s.toString());
-		
-		/* Create arguments */
-		
-		KernelAttribute _tuples = new KernelAttribute("tuples", int.class);
-		_tuples.addAnnotation (new KernelArgument("tuples"));
-		kernel.addAttribute(_tuples);
-		
-		KernelAttribute _bytes = new KernelAttribute("bytes", int.class);
-		_bytes.addAnnotation (new KernelArgument("bytes"));
-		kernel.addAttribute(_bytes);
-		
-		KernelAttribute _input = new KernelAttribute("input", byte [].class);
-		_input.addAnnotation (new GlobalReadOnlyArgument("input"));
-		kernel.addAttribute(_input);
-		
-		KernelAttribute _output = new KernelAttribute("output", byte [].class);
-		_output.addAnnotation (new GlobalWriteOnlyArgument("output"));
-		kernel.addAttribute(_output);
-		
-		return kernel;
-	}
-	
-	public static Kernel getMicroAggregation (String filename) {
+	public static String getSelectionFunctor (IPredicate predicate) {
 		return null;
 	}
 	
-	public static Kernel getProjection (String filename) {
-		
-		String source = load (filename);
-		Kernel kernel = new Kernel ("project", source);
-		
-		/* Create arguments */
-		
-		KernelAttribute _tuples = new KernelAttribute("tuples", int.class);
-		_tuples.addAnnotation (new KernelArgument("tuples"));
-		kernel.addAttribute(_tuples);
-		
-		KernelAttribute _bytes = new KernelAttribute("bytes", int.class);
-		_bytes.addAnnotation (new KernelArgument("bytes"));
-		kernel.addAttribute(_bytes);
-		
-		KernelAttribute _input = new KernelAttribute("input", byte [].class);
-		_input.addAnnotation (new GlobalReadOnlyArgument("input"));
-		kernel.addAttribute(_input);
-		
-		KernelAttribute _output = new KernelAttribute("output", byte [].class);
-		_output.addAnnotation (new GlobalWriteOnlyArgument("output"));
-		kernel.addAttribute(_output);
-		
-		KernelAttribute __input = new KernelAttribute("_input", byte [].class);
-		__input.addAnnotation (new LocalArgument("_input"));
-		kernel.addAttribute(__input);
-		
-		KernelAttribute __output = new KernelAttribute("_output", byte [].class);
-		__output.addAnnotation (new LocalArgument("_output"));
-		kernel.addAttribute(__output);
-		
-		return kernel;
+	public static String getSelectionKernel (String filename) {
+		return load (filename);
+	}
+	
+	public static String getProjectionFunctor (ITupleSchema input, ITupleSchema output) {
+		StringBuilder b = new StringBuilder ();
+		b.append("inline void projectf (__local input_t *p, __local output_t *q) {\n");
+		b.append("\tq->tuple.t = p->tuple.t;\n");
+		int idx = 0;
+		for (int i = 1; i < output.getNumberOfAttributes(); i++) {
+			idx += 1;
+			if (idx >= input.getNumberOfAttributes())
+				idx = 1;
+			b.append(String.format("\tq->tuple._%d = p->tuple._%d;\n",
+					i, idx));
+		}
+		b.append("}\n");
+		return b.toString();
+	}
+	
+	public static String getProjectionKernel (String filename) {
+		return load (filename);
 	}
 	
 	private static String load (String filename) {
@@ -226,5 +124,11 @@ public class KernelCodeGenerator {
 			System.err.println(String.format("error: cannot read file %s", filename));
 		}
 		return null;
+	}
+
+	public static String getReduction (ITupleSchema inputSchema,
+			ITupleSchema outputSchema, String filename) {
+		
+		return load (filename);
 	}
 }

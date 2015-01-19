@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated;
 
 import com.amd.aparapi.device.Device;
 import com.amd.aparapi.device.OpenCLDevice;

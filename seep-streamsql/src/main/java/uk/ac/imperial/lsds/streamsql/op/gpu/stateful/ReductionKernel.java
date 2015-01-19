@@ -1,10 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
@@ -13,7 +10,6 @@ import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
-import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
@@ -21,7 +17,8 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
-import uk.ac.imperial.lsds.streamsql.op.gpu.GPU;
+import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
+import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
@@ -31,44 +28,41 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	 * an input window batch.
 	 */
 	private static final int _default_input_size = Utils._GPU_INPUT_;
+	private static final int SIZEOF_INT = 4;
 	/*
 	 * Operator configuration parameters
 	 */
 	private static final int THREADS_PER_GROUP = 256;
-	private static final int TUPLES_PER_THREAD = 1;
+	
+	private static final int PIPELINES = 2;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
 	
 	private LongColumnReference timestampReference;
 	
-	private WindowDefinition window;
 	private int batchSize;
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
 	private String filename = null;
 	
+	private int qid;
+	
+	private int [] args;
+	
 	private int tuples;
 	private int threads, groups;
 
-	int outputSize, localSize;
+	/* Local memory sizes */
+	private int  _input_size, _window_ptrs_size;
+	private int _output_size, _local_input_size;
 	
-	public static int [] windowStartPointers = new int [32];
-	public static int []   windowEndPointers = new int [32];
+	private byte [] startPtrs;
+	private byte [] endPtrs;
 	
-	private String load (String filename) {
-		File file = new File(filename);
-		try {
-			byte [] bytes = Files.readAllBytes(file.toPath());
-			return new String (bytes, "UTF8");
-		} catch (FileNotFoundException e) {
-			System.err.println(String.format("error: file %s not found", filename));
-		} catch (IOException e) {
-			System.err.println(String.format("error: cannot read file %s", filename));
-		}
-		return null;
-	}
+	private int [] taskIdx;
+	private int [] freeIdx;
 	
 	public ReductionKernel (AggregationType type, FloatColumnReference _the_aggregate) {
 		this (type, _the_aggregate, null);
@@ -91,10 +85,6 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		this.filename = filename;
 	}
 	
-	public void setWindowDefinition (WindowDefinition window) {
-		this.window = window;
-	}
-	
 	public void setInputSchema (ITupleSchema inputSchema) {
 		this.inputSchema = inputSchema;
 	}
@@ -105,48 +95,61 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	public void setup () {
 		
-		this.tuples = _default_input_size / inputSchema.getByteSizeOfTuple();
-		/* We assign 1 group per window? */
+		/* Configure kernel arguments */
+		this._input_size = _default_input_size;
+		this.tuples = _input_size / inputSchema.getByteSizeOfTuple();
+		
+		/* We assign 1 group per window */
 		this.groups = this.batchSize;
 		this.threads = groups * THREADS_PER_GROUP;
 		
-		this.localSize = (THREADS_PER_GROUP) * 4; // * this.outputSchema.getByteSizeOfTuple();
+		this._output_size = groups * outputSchema.getByteSizeOfTuple();
 		
-		// this.outputSize = this.outputSchema.getByteSizeOfTuple() * groups;
-		this.outputSize = 4 * groups;
+		this._window_ptrs_size = SIZEOF_INT * groups;
+		this._local_input_size = SIZEOF_INT * THREADS_PER_GROUP;
 		
 		System.out.println(String.format("[DBG] %6d tuples", tuples));
 		System.out.println(String.format("[DBG] %6d threads", threads));
 		System.out.println(String.format("[DBG] %6d groups", groups));
-		System.out.println(String.format("[DBG] %6d bytes scratch memory", localSize));
-		System.out.println(String.format("[DBG] %6d bytes output", outputSize));
+		System.out.println(String.format("[DBG] %6d bytes scratch memory", _local_input_size));
+		System.out.println(String.format("[DBG] %6d bytes output", _output_size));
 		
-		String source = load (filename);
+		/* Arguments are: tuples, bytes, _local_input_size */
+		args = new int [3];
+		args[0] = tuples;
+		args[1] = _input_size;
+		args[2] =  _local_input_size;
 		
-		int error; 
-		error  = GPU.getInstance().getPlatform();
-		error |= GPU.getInstance().getDevice();
-		error |= GPU.getInstance().createContext();
-		error |= GPU.getInstance().createCommandQueue();
-		error |= GPU.getInstance().createProgram(source);
-		
-		if (error != 0) {
-			System.err.println("Fatal error.");
-			System.exit(1);
+		startPtrs = new byte [_window_ptrs_size];
+		endPtrs   = new byte [_window_ptrs_size];
+		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		int tpw = tuples / groups;
+		int bpw = tpw * inputSchema.getByteSizeOfTuple();
+		for (int i = 0; i < groups; i++) {
+			b.putInt(i * bpw);
+			d.putInt(i * bpw + bpw - 1);
 		}
+		b.clear();
+		d.clear();
 		
-		GPU.getInstance().createInputBuffer(_default_input_size);
-		GPU.getInstance().createOutputBuffer(outputSize);
+		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename);
+		System.out.println(source);
 		
-		// windowStartPointers = new int [batchSize];
-		// windowEndPointers   = new int [batchSize];
+		TheGPU.getInstance().init(1);
+		qid = TheGPU.getInstance().getQuery(source, 1, 3, 1);
+		TheGPU.getInstance().setInput (qid, 0,  _input_size);
+		TheGPU.getInstance().setInput (qid, 1,  _window_ptrs_size);
+		TheGPU.getInstance().setInput (qid, 2,  _window_ptrs_size);
+		TheGPU.getInstance().setOutput(qid, 0, _output_size, 1);
+		TheGPU.getInstance().setKernelReduce (qid, args);
 		
-		GPU.getInstance().createWindowStartPointersBuffer(batchSize);
-		GPU.getInstance().createWindowEndPointersBuffer(batchSize);
-		
-		GPU.getInstance().createKernel("reduce");
-		
-		GPU.getInstance().setReductionKernelArgs(tuples, localSize, false);
+		taskIdx = new int [PIPELINES];
+		freeIdx = new int [PIPELINES];
+		for (int i = 0; i < PIPELINES; i++) {
+			taskIdx[i] = -1;
+			freeIdx[i] = -1;
+		}
 	}
 	
 	@Override
@@ -156,59 +159,37 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		return sb.toString();
 	}
 	
-	private void normalizeWindowPointers (int offset) {
-		for (int i = 0; i < batchSize; i++) {
-			windowStartPointers[i] -= offset;
-			windowEndPointers  [i] -= offset;
-		}
-	}
-	
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
+		int currentTaskIdx = windowBatch.getTaskId();
+		int currentFreeIdx = windowBatch.getFreeOffset();
+		
+		/* Set input and output */
+		byte [] inputArray = windowBatch.getBuffer().array();
+		int start = windowBatch.getBatchStartPointer();
+		int end   = windowBatch.getBatchEndPointer();
+		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
+		/* Create the other two input buffers */
+		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
+		TheGPU.getInstance().setInputBuffer(qid, 2, endPtrs);
 		
-		windowBatch.initWindowPointers(windowStartPointers, windowEndPointers);
-		normalizeWindowPointers (windowBatch.getBatchStartPointer());
-		/* windowBatch.debug(); */
-		
-		/* 
-		 * We copy input directly from the circular buffer to the zero-copy
-		 * input buffer that lives in JNI land.
-		 * 
-		 * windowBatch.getBuffer().appendBytesTo(
-		 *	windowBatch.getBatchStartPointer(), 
-		 *	windowBatch.getBatchEndPointer(), 
-		 *	input);
-		 */
-		
-		GPU.getInstance().setInputDataBuffer(windowBatch.getBuffer().array(), windowBatch.getBatchStartPointer(), windowBatch.getBatchEndPointer());
-		
-		GPU.getInstance().setWindowStartPointersBuffer(windowStartPointers); // (windowBatch.getWindowStartPointers());
-		GPU.getInstance().setWindowEndPointersBuffer(windowEndPointers); // (windowBatch.getWindowEndPointers());
-		
-		GPU.getInstance().setOutputDataBuffer(outputBuffer.array());
-		/* Execute kernel */
-		GPU.getInstance().invokeReductionOperatorKernel(threads, THREADS_PER_GROUP, false);
-		
-		outputBuffer.position(this.outputSize);
-		/*
-		 * Debugging code
-		 * 
-		outputBuffer.getByteBuffer().order(ByteOrder.LITTLE_ENDIAN);
-		outputBuffer.close();
-		System.out.println(String.format("[DBG] [ReductionKernel] output buffer position %d limit %d", outputBuffer.position(), outputBuffer.limit()));
-		int count = 0;
-		while (outputBuffer.hasRemaining()) {
-			int v = outputBuffer.getByteBuffer().getInt();
-			System.out.println(String.format("[DBG] [ReductionKernel] value [%3d] = %d", count, v));
-			count ++;
-		}
-		System.out.println(String.format("[DBG] [ReductionKernel] %d output tuples returned", count));
-		*/
-		// System.exit(1);
+		TheGPU.getInstance().execute(qid, threads, THREADS_PER_GROUP);
 		
 		windowBatch.setBuffer(outputBuffer);
+		
+		windowBatch.setTaskId     (taskIdx[0]);
+		windowBatch.setFreeOffset (freeIdx[0]);
+		
+		for (int i = 0; i < taskIdx.length - 1; i++) {
+			taskIdx[i] = taskIdx [i + 1];
+			freeIdx[i] = freeIdx [i + 1];
+		}
+		taskIdx [taskIdx.length - 1] = currentTaskIdx;
+		freeIdx [freeIdx.length - 1] = currentFreeIdx;
+		
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
 	

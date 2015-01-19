@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;

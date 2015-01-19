@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu.stateless;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless;
 
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
@@ -10,12 +10,12 @@ import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.Kernel;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelDevice;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelInvocationHandler;
-import uk.ac.imperial.lsds.streamsql.op.gpu.KernelOperator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.OperatorStatistics;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.Kernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelCodeGenerator;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelDevice;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelInvocationHandler;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelOperator;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.OperatorStatistics;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 

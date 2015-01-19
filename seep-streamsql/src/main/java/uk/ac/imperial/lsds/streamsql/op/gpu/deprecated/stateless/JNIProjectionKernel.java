@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.gpu.stateless;
+package uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -18,7 +18,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
-import uk.ac.imperial.lsds.streamsql.op.gpu.GPU;
+import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.GPU;
 
 public class JNIProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
