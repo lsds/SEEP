@@ -14,11 +14,10 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
-import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
-public class TestJoinPredComp {
+public class TestJoinSelectivity {
 
 	public static void main(String [] args) {
 		
@@ -35,7 +34,7 @@ public class TestJoinPredComp {
 			System.err.println("\t- second window size ");
 			System.err.println("\t- second window slide");
 			System.err.println("\t- number of attributes in second tuple schema (excl. timestamp)");
-			System.err.println("\t- number of comparisons in predicate");
+			System.err.println("\t- selectivity in percent (0 <= x <= 100)");
 			System.exit(-1);
 		}
 		
@@ -63,7 +62,7 @@ public class TestJoinPredComp {
 		long secondWindowSlide      = Long.parseLong(args[9]);
 		int secondNumberOfAttributesInSchema  = Integer.parseInt(args[10]);
 
-		int numberOfComparisons         = Integer.parseInt(args[11]);
+		int selectivity             = Integer.parseInt(args[11]);
 		
 		WindowDefinition firstWindow = 
 			new WindowDefinition (firstWindowType, firstWindowRange, firstWindowSlide);
@@ -94,19 +93,11 @@ public class TestJoinPredComp {
 		}
 		
 		ITupleSchema secondSchema = new TupleSchema (secondOffsets, secondByteSize);
-		
-		IPredicate[] predicates = new IPredicate[numberOfComparisons];
-		
-		for (int i = 0; i < numberOfComparisons; i++) {
-			predicates[i] = new IntComparisonPredicate(
-					IntComparisonPredicate.EQUAL_OP, 
-					new IntColumnReference(1),
-					new IntColumnReference(1)
-					);
-		}
-		
-		IPredicate predicate =  new ANDPredicate(predicates);
-		
+
+		IPredicate predicate =  new IntComparisonPredicate(
+				IntComparisonPredicate.LESS_OP, 
+				new IntColumnReference(1),
+				new IntColumnReference(1));
 		
 		IMicroOperatorCode joinCode = new ThetaJoin(predicate);
 		System.out.println(String.format("[DBG] %s", joinCode));
@@ -139,16 +130,20 @@ public class TestJoinPredComp {
 		ByteBuffer firstB = ByteBuffer.wrap(firstData);
 		ByteBuffer secondB = ByteBuffer.wrap(secondData);
 		
+		int value = 0;
 		// fill the first buffer
 		while (firstB.hasRemaining()) {
 			firstB.putLong(1);
-			for (int i = 8; i < firstActualByteSize; i += 4)
+			firstB.putInt(value);
+			value = (value + 1) % 100; 
+			for (int i = 12; i < firstActualByteSize; i += 4)
 				firstB.putInt(1);
 		}
 		// fill the second buffer
 		while (secondB.hasRemaining()) {
 			secondB.putLong(1);
-			for (int i = 8; i < secondActualByteSize; i += 4)
+			secondB.putInt(selectivity);
+			for (int i = 12; i < secondActualByteSize; i += 4)
 				secondB.putInt(1);
 		}
 		

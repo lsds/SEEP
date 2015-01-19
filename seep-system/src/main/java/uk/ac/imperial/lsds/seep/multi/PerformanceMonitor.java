@@ -1,9 +1,9 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class PerformanceMonitor implements Runnable {
 	
@@ -37,7 +37,7 @@ public class PerformanceMonitor implements Runnable {
 		for (SubQuery query : L) {
 			System.out.println(String.format("[DBG] [MultiOperator] S %3d", query.getId()));
 			measurements[idx++] = 
-				new Measurement (query.getId(), (CircularQueryBuffer) query.getTaskDispatcher().getBuffer());
+				new Measurement (query.getId(), (CircularQueryBuffer) query.getTaskDispatcher().getBuffer(), (CircularQueryBuffer) query.getTaskDispatcher().getSecondBuffer());
 		}
 	}
 	
@@ -73,14 +73,16 @@ public class PerformanceMonitor implements Runnable {
 		
 		int id;
 		CircularQueryBuffer buffer;
+		CircularQueryBuffer secondBuffer;
 		
 		long bytes, _bytes = 0;
 		double Dt, MBps;
 		double MB, _1MB_ = 1048576.0;
-		
-		public Measurement (int id, CircularQueryBuffer buffer) {
+
+		public Measurement (int id, CircularQueryBuffer buffer, CircularQueryBuffer secondBuffer) {
 			this.id = id;
 			this.buffer = buffer;	
+			this.secondBuffer = secondBuffer;	
 		}
 			
 		@Override
@@ -89,13 +91,18 @@ public class PerformanceMonitor implements Runnable {
 		}
 			
 		public String info(long delta) {
+			
 			String s = "";
 			bytes = buffer.getBytesProcessed();
+			
+			if (secondBuffer != null)
+				bytes += secondBuffer.getBytesProcessed();
+			
 			if (_bytes > 0) {
 				Dt = (delta / 1000.0);
 				MB = (bytes - _bytes) / _1MB_;
 				MBps = MB / Dt;
-				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps", id, MBps, ((MBps / 1024.) * 8.));
+				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps ", id, MBps, ((MBps / 1024.) * 8.));
 			}
 			_bytes = bytes;
 			return s;

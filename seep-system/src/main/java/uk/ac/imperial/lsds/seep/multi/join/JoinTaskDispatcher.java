@@ -90,7 +90,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			if (firstEndIndex < firstStartIndex)
 				firstEndIndex += firstBuffer.capacity();
 			
-			firstToProcessCount += (firstEndIndex - firstStartIndex) / this.firstTupleSize;
+			firstToProcessCount += (firstEndIndex - firstStartIndex + this.firstTupleSize) / this.firstTupleSize;
 					
 			/*
 			 * check whether we have to move the pointer that indicates the oldest
@@ -141,7 +141,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			if (secondEndIndex < secondStartIndex)
 				secondEndIndex += secondBuffer.capacity();
 			
-			secondToProcessCount += (secondEndIndex - secondStartIndex) / this.secondTupleSize;
+			secondToProcessCount += (secondEndIndex - secondStartIndex + this.secondTupleSize) / this.secondTupleSize;
 					
 			/*
 			 * check whether we have to move the pointer that indicates the oldest
@@ -181,8 +181,13 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		int taskid = this.getTaskNumber();
 		
-		int firstFree = (firstNextIndex - firstTupleSize) & firstMask;
-		int secondFree = (secondNextIndex - secondTupleSize) & secondMask;
+		int firstFree = Integer.MIN_VALUE;
+		int secondFree = Integer.MIN_VALUE;
+		
+		if (firstNextIndex != firstStartIndex)
+			firstFree = (firstNextIndex - firstTupleSize) & firstMask;
+		if (secondNextIndex != secondStartIndex)
+			secondFree = (secondNextIndex - secondTupleSize) & secondMask;
 		
 		WindowBatch firstBatch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, firstFree, firstBuffer, firstWindow, firstSchema);
 		WindowBatch secondBatch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, secondFree, secondBuffer, secondWindow, secondSchema);
@@ -218,8 +223,10 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		 * First, reduce the number of tuples that are ready for processing by the 
 		 * number of tuples that are fully processed in the task that was just created
 		 */
-		secondToProcessCount -= (secondNextIndex - secondStartIndex) / secondTupleSize;
-		firstToProcessCount -= (firstNextIndex - firstStartIndex) / firstTupleSize;
+		if (secondNextIndex != secondStartIndex)
+			secondToProcessCount -= (secondNextIndex - secondStartIndex + secondTupleSize) / secondTupleSize;
+		if (firstNextIndex != firstStartIndex)
+			firstToProcessCount -= (firstNextIndex - firstStartIndex + firstTupleSize) / firstTupleSize;
 		
 		/*
 		 * Second, move the start-pointer for the next task to the next-pointer
