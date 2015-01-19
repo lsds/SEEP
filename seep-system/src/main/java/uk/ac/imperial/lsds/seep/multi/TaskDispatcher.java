@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.LockSupport;
 
 public class TaskDispatcher implements ITaskDispatcher {
 	
@@ -68,7 +69,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		if (window.isTumbling())
 			offset = tpb;
 		else
-			offset = Utils.BATCH * window.getSlide();
+			offset = (Utils.BATCH - 1) * window.getSlide();
 		
 		p = q =  0L;
 		next_ =  0L;
@@ -99,8 +100,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public void dispatch (byte [] data) {
 		int idx;
 		while ((idx = buffer.put(data)) < 0) {
-			Thread.yield();
-			/* LockSupport.parkNanos(10L); */
+			// Thread.yield();
+			LockSupport.parkNanos(100000000L);
 		}
 		assemble (idx, data.length);
 	}
@@ -110,14 +111,16 @@ public class TaskDispatcher implements ITaskDispatcher {
 		WindowBatch batch;
 		int taskid;
 		
-//		 System.out.println(
-//			String.format("[%10d, %10d), free %10d, [%3d, %3d]", 
-//					p, q, free, t_, _t)); 
+		taskid = this.getTaskNumber();
 		
+		long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+		
+		System.out.println(
+			String.format("[DBG] Task %6d [%10d, %10d), free %10d, [%3d, %3d] size %10d", 
+					taskid, p, q, free, t_, _t, size));
+		 
 		if (q <= p)
 			q += buffer.capacity();
-		
-		taskid = this.getTaskNumber();
 		
 		batch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, (int) free, buffer, window, schema);
 		if (window.isRangeBased()) {
@@ -136,26 +139,29 @@ public class TaskDispatcher implements ITaskDispatcher {
 		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
 		
 		// if (Utils.HYBRID) {
-			/* Round-robin submission to CPU and GPU executors */
-			/*
-			if ((taskid * 10) % 21 == 0) {
-				workerQueue.add(task);
-			} else {
-				task.setGPU(true);
-				_workerQueue.add(task);
-			}
-			*/
-			
-			// if (workerQueue.size() < _workerQueue.size())
-			// 	workerQueue.add(task);
-			// else {
-			//	task.setGPU(true);
-			//	_workerQueue.add(task);
-			//}
-			
+		// 
+		// Weighted round-robin submission to CPU and GPU executors
+		//	
+		// if ((taskid * 10) % 21 == 0) {
+		//	workerQueue.add(task);
+		// } else {
+		//	task.setGPU(true);
+		//	_workerQueue.add(task);
+		// }
+		//	
+		// Shortest-queue-first strategy 
+		//
+		// if (workerQueue.size() < _workerQueue.size())
+		// 	workerQueue.add(task);
+		// else {
+		//	task.setGPU(true);
+		//	_workerQueue.add(task);
+		// }
 		//} else {
+		// workerQueue.add(task);
+		// }
+		
 		workerQueue.add(task);
-		//	}
 	}
 	
 	private void assemble (int index, int length) {
@@ -171,19 +177,23 @@ public class TaskDispatcher implements ITaskDispatcher {
 				q = ((_next + 1) * tupleSize) & mask;
 				q = (q == 0) ? buffer.capacity() : q;
 				/* Set free pointer */
-				if (window.isTumbling())
-					f = (p + (offset * tupleSize)) & mask;
-				else
-					f = (p + ((offset - 1) * tupleSize)) & mask;
+				// if (window.isTumbling())
+				f = (p + (offset * tupleSize)) & mask;
+				// else
+				//	f = (p + (offset * tupleSize)) & mask;
+					// f = (p + ((offset - 1) * tupleSize)) & mask;
 				f = (f == 0) ? buffer.capacity() : f;
 				f--;
 				/* Dispatch task */
 				this.newTaskFor (p, q, f, _undefined, _undefined);
-				if (window.isTumbling())
+				if (window.isTumbling()) {
 					next_ += offset;
-				else
-					next_ += (offset - 1);
-				_next += tpb;
+					_next += tpb;
+				}
+				else {
+					next_ += offset;
+					_next += ((Utils.BATCH - 1) * window.getSlide());
+				}
 			}
 		} else
 		if (window.isRangeBased()) {
