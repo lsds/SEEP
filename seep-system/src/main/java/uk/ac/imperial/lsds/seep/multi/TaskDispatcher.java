@@ -115,9 +115,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 		
-		System.out.println(
-			String.format("[DBG] Task %6d [%10d, %10d), free %10d, [%3d, %3d] size %10d", 
-					taskid, p, q, free, t_, _t, size));
+//		System.out.println(
+//			String.format("[DBG] Task %6d [%10d, %10d), free %10d, [%3d, %3d] size %10d", 
+//					taskid, p, q, free, t_, _t, size));
 		 
 		if (q <= p)
 			q += buffer.capacity();

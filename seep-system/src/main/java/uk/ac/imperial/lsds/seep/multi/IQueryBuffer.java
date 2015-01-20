@@ -13,6 +13,7 @@ public interface IQueryBuffer {
 	public void appendBytesTo (int offset, int length, IQueryBuffer destination);
 	public ByteBuffer getByteBuffer ();
 	public int capacity ();
+	public int normalise (long index);
 	public int remaining ();
 	public boolean hasRemaining ();
 	public void position (int index);

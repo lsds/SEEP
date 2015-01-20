@@ -220,4 +220,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	public void position(int index) {
 		this.buffer.position(index);
 	}
+
+	@Override
+	public int normalise(long index) {
+		return (int) index;
+	}
 }

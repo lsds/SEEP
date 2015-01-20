@@ -203,11 +203,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						// key exists already
 						keyOffset = keyOffsets.get(key);
 						
-						int inWindowStartOffsetNormed = inWindowStartOffset % inBuffer.capacity();
-						
 						// override timestamp
 						this.timestampReference.writeByteResult(inBuffer,
-								inSchema, inWindowStartOffsetNormed, windowBuffer,
+								inSchema, inWindowStartOffset, windowBuffer,
 								keyOffset);
 
 						// check whether new value for aggregation attribute
@@ -218,7 +216,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
 								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
 							this.aggregationAttribute.writeByteResult(inBuffer,
-									inSchema, inWindowStartOffsetNormed,
+									inSchema, inWindowStartOffset,
 									windowBuffer, keyOffset + outSchema.getOffsetForAttribute(1));
 					}
 

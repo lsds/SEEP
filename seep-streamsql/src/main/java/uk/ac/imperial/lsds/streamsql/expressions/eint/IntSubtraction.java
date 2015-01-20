@@ -53,7 +53,7 @@ public class IntSubtraction implements IntExpression {
 	@Override
 	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
 			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(fromBuffer.array(), fromBufferOffset, ExpressionsUtil
+		System.arraycopy(fromBuffer.array(), fromBuffer.normalise(fromBufferOffset), ExpressionsUtil
 				.intToByteArray(eval(fromBuffer, schema, fromBufferOffset)), 0,
 				4);
 	}

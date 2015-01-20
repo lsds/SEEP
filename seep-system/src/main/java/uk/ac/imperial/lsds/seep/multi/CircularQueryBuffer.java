@@ -231,7 +231,8 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return ;
 	}
 	
-	private int normalise (long index) {
+	@Override
+	public int normalise (long index) {
 		return (int) (index & mask); /* Iff. size is a power of 2 */
 	}
 	
