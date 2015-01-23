@@ -14,7 +14,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 
@@ -22,7 +22,7 @@ public class TestAggregationType {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 8) {
+		if (args.length != 9) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -32,12 +32,15 @@ public class TestAggregationType {
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- aggregation type ('avg', 'sum', 'count', 'max', 'min')");
+			System.err.println("\t- GPU kernel filename");
 			System.exit(-1);
 		}
 		
 		/*
 		 * Set up configuration of system
 		 */
+		Utils.CPU = false;
+		Utils.GPU = false;
 		if (args[0].toLowerCase().contains("cpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
@@ -54,6 +57,8 @@ public class TestAggregationType {
 		long windowSlide      = Long.parseLong(args[5]);
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		AggregationType aggregationType = AggregationType.fromString(args[7]);
+		
+		String filename = args[8];
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -75,16 +80,32 @@ public class TestAggregationType {
 				aggregationType,
 				new FloatColumnReference(1)
 				);
+		
 		System.out.println(String.format("[DBG] %s", aggCode));
-		IMicroOperatorCode gpuAggCode = new MicroAggregationKernel(
+		ReductionKernel gpuAggCode = new ReductionKernel (
 				aggregationType,
-				new FloatColumnReference(1)
+				new FloatColumnReference(1),
+				schema
 				);
+		gpuAggCode.setSource (filename);
+		gpuAggCode.setBatchSize(Utils.BATCH);
+		/* More... */
+		long ppb = window.panesPerSlide() * (Utils.BATCH - 1) + window.numberOfPanes();
+		long tpb = ppb * window.getPaneSize();
+		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] %d bytes", inputSize));
+		gpuAggCode.setInputSize (inputSize);
+		gpuAggCode.setup();
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (aggCode, gpuAggCode, 1);
+		MicroOperator uoperator;
+		if (Utils.GPU)
+			uoperator = new MicroOperator (gpuAggCode, aggCode, 1);
+		else
+			uoperator = new MicroOperator (aggCode, 1);
+		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();

@@ -23,7 +23,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private static final int THREADS_PER_GROUP = 128;
 	
-	private static final int PIPELINES = 2;
+	private static final int PIPELINES = 1;
 	
 	private Expression[] expressions;
 	private ITupleSchema inputSchema, outputSchema;

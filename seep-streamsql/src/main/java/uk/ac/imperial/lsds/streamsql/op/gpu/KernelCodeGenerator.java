@@ -6,13 +6,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
 public class KernelCodeGenerator {
 	
-	public static String getProjection (ITupleSchema input, ITupleSchema output, String filename) {
+	public static String getProjection (ITupleSchema input, ITupleSchema output, 
+			String filename) {
 		StringBuilder b = new StringBuilder ();
-		b.append(getHeader (input, output));
+		b.append(getHeader (input, output, false));
 		b.append("\n");
 		b.append(getProjectionFunctor(input, output));
 		b.append("\n");
@@ -21,7 +23,7 @@ public class KernelCodeGenerator {
 		return b.toString();
 	}
 	
-	public static String getHeader (ITupleSchema input, ITupleSchema output) {
+	public static String getHeader (ITupleSchema input, ITupleSchema output, boolean isFloat) {
 		StringBuilder b = new StringBuilder ();
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
@@ -30,8 +32,9 @@ public class KernelCodeGenerator {
 		b.append(String.format("#define  INPUT_VECTOR_SIZE %d\n",  _input_vector_size));
 		b.append(String.format("#define OUTPUT_VECTOR_SIZE %d\n", _output_vector_size));
 		b.append("\n");
-		b.append( getInputHeader( input,  _input_vector_size));
-		b.append(getOutputHeader(output, _output_vector_size));
+		b.append( getInputHeader( input,  _input_vector_size, isFloat));
+		b.append("\n");
+		b.append(getOutputHeader(output, _output_vector_size, isFloat));
 		b.append("\n");
 		return b.toString();
 	}
@@ -45,12 +48,15 @@ public class KernelCodeGenerator {
 		return result;
 	}
 	
-	private static String getInputHeader (ITupleSchema schema, int vectors) {
+	private static String getInputHeader (ITupleSchema schema, int vectors, boolean isFloat) {
 		StringBuilder b = new StringBuilder ();
 		b.append("typedef struct {\n");
 		b.append("\tlong t;\n");
 		for (int i = 1; i < schema.getNumberOfAttributes(); i++)
-			b.append(String.format("\tint _%d;\n", i));
+			if (i == 1 && isFloat)
+				b.append(String.format("\tfloat _%d;\n", i));
+			else
+				b.append(String.format("\tint _%d;\n", i));
 		if (schema.getDummyContent().length > 0)
 			b.append(String.format("\tuchar padding[%d];\n", 
 				schema.getDummyContent().length));
@@ -63,12 +69,15 @@ public class KernelCodeGenerator {
 		return b.toString();
 	}
 	
-	private static String getOutputHeader (ITupleSchema schema, int vectors) {
+	private static String getOutputHeader (ITupleSchema schema, int vectors, boolean isFloat) {
 		StringBuilder b = new StringBuilder ();
 		b.append("typedef struct {\n");
 		b.append("\tlong t;\n");
 		for (int i = 1; i < schema.getNumberOfAttributes(); i++)
-			b.append(String.format("\tint _%d;\n", i));
+			if (i == 1 && isFloat)
+				b.append(String.format("\tfloat _%d;\n", i));
+			else
+				b.append(String.format("\tint _%d;\n", i));
 		if (schema.getDummyContent().length > 0)
 			b.append(String.format("\tuchar padding[%d];\n", 
 				schema.getDummyContent().length));
@@ -126,8 +135,68 @@ public class KernelCodeGenerator {
 		return null;
 	}
 
-	public static String getReduction (ITupleSchema inputSchema,
-			ITupleSchema outputSchema, String filename) {
+	public static String getReduction (ITupleSchema input, ITupleSchema output, 
+			String filename, AggregationType type) {
+		
+		StringBuilder b = new StringBuilder ();
+		b.append(getHeader (input, output, true));
+		b.append("\n");
+		b.append(getRecuctionFunctor(type));
+		b.append("\n");
+		b.append(getReductionKernel(filename));
+		b.append("\n");
+		return b.toString();
+	}
+	
+	private static Object getReductionKernel(String filename) {
+		return load (filename);
+	}
+	
+	private static String getRecuctionFunctor (AggregationType type) {
+		StringBuilder b = new StringBuilder ();
+		switch (type) {
+		case COUNT:
+		case SUM:
+		case AVG:
+			b.append("#define INITIAL_VALUE 0\n");
+			break;
+		case MAX:
+			b.append("#define INITIAL_VALUE -INFINITY\n");
+			break;
+		case MIN:
+			b.append("#define INITIAL_VALUE INFINITY\n");
+			break;
+		default:
+			break;
+		}
+		b.append("\n");
+		b.append("inline float reducef (float p, float q, int n) {\n");
+		switch (type) {
+		case COUNT:
+			b.append("\treturn (p + 1);\n");
+			break;
+		case SUM:
+			b.append("\treturn (p + q);\n");
+			break;
+		case AVG:
+			b.append("\treturn ((q + n * p) / (n + 1));\n");
+			break;
+		case MAX:
+			b.append("\treturn (q > p ? q : p);\n");
+			break;
+		case MIN:
+			b.append("\treturn (q < p ? q : p);\n");
+			break;
+		default:
+			b.append("\treturn -1;\n");
+			break;
+		}
+		b.append ("}\n");
+		return b.toString();
+	}
+
+	public static String getSelection(ITupleSchema input, ITupleSchema output, 
+			String filename) {
 		
 		return load (filename);
 	}

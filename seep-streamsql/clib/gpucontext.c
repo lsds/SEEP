@@ -294,7 +294,7 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 	q->readCount += 1;
 
 	/* Flush command queues */
-	gpu_context_flush (q);
+	/* gpu_context_flush (q); */ /* Flush happends at gpu_query_exec */
 	q->scheduled = 1;
 
 	return;

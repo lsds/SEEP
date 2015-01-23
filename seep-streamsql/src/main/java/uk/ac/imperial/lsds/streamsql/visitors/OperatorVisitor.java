@@ -6,6 +6,7 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.JNIProjectionKe
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.SelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.AProjectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -23,8 +24,6 @@ public interface OperatorVisitor {
 
 	public void visit (ProjectionKernel projectionKernel);
 	
-	public void visit (SelectionKernel projectionKernel);
-	
 	public void visit (MicroAggregationKernel projectionKernel);
 
 	public void visit(JNIProjectionKernel jniProjectionKernel);
@@ -32,4 +31,8 @@ public interface OperatorVisitor {
 	public void visit(AProjectionKernel aProjectionKernel);
 
 	public void visit(ReductionKernel reductionKernel);
+
+	public void visit(SelectionKernel selectionKernel);
+
+	public void visit(ASelectionKernel aSelectionKernel);
 }

@@ -27,12 +27,13 @@ public class TestReductionKernel {
 		ITupleSchema schema = new TupleSchema (Utils.OFFSETS, Utils._TUPLE_);
 		
 		ReductionKernel reductionCode = new ReductionKernel (
-			AggregationType.AVG, 
+			AggregationType.SUM, 
 			new FloatColumnReference(1),
 			schema
 		);
 		reductionCode.setSource(filename);
 		reductionCode.setBatchSize(Utils.BATCH);
+		reductionCode.setInputSize(Utils._GPU_INPUT_);
 		reductionCode.setup();
 		
 		System.out.println(String.format("[DBG] %s",reductionCode));

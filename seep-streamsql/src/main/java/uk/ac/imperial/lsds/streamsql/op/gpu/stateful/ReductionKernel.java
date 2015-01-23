@@ -34,7 +34,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	 */
 	private static final int THREADS_PER_GROUP = 256;
 	
-	private static final int PIPELINES = 2;
+	private static final int PIPELINES = 4;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
@@ -85,6 +85,10 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		this.filename = filename;
 	}
 	
+	public void setInputSize (int size) {
+		this._input_size = size;
+	}
+	
 	public void setInputSchema (ITupleSchema inputSchema) {
 		this.inputSchema = inputSchema;
 	}
@@ -96,7 +100,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	public void setup () {
 		
 		/* Configure kernel arguments */
-		this._input_size = _default_input_size;
+		/* this._input_size = _default_input_size; */
 		this.tuples = _input_size / inputSchema.getByteSizeOfTuple();
 		
 		/* We assign 1 group per window */
@@ -133,7 +137,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		b.clear();
 		d.clear();
 		
-		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename);
+		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type);
 		System.out.println(source);
 		
 		TheGPU.getInstance().init(1);

@@ -133,7 +133,7 @@ int gpu_query_exec (gpuQueryP q, size_t threads, size_t threadsPerGroup,
 		return -1;
 	gpuContextP p = gpu_context_switch (q);
 	
-	gpu_context_finish (p);
+	/* gpu_context_finish (p); */
 	
 	/* Wait for write event */
 	gpu_context_waitForWriteEvent (p);
