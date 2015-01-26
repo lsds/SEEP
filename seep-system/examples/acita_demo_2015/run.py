@@ -6,6 +6,8 @@ master_port = 3500
 logical_ops = 3
 eg_dir = os.path.dirname(os.path.realpath(__file__))
 seep_jar = 'seep-system-0.0.1-SNAPSHOT.jar'
+query_jar = 'acita_demo_2015.jar'
+query_base = 'Base'
 data_dir = '%s/log'%eg_dir
 
 def main(w, k, plot_time_str):
@@ -38,7 +40,8 @@ def main(w, k, plot_time_str):
 
 def start_master(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/query.jar', 'TODO']
+        args = ['java', '-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
+                '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
