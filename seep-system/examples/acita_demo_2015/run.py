@@ -3,7 +3,7 @@
 import subprocess,os,time,re,argparse
 
 master_port = 3500
-logical_ops = 3
+logical_ops = 4
 eg_dir = os.path.dirname(os.path.realpath(__file__))
 seep_jar = 'seep-system-0.0.1-SNAPSHOT.jar'
 query_jar = 'acita_demo_2015.jar'
@@ -32,17 +32,34 @@ def main(w, k, plot_time_str):
         print 'Starting workers'
         workers = start_workers(w, k, time_str, sim_env)
         time.sleep(5)
+
+        print 'Deploying query'
+        # Bad idea according to docs but anyway...
+        master.stdin.write('1\n')
+        #master.communicate(input='1\n')
+        print 'Deployed query'
+        time.sleep(5)
+
+        print 'Starting query'
+        master.stdin.write('2\n')
+        print 'Started query'
+        time.sleep(5)
+
+        master.stdin.close()
     
         stop_workers(workers)
 
         time.sleep(1)
         stop_master(master)
 
+def deploy_query(master):
+    pass
+
 def start_master(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
         args = ['java', '-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
                 '%s/dist/%s'%(eg_dir,query_jar), query_base]
-        p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
 def stop_master(p):
