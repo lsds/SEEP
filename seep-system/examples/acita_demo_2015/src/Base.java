@@ -33,18 +33,16 @@ public class Base implements QueryComposer{
 		
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();
-		srcFields.add("value1");
-		srcFields.add("value2");
-		srcFields.add("value3");
+		srcFields.add("tupleId");
+		srcFields.add("value");
 		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
 		
 		
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
-		snkFields.add("value1");
-		snkFields.add("value2");
-		snkFields.add("value3");
+		snkFields.add("tupleId");
+		snkFields.add("value");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		
 		
@@ -82,9 +80,8 @@ public class Base implements QueryComposer{
 			for (int j = 0; j < replicationFactor; j++)
 			{ 
 				ArrayList<String> pFields = new ArrayList<String>();
-				pFields.add("value1");
-				pFields.add("value2");
-				pFields.add("value3");
+				pFields.add("tupleId");
+				pFields.add("value");
 				Connectable p = QueryBuilder.newStatelessOperator(new Processor(), (i*replicationFactor)+j, pFields);
 				ops.get(i).put(j, p);
 			}

@@ -16,8 +16,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 public class Sink implements StatelessOperator {
-
 	private static final long serialVersionUID = 1L;
+	private static final long MAX_TUPLES = 10;
 	
 	public void setUp() {
 
@@ -27,22 +27,29 @@ public class Sink implements StatelessOperator {
 	int c = 0;
 	long init = 0;
 	int sec = 0;
-	int totalData = 0;
+	long tuplesReceived = 0;
 	
 	public void processData(DataTuple dt) {
 		System.out.println("Sink received "+dt.toString());
-		int value2 = dt.getInt("value2");
+		long tupleId = dt.getLong("tupleId");
+		String value = dt.getString("value");
 		// TIME CONTROL
-		totalData++;
+		tuplesReceived++;
+		
+		if (tupleId != tuplesReceived -1)
+		{
+			System.out.println("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
+		}
+		
 		if((System.currentTimeMillis() - init) > 1000){
 			System.out.println("SNK: "+sec+" "+c+" ");
 			c = 0;
 			sec++;
 			init = System.currentTimeMillis();
 		}
-		if (totalData > 10)
+		if (tuplesReceived >= MAX_TUPLES)
 		{
-			System.out.println("SNK: FINISHED with total data="+totalData);
+			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived);
 			System.exit(0);
 		}
 	}

@@ -21,15 +21,10 @@ public class Processor implements StatelessOperator{
 
 	
 	public void processData(DataTuple data) {
-		int value1 = data.getInt("value1");
-		int value2 = data.getInt("value2");
-		int value3 = data.getInt("value3");
+		long tupleId = data.getLong("tupleId");
+		String value = data.getString("value") + "," + api.getOperatorId();
 		
-		value1 = value2+value3;
-		value2 = value2/value3;
-		value3 = value3*value3;
-		
-		DataTuple outputTuple = data.setValues(value1, value2, value3);
+		DataTuple outputTuple = data.setValues(tupleId, value);
 		System.out.println("Operator "+api.getOperatorId()+ " processed "+data.toString()+"->"+outputTuple);
 		api.send_lowestCost(outputTuple);
 	}

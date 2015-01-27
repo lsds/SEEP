@@ -30,12 +30,11 @@ public class Source implements StatelessOperator {
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
 		
+		long tupleId = 0;
+		final String value = "Test";
 		while(true){
-			int value1 = 5;
-			int value2 = 15;
-			int value3 = 2;
 			
-			DataTuple output = data.newTuple(value1, value2, value3);
+			DataTuple output = data.newTuple(tupleId, value);
 			System.out.println("Source sending "+output.toString());
 			api.send_lowestCost(output);
 			
@@ -46,6 +45,7 @@ public class Source implements StatelessOperator {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			tupleId++;
 		}
 	}
 	
