@@ -14,16 +14,23 @@ public class CostHandler implements Runnable
 	private volatile boolean isShutdown = false;
 	private long lastSwitchTime = -1;
 	private int lastSwitch = 0;
+	private int localOpId;
 
 	public CostHandler(CoreRE owner)
 	{
-		this.owner = owner;	
+		this.owner = owner;
+		this.localOpId = owner.getProcessingUnit().getOperator().getOperatorId();
 	}
 
 
 	public void run()
 	{
-			
+		if (owner.getProcessingUnit().getOperator().getOpContext().getListOfDownstreamIndexes().isEmpty())
+		{
+			System.out.println("SNK (opid = "+localOpId + "): No need to have a router for sink node, cost handler returning.");
+			return;
+		}
+		
 		while (!isShutdown())
 		{
 			//TODO: Best way to get the potential targets etc?
