@@ -27,21 +27,22 @@ public class Sink implements StatelessOperator {
 	int c = 0;
 	long init = 0;
 	int sec = 0;
+	int totalData = 0;
 	
 	public void processData(DataTuple dt) {
 		System.out.println("Sink received "+dt.toString());
 		int value2 = dt.getInt("value2");
 		// TIME CONTROL
-		c++;
+		totalData++;
 		if((System.currentTimeMillis() - init) > 1000){
 			System.out.println("SNK: "+sec+" "+c+" ");
 			c = 0;
 			sec++;
 			init = System.currentTimeMillis();
 		}
-		if (c > 10)
+		if (totalData > 10)
 		{
-			System.out.println("SNK: FINISHED with c="+c);
+			System.out.println("SNK: FINISHED with total data="+totalData);
 			System.exit(0);
 		}
 	}
