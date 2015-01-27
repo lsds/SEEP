@@ -10,7 +10,7 @@ query_jar = 'acita_demo_2015.jar'
 query_base = 'Base'
 data_dir = '%s/log'%eg_dir
 
-def main(w, k, plot_time_str):
+def main(w, k, plot_time_str, run_master):
     print 'Starting %d workers to execute query with %d logical operators and %d op replicas'%(w,logical_ops,k)
     if w < 2 + (logical_ops - 2) * k:
         raise Exception("Not enough workers (%d) for chain query with %d logical operators (including src and sink) given replication factor %d"%(w,logical_ops, k))
@@ -22,30 +22,40 @@ def main(w, k, plot_time_str):
     else:
         time_str = time.strftime('%H-%M-%a%d%m%y')
 
-        print 'Starting master'
-        master_logfilename = mlog(k, time_str) 
-        master = start_master(master_logfilename, sim_env)
+        try:
+            if run_master:
+                print 'Starting master'
+                master_logfilename = mlog(k, time_str) 
+                master = start_master(master_logfilename, sim_env)
 
-        time.sleep(5)
+                time.sleep(5)
 
+            print 'Starting workers'
+            workers = start_workers(w, k, time_str, sim_env)
+            time.sleep(5)
 
-        print 'Starting workers'
-        workers = start_workers(w, k, time_str, sim_env)
-        time.sleep(5)
+            if run_master:
+                deploy_query(master)
+                time.sleep(5)
 
-        deploy_query(master)
-        time.sleep(5)
+                run_query(master)
+                time.sleep(5)
 
-        run_query(master)
-        time.sleep(5)
+            print 'Waiting for any process to terminate.'
+            while True:
+                if run_master and not master.poll() is None:
+                   break 
 
-        print 'Waiting for sink'
-        workers[2].wait()
+                if not poll_workers(workers):
+                   break
 
-        stop_workers(workers)
+                time.sleep(0.5)
 
-        time.sleep(1)
-        stop_master(master)
+        finally:
+            if workers:
+                stop_workers(workers)
+            if run_master and master:
+                stop_master(master)
 
 def deploy_query(master):
     print 'Deploying query'
@@ -57,6 +67,8 @@ def deploy_query(master):
 def run_query(master):
     print 'Starting query'
     master.stdin.write('2\n')
+    time.sleep(0.5)
+    master.stdin.write('\n')
     print 'Started query'
 
 def start_master(logfilename, sim_env):
@@ -105,17 +117,40 @@ def start_worker(port, logfilename, sim_env):
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
-def stop_workers(workers):
-    workers[0].terminate()
-    print 'Stopped source.'
+def poll_workers(workers):
+    if not workers[0].poll() is None:
+        return False
+    if not workers[2].poll() is None:
+        return False
 
-    workers[2].terminate()
-    print 'Stopped sink.'
+    for log in workers[1]:
+        for phys in log:
+            if not phys.poll() is None:
+                return False
+
+    print 'All workers still running.'
+    return True
+
+def stop_workers(workers):
+    try:
+        workers[0].terminate()
+        print 'Stopped source.'
+    except:
+        pass
+
+    try:
+        workers[2].terminate()
+        print 'Stopped sink.'
+    except:
+        pass
 
     for l, log in enumerate(workers[1]):
         for k, phys in enumerate(log):
-            phys.terminate()
-            print 'Terminate worker log=%d, k=%d'%(l,k)
+            try:
+                phys.terminate()
+                print 'Terminate worker log=%d, k=%d'%(l,k)
+            except:
+                pass
 
 def mlog(k, time_str):
     return 'master-k%d-%s.log'%(k,time_str)
@@ -129,8 +164,9 @@ if __name__ == "__main__":
     parser.add_argument('--workers', dest='w', default='3', help='Total number of workers to start (3)')
     parser.add_argument('-k', dest='k', default='1', help='Number of replicas for each intermediate operator')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
+    parser.add_argument('--nomaster', dest='no_master', default=False, help='Disable master (False)')
     
     args=parser.parse_args()
     
-    main(int(args.w), int(args.k), args.plot_time_str)
+    main(int(args.w), int(args.k), args.plot_time_str, not bool(args.no_master))
 
