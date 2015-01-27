@@ -39,6 +39,11 @@ public class Sink implements StatelessOperator {
 			sec++;
 			init = System.currentTimeMillis();
 		}
+		if (c > 10)
+		{
+			System.out.println("SNK: FINISHED with c="+c);
+			System.exit(0);
+		}
 	}
 	
 	public void processData(List<DataTuple> arg0) {

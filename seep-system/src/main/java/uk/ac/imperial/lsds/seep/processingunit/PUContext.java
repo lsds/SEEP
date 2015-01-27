@@ -259,7 +259,7 @@ public class PUContext {
 			else if(type.equals("up")){
 				LOG.debug("-> Trying remote upstream conn to: {}/{}", ip.toString(), portC);
 				socketC = new Socket(ip, portC);
-				socketBlind = new Socket(ip, blindPort);
+				//socketBlind = new Socket(ip, blindPort);
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
 				upstreamTypeConnection.add(con);
 				remoteUpstream.add(con);

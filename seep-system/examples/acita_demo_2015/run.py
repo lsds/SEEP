@@ -33,27 +33,31 @@ def main(w, k, plot_time_str):
         workers = start_workers(w, k, time_str, sim_env)
         time.sleep(5)
 
-        print 'Deploying query'
-        # Bad idea according to docs but anyway...
-        master.stdin.write('1\n')
-        #master.communicate(input='1\n')
-        print 'Deployed query'
+        deploy_query(master)
         time.sleep(5)
 
-        print 'Starting query'
-        master.stdin.write('2\n')
-        print 'Started query'
+        run_query(master)
         time.sleep(5)
 
-        master.stdin.close()
-    
+        print 'Waiting for sink'
+        workers[2].wait()
+
         stop_workers(workers)
 
         time.sleep(1)
         stop_master(master)
 
 def deploy_query(master):
-    pass
+    print 'Deploying query'
+    # Bad idea according to docs but anyway...
+    master.stdin.write('1\n')
+    #master.communicate(input='1\n')
+    print 'Deployed query'
+
+def run_query(master):
+    print 'Starting query'
+    master.stdin.write('2\n')
+    print 'Started query'
 
 def start_master(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
@@ -63,6 +67,8 @@ def start_master(logfilename, sim_env):
         return p
 
 def stop_master(p):
+    p.stdin.write('6\n')
+    p.stdin.close()
     p.terminate()
     print 'Terminated master.'
 
