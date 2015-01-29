@@ -49,6 +49,7 @@ public interface IProcessingUnit {
 	public void setOpReady(int opId);
 	
 	public void setOutputQueue(OutputQueue outputQueue);
+	public void setOutputQueueList(ArrayList<OutputQueue> downOpId_outputQ_map);
 	
 	public PUContext setUpRemoteConnections();
 
@@ -107,4 +108,6 @@ public interface IProcessingUnit {
 	public int getOriginalUpstreamFromOpId(int opId);
 	
 	public int getOpIdFromUpstreamIp(InetAddress ip);
+	
+	public PUContext getPUContext();
 }

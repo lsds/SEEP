@@ -25,6 +25,8 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -53,18 +55,26 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	private Operator runningOp = null;
 	
 	private ArrayList<Integer> listOfManagedStates = new ArrayList<Integer>();
-	private OutputQueue outputQueue = null;
+	private ArrayList<OutputQueue> outputQueues;
         
-        private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Math.max(1,Runtime.getRuntime().availableProcessors()-1) );
-	
+    private ExecutorService poolOfThreads = Executors.newFixedThreadPool( Math.max(1,Runtime.getRuntime().availableProcessors()-1) );
+        	
 	//Multi-core support
 	private Executor pool;
 	private boolean multiCoreEnabled;
+	
+	private Dispatcher dispatcher = null;
+	private FailureCtrlHandler fctrlHandler = null;
 	
 	public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
+		if (GLOBALS.valueFor("netAwareDispatcher").equals("true"))
+		{
+			dispatcher = new Dispatcher(this);
+			fctrlHandler = new FailureCtrlHandler(this);
+		}
 	}
 
     public PUContext getPUContext() {
@@ -260,7 +270,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 				// REMOTE SYNC
 				else if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
-					outputQueue.sendToDownstream(dt, dest);
+					outputQueues.get(target).sendToDownstream(dt, dest);
 //System.out.println("Send to: "+dest.toString());
 				}
 				// LOCAL
@@ -285,6 +295,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		}
 	}
         
+	private void dispatchData(DataTuple dt, ArrayList<Integer> targets)
+	{
+		dispatcher.dispatch(dt, targets);
+	}
+	
         @Override
         public void sendDataByThreadPool(DataTuple dt, ArrayList<Integer> targets){
         
@@ -310,7 +325,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                         
                         else if (dest instanceof SynchronousCommunicationChannel) {
                             ///\fixme{do some proper thing with var now}
-                            outputQueue.sendToDownstream(dtCopy, dest);
+                            outputQueues.get(target).sendToDownstream(dtCopy, dest);
                             //System.out.println("Send to: "+dest.toString());
                         } // LOCAL
                         
@@ -360,7 +375,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                         
                         else if (dest instanceof SynchronousCommunicationChannel) {
                             ///\fixme{do some proper thing with var now}
-                            outputQueue.sendToDownstream(dtCopy, dest);
+                            outputQueues.get(target).sendToDownstream(dtCopy, dest);
                             //System.out.println("Send to: "+dest.toString());
                         } // LOCAL
                         
@@ -390,7 +405,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 
 	@Override
 	public void setOutputQueue(OutputQueue outputQueue) {
-		this.outputQueue = outputQueue;
+		throw new RuntimeException("Changed to list of outputqueues");
 	}
 
 	@Override
@@ -417,8 +432,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void stopConnection(int opId) {
 		//Stop incoming data, a new thread is replaying
 		LOG.info("Stopping connection to OP: {}", opId);
-		outputQueue.stop();
+		ArrayList<Integer> downstreamOpIdList = getOperator().getOpContext().getDownstreamOpIdList();
+		int indexOfThisOpId = downstreamOpIdList.indexOf(opId);
+		outputQueues.get(indexOfThisOpId).stop();
 		ctx.getCCIfromOpId(opId, "d").getStop().set(true);
+		throw new RuntimeException("What if using dispatcher? Should stop the associated dispatcher worker thread");
 	}
 
 	@Override
@@ -467,6 +485,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public int getOpIdFromUpstreamIp(InetAddress ip) {
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
+	}
+
+	@Override
+	public void setOutputQueueList(ArrayList<OutputQueue> downOpId_outputQ_map) {
+		this.outputQueues = downOpId_outputQ_map;
+		if (dispatcher != null) { dispatcher.setOutputQueues(outputQueues); }
 	}
 
 }

@@ -247,6 +247,11 @@ public class OperatorContext implements Serializable{
 		return -1;
 	}
 	
+	public ArrayList<Integer> getDownstreamOpIdList()
+	{
+		return connectionsD;
+	}
+	
 	/** Methods called by QuerySpecificationI **/
 	
 	public void setOriginalDownstream(ArrayList<Integer> originalDownstream){

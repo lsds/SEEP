@@ -213,6 +213,21 @@ public class CoreProcessingLogic implements Serializable{
 		}
 	}
 	
+	public void processFailureCtrl(IFailureCtrl fctrl)
+	{
+		//TODO: Effectively this implements the defaultFailureCtrlHandler.
+		//Presuming it won't block then should be ok to just do it in this
+		//thread (which should be the associated downstream's controlHandlerWorkerThread)
+		//1) Update the dispatcher's failure ctrl
+		//2) Trim the node out buf and timers
+		//3) Trim the stuff waiting in the dispatcher's queues
+		//4) Trim the stuff waiting in the buffer for this op (and all ops?)
+		//5) TODO: Trim the input queues/buffers? 
+		//6) Notify variuos parties
+		//6) TODO: Forward the ack upstream if different.
+		pu.processFailureCtrl(fctrl);
+	}
+	
 	public void splitState(int oldOpId, int newOpId, int key) {
 		
 		BackupOperatorState backupOperatorState = puCtx.getBuffer(oldOpId).getBackupState();

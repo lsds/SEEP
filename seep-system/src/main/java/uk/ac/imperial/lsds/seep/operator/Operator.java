@@ -32,220 +32,230 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 
 	private final int operatorId;
 	private int originalOpId;
-        
+
 	private final OperatorCode operatorCode;
 	private final StateWrapper stateWrapper;
-	
+
 	private OperatorContext opContext = new OperatorContext();
 	private boolean ready = false;
 	public IProcessingUnit processingUnit = null;
 	private Router router = null;	
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionMode = new HashMap<Integer, InputDataIngestionMode>();
-	
+
 	public static Operator getStatefulOperator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
 		return new Operator(opId, opCode, s, attributes);
 	}
-	
+
 	public static Operator getStatelessOperator(int opId, OperatorCode opCode, List<String> attributes){
 		return new Operator(opId, opCode, attributes);
 	}
-	
+
 	public OperatorCode getOperatorCode(){
 		return operatorCode;
 	}
-	
+
 	private Operator(int opId, OperatorCode opCode, List<String> attributes){
 		this.operatorId = opId;
 		this.operatorCode = opCode;
 		this.stateWrapper = null;
 		opContext.setDeclaredWorkingAttributes(attributes);
-                this.originalOpId = opId;
+		this.originalOpId = opId;
 	}
-	
+
 	private Operator(int opId, OperatorCode opCode, StateWrapper s, List<String> attributes){
 		this.operatorId = opId;
 		this.operatorCode = opCode;
 		this.stateWrapper = s;
 		opContext.setDeclaredWorkingAttributes(attributes);
-                this.originalOpId = opId;
+		this.originalOpId = opId;
 	}
 
-        public void setOriginalOpId(int x){
-            originalOpId = x ;
-        }
-        
-        public int getOriginalOpId(){
-            return originalOpId;
-        }
-	
+	public void setOriginalOpId(int x){
+		originalOpId = x ;
+	}
+
+	public int getOriginalOpId(){
+		return originalOpId;
+	}
+
 	/** Other methods **/
-	
+
 	public StateWrapper getStateWrapper(){
 		return stateWrapper;
 	}
-	
+
 	public void setReady(boolean ready){
 		this.ready = ready;
 	}
-	
+
 	public boolean getReady(){
 		return ready;
 	}
-	
+
 	public Router getRouter(){
 		return router;
 	}
-	
+
 	public void setRouter(Router router){
 		this.router = router;
 	}
-	
+
 	public void setProcessingUnit(IProcessingUnit processingUnit){
 		this.processingUnit = processingUnit;
 		this.operatorCode.api.setCallbackObject(this);
 	}
 
 	/** Methods used by the developers to send data **/
-	
+
 	// Send downstream in round robin fashion
 	public synchronized void send(DataTuple dt){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward(dt);
-        processingUnit.sendData(dt, targets);
+		processingUnit.sendData(dt, targets);
 	}
-	
+
 	// Send downstream in round robin fashion
 	public synchronized void send_lowestCost(DataTuple dt){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward_lowestCost(dt);
-        processingUnit.sendData(dt, targets);
+		processingUnit.sendData(dt, targets);
 	}
-	
+
+	public synchronized void send_highestWeight(DataTuple dt)
+	{
+		ArrayList<Integer> targets = router.forward_highestWeight(dt);
+		if (targets.isEmpty())
+		{
+			throw new RuntimeException("TODO: Need to block here until a valid target is returned!");
+		}
+		processingUnit.sendData(dt, targets);
+	}
+
 	// Send to a particular downstream index
 	public synchronized void send_toIndex(DataTuple dt, int idx){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		targets.add(idx);
 		processingUnit.sendData(dt, targets);
 	}
-        
-        public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
-                ArrayList<Integer> targets = new ArrayList<>();
-                for(int idx : idxs){
-                    targets.add(idx);
-                }
-                processingUnit.sendPartitionedData(dts, targets);
-        }
-	
+
+	public synchronized void send_toIndices(DataTuple[] dts, int[] idxs){
+		ArrayList<Integer> targets = new ArrayList<>();
+		for(int idx : idxs){
+			targets.add(idx);
+		}
+		processingUnit.sendPartitionedData(dts, targets);
+	}
+
 	// Send downstream to stateful partitionable operator
 	public synchronized void send_splitKey(DataTuple dt, int key){
 		// We check the targets with our routers
 		ArrayList<Integer> targets = router.forward_splitKey(dt, key);
 		processingUnit.sendData(dt, targets);
 	}
-	
+
 	// Send to specific streamId in round robin
 	public synchronized void send_toStreamId(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forward_toOp(dt, streamId);
 		processingUnit.sendData(dt, targets);
 	}
-	
+
 	// Send to stateful partition of a given streamId
 	public synchronized void send_toStreamId_splitKey(DataTuple dt, int streamId, int key){
 		ArrayList<Integer> targets = router.forward_toOp_splitKey(dt, streamId, key);
 		processingUnit.sendData(dt, targets);
 	}
-	
+
 	// Send to all instances of a specific streamId
 	public synchronized void send_toStreamId_toAll(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
 		processingUnit.sendData(dt, targets);
 	}
-	
+
 	// Send to all downstream
 	public void send_all(DataTuple dt){
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
 		processingUnit.sendData(dt, targets);
 	}
-        
-        
+
+
 	public synchronized void send_toStreamId_toAll_threadPool(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = router.forwardToAllOpsInStreamId(dt, streamId);
-                processingUnit.sendDataByThreadPool(dt, targets);
+		processingUnit.sendDataByThreadPool(dt, targets);
 	}
-	
+
 	public void send_all_threadPool(DataTuple dt){
 		// When routing to all, targets are all the logical downstreamoperators
 		ArrayList<Integer> targets = router.forwardToAllDownstream(dt);
-                processingUnit.sendDataByThreadPool(dt, targets);
+		processingUnit.sendDataByThreadPool(dt, targets);
 	}
-	
+
 	/** System Configuration Settings **/
-	
+
 	public void disableCheckpointing(){
 		// Disable checkpointing the state for operator with operatorId
 		((StatefulProcessingUnit)processingUnit).disableCheckpointForOperator(operatorId);
 	}
-	
+
 	public void disableMultiCoreSupport(){
 		processingUnit.disableMultiCoreSupport();
 	}
-	
+
 	/** Data Delivery methods **/
-	
+
 	public InputDataIngestionMode getInputDataIngestionModeForUpstream(int opId){
 		return inputDataIngestionMode.get(opId);
 	}
-	
+
 	public Map<Integer, InputDataIngestionMode> getInputDataIngestionModeMap(){
 		return inputDataIngestionMode;
 	}
-	
+
 	public void setInputDataIngestionModeForUpstream(int opId, InputDataIngestionMode mode){
 		this.inputDataIngestionMode.put(opId, mode);
 	}
-	
+
 	/** Implementation of QuerySpecificationI **/
-	
+
 	public int getOperatorId(){
 		return operatorId;
 	}
-	
+
 	public OperatorContext getOpContext(){
 		return opContext;
 	}
-	
+
 	public void setOpContext(OperatorContext opContext){
 		this.opContext = opContext;
 	}
-	
+
 	public void setOriginalDownstream(ArrayList<Integer> originalDownstream){
 		this.opContext.setOriginalDownstream(originalDownstream);
 	}
-	
+
 	public void _declareWorkingAttributes(List<String> attributes){
 		opContext.setDeclaredWorkingAttributes(attributes);
 	}
-	
+
 	public void _declareWorkingAttributes(List<String> attributes, String key){
 		opContext.setKeyAttribute(key);
 		opContext.setDeclaredWorkingAttributes(attributes);
 	}
-	
+
 	public void initializeInputDataIngestionModePerUpstream(Map<Integer, InputDataIngestionMode> idim){
 		for(Integer opId : idim.keySet()){
 			this.getOpContext().setInputDataIngestionModePerUpstream(opId, idim.get(opId));
 		}
 	}
-	
+
 	public void processData(DataTuple data){
 		operatorCode.processData(data);
 	}
-	
+
 	public void processData(ArrayList<DataTuple> dataList){
 		operatorCode.processData(dataList);
 	}
-	
+
 	public void setUp(){
 		operatorCode.setUp();
 	}
@@ -274,9 +284,9 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		// Store in the opContext of the downstream I am adding, the inputdataingestion mode that I demand
 		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
 	}
-	
+
 	/** HELPER METHODS **/
-	
+
 	@Override 
 	public String toString() {
 		return "Operator [operatorId="+operatorId+", opContext= "+opContext+"]";

@@ -218,6 +218,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		this.outputQueue = outputQueue;
 	}
 	
+	
 	@Override
 	public void newOperatorInstantiation(Operator o) {
 		LOG.info("-> Instantiating Stateful Operator...");
@@ -924,5 +925,16 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	@Override
 	public int getOpIdFromUpstreamIp(InetAddress ip) {
 		return runningOp.getOpContext().getOpIdFromUpstreamIp(ip);
+	}
+
+	@Override
+	public void setOutputQueueList(ArrayList<OutputQueue> downOpId_outputQ_map) {
+		throw new RuntimeException("TODO");
+		
+	}
+
+	@Override
+	public PUContext getPUContext() {
+		throw new RuntimeException("TODO");
 	}
 }

@@ -415,6 +415,18 @@ public class CoreRE {
 				coreProcessLogic.processAck(ack);
 			}
 		}
+		if (ctt.equals(ControlTupleType.FCTRL))
+		{
+			IFailureCtrl fctrl = ct.getFailureCtrl();
+			if (processingUnit.getOperator().getOpContext().isSink())
+			{
+				throw new RuntimeException("Logic error?");
+			}
+			
+			//TODO: Check whether dupe?
+			coreProcessLogic.processFailureCtrl(fctrl);
+		}
+		
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
 			LOG.info("-> Node {} recv ControlTuple.INVALIDATE_STATE from OP: {}", nodeDescr.getNodeId(), ct.getInvalidateState().getOperatorId());
