@@ -18,6 +18,7 @@ import com.codahale.metrics.Timer;
 import com.sun.org.apache.bcel.internal.generic.NEW;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
@@ -30,7 +31,8 @@ public class Dispatcher {
 	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<Long, DataTuple>();
 	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<Long, Long>();	//TODO: Perhaps change to a delayQueue
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<Integer, DispatcherWorker>();
-	private final FailureHandler failureHandler = new FailureHandler();
+	private final FailureDetector failureDetector = new FailureDetector();
+	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
 	private final IProcessingUnit owner;
 	private ArrayList<OutputQueue> outputQueues;
 	private static final long FAILURE_TIMEOUT = 30 * 1000;
@@ -96,9 +98,9 @@ public class Dispatcher {
 		}
 	}
 	
-	public void handleFailureCtrl(IFailureCtrl fctrl, int dsOpId) 
+	public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 	{
-		failureHandler.handleFailureCtrl(fctrl, dsOpId);		
+		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);		
 	}
 	
 	public void stop(int target) { throw new RuntimeException("TODO"); }
@@ -137,10 +139,10 @@ public class Dispatcher {
 	}
 	
 	/** Resends timed-out tuples/batches, possibly to a different downstream. */
-	public class FailureHandler implements Runnable
+	public class FailureDetector implements Runnable
 	{
 
-		public void handleFailureCtrl(IFailureCtrl fctrl, int dsOpId)
+		public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId)
 		{ 
 			throw new RuntimeException("TODO");
 		}
@@ -225,4 +227,26 @@ public class Dispatcher {
 	}
 	
 	
+	private class FailureCtrlHandler
+	{
+
+		public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
+		{
+			//nodeFctrl.update(fctrl);
+			owner.getDispatcher
+			//boolean nodeOutChanged = purgeNodeOut();
+			
+			//refreshNodeOutTimers(fctr.alives());
+			
+			//boolean senderOutsChanged = purgeSenderOutputQueues();
+			
+			//batchAckBuffer.purge(nodeFctrl);
+			
+			//boolean inputQueuesChanged = purgeLogicalInputQueues();
+			
+			//notifyChannels()
+			
+		}
+		
+	}
 }

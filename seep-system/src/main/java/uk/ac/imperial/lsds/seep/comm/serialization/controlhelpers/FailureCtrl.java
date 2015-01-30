@@ -24,7 +24,51 @@ public class FailureCtrl {
 	
 	public FailureCtrl(String fctrl)
 	{
-		
+		String[] splits = fctrl.split(":");
+		lw = Long.parseLong(splits[0]);
+		if (splits.length == 1)
+		{
+			acks = new HashSet<Long>();
+			alives = new HashSet<Long>();
+			return;
+		}
+		if (splits.length == 2)
+		{
+			acks = parseLongs(splits[1]);
+			alives = new HashSet<Long>();
+			return;
+		}
+		acks = parseLongs(splits[1]);
+		alives = parseLongs(splits[2]);
+	}
+	
+	public String toString()
+	{
+		return lw + ":" + joinLongs(acks) + ":" + joinLongs(alives);
+	}
+	
+	private String joinLongs(Set<Long> longs)
+	{
+		String longStr = "";
+		Iterator iter = longs.iterator();
+		while (iter.hasNext())
+		{
+			longStr += iter.next();
+			if (iter.hasNext()) { longStr += ","; }
+		}
+		return longStr;
+	}
+	
+	private Set<Long> parseLongs(String longStr)
+	{
+		Set<Long> longs = new HashSet<Long>();
+		if ("".equals(longStr)) { return longs; }
+		String longSplits[] = longStr.split(",");
+		for (int i = 0; i < longSplits.length; i++)
+		{
+			longs.add(Long.parseLong(longSplits[i]));
+		}
+		return longs;
 	}
 	
 	public long lw() { return lw;	}
@@ -65,7 +109,5 @@ public class FailureCtrl {
 		return modified;
 		throw new RuntimeException("TODO: thread safety");
 	}
-	
-	public String toString() {}
 	
 }
