@@ -473,6 +473,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void emitACK(TimestampTracker currentTs) {
 		owner.ack(currentTs);
 	}
+	
+	@Override
+	public void emitFailureCtrl(FailureCtrl fctrl)
+	{
+		owner.writeFailureCtrl(fctrl);
+	}
 
 	public ArrayList<Integer> getRouterIndexesInformation(int opId){
 		return runningOp.getRouter().getIndexesInformation(opId);

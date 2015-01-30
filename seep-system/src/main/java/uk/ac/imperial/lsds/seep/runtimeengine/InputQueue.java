@@ -112,4 +112,16 @@ public class InputQueue implements DataStructureI{
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	public boolean contains(long timestamp, int upstreamOpId) 
+	{ 
+		//TODO: Tmp hack! I guess this is only a perf opt anyway,
+		//so probably wouldn't bother with it as is.
+		Object[] tuples = inputQueue.toArray();
+		for (int i = 0; i < tuples.length; i++) { 
+			if (((DataTuple)tuples[i]).getPayload().timestamp == timestamp) { return true; }
+		}
+		return false; 
+	}
 }

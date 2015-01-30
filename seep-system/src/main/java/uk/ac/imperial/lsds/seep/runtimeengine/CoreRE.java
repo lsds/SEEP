@@ -33,6 +33,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
@@ -43,6 +44,7 @@ import uk.ac.imperial.lsds.seep.manet.CostHandler;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
+import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext.PlacedOperator;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
@@ -96,7 +98,9 @@ public class CoreRE {
 	private TimestampTracker incomingTT = new TimestampTracker();
 	// Track last ack processed by this op
 	private TimestampTracker ts_ack_vector = new TimestampTracker();
-		
+	
+	private TimestampTracker 
+	
 	public CoreRE(WorkerNodeDescription nodeDescr, RuntimeClassLoader rcl){
 		this.nodeDescr = nodeDescr;
 		this.rcl = rcl;		
@@ -280,6 +284,14 @@ public class CoreRE {
 				LOG.info("-> ACK Worker working on {}", nodeDescr.getNodeId());
 			}
 		}
+		else if(GLOBALS.valueFor("fctrlWorkerActive").equals("true"))
+		{
+			OperatorContext opCtx = processingUnit.getOperator().getOpContext(); 
+			if(opCtx.isSink() || !opCtx.isSource())
+			{
+				processingUnit.createAndRunFailureCtrlWriter();
+			}
+		}
 	}
 	
     /**
@@ -417,7 +429,7 @@ public class CoreRE {
 		}
 		if (ctt.equals(ControlTupleType.FCTRL))
 		{
-			IFailureCtrl fctrl = ct.getFailureCtrl();
+			FailureCtrl fctrl = ct.getFailureCtrl();
 			if (processingUnit.getOperator().getOpContext().isSink())
 			{
 				throw new RuntimeException("Logic error?");
@@ -745,6 +757,15 @@ public class CoreRE {
 			controlDispatcher.sendUpstream(ack, index, !bestEffortAcks);
 				
 		}
+	}
+	
+	public void writeFailureCtrl(FailureCtrl fctrl)
+	{
+		int opId = -1; //TODO
+		FailureCtrl opFctrl = new FailureCtrl();
+		opFctrl.update(fctrl);
+		opFctrl.updateAlives(dsa.getDataStructureIForOp(opId).getTimestamps(opId));
+		ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, processingUnit.getOperator().getOperatorId(), fctrl);
 	}
 	
 	public void signalOpenBackupSession(int totalSizeST){

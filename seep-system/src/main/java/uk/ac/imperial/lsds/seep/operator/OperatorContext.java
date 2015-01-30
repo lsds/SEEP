@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.manet.Query;
 
 
 public class OperatorContext implements Serializable{
@@ -39,6 +40,8 @@ public class OperatorContext implements Serializable{
 	
 	private boolean isSource = false;
 	private boolean isSink = false;
+	private Query meanderQuery = null;
+	
 	// store the type of input data ingestion mode per upstream operator. <OpId - InputDataIngestionMode>
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionModePerUpstream = new HashMap<Integer, InputDataIngestionMode>();
 	//This map stores static info (for different types of downstream operators). StreamId -> list of downstreams
@@ -67,6 +70,9 @@ public class OperatorContext implements Serializable{
 	public void setIsSink(boolean isSink){
 		this.isSink = isSink;
 	}
+	
+	public void setMeanderQuery(Query query) { this.meanderQuery = query; }
+	public Query getMeanderQuery() { return meanderQuery; }
 	
 	public boolean doesRequireLogicalRouting(){
 		// If there are more than one addressable streamIds in the logicalRouting table, it does require specific routing

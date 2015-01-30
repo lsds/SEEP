@@ -73,5 +73,8 @@ public class BufferedBarrier implements DataStructureI{
 		thread_mapper.put(id, idx);
 		return idx;
 	}
+	
+	@Override
+	public boolean contains(long timestamp, int upstreamOpId) { throw new RuntimeException("TODO"); }
 
 }

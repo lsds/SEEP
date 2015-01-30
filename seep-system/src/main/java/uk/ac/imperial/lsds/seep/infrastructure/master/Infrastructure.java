@@ -28,8 +28,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +56,7 @@ import uk.ac.imperial.lsds.seep.elastic.ParallelRecoveryException;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMaster;
 import uk.ac.imperial.lsds.seep.infrastructure.monitor.master.MonitorMasterFactory;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
@@ -343,13 +347,77 @@ public class Infrastructure {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-			LOG.debug("-> Mapping OP: {} to Node: {}", e.getValue().getOperatorId(), a);
+			LOG.info("-> Mapping OP: {} to Node: {}", e.getValue().getOperatorId(), a);
 			placeNew(e.getValue(), a);
 		}
-		LOG.debug("-> All operators have been mapped");
+		LOG.info("-> All operators have been mapped");
+		Query q = buildMeanderQuery();
 		for(Operator o : queryToNodesMapping.values()){
-			LOG.debug("OP: {}, CONF: {}", o.getOperatorId(), o);
+			LOG.info("OP: {}, CONF: {}", o.getOperatorId(), o);
+			o.getOpContext().setMeanderQuery(q);
 		}
+	}
+	
+	private Query buildMeanderQuery()
+	{
+		//TreeMap logicalTopology
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		//TODO: Generalize this for non-face recognition queries.
+		logicalTopology.put(1, new Integer[]{}); //src
+		logicalTopology.put(2, new Integer[]{1}); //face detector
+		logicalTopology.put(3, new Integer[]{2}); //face recognizer
+		logicalTopology.put(4, new Integer[]{3}); //sink
+
+		//TreeMap log2Phys
+		//use SEEP operator ids here for now. Will need to also store operator id <-> (node_addr, port) mapping
+		//Will probably need to change the getCost function in LinkCostHandler too to look up the costs by node_addr
+		// (from the op id).
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<>();
+
+		//Walk the ops, starting at the source.
+		Set<Integer> srcPhys = new HashSet<>();
+		if (src.size() > 1) { throw new RuntimeException("TODO"); }
+		Operator currentSrc = src.get(0);
+		srcPhys.add(currentSrc.getOperatorId());
+		log2phys.put(1, srcPhys);
+		phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+
+		LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(srcPhys));
+		int numDownstreams = currentSrc.getOpContext().getDownstreamSize();
+		int downstreamLogicalIndex = 2;
+		Operator current = currentSrc;
+		while (numDownstreams > 0)
+		{
+			LOG.info("Number of downstreams for op "+ current.getOperatorId()+"= "+numDownstreams);
+			Set<Integer> downstreamPhys = new HashSet<Integer>();
+
+			//TODO: Complete hack. For the FR query, enough to know the downstreams of one
+			//physical replica to know the downstreams of all.
+			Operator next = null;
+			for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)
+			{
+				downstreamPhys.add(downstreamPlacement.opID());
+				next = getOp(downstreamPlacement.opID());
+				phys2addr.put(downstreamPlacement.opID(), next.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+				LOG.info("Added op "+ current.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+			}
+			log2phys.put(downstreamLogicalIndex, downstreamPhys);
+			downstreamLogicalIndex++;
+			numDownstreams = next.getOpContext().getDownstreamSize();
+			current = next;
+		}
+
+		return new Query(logicalTopology, log2phys, phys2addr);
+	}
+
+	private Operator getOp(int opId)
+	{
+		for (Operator op : ops)
+		{
+			if (op.getOperatorId() == opId) { return op; }
+		}
+		throw new RuntimeException("Logic error, no operator with id: "+opId);
 	}
 	
 	public void createInitialStarTopology(){
