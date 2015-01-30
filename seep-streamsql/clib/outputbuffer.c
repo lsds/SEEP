@@ -14,6 +14,7 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
 		exit (1);
 	}
 	p->size = size;
+	p->writeOnly = (unsigned char) writeOnly;
 	int error;
 	cl_mem_flags flags;
 	if (writeOnly)

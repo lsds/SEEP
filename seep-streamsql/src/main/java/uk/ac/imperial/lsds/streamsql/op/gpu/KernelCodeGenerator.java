@@ -25,6 +25,7 @@ public class KernelCodeGenerator {
 	
 	public static String getHeader (ITupleSchema input, ITupleSchema output, boolean isFloat) {
 		StringBuilder b = new StringBuilder ();
+		b.append("#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
 		int  _input_vector_size = getVectorSize ( input);
@@ -95,7 +96,11 @@ public class KernelCodeGenerator {
 	}
 	
 	public static String getSelectionFunctor (IPredicate predicate) {
-		return null;
+		StringBuilder b = new StringBuilder ();
+		b.append("inline int selectf (__global input_t *p) {\n");
+		b.append("\treturn 1;\n");
+		b.append("}\n");
+		return b.toString();
 	}
 	
 	public static String getSelectionKernel (String filename) {
@@ -148,7 +153,7 @@ public class KernelCodeGenerator {
 		return b.toString();
 	}
 	
-	private static Object getReductionKernel(String filename) {
+	private static String getReductionKernel(String filename) {
 		return load (filename);
 	}
 	
@@ -194,9 +199,22 @@ public class KernelCodeGenerator {
 		b.append ("}\n");
 		return b.toString();
 	}
-
+	
 	public static String getSelection(ITupleSchema input, ITupleSchema output, 
-			String filename) {
+			IPredicate predicate, String filename) {
+		
+		StringBuilder b = new StringBuilder ();
+		b.append(getHeader (input, output, false));
+		b.append("\n");
+		b.append(getSelectionFunctor(predicate));
+		b.append("\n");
+		b.append(getSelectionKernel(filename));
+		b.append("\n");
+		return b.toString();
+	}
+
+	public static String getAggregation(ITupleSchema inputSchema,
+			ITupleSchema outputSchema, String filename, AggregationType type) {
 		
 		return load (filename);
 	}

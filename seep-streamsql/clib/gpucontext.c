@@ -235,32 +235,47 @@ void gpu_context_finish (gpuContextP q) {
 }
 
 void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGroup) {
-
+	int i;
 	int error = 0;
 	/* Write */
-	error = clEnqueueWriteBuffer (
-		q->queue[0],
-		q->kernelInput.inputs[0]->device_buffer,
-		CL_FALSE,
-		0,
-		q->kernelInput.inputs[0]->size,
-		q->kernelInput.inputs[0]->mapped_buffer,
-		0, NULL, &q->write_event);
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
-		exit (1);
+	for (i = 0; i < q->kernelInput.count; i++) {
+		if (i == q->kernelInput.count - 1) {
+			error |= clEnqueueWriteBuffer (
+				q->queue[0],
+				q->kernelInput.inputs[i]->device_buffer,
+				CL_FALSE,
+				0,
+				q->kernelInput.inputs[i]->size,
+				q->kernelInput.inputs[i]->mapped_buffer,
+				0, NULL, &q->write_event);
+		} else {
+			error |= clEnqueueWriteBuffer (
+				q->queue[0],
+				q->kernelInput.inputs[i]->device_buffer,
+				CL_FALSE,
+				0,
+				q->kernelInput.inputs[i]->size,
+				q->kernelInput.inputs[i]->mapped_buffer,
+				0, NULL, NULL);
+		}
+		if (error != CL_SUCCESS) {
+			fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+			exit (1);
+		}
 	}
 	q->writeCount += 1;
 
 	/* Execute */
-	error = clEnqueueNDRangeKernel (
-		q->queue[0],
-		q->kernel.kernels[0]->kernel[0],
-		1,
-		NULL,
-		&threads,
-		&threadsPerGroup,
-		0, NULL, NULL);
+	for (i = 0; i < q->kernel.count; i++) {
+		error |= clEnqueueNDRangeKernel (
+			q->queue[0],
+			q->kernel.kernels[i]->kernel[0],
+			1,
+			NULL,
+			&threads,
+			&threadsPerGroup,
+			0, NULL, NULL);
+	}
 
 	/* Execute and get event notification */
 	/*
@@ -273,20 +288,34 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		&threadsPerGroup,
 		0, NULL, &q->exec_event);
 	*/
+
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
 
 	/* Read */
-	error = clEnqueueReadBuffer (
-		q->queue[0],
-		q->kernelOutput.outputs[0]->device_buffer,
-		CL_FALSE,
-		0,
-		q->kernelOutput.outputs[0]->size,
-		q->kernelOutput.outputs[0]->mapped_buffer,
-		0, NULL, &q->read_event);
+	for (i = 0; i < q->kernelOutput.count; i++) {
+		if (i == q->kernelOutput.count - 1) {
+			error |= clEnqueueReadBuffer (
+				q->queue[0],
+				q->kernelOutput.outputs[i]->device_buffer,
+				CL_FALSE,
+				0,
+				q->kernelOutput.outputs[i]->size,
+				q->kernelOutput.outputs[i]->mapped_buffer,
+				0, NULL, &q->read_event);
+		} else {
+			error |= clEnqueueReadBuffer (
+				q->queue[0],
+				q->kernelOutput.outputs[i]->device_buffer,
+				CL_FALSE,
+				0,
+				q->kernelOutput.outputs[i]->size,
+				q->kernelOutput.outputs[i]->mapped_buffer,
+				0, NULL, NULL);
+		}
+	}
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);

@@ -70,7 +70,7 @@ public class MicroAggregationKernel implements IStreamSQLOperator, IMicroOperato
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
 	private Expression [] groupBy;
-	private Selection having;
+	private Selection having = null;
 	
 	private LongColumnReference timestampReference;
 	
@@ -113,7 +113,7 @@ public class MicroAggregationKernel implements IStreamSQLOperator, IMicroOperato
 	 * 
 	 * Assert that for each i, failed[i] == 0. 
 	 */
-	private int [] failed;
+	private int []  failed;
 	private int [] stashed;
 	
 	private int tuples; /* Total number of input tuples */

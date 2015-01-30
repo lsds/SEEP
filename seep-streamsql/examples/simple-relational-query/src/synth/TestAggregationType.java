@@ -36,6 +36,7 @@ public class TestAggregationType {
 			System.exit(-1);
 		}
 		
+		
 		/*
 		 * Set up configuration of system
 		 */
@@ -133,8 +134,11 @@ public class TestAggregationType {
 		}
 		
 		try {
-			while (true) 
+			while (true) {
+				// for (int i = 0; i < 32768; i++)
+				//	b.putLong(i * 32, 0L);
 				operator.processData (data);
+			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 
 			System.exit(1);

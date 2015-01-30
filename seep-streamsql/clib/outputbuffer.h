@@ -6,6 +6,7 @@
 typedef struct output_buffer *outputBufferP;
 typedef struct output_buffer {
 	int size;
+	unsigned char writeOnly;
 	cl_mem device_buffer;
 	cl_mem pinned_buffer;
 	void  *mapped_buffer;

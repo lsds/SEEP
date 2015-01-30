@@ -91,6 +91,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKerne
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelReduce
   (JNIEnv *, jobject, jint, jintArray);
 
+/*
+ * Class:     uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU
+ * Method:    setKernelAggregate
+ * Signature: (I[I)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelAggregate
+  (JNIEnv *, jobject, jint, jintArray);
+
 #ifdef __cplusplus
 }
 #endif

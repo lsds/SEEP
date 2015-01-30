@@ -121,8 +121,9 @@ public class TheGPU {
 	public native int execute (int queryId, int threads, int threadsPerGroup);
 	public native int free ();
 	/* Operator-specific function calls */
-	public native int setKernelDummy   (int queryId, int [] args);
-	public native int setKernelProject (int queryId, int [] args);
-	public native int setKernelSelect  (int queryId, int [] args);
-	public native int setKernelReduce  (int queryId, int [] args);
+	public native int setKernelDummy     (int queryId, int [] args);
+	public native int setKernelProject   (int queryId, int [] args);
+	public native int setKernelSelect    (int queryId, int [] args);
+	public native int setKernelReduce    (int queryId, int [] args);
+	public native int setKernelAggregate (int queryId, int [] args);
 }

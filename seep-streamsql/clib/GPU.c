@@ -23,11 +23,13 @@ static int Q; /* Number of queries */
 static int freeIndex;
 static gpuQueryP queries [MAX_QUERIES];
 
-void callback_setKernelDummy   (cl_kernel, gpuContextP, int *);
-void callback_setKernelProject (cl_kernel, gpuContextP, int *);
-void callback_setKernelReduce  (cl_kernel, gpuContextP, int *);
-void callback_setKernelSelect  (cl_kernel, gpuContextP, int *);
-void callback_setKernelCompact (cl_kernel, gpuContextP, int *);
+void callback_setKernelDummy     (cl_kernel, gpuContextP, int *);
+void callback_setKernelProject   (cl_kernel, gpuContextP, int *);
+void callback_setKernelReduce    (cl_kernel, gpuContextP, int *);
+void callback_setKernelSelect    (cl_kernel, gpuContextP, int *);
+void callback_setKernelCompact   (cl_kernel, gpuContextP, int *);
+void callback_setKernelAggrScan  (cl_kernel, gpuContextP, int *);
+void callback_setKernelAggrMerge (cl_kernel, gpuContextP, int *);
 
 void callback_writeInput (gpuContextP, JNIEnv *, jobject, int, int, int);
 void callback_readOutput (gpuContextP, JNIEnv *, jobject, int, int, int);
@@ -250,6 +252,23 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKerne
 	return 0;
 }
 
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelAggregate
+(JNIEnv *env, jobject obj, jint qid, jintArray _args) {
+
+	(void) obj;
+
+	jsize argc = (*env)->GetArrayLength(env, _args);
+	if (argc != 6) /* # selection kernel constants */
+		return -1;
+	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
+	/* Object `int []` pinned */
+	gpu_setKernel (qid, 0,  "aggregateKernel",  &callback_setKernelAggrScan, args);
+	gpu_setKernel (qid, 1, "compactKernel", &callback_setKernelAggrMerge, args);
+	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
+	/* Object `int []` released */
+	return 0;
+}
+
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU_setKernelReduce
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
@@ -402,6 +421,7 @@ void callback_setKernelSelect (cl_kernel kernel, gpuContextP context, int *const
 	 * __global const uchar *input,
 	 * __global int *flags,
 	 * __global int *offsets,
+	 * __global uchar *output,
 	 * __local int *buffer
 	 * )
 	 */
@@ -435,8 +455,13 @@ void callback_setKernelSelect (cl_kernel kernel, gpuContextP context, int *const
 		6, /* 7th argument */
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[1]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		7, /* 8th argument */
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[2]->device_buffer));
 	/* Set local memory */
-	error |= clSetKernelArg (kernel, 7, (size_t) buffer_size, (void *) NULL);
+	error |= clSetKernelArg (kernel, 8, (size_t) buffer_size, (void *) NULL);
 
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
@@ -446,61 +471,150 @@ void callback_setKernelSelect (cl_kernel kernel, gpuContextP context, int *const
 }
 
 void callback_setKernelCompact (cl_kernel kernel, gpuContextP context, int *constants) {
-	/*
-	 * Compact kernel signature
-	 *
-	 * __kernel void compactKernel (
-	 * const int size,
+
+	/* The configuration of this kernel is identical to the select kernel. */
+	callback_setKernelSelect (kernel, context, constants);
+}
+
+void callback_setKernelAggrScan (cl_kernel kernel, gpuContextP context, int *constants) {
+
+	/* __kernel void aggregateKernel (
 	 * const int tuples,
-	 * const int _bundle,
-	 * const int bundles,
-	 * __global const uchar *input,
-	 * __global int *flags,
-	 * __global int *offsets,
-	 * __global const int *pivots,
-	 * __global uchar *output
-	 * )
-	 */
+	 * const int _table_,
+	 * const int __stash_x,
+	 * const int __stash_y,
+	 * const int max_iterations,
+	 *
+	 * __global const uchar* input,
+	 * __global const int* window_ptrs_,
+	 * __global const int* _window_ptrs,
+	 * __global const int* x,
+	 * __global const int* y,
+	 *
+	 * __global uchar* contents,
+	 * __global int* stashed,
+	 * __global int* failed,
+	 * __global int* attempts,
+	 * __global int* indices,
+	 * __global int* offsets,
+	 * __global uchar* output,
+	 * __local int* buffer
+	 * );
+	 * */
 
 	/* Get all constants */
-	int        size = constants[0];
-	int      tuples = constants[1];
-	int     _bundle = constants[2];
-	int     bundles = constants[3];
+	int         tuples = constants[0];
+	int        _table_ = constants[1];
+	int      __stash_x = constants[2];
+	int      __stash_y = constants[3];
+	int max_iterations = constants[4];
+	int   _buffer_size = constants[5];
 
 	int error = 0;
 	/* Set constant arguments */
-	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *)    &size);
-	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)  &tuples);
-	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *) &_bundle);
-	error |= clSetKernelArg (kernel, 3, sizeof(int), (void *) &bundles);
+	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *)          &tuples);
+	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)         &_table_);
+	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *)       &__stash_x);
+	error |= clSetKernelArg (kernel, 3, sizeof(int), (void *)       &__stash_y);
+	error |= clSetKernelArg (kernel, 4, sizeof(int), (void *)  &max_iterations);
 	/* Set I/O byte buffers */
 	error |= clSetKernelArg (
 		kernel,
-		4, /* 5th argument */
+		5,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[0]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		5, /* 6th argument */
+		6,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[1]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		7,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[2]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		8,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[3]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		9,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[4]->device_buffer));
+
+	error |= clSetKernelArg (
+		kernel,
+		10,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[0]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		6, /* 7th argument */
+		11,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[1]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		7, /* 8th argument */
+		12,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[2]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		8, /* 9th argument */
+		13,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[3]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		14,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[4]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		15,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[5]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		16,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[6]->device_buffer));
 
+	/* Set local memory */
+	error |= clSetKernelArg (kernel, 17, (size_t) _buffer_size, (void *) NULL);
+
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+	return;
+}
+
+void callback_setKernelAggrMerge (cl_kernel kernel, gpuContextP context, int *constants) {
+	int _table_ = constants[1];
+	int error = 0;
+	/* Set constant arguments */
+	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *) &_table_);
+	error |= clSetKernelArg (
+		kernel,
+		1,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[0]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		2,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[4]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		3,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[5]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		4,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[6]->device_buffer));
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
@@ -541,6 +655,8 @@ void callback_readOutput (gpuContextP context,
 		fprintf(stderr, "JNI error: failed to acquire read method pointer\n");
 		exit(1);
 	}
+	if (! context->kernelOutput.outputs[ndx]->writeOnly)
+		return ;
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
 			env, obj, method,

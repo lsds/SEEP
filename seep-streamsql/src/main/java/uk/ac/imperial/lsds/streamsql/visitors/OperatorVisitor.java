@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.visitors;
 
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.AggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.JNIProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
@@ -35,4 +36,6 @@ public interface OperatorVisitor {
 	public void visit(SelectionKernel selectionKernel);
 
 	public void visit(ASelectionKernel aSelectionKernel);
+
+	public void visit(AggregationKernel aggregationKernel);
 }
