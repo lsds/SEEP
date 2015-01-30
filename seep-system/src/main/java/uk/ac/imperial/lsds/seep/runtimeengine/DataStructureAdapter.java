@@ -13,10 +13,12 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
@@ -58,8 +60,78 @@ public class DataStructureAdapter {
 		dsoMap.put(opId, dso);
 	}
 	
+	private void setUpMeanderQuery(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext)
+	{
+		Query query = opContext.getMeanderQuery();
+		int logicalId = query.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
+		Map<Integer, DataStructureI> tmpLogicalDsoMap = new HashMap<>();
+		
+		Set[] inputs = query.getPhysicalInputs(logicalId);
+		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
+		if(iimMap.size() > 1){
+			LOG.debug("-> Setting up multiple inputDataIngestionModes");
+			// For processing one event per iteration, the queue is the best abstraction
+			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
+				if(entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)){
+					int logicalIndex = query.getLogicalInputIndex(logicalId, query.getLogicalNodeId(entry.getKey()));
+					if (tmpLogicalDsoMap.containsKey(logicalIndex))
+					{
+						dsoMap.put(entry.getKey(), tmpLogicalDsoMap.get(logicalIndex));
+					}
+					else
+					{
+						InputQueue iq = new InputQueue();
+						dsoMap.put(entry.getKey(), iq);
+						tmpLogicalDsoMap.put(entry.getKey(), iq);
+					}	
+					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
+				}
+				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
+					int originalOperatorOnBarrier = entry.getKey();
+					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+                                        LOG.debug("-> ^^^^^ numberUpstreamsOnBarrier {}", numberUpstreamsOnBarrier);
+					Barrier b = new Barrier(numberUpstreamsOnBarrier);
+					dsoMap.put(entry.getKey(), b);
+					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
+					throw new RuntimeException("TODO");
+				}
+			}
+		}
+		else if(iimMap.size() == 1)
+		{
+			LOG.debug("-> Setting up a unique InputDataIngestionMode");
+			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
+				if(entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)){
+					InputQueue iq = new InputQueue();
+					uniqueDso = iq;
+					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
+				}
+				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
+					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
+					int originalOperatorOnBarrier = entry.getKey();
+					int numberUpstreamsOnBarrier = opContext.getUpstreamNumberOfType(originalOperatorOnBarrier);
+//					System.out.println("Num registers on barrier: "+numberUpstreamsOnBarrier);
+					///\fixme{manage this}
+					numberUpstreamsOnBarrier = opContext.upstreams.size();
+					Barrier b = new Barrier(numberUpstreamsOnBarrier);
+					uniqueDso = b;
+					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
+				}
+			}
+			throw new RuntimeException("TODO: Meander query?");
+		}
+	}
+	
+	
 //	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext){
+		if (opContext.getMeanderQuery() != null)
+		{
+		  setUpMeanderQuery(iimMap, opContext);
+		  return;
+		}
+	
 		// Differentiate between cases with only one inputdatamode and more than one (for performance reasons)
 		if(iimMap.size() > 1){
 			LOG.debug("-> Setting up multiple inputDataIngestionModes");

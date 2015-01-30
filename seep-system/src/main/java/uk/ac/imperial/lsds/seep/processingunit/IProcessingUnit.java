@@ -101,6 +101,8 @@ public interface IProcessingUnit {
 
 	public void emitACK(TimestampTracker currentTs);
 	
+	public void emitFailureCtrl();
+	
 	public ArrayList<Integer> getRouterIndexesInformation(int opId);
 	
 	public ArrayList<Integer> getRouterKeysInformation(int opId);
