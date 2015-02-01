@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
@@ -36,6 +37,7 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
+import uk.ac.imperial.lsds.seep.reliable.FailureCtrlWriter;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
@@ -64,7 +66,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	private boolean multiCoreEnabled;
 	
 	private Dispatcher dispatcher = null;
-	private FailureCtrlHandler fctrlHandler = null;
 	
 	public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
 		this.owner = owner;
@@ -73,7 +74,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		if (GLOBALS.valueFor("netAwareDispatcher").equals("true"))
 		{
 			dispatcher = new Dispatcher(this);
-			fctrlHandler = new FailureCtrlHandler(this);
 		}
 	}
 
@@ -81,6 +81,13 @@ public class StatelessProcessingUnit implements IProcessingUnit {
         return ctx;
     }
 	
+    /*
+    public Dispatcher processFailureCtrl(FailureCtrl fctrl, int downOpId)
+    {
+    	if (dispatcher == null) { throw new RuntimeException("Logic error."); }
+    	dispatcher.handleFailureCtrl(fctrl, downOpId);
+    }
+    */
 	@Override
 	public void addDownstream(int opId, OperatorStaticInformation location) {
 		// First pick the most downstream operator, and add the downstream to that one
@@ -129,6 +136,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public Operator getOperator() {
 		return runningOp;
+	}
+	
+	@Override
+	public Dispatcher getDispatcher()
+	{
+		return dispatcher;
 	}
 	
 	@Override
@@ -465,6 +478,14 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	}
 
 	@Override
+	public void createAndRunFailureCtrlWriter()
+	{
+		FailureCtrlWriter fctrlWriter = new FailureCtrlWriter(this);
+		Thread fctrlT = new Thread(fctrlWriter);
+		fctrlT.start();
+	}
+	
+	@Override
 	public TimestampTracker getLastACK() {
 		return owner.getIncomingTT();
 	}
@@ -475,9 +496,9 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	}
 	
 	@Override
-	public void emitFailureCtrl(FailureCtrl fctrl)
-	{
-		owner.writeFailureCtrl(fctrl);
+	public void emitFailureCtrl(FailureCtrl nodeFctrl)
+	{	
+		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl);
 	}
 
 	public ArrayList<Integer> getRouterIndexesInformation(int opId){

@@ -174,6 +174,15 @@ public class OperatorContext implements Serializable{
 		}
 		return indexes;
 	}
+	
+	public ArrayList<Integer> getListOfUpstreamIndexes()
+	{
+		ArrayList<Integer> indexes = new ArrayList<Integer>();
+		for(PlacedOperator up: upstreams){
+			indexes.add(up.index());
+		}
+		return indexes;
+	}
 
 	//Check if the given opId is statefull
 	public boolean isDownstreamOperatorStateful(int opId) {

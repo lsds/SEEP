@@ -156,6 +156,13 @@ public class Router implements Serializable{
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route_lowestCost();
 	}
 		
+	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
+	{
+		checkDownstreamRoutingImpl();
+		//return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route_highestWeight();
+		throw new RuntimeException("TODO");
+	}
+	
 	private void checkDownstreamRoutingImpl()
 	{
 		if(downstreamRoutingImpl == null){

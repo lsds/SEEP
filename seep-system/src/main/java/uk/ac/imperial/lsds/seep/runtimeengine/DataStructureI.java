@@ -11,8 +11,10 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 
 public interface DataStructureI {
 
@@ -20,5 +22,7 @@ public interface DataStructureI {
 	public DataTuple pull();
 	public ArrayList<DataTuple> pull_from_barrier();
 	public boolean contains(long timestamp, int upstreamOpId);
+	public Set<Long> getTimestamps();
+	public FailureCtrl purge(FailureCtrl nodeFctrl);
 	
 }

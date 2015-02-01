@@ -1,8 +1,8 @@
 package uk.ac.imperial.lsds.seep.reliable;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
-import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public class FailureCtrlWriter implements Runnable {
 
@@ -17,7 +17,7 @@ public class FailureCtrlWriter implements Runnable {
 		int sleep = new Integer(GLOBALS.valueFor("ackEmitInterval"));
 		while(goOn){
 			
-			processingUnit.getDispatcher().getNodeFailureCtrl();
+			FailureCtrl fctrl = processingUnit.getDispatcher().getNodeFailureCtrl();
 			
 			/*
 			TimestampTracker currentTsV = processingUnit.getLastACK();
@@ -25,7 +25,7 @@ public class FailureCtrlWriter implements Runnable {
 			processingUnit.emitACK(currentTsV);
 			*/
 			
-			processingUnit.emitFailureCtrl();
+			processingUnit.emitFailureCtrl(fctrl);
 			
 			try{
 				Thread.sleep(sleep);

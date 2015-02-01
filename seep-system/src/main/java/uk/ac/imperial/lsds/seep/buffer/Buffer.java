@@ -15,6 +15,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
@@ -126,6 +127,20 @@ public class Buffer implements Serializable{
 		System.out.println("TOTAL-TRIM: "+(endTrim-startTrim));
 
         return oldest;
+	}
+	
+	public void trim(FailureCtrl fctrl)
+	{
+		Iterator<OutputLogEntry> iter = log.iterator();
+		while (iter.hasNext())
+		{
+			long ts = iter.next().outputTs;
+			if (ts <= fctrl.lw() || fctrl.acks().contains(ts) || fctrl.alives().contains(ts))
+			{
+				iter.remove();
+			}
+		}
+		throw new RuntimeException("Need to handle (SEEP) batch sending properly here!");
 	}
 	
 	///fixme{just for testing, do binary search on structure}

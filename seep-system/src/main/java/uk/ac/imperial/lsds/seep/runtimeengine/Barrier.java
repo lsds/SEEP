@@ -11,11 +11,13 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.SynchronousQueue;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 
 /** 
  * Reason why the barrier is implemented with the Phaser of Java 7 instead of a common CyclicBarrier of previous java is because of its robust support
@@ -25,43 +27,43 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 public class Barrier implements DataStructureI {
 
 	private Phaser staticBarrier;
-	
+
 	private ArrayList<DataTuple> data = new ArrayList<DataTuple>();
-	
+
 	private BlockingQueue<ArrayList<DataTuple>> sbq = new SynchronousQueue<ArrayList<DataTuple>>();
-	
+
 	private long lastTimestamp = 0;
 	private int repetitions = 0;
-        private int repetitionsANN = 0 ;
+	private int repetitionsANN = 0 ;
 	private long cummulatedTime = 0;
-        private long cummulatedBarrierTime = 0 ; 
-        private long barrierTimeEachPhase;
-	
+	private long cummulatedBarrierTime = 0 ; 
+	private long barrierTimeEachPhase;
+
 	public Barrier(int initialNumberOfThreads){
 		staticBarrier = new Phaser(initialNumberOfThreads){
 			protected boolean onAdvance(int phase, int parties) {
-				
-                                cummulatedBarrierTime += (System.nanoTime() - barrierTimeEachPhase);
-                                long now = System.currentTimeMillis();
-                                
+
+				cummulatedBarrierTime += (System.nanoTime() - barrierTimeEachPhase);
+				long now = System.currentTimeMillis();
+
 				if(lastTimestamp != 0){
-                                    
+
 					cummulatedTime += (now-lastTimestamp);
 					lastTimestamp = now;
 					repetitions++;
-                                        repetitionsANN++;
-					
-                                        if(repetitions == 5000){
+					repetitionsANN++;
+
+					if(repetitions == 5000){
 						System.out.println("AVG barrier time: "+(cummulatedTime)+" ms");
 						repetitions = 0;
 						cummulatedTime = 0;
 					}
-                                        
-                                        if(repetitionsANN == 9500){
-                                                System.out.println("Accum barrier time: "+((double)(cummulatedBarrierTime/1000000000.0))+" s");
-                                                System.out.println("repetitions = " + repetitionsANN);
+
+					if(repetitionsANN == 9500){
+						System.out.println("Accum barrier time: "+((double)(cummulatedBarrierTime/1000000000.0))+" s");
+						System.out.println("repetitions = " + repetitionsANN);
 						repetitionsANN = 0 ; 
-                                                cummulatedBarrierTime = 0 ;
+						cummulatedBarrierTime = 0 ;
 					}
 				}
 				else{
@@ -79,7 +81,7 @@ public class Barrier implements DataStructureI {
 			}
 		};
 	}
-	
+
 	public void reconfigureBarrier(int numThreads){
 		// Dynamic tiering of the hierarchical phaser
 		// Check the num of Threads. 
@@ -87,9 +89,9 @@ public class Barrier implements DataStructureI {
 		// partition the parties into two phasers
 		// register those in the master one
 		staticBarrier.register();
-//		staticBarrier.bulkRegister(numThreads);
+		//		staticBarrier.bulkRegister(numThreads);
 	}
-	
+
 	@Override
 	public DataTuple pull() {
 		return null;
@@ -111,10 +113,10 @@ public class Barrier implements DataStructureI {
 		// We put the data
 		synchronized(data){
 			data.add(dt);
-                        
-                        if( (data.size() == 1) ){
-                            barrierTimeEachPhase = System.nanoTime();
-                        }
+
+			if( (data.size() == 1) ){
+				barrierTimeEachPhase = System.nanoTime();
+			}
 		}
 		try{
 			// And wait on the barrier
@@ -126,7 +128,17 @@ public class Barrier implements DataStructureI {
 			staticBarrier.arriveAndAwaitAdvance();
 		}
 	}
-	
+
 	@Override
 	public boolean contains(long timestamp, int upstreamOpId) { throw new RuntimeException("TODO"); }
+
+	@Override
+	public Set<Long> getTimestamps() {
+		throw new RuntimeException("TODO");
+	}
+	
+	@Override
+	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
+		throw new RuntimeException("TODO");
+	}
 }

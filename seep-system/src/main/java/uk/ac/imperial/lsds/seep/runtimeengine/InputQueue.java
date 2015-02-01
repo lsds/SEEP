@@ -13,10 +13,14 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 
 public class InputQueue implements DataStructureI{
@@ -124,4 +128,42 @@ public class InputQueue implements DataStructureI{
 		}
 		return false; 
 	}
+
+	@Override
+	public Set<Long> getTimestamps() {
+		Set<Long> result = new HashSet<>();
+		Object[] tuples = inputQueue.toArray();
+		for (int i = 0; i < tuples.length; i ++)
+		{
+			result.add(((DataTuple)tuples[i]).getPayload().timestamp);
+		}
+		return result;
+	}
+
+	@Override
+	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
+		//TODO: This will be horrendously slow, and is in the critical path,
+		//and I'm not even sure it's threadsafe wrt the dataconsumer.
+		Set<Long> opAlives = new HashSet<>();
+		Iterator<DataTuple> iter = inputQueue.iterator();
+		while (iter.hasNext())
+		{
+			long ts = iter.next().getPayload().timestamp;
+			if (ts <= nodeFctrl.lw() || nodeFctrl.acks().contains(ts) 
+					|| nodeFctrl.alives().contains(ts))
+			{
+				iter.remove();
+			}
+			else
+			{
+				opAlives.add(ts);
+			}
+		}
+		FailureCtrl upOpFctrl = new FailureCtrl(nodeFctrl);
+		upOpFctrl.updateAlives(opAlives);
+		//return upOpFctrl;
+		throw new RuntimeException("TODO");
+	}
+	
+	
 }

@@ -123,6 +123,18 @@ public class DataStructureAdapter {
 		}
 	}
 	
+	/*
+	public Set<Long> getTimestamps(int upstreamOpId)
+	{
+		if (uniqueDso != null)
+		{
+			return uniqueDso.getTimestamps();
+		}
+		else
+		{
+			return dsoMap.get(upstreamOpId).getTimestamps();
+		}
+	}*/
 	
 //	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext){

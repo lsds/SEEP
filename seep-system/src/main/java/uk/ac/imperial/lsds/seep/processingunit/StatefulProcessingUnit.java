@@ -31,6 +31,7 @@ import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -40,6 +41,7 @@ import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
 import uk.ac.imperial.lsds.seep.reliable.ACKWorker;
+import uk.ac.imperial.lsds.seep.reliable.FailureCtrlWriter;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.reliable.SerialiserWorker;
 import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker;
@@ -908,6 +910,14 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 
 	@Override
+	public void createAndRunFailureCtrlWriter()
+	{
+		FailureCtrlWriter fctrlWriter = new FailureCtrlWriter(this);
+		Thread fctrlT = new Thread(fctrlWriter);
+		fctrlT.start();
+	}
+	
+	@Override
 	public TimestampTracker getLastACK() {
 		return owner.getIncomingTT();
 	}
@@ -917,6 +927,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		owner.ack(currentTs);
 	}
 
+	@Override
+	public void emitFailureCtrl(FailureCtrl nodeFctrl) {
+		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl);
+	}
+	
 	public void resetState() {
 		//((Streamable)((LargeState)runningOpState).getVersionableAndStreamableState()).reset();
 		((Streamable)runningOpState).reset();
@@ -937,4 +952,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	public PUContext getPUContext() {
 		throw new RuntimeException("TODO");
 	}
+
+	@Override
+	public Dispatcher getDispatcher() {
+		throw new RuntimeException("TODO");
+	}
+
+
 }

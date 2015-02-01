@@ -36,6 +36,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitNodeState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
@@ -213,7 +214,7 @@ public class CoreProcessingLogic implements Serializable{
 		}
 	}
 	
-	public void processFailureCtrl(IFailureCtrl fctrl)
+	public synchronized void processFailureCtrl(FailureCtrl fctrl, int downOpId)
 	{
 		//TODO: Effectively this implements the defaultFailureCtrlHandler.
 		//Presuming it won't block then should be ok to just do it in this
@@ -225,7 +226,14 @@ public class CoreProcessingLogic implements Serializable{
 		//5) TODO: Trim the input queues/buffers? 
 		//6) Notify variuos parties
 		//6) TODO: Forward the ack upstream if different.
-		pu.processFailureCtrl(fctrl);
+		if (pu.getDispatcher() != null)
+		{
+			FailureCtrl updatedFctrl = pu.getDispatcher().handleFailureCtrl(fctrl, downOpId);
+			
+			//Now trim the input data structures + trigger the fctrl writer to write 
+			//a new fctrl.
+			owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
+		}
 	}
 	
 	public void splitState(int oldOpId, int newOpId, int key) {

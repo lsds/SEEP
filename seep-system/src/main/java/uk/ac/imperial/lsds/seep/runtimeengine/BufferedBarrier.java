@@ -14,9 +14,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 
 public class BufferedBarrier implements DataStructureI{
 
@@ -75,6 +77,16 @@ public class BufferedBarrier implements DataStructureI{
 	}
 	
 	@Override
-	public boolean contains(long timestamp, int upstreamOpId) { throw new RuntimeException("TODO"); }
+	public boolean contains(long timestamp, int upstreamOpId) 
+	{ throw new RuntimeException("TODO"); }
 
+	@Override
+	public Set<Long> getTimestamps() {
+		throw new RuntimeException("TODO");
+	}
+	
+	@Override
+	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
+		throw new RuntimeException("TODO");
+	}
 }

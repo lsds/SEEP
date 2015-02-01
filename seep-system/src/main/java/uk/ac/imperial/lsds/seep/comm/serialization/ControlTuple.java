@@ -18,10 +18,12 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperator
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.CloseSignal;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DistributedScaleOutInfo;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.KeyBounds;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpFailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpenSignal;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
@@ -41,6 +43,7 @@ public class ControlTuple {
 	private CoreRE.ControlTupleType type;
 	
 	private Ack ack;
+	private OpFailureCtrl opFctrl;
 	private BackupOperatorState backupState;
 	private ReconfigureConnection reconfigureConnection;
 	private ScaleOutInfo scaleOutInfo;
@@ -72,6 +75,12 @@ public class ControlTuple {
 		this.invalidateState = new InvalidateState(opId);
 	}
 	
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, FailureCtrl fctrl)
+	{
+		this.type = type;
+		this.opFctrl = new OpFailureCtrl(opId, fctrl);
+
+	}
 	public CoreRE.ControlTupleType getType() {
 		return type;
 	}
@@ -88,6 +97,15 @@ public class ControlTuple {
 		this.ack = ack;
 	}
 
+	public OpFailureCtrl getOpFailureCtrl() {
+		return opFctrl;
+	}
+	
+	public void setOpFailureCtrl(OpFailureCtrl opFctrl)
+	{
+		this.opFctrl = opFctrl;
+	}
+	
 	public BackupOperatorState getBackupState(){
 		return backupState;
 	}

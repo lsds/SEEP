@@ -99,7 +99,6 @@ public class CoreRE {
 	// Track last ack processed by this op
 	private TimestampTracker ts_ack_vector = new TimestampTracker();
 	
-	private TimestampTracker 
 	
 	public CoreRE(WorkerNodeDescription nodeDescr, RuntimeClassLoader rcl){
 		this.nodeDescr = nodeDescr;
@@ -338,7 +337,7 @@ public class CoreRE {
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, SCALE_IN, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
 		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT,
-		KEY_SPACE_BOUNDS
+		KEY_SPACE_BOUNDS, FAILURE_CTRL
 	}
 	
 	public synchronized void setTsData(int stream, long ts_data){
@@ -427,16 +426,17 @@ public class CoreRE {
 				coreProcessLogic.processAck(ack);
 			}
 		}
-		if (ctt.equals(ControlTupleType.FCTRL))
+		if (ctt.equals(ControlTupleType.FAILURE_CTRL))
 		{
-			FailureCtrl fctrl = ct.getFailureCtrl();
+			FailureCtrl fctrl = ct.getOpFailureCtrl().getFctrl();
+			int downOpId = ct.getOpFailureCtrl().getOpId();
 			if (processingUnit.getOperator().getOpContext().isSink())
 			{
 				throw new RuntimeException("Logic error?");
 			}
 			
 			//TODO: Check whether dupe?
-			coreProcessLogic.processFailureCtrl(fctrl);
+			coreProcessLogic.processFailureCtrl(fctrl, downOpId);
 		}
 		
 		/** INVALIDATE_STATE message **/
@@ -759,13 +759,16 @@ public class CoreRE {
 		}
 	}
 	
-	public void writeFailureCtrl(FailureCtrl fctrl)
+	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
 	{
-		int opId = -1; //TODO
-		FailureCtrl opFctrl = new FailureCtrl();
-		opFctrl.update(fctrl);
-		opFctrl.updateAlives(dsa.getDataStructureIForOp(opId).getTimestamps(opId));
-		ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, processingUnit.getOperator().getOperatorId(), fctrl);
+		for (int upOpIndex : upOpIndexes)
+		{
+			int upOpId = processingUnit.getOperator().getOpContext().getUpOpIdFromIndex(upOpIndex);
+			FailureCtrl upFctrl = dsa.getDataStructureIForOp(upOpId).purge(nodeFctrl);
+			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, processingUnit.getOperator().getOperatorId(), upFctrl);
+			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
+			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
+		}
 	}
 	
 	public void signalOpenBackupSession(int totalSizeST){
