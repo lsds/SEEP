@@ -1,16 +1,6 @@
-/*******************************************************************************
- * Copyright (c) 2013 Imperial College London.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * 
- * Contributors:
- *     Raul Castro Fernandez - initial design and implementation
- *     Martin Rouaux - Added calls to notify arrival and departure of tuples
- *     to DefaultMetricsReader.
- ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
+
+import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -18,24 +8,19 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
-import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 
-public class InputQueue implements DataStructureI{
+public class SlowInputQueue implements DataStructureI {
 
+	
 	private BlockingQueue<DataTuple> inputQueue;
 	
-	public InputQueue(){
+	public SlowInputQueue()
+	{
 		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
-		//inputQueue = new LinkedBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
-		//Unbounded
-		//inputQueue = new LinkedBlockingQueue<DataTuple>();
-	}
-	
-	public InputQueue(int size){
-		inputQueue = new ArrayBlockingQueue<DataTuple>(size);
 	}
 	
 	public synchronized void push(DataTuple data){
@@ -67,14 +52,17 @@ public class InputQueue implements DataStructureI{
 
         // Seep monitoring: notify reset of input queue
         notifyThat(0).inputQueueTake();
-            
-        for(int i = 0; i<miniBatchSize; i++){
-			DataTuple dt = inputQueue.poll();
-			if(dt != null)
-				batch[i] = dt;
-			else
-				break;
-		}
+         
+        synchronized(this)
+        {
+	        for(int i = 0; i<miniBatchSize; i++){
+				DataTuple dt = inputQueue.poll();
+				if(dt != null)
+					batch[i] = dt;
+				else
+					break;
+			}
+        }
 		return batch;
 	}
 	
@@ -83,7 +71,10 @@ public class InputQueue implements DataStructureI{
             // Seep monitoring
             notifyThat(0).inputQueueTake();
             
-			return inputQueue.take();
+            synchronized(this)
+            {
+            	return inputQueue.take();
+            }
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -118,18 +109,52 @@ public class InputQueue implements DataStructureI{
 	}
 	
 	@Override
-	public boolean contains(long timestamp, int upstreamOpId) { 
-		throw new RuntimeException("TODO");
+	public boolean contains(long timestamp, int upstreamOpId) 
+	{ 
+		//TODO: Tmp hack! I guess this is only a perf opt anyway,
+		//so probably wouldn't bother with it as is.
+		Object[] tuples = null;
+		synchronized(this) { tuples = inputQueue.toArray(); }
+		for (int i = 0; i < tuples.length; i++) { 
+			if (((DataTuple)tuples[i]).getPayload().timestamp == timestamp) { return true; }
+		}
+		return false; 
 	}
 
 	@Override
 	public Set<Long> getTimestamps() {
-		throw new RuntimeException("TODO");
+		Set<Long> result = new HashSet<>();
+		Object[] tuples = null;
+		synchronized(this) { tuples = inputQueue.toArray(); }
+		for (int i = 0; i < tuples.length; i ++)
+		{
+			result.add(((DataTuple)tuples[i]).getPayload().timestamp);
+		}
+		return result;
 	}
 
 	@Override
-	public FailureCtrl purge(FailureCtrl nodeFctrl) {
-		throw new RuntimeException("TODO");
+	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
+		//TODO: This will be much slower than input queue since the data
+		//consumer methods must now take the lock
+		Set<Long> opAlives = new HashSet<>();
+		Iterator<DataTuple> iter = inputQueue.iterator();
+		while (iter.hasNext())
+		{
+			long ts = iter.next().getPayload().timestamp;
+			if (ts <= nodeFctrl.lw() || nodeFctrl.acks().contains(ts) 
+					|| nodeFctrl.alives().contains(ts))
+			{
+				iter.remove();
+			}
+			else
+			{
+				opAlives.add(ts);
+			}
+		}
+		FailureCtrl upOpFctrl = new FailureCtrl(nodeFctrl);
+		upOpFctrl.updateAlives(opAlives);
+		return upOpFctrl;
 	}
 	
 	

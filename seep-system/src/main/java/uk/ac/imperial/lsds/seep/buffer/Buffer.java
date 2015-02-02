@@ -134,13 +134,13 @@ public class Buffer implements Serializable{
 		Iterator<OutputLogEntry> iter = log.iterator();
 		while (iter.hasNext())
 		{
-			long ts = iter.next().outputTs;
-			if (ts <= fctrl.lw() || fctrl.acks().contains(ts) || fctrl.alives().contains(ts))
-			{
-				iter.remove();
-			}
+			BatchTuplePayload batch = iter.next().batch;
+			batch.trim(fctrl);
+			if (batch.size() <= 0) { iter.remove(); }
 		}
-		throw new RuntimeException("Need to handle (SEEP) batch sending properly here!");
+		//TODO: This won't work with SEEPs current batching/acking model.
+		//throw new RuntimeException("Need to handle (SEEP) batch sending properly here!");
+		
 	}
 	
 	///fixme{just for testing, do binary search on structure}

@@ -1,7 +1,5 @@
 package uk.ac.imperial.lsds.seep.processingunit;
 
-import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,12 +8,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
@@ -24,7 +20,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 
-public class Dispatcher {
+public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private final FailureCtrl nodeFctrl = new FailureCtrl();
@@ -72,14 +68,15 @@ public class Dispatcher {
 	
 	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
 	{		
-		if (targets.isEmpty()) { throw new RuntimeException("Logic error."); }
+		if (targets == null || targets.isEmpty()) { throw new RuntimeException("Logic error."); }
 		if (targets.size() > 1) { throw new RuntimeException("TODO."); }
-		//TODO: Flow control if total q length > max q?
+
 		synchronized(lock)
 		{
 			if (nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }
 			else
 			{
+				//TODO: Flow control if total q length > max q for round robin?
 				nodeOutBuffer.put(dt.getPayload().timestamp, dt);
 				nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
 			}
@@ -111,6 +108,11 @@ public class Dispatcher {
 	{
 		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);
 		return new FailureCtrl(nodeFctrl);
+	}
+	
+	public void routingChanged()
+	{
+		synchronized(lock) { lock.notifyAll(); }
 	}
 	
 	public void stop(int target) { throw new RuntimeException("TODO"); }
@@ -150,12 +152,12 @@ public class Dispatcher {
 		public boolean purgeSenderQueue()
 		{
 			boolean changed = false;
-			  
+			  FailureCtrl currentFctrl = getNodeFailureCtrl();
 			  Iterator<DataTuple> qIter = tupleQueue.iterator();
 			  while (qIter.hasNext())
 			  {
 				  long batchId = qIter.next().getPayload().timestamp;
-				  if (batchId <= nodeFctrl.lw() || nodeFctrl.acks().contains(batchId) || nodeFctrl.alives().contains(batchId))
+				  if (batchId <= currentFctrl.lw() || currentFctrl.acks().contains(batchId) || currentFctrl.alives().contains(batchId))
 				  {
 				  	changed = true;
 					qIter.remove();
@@ -175,6 +177,7 @@ public class Dispatcher {
 			while(true)
 			{
 				checkForRetransmissions();
+				throw new RuntimeException("TODO: notify on lock");
 			}
 		}
 		
@@ -241,7 +244,7 @@ public class Dispatcher {
 					//TODO: Check whether this sender already has it?
 					workers.get(target).send(dt);
 											
-					//TODO: Remove from other sender queues? 
+					//TODO: Remove from other sender queues? 				
 				}					
 			}					
 		}
@@ -273,38 +276,43 @@ public class Dispatcher {
 			*/
 
 			//notifyChannels()
-			throw new RuntimeException("TODO: Notify channels.");
 
+			synchronized(lock) { lock.notifyAll(); }
 		}
 		private boolean purgeNodeOut()
 		{
 			boolean changed = false;
-			Iterator<Long> iter = nodeOutBuffer.keySet().iterator();
-			while (iter.hasNext())
+			synchronized(lock)
 			{
-				long nxtBatch = iter.next();
-				if (nxtBatch <= nodeFctrl.lw() || nodeFctrl.acks().contains(nxtBatch))
+				Iterator<Long> iter = nodeOutBuffer.keySet().iterator();
+				while (iter.hasNext())
 				{
-					iter.remove();
-					nodeOutTimers.remove(nxtBatch);
-					changed = true;
+					long nxtBatch = iter.next();
+					if (nxtBatch <= nodeFctrl.lw() || nodeFctrl.acks().contains(nxtBatch))
+					{
+						iter.remove();
+						nodeOutTimers.remove(nxtBatch);
+						changed = true;
+					}
 				}
 			}
-			//return changed;
-			throw new RuntimeException("TODO: Locking.");
+			return changed;
 		}
 
 		private void refreshNodeOutTimers(Set newAlives)
 		{
-			Iterator<Long> iter = nodeFctrl.alives().iterator();
-			while (iter.hasNext())
+			synchronized(lock)
 			{
-				Long nxtAlive = (Long)iter.next();
-				if (newAlives.contains(nxtAlive))
+				Iterator<Long> iter = nodeFctrl.alives().iterator();
+				while (iter.hasNext())
 				{
-					//Only refresh the newly updated alives
-					//TODO: Could perhaps use the time the fctrl was sent instead.
-					nodeOutTimers.put(nxtAlive, System.currentTimeMillis());
+					Long nxtAlive = (Long)iter.next();
+					if (newAlives.contains(nxtAlive))
+					{
+						//Only refresh the newly updated alives
+						//TODO: Could perhaps use the time the fctrl was sent instead.
+						nodeOutTimers.put(nxtAlive, System.currentTimeMillis());
+					}
 				}
 			}
 		}
@@ -322,39 +330,20 @@ public class Dispatcher {
 		private boolean purgeSenderBuffers()
 		{
 			//TODO: How to trim buffer?
+			FailureCtrl currentFailureCtrl = getNodeFailureCtrl();
 			for (int opId : workers.keySet())
 			{
 				SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
-				Buffer buffer = cci.getBuffer();
-				buffer.trim(nodeFctrl);
-			}
-			throw new RuntimeException("Changed?");
-		}
-		
-		
-		/*
-		private boolean purgeLogicalInputQueues()
-		{
-			boolean changed = false;
-			if (logicalInputQueues != null)		//i.e. not a source.
-			{
-				for (int i = 0; i < logicalInputQueues.length; i++)
+				if (cci != null)
 				{
-					Iterator iter = logicalInputQueues[i].keySet().iterator();
-					while (iter.hasNext())
-					{
-						Long id = (Long)iter.next();
-						if (id.longValue() <= nodeFctrl.lw() || nodeFctrl.acks().contains(id))
-						{
-							changed = true;
-							iter.remove();
-						}
-					}
+					Buffer buffer = cci.getBuffer();
+					buffer.trim(currentFailureCtrl);
 				}
 			}
-			return changed;
+			return true;
 		}
-
+		
+		/*
 		private void notifyChannels()
 		{
 

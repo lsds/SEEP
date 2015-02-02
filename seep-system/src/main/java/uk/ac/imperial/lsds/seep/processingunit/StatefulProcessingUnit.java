@@ -958,5 +958,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		throw new RuntimeException("TODO");
 	}
 
+	@Override
+	public void sendDataDispatched(DataTuple dt, ArrayList<Integer> targets) {
+		throw new RuntimeException("TODO");
+		
+	}
+
 
 }

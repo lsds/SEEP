@@ -308,7 +308,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		}
 	}
         
-	private void dispatchData(DataTuple dt, ArrayList<Integer> targets)
+	public void sendDataDispatched(DataTuple dt, ArrayList<Integer> targets)
 	{
 		dispatcher.dispatch(dt, targets);
 	}
@@ -517,7 +517,10 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public void setOutputQueueList(ArrayList<OutputQueue> downOpId_outputQ_map) {
 		this.outputQueues = downOpId_outputQ_map;
-		if (dispatcher != null) { dispatcher.setOutputQueues(outputQueues); }
+		if (dispatcher != null) {
+			getOperator().getRouter().addObserver(dispatcher);	//TODO: Bit weird to do this here.
+			dispatcher.setOutputQueues(outputQueues); 
+		}
 	}
 
 }

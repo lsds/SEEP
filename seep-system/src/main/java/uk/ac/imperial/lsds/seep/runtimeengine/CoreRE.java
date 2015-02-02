@@ -433,7 +433,7 @@ public class CoreRE {
 		}
 		if (ctt.equals(ControlTupleType.FAILURE_CTRL))
 		{
-			FailureCtrl fctrl = ct.getOpFailureCtrl().getFctrl();
+			FailureCtrl fctrl = ct.getOpFailureCtrl().getFailureCtrl();
 			int downOpId = ct.getOpFailureCtrl().getOpId();
 			if (processingUnit.getOperator().getOpContext().isSink())
 			{
@@ -770,6 +770,7 @@ public class CoreRE {
 	
 	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
 	{
+		if (controlDispatcher == null) { return; }
 		LOG.info("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		for (int upOpIndex : upOpIndexes)
 		{

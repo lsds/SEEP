@@ -80,7 +80,7 @@ public class DataStructureAdapter {
 					}
 					else
 					{
-						InputQueue iq = new InputQueue();
+						SlowInputQueue iq = new SlowInputQueue();
 						dsoMap.put(entry.getKey(), iq);
 						tmpLogicalDsoMap.put(entry.getKey(), iq);
 					}	
@@ -103,7 +103,7 @@ public class DataStructureAdapter {
 			LOG.debug("-> Setting up a unique InputDataIngestionMode");
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
 				if(entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)){
-					InputQueue iq = new InputQueue();
+					SlowInputQueue iq = new SlowInputQueue();
 					uniqueDso = iq;
 					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}

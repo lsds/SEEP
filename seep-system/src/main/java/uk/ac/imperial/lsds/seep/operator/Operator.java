@@ -19,13 +19,14 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
-public class Operator implements Serializable, EndPoint, Connectable, Callback{
+public class Operator implements Serializable, EndPoint, Connectable, Callback, IRoutingObserver {
 
 	private static final long serialVersionUID = 1L;
 	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
@@ -98,6 +99,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 
 	public void setRouter(Router router){
 		this.router = router;
+		router.addObserver(this);
 	}
 
 	public void setProcessingUnit(IProcessingUnit processingUnit){
@@ -123,12 +125,19 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 
 	public synchronized void send_highestWeight(DataTuple dt)
 	{
-		ArrayList<Integer> targets = router.forward_highestWeight(dt);
-		if (targets.isEmpty())
+		ArrayList<Integer> targets = router.forward_highestWeight(dt);;
+		
+		while (targets == null || targets.isEmpty())
 		{
-			throw new RuntimeException("TODO: Need to block here until a valid target is returned!");
+			try {
+				this.wait();
+			} catch (InterruptedException e) {
+				LOG.debug("TODO: Check if router closed.");
+			}
+			targets = router.forward_highestWeight(dt);
 		}
-		processingUnit.sendData(dt, targets);
+			
+		processingUnit.sendDataDispatched(dt, targets);
 	}
 
 	// Send to a particular downstream index
@@ -285,6 +294,11 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback{
 		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
 	}
 
+	@Override
+	public void routingChanged()
+	{
+		synchronized(this) { this.notifyAll(); }
+	}
 	/** HELPER METHODS **/
 
 	@Override 

@@ -45,6 +45,8 @@ public class Router implements Serializable{
 	
 	//This map stores the load balancer for each type of downstream. This map is related to routeInfo
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
+
+	private ArrayList<IRoutingObserver> observers = new ArrayList<>(1);
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -223,6 +225,19 @@ public class Router implements Serializable{
 	public void update_lowestCost(int newTarget)
 	{
 		downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_lowestCost(newTarget);
+		notifyObservers();
+	}
+	
+	public void addObserver(IRoutingObserver o)
+	{
+		observers.add(o);
+	}
+	private void notifyObservers()
+	{
+		for (IRoutingObserver o : observers)
+		{
+			o.routingChanged();
+		}
 	}
 	
 	public int[] newOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){

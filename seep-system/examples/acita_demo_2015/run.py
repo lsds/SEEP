@@ -161,8 +161,8 @@ def wlog(w, k, port, time_str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
 
-    parser.add_argument('--workers', dest='w', default='3', help='Total number of workers to start (3)')
-    parser.add_argument('-k', dest='k', default='1', help='Number of replicas for each intermediate operator')
+    parser.add_argument('--workers', dest='w', default='6', help='Total number of workers to start (3)')
+    parser.add_argument('-k', dest='k', default='2', help='Number of replicas for each intermediate operator')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nomaster', dest='no_master', default=False, help='Disable master (False)')
     

@@ -78,7 +78,7 @@ public class ControlTuple {
 	public ControlTuple(CoreRE.ControlTupleType type, int opId, FailureCtrl fctrl)
 	{
 		this.type = type;
-		this.opFctrl = new OpFailureCtrl(opId, fctrl);
+		this.opFctrl = new OpFailureCtrl(opId, fctrl.lw(), fctrl.acks(), fctrl.alives());
 
 	}
 	public CoreRE.ControlTupleType getType() {

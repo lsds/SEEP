@@ -226,7 +226,7 @@ public class CoreProcessingLogic implements Serializable{
 		//5) TODO: Trim the input queues/buffers? 
 		//6) Notify variuos parties
 		//6) TODO: Forward the ack upstream if different.
-		if (pu.getDispatcher() != null)
+		if (pu != null && pu.getDispatcher() != null)
 		{
 			FailureCtrl updatedFctrl = pu.getDispatcher().handleFailureCtrl(fctrl, downOpId);
 			

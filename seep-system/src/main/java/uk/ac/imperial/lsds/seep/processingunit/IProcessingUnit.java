@@ -118,4 +118,6 @@ public interface IProcessingUnit {
 
 	public PUContext getPUContext();
 
+	public void sendDataDispatched(DataTuple dt, ArrayList<Integer> targets);
+
 }

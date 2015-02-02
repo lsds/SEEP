@@ -11,6 +11,9 @@
 package uk.ac.imperial.lsds.seep.comm.serialization.messages;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 
 public class BatchTuplePayload {
 
@@ -38,6 +41,28 @@ public class BatchTuplePayload {
 	}
 	
 	public int size(){
+		//TODO: dokeeffe - should this not be batchSize? is it thread safe currently?
 		return batch.size();
+	}
+	
+	public synchronized void trim(FailureCtrl fctrl)
+	{
+		//TODO: Is this even thread safe wrt output sending?
+		Iterator<TuplePayload> iter = batch.iterator();
+		long newOutputTs = -1;
+		while (iter.hasNext())
+		{
+			long tupleTs = iter.next().timestamp;
+			if (tupleTs <= fctrl.lw() || fctrl.acks().contains(tupleTs) || fctrl.alives().contains(tupleTs))
+			{
+				iter.remove();
+				batchSize--;
+			}
+			else
+			{
+				newOutputTs = Math.max(newOutputTs, tupleTs);
+			}
+		}
+		outputTs = newOutputTs;	//TODO: This will probably mess up the existing acking relationships.
 	}
 }
