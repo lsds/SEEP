@@ -8,6 +8,7 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
@@ -47,7 +48,7 @@ public class TestAggregationGroupBy {
 			Utils.GPU = true;
 		
 		Utils.THREADS = Integer.parseInt(args[1]);
-		Utils.BATCH = Integer.parseInt(args[2]);
+		QueryConf queryConf = new QueryConf(Integer.parseInt(args[2]), 1024);
 		
 		/*
 		 * Set up configuration of query
@@ -97,7 +98,7 @@ public class TestAggregationGroupBy {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window);
+		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();

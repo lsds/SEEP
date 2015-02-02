@@ -25,6 +25,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private JoinResultHandler handler;
 	private SubQuery parent;
 	
+	private int batch;
+	
 	private int nextTask = 0;
 	
 	private int firstStartIndex      = 0;
@@ -64,7 +66,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		this.firstMask = this.firstBuffer.capacity() - 1;
 		this.secondMask = this.secondBuffer.capacity() - 1;
-
+		
+		this.batch     = this.parent.getQueryConf().BATCH;
 	}
 	
 	@Override
@@ -121,7 +124,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			/*
 			 * check whether we have enough data to create a task
 			 */
-			if (firstToProcessCount >= Utils.JOIN_BATCH || secondToProcessCount >= Utils.JOIN_BATCH)
+			if (firstToProcessCount >= this.batch || secondToProcessCount >= this.batch)
 				createTask();
 		}
 	}
@@ -172,7 +175,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			/*
 			 * check whether we have enough data to create a task
 			 */
-			if (firstToProcessCount >= Utils.JOIN_BATCH || secondToProcessCount >= Utils.JOIN_BATCH)
+			if (firstToProcessCount >= this.batch || secondToProcessCount >= this.batch)
 				createTask();
 		}
 	}
@@ -189,8 +192,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		if (secondNextIndex != secondStartIndex)
 			secondFree = (secondNextIndex - secondTupleSize) & secondMask;
 		
-		WindowBatch firstBatch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, firstFree, firstBuffer, firstWindow, firstSchema);
-		WindowBatch secondBatch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, secondFree, secondBuffer, secondWindow, secondSchema);
+		WindowBatch firstBatch = WindowBatchFactory.newInstance(this.batch, taskid, firstFree, firstBuffer, firstWindow, firstSchema);
+		WindowBatch secondBatch = WindowBatchFactory.newInstance(this.batch, taskid, secondFree, secondBuffer, secondWindow, secondSchema);
 	
 		firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
 		secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);

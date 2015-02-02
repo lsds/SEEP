@@ -26,13 +26,16 @@ public class SubQuery {
 
 	private WindowDefinition	secondWindow;
 	private ITupleSchema		secondSchema;
+	
+	private QueryConf           queryConf;
 
 	public SubQuery(int id, Set<MicroOperator> microOperators,
-			ITupleSchema schema, WindowDefinition window) {
+			ITupleSchema schema, WindowDefinition window, QueryConf queryConf) {
 		this.id = id;
 		this.microOperators = microOperators;
 		this.firstWindow = window;
 		this.firstSchema = schema;
+		this.queryConf   = queryConf;
 
 		for (MicroOperator o : this.microOperators) {
 			if (o.isMostUpstream())
@@ -45,10 +48,11 @@ public class SubQuery {
 	}
 
 	public SubQuery(int id, Set<MicroOperator> microOperators,
-			ITupleSchema firstSchema, WindowDefinition firstWindow,
+			ITupleSchema firstSchema, WindowDefinition firstWindow, 
+			QueryConf queryConf,
 			ITupleSchema secondSchema, WindowDefinition secondWindow) {
 		
-		this(id, microOperators, firstSchema, firstWindow);
+		this(id, microOperators, firstSchema, firstWindow, queryConf);
 		
 		this.secondWindow = secondWindow;
 		this.secondSchema = secondSchema;
@@ -139,5 +143,9 @@ public class SubQuery {
 
 	public ITupleSchema getSecondSchema() {
 		return secondSchema;
+	}
+
+	public QueryConf getQueryConf() {
+		return queryConf;
 	}
 }

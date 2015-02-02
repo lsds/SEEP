@@ -22,10 +22,12 @@ public class TestMicroAggregationKernel {
 		
 		String filename = args[0];
 		
-		WindowDefinition window = 
-			new WindowDefinition (Utils.TYPE, Utils.RANGE, Utils.SLIDE);
+		int batchSize = 100;
 		
-		ITupleSchema schema = new TupleSchema (Utils.OFFSETS, Utils._TUPLE_);
+		WindowDefinition window = 
+			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
+		
+		ITupleSchema schema = new TupleSchema (TestUtils.OFFSETS, TestUtils._TUPLE_);
 		
 		Selection having = new Selection 
 		(
@@ -52,7 +54,7 @@ public class TestMicroAggregationKernel {
 		
 		/* aggregation.setSource(filename); */
 		aggregation.setWindowDefinition(window);
-		aggregation.setBatchSize(Utils.BATCH);
+		aggregation.setBatchSize(batchSize);
 		aggregation.setup();
 		
 		/* System.out.println(String.format("[DBG] %s", aggregation)); */
@@ -63,7 +65,7 @@ public class TestMicroAggregationKernel {
 		while (buffer.getByteBuffer().hasRemaining())
 			buffer.getByteBuffer().putInt(1);
 		buffer.close();
-		WindowBatch batch = new WindowBatch(Utils.BATCH, 0, 0, buffer, window, schema);
+		WindowBatch batch = new WindowBatch(batchSize, 0, 0, buffer, window, schema);
 		batch.setBatchPointers(0, buffer.capacity());
 		
 		aggregation.processData(batch, null);

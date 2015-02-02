@@ -5,6 +5,7 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -57,7 +58,7 @@ public class LRBQ14 {
 		q1MicroOps.add(q1Proj);
 
 		SubQuery sq1 = new SubQuery(10, q1MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024));
+				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024), new QueryConf(200, 1024));
 
 		/*
 		 * Query 4
@@ -96,7 +97,7 @@ public class LRBQ14 {
 		// SubQuery sq1 = new SubQuery(10, q2MicroOps, inputSchema, new
 		// WindowDefinition(WindowType.RANGE_BASED, 300, 1));
 		SubQuery sq4 = new SubQuery(40, q2MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024));
+				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024), new QueryConf(200, 1024));
 
 		sq1.connectTo(101, sq4);
 

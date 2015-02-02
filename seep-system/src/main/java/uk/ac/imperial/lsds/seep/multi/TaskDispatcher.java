@@ -14,6 +14,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 	private ResultHandler handler;
 	private SubQuery parent;
 	
+	private int batch;
+	private int batchRecords;
+	
 	private int nextTask = 0;
 	
 	/* Some constants for calculating window batches */
@@ -59,9 +62,12 @@ public class TaskDispatcher implements ITaskDispatcher {
 		this.schema = this.parent.getSchema();
 		this.handler = new ResultHandler (this.buffer);
 		
+		this.batch        = this.parent.getQueryConf().BATCH;
+		this.batchRecords = this.parent.getQueryConf()._BATCH_RECORDS;
+		
 		/* Initialise constants */
 		System.out.println(String.format("[DBG] %d panes/slide %d panes/window", window.panesPerSlide(), window.numberOfPanes()));
-		ppb = window.panesPerSlide() * (Utils.BATCH - 1) + 
+		ppb = window.panesPerSlide() * (this.batch - 1) + 
 				window.numberOfPanes();
 		
 		tpb = ppb * window.getPaneSize();
@@ -69,7 +75,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		if (window.isTumbling())
 			offset = tpb;
 		else
-			offset = (Utils.BATCH - 1) * window.getSlide();
+			offset = (this.batch - 1) * window.getSlide();
 		
 		p = q =  0L;
 		next_ =  0L;
@@ -79,9 +85,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		tupleSize = schema.getByteSizeOfTuple();
 		
-		batches = new int [Utils._BATCH_RECORDS][3];
+		batches = new int [this.batchRecords][3];
 		/* Initialise state */
-		for (int i = 0; i < Utils._BATCH_RECORDS; i++)
+		for (int i = 0; i < this.batchRecords; i++)
 			batches[i][_START] = _undefined;
 		b = d = 0;
 		
@@ -122,7 +128,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		if (q <= p)
 			q += buffer.capacity();
 		
-		batch = WindowBatchFactory.newInstance(Utils.BATCH, taskid, (int) free, buffer, window, schema);
+		batch = WindowBatchFactory.newInstance(this.batch, taskid, (int) free, buffer, window, schema);
 		if (window.isRangeBased()) {
 			if (buffer.getLong((int) p) > _t)
 				batch.cancel();
@@ -192,7 +198,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 				}
 				else {
 					next_ += offset;
-					_next += ((Utils.BATCH - 1) * window.getSlide());
+					_next += ((this.batch - 1) * window.getSlide());
 				}
 			}
 		} else
@@ -280,7 +286,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	}
 	
 	private int incrementAndGet (int x, boolean check) {
-		int value = ++x & (Utils._BATCH_RECORDS - 1);
+		int value = ++x & (this.batchRecords - 1);
 		/* We treat `batches` as an unsafe circular buffer. But, without 
 		 * sufficient capacity, we may ovewrite the pointers of a window 
 		 * batch that is currently open.

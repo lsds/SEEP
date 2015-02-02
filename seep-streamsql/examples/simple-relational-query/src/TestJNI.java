@@ -1,8 +1,8 @@
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.GPU;

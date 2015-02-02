@@ -6,6 +6,7 @@ import java.util.Set;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
+import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
@@ -22,9 +23,9 @@ public class TestSelectionKernel {
 		String filename = args[0];
 		
 		WindowDefinition window = 
-			new WindowDefinition (Utils.TYPE, Utils.RANGE, Utils.SLIDE);
+			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
 		
-		ITupleSchema schema = new TupleSchema (Utils.OFFSETS, Utils._TUPLE_);
+		ITupleSchema schema = new TupleSchema (TestUtils.OFFSETS, TestUtils._TUPLE_);
 		
 		ASelectionKernel selectionCode = new ASelectionKernel (
 			new IntComparisonPredicate (IntComparisonPredicate.LESS_OP, new IntColumnReference(1), new IntConstant(40)),
@@ -40,7 +41,7 @@ public class TestSelectionKernel {
 		operators.add(uoperator);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window);
+		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(200, 1024));
 		queries.add(query);
 		
 		MultiOperator operator = new MultiOperator(queries, 0);
