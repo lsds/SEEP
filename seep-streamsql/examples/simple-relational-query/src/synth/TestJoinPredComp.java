@@ -43,6 +43,8 @@ public class TestJoinPredComp {
 		/*
 		 * Set up configuration of system
 		 */
+		Utils.CPU = false;
+		Utils.GPU = false;
 		if (args[0].toLowerCase().contains("cpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
