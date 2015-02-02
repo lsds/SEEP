@@ -1,3 +1,4 @@
+package lrb;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -5,6 +6,7 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 
@@ -26,7 +28,7 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 		ITupleSchema inSchema = windowBatch.getSchema();
 		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
 
-		IQueryBuffer outBuffer = windowBatch.getBuffer();
+		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		Map<Integer, Integer> lastPerVehicleInLast30Sec = new HashMap<>();
 
@@ -70,14 +72,14 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 				 * window
 				 */
 				if (prevWindowStart != -1) {
-					for (int i = prevWindowEnd; i <= inWindowEndOffset; i += byteSizeOfInTuple) {
+					for (int i = prevWindowEnd; i < inWindowEndOffset; i += byteSizeOfInTuple) {
 
 						int vehicleValue = vehicleAttribute.eval(inBuffer,
 								inSchema, i);
 						lastPerVehicleInLast30Sec.put(vehicleValue, i);
 					}
 				} else {
-					for (int i = inWindowStartOffset; i <= inWindowEndOffset; i += byteSizeOfInTuple) {
+					for (int i = inWindowStartOffset; i < inWindowEndOffset; i += byteSizeOfInTuple) {
 
 						int vehicleValue = vehicleAttribute.eval(inBuffer,
 								inSchema, i);
