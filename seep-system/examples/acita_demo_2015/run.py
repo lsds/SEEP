@@ -32,7 +32,7 @@ def main(w, k, plot_time_str, run_master):
 
             print 'Starting workers'
             workers = start_workers(w, k, time_str, sim_env)
-            time.sleep(5)
+            time.sleep(30)
 
             if run_master:
                 deploy_query(master)

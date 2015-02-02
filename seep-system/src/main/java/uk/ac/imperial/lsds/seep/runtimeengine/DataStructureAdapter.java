@@ -117,9 +117,9 @@ public class DataStructureAdapter {
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					uniqueDso = b;
 					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
+					throw new RuntimeException("TODO: Meander query?");
 				}
 			}
-			throw new RuntimeException("TODO: Meander query?");
 		}
 	}
 	

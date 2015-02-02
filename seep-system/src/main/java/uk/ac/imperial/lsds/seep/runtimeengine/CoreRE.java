@@ -79,7 +79,7 @@ public class CoreRE {
 	private DataConsumer dataConsumer;
 	private Thread dConsumerH = null;
 	private ControlDispatcher controlDispatcher;
-	private OutputQueue outputQueue;
+	private ArrayList<OutputQueue> outputQueues;
 	private OutgoingDataHandlerWorker odhw = null;
 	
 	private Thread controlH = null;
@@ -161,7 +161,12 @@ public class CoreRE {
 	}
 	
 	public void initializeCommunications(Map<String, Integer> tupleIdxMapper){
-		outputQueue = new OutputQueue(this);
+		int numDownstreams = processingUnit.getOperator().getOpContext().getDownstreamOpIdList().size();
+		outputQueues = new ArrayList<>(numDownstreams);
+		for (int i = 0; i < numDownstreams; i++)
+		{
+			outputQueues.add(new OutputQueue(this));
+		}
 
 		// SET UP the data structure adapter, depending on the operators
 		dsa = new DataStructureAdapter();
@@ -215,7 +220,7 @@ public class CoreRE {
 		
 		// Set up output communication module
 		if (GLOBALS.valueFor("synchronousOutput").equals("true")){
-			processingUnit.setOutputQueue(outputQueue);
+			processingUnit.setOutputQueueList(outputQueues);
 			LOG.debug("-> CONFIGURING SYSTEM WITH A SYNCHRONOUS OUTPUT");
 		}
 		else{
@@ -488,7 +493,9 @@ public class CoreRE {
 			LOG.info("-> Received STATE_ACK from Op: {}", opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-			outputQueue.replayTuples(cci);
+			ArrayList<Integer> downOpIds = processingUnit.getOperator().getOpContext().getDownstreamOpIdList();
+			int downOpIndex = downOpIds.indexOf(opId);
+			outputQueues.get(downOpIndex).replayTuples(cci);
 			// In case of failure, the thread may have died, in such case we make it runnable again.
 //			if(dConsumerH.getState() != Thread.State.TERMINATED){
 //				dConsumerH = new Thread(dataConsumer);
@@ -735,7 +742,9 @@ public class CoreRE {
 			/// \todo{avoid this deprecated function}
 			//opCommonProcessLogic.startReplayer(opID);
 			SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-			outputQueue.replayTuples(cci);
+			ArrayList<Integer> downOpIds = processingUnit.getOperator().getOpContext().getDownstreamOpIdList();
+			int downOpIndex = downOpIds.indexOf(opId);
+			outputQueues.get(downOpIndex).replayTuples(cci);
 		}
 		/** NOT RECOGNIZED message **/
 		else{
@@ -761,10 +770,13 @@ public class CoreRE {
 	
 	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
 	{
+		LOG.info("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		for (int upOpIndex : upOpIndexes)
 		{
 			int upOpId = processingUnit.getOperator().getOpContext().getUpOpIdFromIndex(upOpIndex);
-			FailureCtrl upFctrl = dsa.getDataStructureIForOp(upOpId).purge(nodeFctrl);
+			DataStructureI dso = dsa.getUniqueDso();
+			if (dso == null) { dso = dsa.getDataStructureIForOp(upOpId); }
+			FailureCtrl upFctrl = dso.purge(nodeFctrl);
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, processingUnit.getOperator().getOperatorId(), upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
