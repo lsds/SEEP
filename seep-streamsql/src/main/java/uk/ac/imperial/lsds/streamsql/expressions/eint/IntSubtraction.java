@@ -9,7 +9,7 @@ public class IntSubtraction implements IntExpression {
 
 	private IntExpression[]	expressions	= null;
 
-	public IntSubtraction(IntExpression[] expressions) {
+	public IntSubtraction(IntExpression... expressions) {
 		this.expressions = expressions;
 	}
 

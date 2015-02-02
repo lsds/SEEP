@@ -9,7 +9,7 @@ public class IntDivision implements IntExpression {
 
 	private IntExpression[]	expressions	= null;
 
-	public IntDivision(IntExpression[] expressions) {
+	public IntDivision(IntExpression... expressions) {
 		this.expressions = expressions;
 	}
 

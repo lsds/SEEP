@@ -9,7 +9,7 @@ public class IntAddition implements IntExpression {
 
 	private IntExpression[]	expressions	= null;
 
-	public IntAddition(IntExpression[] expressions) {
+	public IntAddition(IntExpression... expressions) {
 		this.expressions = expressions;
 	}
 

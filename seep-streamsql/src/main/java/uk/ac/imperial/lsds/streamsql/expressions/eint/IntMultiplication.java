@@ -9,7 +9,7 @@ public class IntMultiplication implements IntExpression {
 
 	private IntExpression[]	expressions	= null;
 
-	public IntMultiplication(IntExpression[] expressions) {
+	public IntMultiplication(IntExpression... expressions) {
 		this.expressions = expressions;
 	}
 
