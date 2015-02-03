@@ -1,7 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.LockSupport;
 
 public class TaskDispatcher implements ITaskDispatcher {
 	
@@ -106,8 +105,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public void dispatch (byte [] data) {
 		int idx;
 		while ((idx = buffer.put(data)) < 0) {
-			// Thread.yield();
-			LockSupport.parkNanos(100000000L);
+			Thread.yield();
+			//LockSupport.parkNanos(100000000L);
 		}
 		assemble (idx, data.length);
 	}
@@ -122,8 +121,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 		long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 		
 //		System.out.println(
-//			String.format("[DBG] Task %6d [%10d, %10d), free %10d, [%3d, %3d] size %10d", 
-//					taskid, p, q, free, t_, _t, size));
+//			String.format("[DBG] %4d Task %6d [%10d, %10d), free %10d, [%3d, %3d] size %10d", 
+//					parent.getId(), taskid, p, q, free, t_, _t, size));
 		 
 		if (q <= p)
 			q += buffer.capacity();

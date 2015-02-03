@@ -109,6 +109,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		 * Make sure the batch is initialised
 		 */
 		windowBatch.initWindowPointers();
+//		System.out.println("RUN aggregration");
 
 		switch (aggregationType) {
 		case COUNT:

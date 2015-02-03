@@ -52,6 +52,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		 * Make sure the batch is initialised
 		 */
 		windowBatch.initWindowPointers();
+//		System.out.println("RUN projection");
 		
 		int [] startPointers = windowBatch.getWindowStartPointers ();
 		int [] endPointers   = windowBatch.getWindowEndPointers ();

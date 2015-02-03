@@ -136,6 +136,12 @@ public class MicroAggregationKernel implements IStreamSQLOperator, IMicroOperato
 		this(type, _the_aggregate, groupBy, null, null);
 	}
 
+	public MicroAggregationKernel (AggregationType type,
+			FloatColumnReference _the_aggregate,
+			Expression[] groupBy, Selection having) {
+		this(type, _the_aggregate, groupBy, having, null);
+	}
+
 	public MicroAggregationKernel (AggregationType type, 
 		FloatColumnReference _the_aggregate, Expression [] groupBy, 
 		Selection having, ITupleSchema inputSchema) {
