@@ -60,6 +60,14 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		IQueryBuffer inBuffer  = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 		
+//		System.out.println("projection: task " + windowBatch.getTaskId() + " use buffer " + outBuffer + " position " + outBuffer.position());
+		
+		
+		if (outBuffer.position() != 0) {
+			System.err.println("error: buffer not reset (" + outBuffer.position() + ")");
+			System.exit(1);
+		}
+		
 		ITupleSchema schema = windowBatch.getSchema();
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
@@ -89,9 +97,13 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		/* Return (unbounded) buffers to the pool */
 		inBuffer.release();
 		/* Reuse window batch by setting the new buffer and the new schema for the data in this buffer */
+		// outBuffer.close();
 		windowBatch.setBuffer(outBuffer);
 		windowBatch.setSchema(outSchema);
-		
+
+		if (outBuffer.position() > 1048576)
+			System.err.println("buffer position after filling (" + outBuffer.position() + ")");
+
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
 

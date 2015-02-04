@@ -54,7 +54,7 @@ public class TestAHybrid {
 		operators.add(uoperator);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(200, 1024));
+		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(32, 1024));
 		queries.add(query);
 			
 		MultiOperator operator = new MultiOperator(queries, 0);

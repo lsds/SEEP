@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 public class UnboundedQueryBuffer implements IQueryBuffer {
@@ -79,7 +80,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	public int putInt (int value) { 
 		try {
 			buffer.putInt(value);
-		} catch (IndexOutOfBoundsException e) {
+		} catch (BufferOverflowException e) {
+			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
+			e.printStackTrace();
 			resize ();
 			putInt (value);
 		} finally {
@@ -98,7 +101,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	public int putFloat (float value) {
 		try {
 			buffer.putFloat(value);
-		} catch (IndexOutOfBoundsException e) {
+		} catch (BufferOverflowException e) {
+			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
+			e.printStackTrace();
 			resize ();
 			putFloat (value);
 		} finally {
@@ -117,7 +122,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	public int putLong (long value) {
 		try {
 			buffer.putLong(value);
-		} catch (IndexOutOfBoundsException e) {
+		} catch (BufferOverflowException e) {
+			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
+			e.printStackTrace();
 			resize ();
 			putLong (value);
 		} finally {
@@ -137,7 +144,8 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		int size, size_;
 		try {
 			buffer.put(values);
-		} catch (IndexOutOfBoundsException e) {
+		} catch (BufferOverflowException e) {
+			e.printStackTrace();
 			size  = buffer.capacity();
 			size_ = (values.length < size) ? (size + size) : (size + values.length);
 			resize (size_);

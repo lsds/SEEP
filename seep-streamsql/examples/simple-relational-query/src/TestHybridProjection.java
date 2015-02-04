@@ -33,10 +33,10 @@ public class TestHybridProjection {
 				new LongColumnReference(0),
 				new IntColumnReference(1),
 				new IntColumnReference(2),
-				new IntColumnReference(3),
-				new IntColumnReference(4),
-				new IntColumnReference(5),
-				new IntColumnReference(6)
+				//new IntColumnReference(3),
+				//new IntColumnReference(4),
+				//new IntColumnReference(5),
+				//new IntColumnReference(6)
 			}
 		);
 		
@@ -45,10 +45,10 @@ public class TestHybridProjection {
 				new LongColumnReference(0),
 				new IntColumnReference(1),
 				new IntColumnReference(2),
-				new IntColumnReference(3),
-				new IntColumnReference(4),
-				new IntColumnReference(5),
-				new IntColumnReference(6)
+				// new IntColumnReference(3),
+				// new IntColumnReference(4),
+				// new IntColumnReference(5),
+				// new IntColumnReference(6)
 			},
 			schema,
 			filename
@@ -61,7 +61,7 @@ public class TestHybridProjection {
 		operators.add(uoperator);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(200, 1024));
+		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(32, 1024));
 		queries.add(query);
 			
 		MultiOperator operator = new MultiOperator(queries, 0);

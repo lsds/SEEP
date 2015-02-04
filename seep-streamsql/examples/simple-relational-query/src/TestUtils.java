@@ -4,8 +4,8 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 
 public class TestUtils {
 	
-	public static int RANGE = 100;
-	public static int SLIDE = 1;
+	public static int RANGE = 1024;
+	public static int SLIDE = 1024;
 	public static WindowType TYPE  = WindowType.ROW_BASED;
 	
 	

@@ -260,6 +260,7 @@ public class WindowBatch {
 		initialised = false;
 		windowStartPointers = windowEndPointers = null;
 		batchStartTime = batchEndTime = -1;
+		this.buffer = null;
 	}
 	
 	public int getInt (int offset, int attribute) {

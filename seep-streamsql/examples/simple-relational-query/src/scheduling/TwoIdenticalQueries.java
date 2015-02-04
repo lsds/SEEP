@@ -18,6 +18,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
@@ -25,7 +26,7 @@ import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 
-public class TwoQuerySetup {
+public class TwoIdenticalQueries {
 
 	public static void main(String [] args) {
 		
@@ -55,110 +56,72 @@ public class TwoQuerySetup {
 		QueryConf queryConf2 = new QueryConf(Integer.parseInt(args[3]), 1024);
 
 		int numberOfAttributesInSchema  = Integer.parseInt(args[4]);
-
-		
-		/*
-		 * Queries
-		 * 
-		 * Q1:
-		 * Select AVG(att_1), att_2, att_3
-		 * From input [ROWS 1024 Slide 100]
-		 * Group By att_2, att_3
-		 * Having AVG(att_1) > 0.5
-		 * 
-		 * Q2:
-		 * Select att_1
-		 * From input [ROWS 1024 Slide 1024]
-		 * 
-		 * Query graph:
-		 * (Q1)->(Q2)
-		 */
-		
 		
 		/*
 		 * Q1		
 		 */
-		WindowType windowType1 = WindowType.ROW_BASED;
-		long windowRange1      = 1024;
-		long windowSlide1      = 1024;
-		AggregationType aggregationType = AggregationType.AVG;
+		WindowType windowType = WindowType.ROW_BASED;
+		long windowRange      = 1024;
+		long windowSlide      = 1024;
 		
 		WindowDefinition window1 = 
-			new WindowDefinition (windowType1, windowRange1, windowSlide1);
+			new WindowDefinition (windowType, windowRange, windowSlide);
 		
 		int[] offsets1 = new int[numberOfAttributesInSchema + 1];
 		// first attribute is timestamp
 		offsets1[0] = 0;
 
-		int byteSize1 = 8;
+		int byteSize = 8;
 		for (int i = 1; i < numberOfAttributesInSchema + 1; i++) {
-			offsets1[i] = byteSize1;
-			byteSize1+= 4;
+			offsets1[i] = byteSize;
+			byteSize += 4;
 		}
 		
-		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize1);
-				
-		Expression[] groupBy = new Expression[] {
-			new IntColumnReference(2),
-			new IntColumnReference(3)
-		};
-
-		Selection having = new Selection(
-				new FloatComparisonPredicate(
-						FloatComparisonPredicate.LESS_OP, 
-						new FloatColumnReference(1), 
-						new FloatConstant(0.5f)
-						)
-				);
-
+		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize);
 		
-		IMicroOperatorCode aggCode = new MicroAggregation(
-				aggregationType,
-				new FloatColumnReference(1),
-				groupBy
-				);
-
-
-		System.out.println(String.format("[DBG] %s", aggCode));
-		IMicroOperatorCode gpuAggCode = new MicroAggregationKernel(
-				aggregationType,
-				new FloatColumnReference(1),
-				groupBy,
-				having
-				);
-
-		IMicroOperatorCode tmpProjCode = new Projection(
-			new FloatColumnReference(1)
+		IMicroOperatorCode projCode1 = new Projection(
+			new Expression [] {
+				new LongColumnReference(0),
+				new IntColumnReference(1),
+				new IntColumnReference(2),
+				new IntColumnReference(3),
+				new IntColumnReference(4),
+				new IntColumnReference(5),
+				new IntColumnReference(6)
+			}
 		);
-
-//		MicroOperator operator1 = new MicroOperator (aggCode, gpuAggCode, 1);
-		MicroOperator operator1 = new MicroOperator (tmpProjCode, 1);
+		
+		MicroOperator operator1 = new MicroOperator (projCode1, 1);
 		Set<MicroOperator> operators1 = new HashSet<MicroOperator>();
 		operators1.add(operator1);
-		SubQuery query1 = new SubQuery (100, operators1, schema1, window1, queryConf1);
-
-
-		/*
-		 * Q2		
-		 */
-		WindowType windowType2 = WindowType.ROW_BASED;
-		long windowRange2      = 1024;
-		long windowSlide2      = 1024;
+		SubQuery query1 = new SubQuery (0, operators1, schema1, window1, queryConf1);
 		
 		WindowDefinition window2 = 
-			new WindowDefinition (windowType2, windowRange2, windowSlide2);
+			new WindowDefinition (windowType, windowRange, windowSlide);
 		
-		int[] offsets2 = new int[] {0, 8};
-		ITupleSchema schema2 = new TupleSchema (offsets2, offsets2[offsets2.length-1]+4);
+//		int[] offsets2 = new int[3];
+//		offsets2[0] = 0;
+//		offsets2[0] = 8;
+//		offsets2[0] = 12;
 		
-		IMicroOperatorCode projCode = new Projection(new FloatColumnReference(1));
-//		IMicroOperatorCode gpuProjCode = new ProjectionKernel(new FloatColumnReference(2));
-
-		MicroOperator operator2 = new MicroOperator (projCode, 2);
-//		MicroOperator operator2 = new MicroOperator (projCode, gpuProjCode, 2);
+		ITupleSchema schema2 = new TupleSchema (offsets1, 32);
+		
+		IMicroOperatorCode projCode2 = new Projection(
+			new Expression [] {
+				new LongColumnReference(0),
+				new IntColumnReference(1),
+				new IntColumnReference(2),
+				new IntColumnReference(3),
+				new IntColumnReference(4),
+				new IntColumnReference(5),
+				new IntColumnReference(6)
+			}
+		);
+		
+		MicroOperator operator2 = new MicroOperator (projCode2, 2);
 		Set<MicroOperator> operators2 = new HashSet<MicroOperator>();
 		operators2.add(operator2);
-		SubQuery query2 = new SubQuery (101, operators2, schema2, window2, queryConf2);
+		SubQuery query2 = new SubQuery (1, operators2, schema2, window2, queryConf2);
 
 		query1.connectTo(10000, query2);
 		
@@ -167,8 +130,10 @@ public class TwoQuerySetup {
 		queries.add(query2);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
-
-
+		
+		System.out.println("1st schema " + schema1.getByteSizeOfTuple() + " bytes");
+		System.out.println("2nd schema " + schema2.getByteSizeOfTuple() + " bytes");
+		
 		/*
 		 * Set up the stream
 		 */

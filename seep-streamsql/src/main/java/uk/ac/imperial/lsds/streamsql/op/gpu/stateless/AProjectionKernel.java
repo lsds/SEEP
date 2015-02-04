@@ -23,7 +23,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private static final int THREADS_PER_GROUP = 128;
 	
-	private static final int PIPELINES = 1;
+	private static final int PIPELINES = 2;
 	
 	private Expression[] expressions;
 	private ITupleSchema inputSchema, outputSchema;
@@ -132,6 +132,8 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		/* windowBatch.setTaskId     (taskIdx[0]);
 		windowBatch.setFreeOffset (freeIdx[0]); */
+		
+		// System.out.println("Running " + currentTaskIdx);
 		
 		for (int i = 0; i < taskIdx.length - 1; i++) {
 			taskIdx[i] = taskIdx [i + 1];
