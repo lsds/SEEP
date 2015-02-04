@@ -41,6 +41,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.manet.CostHandler;
+import uk.ac.imperial.lsds.seep.manet.RoutingController;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -90,6 +91,9 @@ public class CoreRE {
 	private Thread backupH = null;
 	private Thread costHandlerT = null;
 	private CostHandler costHandler = null;
+	
+	private RoutingController routingController = null;
+	private Thread rControllerT = null;
 	
 	static ControlTuple genericAck;
 	private int totalNumberOfChunks = -1;
@@ -205,9 +209,11 @@ public class CoreRE {
 		}
 		
 		//TODO: is all this control logic really thread-safe? Don't think so.
+		/*
 		costHandler = new CostHandler(this);
 		costHandlerT = new Thread(costHandler, "costHandlerT");
 		costHandlerT.start();
+		*/
 		//TODO: What if we want to get costs from app-level probes?
 		
 	}
@@ -296,6 +302,20 @@ public class CoreRE {
 				processingUnit.createAndRunFailureCtrlWriter();
 			}
 		}
+		
+		if (GLOBALS.valueFor("backpressureRouting").equals("true"))
+		{
+			if (!processingUnit.getOperator().getOpContext().isSource())
+			{
+				routingController = new RoutingController(this);
+				Thread rControllerT = new Thread(routingController);
+				rControllerT.start();
+			}
+			if (!processingUnit.getOperator().getOpContext().isSink())
+			{
+				processingUnit.getDispatcher().startRoutingCtrlWorkers();
+			}
+		}
 	}
 	
     /**
@@ -342,7 +362,7 @@ public class CoreRE {
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, SCALE_IN, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
 		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT,
-		KEY_SPACE_BOUNDS, FAILURE_CTRL
+		KEY_SPACE_BOUNDS, FAILURE_CTRL, DOWN_UP_RCTRL, UP_DOWN_RCTRL
 	}
 	
 	public synchronized void setTsData(int stream, long ts_data){
@@ -431,7 +451,7 @@ public class CoreRE {
 				coreProcessLogic.processAck(ack);
 			}
 		}
-		if (ctt.equals(ControlTupleType.FAILURE_CTRL))
+		else if (ctt.equals(ControlTupleType.FAILURE_CTRL))
 		{
 			FailureCtrl fctrl = ct.getOpFailureCtrl().getFailureCtrl();
 			int downOpId = ct.getOpFailureCtrl().getOpId();
@@ -444,6 +464,23 @@ public class CoreRE {
 			coreProcessLogic.processFailureCtrl(fctrl, downOpId);
 		}
 		
+		else if (ctt.equals(ControlTupleType.DOWN_UP_RCTRL))
+		{
+			if (processingUnit.getOperator().getOpContext().isSink())
+			{
+				throw new RuntimeException("Logic error?");
+			}		
+
+			processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
+		}
+		else if (ctt.equals(ControlTupleType.UP_DOWN_RCTRL))
+		{			
+			if (processingUnit.getOperator().getOpContext().isSource())
+			{
+				throw new RuntimeException("Logic error?");
+			}
+			routingController.handleRCtrl(ct.getUpDown());
+		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
 			LOG.info("-> Node {} recv ControlTuple.INVALIDATE_STATE from OP: {}", nodeDescr.getNodeId(), ct.getInvalidateState().getOperatorId());

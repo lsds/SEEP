@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
@@ -47,6 +49,7 @@ public class Router implements Serializable{
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
 
 	private ArrayList<IRoutingObserver> observers = new ArrayList<>(1);
+	private BackpressureRouter bpRouter = null;
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -57,6 +60,13 @@ public class Router implements Serializable{
 		this.requiresLogicalRouting = requiresLogicalRouting;
 		this.routeInfo = routeInfo;
 	}
+	
+	public void setBackpressureRouting(BackpressureRouter bpRouter)
+	{
+		this.bpRouter = bpRouter;
+	}
+	
+	public BackpressureRouter getBackpressureRouting() { return bpRouter; }
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
@@ -157,13 +167,6 @@ public class Router implements Serializable{
 		checkDownstreamRoutingImpl();
 		return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route_lowestCost();
 	}
-		
-	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
-	{
-		checkDownstreamRoutingImpl();
-		//return downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).route_highestWeight();
-		throw new RuntimeException("TODO");
-	}
 	
 	private void checkDownstreamRoutingImpl()
 	{
@@ -178,6 +181,23 @@ public class Router implements Serializable{
 			System.out.println("idx for routing impl");
 			System.exit(0); // xtreme
 		}		
+	}
+	
+	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
+	{
+		if (bpRouter == null) { throw new RuntimeException("Logic error?"); }
+		checkDownstreamRoutingImpl();
+		Integer downOpId = bpRouter.route(dt.getPayload().timestamp);
+		if (downOpId != null)
+		{
+			ArrayList<Integer> targets = getIndexesInformation(downOpId);
+			LOG.info("Forwarding to "+downOpId+" at indexes="+targets);
+			return targets;		//TODO: Are these the right targets?
+		}
+		else
+		{
+			return null;
+		}
 	}
 	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
@@ -225,6 +245,17 @@ public class Router implements Serializable{
 	public void update_lowestCost(int newTarget)
 	{
 		downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_lowestCost(newTarget);
+	}
+	
+	public void update_highestWeight(DownUpRCtrl downUp)
+	{
+		if (bpRouter == null) 
+		{ 
+			LOG.warn("Ignoring down-up routing ctrl - backpressure router doesn't exist yet.");
+			return;
+		}
+		bpRouter.handleDownUp(downUp);
+		//downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_highestWeight(newTarget);
 		notifyObservers();
 	}
 	

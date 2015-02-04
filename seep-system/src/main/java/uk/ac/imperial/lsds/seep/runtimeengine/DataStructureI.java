@@ -24,5 +24,6 @@ public interface DataStructureI {
 	public boolean contains(long timestamp, int upstreamOpId);
 	public Set<Long> getTimestamps();
 	public FailureCtrl purge(FailureCtrl nodeFctrl);
+	public int size();
 	
 }

@@ -141,4 +141,9 @@ public class Barrier implements DataStructureI {
 	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
 		throw new RuntimeException("TODO");
 	}
+	
+	@Override
+	public int size() {
+		throw new UnsupportedOperationException();
+	}
 }

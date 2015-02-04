@@ -36,7 +36,7 @@ public class Source implements StatelessOperator {
 			
 			DataTuple output = data.newTuple(tupleId, value);
 			System.out.println("Source sending "+output.toString());
-			api.send_lowestCost(output);
+			api.send_highestWeight(output);
 			
 			try {
 				Thread.sleep(1000);

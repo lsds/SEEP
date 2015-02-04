@@ -26,7 +26,7 @@ public class Processor implements StatelessOperator{
 		
 		DataTuple outputTuple = data.setValues(tupleId, value);
 		System.out.println("Operator "+api.getOperatorId()+ " processed "+data.toString()+"->"+outputTuple);
-		api.send_lowestCost(outputTuple);
+		api.send_highestWeight(outputTuple);
 	}
 
 	

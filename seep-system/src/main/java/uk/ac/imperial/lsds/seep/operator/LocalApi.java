@@ -96,5 +96,12 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
 		public void send_lowestCost(DataTuple dt) {
 			throw new UnsupportedOperationException("TODO");			
 		}
+		
+
+		@Override
+		public synchronized void send_highestWeight(DataTuple dt)
+		{
+			throw new UnsupportedOperationException("TODO");
+		}
         
 }

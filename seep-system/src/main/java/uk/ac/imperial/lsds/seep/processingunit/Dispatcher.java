@@ -12,11 +12,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
+import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 
@@ -24,15 +26,17 @@ public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private final FailureCtrl nodeFctrl = new FailureCtrl();
-	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<Long, DataTuple>();
-	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<Long, Long>();	//TODO: Perhaps change to a delayQueue
-	private final Map<Integer, DispatcherWorker> workers = new HashMap<Integer, DispatcherWorker>();
+	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();
+	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//TODO: Perhaps change to a delayQueue
+	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
+	private final Set<RoutingControlWorker> rctrlWorkers = new HashSet<>();
 	private final FailureDetector failureDetector = new FailureDetector();
 	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
 	private final IProcessingUnit owner;
 	private ArrayList<OutputQueue> outputQueues;
 	private static final long FAILURE_TIMEOUT = 30 * 1000;
 	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
+	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	
 	private final Object lock = new Object(){};
 	
@@ -62,6 +66,20 @@ public class Dispatcher implements IRoutingObserver {
 			DispatcherWorker worker = new DispatcherWorker(outputQueues.get(i), owner.getPUContext().getDownstreamTypeConnection().elementAt(i));			
 			Thread workerT = new Thread(worker);
 			workers.put(i, worker);
+			workerT.start();
+		}
+		
+		
+	}
+	
+	public void startRoutingCtrlWorkers()
+	{
+		for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
+		{
+			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
+			RoutingControlWorker worker = new RoutingControlWorker(downOpId);			
+			Thread workerT = new Thread(worker);
+			rctrlWorkers.add(worker);
 			workerT.start();
 		}		
 	}
@@ -164,6 +182,64 @@ public class Dispatcher implements IRoutingObserver {
 				  }
 			  }
 			return changed;
+		}
+		
+		public int queueLength()
+		{
+			//TODO: Thread safe?
+			return tupleQueue.size();
+		}
+	}
+	
+	public class RoutingControlWorker implements Runnable
+	{
+		private final int downId;
+		
+		public RoutingControlWorker(int downId) {
+			this.downId = downId;
+		}
+
+		@Override
+		public void run() {
+			// while true
+			while (true)
+			{
+				int totalQueueLength = 0;
+				int downIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId);
+				synchronized(lock)
+				{
+					//measure tuple queue length
+					totalQueueLength += workers.get(downIndex).queueLength();
+					//measure buf length
+					totalQueueLength += bufLength(downId);
+				}	
+				//Create and send control tuple
+				sendQueueLength(totalQueueLength);
+				
+				//wait for interval
+				try {
+					Thread.sleep(ROUTING_CTRL_DELAY);
+				} catch (InterruptedException e) {}
+				throw new RuntimeException("Locking?");
+			}
+		}
+		
+		private int bufLength(int opId)
+		{
+			SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
+			if (cci != null)
+			{
+				Buffer buffer = cci.getBuffer();
+				return buffer.numTuples();
+			}
+			else { throw new RuntimeException("Logic error."); }
+		}
+		
+		private void sendQueueLength(int queueLength)
+		{
+			int localOpId = owner.getOperator().getOperatorId();
+			ControlTuple ct = new ControlTuple(ControlTupleType.UP_DOWN_RCTRL, localOpId, queueLength);
+			owner.getOwner().getControlDispatcher().sendUpstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId));
 		}
 	}
 	

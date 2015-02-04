@@ -16,6 +16,7 @@ public interface CommunicationPrimitives {
 
 	public void send(DataTuple dt);
 	public void send_lowestCost(DataTuple dt);
+	public void send_highestWeight(DataTuple dt);
 	public void send_toIndex(DataTuple dt, int idx);
 	public void send_splitKey(DataTuple dt, int key);
 	public void send_toStreamId_splitKey(DataTuple dt, int streamId, int key);

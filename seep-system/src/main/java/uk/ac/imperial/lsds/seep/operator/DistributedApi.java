@@ -45,6 +45,12 @@ public class DistributedApi implements API, CommunicationPrimitives, Serializabl
 	{
 		op.send_lowestCost(dt);
 	}
+
+	@Override
+	public synchronized void send_highestWeight(DataTuple dt)
+	{
+		op.send_highestWeight(dt);
+	}
 	
 	@Override
 	public synchronized void send_toIndex(DataTuple dt, int idx){

@@ -50,8 +50,19 @@ public class Buffer implements Serializable{
 	
 	public int size(){
 		return log.size();
+	} 
+ 
+	public int numTuples()
+	{
+		int total = 0;
+		for (OutputLogEntry o : log)
+		{
+			total += o.batch.size();
+		}
+		//return total;
+		throw new RuntimeException("TODO: Tmp hack, not thread safe.");
 	}
-
+	
 	public BackupOperatorState getBackupState(){
 		return bs;
 	}

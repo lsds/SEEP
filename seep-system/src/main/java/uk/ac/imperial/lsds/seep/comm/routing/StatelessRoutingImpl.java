@@ -119,7 +119,8 @@ public class StatelessRoutingImpl implements RoutingStrategyI, Serializable{
     {
     	ArrayList<Integer> targets = new ArrayList<Integer>();
     	targets.add(virtualIndexToRealIndex.get(target));
-    	return targets;
+    	//return targets;
+    	throw new RuntimeException("DEPRECATED");
     }
     
     @Override

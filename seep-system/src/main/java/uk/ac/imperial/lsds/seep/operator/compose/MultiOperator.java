@@ -158,4 +158,10 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void send_highestWeight(DataTuple dt) {
+		// TODO Auto-generated method stub
+		
+	}
 }

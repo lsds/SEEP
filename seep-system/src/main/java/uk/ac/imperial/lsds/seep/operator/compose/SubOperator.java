@@ -190,4 +190,10 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void send_highestWeight(DataTuple dt) {
+		// TODO Auto-generated method stub
+		
+	}
 }

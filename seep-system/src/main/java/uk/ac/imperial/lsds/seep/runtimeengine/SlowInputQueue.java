@@ -156,6 +156,11 @@ public class SlowInputQueue implements DataStructureI {
 		upOpFctrl.updateAlives(opAlives);
 		return upOpFctrl;
 	}
+
+	@Override
+	public synchronized int size() {
+		return inputQueue.size();
+	}
 	
 	
 }

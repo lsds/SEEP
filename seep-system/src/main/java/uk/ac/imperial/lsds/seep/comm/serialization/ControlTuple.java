@@ -12,12 +12,14 @@
 package uk.ac.imperial.lsds.seep.comm.serialization;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.CloseSignal;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DistributedScaleOutInfo;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
@@ -34,6 +36,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StreamState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -63,6 +66,9 @@ public class ControlTuple {
 	private StreamState streamState;
 	private KeyBounds keyBounds;
 
+	private DownUpRCtrl downUp;
+	private UpDownRCtrl upDown;
+
 	public ControlTuple(){}
 	
 	public ControlTuple(CoreRE.ControlTupleType type, int opId, long ts){
@@ -79,8 +85,21 @@ public class ControlTuple {
 	{
 		this.type = type;
 		this.opFctrl = new OpFailureCtrl(opId, fctrl.lw(), fctrl.acks(), fctrl.alives());
-
 	}
+	
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, int qLen)
+	{
+		if (!type.equals(CoreRE.ControlTupleType.UP_DOWN_RCTRL)) { throw new RuntimeException("Logic error."); }
+		this.type = type;
+		this.upDown = new UpDownRCtrl(opId, qLen);
+	}
+
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, Set<Long> unmatched)
+	{
+		this.type = type;
+		this.downUp = new DownUpRCtrl(opId, weight, unmatched);
+	}
+	
 	public CoreRE.ControlTupleType getType() {
 		return type;
 	}
@@ -378,6 +397,18 @@ public class ControlTuple {
         this.scaleInInfo = scaleInInfo;
     }
 	
+	public OpFailureCtrl getOpFctrl() {
+		return opFctrl;
+	}
+
+	public DownUpRCtrl getDownUp() {
+		return downUp;
+	}
+
+	public UpDownRCtrl getUpDown() {
+		return upDown;
+	}
+    
 	@Override
 	public String toString(){
 		return "ControlTuple."+this.type;

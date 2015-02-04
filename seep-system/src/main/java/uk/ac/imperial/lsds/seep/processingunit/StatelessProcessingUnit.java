@@ -32,6 +32,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
+import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
@@ -66,6 +67,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	private boolean multiCoreEnabled;
 	
 	private Dispatcher dispatcher = null;
+	//private BackpressureRouter bpRouter = null;
 	
 	public StatelessProcessingUnit(CoreRE owner, boolean multiCoreEnabled){
 		this.owner = owner;
@@ -143,6 +145,14 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	{
 		return dispatcher;
 	}
+	
+	/*
+	@Override
+	public BackpressureRouter getBackpressureRouter()
+	{
+		return bpRouter;
+	}
+	*/
 	
 	@Override
 	public CoreRE getOwner(){
@@ -429,6 +439,10 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public PUContext setUpRemoteConnections() {
 		ctx.configureOperatorConnections(runningOp);
+		if (dispatcher != null)
+		{
+			getOperator().getRouter().setBackpressureRouting(new BackpressureRouter(getOperator().getOpContext().getDownstreamOpIdList()));
+		}
 		return ctx;
 	}
 
