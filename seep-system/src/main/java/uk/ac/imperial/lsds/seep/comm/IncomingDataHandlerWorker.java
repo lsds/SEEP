@@ -117,6 +117,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			
 			while(goOn){
 				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+				LOG.debug("Received new batch: "+ batchTuplePayload);
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
 				for(TuplePayload t_payload : batch)
 				{
@@ -145,11 +146,12 @@ public class IncomingDataHandlerWorker implements Runnable{
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
-						
+						LOG.debug("Adding batch to dso.");
 						dso.push(reg);
 					}
 					else{
 						///\todo{check for garbage in the tcp buffers}
+						LOG.warn("Discarding batch as system status not normal.");
 					}
 				}
 			}

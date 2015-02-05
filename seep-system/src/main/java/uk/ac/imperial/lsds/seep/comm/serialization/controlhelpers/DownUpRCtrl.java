@@ -40,4 +40,6 @@ public class DownUpRCtrl {
 	public void setUnmatched(Set<Long> unmatched) {
 		this.unmatched = unmatched;
 	}
+	
+	public String toString() { return "downOp="+opId+",weight="+weight+",unmatched="+unmatched; }
 }

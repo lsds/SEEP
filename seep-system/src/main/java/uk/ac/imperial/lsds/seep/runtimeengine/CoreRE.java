@@ -471,6 +471,7 @@ public class CoreRE {
 				throw new RuntimeException("Logic error?");
 			}		
 
+			LOG.debug("About to update weight with downup rctrl: "+ct.getDownUp());
 			processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
 		}
 		else if (ctt.equals(ControlTupleType.UP_DOWN_RCTRL))

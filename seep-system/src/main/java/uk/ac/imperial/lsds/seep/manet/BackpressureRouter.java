@@ -6,17 +6,26 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
 public class BackpressureRouter {
 
+	private final static Logger logger = LoggerFactory.getLogger(BackpressureRouter.class);
+	private final static double INITIAL_WEIGHT = 1;
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Set<Long>> unmatched;
-	private final static double INITIAL_WEIGHT = 1;
+	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
+
 	
-	public BackpressureRouter(ArrayList<Integer> downOps) {
+	public BackpressureRouter(OperatorContext opContext) {
 		this.weights = new HashMap<>();
 		this.unmatched = new HashMap<>();
+		this.opContext = opContext;
+		ArrayList<Integer> downOps = opContext.getDownstreamOpIdList();
 		for (int downOpId : downOps)
 		{
 			weights.put(downOpId, INITIAL_WEIGHT);
@@ -26,8 +35,13 @@ public class BackpressureRouter {
 	
 	public Integer route(long batchId)
 	{
-		//TODO: Unmatched.
-		return maxWeightOpId();
+		Integer downOpId = maxWeightOpId();
+		if (downOpId != null)
+		{
+			return opContext.getDownOpIndexFromOpId(downOpId);
+		}
+		//TODO: Unmatched;
+		return null;
 	}
 	
 	public void handleDownUp(DownUpRCtrl downUp)
@@ -36,6 +50,7 @@ public class BackpressureRouter {
 		{
 			throw new RuntimeException("Logic error?");
 		}
+		logger.debug("BP router handling downup rctrl: "+ downUp);
 		weights.put(downUp.getOpId(), downUp.getWeight());
 		unmatched.put(downUp.getOpId(), downUp.getUnmatched());
 	}
@@ -47,8 +62,9 @@ public class BackpressureRouter {
 		for (Integer opId : weights.keySet())
 		{
 			double opWeight = weights.get(opId);
-			if (opWeight > maxWeight) { result = opId; }  
+			if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
 		}
+		logger.debug("Backpressure router weights= "+weights);
 		return result;
 	}
 	

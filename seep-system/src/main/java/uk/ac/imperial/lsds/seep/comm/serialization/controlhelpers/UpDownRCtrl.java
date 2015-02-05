@@ -22,4 +22,6 @@ public class UpDownRCtrl {
 	public void setQlen(int qlen) {
 		this.qlen = qlen;
 	}	
+	
+	public String toString() { return "upOp="+opId+",qlen="+qlen; }
 }

@@ -112,7 +112,7 @@ public class RoutingController implements Runnable{
 		synchronized(lock)
 		{
 			if (query == null) { throw new RuntimeException("Logic error?"); }
-			logger.debug("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received rctrl:"+rctrl.toString());
+			logger.debug("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
 			int inputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(rctrl.getOpId()));
 			if (!upstreamQlens.get(inputIndex).containsKey(rctrl.getOpId())) { throw new RuntimeException("Logic error."); }
 			this.upstreamQlens.get(inputIndex).put(rctrl.getOpId(),  new Integer(rctrl.getQlen()));
@@ -203,7 +203,11 @@ public class RoutingController implements Runnable{
 	private double computeWeight(int qLenUpstream, int qLenLocal, double netRate, double pRate)
 	{
 		// N.B. TODO: Need to discuss this.
-		return (qLenUpstream - qLenLocal) * netRate * pRate;
+		//N.B. I think the +1 here will do what we want since
+		//if there is no link we will still have a weight of 0,
+		//But when sending initially it will act as a gradient.
+		//Not sure if it will overload the queues though?
+		return (qLenUpstream + 1 - qLenLocal) * netRate * pRate;
 	}
 	
 	private double aggregate(Set<Double> joinWeights)

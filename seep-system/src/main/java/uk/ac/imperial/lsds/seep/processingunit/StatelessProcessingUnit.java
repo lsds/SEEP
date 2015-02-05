@@ -441,7 +441,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx.configureOperatorConnections(runningOp);
 		if (dispatcher != null)
 		{
-			getOperator().getRouter().setBackpressureRouting(new BackpressureRouter(getOperator().getOpContext().getDownstreamOpIdList()));
+			getOperator().getRouter().setBackpressureRouting(new BackpressureRouter(getOperator().getOpContext()));
 		}
 		return ctx;
 	}

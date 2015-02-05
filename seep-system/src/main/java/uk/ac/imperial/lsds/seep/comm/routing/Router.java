@@ -188,11 +188,12 @@ public class Router implements Serializable{
 		LOG.debug("Routing data tuple: "+dt.toString());
 		if (bpRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
-		Integer downOpId = bpRouter.route(dt.getPayload().timestamp);
-		if (downOpId != null)
+		Integer target = bpRouter.route(dt.getPayload().timestamp);
+		if (target != null)
 		{
-			ArrayList<Integer> targets = getIndexesInformation(downOpId);
-			LOG.info("Forwarding to "+downOpId+" at indexes="+targets);
+			ArrayList<Integer> targets = new ArrayList<>();
+			targets.add(target);
+			LOG.info("Forwarding to targets="+targets);
 			return targets;		//TODO: Are these the right targets?
 		}
 		else

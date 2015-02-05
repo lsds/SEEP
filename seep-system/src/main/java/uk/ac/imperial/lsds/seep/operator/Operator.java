@@ -129,6 +129,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 		ArrayList<Integer> targets = router.forward_highestWeight(dt);
 		while (targets == null || targets.isEmpty())
 		{
+			LOG.debug("Nowhere to send tuple, waiting for routing change.");
 			try {
 				this.wait();
 			} catch (InterruptedException e) {
@@ -297,6 +298,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 	@Override
 	public void routingChanged()
 	{
+		LOG.debug("Routing changed!");
 		synchronized(this) { this.notifyAll(); }
 	}
 	/** HELPER METHODS **/

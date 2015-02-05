@@ -112,6 +112,7 @@ public class OutputQueue {
 					{
 						try
 						{
+							LOG.debug("Writing batch tuple: "+msg);
 							k.writeObject(channelRecord.getOutput(), msg);
 							//Flush the buffer to the stream
 							channelRecord.getOutput().flush();

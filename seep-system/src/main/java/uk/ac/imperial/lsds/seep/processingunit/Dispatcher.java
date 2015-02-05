@@ -167,8 +167,10 @@ public class Dispatcher implements IRoutingObserver {
 					nextTuple = tupleQueue.take();					
 				} catch (InterruptedException e) {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
-				}				
+				}
+				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple);
 				outputQueue.sendToDownstream(nextTuple, dest);
+				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple);
 			}
 		}
 		
@@ -244,6 +246,7 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			int localOpId = owner.getOperator().getOperatorId();
 			ControlTuple ct = new ControlTuple(ControlTupleType.UP_DOWN_RCTRL, localOpId, queueLength);
+			logger.debug("Sending control tuple downstream from "+localOpId+" with queue length="+queueLength);
 			owner.getOwner().getControlDispatcher().sendDownstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId), false);
 		}
 	}
@@ -337,6 +340,7 @@ public class Dispatcher implements IRoutingObserver {
 
 		public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 		{
+			logger.debug("Handling failure ctrl received from "+dsOpId+",nodefctrl="+nodeFctrl+ ", fctrl="+fctrl);
 			nodeFctrl.update(fctrl);
 
 			boolean nodeOutChanged = purgeNodeOut();

@@ -31,8 +31,15 @@ public class Processor implements StatelessOperator{
 
 	
 	public void processData(List<DataTuple> arg0) {
-		// TODO Auto-generated method stub
-		
+		for (DataTuple data : arg0)
+		{
+			long tupleId = data.getLong("tupleId");
+			String value = data.getString("value") + "," + api.getOperatorId();
+			
+			DataTuple outputTuple = data.setValues(tupleId, value);
+			System.out.println("Operator "+api.getOperatorId()+ " processed "+data.toString()+"->"+outputTuple);
+		}
+		throw new RuntimeException("TODO"); 
 	}
 
 	
