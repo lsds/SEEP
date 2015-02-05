@@ -4,6 +4,8 @@ public class UpDownRCtrl {
 	private int opId;
 	private int qlen;
 	
+	public UpDownRCtrl() {}
+	
 	public UpDownRCtrl(int opId, int qlen) {
 		this.opId = opId;
 		this.qlen = qlen;

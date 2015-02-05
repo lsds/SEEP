@@ -10,6 +10,9 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -25,6 +28,10 @@ import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
+	private static final Logger logger = LoggerFactory.getLogger(Dispatcher.class);
+	private static final long FAILURE_TIMEOUT = 30 * 1000;
+	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
+	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	private final FailureCtrl nodeFctrl = new FailureCtrl();
 	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();
 	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//TODO: Perhaps change to a delayQueue
@@ -34,9 +41,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
 	private final IProcessingUnit owner;
 	private ArrayList<OutputQueue> outputQueues;
-	private static final long FAILURE_TIMEOUT = 30 * 1000;
-	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
-	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
+
 	
 	private final Object lock = new Object(){};
 	
@@ -220,7 +225,7 @@ public class Dispatcher implements IRoutingObserver {
 				try {
 					Thread.sleep(ROUTING_CTRL_DELAY);
 				} catch (InterruptedException e) {}
-				throw new RuntimeException("Locking?");
+				logger.warn("TODO: Locking?");
 			}
 		}
 		
@@ -239,7 +244,7 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			int localOpId = owner.getOperator().getOperatorId();
 			ControlTuple ct = new ControlTuple(ControlTupleType.UP_DOWN_RCTRL, localOpId, queueLength);
-			owner.getOwner().getControlDispatcher().sendUpstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId));
+			owner.getOwner().getControlDispatcher().sendDownstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId), false);
 		}
 	}
 	

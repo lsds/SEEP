@@ -14,6 +14,10 @@ import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingDeque;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
@@ -26,6 +30,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public class Buffer implements Serializable{
 
+	private static final Logger logger = LoggerFactory.getLogger(Buffer.class);
 	private static final long serialVersionUID = 1L;
 
 //	private Deque<BatchTuplePayload> buff = new LinkedBlockingDeque<BatchTuplePayload>();
@@ -59,8 +64,10 @@ public class Buffer implements Serializable{
 		{
 			total += o.batch.size();
 		}
-		//return total;
-		throw new RuntimeException("TODO: Tmp hack, not thread safe.");
+		logger.error("TODO: Tmp hack, not thread safe.");
+		return total;
+		//throw new RuntimeException("TODO: Tmp hack, not thread safe.");
+		
 	}
 	
 	public BackupOperatorState getBackupState(){

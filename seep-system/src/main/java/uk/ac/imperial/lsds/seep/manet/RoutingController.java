@@ -59,7 +59,7 @@ public class RoutingController implements Runnable{
 			while (iter.hasNext())
 			{
 				Integer nextId = (Integer)iter.next();
-				upstreamNetRates.get(i).put(nextId, 0.0);
+				upstreamNetRates.get(i).put(nextId, 1.0);
 				upstreamQlens.get(i).put(nextId, 0);
 				if (numLogicalInputs == 1)
 				{

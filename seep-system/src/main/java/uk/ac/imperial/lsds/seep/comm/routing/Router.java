@@ -185,6 +185,7 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
 	{
+		LOG.debug("Routing data tuple: "+dt.toString());
 		if (bpRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
 		Integer downOpId = bpRouter.route(dt.getPayload().timestamp);

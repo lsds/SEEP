@@ -125,6 +125,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 
 	public synchronized void send_highestWeight(DataTuple dt)
 	{
+		LOG.debug("Operator sending data tuple: "+dt.toString());
 		ArrayList<Integer> targets = router.forward_highestWeight(dt);
 		while (targets == null || targets.isEmpty())
 		{

@@ -479,7 +479,14 @@ public class CoreRE {
 			{
 				throw new RuntimeException("Logic error?");
 			}
-			routingController.handleRCtrl(ct.getUpDown());
+			if (routingController == null)
+			{
+				LOG.warn("Ignoring upDown routing ctrl message - routing controller is still null.");
+			}
+			else
+			{
+				routingController.handleRCtrl(ct.getUpDown());
+			}
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
