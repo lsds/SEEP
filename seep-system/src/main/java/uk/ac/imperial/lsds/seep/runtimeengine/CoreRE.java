@@ -535,6 +535,10 @@ public class CoreRE {
 		}
 		/** STATE_ACK message **/
 		else if(ctt.equals(ControlTupleType.STATE_ACK)){
+			if (processingUnit.getDispatcher() != null)
+			{
+				throw new UnsupportedOperationException("TODO: Not supported for net aware routing yet.");
+			}
 			int opId = ct.getStateAck().getMostUpstreamOpId();
 			LOG.info("-> Received STATE_ACK from Op: {}", opId);
 //			operatorStatus = OperatorStatus.REPLAYING_BUFFER;
@@ -782,6 +786,10 @@ public class CoreRE {
 		/** REPLAY message **/
 		/// \todo {this command is only used for twitter storm model...}
 		else if (command.equals("replay")){
+			if(processingUnit.getDispatcher() != null)
+			{
+				throw new UnsupportedOperationException("TODO: Replay not supported yet for net aware routing.");
+			}
 			//ackControlMessage(os);
 			//FIXME there is only one, this must be done for each conn
 			processingUnit.stopConnection(opId);

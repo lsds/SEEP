@@ -349,25 +349,10 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			logger.debug("Handling failure ctrl received from "+dsOpId+",nodefctrl="+nodeFctrl+ ", fctrl="+fctrl);
 			nodeFctrl.update(fctrl);
-
 			boolean nodeOutChanged = purgeNodeOut();
-
 			refreshNodeOutTimers(fctrl.alives());
-
 			boolean senderOutsChanged = purgeSenderQueues();
-
 			boolean senderBuffersChanged = purgeSenderBuffers();
-
-			
-			/*
-			boolean inputQueuesChanged = false;
-			if (!owner.getOperator().getOpContext().isSource())
-			{
-				inputQueuesChanged = purgeLogicalInputQueues();
-			}
-			*/
-
-			//notifyChannels()
 
 			synchronized(lock) { lock.notifyAll(); }
 		}
@@ -434,31 +419,5 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			return true;
 		}
-		
-		/*
-		private void notifyChannels()
-		{
-
-			Iterator iter = processingProducerChannels.iterator();
-			while (iter.hasNext())
-			{
-				((Channel)iter.next()).sendNonBlock(new Object(), true, false);
-			}
-
-			if (fctrlWriterChannels != null)
-			{
-				for (int i = 0; i < fctrlWriterChannels.length; i++)
-				{
-					iter = fctrlWriterChannels[i].keySet().iterator();
-					while (iter.hasNext())
-					{
-						((Channel)fctrlWriterChannels[i].get(iter.next())).sendNonBlock(new Object(), true, false); 
-					}
-				}
-			}
-			outputConsumerChannel.sendNonBlock(new Object(), true, false);
-		}
-		*/
-
 	}
 }
