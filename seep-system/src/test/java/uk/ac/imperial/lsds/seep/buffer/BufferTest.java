@@ -35,7 +35,7 @@ public class BufferTest extends TestCase {
 	public void testBuffer_1()
 		throws Exception {
 
-		Buffer result = new Buffer();
+		IBuffer result = new Buffer();
 
 		// add additional test code here
 		assertNotNull(result);
@@ -51,7 +51,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testGetBackupState_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 
@@ -74,7 +74,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testGetInputVTsForOutputTs_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long output_ts = 1L;
@@ -94,7 +94,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testGetInputVTsForOutputTs_2()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long output_ts = 1L;
@@ -114,7 +114,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testGetInputVTsForOutputTs_3()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long output_ts = 1L;
@@ -134,7 +134,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testIterator_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 
@@ -154,7 +154,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testReplaceBackupOperatorState_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		BackupOperatorState bs = new BackupOperatorState();
@@ -173,7 +173,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testReplaceRawData_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		RawData rw = new RawData(1, new byte[] {});
@@ -192,7 +192,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testSave_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		BatchTuplePayload batch = new BatchTuplePayload();
@@ -213,7 +213,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testSize_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 
@@ -232,7 +232,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testTrim_1()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long ts = 1L;
@@ -252,7 +252,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testTrim_2()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long ts = 1L;
@@ -272,7 +272,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testTrim_3()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long ts = 1L;
@@ -292,7 +292,7 @@ public class BufferTest extends TestCase {
 	 */
 	public void testTrim_4()
 		throws Exception {
-		Buffer fixture = new Buffer();
+		IBuffer fixture = new Buffer();
 		fixture.replaceRawData(new RawData(1, new byte[] {}));
 		fixture.replaceBackupOperatorState(new BackupOperatorState());
 		long ts = 1L;

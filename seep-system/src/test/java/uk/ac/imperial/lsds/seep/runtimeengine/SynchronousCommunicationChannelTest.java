@@ -12,6 +12,8 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 
 import java.io.PipedReader;
 import java.net.Socket;
+
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import java.util.Iterator;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
@@ -43,7 +45,7 @@ public class SynchronousCommunicationChannelTest extends TestCase {
 		Socket downstreamSocketD = new Socket();
 		Socket downstreamSocketC = new Socket();
 		Socket blindSocket = new Socket();
-		Buffer buffer = new Buffer();
+		IBuffer buffer = new Buffer();
 
 		SynchronousCommunicationChannel result = new SynchronousCommunicationChannel(opId, downstreamSocketD, downstreamSocketC, blindSocket, buffer);
 
@@ -69,7 +71,7 @@ public class SynchronousCommunicationChannelTest extends TestCase {
 		Socket downstreamSocketD = null;
 		Socket downstreamSocketC = new Socket();
 		Socket blindSocket = new Socket();
-		Buffer buffer = new Buffer();
+		IBuffer buffer = new Buffer();
 
 		SynchronousCommunicationChannel result = new SynchronousCommunicationChannel(opId, downstreamSocketD, downstreamSocketC, blindSocket, buffer);
 
@@ -95,7 +97,7 @@ public class SynchronousCommunicationChannelTest extends TestCase {
 		Socket downstreamSocketD = new Socket();
 		Socket downstreamSocketC = new Socket();
 		Socket blindSocket = new Socket();
-		Buffer buffer = new Buffer();
+		IBuffer buffer = new Buffer();
 
 		SynchronousCommunicationChannel result = new SynchronousCommunicationChannel(opId, downstreamSocketD, downstreamSocketC, blindSocket, buffer);
 
@@ -270,7 +272,7 @@ public class SynchronousCommunicationChannelTest extends TestCase {
 		fixture.setReconf_ts(new TimestampTracker());
 //		fixture.setSharedIterator(new Scanner(new PipedReader()));
 
-		Buffer result = fixture.getBuffer();
+		IBuffer result = fixture.getBuffer();
 
 		// add additional test code here
 		// An unexpected exception was thrown in user code while executing this test:

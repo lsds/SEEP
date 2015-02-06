@@ -15,7 +15,7 @@ import java.nio.channels.Selector;
 import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
@@ -28,7 +28,7 @@ import com.esotericsoftware.kryo.io.Output;
 public class AsynchronousCommunicationChannel implements EndPoint{
 
 	private int opId;
-	private Buffer buf;
+	private IBuffer buf;
 	private Selector s;
 	
 	//Serialization tools
@@ -42,7 +42,7 @@ public class AsynchronousCommunicationChannel implements EndPoint{
 	private int batchSize = new Integer(GLOBALS.valueFor("batchLimit"));
 	int currentBatchSize = 0;
 	
-	public AsynchronousCommunicationChannel(int opId, Buffer buf, Output o, ByteBuffer nativeBuffer){
+	public AsynchronousCommunicationChannel(int opId, IBuffer buf, Output o, ByteBuffer nativeBuffer){
 		this.opId = opId;
 		this.buf = buf;
 		this.o = o;

@@ -28,7 +28,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 * Buffer class models the buffers for the connections between operators in our system
 */
 
-public class Buffer implements Serializable{
+public class Buffer implements Serializable, IBuffer{
 
 	private static final Logger logger = LoggerFactory.getLogger(Buffer.class);
 	private static final long serialVersionUID = 1L;
@@ -44,6 +44,10 @@ public class Buffer implements Serializable{
 //		return buff.iterator(); 
 //	}
 	
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#iterator()
+	 */
+	@Override
 	public Iterator<OutputLogEntry> iterator() { 
 		return log.iterator(); 
 	}
@@ -53,10 +57,18 @@ public class Buffer implements Serializable{
 		bs = initState;
 	}
 	
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#size()
+	 */
+	@Override
 	public int size(){
 		return log.size();
 	} 
  
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#numTuples()
+	 */
+	@Override
 	public int numTuples()
 	{
 		int total = 0;
@@ -70,6 +82,10 @@ public class Buffer implements Serializable{
 		
 	}
 	
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#getBackupState()
+	 */
+	@Override
 	public BackupOperatorState getBackupState(){
 		return bs;
 	}
@@ -82,6 +98,10 @@ public class Buffer implements Serializable{
 //		trim(ts_e);
 //	}
 	
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#replaceBackupOperatorState(uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState)
+	 */
+	@Override
 	public void replaceBackupOperatorState(BackupOperatorState bs) {
 		// In-memory
 		long smem = System.currentTimeMillis();
@@ -104,17 +124,30 @@ public class Buffer implements Serializable{
 //	    System.out.println("MEM: "+(emem-smem)+" DISK: "+(enddisk-emem));
 	}
 	
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#replaceRawData(uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData)
+	 */
+	@Override
 	public void replaceRawData(RawData rw){
 		System.out.println("Storing: "+rw.getData().length+" bytes");
 		this.rw = rw;
 	}
 
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#save(uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload, long, uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker)
+	 */
+	@Override
 	public void save(BatchTuplePayload batch, long outputTs, TimestampTracker inputTs){
 		log.add(new OutputLogEntry(outputTs, inputTs, batch));
 	}
 	
-	public TimestampTracker trim(long ts){
-//		System.out.println("ACK: "+ts);
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#trim(long)
+	 */
+	@Override
+	public TimestampTracker trim(long ts)
+	{
+		// System.out.println("ACK: "+ts);
 		TimestampTracker oldest = null;
 		boolean matchFirstEntryToRemove = true;
 		long startTrim = System.currentTimeMillis();
@@ -147,6 +180,10 @@ public class Buffer implements Serializable{
         return oldest;
 	}
 	
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#trim(uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl)
+	 */
+	@Override
 	public void trim(FailureCtrl fctrl)
 	{
 		Iterator<OutputLogEntry> iter = log.iterator();
@@ -162,6 +199,10 @@ public class Buffer implements Serializable{
 	}
 	
 	///fixme{just for testing, do binary search on structure}
+	/* (non-Javadoc)
+	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#getInputVTsForOutputTs(long)
+	 */
+	@Override
 	public TimestampTracker getInputVTsForOutputTs(long output_ts){
 		for(OutputLogEntry l : log){
 			if(l.outputTs == output_ts){

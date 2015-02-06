@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
@@ -184,7 +184,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		}
 		// and then we clean both the buffer and the mapping in downstreamBuffers.
 //		if(PUContext.downstreamBuffers.get(opId) != null){
-		Buffer b = ctx.getBuffer(opId);
+		IBuffer b = ctx.getBuffer(opId);
 		if(b != null){
 			//First of all, we empty the buffer
 			b.replaceBackupOperatorState(null);

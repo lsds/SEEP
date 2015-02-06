@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
@@ -85,7 +85,7 @@ public class OutputQueue {
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
-		Buffer buffer = channelRecord.getBuffer();
+		IBuffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
 		//Output for this socket

@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
+import uk.ac.imperial.lsds.seep.buffer.OutOfOrderBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
@@ -63,7 +65,7 @@ public class PUContext {
 	private Selector selector;
 	
 	//map in charge of storing the buffers that this operator is using
-	private HashMap<Integer, Buffer> downstreamBuffers = new HashMap<Integer, Buffer>();
+	private HashMap<Integer, IBuffer> downstreamBuffers = new HashMap<Integer, IBuffer>();
 	
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
 		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket")); 
@@ -246,9 +248,9 @@ public class PUContext {
 				socketD = new Socket(ip, portD);
 				if(portC != 0){
 					socketC = new Socket(ip, portC);
-				}
-				
-				Buffer buffer = new Buffer();
+				}					
+					
+				IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer() : new Buffer();
 				
 				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
 				downstreamTypeConnection.add(con);
@@ -300,7 +302,7 @@ public class PUContext {
 		return null;
 	}
 
-	public Buffer getBuffer(int opId) {
+	public IBuffer getBuffer(int opId) {
 		return downstreamBuffers.get(opId);
 	}
 	
@@ -323,7 +325,7 @@ public class PUContext {
 					Socket dataS = new Socket(newIp, dataPort);
 					Socket controlS = new Socket(newIp, controlPort);
 					Socket blindS = null;
-					Buffer buf = downstreamBuffers.get(opId);
+					IBuffer buf = downstreamBuffers.get(opId);
 					int index = opToReconfigure.getOpContext().getDownOpIndexFromOpId(opId);
 					SynchronousCommunicationChannel cci = new SynchronousCommunicationChannel(opId, dataS, controlS, blindS, buf);
 					downstreamTypeConnection.set(index, cci);

@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
@@ -187,7 +187,7 @@ public class CoreProcessingLogic implements Serializable{
 	
 	private synchronized void processAck(int opId, long ack_ts){
 		// Trim local buffer
-		Buffer buffer = puCtx.getBuffer(opId);
+		IBuffer buffer = puCtx.getBuffer(opId);
 		TimestampTracker oldest = buffer.trim(ack_ts);
 		
 		// Check whether this operator is responsible to control when to backpropagate acks
@@ -409,7 +409,7 @@ public class CoreProcessingLogic implements Serializable{
 	public void replayState(int opId) {
 		//Get channel information
 		SynchronousCommunicationChannel cci = puCtx.getCCIfromOpId(opId, "d");
-		Buffer buffer = cci.getBuffer();
+		IBuffer buffer = cci.getBuffer();
 		Socket controlDownstreamSocket = cci.getDownstreamControlSocket();
 
 		//Get a proper init state and just send it

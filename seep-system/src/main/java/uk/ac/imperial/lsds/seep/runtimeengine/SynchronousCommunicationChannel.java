@@ -18,7 +18,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
@@ -36,7 +36,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
 	private Socket blindSocket;
-	private Buffer buffer;
+	private IBuffer buffer;
 	
 	private final Object controlSocketLock = new Object(){};
 	
@@ -56,7 +56,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int channelBatchSize = Integer.parseInt(GLOBALS.valueFor("batchLimit"));
 	private long tick = 0;
 
-	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, Buffer buffer){
+	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer){
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
 		this.downstreamControlSocket = downstreamSocketC;
@@ -257,7 +257,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return downstreamDataSocket;
 	}
 	
-	public Buffer getBuffer(){
+	public IBuffer getBuffer(){
 		return buffer;
 	}
 	

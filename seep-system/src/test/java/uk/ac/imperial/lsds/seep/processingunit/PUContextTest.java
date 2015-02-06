@@ -12,11 +12,12 @@ package uk.ac.imperial.lsds.seep.processingunit;
 
 import java.net.InetAddress;
 import java.nio.channels.Selector;
+
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.runtimeengine.DisposableCommunicationChannel;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import java.util.ArrayList;
 import java.util.Vector;
@@ -264,7 +265,7 @@ public class PUContextTest extends TestCase {
 		PUContext fixture = new PUContext(new WorkerNodeDescription(InetAddress.getLocalHost(), 1), new ArrayList());
 		int opId = 1;
 
-		Buffer result = fixture.getBuffer(opId);
+		IBuffer result = fixture.getBuffer(opId);
 
 		// add additional test code here
 		assertEquals(null, result);

@@ -26,7 +26,8 @@ import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputBuffer;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -816,7 +817,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 			listOfManagedStates.remove(index);
 		}
 		// and then we clean both the buffer and the mapping in downstreamBuffers.
-		Buffer b = ctx.getBuffer(opId);
+		IBuffer b = ctx.getBuffer(opId);
 		if(b != null){
 			//First of all, we empty the buffer
 			b.replaceBackupOperatorState(null);

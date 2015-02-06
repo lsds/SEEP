@@ -13,7 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.buffer.Buffer;
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -182,6 +182,7 @@ public class Dispatcher implements IRoutingObserver {
 		
 		public boolean purgeSenderQueue()
 		{
+			logger.error("TODO: Thread safety?"); 
 			boolean changed = false;
 			  FailureCtrl currentFctrl = getNodeFailureCtrl();
 			  Iterator<DataTuple> qIter = tupleQueue.iterator();
@@ -242,7 +243,7 @@ public class Dispatcher implements IRoutingObserver {
 			SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
 			if (cci != null)
 			{
-				Buffer buffer = cci.getBuffer();
+				IBuffer buffer = cci.getBuffer();
 				return buffer.numTuples();
 			}
 			else { throw new RuntimeException("Logic error."); }
@@ -413,7 +414,7 @@ public class Dispatcher implements IRoutingObserver {
 				SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
 				if (cci != null)
 				{
-					Buffer buffer = cci.getBuffer();
+					IBuffer buffer = cci.getBuffer();
 					buffer.trim(currentFailureCtrl);
 				}
 			}
