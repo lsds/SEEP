@@ -102,7 +102,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
     	}
         // Seep monitoring
         notifyThat(0).inputQueueTake();
-        return inputQueue.firstEntry().getValue();
+        return inputQueue.remove(inputQueue.firstKey());
 	}
 	
 	public void clean(){
