@@ -47,7 +47,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public Dispatcher(IProcessingUnit owner)
 	{
-		this.owner = owner;		
+		this.owner = owner;
 	}
 	
 	public FailureCtrl getNodeFailureCtrl()
@@ -87,6 +87,12 @@ public class Dispatcher implements IRoutingObserver {
 			rctrlWorkers.add(worker);
 			workerT.start();
 		}		
+	}
+	
+	public void startFailureDetector()
+	{
+		Thread fDetectorT = new Thread(failureDetector);
+		fDetectorT.start();
 	}
 	
 	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
@@ -261,7 +267,22 @@ public class Dispatcher implements IRoutingObserver {
 			while(true)
 			{
 				checkForRetransmissions();
-				throw new RuntimeException("TODO: notify on lock");
+				
+				//TODO: This will cause a full iteration over node out timers
+				// every second!
+				synchronized(lock)
+				{
+					long waitStart = System.currentTimeMillis();
+					long now = waitStart;
+					
+					while (waitStart + RETRANSMIT_CHECK_INTERVAL < now)
+					{
+						try {
+							lock.wait(now - (waitStart + RETRANSMIT_CHECK_INTERVAL));
+						} catch (InterruptedException e) {}
+						now = System.currentTimeMillis();
+					}
+				}
 			}
 		}
 		
@@ -276,13 +297,16 @@ public class Dispatcher implements IRoutingObserver {
 					if (entry.getValue() + FAILURE_TIMEOUT  < System.currentTimeMillis())
 					{
 						timerKeys.add(entry.getKey());
-						entry.setValue(System.currentTimeMillis());
+						//entry.setValue(System.currentTimeMillis());
 					}
 				}
 			}
 			
-			long lastChecked = System.currentTimeMillis();
-			
+			//TODO: This is a best effort retransmit. If there is no
+			//available downstream for a particular tuple, it will have
+			//to wait until the next failure detection timeout. Should
+			//possibly tweak to retry in the meantime whenever there is
+			//a routing change.
 			for (Long tupleKey : timerKeys)
 			{
 				DataTuple dt = null;
@@ -293,43 +317,26 @@ public class Dispatcher implements IRoutingObserver {
 				}
 								
 				if (dt != null)	
-				{						
-					//Don't care about queues being too big here.
-					//TODO: Question is where to send too.
+				{
 					int target = -1;
-					while(true)
+					ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+					if (targets.size() > 1) { throw new RuntimeException("TODO"); }
+					else if (targets.size() == 1) { target = targets.get(0); }
+
+					if (target >= 0)
 					{
-						//TODO: Change from forward lowest cost to forward highest weight.
-						ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
-						if (targets.size() > 1) { throw new RuntimeException("TODO"); }
-						else if (targets.size() == 1) { target = targets.get(0); }
-						
-						if (target < 0)
+						workers.get(target).send(dt);
+						synchronized(lock)
 						{
-							synchronized(lock)
-							{								
-								try 
-								{
-									lock.wait(RETRANSMIT_CHECK_INTERVAL);
-								} 
-								catch (InterruptedException e) 
-								{
-									if (lastChecked + RETRANSMIT_CHECK_INTERVAL < System.currentTimeMillis())
-									{
-										return;
-									}
-								}
+							//If hasn't been acked
+							if (nodeOutTimers.containsKey(dt.getPayload().timestamp))
+							{
+								//Touch the retransmission timer
+								nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
 							}
 						}
-						else { break; }
 					}
-					
-					
-					//TODO: Check whether this sender already has it?
-					workers.get(target).send(dt);
-											
-					//TODO: Remove from other sender queues? 				
-				}					
+				}
 			}					
 		}
 	}

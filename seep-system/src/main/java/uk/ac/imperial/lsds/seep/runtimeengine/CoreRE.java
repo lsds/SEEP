@@ -314,6 +314,7 @@ public class CoreRE {
 			if (!processingUnit.getOperator().getOpContext().isSink())
 			{
 				processingUnit.getDispatcher().startRoutingCtrlWorkers();
+				processingUnit.getDispatcher().startFailureDetector();
 			}
 		}
 	}
