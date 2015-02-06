@@ -95,14 +95,20 @@ public class SubQuery {
 	public void setTaskDispatcher(TaskDispatcher dispatcher) {
 		this.dispatcher = dispatcher;
 	}
-
+	
+	/*
 	public ConcurrentLinkedQueue<ITask> getExecutorQueue() {
 		return this.parent.getExecutorQueue();
 	}
-
-	public ConcurrentLinkedQueue<ITask> getGPUExecutorQueue() {
-		return this.parent.getGPUExecutorQueue();
+	*/
+	
+	public TaskQueue getExecutorQueue() {
+		return this.parent.getExecutorQueue();
 	}
+
+//	public ConcurrentLinkedQueue<ITask> getGPUExecutorQueue() {
+//		return this.parent.getGPUExecutorQueue();
+//	}
 
 	public WindowDefinition getWindowDefinition() {
 		return this.firstWindow;

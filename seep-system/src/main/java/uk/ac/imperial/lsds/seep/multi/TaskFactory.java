@@ -20,7 +20,7 @@ public class TaskFactory {
 	public static Task newInstance (SubQuery query, WindowBatch batch, ResultHandler handler, int taskid, int offset) {
 		Task task = pool.poll();
 		if (task == null)
-			return new Task(query, batch, handler, taskid, offset);
+			return new Task(query, batch, handler, taskid, offset, query.getId());
 		task.set(query, batch, handler, taskid, offset);
 		return task;
 	}

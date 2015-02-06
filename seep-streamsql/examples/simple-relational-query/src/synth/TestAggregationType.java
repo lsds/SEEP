@@ -37,7 +37,6 @@ public class TestAggregationType {
 			System.exit(-1);
 		}
 		
-		
 		/*
 		 * Set up configuration of system
 		 */

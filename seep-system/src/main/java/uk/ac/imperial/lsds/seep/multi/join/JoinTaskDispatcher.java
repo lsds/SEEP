@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi.join;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
+//import java.util.concurrent.ConcurrentLinkedQueue;
+import uk.ac.imperial.lsds.seep.multi.TaskQueue;
 
 import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
@@ -15,7 +16,8 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 
 public class JoinTaskDispatcher implements ITaskDispatcher {
 	
-	private ConcurrentLinkedQueue<ITask> workerQueue, _workerQueue;
+	/* private ConcurrentLinkedQueue<ITask> workerQueue, _workerQueue; */
+	private TaskQueue workerQueue;
 	private IQueryBuffer firstBuffer;
 	private IQueryBuffer secondBuffer;
 	private WindowDefinition firstWindow;
@@ -74,8 +76,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	public void setup () {
 		/* The default task queue for either CPU or GPU executor */
 		this.workerQueue = this.parent.getExecutorQueue();
-		if (Utils.HYBRID)
-			this._workerQueue = this.parent.getGPUExecutorQueue();
+		// if (Utils.HYBRID)
+		//	this._workerQueue = this.parent.getGPUExecutorQueue();
 	}
 	
 	@Override
@@ -203,7 +205,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 //		System.out.println(String.format("[DBG] FIRST  window batch starts at %10d ends at %10d free at %10d", firstStartIndex, firstEndIndex, firstFree));
 //		System.out.println(String.format("[DBG] SECOND window batch starts at %10d ends at %10d free at %10d", secondStartIndex, secondEndIndex, secondFree));
 
-		if (Utils.HYBRID) {
+		// if (Utils.HYBRID) {
 			/* Round-robin submission to CPU and GPU executors */
 			/* if (taskid % 3 == 0) {
 				task.setGPU(true);
@@ -212,15 +214,15 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 				workerQueue.add(task);
 			}
 			*/
-			if (workerQueue.size() < _workerQueue.size())
-				workerQueue.add(task);
-			else {
-				task.setGPU(true);
-				_workerQueue.add(task);
-			}
-		} else {
-			workerQueue.add(task);
-		}
+		//	if (workerQueue.size() < _workerQueue.size())
+		//		workerQueue.add(task);
+		//	else {
+		//		task.setGPU(true);
+		//		_workerQueue.add(task);
+		//	}
+		//} else {
+		// workerQueue.add(task);
+		// }
 		
 		/*
 		 * First, reduce the number of tuples that are ready for processing by the 

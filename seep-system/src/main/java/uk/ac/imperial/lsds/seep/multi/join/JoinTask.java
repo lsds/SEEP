@@ -19,6 +19,7 @@ public class JoinTask implements ITask {
 
 	private boolean			GPU	= false;
 
+	@Override
 	public void setGPU(boolean GPU) {
 		this.GPU = GPU;
 	}
@@ -73,8 +74,8 @@ public class JoinTask implements ITask {
 		ResultCollector.forwardAndFree(handler, query, this.firstBatch.getBuffer(),
 				taskid, firstFreeUpTo, secondFreeUpTo);
 
-		this.firstBatch.getBuffer().release();
-		this.secondBatch.getBuffer().release();
+		// this.firstBatch.getBuffer().release();
+		// this.secondBatch.getBuffer().release();
 		
 		WindowBatchFactory.free(this.firstBatch);
 		WindowBatchFactory.free(this.secondBatch);

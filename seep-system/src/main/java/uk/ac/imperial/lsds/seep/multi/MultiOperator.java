@@ -13,9 +13,12 @@ public class MultiOperator {
 	private int				id;
 
 	private ITaskDispatcher	dispatcher;
-	private ConcurrentLinkedQueue<ITask>	queue, _queue;
-	private TaskProcessorPool				workerPool, _workerPool;
-	private Executor						executor, _executor;
+	/* private ConcurrentLinkedQueue<ITask>	queue, _queue; */
+	private TaskQueue queue;
+	private TaskProcessorPool workerPool, _workerPool;
+	private Executor executor, _executor;
+	
+	int [][] policy;
 
 	public MultiOperator(Set<SubQuery> subQueries, int id) {
 		this.subQueries = subQueries;
@@ -53,9 +56,15 @@ public class MultiOperator {
 //
 //			threads--;
 //		}
+		
+		this.policy = new int [threads][1];
+		for (int i = 0; i < threads; i++) {
+			policy [i][0] = 1;
+		}
+		// policy[1][0] = 8;
 
-		this.queue = new ConcurrentLinkedQueue<ITask>();
-		this.workerPool = new TaskProcessorPool(threads, queue, Utils.HYBRID);
+		this.queue = new TaskQueue(threads, 1); // new ConcurrentLinkedQueue<ITask>();
+		this.workerPool = new TaskProcessorPool(threads, queue, policy, Utils.HYBRID);
 		this.executor = Executors.newCachedThreadPool();
 		this.queue = workerPool.start(executor);
 
@@ -74,14 +83,22 @@ public class MultiOperator {
 	public int getId() {
 		return id;
 	}
-
+	
+	/*
 	public ConcurrentLinkedQueue<ITask> getExecutorQueue() {
 		return this.queue;
 	}
-
+	*/
+	
+	public TaskQueue getExecutorQueue() {
+		return this.queue;
+	}
+	
+	/*
 	public ConcurrentLinkedQueue<ITask> getGPUExecutorQueue() {
 		return _queue;
 	}
+	*/
 
 	public int getExecutorQueueSize() {
 		return this.queue.size();
@@ -90,8 +107,9 @@ public class MultiOperator {
 	public Set<SubQuery> getSubQueries() {
 		return this.subQueries;
 	}
-
+	/*
 	public int getSecondExecutorQueueSize() {
 		return this._queue.size();
 	}
+	*/
 }

@@ -71,6 +71,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		ITupleSchema schema = windowBatch.getSchema();
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			
 			int inWindowStartOffset = startPointers[currentWindow];
@@ -100,7 +101,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		// outBuffer.close();
 		windowBatch.setBuffer(outBuffer);
 		windowBatch.setSchema(outSchema);
-
+		
 		if (outBuffer.position() > 1048576)
 			System.err.println("buffer position after filling (" + outBuffer.position() + ")");
 
