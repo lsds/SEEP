@@ -121,17 +121,10 @@ public class IncomingDataHandlerWorker implements Runnable{
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
 				for(TuplePayload t_payload : batch)
 				{
-					long incomingTs = t_payload.timestamp;
-					if (allowOutOfOrderTuples)
+					
+					if (!allowOutOfOrderTuples)
 					{
-						if (dso.contains(incomingTs, opId))
-						{
-							System.out.println("Duplicate");
-							continue;
-						}
-					}
-					else
-					{
+						long incomingTs = t_payload.timestamp;
 						// Check for already processed data
 						/// \todo{should be <= but the problem is that logical clock in java has ms granularity. This means that once you
 						/// send more than 1000 events per second, some events are discarded here, since their ts is the same...}
@@ -140,9 +133,9 @@ public class IncomingDataHandlerWorker implements Runnable{
 							continue;
 						}
 						owner.setTsData(opId, incomingTs);
+						lastIncomingTs = incomingTs;
 					}
-				
-					lastIncomingTs = incomingTs;
+					
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						DataTuple reg = new DataTuple(idxMapper, t_payload);

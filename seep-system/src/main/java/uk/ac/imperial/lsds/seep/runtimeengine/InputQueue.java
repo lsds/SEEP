@@ -116,16 +116,6 @@ public class InputQueue implements DataStructureI{
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
-	@Override
-	public boolean contains(long timestamp, int upstreamOpId) { 
-		throw new RuntimeException("TODO");
-	}
-
-	@Override
-	public Set<Long> getTimestamps() {
-		throw new RuntimeException("TODO");
-	}
 
 	@Override
 	public FailureCtrl purge(FailureCtrl nodeFctrl) {

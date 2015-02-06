@@ -45,7 +45,7 @@ public class DataConsumer implements Runnable {
 		//... and only one, case that we can exploit for performance reasons
 		else{
 			DataStructureI dso = dataAdapter.getUniqueDso();
-			if(dso instanceof InputQueue || dso instanceof SlowInputQueue){
+			if(dso instanceof InputQueue || dso instanceof OutOfOrderInputQueue){
 				while(doWork){
 					DataTuple data = dso.pull();
 //					DataTuple[] dataBatch = ((InputQueue)dso).pullMiniBatch();
@@ -81,7 +81,7 @@ public class DataConsumer implements Runnable {
 
 		@Override
 		public void run() {			
-			if(dsi instanceof InputQueue || dsi instanceof SlowInputQueue){
+			if(dsi instanceof InputQueue || dsi instanceof OutOfOrderInputQueue){
 				while(doWork){
 					DataTuple data = dsi.pull();
 					if(owner.checkSystemStatus()){

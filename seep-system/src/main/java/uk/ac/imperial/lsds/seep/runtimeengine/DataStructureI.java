@@ -21,8 +21,6 @@ public interface DataStructureI {
 	public void push(DataTuple dt);
 	public DataTuple pull();
 	public ArrayList<DataTuple> pull_from_barrier();
-	public boolean contains(long timestamp, int upstreamOpId);
-	public Set<Long> getTimestamps();
 	public FailureCtrl purge(FailureCtrl nodeFctrl);
 	public int size();
 	

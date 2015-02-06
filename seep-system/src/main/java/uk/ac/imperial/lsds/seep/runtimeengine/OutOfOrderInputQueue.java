@@ -3,9 +3,12 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -13,30 +16,49 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 
-public class SlowInputQueue implements DataStructureI {
+public class OutOfOrderInputQueue implements DataStructureI {
 
 	
-	private BlockingQueue<DataTuple> inputQueue;
+	private TreeMap<Long, DataTuple> inputQueue = new TreeMap<>();
+	private final int maxInputQueueSize;
+	private long lw = -1;
+	private Set<Long> acks = new HashSet<>();
 	
-	public SlowInputQueue()
+	public OutOfOrderInputQueue()
 	{
-		inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
+		//inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
+		maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength")); 
 	}
 	
 	public synchronized void push(DataTuple data){
-		try {
-			inputQueue.put(data);
-            
-            // Seep monitoring
-            notifyThat(0).inputQueuePut();
-            
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		
+		//TODO: Should really check alives too (at least the local ones).
+		if (data.getPayload().timestamp <= lw || 
+				acks.contains(lw) ||
+				inputQueue.containsKey(data.getPayload().timestamp)) 
+		{ return; }
+		
+		while (inputQueue.size() >= maxInputQueueSize)
+		{
+			try {
+				this.wait();
+			} catch (InterruptedException e) {}
 		}
+		
+		inputQueue.put(data.getPayload().timestamp, data);
+		this.notifyAll();
+        notifyThat(0).inputQueuePut();
 	}
 	
 	public synchronized boolean pushOrShed(DataTuple data){
+		
+		//TODO: Check not acked
+		//if tuple <= lw or in acks,
+			//return
+		//if queue is !map and queue contains tuple
+			//return
+		
+		/*
 		boolean inserted = inputQueue.offer(data);
 		if (inserted) {
             // Seep monitoring
@@ -44,9 +66,12 @@ public class SlowInputQueue implements DataStructureI {
         }
         
 		return inserted;
+		*/
+		throw new RuntimeException("TODO");
 	}
 	
 	public DataTuple[] pullMiniBatch(){
+		/*
 		int miniBatchSize = 10;
 		DataTuple[] batch = new DataTuple[miniBatchSize];
 
@@ -64,25 +89,24 @@ public class SlowInputQueue implements DataStructureI {
 			}
         }
 		return batch;
+		*/
+		throw new RuntimeException("TODO");
 	}
 	
-	public DataTuple pull(){
-		try {
-            // Seep monitoring
-            notifyThat(0).inputQueueTake();
-            
-            synchronized(this)
-            {
-            	return inputQueue.take();
-            }
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
+	public synchronized DataTuple pull(){
+    	while (inputQueue.isEmpty())
+    	{
+    		try {
+				this.wait();
+			} catch (InterruptedException e) {}
+    	}
+        // Seep monitoring
+        notifyThat(0).inputQueueTake();
+        return inputQueue.firstEntry().getValue();
 	}
 	
 	public void clean(){
+		/*
 		try {
             // Seep monitoring
             notifyThat(1).inputQueueTake();
@@ -100,6 +124,8 @@ public class SlowInputQueue implements DataStructureI {
         
 		inputQueue.clear();
 		System.out.println("AFTER- REAL SIZE OF INPUT QUEUE: " + inputQueue.size());
+		*/
+		throw new RuntimeException("TODO");
 	}
 
 	@Override
@@ -107,41 +133,26 @@ public class SlowInputQueue implements DataStructureI {
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
-	@Override
-	public boolean contains(long timestamp, int upstreamOpId) 
-	{ 
-		//TODO: Tmp hack! I guess this is only a perf opt anyway,
-		//so probably wouldn't bother with it as is.
-		Object[] tuples = null;
-		synchronized(this) { tuples = inputQueue.toArray(); }
-		for (int i = 0; i < tuples.length; i++) { 
-			if (((DataTuple)tuples[i]).getPayload().timestamp == timestamp) { return true; }
-		}
-		return false; 
-	}
 
-	@Override
-	public Set<Long> getTimestamps() {
-		Set<Long> result = new HashSet<>();
-		Object[] tuples = null;
-		synchronized(this) { tuples = inputQueue.toArray(); }
-		for (int i = 0; i < tuples.length; i ++)
-		{
-			result.add(((DataTuple)tuples[i]).getPayload().timestamp);
-		}
-		return result;
-	}
-
+	//TODO: Should really allow to distinguish between local alives
+	//and downstream alives, since we can avoid adding most of the former 
+	// in the first place in push.
 	@Override
 	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
-		//TODO: This will be much slower than input queue since the data
-		//consumer methods must now take the lock
+		
+		if (nodeFctrl.lw() < lw || (nodeFctrl.lw() == lw && nodeFctrl.acks().size() < acks.size()))
+		{
+			throw new RuntimeException("Logic error");
+		}
+		lw = nodeFctrl.lw();
+		acks = nodeFctrl.acks();
+		
 		Set<Long> opAlives = new HashSet<>();
-		Iterator<DataTuple> iter = inputQueue.iterator();
+		Iterator<Long> iter = inputQueue.keySet().iterator();
 		while (iter.hasNext())
 		{
-			long ts = iter.next().getPayload().timestamp;
+			long ts = iter.next();
+			//TODO: Do we really want to delete alives that aren't local?
 			if (ts <= nodeFctrl.lw() || nodeFctrl.acks().contains(ts) 
 					|| nodeFctrl.alives().contains(ts))
 			{

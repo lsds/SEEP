@@ -77,15 +77,6 @@ public class BufferedBarrier implements DataStructureI{
 	}
 	
 	@Override
-	public boolean contains(long timestamp, int upstreamOpId) 
-	{ throw new RuntimeException("TODO"); }
-
-	@Override
-	public Set<Long> getTimestamps() {
-		throw new RuntimeException("TODO");
-	}
-	
-	@Override
 	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
 		throw new RuntimeException("TODO");
 	}
