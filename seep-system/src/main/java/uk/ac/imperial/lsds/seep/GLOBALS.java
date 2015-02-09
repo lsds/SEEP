@@ -37,6 +37,11 @@ public class GLOBALS {
 		return globals.getProperty(key);
 	}
 	
+	public static String propsToString()
+	{
+		return globals.toString();
+	}
+	
 	//Load properties from file
 	private static void loadProperties(){
 		try {

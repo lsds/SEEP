@@ -50,12 +50,14 @@ class MeanderWorker(CoreService):
         cfg += "mkdir %s\n"%log_dir
         cfg += "pwd\n"
         cfg += "ls\n"
+        cfg += "cp %s/core-emane/vldb/config/run-worker.py .\n"%(seep_example_dir)
         cfg += "cp %s/lib/%s %s\n"%(seep_example_dir, seep_jar, lib_dir)
         cfg += 'echo "Starting MeanderWorker on `hostname`(`hostname -i`)"\n'
         cfg += 'echo "cating /etc/hosts"\n'
         cfg += 'cat /etc/hosts\n'
         cfg += "ip route > rt.log\n"
-        cfg += "java -jar %s/%s Worker\n"%(lib_dir, seep_jar)
+        cfg += "./run-worker.py"
+        #cfg += "java -jar %s/%s Worker\n"%(lib_dir, seep_jar)
 
         return cfg
 

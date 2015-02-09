@@ -118,6 +118,7 @@ public class NodeManagerCommunication {
 			DataOutputStream dos = new DataOutputStream(connection.getOutputStream());
 			dos.writeInt(data.length);
 			dos.write(data);
+			dos.flush();
 //			fis.close();
 			dos.close();
 			connection.close();

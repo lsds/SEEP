@@ -92,6 +92,8 @@ public class Main {
 			{
 				bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
 			}
+			LOG.info("Bind address="+bindAddr);
+			LOG.info("globalProps="+GLOBALS.propsToString());
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();

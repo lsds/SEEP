@@ -66,7 +66,7 @@ def run_query(master):
 
 def start_master(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr="true"','-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
+        args = ['java', '-DuseCoreAddr=true','-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
                 '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
