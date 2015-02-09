@@ -63,6 +63,8 @@ public class Task implements ITask {
 		ResultCollector.forwardAndFree(handler, query, this.batch.getBuffer(),
 				this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
 		
+		// this.batch.getBuffer().release();
+		
 		WindowBatchFactory.free(this.batch);
 
 		return 0;

@@ -15,6 +15,8 @@ public class Noop implements IMicroOperatorCode {
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
+		/* Copy input to output */
+		windowBatch.getBuffer().appendBytesTo(windowBatch.getBatchStartPointer(), windowBatch.getBatchEndPointer(), outputBuffer.array());
 		windowBatch.setBuffer(outputBuffer);
 		api.outputWindowBatchResult(-1, windowBatch);
 	}

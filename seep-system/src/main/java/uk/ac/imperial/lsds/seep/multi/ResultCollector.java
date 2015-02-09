@@ -34,7 +34,7 @@ public class ResultCollector {
 			/* Forward and free */
 			Integer index = handler.next.get(marked);
 			if (! marked[0])
-				if (! handler.next.compareAndSet(index, index, false, true))
+				if (! handler.next.attemptMark(index, true))
 					return ;
 			
 			/* No other thread can modify next.
@@ -50,7 +50,7 @@ public class ResultCollector {
 			
 			while (busy) {
 				
-				/* System.out.println(String.format("[DBG] %s try  slot qid %d idx %6d", Thread.currentThread(), query.getId(), nextone)); */
+				System.out.println(String.format("[DBG] %s try  slot qid %d idx %6d", Thread.currentThread(), query.getId(), nextone));
 
 				IQueryBuffer buf = handler.results[nextone];
 				byte [] arr = buf.array();
@@ -84,7 +84,7 @@ public class ResultCollector {
 					/* System.out.println(String.format("[DBG] %s next slot %d is unavailable", Thread.currentThread(), nextone)); */
 					/* Exit gracefully */
 					if (! handler.next.compareAndSet(index, new Integer(nextone), true, false)) {
-						System.err.println ("Fatal error.");
+						System.err.println ("Fatal error: expected " + index.intValue() + " found " + handler.next.get(marked).intValue() + " new " + nextone);
 						System.exit(1);
 					}
 					busy = false;
