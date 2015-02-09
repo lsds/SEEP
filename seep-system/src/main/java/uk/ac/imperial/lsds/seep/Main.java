@@ -84,7 +84,14 @@ public class Main {
 		int port = Integer.parseInt(GLOBALS.valueFor("mainPort"));
 		InetAddress bindAddr = null;
 		try {
-			bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
+			if ("true".equals(GLOBALS.valueFor("useCoreAddr")))
+			{
+				bindAddr = InetAddress.getByName(GLOBALS.valueFor("coreMainAddr"));
+			}
+			else
+			{
+				bindAddr = InetAddress.getByName(GLOBALS.valueFor("mainAddr"));
+			}
 		} 
 		catch (UnknownHostException e) {
 			e.printStackTrace();

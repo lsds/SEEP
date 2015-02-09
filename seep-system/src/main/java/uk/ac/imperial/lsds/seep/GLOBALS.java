@@ -42,6 +42,7 @@ public class GLOBALS {
 		try {
 			InputStream fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
 			globals.load(fis);
+			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
 		}
 		catch (FileNotFoundException e1) {
 			System.out.println("Properties file not found "+e1.getMessage());

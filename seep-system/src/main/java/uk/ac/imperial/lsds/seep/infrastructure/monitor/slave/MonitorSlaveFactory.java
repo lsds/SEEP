@@ -27,7 +27,15 @@ public class MonitorSlaveFactory implements Factory<MonitorSlave> {
     public MonitorSlaveFactory(int operatorId) {
         this.operatorId = operatorId;
         
-        this.masterHost = GLOBALS.valueFor("mainAddr");
+        if ("true".equals(GLOBALS.valueFor("useCoreAddr")))
+        {
+        	this.masterHost = GLOBALS.valueFor("coreMainAddr");
+        }
+        else
+        {
+        	this.masterHost = GLOBALS.valueFor("mainAddr");
+        }
+        	
         this.masterPort = Integer.valueOf(GLOBALS.valueFor("monitorManagerPort"));
         
         this.freqSeconds = Integer.valueOf(GLOBALS.valueFor("monitorInterval"));
