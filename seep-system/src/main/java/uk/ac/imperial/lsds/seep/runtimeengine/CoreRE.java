@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,6 +42,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.manet.CostHandler;
+import uk.ac.imperial.lsds.seep.manet.NetRateMonitor;
 import uk.ac.imperial.lsds.seep.manet.RoutingController;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
@@ -94,6 +96,9 @@ public class CoreRE {
 	
 	private RoutingController routingController = null;
 	private Thread rControllerT = null;
+	
+	private NetRateMonitor netRateMonitor = null;
+	private Thread nrMonT = null;
 	
 	static ControlTuple genericAck;
 	private int totalNumberOfChunks = -1;
@@ -310,6 +315,20 @@ public class CoreRE {
 				routingController = new RoutingController(this);
 				Thread rControllerT = new Thread(routingController);
 				rControllerT.start();
+				
+				ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
+				Map<Integer, String> upOpIdAddrs = new HashMap<>();
+				
+				for (Integer upOpId : upOpIds)
+				{
+					OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getUpstreamLocation(upOpId);
+					upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
+					
+				}
+				
+				netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
+				nrMonT = new Thread(netRateMonitor);
+				nrMonT.start();
 			}
 			if (!processingUnit.getOperator().getOpContext().isSink())
 			{

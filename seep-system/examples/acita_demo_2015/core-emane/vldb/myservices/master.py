@@ -57,7 +57,7 @@ class MeanderMaster(CoreService):
         cfg += 'echo "cating /etc/hosts"\n'
         cfg += 'cat /etc/hosts\n'
         cfg += "ip route > rt.log\n"
-        cfg += "./run-master.py"
+        cfg += "./run-master.py\n"
         #cfg += "cat /tmp/master-stdin | java -jar %s/%s Master `pwd`/%s/%s Base &\n"%(lib_dir, seep_jar, dist_dir, query_jar)
 
         return cfg
