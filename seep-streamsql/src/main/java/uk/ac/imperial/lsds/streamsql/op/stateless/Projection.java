@@ -61,7 +61,8 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 		
 //		System.out.println("projection: task " + windowBatch.getTaskId() + " use buffer " + outBuffer + " position " + outBuffer.position());
-		
+//		System.out.println(String.format("[DBG] In projection: ts %d start %10d end %10d", 
+//				inBuffer.getLong(windowBatch.getBatchStartPointer()), windowBatch.getBatchStartPointer(), windowBatch.getBatchEndPointer()));
 		
 		if (outBuffer.position() != 0) {
 			System.err.println("error: buffer not reset (" + outBuffer.position() + ")");

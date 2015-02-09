@@ -262,8 +262,8 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	@Override
 	public void appendBytesTo (int start, int end, byte [] destination) {
 		if (end > start) {
-			System.out.println(
-				String.format("[DBG] [appendBytesTo] start %7d end %7d destination %7d bytes", start, end, destination.length));
+			//System.out.println(
+			//	String.format("[DBG] [appendBytesTo] start %7d end %7d destination %7d bytes", start, end, destination.length));
 			System.arraycopy(this.data, start, destination, 0, end - start);
 		} else {
 			/* Copy in two parts */

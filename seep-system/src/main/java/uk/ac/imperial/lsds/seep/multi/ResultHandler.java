@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
@@ -12,9 +14,9 @@ public class ResultHandler {
 	/*
 	 * Flags:
 	 *  -1 - slot is free
-	 *   0 - slot is being populated
-	 *   1 - slot is occupied, but unlocked
-	 *   2 - slot is occupied, but locked (somebody is working on it)
+	 *   0 - slot is being populated by a thread
+	 *   1 - slot is occupied, but "unlocked"
+	 *   2 - slot is occupied, but "locked" (somebody is working on it)
 	 */
 	public AtomicIntegerArray slots;
 
@@ -24,7 +26,8 @@ public class ResultHandler {
 	public IQueryBuffer [] results = new IQueryBuffer [SLOTS];
 	public int [] offsets = new int[SLOTS];
 	
-	public AtomicMarkableReference<Integer> next;
+	Semaphore semaphore; /* Protects next */
+	int next;
 
 	public ResultHandler (IQueryBuffer freeBuffer) {
 		
@@ -37,6 +40,7 @@ public class ResultHandler {
 			offsets[i] = Integer.MIN_VALUE;
 		}
 		
-		next = new AtomicMarkableReference<Integer>(new Integer(0), false);
+		next = 0;
+		semaphore = new Semaphore(1, false);
 	}
 }

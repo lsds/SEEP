@@ -22,11 +22,12 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateless.LatencyOp;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 
-public class TwoIdenticalQueries {
+public class OneQueryLatency {
 
 	public static void main(String [] args) {
 		
@@ -106,17 +107,7 @@ public class TwoIdenticalQueries {
 		
 		ITupleSchema schema2 = new TupleSchema (offsets1, 32);
 		
-		IMicroOperatorCode projCode2 = new Projection(
-			new Expression [] {
-				new LongColumnReference(0),
-				new IntColumnReference(1),
-				new IntColumnReference(2),
-				new IntColumnReference(3),
-				new IntColumnReference(4),
-				new IntColumnReference(5),
-				new IntColumnReference(6)
-			}
-		);
+		IMicroOperatorCode projCode2 = new LatencyOp();
 		
 		MicroOperator operator2 = new MicroOperator (projCode2, 2);
 		Set<MicroOperator> operators2 = new HashSet<MicroOperator>();
@@ -149,13 +140,21 @@ public class TwoIdenticalQueries {
 			for (int i = 8; i < actualByteSize; i += 4)
 				b.putInt(1);
 		}
+		b.clear();
+		b.putLong(0, System.nanoTime());
+		b.putLong(bufferBundle/2, System.nanoTime());
 		
 		try {
+			int count = 0;
 			while (true) {
 				operator.processData (data);
+				count += 1;
 				b.clear();
 				// while (b.hasRemaining()) {
+				// b.putLong(0, 6667 + count);
+				// System.out.println(String.format("[DBG] main %d ts %d size %d", count, 6667 + count, data.length));
 				b.putLong(0, System.nanoTime());
+				b.putLong(bufferBundle/2, System.nanoTime());
 				//	for (int i = 8; i < actualByteSize; i += 4)
 				//		b.putInt(1);
 				// }
