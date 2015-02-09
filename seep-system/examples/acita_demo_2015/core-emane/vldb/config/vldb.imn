@@ -1,0 +1,289 @@
+node w0 {
+    delay 20000
+    bandwidth 54000000
+    type wlan
+    network-config {
+	hostname w0
+	!
+	interface wireless
+	 ip address 10.0.0.13/32
+	 ipv6 address 2001::0/128
+	!
+	mobmodel
+	coreapi
+	basic_range
+	!
+    }
+    custom-config {
+	custom-config-id basic_range
+	custom-command {3 3 9 9 9}
+	config {
+	range=275
+	bandwidth=54000000
+	jitter=0
+	delay=20000
+	error=0
+	}
+    }
+    canvas c1
+    iconcoords {474.0 300.0}
+    labelcoords {474.0 332.0}
+    interface-peer {e0 n1}
+    interface-peer {e1 n2}
+    interface-peer {e2 n3}
+    interface-peer {e3 n4}
+    interface-peer {e4 n5}
+    interface-peer {e5 n6}
+    interface-peer {e6 n7}
+}
+
+node n1 {
+    type router
+    model host
+    network-config {
+	hostname n1
+	!
+	interface eth0
+	 ipv6 address 2001::14/128
+	 ip address 10.0.0.1/32
+	!
+    }
+    canvas c1
+    iconcoords {374.0 295.0}
+    labelcoords {374.0 327.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderWorker}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker 
+	config {
+	starttime=5
+	}
+    }
+    custom-image /data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/host.gif
+}
+
+node n2 {
+    type router
+    model host
+    network-config {
+	hostname n2
+	!
+	interface eth0
+	 ipv6 address 2001::11/128
+	 ip address 10.0.0.2/32
+	!
+    }
+    canvas c1
+    iconcoords {421.0 239.0}
+    labelcoords {421.0 271.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderWorker}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=5
+	}
+    }
+    custom-image /data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/host.gif
+}
+
+node n3 {
+    type router
+    model host
+    network-config {
+	hostname n3
+	!
+	interface eth0
+	 ipv6 address 2001::12/128
+	 ip address 10.0.0.3/32
+	!
+    }
+    canvas c1
+    iconcoords {557.0 245.0}
+    labelcoords {557.0 277.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderWorker}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=5
+	}
+    }
+    custom-image /data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/host.gif
+}
+
+node n4 {
+    type router
+    model host
+    network-config {
+	hostname n4
+	!
+	interface eth0
+	 ipv6 address 2001::13/128
+	 ip address 10.0.0.4/32
+	!
+    }
+    canvas c1
+    iconcoords {624.0 326.0}
+    labelcoords {624.0 358.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderWorker}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=5
+	}
+    }
+    custom-image /data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/host.gif
+}
+
+node n5 {
+    type router
+    model host
+    network-config {
+	hostname n5
+	!
+	interface eth0
+	 ipv6 address 2001::10/128
+	 ip address 10.0.0.5/32
+	!
+    }
+    canvas c1
+    iconcoords {536.0 359.0}
+    labelcoords {536.0 391.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderWorker}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=5
+	}
+    }
+    custom-image /data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/host.gif
+}
+
+node n6 {
+    type router
+    model host
+    network-config {
+	hostname n6
+	!
+	interface eth0
+	 ipv6 address 2001::15/128
+	 ip address 10.0.0.6/32
+	!
+    }
+    canvas c1
+    iconcoords {425.0 377.0}
+    labelcoords {425.0 409.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderWorker}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=5
+	}
+    }
+    custom-image /data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/host.gif
+}
+
+node n7 {
+    type router
+    model host
+    network-config {
+	hostname n7
+	!
+	interface eth0
+	 ipv6 address 2001::16/128
+	 ip address 10.0.0.7/32
+	!
+    }
+    canvas c1
+    iconcoords {482.0 185.0}
+    labelcoords {482.0 217.0}
+    interface-peer {eth0 w0}
+    services {OLSR IPForward MeanderMaster}
+    custom-config {
+	custom-config-id service:MeanderMaster
+	custom-command MeanderMaster
+	config {
+	starttime=5
+	}
+    }
+}
+
+link l1 {
+    delay 20000
+    bandwidth 54000000
+    nodes {w0 n1}
+}
+
+link l2 {
+    delay 20000
+    nodes {w0 n2}
+    bandwidth 54000000
+}
+
+link l3 {
+    delay 20000
+    nodes {w0 n3}
+    bandwidth 54000000
+}
+
+link l4 {
+    delay 20000
+    nodes {w0 n4}
+    bandwidth 54000000
+}
+
+link l5 {
+    delay 20000
+    nodes {w0 n5}
+    bandwidth 54000000
+}
+
+link l6 {
+    delay 20000
+    nodes {w0 n6}
+    bandwidth 54000000
+}
+
+link l7 {
+    delay 20000
+    nodes {w0 n7}
+    bandwidth 54000000
+}
+
+canvas c1 {
+    name {Canvas1}
+    wallpaper-style {upperleft}
+    wallpaper {/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg.gif}
+    size {1000 750}
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid no
+    traffic_start 0
+}
+
+option session {
+    controlnet=
+    enablerj45=0
+    enablesdt=0
+    preservedir=0
+}
+

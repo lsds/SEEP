@@ -1,0 +1,260 @@
+node n1 {
+    type wlan
+    network-config {
+	hostname wlan1
+	!
+	interface wireless
+	 ip address 10.0.0.0/32
+	 ipv6 address 2001:0::0/128
+	!
+	mobmodel
+	coreapi
+	basic_range
+	!
+    }
+    custom-config {
+	custom-config-id basic_range
+	custom-command {3 3 9 9 9}
+	config {
+	range=275
+	bandwidth=54000000
+	jitter=0
+	delay=20000
+	error=0
+	}
+    }
+    canvas c1
+    iconcoords {418.0 258.0}
+    labelcoords {418.0 290.0}
+    interface-peer {e0 n2}
+    interface-peer {e1 n3}
+    interface-peer {e2 n4}
+    interface-peer {e3 n5}
+    interface-peer {e4 n6}
+    interface-peer {e5 n7}
+    interface-peer {e6 n8}
+}
+
+node n2 {
+    type router
+    model host
+    network-config {
+	hostname n2
+	!
+	interface eth0
+	 ip address 10.0.0.10/32
+	 ipv6 address 2001:0::10/128
+	!
+    }
+    canvas c1
+    iconcoords {346.0 178.0}
+    labelcoords {346.0 210.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=10
+	}
+    }
+    services {OLSR IPForward MeanderWorker}
+}
+
+node n3 {
+    type router
+    model host
+    network-config {
+	hostname n3
+	!
+	interface eth0
+	 ip address 10.0.0.11/32
+	 ipv6 address 2001:0::11/128
+	!
+    }
+    canvas c1
+    iconcoords {515.0 160.0}
+    labelcoords {515.0 192.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=10
+	}
+    }
+    services {OLSR IPForward MeanderWorker}
+}
+
+node n4 {
+    type router
+    model host
+    network-config {
+	hostname n4
+	!
+	interface eth0
+	 ip address 10.0.0.12/32
+	 ipv6 address 2001:0::12/128
+	!
+    }
+    canvas c1
+    iconcoords {567.0 244.0}
+    labelcoords {567.0 276.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=10
+	}
+    }
+    services {OLSR IPForward MeanderWorker}
+}
+
+node n5 {
+    type router
+    model host
+    network-config {
+	hostname n5
+	!
+	interface eth0
+	 ip address 10.0.0.13/32
+	 ipv6 address 2001:0::13/128
+	!
+    }
+    canvas c1
+    iconcoords {558.0 317.0}
+    labelcoords {558.0 349.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=10
+	}
+    }
+    services {OLSR IPForward MeanderWorker}
+}
+
+node n6 {
+    type router
+    model host
+    network-config {
+	hostname n6
+	!
+	interface eth0
+	 ip address 10.0.0.14/32
+	 ipv6 address 2001:0::14/128
+	!
+    }
+    canvas c1
+    iconcoords {458.0 392.0}
+    labelcoords {458.0 424.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=10
+	}
+    }
+    services {OLSR IPForward MeanderWorker}
+}
+
+node n7 {
+    type router
+    model host
+    network-config {
+	hostname n7
+	!
+	interface eth0
+	 ip address 10.0.0.15/32
+	 ipv6 address 2001:0::15/128
+	!
+    }
+    canvas c1
+    iconcoords {349.0 359.0}
+    labelcoords {349.0 391.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderWorker
+	custom-command MeanderWorker
+	config {
+	starttime=10
+	}
+    }
+    services {OLSR IPForward MeanderWorker}
+}
+
+node n8 {
+    type router
+    model host
+    network-config {
+	hostname n8
+	!
+	interface eth0
+	 ip address 10.0.0.16/32
+	 ipv6 address 2001:0::16/128
+	!
+    }
+    canvas c1
+    iconcoords {295.0 290.0}
+    labelcoords {295.0 322.0}
+    interface-peer {eth0 n1}
+    custom-config {
+	custom-config-id service:MeanderMaster
+	custom-command MeanderMaster
+	config {
+	starttime=5
+	}
+    }
+    services {OLSR IPForward MeanderMaster}
+}
+
+link l1 {
+    nodes {n1 n2}
+}
+
+link l2 {
+    nodes {n1 n3}
+}
+
+link l3 {
+    nodes {n1 n4}
+}
+
+link l4 {
+    nodes {n1 n5}
+}
+
+link l5 {
+    nodes {n1 n6}
+}
+
+link l6 {
+    nodes {n1 n7}
+}
+
+link l7 {
+    nodes {n1 n8}
+}
+
+canvas c1 {
+    name {Canvas1}
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+}
+
