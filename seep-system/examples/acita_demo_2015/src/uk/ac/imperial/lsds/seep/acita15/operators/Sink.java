@@ -12,46 +12,44 @@ package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.util.List;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 public class Sink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
-	private static final long MAX_TUPLES = 10;
+	private long numTuples;
+	private long tuplesReceived = 0;
 	
 	public void setUp() {
-
+		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+		System.out.println("SINK expecting "+numTuples+" tuples.");
 	}
-
-	// time control variables
-	int c = 0;
-	long init = 0;
-	int sec = 0;
-	long tuplesReceived = 0;
 	
 	public void processData(DataTuple dt) {
-		System.out.println("Sink received "+dt.toString());
-		long tupleId = dt.getLong("tupleId");
-		String value = dt.getString("value");
-		// TIME CONTROL
-		tuplesReceived++;
 		
+		
+		tuplesReceived++;
+		recordTuple(dt);
+		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
 		{
 			System.out.println("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}
 		
-		if((System.currentTimeMillis() - init) > 1000){
-			System.out.println("SNK: "+sec+" "+c+" ");
-			c = 0;
-			sec++;
-			init = System.currentTimeMillis();
-		}
-		if (tuplesReceived >= MAX_TUPLES)
+		if (tuplesReceived >= numTuples)
 		{
-			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived);
+			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived+",t="+System.currentTimeMillis());
 			System.exit(0);
 		}
+	}
+	
+	private void recordTuple(DataTuple dt)
+	{
+		System.out.println("SNK: Received tuple with cnt="+tuplesReceived 
+				+",id="+dt.getLong("tupleId")
+				+",txts="+dt.getPayload().timestamp
+				+",rxts="+System.currentTimeMillis());
 	}
 	
 	public void processData(List<DataTuple> arg0) {
