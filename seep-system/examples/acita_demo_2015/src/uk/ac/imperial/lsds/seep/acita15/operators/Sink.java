@@ -28,6 +28,10 @@ public class Sink implements StatelessOperator {
 	
 	public void processData(DataTuple dt) {
 		
+		if (tuplesReceived == 0)
+		{
+			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
+		}
 		
 		tuplesReceived++;
 		recordTuple(dt);
