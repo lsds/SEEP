@@ -242,6 +242,41 @@ canvas c1 {
     name {Canvas1}
 }
 
+hook 5:datacollect_hook.sh {
+#!/bin/bash
+# session hook script; write commands here to execute on the host at the
+# specified state
+
+echo "`hostname`:`pwd`" > /tmp/datacollect.log
+if [ -z "$SEEP_GITHUB_DIR" ]; then
+	echo "SEEP_GITHUB_DIR not set." >> /tmp/datacollect.log
+	SEEP_GITHUB_DIR=/data/dev/seep-github
+fi
+
+expDir=$(pwd)
+scriptDir=$SEEP_GITHUB_DIR/seep-system/examples/acita_demo_2015/core-emane
+timeStr=$(date +%H-%M-%S-%a%d%m%y)
+resultsDir=$scriptDir/log/$timeStr
+
+echo $expDir >> /tmp/datacollect.log
+echo $scriptDir >> /tmp/datacollect.log
+echo $timeStr >> /tmp/datacollect.log
+echo $resultsDir >> /tmp/datacollect.log
+
+mkdir -p $resultsDir
+
+# Copy all log files to results dir
+for d in n*.conf 
+do
+	cp $d/log/*.log $resultsDir	
+done
+	
+
+cd $scriptDir
+./gen_core_results.py --expTimeStr $timeStr 
+cd $expDir
+}
+
 option global {
     interface_names no
     ip_addresses yes
