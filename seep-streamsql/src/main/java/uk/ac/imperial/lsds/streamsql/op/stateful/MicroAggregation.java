@@ -368,12 +368,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				currentValue += 1;
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 			}
-			else if (this.aggregationType == AggregationType.SUM) {
-				currentValue += this.aggregationAttribute.eval(inBuffer,
-						inSchema, enterOffset);
-				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-			}
-			else if (this.aggregationType == AggregationType.AVG) {
+			else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				currentValue += this.aggregationAttribute.eval(inBuffer,
 						inSchema, enterOffset);
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
@@ -396,11 +391,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (this.aggregationType == AggregationType.COUNT) {
 				windowBuffer.putFloat(1f);
 			}
-			else if (this.aggregationType == AggregationType.SUM) {
-				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
-						enterOffset, windowBuffer);
-			}
-			else if (this.aggregationType == AggregationType.AVG) {
+			else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
 						enterOffset, windowBuffer);
 				windowTupleCount.put(key, 1);
@@ -430,30 +421,34 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 			if (this.aggregationType == AggregationType.COUNT) {
 				currentValue -= 1;
-			}
-			else if (this.aggregationType == AggregationType.SUM) {
-				currentValue -= this.aggregationAttribute.eval(inBuffer,
-						inSchema, removeOffset);
-			}
-			else if (this.aggregationType == AggregationType.AVG) {
-				currentValue -= this.aggregationAttribute.eval(inBuffer,
-						inSchema, removeOffset);
 				
-				int tupleCount = windowTupleCount.get(key);
-				if (tupleCount > 1)
-					windowTupleCount.put(key, tupleCount - 1);
-				else
-					windowTupleCount.remove(key);
+				// is the partition empty? (check with 0.0001 because of floating
+				// point inaccuracy)
+				if (currentValue < 0.0001) {
+					// simply remove the key, no need to remove the data from the
+					// window buffer
+					keyOffsets.remove(key);
+				} else {
+					// write new current value
+					windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+				}
 			}
-			// is the partition empty? (check with 0.0001 because of floating
-			// point inaccuracy)
-			if (currentValue < 0.0001) {
-				// simply remove the key, no need to remove the data from the
-				// window buffer
-				keyOffsets.remove(key);
-			} else {
-				// write new current value
-				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+			else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+				int tupleCount = windowTupleCount.get(key);
+				if (tupleCount > 1) {
+					currentValue -= this.aggregationAttribute.eval(inBuffer,
+							inSchema, removeOffset);
+					// write new current value
+					windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+
+					windowTupleCount.put(key, tupleCount - 1);
+				}
+				else {
+					// simply remove the key, no need to remove the data from the
+					// window buffer
+					keyOffsets.remove(key);
+					windowTupleCount.remove(key);
+				}
 			}
 		} else {
 			throw new IllegalArgumentException(
