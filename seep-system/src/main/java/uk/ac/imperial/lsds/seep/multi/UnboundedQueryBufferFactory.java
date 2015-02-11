@@ -18,11 +18,11 @@ public class UnboundedQueryBufferFactory {
 	
 	public static UnboundedQueryBuffer newInstance () {
 		UnboundedQueryBuffer buffer;
-		while ((buffer = pool.poll()) == null)
-			;
-		// buffer = pool.poll();
-		// if (buffer == null) 
-		//	return new UnboundedQueryBuffer(_buffer_size);
+		// while ((buffer = pool.poll()) == null)
+		//	;
+		buffer = pool.poll();
+		if (buffer == null) 
+			return new UnboundedQueryBuffer(_buffer_size);
 		
 		return buffer;
 	}
