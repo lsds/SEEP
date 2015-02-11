@@ -6,18 +6,50 @@ from core.mobility import BasicRangeModel
 
 
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
+
+#hook 5:datacollect_hook.sh {
+datacollect_hookdata = '''#!/bin/bash
+# session hook script; write commands here to execute on the host at the
+# specified state
+
+echo "`hostname`:`pwd`" > /tmp/datacollect.log
+if [ -z "$SEEP_GITHUB_DIR" ]; then
+	echo "SEEP_GITHUB_DIR not set." >> /tmp/datacollect.log
+	SEEP_GITHUB_DIR=/data/dev/seep-github
+fi
+
+expDir=$(pwd)
+scriptDir=$SEEP_GITHUB_DIR/seep-system/examples/acita_demo_2015/core-emane
+timeStr=$(date +%H-%M-%S-%a%d%m%y)
+resultsDir=$scriptDir/log/$timeStr
+
+echo $expDir >> /tmp/datacollect.log
+echo $scriptDir >> /tmp/datacollect.log
+echo $timeStr >> /tmp/datacollect.log
+echo $resultsDir >> /tmp/datacollect.log
+
+mkdir -p $resultsDir
+
+# Copy all log files to results dir
+for d in n*.conf 
+do
+	cp $d/log/*.log $resultsDir	
+done
+	
+
+cd $scriptDir
+./gen_core_results.py --expTimeStr $timeStr 
+cd $expDir
+'''
 def main():
 
     try:
-        session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
+        session = pycore.Session(cfg={'custom_services_dir':svc_dir,'preservedir':'1'}, persistent=True)
         """
         if not add_to_server(session): 
             print 'Could not add to server'
             return
         """
-        for svc in session.services.get():
-            print svc._name
-
         #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
         #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
         # set increasing Z coordinates
@@ -51,9 +83,14 @@ def main():
         n8.newnetif(net=wlan1, addrlist=["10.0.0.16/32"], ifindex=0)
 
 
+        session.sethook("hook:5","datacollect.sh",None,datacollect_hookdata)
         print 'Instantiating session.'
         session.instantiate()
         time.sleep(30)
+        print 'Collecting data'
+        session.datacollect()
+        time.sleep(5)
+        print 'Shutting down'
 
     finally:
         print 'Shutting down session.'
