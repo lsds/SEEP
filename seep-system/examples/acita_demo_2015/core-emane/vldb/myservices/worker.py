@@ -30,7 +30,7 @@ class MeanderWorker(CoreService):
     # list of startup commands, also may be generated during startup
     _startup = ('sh worker.sh',)
     # list of shutdown commands
-    _shutdown = ()
+    _shutdown = ('touch worker.shutdown')
 
 
     @classmethod
@@ -59,6 +59,7 @@ class MeanderWorker(CoreService):
         cfg += "ip route > rt.log\n"
         cfg += "./net-rates.sh\n"
         cfg += "./run-worker.py\n"
+        cfg += "touch worker.shutdown\n"
         #cfg += "java -jar %s/%s Worker\n"%(lib_dir, seep_jar)
 
         return cfg

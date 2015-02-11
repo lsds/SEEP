@@ -86,7 +86,10 @@ def main():
         session.sethook("hook:5","datacollect.sh",None,datacollect_hookdata)
         print 'Instantiating session.'
         session.instantiate()
-        time.sleep(30)
+
+        print 'Waiting for a meander worker/master to terminate'
+        watch_meander_services(session.sessiondir, ["n2"])
+        #time.sleep(30)
         print 'Collecting data'
         session.datacollect()
         time.sleep(5)
@@ -105,6 +108,17 @@ def add_to_server(session):
     except NameError:
         print 'Name error'
         return False
+
+def watch_meander_services(sessiondir, node_names):
+    while True:
+        for name in node_names:
+            if os.path.exists("%s/%s.conf/worker.shutdown"%(sessiondir, name)):
+                print 'Worker shutdown file exists for node %s - exiting'%name
+                return
+
+        time.sleep(0.5)
+
+
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     main()
