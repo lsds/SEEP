@@ -58,37 +58,21 @@ def main():
         wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
         wlan1.setposition(x=418.0,y=258.0)
 
-        worker_services_str = "OLSR|IPForward|MeanderWorker"
-        n2 = session.addobj(cls = pycore.nodes.CoreNode, name="n2")
-        session.services.addservicestonode(n2, "", worker_services_str, verbose=False)
-        n2.setposition(x=346.0,y=178.0)
-        n3 = session.addobj(cls = pycore.nodes.CoreNode, name="n3")
-        n3.setposition(x=515.0,y=160.0)
-        n4 = session.addobj(cls = pycore.nodes.CoreNode, name="n4")
-        n4.setposition(x=567.0,y=244.0)
-        n5 = session.addobj(cls = pycore.nodes.CoreNode, name="n5")
-        n5.setposition(x=558.0,y=317.0)
-        n6 = session.addobj(cls = pycore.nodes.CoreNode, name="n6")
-        n6.setposition(x=458.0,y=392.0)
-        n7 = session.addobj(cls = pycore.nodes.CoreNode, name="n7")
-        n7.setposition(x=349.0,y=359.0)
-        n8 = session.addobj(cls = pycore.nodes.CoreNode, name="n8")
-        n8.setposition(x=295.0,y=290.0)
-        n2.newnetif(net=wlan1, addrlist=["10.0.0.10/32"], ifindex=0)
-        n3.newnetif(net=wlan1, addrlist=["10.0.0.11/32"], ifindex=0)
-        n4.newnetif(net=wlan1, addrlist=["10.0.0.12/32"], ifindex=0)
-        n5.newnetif(net=wlan1, addrlist=["10.0.0.13/32"], ifindex=0)
-        n6.newnetif(net=wlan1, addrlist=["10.0.0.14/32"], ifindex=0)
-        n7.newnetif(net=wlan1, addrlist=["10.0.0.15/32"], ifindex=0)
-        n8.newnetif(net=wlan1, addrlist=["10.0.0.16/32"], ifindex=0)
+        services_str = "OLSR|IPForward"
 
+        workers = []
+        for i in range(2,8):
+            pos = gen_position(i)
+            workers.append(create_node(i, session, "%s|MeanderWorker"%services_str, wlan1, pos)) 
+        
+        master = create_node(8, session, "%s|MeanderMaster"%services_str, wlan1, gen_position(8))
 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hookdata)
         print 'Instantiating session.'
         session.instantiate()
 
         print 'Waiting for a meander worker/master to terminate'
-        watch_meander_services(session.sessiondir, ["n2"])
+        watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n, range(2,9)))
         #time.sleep(30)
         print 'Collecting data'
         session.datacollect()
@@ -99,6 +83,17 @@ def main():
         print 'Shutting down session.'
         if session:
             session.shutdown()
+
+def create_node(i, session, services_str, wlan, pos, ip_offset=8):
+    n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i)
+    session.services.addservicestonode(n, "", services_str, verbose=False)
+    n.setposition(x=pos[0], y=pos[1])
+    n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
+
+default_positions = {2 : (346.0,178.0),3:(515.0,160.0),4:(567.0,244.0),5:(558.0,317.0),6:(458.0,392.0),7:(349.0,359.0),8:(295.0,290.0)}
+def gen_position(i):
+    """TODO: Have different initial placement models etc."""
+    return default_positions[i] 
 
 def add_to_server(session):
     global server
@@ -112,12 +107,11 @@ def add_to_server(session):
 def watch_meander_services(sessiondir, node_names):
     while True:
         for name in node_names:
-            if os.path.exists("%s/%s.conf/worker.shutdown"%(sessiondir, name)):
-                print 'Worker shutdown file exists for node %s - exiting'%name
+            if os.path.exists("%s/%s.conf/worker.shutdown"%(sessiondir, name)) or os.path.exists("%s/%s.conf/master.shutdown"%(sessiondir, name)):
+                print 'Shutdown file exists for node %s - exiting'%name
                 return
 
         time.sleep(0.5)
-
 
 
 if __name__ == "__main__" or __name__ == "__builtin__":

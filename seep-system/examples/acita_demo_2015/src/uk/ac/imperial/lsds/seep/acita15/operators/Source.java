@@ -62,6 +62,7 @@ public class Source implements StatelessOperator {
 			*/
 			tupleId++;
 		}
+		System.exit(0);
 	}
 	
 	public void processData(List<DataTuple> arg0) {

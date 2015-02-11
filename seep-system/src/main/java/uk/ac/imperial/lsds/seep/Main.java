@@ -31,6 +31,7 @@ public class Main {
 	
 	public static void main(String args[]){
 		
+		
 		Main instance = new Main();
 		
 		if(args.length == 0){
@@ -51,6 +52,7 @@ public class Main {
 			System.out.println("Unrecognized command. Type 'Master' or 'Worker' to see usage directions for each mode.");
 			System.exit(0);
 		}
+		
 	}
 	
 	private void executeMaster(String[] args){

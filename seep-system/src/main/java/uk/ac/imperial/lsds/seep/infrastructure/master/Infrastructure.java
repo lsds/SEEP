@@ -774,7 +774,15 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		}
 		numberRunningMachines++;
 		if(nodeStack.isEmpty()){
-			throw new NodePoolEmptyException("Node pool is empty, impossible to get more nodes");
+			if ("true".equals(GLOBALS.valueFor("abortOnNodePoolEmpty")))
+			{
+				LOG.error("Node pool is empty, impossible to get more nodes");
+				System.exit(1);
+			}
+			else
+			{
+				throw new NodePoolEmptyException("Node pool is empty, impossible to get more nodes");
+			}
 		}
 		
 		return nodeStack.pop();

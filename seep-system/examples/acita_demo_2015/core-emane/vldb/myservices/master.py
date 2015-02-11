@@ -58,6 +58,7 @@ class MeanderMaster(CoreService):
         cfg += 'cat /etc/hosts\n'
         cfg += "ip route > rt.log\n"
         cfg += "./run-master.py\n"
+        cfg += "touch master.shutdown"
         #cfg += "cat /tmp/master-stdin | java -jar %s/%s Master `pwd`/%s/%s Base &\n"%(lib_dir, seep_jar, dist_dir, query_jar)
 
         return cfg
