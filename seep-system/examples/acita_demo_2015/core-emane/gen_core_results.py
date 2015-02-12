@@ -65,7 +65,9 @@ def mean_tput(t_start, t_end, bites):
 def record_stat(stat_file, stats, mode='w'):
     with open(stat_file, mode) as sf:
         for stat in stats:
-            sf.write('%s=%s\n'%(str(stat), str(stats[stat])))
+            line = '%s=%s\n'%(str(stat), str(stats[stat]))
+            print line
+            sf.write(line)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys,os,time,re
+import sys,os,time,re,argparse
 from core import pycore
 from core.mobility import BasicRangeModel
 
@@ -41,7 +41,7 @@ cd $scriptDir
 ./gen_core_results.py --expDir log/$timeStr 
 cd $expDir
 '''
-def main():
+def main(sessions):
     """
     TODO: Take in a set of values for k (e.g. supply using java prop) and
     a number of repetitions to do for each k. Might also want an initial
@@ -56,11 +56,14 @@ def main():
 
     Might also want to take a plotOnly arg?
     """
-    run_session()
+    for session in range(0, sessions):
+        print '*** Running session %d ***'%session
+        run_session()
 
 def run_session():
     try:
-        session = pycore.Session(cfg={'custom_services_dir':svc_dir,'preservedir':'1'}, persistent=True)
+        #session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1'}, persistent=True)
+        session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
         """
         if not add_to_server(session): 
             print 'Could not add to server'
@@ -131,4 +134,7 @@ def watch_meander_services(sessiondir, node_names):
 
 
 if __name__ == "__main__" or __name__ == "__builtin__":
-    main()
+    parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
+    parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
+    args=parser.parse_args()
+    main(int(args.sessions))
