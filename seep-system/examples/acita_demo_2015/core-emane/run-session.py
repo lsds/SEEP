@@ -38,11 +38,27 @@ done
 	
 
 cd $scriptDir
-./gen_core_results.py --expTimeStr $timeStr 
+./gen_core_results.py --expDir log/$timeStr 
 cd $expDir
 '''
 def main():
+    """
+    TODO: Take in a set of values for k (e.g. supply using java prop) and
+    a number of repetitions to do for each k. Might also want an initial
+    rand seed for mobility?
 
+    For each k run the required number of sessions.
+
+    Create some aggregated results based on the result recorded for
+    each session, and generate a plot.
+
+    Finally, move all results into a separate dir. 
+
+    Might also want to take a plotOnly arg?
+    """
+    run_session()
+
+def run_session():
     try:
         session = pycore.Session(cfg={'custom_services_dir':svc_dir,'preservedir':'1'}, persistent=True)
         """

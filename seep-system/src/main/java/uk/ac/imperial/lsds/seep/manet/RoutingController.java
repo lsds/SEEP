@@ -129,10 +129,11 @@ public class RoutingController implements Runnable{
 						.iterator();
 				while (iter.hasNext()) {
 					Integer upstreamId = iter.next();
-					if (!upstreamCosts.containsKey(upstreamId)) {
-						throw new RuntimeException("Logic error.");
-					}
 					Integer cost = upstreamCosts.get(upstreamId);
+					if (cost==null) {
+						cost = GraphUtil.SUB_INFINITE_DISTANCE;
+					}
+					
 					if (cost.intValue() >= GraphUtil.SUB_INFINITE_DISTANCE
 							.intValue()) {
 						upstreamNetRates.get(i).put(upstreamId, new Double(0));

@@ -27,6 +27,7 @@ class MeanderWorker(CoreService):
     _configs = ('worker.sh',)
     # this controls the starting order vs other enabled services
     _startindex = 50
+    #_starttime="10"
     # list of startup commands, also may be generated during startup
     _startup = ('sh worker.sh',)
     # list of shutdown commands

@@ -15,6 +15,8 @@ def main(w, k, hostname):
     time_str = time.strftime('%H-%M-%a%d%m%y')
 
     try:
+        print 'Waiting 5 seconds to start worker.'
+        time.sleep(5)
         print 'Starting worker'
         worker_logfilename = wlog(w, k, hostname, time_str) 
         worker = start_worker(worker_logfilename, sim_env)

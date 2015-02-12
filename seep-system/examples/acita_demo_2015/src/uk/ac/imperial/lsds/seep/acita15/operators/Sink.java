@@ -20,8 +20,10 @@ public class Sink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private long numTuples;
 	private long tuplesReceived = 0;
+	private long totalBytes = 0;
 	
 	public void setUp() {
+		System.out.println("Setting up SINK operator with id="+api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
 		System.out.println("SINK expecting "+numTuples+" tuples.");
 	}
@@ -34,6 +36,7 @@ public class Sink implements StatelessOperator {
 		}
 		
 		tuplesReceived++;
+		totalBytes += dt.getString("value").length();
 		recordTuple(dt);
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
@@ -43,17 +46,19 @@ public class Sink implements StatelessOperator {
 		
 		if (tuplesReceived >= numTuples)
 		{
-			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived+",t="+System.currentTimeMillis());
+			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived+",total bytes="+totalBytes+",t="+System.currentTimeMillis());
 			System.exit(0);
 		}
 	}
 	
 	private void recordTuple(DataTuple dt)
 	{
+		long rxts = System.currentTimeMillis();
 		System.out.println("SNK: Received tuple with cnt="+tuplesReceived 
 				+",id="+dt.getLong("tupleId")
 				+",txts="+dt.getPayload().timestamp
-				+",rxts="+System.currentTimeMillis());
+				+",rxts="+rxts
+				+",latency="+ (rxts - dt.getPayload().timestamp));
 	}
 	
 	public void processData(List<DataTuple> arg0) {

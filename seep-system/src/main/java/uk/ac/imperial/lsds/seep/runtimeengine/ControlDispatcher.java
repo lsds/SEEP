@@ -113,7 +113,7 @@ public class ControlDispatcher {
 			Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
 			if (socket == null)
 			{
-				if (!block) { throw new RuntimeException("Logic error."); }
+				if (block) { throw new RuntimeException("Logic error."); }
 				return;
 			}
 			

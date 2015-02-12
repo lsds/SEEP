@@ -44,8 +44,7 @@ public class Processor implements StatelessOperator{
 
 	
 	public void setUp() {
-		// TODO Auto-generated method stub
-		
+		System.out.println("Setting up PROCESSOR operator with id="+api.getOperatorId());
 	}
 
 }

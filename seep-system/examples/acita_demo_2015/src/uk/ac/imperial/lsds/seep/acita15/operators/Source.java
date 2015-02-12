@@ -27,6 +27,7 @@ public class Source implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	
 	public void setUp() {
+		System.out.println("Setting up SOURCE operator with id="+api.getOperatorId());
 	}
 
 	public void processData(DataTuple dt) {

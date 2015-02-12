@@ -27,6 +27,7 @@ class MeanderMaster(CoreService):
     _configs = ('master.sh', )
     # this controls the starting order vs other enabled services
     _startindex = 50
+    #_starttime = "5"
     # list of startup commands, also may be generated during startup
     _startup = ('sh master.sh',)
     # list of shutdown commands
