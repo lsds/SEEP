@@ -282,8 +282,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
 
-		Map<Integer, Integer> keyOffsets = new HashMap<>();
-		Map<Integer, Integer> windowTupleCount = new HashMap<>();
+		Map<Integer, Integer> keyOffsets = null;
+		Map<Integer, Integer> windowTupleCount = null;
+
+		if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			keyOffsets = new HashMap<>();
+			windowTupleCount = new HashMap<>();
+		}
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
