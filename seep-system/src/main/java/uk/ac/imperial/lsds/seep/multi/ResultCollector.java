@@ -1,5 +1,9 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import uk.ac.imperial.lsds.seep.multi.join.JoinResultHandler;
 
 public class ResultCollector {
@@ -7,8 +11,9 @@ public class ResultCollector {
 	public static void forwardAndFree(ResultHandler handler, SubQuery query,
 			IQueryBuffer buffer, int taskid, int freeOffset, boolean GPU) {
 		
-		if (taskid < 0) /* Invalid task id */
+		if (taskid < 0) { /* Invalid task id */
 			return ;
+		}
 		int idx = taskid % handler.SLOTS;
 
 		try {
@@ -18,13 +23,14 @@ public class ResultCollector {
 				System.err.println(String.format("warning: result collector blocked at %s q %d t %4d", 
 				Thread.currentThread(), query.getId(), taskid));
 				System.err.flush();
-			 	// Thread.sleep(100L);
+			 	Thread.sleep(1000L);
 				
 				Thread.yield();
 			}
 			
-			/* System.out.println(String.format("[DBG] %s get  slot qid %d idx %6d", 
-			 * Thread.currentThread(), query.getId(), idx)); */
+//			if (query.getId() == 1)
+//				System.out.println(String.format("[DBG] %s get  slot qid %d idx %6d", 
+//				 Thread.currentThread(), query.getId(), idx)); 
 
 			handler.offsets[idx] = freeOffset;
 			handler.results[idx] = buffer;
@@ -53,8 +59,8 @@ public class ResultCollector {
 			
 			while (busy) {
 				
-				/* System.out.println(String.format("[DBG] %s try  slot qid %d idx %6d", 
-				 * Thread.currentThread(), query.getId(), nextone)); */
+//				System.out.println(String.format("[DBG] %s try  slot qid %d idx %6d", 
+//				Thread.currentThread(), query.getId(), nextone)); 
 
 				IQueryBuffer buf = handler.results[handler.next];
 				byte [] arr = buf.array();
@@ -62,8 +68,15 @@ public class ResultCollector {
 				/*
 				 * Do the actual result forwarding
 				 */
-				if (query.getDownstreamSubQuery() != null)
-					query.getDownstreamSubQuery().getTaskDispatcher().dispatch(arr);
+				if (query.getDownstreamSubQuery() != null) {
+//					System.out.println(String.format("[DBG] %s free qid %d idx %6d", 
+//					Thread.currentThread(), query.getId(), handler.next));
+					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr)) {
+						handler.slots.set(handler.next, 1);
+						break;
+					}
+					// query.getDownstreamSubQuery().getTaskDispatcher().dispatch(arr);
+				}
 				
 				/* Forward to the distributed API */
 
@@ -71,15 +84,27 @@ public class ResultCollector {
 //				if (query.getId() == 0)
 //					latencyMeasurement (buf);
 				
+//					System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
+//					Thread.currentThread(), query.getId(), handler.next));
+				
+				query.getLatencyMonitor().monitor(buf);
+				
 				buf.release();
 
 				/* Free input buffer */
 				int offset = handler.offsets[handler.next];
-				if (offset != Integer.MIN_VALUE) 
+				if (offset != Integer.MIN_VALUE) {
+					
 					handler.freeBuffer.free (offset);
+				} else {
+					System.err.println(String.format("[DBG] %s skip slot qid %d idx %6d", 
+							Thread.currentThread(), query.getId(), handler.next));
+					System.exit(1);
+				}
 				
-				/* System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
-				 * Thread.currentThread(), query.getId(), nextone)); */
+//				if (query.getId() ==  1)
+//					System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
+//					Thread.currentThread(), query.getId(), handler.next));
 				
 				/* Release the current slot */
 				handler.slots.set(handler.next, -1);
@@ -95,8 +120,8 @@ public class ResultCollector {
 				}
 			}
 			/* Thread exit critical section */
-//			 System.out.println(String.format("[DBG] %s released %3d q%d buffers", 
-//			  Thread.currentThread(), count, query.getId()));
+			// System.out.println(String.format("[DBG] %s released %3d q%d buffers", 
+			//  Thread.currentThread(), count, query.getId()));
 			handler.semaphore.release();
 			
 		} catch (Exception e) {

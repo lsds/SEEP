@@ -54,8 +54,6 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	byte [] flags;
 	byte [] offsets;
 	
-	private int runs = 0;
-	
 	public ASelectionKernel (IPredicate predicate, ITupleSchema schema,
 		String filename) {
 		
@@ -109,10 +107,13 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		String source = KernelCodeGenerator.getSelection (schema, schema, predicate, filename);
 		
-		/* System.out.println(source); */
+		System.out.println(source);
 		
-		TheGPU.getInstance().init(1);
+		// TheGPU.getInstance().init(1);
 		qid = TheGPU.getInstance().getQuery(source, 2, 1, 3);
+		
+		System.out.println(String.format("[DBG] GPU selection qid %d", qid));
+		
 		TheGPU.getInstance().setInput (qid, 0, _input_size);
 		/* These are read-write buffers */
 		TheGPU.getInstance().setOutput(qid, 0, _INT_ * tuples, 0);
@@ -141,6 +142,8 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
+		
+		// System.out.println(String.format("[DBG] GPU selection executes %d", currentTaskIdx));
 		
 		/* Set input and output */
 		byte [] inputArray = windowBatch.getBuffer().array();

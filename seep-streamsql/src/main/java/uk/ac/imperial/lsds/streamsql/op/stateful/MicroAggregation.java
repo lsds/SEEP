@@ -134,7 +134,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		 * Make sure the batch is initialised
 		 */
 		windowBatch.initWindowPointers();
-
+		// windowBatch.debug();
+		int count = 0;
+		
 		int[] startPointers = windowBatch.getWindowStartPointers();
 		int[] endPointers = windowBatch.getWindowEndPointers();
 
@@ -168,7 +170,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				float newValue, oldValue;
 				// for all the tuples in the window
 				while (inWindowStartOffset < inWindowEndOffset) {
-
+					
+					count ++;
+					
 					// get the key
 					key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset);
 					// get the value of the aggregation attribute in the current
@@ -223,7 +227,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 					inWindowStartOffset += byteSizeOfInTuple;
 				}
-
+					
 				/*
 				 * we got the aggregation result for the window, check whether
 				 * we have a selection to apply for each of the partitions
@@ -246,6 +250,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				}
 			}
 		}
+		
+		// System.out.println("[DBG] count " + count);
 		
 		// release window buffer (will return Unbounded Buffers to the pool)
 		windowBuffer.release();
@@ -367,8 +373,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (this.aggregationType == AggregationType.COUNT) {
 				currentValue += 1;
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
+			} else 
+			/* if (this.aggregationType == AggregationType.SUM) {
+				currentValue += this.aggregationAttribute.eval(inBuffer,
+						inSchema, enterOffset);
+				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 			}
-			else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			else */ 
+			if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				currentValue += this.aggregationAttribute.eval(inBuffer,
 						inSchema, enterOffset);
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
@@ -390,8 +402,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			// write value for aggregation attribute
 			if (this.aggregationType == AggregationType.COUNT) {
 				windowBuffer.putFloat(1f);
+			} else 
+			/* if (this.aggregationType == AggregationType.SUM) {
+				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
+						enterOffset, windowBuffer);
 			}
-			else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			else */
+			if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
 						enterOffset, windowBuffer);
 				windowTupleCount.put(key, 1);
@@ -432,8 +449,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					// write new current value
 					windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 				}
+			} else
+			/* if (this.aggregationType == AggregationType.SUM) {
+				currentValue -= this.aggregationAttribute.eval(inBuffer,
+						inSchema, removeOffset);
+				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 			}
-			else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			else */ 
+			if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				int tupleCount = windowTupleCount.get(key);
 				if (tupleCount > 1) {
 					currentValue -= this.aggregationAttribute.eval(inBuffer,

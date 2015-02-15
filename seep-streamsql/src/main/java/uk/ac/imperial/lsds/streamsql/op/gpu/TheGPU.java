@@ -8,7 +8,7 @@ import sun.misc.Unsafe;
 public class TheGPU {
 	
 	private static final int MAX_QUERIES = 2;
-	private static final int MAX_BUFFERS = 4;
+	private static final int MAX_BUFFERS = 20;
 	
 	private static final String library = "/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib/libGPU.so";
 	

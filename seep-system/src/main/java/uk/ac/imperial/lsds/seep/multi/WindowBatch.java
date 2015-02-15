@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
@@ -122,15 +124,10 @@ public class WindowBatch {
 		this.batchEndTime = batchEndTime;
 	}
 	
-	public void initWindowPointers (int [] windowStartPointers, int [] windowEndPointers) {
+	public void initWindowPointers (byte [] startPtrs, byte [] endPtrs) {
 		
-		if (initialised)
-			return ;
-		
-		initialised = true;
-		
-		Arrays.fill(windowStartPointers, -1);
-		Arrays.fill(windowEndPointers,   -1);
+		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		
 		if (batchStartPointer < 0 && batchEndPointer < 0)
 			return ;
@@ -150,43 +147,20 @@ public class WindowBatch {
 			else
 				offset *= slide_;
 			
-			windowStartPointers [0] = batchStartPointer;
-			windowEndPointers   [0] = windowStartPointers[0] + bpw;
+			// windowStartPointers [0] = batchStartPointer;
+			// windowEndPointers   [0] = windowStartPointers[0] + bpw;
+			b.putInt(batchStartPointer - batchStartPointer);
+			d.putInt(batchStartPointer + bpw - batchStartPointer);
 			
 			for (int i = 1; i < batchSize; i++) {
-				windowStartPointers [i] = windowStartPointers [i - 1] + offset;
-				windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
+				b.putInt(b.getInt((i-1) * 4) + offset);
+				d.putInt(d.getInt((i-1) * 4) + offset);
+				// windowStartPointers [i] = windowStartPointers [i - 1] + offset;
+				// windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
 			}
 		} else { /* Fill-in range-based windows */
-			
-			int p = 0; /* Current opened window */ 
-			int q = 0; /* Current closed window */
-			
-			this.windowStartPointers[p] = this.batchStartPointer;
-			
-			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
-				long t = buffer.getLong(i);
-				/* 
-				 * Should we open new windows? 
-				 */
-				boolean open = false;
-				while (t - slide_ >= this.batchStartTime + p * slide_) {
-					p ++;
-					open |= true;
-				}
-				if (open && p < this.batchSize)
-					this.windowStartPointers[p] = i;
-				/* 
-				 * Should be close old windows? 
-				 */
-				boolean close = true;
-				while (t > this.batchStartTime + q * slide_ + window_ - 1) {
-					if (close)
-						this.windowEndPointers[q] = i;
-					close = false;
-					q ++;
-				}
-			} /* End of batch */
+			System.err.println("Unsupported operation...");
+			System.exit(1);
 		}
 	}
 	
@@ -361,6 +335,13 @@ public class WindowBatch {
 		for (int i = 0; i < batchSize; i++) {
 			windowStartPointers[i] -= batchStartPointer;
 			windowEndPointers  [i] -= batchStartPointer;
+		}
+	}
+	
+	public void normalizeWindowPointers (int [] startPtrs, int [] endPtrs) {
+		for (int i = 0; i < batchSize; i++) {
+			startPtrs[i] -= batchStartPointer;
+			endPtrs  [i] -= batchStartPointer;
 		}
 	}
 }

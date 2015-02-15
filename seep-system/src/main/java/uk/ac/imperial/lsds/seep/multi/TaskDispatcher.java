@@ -114,6 +114,16 @@ public class TaskDispatcher implements ITaskDispatcher {
 		assemble (idx, data.length);
 	}
 	
+	@Override
+	public boolean tryDispatch(byte[] data) {
+		int idx;
+		if ((idx = buffer.put(data)) < 0) {
+			return false;
+		}
+		assemble (idx, data.length);
+		return true;
+	}
+	
 	private void newTaskFor (long p, long q, long free, long t_, long _t) {
 		Task task;
 		WindowBatch batch;

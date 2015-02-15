@@ -1,5 +1,6 @@
 package scheduling;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -18,24 +19,32 @@ import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
-public class TwoQuerySetup {
+public class TwoQuerySelectAggregate {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 5) {
+		if (args.length != 7) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of threads");
 			System.err.println("\t- numbers of windows in window batch for first query");
 			System.err.println("\t- numbers of windows in window batch for second query");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
+			System.err.println("\t- kernel filename 1");
+			System.err.println("\t- kernel filename 2");
 			System.exit(-1);
 		}
 		
@@ -49,39 +58,29 @@ public class TwoQuerySetup {
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
+		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = Integer.parseInt(args[1]);
 		QueryConf queryConf1 = new QueryConf(Integer.parseInt(args[2]), 1024);
 		QueryConf queryConf2 = new QueryConf(Integer.parseInt(args[3]), 1024);
 
 		int numberOfAttributesInSchema  = Integer.parseInt(args[4]);
-
+		
+		String filename1 = args[5];
+		
+		String filename2 = args[6];
+		
+		TheGPU.getInstance().init(2);
 		
 		/*
-		 * Queries
-		 * 
-		 * Q1:
-		 * Select AVG(att_1), att_2, att_3
-		 * From input [ROWS 1024 Slide 100]
-		 * Group By att_2, att_3
-		 * Having AVG(att_1) > 0.5
-		 * 
-		 * Q2:
-		 * Select att_1
-		 * From input [ROWS 1024 Slide 1024]
-		 * 
-		 * Query graph:
-		 * (Q1)->(Q2)
-		 */
+		 * 32-byte tuples (1 timestamp, 6 attributes)
+		 * Q1: select * from S [row 1024 slide 1024] where "1" <= 100
+		 */ 
 		
-		
-		/*
-		 * Q1		
-		 */
 		WindowType windowType1 = WindowType.ROW_BASED;
 		long windowRange1      = 1024;
 		long windowSlide1      = 1024;
-		AggregationType aggregationType = AggregationType.AVG;
+		AggregationType aggregationType = AggregationType.SUM;
 		
 		WindowDefinition window1 = 
 			new WindowDefinition (windowType1, windowRange1, windowSlide1);
@@ -97,51 +96,31 @@ public class TwoQuerySetup {
 		}
 		
 		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize1);
-				
-		Expression[] groupBy = new Expression[] {
-			new IntColumnReference(2),
-			new IntColumnReference(3)
-		};
-
-		Selection having = new Selection(
-				new FloatComparisonPredicate(
-						FloatComparisonPredicate.LESS_OP, 
-						new FloatColumnReference(1), 
-						new FloatConstant(0.5f)
-						)
-				);
-
 		
-		IMicroOperatorCode aggCode = new MicroAggregation(
-				aggregationType,
+		float selectivity = 100;
+		IPredicate predicate =  new FloatComparisonPredicate(
+				IntComparisonPredicate.LESS_OP, 
 				new FloatColumnReference(1),
-				groupBy
-				);
-
-
-		System.out.println(String.format("[DBG] %s", aggCode));
-		IMicroOperatorCode gpuAggCode = new MicroAggregationKernel(
-				aggregationType,
-				new FloatColumnReference(1),
-				groupBy,
-				having
-				);
-
-		IMicroOperatorCode tmpProjCode = new Projection(
-			new FloatColumnReference(1)
-		);
-
-//		MicroOperator operator1 = new MicroOperator (aggCode, gpuAggCode, 1);
-		MicroOperator operator1 = new MicroOperator (tmpProjCode, 1);
+				new FloatConstant(selectivity));
+		
+		IMicroOperatorCode selectionCode = new Selection(predicate);
+		System.out.println(String.format("[DBG] %s", selectionCode));
+		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema1, filename1);
+				
+		MicroOperator operator1;
+		if (Utils.GPU && ! Utils.HYBRID)
+			operator1 = new MicroOperator (gpuSelectionCode, selectionCode, 1);
+		else
+			operator1 = new MicroOperator (selectionCode, gpuSelectionCode, 1);
+		
 		Set<MicroOperator> operators1 = new HashSet<MicroOperator>();
 		operators1.add(operator1);
-		SubQuery query1 = new SubQuery (100, operators1, schema1, window1, queryConf1);
+		SubQuery query1 = new SubQuery (1, operators1, schema1, window1, queryConf1);
 
 
 		/*
-		 * Q2		
+		 * Q2: select sum("1") from R [rows 1024 slide 1024]
 		 */
-		
 		WindowType windowType2 = WindowType.ROW_BASED;
 		long windowRange2      = 1024;
 		long windowSlide2      = 1024;
@@ -149,17 +128,39 @@ public class TwoQuerySetup {
 		WindowDefinition window2 = 
 			new WindowDefinition (windowType2, windowRange2, windowSlide2);
 		
-		int[] offsets2 = new int[] {0, 8};
-		ITupleSchema schema2 = new TupleSchema (offsets2, offsets2[offsets2.length-1]+4);
+		int [] offsets2 = offsets1;
+		ITupleSchema schema2 = new TupleSchema (offsets2, schema1.getByteSizeOfTuple());
 		
-		IMicroOperatorCode projCode = new Projection(new FloatColumnReference(1));
-//		IMicroOperatorCode gpuProjCode = new ProjectionKernel(new FloatColumnReference(2));
+		IMicroOperatorCode aggCode = new MicroAggregation(
+				aggregationType,
+				new FloatColumnReference(1)
+				);
+		
+		System.out.println(String.format("[DBG] %s", aggCode));
+		ReductionKernel gpuAggCode = new ReductionKernel (
+				aggregationType,
+				new FloatColumnReference(1),
+				schema2
+				);
+		gpuAggCode.setSource (filename2);
+		gpuAggCode.setBatchSize(queryConf2.BATCH);
+		/* More... */
+		long ppb = window2.panesPerSlide() * (queryConf2.BATCH - 1) + window2.numberOfPanes();
+		long tpb = ppb * window2.getPaneSize();
+		int inputSize = (int) tpb * schema2.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] %d bytes", inputSize));
+		gpuAggCode.setInputSize (inputSize);
+		gpuAggCode.setup();
 
-		MicroOperator operator2 = new MicroOperator (projCode, 2);
-//		MicroOperator operator2 = new MicroOperator (projCode, gpuProjCode, 2);
+		MicroOperator operator2;
+		if (Utils.GPU && ! Utils.HYBRID)
+			operator2 = new MicroOperator (gpuAggCode, aggCode, 1);
+		else
+			operator2 = new MicroOperator (aggCode, gpuAggCode, 1);
+		
 		Set<MicroOperator> operators2 = new HashSet<MicroOperator>();
 		operators2.add(operator2);
-		SubQuery query2 = new SubQuery (101, operators2, schema2, window2, queryConf2);
+		SubQuery query2 = new SubQuery (2, operators2, schema2, window2, queryConf2);
 
 		query1.connectTo(10000, query2);
 		
@@ -180,19 +181,12 @@ public class TwoQuerySetup {
 		ByteBuffer b = ByteBuffer.wrap(data);
 		
 		// fill the buffer
-		Random r = new Random();
-		int firstGroupByAtt  = 0;
-		int secondGroupByAtt = 0;
+		float value = 0;
 		while (b.hasRemaining()) {
 			b.putLong(1);
-			b.putFloat(r.nextFloat());
-			// attributes, which will be used for grouping
-			b.putInt(firstGroupByAtt++);
-			firstGroupByAtt = firstGroupByAtt % 10;
-			b.putInt(secondGroupByAtt++);
-			secondGroupByAtt = secondGroupByAtt % 10;
-			
-			for (int i = 20; i < actualByteSize; i += 4)
+			b.putFloat(value);
+			value = (value + 1) % 100; 
+			for (int i = 12; i < actualByteSize; i += 4)
 				b.putInt(1);
 		}
 		

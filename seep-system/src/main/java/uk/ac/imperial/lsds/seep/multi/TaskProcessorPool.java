@@ -35,7 +35,7 @@ public class TaskProcessorPool {
 		this.workers = workers;
 		this.queue = queue;
 		this.policy = policy;
-		System.out.println(String.format("[DBG] %d threads", this.workers));
+		System.out.println(String.format("[DBG] %d threads (hybrid mode %s)", this.workers, hybrid));
 		this.processor = new TaskProcessor[workers];
 		if (hybrid) {
 			// Assign the first processor to be the GPU manager

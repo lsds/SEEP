@@ -4,7 +4,7 @@
 #define MAX_KERNELS  2
 #define MAX__INPUTS  6
 #define MAX_OUTPUTS  7
-#define MAX_QUERIES  1
+#define MAX_QUERIES  2
 
 #define DEPTH 2
 

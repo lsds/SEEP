@@ -19,7 +19,7 @@ public class MicroOperator {
 		this.gpuCode = gpuCode;
 		this.id = id;
 	}
-
+	
 	public MicroOperator(IMicroOperatorCode cpuCode, int id) {
 		this(cpuCode, null, id);
 	}
@@ -54,12 +54,15 @@ public class MicroOperator {
 	}
 
 	public void process(WindowBatch windowBatch, IWindowAPI api, boolean GPU) {
-		if (GPU)
+		if (GPU) {
+			// System.out.println(String.format("[DBG] Running task %d on GPU", windowBatch.getTaskId()));
 			this.gpuCode.processData(windowBatch, api);
-		else
+		} else {
+			// System.out.println(String.format("[DBG] Running task %d on CPU", windowBatch.getTaskId()));
 			this.cpuCode.processData(windowBatch, api);
+		}
 	}
-
+	
 	public void process(WindowBatch firstWindowBatch, WindowBatch secondWindowBatch, IWindowAPI api, boolean GPU) {
 		if (GPU)
 			this.gpuCode.processData(firstWindowBatch, secondWindowBatch, api);

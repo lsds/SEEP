@@ -16,4 +16,6 @@ public interface IPredicate {
 	@Override
 	public String toString();
 	
+	public int getNumPredicates();
+	
 }

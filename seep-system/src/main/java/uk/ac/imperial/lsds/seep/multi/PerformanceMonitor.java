@@ -37,7 +37,10 @@ public class PerformanceMonitor implements Runnable {
 		for (SubQuery query : L) {
 			System.out.println(String.format("[DBG] [MultiOperator] S %3d", query.getId()));
 			measurements[idx++] = 
-				new Measurement (query.getId(), (CircularQueryBuffer) query.getTaskDispatcher().getBuffer(), (CircularQueryBuffer) query.getTaskDispatcher().getSecondBuffer());
+				new Measurement (query.getId(), 
+						(CircularQueryBuffer) query.getTaskDispatcher().getBuffer(), 
+						(CircularQueryBuffer) query.getTaskDispatcher().getSecondBuffer(),
+						query.getLatencyMonitor());
 		}
 	}
 	
@@ -75,14 +78,18 @@ public class PerformanceMonitor implements Runnable {
 		CircularQueryBuffer buffer;
 		CircularQueryBuffer secondBuffer;
 		
+		LatencyMonitor monitor;
+		
 		long bytes, _bytes = 0;
 		double Dt, MBps;
 		double MB, _1MB_ = 1048576.0;
 
-		public Measurement (int id, CircularQueryBuffer buffer, CircularQueryBuffer secondBuffer) {
+		public Measurement (int id, CircularQueryBuffer buffer, CircularQueryBuffer secondBuffer, LatencyMonitor monitor) {
 			this.id = id;
 			this.buffer = buffer;	
 			this.secondBuffer = secondBuffer;	
+			
+			this.monitor = monitor;
 		}
 			
 		@Override
@@ -101,8 +108,10 @@ public class PerformanceMonitor implements Runnable {
 			if (_bytes > 0) {
 				Dt = (delta / 1000.0);
 				MB = (bytes - _bytes) / _1MB_;
+//				if (MB == 0)
+//					System.out.println("zero...");
 				MBps = MB / Dt;
-				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps ", id, MBps, ((MBps / 1024.) * 8.));
+				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps [%s] ", id, MBps, ((MBps / 1024.) * 8.), monitor);
 			}
 			_bytes = bytes;
 			return s;

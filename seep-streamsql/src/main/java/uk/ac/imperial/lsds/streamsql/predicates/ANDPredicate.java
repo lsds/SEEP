@@ -47,4 +47,8 @@ public class ANDPredicate implements IPredicate {
 		return true;
 	}
 
+	@Override
+	public int getNumPredicates() {
+		return predicates.length;
+	}
 }

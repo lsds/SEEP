@@ -15,6 +15,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
@@ -88,6 +89,9 @@ public class TestAggregationType {
 				new FloatColumnReference(1),
 				schema
 				);
+		
+		TheGPU.getInstance().init(1);
+		
 		gpuAggCode.setSource (filename);
 		gpuAggCode.setBatchSize(queryConf.BATCH);
 		/* More... */

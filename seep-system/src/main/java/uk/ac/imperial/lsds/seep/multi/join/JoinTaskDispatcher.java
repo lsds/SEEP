@@ -262,5 +262,11 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		return this.secondBuffer;
 	}
 
+	@Override
+	public boolean tryDispatch(byte[] data) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 }
 

@@ -15,7 +15,9 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.SelectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
@@ -25,7 +27,7 @@ public class TestSelectionPredComp {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 8) {
+		if (args.length != 9) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -35,6 +37,7 @@ public class TestSelectionPredComp {
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- number of comparisons in predicate");
+			System.err.println("\t- kernel filename");
 			System.exit(-1);
 		}
 		
@@ -47,6 +50,7 @@ public class TestSelectionPredComp {
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
+		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = Integer.parseInt(args[1]);
 		QueryConf queryConf = new QueryConf(Integer.parseInt(args[2]), 1024);
@@ -59,6 +63,8 @@ public class TestSelectionPredComp {
 		long windowSlide      = Long.parseLong(args[5]);
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		int numberOfComparisons         = Integer.parseInt(args[7]);
+		
+		String filename = args[8];
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -87,14 +93,23 @@ public class TestSelectionPredComp {
 		
 		IPredicate predicate =  new ANDPredicate(predicates);
 		
+		TheGPU.getInstance().init(1);
+		
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
-		IMicroOperatorCode gpuSelectionCode = new SelectionKernel(predicate);
+		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema, filename);
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (selectionCode, gpuSelectionCode, 1);
+		// MicroOperator uoperator = new MicroOperator (selectionCode, gpuSelectionCode, 1);
+		
+		MicroOperator uoperator;
+		if (Utils.GPU && ! Utils.HYBRID)
+			uoperator = new MicroOperator (gpuSelectionCode, selectionCode, 1);
+		else
+			uoperator = new MicroOperator (selectionCode, gpuSelectionCode, 1);
+		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();

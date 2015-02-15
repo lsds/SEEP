@@ -34,7 +34,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	 */
 	private static final int THREADS_PER_GROUP = 256;
 	
-	private static final int PIPELINES = 4;
+	private static final int PIPELINES = 2;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
@@ -140,8 +140,9 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type);
 		System.out.println(source);
 		
-		TheGPU.getInstance().init(1);
+		// TheGPU.getInstance().init(1);
 		qid = TheGPU.getInstance().getQuery(source, 1, 3, 1);
+		System.out.println(String.format("[DBG] GPU reduction qid %d", qid));
 		TheGPU.getInstance().setInput (qid, 0,  _input_size);
 		TheGPU.getInstance().setInput (qid, 1,  _window_ptrs_size);
 		TheGPU.getInstance().setInput (qid, 2,  _window_ptrs_size);
@@ -177,6 +178,21 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
 		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
 		/* Create the other two input buffers */
+		
+		windowBatch.initWindowPointers(startPtrs, endPtrs);
+		// windowBatch.normalizeWindowPointers();
+		
+		// int [] _startPtrs = windowBatch.getWindowStartPointers();
+		// int [] _endPtrs = windowBatch.getWindowEndPointers();
+		// ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		// ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		// b.clear();
+		// d.clear();
+		// for (int i = 0; i < _startPtrs.length; i++) {
+		//	b.putInt(_startPtrs[i]);
+		// 	d.putInt(_endPtrs[i]);
+		// }
+		
 		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
 		TheGPU.getInstance().setInputBuffer(qid, 2, endPtrs);
 		

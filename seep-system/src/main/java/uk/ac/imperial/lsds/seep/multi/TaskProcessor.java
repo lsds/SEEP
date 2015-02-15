@@ -26,6 +26,8 @@ public class TaskProcessor implements Runnable {
 	@Override
 	public void run() {
 		ITask task = null;
+		if (GPU)
+			System.out.println ("GPU thread is " + Thread.currentThread());
 		while (true) {
 			try {
 

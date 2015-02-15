@@ -47,4 +47,9 @@ public class ORPredicate implements IPredicate {
 				return true;
 		return false;	}
 
+	@Override
+	public int getNumPredicates() {
+		return predicates.length;
+	}
+
 }

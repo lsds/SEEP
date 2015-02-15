@@ -155,4 +155,9 @@ public class IntComparisonPredicate implements IPredicate {
 				throw new RuntimeException("Unsupported operation " + this.comparisonOperation);
 		}
 	}
+
+	@Override
+	public int getNumPredicates() {
+		return 0;
+	}
 }

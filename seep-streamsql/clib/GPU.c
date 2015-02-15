@@ -102,6 +102,8 @@ int gpu_getQuery (const char *source, int _kernels, int _inputs, int _outputs) {
 		return -1;
 	queries[ndx] = gpu_query_new (device, context,
 			source, _kernels, _inputs, _outputs);
+
+	fprintf(stderr, "[GPU] _getQuery returns %d (%d/%d)\n", ndx, freeIndex, Q);
 	return ndx;
 }
 

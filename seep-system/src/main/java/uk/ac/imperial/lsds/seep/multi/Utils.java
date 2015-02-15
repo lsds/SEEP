@@ -5,14 +5,14 @@ public class Utils {
 	public static int BUNDLE = 1048576;
 	
 	// Default size of circular input buffers
-	public static int _CIRCULAR_BUFFER_ = 64 * BUNDLE; // 1073741824;
+	public static int _CIRCULAR_BUFFER_ = 128 * BUNDLE; // 1073741824;
 	
 	// Initial size of intermediate array buffers
 	public static int _UNBOUNDED_BUFFER_ = Integer.parseInt(Globals.valueFor("intermediate"));
 	
 	// Number of CPU threads
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
-	public static int TASKS = 1000;
+	public static int TASKS = 100000;
 	
 	/* GPU-specific constants */
 	

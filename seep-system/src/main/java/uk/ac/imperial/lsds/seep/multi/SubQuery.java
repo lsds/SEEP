@@ -28,6 +28,8 @@ public class SubQuery {
 	private ITupleSchema		secondSchema;
 	
 	private QueryConf           queryConf;
+	
+	private LatencyMonitor latencyMonitor;
 
 	public SubQuery(int id, Set<MicroOperator> microOperators,
 			ITupleSchema schema, WindowDefinition window, QueryConf queryConf) {
@@ -43,7 +45,9 @@ public class SubQuery {
 			if (o.isMostDownstream())
 				mostDownstreamMicroOperator = o;
 		}
-
+		
+		this.latencyMonitor = new LatencyMonitor();
+		
 		this.dispatcher = new TaskDispatcher(this);
 	}
 
@@ -153,5 +157,10 @@ public class SubQuery {
 
 	public QueryConf getQueryConf() {
 		return queryConf;
+	}
+
+	public LatencyMonitor getLatencyMonitor() {
+		
+		return latencyMonitor;
 	}
 }

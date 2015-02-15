@@ -1,5 +1,6 @@
 package synth;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,14 +17,16 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.AProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 
 public class TestProjectionAttributes {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 8) {
+		if (args.length != 9) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -33,6 +36,7 @@ public class TestProjectionAttributes {
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- number of projected attributes (excl. timestamp)");
+			System.err.println("\t- kernel filename");
 			System.exit(-1);
 		}
 		
@@ -45,6 +49,7 @@ public class TestProjectionAttributes {
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
+		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = Integer.parseInt(args[1]);
 		QueryConf queryConf = new QueryConf(Integer.parseInt(args[2]), 1024);
@@ -57,6 +62,8 @@ public class TestProjectionAttributes {
 		long windowSlide      = Long.parseLong(args[5]);
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		int numberOfProjectedAttributes = Integer.parseInt(args[7]);
+		
+		String filename = args[8];
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -82,14 +89,22 @@ public class TestProjectionAttributes {
 			expression[i+1] = new IntColumnReference((i % (numberOfAttributesInSchema)) + 1);
 		}
 		
+		TheGPU.getInstance().init(1);
+		
 		IMicroOperatorCode projectionCode = new Projection (expression);
 		System.out.println(String.format("[DBG] %s", projectionCode));
-		IMicroOperatorCode gpuProjectionCode = new ProjectionKernel(expression);
+		IMicroOperatorCode gpuProjectionCode = new AProjectionKernel(expression, schema, filename);
 		
 		/*
 		 * Build and set up the query
 		 */
-		MicroOperator uoperator = new MicroOperator (projectionCode, gpuProjectionCode, 1);
+		
+		MicroOperator uoperator;
+		if (Utils.GPU && ! Utils.HYBRID)
+			uoperator = new MicroOperator (gpuProjectionCode, projectionCode, 1);
+		else
+			uoperator = new MicroOperator (projectionCode, gpuProjectionCode, 1);
+		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
@@ -106,17 +121,35 @@ public class TestProjectionAttributes {
 		int bufferBundle = actualByteSize * 32768;
 		byte [] data = new byte [bufferBundle];
 		ByteBuffer b = ByteBuffer.wrap(data);
+		// b.order(ByteOrder.LITTLE_ENDIAN);
 		
 		// fill the buffer
 		while (b.hasRemaining()) {
-			b.putLong(1);
+			b.putLong(System.nanoTime());
 			for (int i = 8; i < actualByteSize; i += 4)
 				b.putInt(1);
 		}
 		
+		// System.out.println("[DBG] First timestamp is " + b.getLong(0));
+		
 		try {
-			while (true) 
+			while (true) {
 				operator.processData (data);
+				b.putLong(0, System.nanoTime());
+//				System.out.println("[DBG] Second timestamp is " + b.getLong(0));
+//				operator.processData (data);
+//				b.putLong(0, System.nanoTime());
+//				System.out.println("[DBG] Third timestamp is " + b.getLong(0));
+//				operator.processData (data);
+//				b.putLong(0, System.nanoTime());
+//				System.out.println("[DBG] Fourth timestamp is " + b.getLong(0));
+//				operator.processData (data);
+//				break;
+				/* Update timestamps */
+				// for (int i = 0; i < 32768; i++)
+				//	b.putLong(i * actualByteSize, System.nanoTime());
+				// b.putLong(0, System.nanoTime());
+			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 
 			System.exit(1);

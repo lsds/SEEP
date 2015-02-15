@@ -5,6 +5,8 @@ public interface ITaskDispatcher {
 	public void setup();
 
 	public void dispatch(byte [] data);
+	
+	public boolean tryDispatch(byte [] data);
 
 	public void dispatchSecond(byte [] data);
 

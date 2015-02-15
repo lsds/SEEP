@@ -89,7 +89,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		String source = KernelCodeGenerator.getProjection(inputSchema, outputSchema, filename);
 		System.out.println(source);
 		
-		TheGPU.getInstance().init(1);
+		// TheGPU.getInstance().init(1);
 		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
 		TheGPU.getInstance().setInput (qid, 0,  _input_size);
 		TheGPU.getInstance().setOutput(qid, 0, _output_size, 1);
@@ -123,15 +123,20 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		byte [] inputArray = windowBatch.getBuffer().array();
 		int start = windowBatch.getBatchStartPointer();
 		int end   = windowBatch.getBatchEndPointer();
+		
+		// System.out.println("[DBG] First timestamp in operator is " + windowBatch.getBuffer().getByteBuffer().getLong(start));
+		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
 		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
+		// System.out.println("[DBG] Returned first timestamp is " + outputBuffer.getByteBuffer().getLong(0));
+		
 		windowBatch.setBuffer(outputBuffer);
 		
-		/* windowBatch.setTaskId     (taskIdx[0]);
-		windowBatch.setFreeOffset (freeIdx[0]); */
+		windowBatch.setTaskId     (taskIdx[0]);
+		windowBatch.setFreeOffset (freeIdx[0]);
 		
 		// System.out.println("Running " + currentTaskIdx);
 		

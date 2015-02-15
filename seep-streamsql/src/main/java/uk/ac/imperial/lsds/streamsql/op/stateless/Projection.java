@@ -103,8 +103,8 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		windowBatch.setBuffer(outBuffer);
 		windowBatch.setSchema(outSchema);
 		
-		if (outBuffer.position() > 1048576)
-			System.err.println("buffer position after filling (" + outBuffer.position() + ")");
+//		if (outBuffer.position() > 1048576)
+//			System.err.println("buffer position after filling (" + outBuffer.position() + ")");
 
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
