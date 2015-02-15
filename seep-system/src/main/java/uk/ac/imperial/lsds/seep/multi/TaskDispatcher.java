@@ -76,7 +76,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		if (window.isTumbling())
 			offset = tpb;
 		else
-			offset = (this.batch - 1) * window.getSlide();
+			offset = (this.batch) * window.getSlide(); // (this.batch - 1) * window.getSlide();
+		
+		// System.out.println("[DBG] offset is " + offset);
 		
 		p = q =  0L;
 		next_ =  0L;
@@ -151,8 +153,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 			batch.setBatchPointers((int) p, (int) q);
 		
 		
-		/* batch.initWindowPointers();
-		batch.debug(); */
+		// batch.initWindowPointers();
+		// batch.debug();
 		
 		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
 		
@@ -210,7 +212,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 				}
 				else {
 					next_ += offset;
-					_next += ((this.batch - 1) * window.getSlide());
+					_next += ((this.batch) * window.getSlide()); // ((this.batch - 1) * window.getSlide());
 				}
 			}
 		} else

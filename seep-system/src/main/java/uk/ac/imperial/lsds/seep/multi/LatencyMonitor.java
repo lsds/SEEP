@@ -1,6 +1,8 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LatencyMonitor {
 
@@ -8,6 +10,10 @@ public class LatencyMonitor {
 	double min, max, avg, std;
 	
 	double latency, latencySquared;
+	
+	AtomicBoolean active;
+	
+	ArrayList<Double> measurements;
 	
 	public LatencyMonitor () {
 		count = 0;
@@ -19,6 +25,10 @@ public class LatencyMonitor {
 		
 		latency = 0.0;
 		latencySquared = 0.0;
+		
+		active = new AtomicBoolean(true);
+		
+		measurements = new ArrayList<Double>();
 	}
 	
 	@Override
@@ -41,12 +51,18 @@ public class LatencyMonitor {
 	}
 	
 	public void monitor (IQueryBuffer buffer) {
+		
+		if (! this.active.get())
+			return ;
+		
 		double dt = 0;
 		/* Check buffer */
 		long t1 = buffer.getLong(0);
 		
 		long t2 = System.nanoTime();
-		dt = (t2 - t1) / 1000000.0;
+		dt = (t2 - t1) / 1000000.0; /* In milliseconds */
+		
+		measurements.add(dt);
 		
 		// System.out.println("[DBG] Timestamp in latency monitor is " + t1 + "; dt is " + dt);
 		
@@ -58,5 +74,15 @@ public class LatencyMonitor {
 		min = (dt < min) ? dt : min;
 		max = (dt > max) ? dt : max;
 		return ;
+	}
+
+	public void stop() {
+		active.set(false);
+		System.out.println(String.format("[DBG] [LatencyMonitor] %10d measurements", measurements.size()));
+		for (Double d: measurements) {
+			System.out.println(String.format("%10.3f", d));
+			System.out.flush();
+		}
+		System.out.println("Done.");
 	}
 }

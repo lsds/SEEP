@@ -253,6 +253,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		// System.out.println("[DBG] count " + count);
 		
+		/* Let's set the timestamp from the first tuple of the window batch */
+		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
+		
 		// release window buffer (will return Unbounded Buffers to the pool)
 		windowBuffer.release();
 
@@ -287,7 +291,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
-
+		
 		Map<Integer, Integer> keyOffsets = null;
 		Map<Integer, Integer> windowTupleCount = null;
 
@@ -308,7 +312,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 								keyOffsets, windowTupleCount);
 					}
 				}
-
+				
 				evaluateWindow(api, windowBuffer, keyOffsets, outBuffer,
 						startPointers, endPointers, currentWindow,
 						windowTupleCount);
@@ -347,6 +351,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				prevWindowEnd = inWindowEndOffset;
 			}
 		}
+		
+		/* Let's set the timestamp from the first tuple of the window batch */
+		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 
 		// release window buffer (will return Unbounded Buffers to the pool)
 		windowBuffer.release();

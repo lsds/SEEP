@@ -65,10 +65,12 @@ public class PerformanceMonitor implements Runnable {
 			System.out.println(b);
 			_time = time;
 			
-//			 if (counter++ > 60) {
-//				System.out.println("Done.");
-//				break;
-//			 }
+			 if (counter++ > 60) {
+				System.out.println("Done.");
+				for (int i = 0; i < size; i++)
+					measurements[i].stop();
+				break;
+			 }
 		}
 	}
 		
@@ -92,6 +94,10 @@ public class PerformanceMonitor implements Runnable {
 			this.monitor = monitor;
 		}
 			
+		public void stop() {
+			monitor.stop();
+		}
+
 		@Override
 		public String toString () {
 			return null;
