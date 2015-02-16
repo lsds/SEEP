@@ -3,9 +3,11 @@
 import sys,os,time,re,argparse
 from core import pycore
 from core.mobility import BasicRangeModel
+from core.mobility import Ns2ScriptedMobility 
 
 
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
+conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
 
 #hook 5:datacollect_hook.sh {
 datacollect_hookdata = '''#!/bin/bash
@@ -74,9 +76,11 @@ def run_session():
         # set increasing Z coordinates
         wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1,
                 verbose=True)
+        print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
         wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
         wlan1.setposition(x=418.0,y=258.0)
 
+        wlan1.setmodel(Ns2ScriptedMobility, ('%s/rwpt.ns_movements'%conf_dir,'50', '1','','','','',''))
         services_str = "OLSR|IPForward"
 
         workers = []
