@@ -48,8 +48,10 @@ public class TestAggregationType {
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
 		
+		int batchSize = Integer.parseInt(args[2]);
+		
 		Utils.THREADS = Integer.parseInt(args[1]);
-		QueryConf queryConf = new QueryConf(Integer.parseInt(args[2]), 1024);
+		QueryConf queryConf = new QueryConf(batchSize, 1024);
 		
 		/*
 		 * Set up configuration of query
@@ -65,6 +67,8 @@ public class TestAggregationType {
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
 		
+		int batchOffset = (int) ((batchSize) * window.getSlide());
+		System.out.println("[DBG] offset is " + batchOffset);
 		
 		int[] offsets = new int[numberOfAttributesInSchema + 1];
 		// first attribute is timestamp
@@ -77,6 +81,13 @@ public class TestAggregationType {
 		}
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
+		
+		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
+		long tpb = ppb * window.getPaneSize();
+		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+		
+		Utils._CIRCULAR_BUFFER_ = 16 * 1024 * 1024;
 				
 		IMicroOperatorCode aggCode = new MicroAggregation(
 				aggregationType,
@@ -94,11 +105,7 @@ public class TestAggregationType {
 		
 		gpuAggCode.setSource (filename);
 		gpuAggCode.setBatchSize(queryConf.BATCH);
-		/* More... */
-		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
-		long tpb = ppb * window.getPaneSize();
-		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
-		System.out.println(String.format("[DBG] %d bytes", inputSize));
+		/* Configure... */
 		gpuAggCode.setInputSize (inputSize);
 		gpuAggCode.setup();
 		
@@ -123,18 +130,29 @@ public class TestAggregationType {
 		 * Set up the stream
 		 */
 		// yields 1MB for byteSize = 32 
+		int tuplesPerInsert = 32768;
 		int actualByteSize = schema.getByteSizeOfTuple();
-		int bufferBundle = actualByteSize * 32768;
+		int bufferBundle = actualByteSize * tuplesPerInsert; // yields 1MB for byteSize = 32 
 		byte [] data = new byte [bufferBundle];
 		ByteBuffer b = ByteBuffer.wrap(data);
 		
 		// fill the buffer
 		Random r = new Random();
 		while (b.hasRemaining()) {
-			b.putLong(1);
+			b.putLong(0);
 			b.putFloat(r.nextFloat());
 			for (int i = 12; i < actualByteSize; i += 4)
 				b.putInt(1);
+		}
+		
+		/* Populate timestamps */
+		long nextBatchStartPointer = 0L;
+		long count = 1L;
+		while (nextBatchStartPointer < tuplesPerInsert) {
+			int normalisedIndex = (int) (nextBatchStartPointer % tuplesPerInsert) * actualByteSize;
+			b.putLong(normalisedIndex, System.nanoTime());
+			// System.out.println("Set batch timestamp at " + normalisedIndex + " to be " + b.getLong(normalisedIndex));
+			nextBatchStartPointer += batchOffset;
 		}
 		
 		try {
@@ -142,6 +160,13 @@ public class TestAggregationType {
 				// for (int i = 0; i < 32768; i++)
 				//	b.putLong(i * 32, 0L);
 				operator.processData (data);
+				count ++;
+				while (nextBatchStartPointer < tuplesPerInsert * count) {
+					int normalisedIndex = (int) (nextBatchStartPointer % tuplesPerInsert) * actualByteSize;
+					b.putLong(normalisedIndex, System.nanoTime());
+					// System.out.println("Set batch timestamp at " + normalisedIndex + " to be " + b.getLong(normalisedIndex));
+					nextBatchStartPointer += batchOffset;
+				}
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

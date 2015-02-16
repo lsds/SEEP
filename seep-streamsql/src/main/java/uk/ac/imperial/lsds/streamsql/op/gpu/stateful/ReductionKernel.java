@@ -138,7 +138,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		d.clear();
 		
 		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type);
-		System.out.println(source);
+		// System.out.println(source);
 		
 		// TheGPU.getInstance().init(1);
 		qid = TheGPU.getInstance().getQuery(source, 1, 3, 1);

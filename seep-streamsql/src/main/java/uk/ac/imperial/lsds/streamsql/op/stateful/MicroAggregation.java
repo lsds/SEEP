@@ -292,11 +292,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
 		
-		Map<Integer, Integer> keyOffsets = null;
+		Map<Integer, Integer> keyOffsets = new HashMap<>();
 		Map<Integer, Integer> windowTupleCount = null;
 
 		if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-			keyOffsets = new HashMap<>();
 			windowTupleCount = new HashMap<>();
 		}
 
@@ -375,6 +374,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			Map<Integer, Integer> windowTupleCount) {
 
 		int key = getGroupByKey(inBuffer, inSchema, enterOffset);
+		// System.out.println("Search " + key);
 
 		if (keyOffsets.keySet().contains(key)) {
 			int currentValuePositionInWindowBuffer = keyOffsets.get(key)
