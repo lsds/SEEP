@@ -23,9 +23,8 @@ def main(ks,mobilities,sessions,plot_time_str=None):
 
     record_statistics(ks, mobilities, sessions, time_str, data_dir)
 
-    # TODO: Fix up location of gnuplot templates
-    #plot_tput_vs_mobility(time_str, script_dir, data_dir)
-    #plot_median_tput_vs_mobility(time_str, script_dir, data_dir)
+    plot_tput_vs_mobility(time_str, script_dir, data_dir)
+    plot_median_tput_vs_mobility(time_str, script_dir, data_dir)
 
 def get_session_dir(k, mob, session, time_str, data_dir):
     return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
@@ -118,15 +117,19 @@ def get_tput(logfilename):
     raise Exception("Could not find tput in %s"%logfilename)
 
 def plot_tput_vs_mobility(time_str, script_dir, data_dir):
+    exp_dir = '%s/%s'%(data_dir,time_str)
+    print exp_dir
     plot_proc = subprocess.Popen(['gnuplot', '-e',
 'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
-script_dir+'/../config/tput_vs_mobility.plt'], cwd=data_dir)
+script_dir+'/vldb/config/tput_vs_mobility.plt'], cwd=exp_dir)
     plot_proc.wait()
 
 def plot_median_tput_vs_mobility(time_str, script_dir, data_dir):
+    exp_dir = '%s/%s'%(data_dir,time_str)
+    print exp_dir
     plot_proc = subprocess.Popen(['gnuplot', '-e',
 'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
-script_dir+'/../config/median_tput_vs_mobility.plt'], cwd=data_dir)
+script_dir+'/vldb/config/median_tput_vs_mobility.plt'], cwd=exp_dir)
     plot_proc.wait()
 
 
