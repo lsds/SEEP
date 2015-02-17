@@ -8,6 +8,8 @@ from core.mobility import Ns2ScriptedMobility
 
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
 conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
+mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',500),
+        ('loop',1),('autostart',5.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
 
 datacollect_template = '''#!/bin/bash
 # session hook script; write commands here to execute on the host at the
@@ -70,13 +72,10 @@ def run_session(time_str, k, mob, exp_session):
         wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1,
                 verbose=True)
 
-        wlan1.setmodel(Ns2ScriptedMobility, ('%s/rwpt.ns_movements'%conf_dir,'50', '1','','','','',''))
-
         print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
         wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
         wlan1.setposition(x=418.0,y=258.0)
 
-        #wlan1.setmodel(Ns2ScriptedMobility, Ns2ScriptedMobility.getdefaultvalues())
         services_str = "OLSR|IPForward"
 
         workers = []
@@ -86,8 +85,19 @@ def run_session(time_str, k, mob, exp_session):
         
         master = create_node(8, session, "%s|MeanderMaster"%services_str, wlan1, gen_position(8))
 
+
+        node_map = create_node_map(range(0,6), workers)
+        
+        print 'Node map=%s'%node_map
+        #wlan1.setmodel(Ns2ScriptedMobility, tuple(map(lambda (key,val): str(val), mobility_params)))
+        mobility_params[4] = ('map', node_map)
+        session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
+
+        #wlan1.setmodel(Ns2ScriptedMobility, Ns2ScriptedMobility.getdefaultvalues())
+
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
+        session.node_count=1+1+6
         print 'Instantiating session.'
         session.instantiate()
 
@@ -109,6 +119,14 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     session.services.addservicestonode(n, "", services_str, verbose=False)
     n.setposition(x=pos[0], y=pos[1])
     n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
+    return n
+
+def create_node_map(ns_nums, nodes):
+    if len(ns_nums) != len(nodes): 
+        raise Exception("Invalid node mapping.")
+    print 'ns_nums=%s'%str(ns_nums)
+    print 'nodes=%s'%str(nodes)
+    return ",".join(map(lambda (ns_num, node) : "%d:%d"%(ns_num,node.objid), zip(ns_nums, nodes)))
 
 default_positions = {2 : (346.0,178.0),3:(515.0,160.0),4:(567.0,244.0),5:(558.0,317.0),6:(458.0,392.0),7:(349.0,359.0),8:(295.0,290.0)}
 def gen_position(i):
