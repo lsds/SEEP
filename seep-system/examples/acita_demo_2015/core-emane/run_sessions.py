@@ -9,21 +9,27 @@ from core.mobility import Ns2ScriptedMobility
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
 conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
 
-#hook 5:datacollect_hook.sh {
-datacollect_hookdata = '''#!/bin/bash
+datacollect_template = '''#!/bin/bash
 # session hook script; write commands here to execute on the host at the
 # specified state
 
-echo "`hostname`:`pwd`" > /tmp/datacollect.log
-if [ -z "$SEEP_GITHUB_DIR" ]; then
-	echo "SEEP_GITHUB_DIR not set." >> /tmp/datacollect.log
-	SEEP_GITHUB_DIR=/data/dev/seep-github
-fi
+
+#echo "`hostname`:`pwd`" > /tmp/datacollect.log
+#if [ -z "$SEEP_GITHUB_DIR" ]; then
+#	echo "SEEP_GITHUB_DIR not set." >> /tmp/datacollect.log
+#	SEEP_GITHUB_DIR=/data/dev/seep-github
+#fi
+
+#scriptDir=$SEEP_GITHUB_DIR/seep-system/examples/acita_demo_2015/core-emane
+scriptDir=%s
+timeStr=%s
+k=%dk
+mob=%.2fm
+session=%ds
+#resultsDir=$scriptDir/log/$timeStr
+resultsDir=$scriptDir/log/$timeStr/$k/$mob/$session
 
 expDir=$(pwd)
-scriptDir=$SEEP_GITHUB_DIR/seep-system/examples/acita_demo_2015/core-emane
-timeStr=$(date +%H-%M-%S-%a%d%m%y)
-resultsDir=$scriptDir/log/$timeStr
 
 echo $expDir >> /tmp/datacollect.log
 echo $scriptDir >> /tmp/datacollect.log
@@ -40,32 +46,19 @@ done
 	
 
 cd $scriptDir
-./gen_core_results.py --expDir log/$timeStr 
+#./gen_core_results.py --expDir log/$timeStr 
+./gen_core_results.py --expDir $resultsDir
 cd $expDir
 '''
-def main(sessions):
-    """
-    TODO: Take in a set of values for k (e.g. supply using java prop) and
-    a number of repetitions to do for each k. Might also want an initial
-    rand seed for mobility?
-
-    For each k run the required number of sessions.
-
-    Create some aggregated results based on the result recorded for
-    each session, and generate a plot.
-
-    Finally, move all results into a separate dir. 
-
-    Might also want to take a plotOnly arg?
-    """
+def run_sessions(time_str, k, mob, sessions):
     for session in range(0, sessions):
         print '*** Running session %d ***'%session
-        run_session()
+        run_session(time_str, k, mob, session)
 
-def run_session():
+def run_session(time_str, k, mob, exp_session):
     try:
-        #session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1'}, persistent=True)
-        session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
+        session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1'}, persistent=True)
+        #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
         """
         if not add_to_server(session): 
             print 'Could not add to server'
@@ -76,11 +69,14 @@ def run_session():
         # set increasing Z coordinates
         wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1,
                 verbose=True)
+
+        wlan1.setmodel(Ns2ScriptedMobility, ('%s/rwpt.ns_movements'%conf_dir,'50', '1','','','','',''))
+
         print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
         wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
         wlan1.setposition(x=418.0,y=258.0)
 
-        wlan1.setmodel(Ns2ScriptedMobility, ('%s/rwpt.ns_movements'%conf_dir,'50', '1','','','','',''))
+        #wlan1.setmodel(Ns2ScriptedMobility, Ns2ScriptedMobility.getdefaultvalues())
         services_str = "OLSR|IPForward"
 
         workers = []
@@ -90,7 +86,8 @@ def run_session():
         
         master = create_node(8, session, "%s|MeanderMaster"%services_str, wlan1, gen_position(8))
 
-        session.sethook("hook:5","datacollect.sh",None,datacollect_hookdata)
+        datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
+        session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         print 'Instantiating session.'
         session.instantiate()
 
@@ -127,6 +124,11 @@ def add_to_server(session):
         print 'Name error'
         return False
 
+def create_datacollect_hook(time_str, k, mob, exp_session):
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    print 'Script dir = %s'%script_dir
+    return datacollect_template%(script_dir, time_str, k, mob, exp_session)
+
 def watch_meander_services(sessiondir, node_names):
     while True:
         for name in node_names:
@@ -140,5 +142,10 @@ def watch_meander_services(sessiondir, node_names):
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
+    parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     args=parser.parse_args()
-    main(int(args.sessions))
+    if args.plot_time_str:
+        time_str = args.plot_time_str
+    else:
+        time_str = time.strftime('%H-%M-%S-%a%d%m%y')
+    run_sessions(time_str, 2, 0.00, int(args.sessions))

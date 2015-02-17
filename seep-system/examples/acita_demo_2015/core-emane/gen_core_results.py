@@ -4,12 +4,10 @@ import subprocess,os,time,re,argparse,glob
 
 from extract_results import *
 
-eg_dir = os.path.dirname(os.path.realpath(__file__))
 
-def main(rel_exp_dir):
+def main(exp_dir):
 
     sim_env = os.environ.copy()
-    exp_dir = "%s/%s"%(eg_dir, rel_exp_dir) 
     print "Analysing logs in %s"%(exp_dir)       
 
     # Get src logfilename
