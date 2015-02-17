@@ -10,6 +10,7 @@ import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
+import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
@@ -36,14 +37,24 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 	private LongColumnReference timestampReference = new LongColumnReference(0);
 
-	public MicroAggregation(AggregationType aggregationType,
+	private boolean hasGroupBy;
+	private boolean doIncremental;
+
+	public MicroAggregation(WindowDefinition windowDef, 
+			AggregationType aggregationType, 
 			FloatColumnReference aggregationAttribute) {
 
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = new Expression[0];
 		this.havingSel = null;
-
+		this.hasGroupBy = false;
+		
+		if (this.aggregationType == AggregationType.COUNT
+				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);		
+		}
+		
 		Expression[] tmpAllOutAttributes = new Expression[2];
 		tmpAllOutAttributes[0] = this.timestampReference;
 		tmpAllOutAttributes[1] = this.aggregationAttribute;
@@ -52,13 +63,20 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		this.byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
 	}
 
-	public MicroAggregation(AggregationType aggregationType,
+	public MicroAggregation(WindowDefinition windowDef, 
+			AggregationType aggregationType,
 			FloatColumnReference aggregationAttribute,
 			Expression[] groupByAttributes, Selection havingSel) {
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
 		this.havingSel = havingSel;
+		this.hasGroupBy = true;
+		
+		if (this.aggregationType == AggregationType.COUNT
+				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);		
+		}
 
 		Expression[] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
 		tmpAllOutAttributes[0] = this.timestampReference;
@@ -72,10 +90,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		this.byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
 	}
 
-	public MicroAggregation(AggregationType aggregationType,
+	public MicroAggregation(WindowDefinition windowDef, AggregationType aggregationType,
 			FloatColumnReference aggregationAttribute,
 			Expression[] groupByAttributes) {
-		this(aggregationType, aggregationAttribute, groupByAttributes, null);
+		this(windowDef, aggregationType, aggregationAttribute, groupByAttributes, null);
 	}
 
 	@Override
@@ -116,14 +134,18 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		case COUNT:
 		case SUM:
 		case AVG:
-			if (this.groupByAttributes.length != 0)
+			if (this.hasGroupBy && this.doIncremental) 
 				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
-			else 
+			else if (!this.hasGroupBy && this.doIncremental)
 				processDataPerWindowIncrementally(windowBatch, api);
+			else if (this.hasGroupBy && !this.doIncremental)
+				processDataPerWindowWithGroupBy(windowBatch, api);
+			else if (!this.hasGroupBy && !this.doIncremental)
+				processDataPerWindow(windowBatch, api);
 			break;
 		case MAX:
 		case MIN:
-			if (this.groupByAttributes.length != 0)
+			if (this.hasGroupBy)
 				processDataPerWindowWithGroupBy(windowBatch, api);
 			else 
 				processDataPerWindow(windowBatch, api);
@@ -135,9 +157,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	}
 
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {
-
-		assert (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);
-
 		/*
 		 * Make sure the batch is initialised
 		 */
@@ -155,11 +174,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		int inWindowStartOffset;
 		int inWindowEndOffset;
+		
+		int tupleCount;
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];
 
+			tupleCount = 0;
+			
 			/*
 			 * If the window is empty, we skip it
 			 */
@@ -173,9 +196,22 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				// copy timestamp
 				this.timestampReference.appendByteResult(inBuffer,
 						inSchema, inWindowStartOffset, windowBuffer);
-				// write value for aggregation attribute
-				this.aggregationAttribute.appendByteResult(inBuffer,
-						inSchema, inWindowStartOffset, windowBuffer);
+						
+				if (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN) {
+					// write value for aggregation attribute
+					this.aggregationAttribute.appendByteResult(inBuffer,
+							inSchema, inWindowStartOffset, windowBuffer);
+				}
+				else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+					// write value for aggregation attribute
+					this.aggregationAttribute.appendByteResult(inBuffer,
+							inSchema, inWindowStartOffset, windowBuffer);
+					tupleCount++;
+				}
+				else if (this.aggregationType == AggregationType.COUNT) {
+					tupleCount++;
+				}
+				
 				// write dummy content if needed 
 				windowBuffer.put(outSchema.getDummyContent());
 				
@@ -189,25 +225,52 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					this.timestampReference.writeByteResult(inBuffer,
 							inSchema, inWindowStartOffset, windowBuffer,0);
 
-					// get the value of the aggregation attribute in the current
-					// tuple
-					newValue = this.aggregationAttribute.eval(inBuffer,
-							inSchema, inWindowStartOffset);
+					
+					if (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN) {
+						
+						// get the value of the aggregation attribute in the current
+						// tuple
+						newValue = this.aggregationAttribute.eval(inBuffer,
+								inSchema, inWindowStartOffset);
+						
+						// check whether new value for aggregation attribute
+						// shall be written
+						oldValue = this.aggregationAttribute.eval(windowBuffer,
+								outSchema, 0);
 
-					// check whether new value for aggregation attribute
-					// shall be written
-					oldValue = this.aggregationAttribute.eval(windowBuffer,
-							outSchema, 0);
-
-					if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
-							|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
-						this.aggregationAttribute.writeByteResult(inBuffer,
-								inSchema, inWindowStartOffset,
-								windowBuffer, outSchema.getOffsetForAttribute(1));
+						if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
+								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
+							this.aggregationAttribute.writeByteResult(inBuffer,
+									inSchema, inWindowStartOffset,
+									windowBuffer, outSchema.getOffsetForAttribute(1));
+					}
+					else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+						
+						newValue = this.aggregationAttribute.eval(windowBuffer,
+								outSchema, 0);
+						newValue += this.aggregationAttribute.eval(inBuffer,
+								inSchema, inWindowStartOffset);
+						
+						windowBuffer.putFloat(outSchema.getOffsetForAttribute(1), newValue);
+						
+						tupleCount++;
+					}
+					else if (this.aggregationType == AggregationType.COUNT) {
+						tupleCount++;
+					}
 
 					inWindowStartOffset += byteSizeOfInTuple;
 				}
-					
+				
+				if (this.aggregationType == AggregationType.AVG) {
+					float avg = this.aggregationAttribute.eval(windowBuffer,
+							outSchema, 0) / tupleCount;
+					outBuffer.putFloat(outSchema.getOffsetForAttribute(1), avg);
+				}
+				else if (this.aggregationType == AggregationType.COUNT) {
+					windowBuffer.putFloat(outSchema.getOffsetForAttribute(1), tupleCount);
+				}
+				
 				startPointers[currentWindow] = outBuffer.position();
 				outBuffer.put(windowBuffer, 0, this.byteSizeOfOutTuple);
 				endPointers[currentWindow] = outBuffer.position() - 1;
@@ -235,7 +298,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	
 	private void processDataPerWindowWithGroupBy(WindowBatch windowBatch, IWindowAPI api) {
 
-		assert (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);
+		//TODO: implement SUM, AVG, COUNT per Window
+		
+		//assert (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);
 
 		/*
 		 * Make sure the batch is initialised

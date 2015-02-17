@@ -113,6 +113,7 @@ public class TwoQuerySetup {
 
 		
 		IMicroOperatorCode aggCode = new MicroAggregation(
+				window1,
 				aggregationType,
 				new FloatColumnReference(1),
 				groupBy

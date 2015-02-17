@@ -95,11 +95,14 @@ public class LRBQ14 {
 		 */
 		// OUTPUT STREAM timestamp, segNo, dir, hwy, AVG(speed)
 
+		WindowDefinition window4 = new WindowDefinition(WindowType.ROW_BASED, 1024, 1024);
+		
 		Selection having = new Selection(new FloatComparisonPredicate(
 				FloatComparisonPredicate.LESS_OP, new FloatColumnReference(3),
 				new FloatConstant(40f)));
 
 		IMicroOperatorCode q4AggCode = new MicroAggregation(
+				window4,
 				AggregationType.AVG, new FloatColumnReference(1),
 				new Expression[] { new IntColumnReference(2),
 						new IntColumnReference(3), new IntColumnReference(4) },
@@ -122,7 +125,7 @@ public class LRBQ14 {
 		q4MicroOps.add(q4Agg);
 
 		SubQuery sq4 = new SubQuery(40, q4MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024), new QueryConf(200, 1024));
+				window4, new QueryConf(200, 1024));
 
 		sq1.connectTo(101, sq4);
 		sq1.connectTo(102, sq2);

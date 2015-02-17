@@ -38,6 +38,7 @@ public class TestHybridReduction {
 		gpuReductionCode.setup();
 		
 		IMicroOperatorCode cpuReductionCode = new MicroAggregation(
+			window,
 			AggregationType.SUM,
 			new FloatColumnReference(1)
 		);

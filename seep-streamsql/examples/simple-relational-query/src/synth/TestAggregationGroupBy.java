@@ -82,6 +82,7 @@ public class TestAggregationGroupBy {
 		};
 		
 		IMicroOperatorCode aggCode = new MicroAggregation(
+				window,
 				aggregationType,
 				new FloatColumnReference(1),
 				groupBy

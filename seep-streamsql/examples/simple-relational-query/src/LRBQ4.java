@@ -42,12 +42,13 @@ public class LRBQ4 {
 		 * segNo, dir, hwy Having Avg(speed) < 40
 		 */
 		// OUTPUT STREAM timestamp, segNo, dir, hwy, AVG(speed)
-
+		WindowDefinition window4 = new WindowDefinition(WindowType.ROW_BASED, 300, 1);
 		Selection having = new Selection(new FloatComparisonPredicate(
 				FloatComparisonPredicate.LESS_OP, new FloatColumnReference(3),
 				new FloatConstant(40f)));
 
 		IMicroOperatorCode q2AggCode = new MicroAggregation(
+				window4,
 				AggregationType.AVG, new FloatColumnReference(1),
 				new Expression[] { new IntColumnReference(2),
 						new IntColumnReference(3), new IntColumnReference(4) },
@@ -72,7 +73,7 @@ public class LRBQ4 {
 		// SubQuery sq1 = new SubQuery(10, q2MicroOps, inputSchema, new
 		// WindowDefinition(WindowType.RANGE_BASED, 300, 1));
 		SubQuery sq4 = new SubQuery(40, q2MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 300, 1), new QueryConf(200, 1024));
+				window4, new QueryConf(200, 1024));
 
 		Set<SubQuery> subQueries = new HashSet<>();
 		subQueries.add(sq4);

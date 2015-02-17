@@ -15,8 +15,6 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 
@@ -84,6 +82,7 @@ public class TestSlidingWindow {
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024; // + (batchOffset * schema.getByteSizeOfTuple() * 128);
 				
 		IMicroOperatorCode aggCode = new MicroAggregation(
+				window,
 				aggregationType,
 				new FloatColumnReference(1)
 				);

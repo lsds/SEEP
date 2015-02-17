@@ -101,11 +101,14 @@ public class LRBQ16 {
 		 */
 		// OUTPUT STREAM timestamp, segNo, dir, hwy, AVG(speed)
 
+		WindowDefinition window4 = new WindowDefinition(WindowType.ROW_BASED, 1024, 1024);
+
 		Selection having = new Selection(new FloatComparisonPredicate(
 				FloatComparisonPredicate.LESS_OP, new FloatColumnReference(3),
 				new FloatConstant(40f)));
 
 		IMicroOperatorCode q4AggCode = new MicroAggregation(
+				window4,
 				AggregationType.AVG, new FloatColumnReference(1),
 				new Expression[] { new IntColumnReference(2),
 						new IntColumnReference(3), new IntColumnReference(4) },
@@ -126,7 +129,7 @@ public class LRBQ16 {
 		q4MicroOps.add(q4Agg);
 
 		SubQuery sq4 = new SubQuery(40, q4MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024), new QueryConf(200, 1024));
+				window4, new QueryConf(200, 1024));
 		
 		/*
 		 * Query 5
@@ -135,7 +138,10 @@ public class LRBQ16 {
 		 * From ActiveVehicleSegRel
 		 * Group By segNo, dir, hwy 
 		 */
+		WindowDefinition window5 = new WindowDefinition(WindowType.ROW_BASED, 1024, 1024);
+
 		IMicroOperatorCode q5AggCode = new MicroAggregation(
+				window5,
 				AggregationType.COUNT, new FloatColumnReference(1),
 				new Expression[] { new IntColumnReference(2),
 						new IntColumnReference(3), new IntColumnReference(4) });
@@ -155,7 +161,7 @@ public class LRBQ16 {
 		q5MicroOps.add(q5Agg);
 
 		SubQuery sq5 = new SubQuery(50, q5MicroOps, inputSchema,
-				new WindowDefinition(WindowType.ROW_BASED, 1024, 1024), new QueryConf(200, 1024));
+				window5, new QueryConf(200, 1024));
 
 		/*
 		 * Query 6
