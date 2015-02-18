@@ -157,16 +157,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	}
 
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {
-		/*
-		 * Make sure the batch is initialised
-		 */
+		// initialise pointers
 		windowBatch.initWindowPointers();
 		
 		int[] startPointers = windowBatch.getWindowStartPointers();
 		int[] endPointers = windowBatch.getWindowEndPointers();
 
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
-		IQueryBuffer windowBuffer = UnboundedQueryBufferFactory.newInstance();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		ITupleSchema inSchema = windowBatch.getSchema();
@@ -175,104 +172,73 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int inWindowStartOffset;
 		int inWindowEndOffset;
 		
-		int tupleCount;
+		float windowValue, newWindowValue;
+		int   windowTupleCount;
+		long  windowTimestamp;
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];
 
-			tupleCount = 0;
+			windowTupleCount = 0;
+			windowValue = 0;
 			
 			/*
 			 * If the window is empty, we skip it
 			 */
 			if (inWindowStartOffset != -1) {
 
-				windowBuffer.position(0);
-				
 				/*
 				 * First value
 				 */
 				// copy timestamp
-				this.timestampReference.appendByteResult(inBuffer,
-						inSchema, inWindowStartOffset, windowBuffer);
+				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset);
 						
 				if (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN) {
 					// write value for aggregation attribute
-					this.aggregationAttribute.appendByteResult(inBuffer,
-							inSchema, inWindowStartOffset, windowBuffer);
+					windowValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
+				}
+				else if (this.aggregationType == AggregationType.COUNT) {
+					windowValue++;
 				}
 				else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 					// write value for aggregation attribute
-					this.aggregationAttribute.appendByteResult(inBuffer,
-							inSchema, inWindowStartOffset, windowBuffer);
-					tupleCount++;
+					windowValue += this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
+					windowTupleCount++;
 				}
-				else if (this.aggregationType == AggregationType.COUNT) {
-					tupleCount++;
-				}
-				
-				// write dummy content if needed 
-				windowBuffer.put(outSchema.getDummyContent());
-				
+								
 				inWindowStartOffset += byteSizeOfInTuple;
 
-				float newValue, oldValue;
 				// for all remaining tuples in the window
 				while (inWindowStartOffset < inWindowEndOffset) {
 					
-					// override timestamp
-					this.timestampReference.writeByteResult(inBuffer,
-							inSchema, inWindowStartOffset, windowBuffer,0);
-
-					
 					if (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN) {
 						
-						// get the value of the aggregation attribute in the current
-						// tuple
-						newValue = this.aggregationAttribute.eval(inBuffer,
-								inSchema, inWindowStartOffset);
+						// get the value of the aggregation attribute in the current tuple
+						newWindowValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
 						
-						// check whether new value for aggregation attribute
-						// shall be written
-						oldValue = this.aggregationAttribute.eval(windowBuffer,
-								outSchema, 0);
-
-						if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
-								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
-							this.aggregationAttribute.writeByteResult(inBuffer,
-									inSchema, inWindowStartOffset,
-									windowBuffer, outSchema.getOffsetForAttribute(1));
-					}
-					else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-						
-						newValue = this.aggregationAttribute.eval(windowBuffer,
-								outSchema, 0);
-						newValue += this.aggregationAttribute.eval(inBuffer,
-								inSchema, inWindowStartOffset);
-						
-						windowBuffer.putFloat(outSchema.getOffsetForAttribute(1), newValue);
-						
-						tupleCount++;
+						if ((newWindowValue > windowValue && this.aggregationType == AggregationType.MAX)
+								|| (newWindowValue < windowValue && this.aggregationType == AggregationType.MIN))
+							windowValue = newWindowValue;
 					}
 					else if (this.aggregationType == AggregationType.COUNT) {
-						tupleCount++;
+						windowValue++;
+					}
+					else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+						// write value for aggregation attribute
+						windowValue += this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
+						windowTupleCount++;
 					}
 
 					inWindowStartOffset += byteSizeOfInTuple;
 				}
 				
-				if (this.aggregationType == AggregationType.AVG) {
-					float avg = this.aggregationAttribute.eval(windowBuffer,
-							outSchema, 0) / tupleCount;
-					outBuffer.putFloat(outSchema.getOffsetForAttribute(1), avg);
-				}
-				else if (this.aggregationType == AggregationType.COUNT) {
-					windowBuffer.putFloat(outSchema.getOffsetForAttribute(1), tupleCount);
-				}
-				
 				startPointers[currentWindow] = outBuffer.position();
-				outBuffer.put(windowBuffer, 0, this.byteSizeOfOutTuple);
+				outBuffer.putLong(windowTimestamp);
+				if (this.aggregationType == AggregationType.AVG)
+					windowValue = windowValue / windowTupleCount;
+				outBuffer.putFloat(windowValue);
+				outBuffer.put(outSchema.getDummyContent());
 				endPointers[currentWindow] = outBuffer.position() - 1;
 			}
 		}
@@ -283,9 +249,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
-		// release window buffer (will return Unbounded Buffers to the pool)
-		windowBuffer.release();
-
 		// release old buffer (will return Unbounded Buffers to the pool)
 		inBuffer.release();
 		// reuse window batch by setting the new buffer and the new schema for
@@ -298,13 +261,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	
 	private void processDataPerWindowWithGroupBy(WindowBatch windowBatch, IWindowAPI api) {
 
-		//TODO: implement SUM, AVG, COUNT per Window
-		
-		//assert (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN);
-
-		/*
-		 * Make sure the batch is initialised
-		 */
 		windowBatch.initWindowPointers();
 		
 		int[] startPointers = windowBatch.getWindowStartPointers();
@@ -316,11 +272,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		ITupleSchema inSchema = windowBatch.getSchema();
 		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
-
+		int offsetOutAggAttribute = outSchema.getByteSizeOfTuple() - outSchema.getDummyContent().length - 4;
 		int inWindowStartOffset;
 		int inWindowEndOffset;
 
-		Map<Integer, Integer> keyOffsets;
+		Map<Integer, Integer> keyOffsets = new HashMap<>();
+		Map<Integer, Integer> windowTupleCount = null;
+
+		if (this.aggregationType == AggregationType.AVG) 
+			windowTupleCount = new HashMap<>();
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
@@ -334,18 +294,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				keyOffsets = new HashMap<>();
 				windowBuffer.position(0);
 
-				int key, keyOffset;
+				int keyOffset;
 				float newValue, oldValue;
+
 				// for all the tuples in the window
 				while (inWindowStartOffset < inWindowEndOffset) {
 					
 					// get the key
-					key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset);
-					// get the value of the aggregation attribute in the current
-					// tuple
-					newValue = this.aggregationAttribute.eval(inBuffer,
-							inSchema, inWindowStartOffset);
-
+					int key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset);
+					
 					// check whether there is already an entry in the window
 					// buffer for this key
 					if (!keyOffsets.containsKey(key)) {
@@ -360,9 +317,21 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 							this.groupByAttributes[i].appendByteResult(
 									inBuffer, inSchema, inWindowStartOffset,
 									windowBuffer);
-						// write value for aggregation attribute
-						this.aggregationAttribute.appendByteResult(inBuffer,
-								inSchema, inWindowStartOffset, windowBuffer);
+						
+						if (this.aggregationType == AggregationType.MAX || this.aggregationType == AggregationType.MIN || 
+								this.aggregationType == AggregationType.SUM) {
+							// write value for aggregation attribute
+							this.aggregationAttribute.appendByteResult(inBuffer,
+									inSchema, inWindowStartOffset, windowBuffer);
+						}
+						else if (this.aggregationType == AggregationType.AVG) {
+							windowTupleCount.put(key, 1);
+							this.aggregationAttribute.appendByteResult(inBuffer,
+									inSchema, inWindowStartOffset, windowBuffer);
+						}
+						else if (this.aggregationType == AggregationType.COUNT) {
+							windowBuffer.putInt(1);
+						}
 						
 						// write dummy content if needed 
 						windowBuffer.put(outSchema.getDummyContent());
@@ -374,21 +343,26 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						// key exists already
 						keyOffset = keyOffsets.get(key);
 						
-						// override timestamp
-						this.timestampReference.writeByteResult(inBuffer,
-								inSchema, inWindowStartOffset, windowBuffer,
-								keyOffset);
+						newValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
 
 						// check whether new value for aggregation attribute
 						// shall be written
-						oldValue = this.aggregationAttribute.eval(windowBuffer,
-								outSchema, keyOffset);
+						oldValue = this.aggregationAttribute.eval(windowBuffer, outSchema, keyOffset);
 
-						if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
-								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN))
-							this.aggregationAttribute.writeByteResult(inBuffer,
-									inSchema, inWindowStartOffset,
-									windowBuffer, keyOffset + outSchema.getOffsetForAttribute(1));
+						if (this.aggregationType == AggregationType.SUM) {
+							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
+						}
+						else if (this.aggregationType == AggregationType.AVG) {
+							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
+							windowTupleCount.put(key, windowTupleCount.get(key) + 1);
+						}
+						else if (this.aggregationType == AggregationType.COUNT) {
+							windowBuffer.putInt(1);
+						}
+						else if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
+								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN)) {
+							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, newValue);
+						}
 					}
 
 					inWindowStartOffset += byteSizeOfInTuple;
@@ -400,24 +374,55 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				 */
 				if (this.havingSel == null) {
 					startPointers[currentWindow] = outBuffer.position();
-					for (Integer partitionOffset : keyOffsets.values())
+					for (Integer key : keyOffsets.keySet()) {
+						int partitionOffset = keyOffsets.get(key);
 						outBuffer.put(windowBuffer,
 								partitionOffset, this.byteSizeOfOutTuple);
+						
+						if (aggregationType == AggregationType.AVG) {
+							int countPositionInOutBuffer = outBuffer.position()
+									- this.aggregationAttributeByteLength;
+							float avg = outBuffer
+									.getFloat(countPositionInOutBuffer)
+									/ windowTupleCount.get(key);
+							outBuffer.putFloat(countPositionInOutBuffer, avg);
+						}
 
+						
+					}
 					endPointers[currentWindow] = outBuffer.position() - 1;
 				} else {
-					startPointers[currentWindow] = outBuffer.position();
-					for (Integer partitionOffset : keyOffsets.values())
-						if (this.havingSel.getPredicate().satisfied(
-								windowBuffer, outSchema, partitionOffset))
+					int tmpStart = outBuffer.position();
+					for (Integer key : keyOffsets.keySet()) {
+						int partitionOffset = keyOffsets.get(key);
+						float sum = -1;
+						if (aggregationType == AggregationType.AVG) {
+							sum= windowBuffer.getFloat(partitionOffset + offsetOutAggAttribute);
+							float avg = sum / windowTupleCount.get(key);
+							windowBuffer.putFloat(partitionOffset + offsetOutAggAttribute, avg);
+						}
+						if (this.havingSel.getPredicate().satisfied(windowBuffer,
+								outSchema, partitionOffset)) {
 							outBuffer.put(windowBuffer,
-									partitionOffset, this.byteSizeOfOutTuple);
-					endPointers[currentWindow] = outBuffer.position() - 1;
+									partitionOffset, byteSizeOfOutTuple);
+						}
+						if (aggregationType == AggregationType.AVG) {
+							// restore the sum in the window buffer
+							windowBuffer.putFloat(partitionOffset + offsetOutAggAttribute, sum);
+						}
+					}
+
+					// did we actually write something?
+					if (tmpStart == outBuffer.position()) {
+						startPointers[currentWindow] = -1;
+						endPointers[currentWindow] = -1;
+					} else {
+						startPointers[currentWindow] = tmpStart;
+						endPointers[currentWindow] = outBuffer.position() - 1;
+					}
 				}
 			}
 		}
-		
-		// System.out.println("[DBG] count " + count);
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
 		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
@@ -436,6 +441,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
 
+	
 	private void processDataPerWindowIncrementallyWithGroupBy(WindowBatch windowBatch,
 			IWindowAPI api) {
 
@@ -461,7 +467,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		Map<Integer, Integer> keyOffsets = new HashMap<>();
 		Map<Integer, Integer> windowTupleCount = null;
 
-		if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) 
+		if (this.aggregationType == AggregationType.AVG) 
 			windowTupleCount = new HashMap<>();
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
@@ -544,7 +550,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
-		IQueryBuffer windowBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		ITupleSchema inSchema = windowBatch.getSchema();
 		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
@@ -555,11 +560,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
 		
-		Map<Integer, Integer> windowTupleCount = null;
-
-		if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) 
-			windowTupleCount = new HashMap<>();
-
+		float windowValue = 0;
+		int   windowTupleCount = 0;
+		long  windowTimestamp;
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];
@@ -568,14 +572,22 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (inWindowStartOffset == -1) {
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
-						exitedWindow(inBuffer, inSchema, i, windowBuffer,
-								windowTupleCount);
+						windowTupleCount--;
+						if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG)
+							windowValue -= this.aggregationAttribute.eval(inBuffer, inSchema, i);
 					}
 				}
 				
-				evaluateWindow(api, windowBuffer, outBuffer,
-						startPointers, endPointers, currentWindow,
-						windowTupleCount);
+				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset - byteSizeOfInTuple);
+				
+				startPointers[currentWindow] = outBuffer.position();
+				outBuffer.putLong(windowTimestamp);
+				if (this.aggregationType == AggregationType.AVG)
+					windowValue = windowValue / windowTupleCount;
+				outBuffer.putFloat(windowValue);
+				outBuffer.put(outSchema.getDummyContent());
+				endPointers[currentWindow] = outBuffer.position() - 1;
+				
 			} else {
 				/*
 				 * Tuples in current window that have not been in the previous
@@ -583,13 +595,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				 */
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowEnd; i < inWindowEndOffset; i += byteSizeOfInTuple) {
-						enteredWindow(inBuffer, inSchema, i, windowBuffer,
-								windowTupleCount);
+						windowTupleCount++;
+						if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG)
+							windowValue += this.aggregationAttribute.eval(inBuffer, inSchema, i);
 					}
 				} else {
 					for (int i = inWindowStartOffset; i < inWindowEndOffset; i += byteSizeOfInTuple) {
-						enteredWindow(inBuffer, inSchema, i, windowBuffer,
-								windowTupleCount);
+						windowTupleCount++;
+						if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG)
+							windowValue += this.aggregationAttribute.eval(inBuffer, inSchema, i);
 					}
 				}
 
@@ -598,14 +612,22 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				 */
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
-						exitedWindow(inBuffer, inSchema, i, windowBuffer,
-								windowTupleCount);
+						windowTupleCount--;
+						windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, i);
+						if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG)
+							windowValue -= this.aggregationAttribute.eval(inBuffer,inSchema, i);
 					}
 				}
 
-				evaluateWindow(api, windowBuffer, outBuffer,
-						startPointers, endPointers, currentWindow,
-						windowTupleCount);
+				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset);
+
+				startPointers[currentWindow] = outBuffer.position();
+				outBuffer.putLong(windowTimestamp);
+				if (this.aggregationType == AggregationType.AVG)
+					windowValue = windowValue / windowTupleCount;
+				outBuffer.putFloat(windowValue);
+				outBuffer.put(outSchema.getDummyContent());
+				endPointers[currentWindow] = outBuffer.position() - 1;
 
 				prevWindowStart = inWindowStartOffset;
 				prevWindowEnd = inWindowEndOffset;
@@ -615,9 +637,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		/* Let's set the timestamp from the first tuple of the window batch */
 		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
-
-		// release window buffer (will return Unbounded Buffers to the pool)
-		windowBuffer.release();
 
 		// release old buffer (will return Unbounded Buffers to the pool)
 		inBuffer.release();
@@ -648,8 +667,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				currentValue += 1;
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-				currentValue += this.aggregationAttribute.eval(inBuffer,
-						inSchema, enterOffset);
+				currentValue += this.aggregationAttribute.eval(inBuffer, inSchema, enterOffset);
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 				windowTupleCount.put(key, windowTupleCount.get(key) + 1);
 			}
@@ -669,13 +687,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			// write value for aggregation attribute
 			if (this.aggregationType == AggregationType.COUNT) {
 				windowBuffer.putFloat(1f);
-			} else 
-			/* if (this.aggregationType == AggregationType.SUM) {
-				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
-						enterOffset, windowBuffer);
-			}
-			else */
-			if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
 						enterOffset, windowBuffer);
 				windowTupleCount.put(key, 1);
@@ -689,43 +701,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		}
 	}
 	
-	private void enteredWindow(IQueryBuffer inBuffer, ITupleSchema inSchema,
-			int enterOffset, IQueryBuffer windowBuffer,
-			Map<Integer, Integer> windowTupleCount) {
-
-		if (windowBuffer.position() != 0) {
-			int currentValuePositionInWindowBuffer = this.byteSizeOfOutTuple - this.aggregationAttributeByteLength;
-			float currentValue = windowBuffer
-					.getFloat(currentValuePositionInWindowBuffer);
-
-			if (this.aggregationType == AggregationType.COUNT) {
-				currentValue += 1;
-				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-				currentValue += this.aggregationAttribute.eval(inBuffer,
-						inSchema, enterOffset);
-				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-				windowTupleCount.put(0, windowTupleCount.get(0) + 1);
-			}
-		} else {
-
-			// copy timestamp
-			this.timestampReference.appendByteResult(inBuffer, inSchema,
-					enterOffset, windowBuffer);
-			
-			// write value for aggregation attribute
-			if (this.aggregationType == AggregationType.COUNT) {
-				windowBuffer.putFloat(1f);
-			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
-						enterOffset, windowBuffer);
-				windowTupleCount.put(0, 1);
-			}
-			// write dummy content if needed 
-			windowBuffer.put(outSchema.getDummyContent());
-		}
-	}
-
 	private void exitedWindow(IQueryBuffer inBuffer, ITupleSchema inSchema,
 			int removeOffset, IQueryBuffer windowBuffer,
 			Map<Integer, Integer> keyOffsets,
@@ -753,14 +728,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					// write new current value
 					windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 				}
-			} else
-			/* if (this.aggregationType == AggregationType.SUM) {
-				currentValue -= this.aggregationAttribute.eval(inBuffer,
-						inSchema, removeOffset);
-				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-			}
-			else */ 
-			if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
+			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				int tupleCount = windowTupleCount.get(key);
 				if (tupleCount > 1) {
 					currentValue -= this.aggregationAttribute.eval(inBuffer,
@@ -780,39 +748,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		} else {
 			throw new IllegalArgumentException(
 					"Cannot remove tuple from window since it is not part of the window");
-		}
-	}
-	
-	private void exitedWindow(IQueryBuffer inBuffer, ITupleSchema inSchema,
-			int removeOffset, IQueryBuffer windowBuffer,
-			Map<Integer, Integer> windowTupleCount) {
-
-		int currentValuePositionInWindowBuffer = this.byteSizeOfOutTuple - this.aggregationAttributeByteLength;
-		float currentValue = windowBuffer
-				.getFloat(currentValuePositionInWindowBuffer);
-
-		if (this.aggregationType == AggregationType.COUNT) {
-			currentValue -= 1;
-			if (currentValue < 0.0001) {
-				currentValue = 0;
-			}
-			// write new current value
-			windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-		} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-			int tupleCount = windowTupleCount.get(0);
-			if (tupleCount > 1) {
-				currentValue -= this.aggregationAttribute.eval(inBuffer,
-						inSchema, removeOffset);
-				// write new current value
-				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
-
-				windowTupleCount.put(0, tupleCount - 1);
-			}
-			else {
-				// simply remove the key, no need to remove the data from the
-				// window buffer
-				windowTupleCount.remove(0);
-			}
 		}
 	}
 	
@@ -901,38 +836,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					endPointers[currentWindow] = outBuffer.position() - 1;
 				}
 			}
-		}
-	}
-
-	private void evaluateWindow(IWindowAPI api, IQueryBuffer windowBuffer,
-			IQueryBuffer outBuffer,
-			int[] startPointers, int[] endPointers, int currentWindow,
-			Map<Integer, Integer> windowTupleCount) {
-
-		if (windowBuffer.position() == 0) {
-			startPointers[currentWindow] = -1;
-			endPointers[currentWindow] = -1;
-		} else {
-			startPointers[currentWindow] = outBuffer.position();
-			outBuffer.put(windowBuffer, 0, byteSizeOfOutTuple);
-
-			/*
-			 * The window buffer contains either the sum or count for
-			 * the aggregation attribute, depending on the aggregation
-			 * type (sum for SUM and AVG, count for COUNT). Thus, for
-			 * AVG, we still need to divide by the tuple count in order
-			 * to get the average
-			 */
-			if (aggregationType == AggregationType.AVG) {
-				int countPositionInOutBuffer = outBuffer.position()
-						- this.aggregationAttributeByteLength;
-				float avg = outBuffer
-						.getFloat(countPositionInOutBuffer)
-						/ windowTupleCount.get(0);
-				outBuffer.putFloat(countPositionInOutBuffer, avg);
-			}
-
-			endPointers[currentWindow] = outBuffer.position() - 1;
 		}
 	}
 
