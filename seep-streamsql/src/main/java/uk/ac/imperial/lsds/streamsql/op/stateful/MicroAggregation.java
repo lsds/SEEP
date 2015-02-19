@@ -245,7 +245,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
 		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
-		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
+		//System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
 		// release old buffer (will return Unbounded Buffers to the pool)
 		inBuffer.release();
@@ -277,9 +277,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		IntMap keyOffsets;
 		IntMap windowTupleCount = null;
 
-		if (this.aggregationType == AggregationType.AVG) 
-			windowTupleCount = IntMapFactory.newInstance();
-
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];
@@ -289,7 +286,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			 */
 			if (inWindowStartOffset != -1) {
 
-				keyOffsets = IntMapFactory.newInstance();
+				keyOffsets = new IntMap();
+				if (this.aggregationType == AggregationType.AVG) 
+					windowTupleCount = new IntMap();
+				
 				windowBuffer.position(0);
 
 				int keyOffset;
@@ -373,41 +373,55 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				if (this.havingSel == null) {
 					startPointers[currentWindow] = outBuffer.position();
 					
-					for (Integer key : keyOffsets.keySet()) {
-						int partitionOffset = keyOffsets.get(key);
-						outBuffer.put(windowBuffer,
-								partitionOffset, this.byteSizeOfOutTuple);
+//					for (Integer key : keyOffsets.keySet()) {
+//						int partitionOffset = keyOffsets.get(key);
+					
+					IntMapEntry[] entries = keyOffsets.getEntries();
+					for (int k = 0; k < entries.length; k++) {
+						IntMapEntry e = entries[k];
 						
-						if (aggregationType == AggregationType.AVG) {
-							int countPositionInOutBuffer = outBuffer.position()
-									- this.aggregationAttributeByteLength;
-							float avg = outBuffer
-									.getFloat(countPositionInOutBuffer)
-									/ windowTupleCount.get(key);
-							outBuffer.putFloat(countPositionInOutBuffer, avg);
+						while (e != null) {
+							int partitionOffset = e.value;
+						
+							outBuffer.put(windowBuffer,
+									partitionOffset, this.byteSizeOfOutTuple);
+							
+							if (aggregationType == AggregationType.AVG) {
+								int countPositionInOutBuffer = outBuffer.position()
+										- this.aggregationAttributeByteLength;
+								float avg = outBuffer
+										.getFloat(countPositionInOutBuffer)
+										/ windowTupleCount.get(e.key);
+								outBuffer.putFloat(countPositionInOutBuffer, avg);
+							}
+							e = e.next;
 						}
-
-						
 					}
 					endPointers[currentWindow] = outBuffer.position() - 1;
 				} else {
 					int tmpStart = outBuffer.position();
-					for (Integer key : keyOffsets.keySet()) {
-						int partitionOffset = keyOffsets.get(key);
-						float sum = -1;
-						if (aggregationType == AggregationType.AVG) {
-							sum= windowBuffer.getFloat(partitionOffset + offsetOutAggAttribute);
-							float avg = sum / windowTupleCount.get(key);
-							windowBuffer.putFloat(partitionOffset + offsetOutAggAttribute, avg);
-						}
-						if (this.havingSel.getPredicate().satisfied(windowBuffer,
-								outSchema, partitionOffset)) {
-							outBuffer.put(windowBuffer,
-									partitionOffset, byteSizeOfOutTuple);
-						}
-						if (aggregationType == AggregationType.AVG) {
-							// restore the sum in the window buffer
-							windowBuffer.putFloat(partitionOffset + offsetOutAggAttribute, sum);
+					IntMapEntry[] entries = keyOffsets.getEntries();
+					for (int k = 0; k < entries.length; k++) {
+						IntMapEntry e = entries[k];
+						
+						while (e != null) {
+							int partitionOffset = e.value;
+							float sum = -1;
+							if (aggregationType == AggregationType.AVG) {
+								sum= windowBuffer.getFloat(partitionOffset + offsetOutAggAttribute);
+								float avg = sum / windowTupleCount.get(e.key);
+								windowBuffer.putFloat(partitionOffset + offsetOutAggAttribute, avg);
+							}
+							if (this.havingSel.getPredicate().satisfied(windowBuffer,
+									outSchema, partitionOffset)) {
+								outBuffer.put(windowBuffer,
+										partitionOffset, byteSizeOfOutTuple);
+							}
+							if (aggregationType == AggregationType.AVG) {
+								// restore the sum in the window buffer
+								windowBuffer.putFloat(partitionOffset + offsetOutAggAttribute, sum);
+							}
+							e = e.next;
 						}
 					}
 
@@ -419,13 +433,18 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						startPointers[currentWindow] = tmpStart;
 						endPointers[currentWindow] = outBuffer.position() - 1;
 					}
+					
+					keyOffsets.release();
+					if (aggregationType == AggregationType.AVG) 
+						windowTupleCount.release();
+					
 				}
 			}
 		}
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
 		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
-		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
+		//System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
 		// release window buffer (will return Unbounded Buffers to the pool)
 		windowBuffer.release();
@@ -463,11 +482,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
 		
-		IntMap keyOffsets = IntMapFactory.newInstance();
+		IntMap keyOffsets = new IntMap();
 		IntMap windowTupleCount = null;
 
 		if (this.aggregationType == AggregationType.AVG) 
-			windowTupleCount = IntMapFactory.newInstance();
+			windowTupleCount = new IntMap();
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
@@ -521,6 +540,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			}
 		}
 		
+		keyOffsets.release();
+		if (aggregationType == AggregationType.AVG) 
+			windowTupleCount.release();
+
 		/* Let's set the timestamp from the first tuple of the window batch */
 		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
@@ -761,25 +784,33 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		} else {
 			if (this.havingSel == null) {
 				startPointers[currentWindow] = outBuffer.position();
-				for (Integer key : keyOffsets.keySet()) {
-					int partitionOffset = keyOffsets.get(key);
-					outBuffer.put(windowBuffer,
-							partitionOffset, byteSizeOfOutTuple);
-
-					/*
-					 * The window buffer contains either the sum or count for
-					 * the aggregation attribute, depending on the aggregation
-					 * type (sum for SUM and AVG, count for COUNT). Thus, for
-					 * AVG, we still need to divide by the tuple count in order
-					 * to get the average
-					 */
-					if (aggregationType == AggregationType.AVG) {
-						int countPositionInOutBuffer = outBuffer.position()
-								- this.aggregationAttributeByteLength;
-						float avg = outBuffer
-								.getFloat(countPositionInOutBuffer)
-								/ windowTupleCount.get(key);
-						outBuffer.putFloat(countPositionInOutBuffer, avg);
+//				for (Integer key : keyOffsets.keySet()) {
+//					int partitionOffset = keyOffsets.get(key);
+				IntMapEntry[] entries = keyOffsets.getEntries();
+				for (int k = 0; k < entries.length; k++) {
+					IntMapEntry e = entries[k];
+					
+					while (e != null) {
+						int partitionOffset = e.value;
+						outBuffer.put(windowBuffer,
+								partitionOffset, byteSizeOfOutTuple);
+	
+						/*
+						 * The window buffer contains either the sum or count for
+						 * the aggregation attribute, depending on the aggregation
+						 * type (sum for SUM and AVG, count for COUNT). Thus, for
+						 * AVG, we still need to divide by the tuple count in order
+						 * to get the average
+						 */
+						if (aggregationType == AggregationType.AVG) {
+							int countPositionInOutBuffer = outBuffer.position()
+									- this.aggregationAttributeByteLength;
+							float avg = outBuffer
+									.getFloat(countPositionInOutBuffer)
+									/ windowTupleCount.get(e.key);
+							outBuffer.putFloat(countPositionInOutBuffer, avg);
+						}
+						e = e.next;
 					}
 				}
 
@@ -787,42 +818,52 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 			} else {
 				int tmpStart = outBuffer.position();
-				for (Integer key : keyOffsets.keySet()) {
-					int partitionOffset = keyOffsets.get(key);
-					/*
-					 * The window buffer contains either the sum or count for
-					 * the aggregation attribute, depending on the aggregation
-					 * type (sum for SUM and AVG, count for COUNT). Thus, for
-					 * AVG, we still need to divide by the tuple count in order
-					 * to get the average
-					 * 
-					 * Since we also need to check a having clause, we derive
-					 * the actual avg in the window buffer, but restore the sum
-					 * after the check since it is needed for subsequent windows
-					 */
-					float count = -1;
-					if (aggregationType == AggregationType.AVG) {
-						int countPositionInWindowBuffer = partitionOffset
-								+ this.byteSizeOfOutTuple
-								- this.aggregationAttributeByteLength;
-						count = windowBuffer
-								.getFloat(countPositionInWindowBuffer);
-						float avg = count / windowTupleCount.get(key);
-						windowBuffer.putFloat(countPositionInWindowBuffer, avg);
+//				for (Integer key : keyOffsets.keySet()) {
+//					int partitionOffset = keyOffsets.get(key);
+				
+				IntMapEntry[] entries = keyOffsets.getEntries();
+				for (int k = 0; k < entries.length; k++) {
+					IntMapEntry e = entries[k];
+					
+					while (e != null) {
+						int partitionOffset = e.value;
 
-					}
-					if (this.havingSel.getPredicate().satisfied(windowBuffer,
-							outSchema, partitionOffset)) {
-						outBuffer.put(windowBuffer,
-								partitionOffset, byteSizeOfOutTuple);
-					}
-					if (aggregationType == AggregationType.AVG) {
-						// restore the count in the window buffer
-						int countPositionInWindowBuffer = partitionOffset
-								+ this.byteSizeOfOutTuple
-								- this.aggregationAttributeByteLength;
-						windowBuffer.putFloat(countPositionInWindowBuffer, count);
-
+						/*
+						 * The window buffer contains either the sum or count for
+						 * the aggregation attribute, depending on the aggregation
+						 * type (sum for SUM and AVG, count for COUNT). Thus, for
+						 * AVG, we still need to divide by the tuple count in order
+						 * to get the average
+						 * 
+						 * Since we also need to check a having clause, we derive
+						 * the actual avg in the window buffer, but restore the sum
+						 * after the check since it is needed for subsequent windows
+						 */
+						float count = -1;
+						if (aggregationType == AggregationType.AVG) {
+							int countPositionInWindowBuffer = partitionOffset
+									+ this.byteSizeOfOutTuple
+									- this.aggregationAttributeByteLength;
+							count = windowBuffer
+									.getFloat(countPositionInWindowBuffer);
+							float avg = count / windowTupleCount.get(e.key);
+							windowBuffer.putFloat(countPositionInWindowBuffer, avg);
+		
+						}
+						if (this.havingSel.getPredicate().satisfied(windowBuffer,
+								outSchema, partitionOffset)) {
+							outBuffer.put(windowBuffer,
+									partitionOffset, byteSizeOfOutTuple);
+						}
+						if (aggregationType == AggregationType.AVG) {
+							// restore the count in the window buffer
+							int countPositionInWindowBuffer = partitionOffset
+									+ this.byteSizeOfOutTuple
+									- this.aggregationAttributeByteLength;
+							windowBuffer.putFloat(countPositionInWindowBuffer, count);
+		
+						}
+						e = e.next;
 					}
 				}
 

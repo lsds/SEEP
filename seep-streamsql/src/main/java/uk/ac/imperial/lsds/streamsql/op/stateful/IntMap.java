@@ -21,8 +21,7 @@ public class IntMap {
 		IntMapEntry current = content[hash(key)];
 		
 		if (current == null) {
-			IntMapEntry e = IntMapEntryFactory.newInstance(key, value, null);
-			content[hash(key)] = e;
+			content[hash(key)] = IntMapEntryFactory.newInstance(key, value, null);
 			size++;
 		}
 		else {
@@ -33,8 +32,7 @@ public class IntMap {
 				current.value = value;
 			}
 			else {
-				IntMapEntry e = IntMapEntryFactory.newInstance(key, value, null);
-				current.next = e;
+				current.next = IntMapEntryFactory.newInstance(key, value, null);
 				size++;
 			}
 		}
@@ -86,11 +84,6 @@ public class IntMap {
 		}
 	}
 	
-	public void release() {
-		clear();
-		IntMapFactory.free(this);
-	}
-
 	public void remove(int key) {
 		IntMapEntry current = content[hash(key)];
 		
@@ -118,21 +111,29 @@ public class IntMap {
 		}
 	}
 
-	public int[] keySet() {
-		int[] result = new int[size];
-		
-		int k = 0;
-		for (int i = 0; i < INTMAP_CONTENT_SIZE; i++) {
-			if (content[i] != null) {
-				IntMapEntry e = content[i];
-				result[k++] = e.key;
-				while (e.next != null) {
-					e = e.next;
-					result[k++] = e.key;
-				}
-			}
-		}
+//	public int[] keySet() {
+//		int[] result = new int[size];
+//		
+//		int k = 0;
+//		for (int i = 0; i < INTMAP_CONTENT_SIZE; i++) {
+//			if (content[i] != null) {
+//				IntMapEntry e = content[i];
+//				result[k++] = e.key;
+//				while (e.next != null) {
+//					e = e.next;
+//					result[k++] = e.key;
+//				}
+//			}
+//		}
+//		return result;
+//	}
 
-		return result;
+	public IntMapEntry[] getEntries() {
+		return this.content;
 	}
+	
+	public void release() {
+		clear();
+	}
+
 }
