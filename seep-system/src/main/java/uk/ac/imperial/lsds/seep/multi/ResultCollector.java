@@ -14,11 +14,11 @@ public class ResultCollector {
 		if (taskid < 0) { /* Invalid task id */
 			return ;
 		}
-		int idx = taskid % handler.SLOTS;
+		int idx = (taskid % handler.SLOTS) * handler.pad;
 
 		try {
 			
-			while (! handler.slots.compareAndSet(idx, -1, 0)) {
+			while (! handler.slots[idx].compareAndSet(-1, 0)) {
 				
 				System.err.println(String.format("warning: result collector blocked at %s q %d t %4d", 
 				Thread.currentThread(), query.getId(), taskid));
@@ -29,14 +29,15 @@ public class ResultCollector {
 			}
 			
 //			if (query.getId() == 1)
-//				System.out.println(String.format("[DBG] %s get  slot qid %d idx %6d", 
-//				 Thread.currentThread(), query.getId(), idx)); 
 
-			handler.offsets[idx] = freeOffset;
+			handler.offsets[idx].value = freeOffset;
 			handler.results[idx] = buffer;
 			
 			/* No other thread can modify this slot. */
-			handler.slots.set(idx, 1);
+			handler.slots[idx].set(1);
+			
+//			System.out.println(String.format("[DBG] %s set  slot qid %d idx %6d next %d", 
+//					Thread.currentThread(), query.getId(), idx, handler.next)); 
 			
 			/* Forward and free */
 			
@@ -48,7 +49,7 @@ public class ResultCollector {
 			/* Is slot `index` occupied? 
 			 */
 			
-			if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
+			if (! handler.slots[handler.next.value].compareAndSet(1, 2)) {
 				handler.semaphore.release();
 				return ;
 			}
@@ -60,9 +61,9 @@ public class ResultCollector {
 			while (busy) {
 				
 //				System.out.println(String.format("[DBG] %s try  slot qid %d idx %6d", 
-//				Thread.currentThread(), query.getId(), nextone)); 
+//				Thread.currentThread(), query.getId(), handler.next)); 
 
-				IQueryBuffer buf = handler.results[handler.next];
+				IQueryBuffer buf = handler.results[handler.next.value];
 				byte [] arr = buf.array();
 
 				/*
@@ -72,7 +73,7 @@ public class ResultCollector {
 //					System.out.println(String.format("[DBG] %s free qid %d idx %6d", 
 //					Thread.currentThread(), query.getId(), handler.next));
 					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr)) {
-						handler.slots.set(handler.next, 1);
+						handler.slots[handler.next.value].set(1);
 						break;
 					}
 					// query.getDownstreamSubQuery().getTaskDispatcher().dispatch(arr);
@@ -92,7 +93,7 @@ public class ResultCollector {
 				buf.release();
 
 				/* Free input buffer */
-				int offset = handler.offsets[handler.next];
+				int offset = handler.offsets[handler.next.value].value;
 				if (offset != Integer.MIN_VALUE) {
 					
 					handler.freeBuffer.free (offset);
@@ -107,15 +108,16 @@ public class ResultCollector {
 //					Thread.currentThread(), query.getId(), handler.next));
 				
 				/* Release the current slot */
-				handler.slots.set(handler.next, -1);
+				handler.slots[handler.next.value].set(-1);
 				
 				/* Increment next */
-				handler.next = (handler.next + 1) % handler.SLOTS;
+				// handler.next = ((handler.next + 1) % handler.SLOTS);
+				handler.next.value = ((handler.next.value + 1) % handler.SLOTS);
 				
 				count ++;
 				
 				/* Check if next is ready to be pushed */
-				if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
+				if (! handler.slots[handler.next.value].compareAndSet(1, 2)) {
 					busy = false;
 				}
 			}

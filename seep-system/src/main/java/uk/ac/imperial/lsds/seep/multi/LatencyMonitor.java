@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.multi;
 
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LatencyMonitor {
@@ -77,12 +78,69 @@ public class LatencyMonitor {
 	}
 
 	public void stop() {
+		
 		active.set(false);
+		
 		System.out.println(String.format("[DBG] [LatencyMonitor] %10d measurements", measurements.size()));
-		for (Double d: measurements) {
-			System.out.println(String.format("%10.3f", d));
-			System.out.flush();
+		
+		int length = measurements.size();
+		double [] array = new double [length];
+		int i = 0;
+		for (Double d: measurements)
+			array[i++] = d.doubleValue();
+		Arrays.sort(array);
+		
+		System.out.println(String.format("[DBG] [LatencyMonitor] 5th %10.3f 25th %10.3f 50th %10.3f 75th %10.3f 95th %10.3f", 
+			evaluateSorted(array,  5D),
+			evaluateSorted(array, 25D),
+			evaluateSorted(array, 50D),
+			evaluateSorted(array, 75D),
+			evaluateSorted(array, 95D)
+			));
+	}
+	
+	public double evaluate (final double[] values, final int begin, final int length, final double p) {
+			
+		if ((p > 100) || (p <= 0)) {
+			throw new IllegalArgumentException("invalid quantile value: " + p);
 		}
-		System.out.println("Done.");
+		
+		if (length == 0) {
+			return Double.NaN;
+		}
+		
+		if (length == 1) {
+			return values[begin]; /* always return single value for n = 1 */
+		}
+		
+		/* Sort array */
+		double [] sorted = new double[length];
+		
+		System.arraycopy (values, begin, sorted, 0, length);
+		
+		Arrays.sort(sorted);
+		
+		return evaluateSorted (sorted, p);
+	}
+	
+	private double evaluateSorted(final double[] sorted, final double p) {
+		
+		double n = sorted.length;
+		double pos = p * (n + 1) / 100;
+		double fpos = Math.floor(pos);
+		int intPos = (int) fpos;
+		double dif = pos - fpos;
+		
+		if (pos < 1) {
+			return sorted[0];
+		}
+		
+		if (pos >= n) {
+			return sorted[sorted.length - 1];
+		}
+		
+		double lower = sorted[intPos - 1];
+		double upper = sorted[intPos];
+		return lower + dif * (upper - lower);
 	}
 }

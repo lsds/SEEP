@@ -45,7 +45,8 @@ __kernel void reduceKernel (
 	if (lid == 0) {
 		__global output_t *result =
 			(__global output_t *) &output[gid * sizeof(output_t)];
-		result->tuple.t = 0L;
+
+		result->tuple.t = 0; // p->tuple.t;
 		result->tuple._1 = scratch[lid];
 	}
 	return ;

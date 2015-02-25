@@ -5,7 +5,7 @@ public class Utils {
 	public static int BUNDLE = 1048576;
 	
 	// Default size of circular input buffers
-	public static int _CIRCULAR_BUFFER_ = 1024 * 1024 * 1024; // 1073741824;
+	public static int _CIRCULAR_BUFFER_ = 4 * 1024 * 1024; // * 1024 * 1024; // 1073741824;
 	
 	// Initial size of intermediate array buffers
 	public static int _UNBOUNDED_BUFFER_ = Integer.parseInt(Globals.valueFor("intermediate"));

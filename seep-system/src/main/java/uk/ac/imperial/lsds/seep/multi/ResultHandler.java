@@ -6,8 +6,10 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class ResultHandler {
+	
+	public int pad = 1;
 
-	public final int SLOTS = Utils.TASKS;
+	public final int SLOTS = 1024 * 1024;
 
 	public IQueryBuffer freeBuffer;
 	
@@ -18,29 +20,31 @@ public class ResultHandler {
 	 *   1 - slot is occupied, but "unlocked"
 	 *   2 - slot is occupied, but "locked" (somebody is working on it)
 	 */
-	public AtomicIntegerArray slots;
+	public PaddedAtomicInteger [] slots = new PaddedAtomicInteger [SLOTS];
 
 	/*
 	 * Structures to hold the actual data
 	 */
 	public IQueryBuffer [] results = new IQueryBuffer [SLOTS];
-	public int [] offsets = new int[SLOTS];
+	public PaddedInteger [] offsets = new PaddedInteger [SLOTS];
 	
 	Semaphore semaphore; /* Protects next */
-	int next;
+	PaddedInteger next;
+
 
 	public ResultHandler (IQueryBuffer freeBuffer) {
 		
 		this.freeBuffer = freeBuffer;
 		
-		slots = new AtomicIntegerArray(SLOTS);
+		// slots = new AtomicIntegerArray(SLOTS);
 		
 		for (int i = 0; i < SLOTS; i++) {
-			slots.set(i, -1);
-			offsets[i] = Integer.MIN_VALUE;
+			// slots.set(i, -1);
+			slots[i] = new PaddedAtomicInteger(-1);
+			offsets[i] = new PaddedInteger(Integer.MIN_VALUE);
 		}
 		
-		next = 0;
+		next = new PaddedInteger(0);
 		semaphore = new Semaphore(1, false);
 	}
 }
