@@ -25,7 +25,7 @@ public class Processor implements StatelessOperator{
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
 		DataTuple outputTuple = data.setValues(tupleId, value);
-		System.out.println("Operator "+api.getOperatorId()+ " processed "+data.toString()+"->"+outputTuple);
+		System.out.println("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -37,7 +37,7 @@ public class Processor implements StatelessOperator{
 			String value = data.getString("value") + "," + api.getOperatorId();
 			
 			DataTuple outputTuple = data.setValues(tupleId, value);
-			System.out.println("Operator "+api.getOperatorId()+ " processed "+data.toString()+"->"+outputTuple);
+			System.out.println("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 		}
 		throw new RuntimeException("TODO"); 
 	}

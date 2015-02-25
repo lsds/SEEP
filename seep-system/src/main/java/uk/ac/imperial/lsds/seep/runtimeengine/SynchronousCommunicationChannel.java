@@ -145,6 +145,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		output = null;
 		downstreamDataSocket = null;
 
+		int numReconnects = 0;
 		boolean success = false;
 		while(!success)
 		{
@@ -165,7 +166,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					try { tmpSocket.close(); } 
 					catch (IOException e1) {} 
 				}
-				e.printStackTrace();
+				if (numReconnects < 1)
+				{
+					e.printStackTrace();
+					numReconnects++;
+				}
 			}
 		}
 		return downstreamDataSocket;
@@ -198,7 +203,9 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			else
 			{
 				try { prevSocketToClose.close(); }
-				catch(IOException e) { e.printStackTrace(); /*Urgh*/ }
+				catch(IOException e) {
+					e.printStackTrace(); /*Urgh*/ 
+				}
 	
 				//Another caller is already reopening the socket.
 				return;

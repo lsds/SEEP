@@ -18,17 +18,16 @@ def main(exp_dir):
 
     # Get time src started sending
     with open(src_log, 'r') as src:
-        lines = src.readlines()
         # Get time src sent first message
-        t_src_begin = src_tx_begin(lines)
+        t_src_begin = src_tx_begin(src)
         if not t_src_begin: raise Exception("Could not find t_src_begin.")
 
     with open(sink_log, 'r') as sink:
-        lines = sink.readlines()
         # Get time sink received first message
-        t_sink_begin = sink_rx_begin(lines)
+        t_sink_begin = sink_rx_begin(sink)
         if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
-        (tuples, total_bytes, t_sink_end) = sink_rx_end(lines)
+    with open(sink_log, 'r') as sink:
+        (tuples, total_bytes, t_sink_end) = sink_rx_end(sink)
         if not t_sink_end: raise Exception("Could not find t_sink_end.")
         #rx_latencies = sink_rx_latencies(lines)
 
@@ -51,8 +50,7 @@ def get_logfile_type(exp_dir, fn):
     files = glob.glob("%s/*.log"%exp_dir)
     for filename in files:
         with open(filename, 'r') as f:
-            lines = f.readlines()
-            if fn(lines): return filename 
+            if fn(f): return filename 
     return None
 
 def mean_tput(t_start, t_end, bites):

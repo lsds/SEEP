@@ -107,6 +107,7 @@ public class ControlDispatcher {
 	public void sendUpstream(ControlTuple ct, int index, boolean block){
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
+		int numRetries = 0;
 		boolean success = false;
 		while(!success)
 		{
@@ -131,8 +132,11 @@ public class ControlDispatcher {
 				success = true;
 			}
 			catch(IOException | KryoException e){
-				LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
-				e.printStackTrace();
+				if (numRetries < 1)
+				{
+					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+					e.printStackTrace();
+				}
 				((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
 				if (!block) { break; }
 			}
@@ -252,6 +256,7 @@ public class ControlDispatcher {
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
 		if (obj instanceof SynchronousCommunicationChannel){
 			SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
+			int numRetries = 0;
 			boolean success = false;
 			while (!success)
 			{
@@ -274,8 +279,11 @@ public class ControlDispatcher {
 					success = true;
 				}
 				catch(IOException | KryoException e){
-					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
-					e.printStackTrace();
+					if (numRetries < 1)
+					{
+						LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+						e.printStackTrace();
+					}
 					((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
 					if (!block) { break; }
 				}

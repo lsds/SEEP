@@ -174,9 +174,9 @@ public class Dispatcher implements IRoutingObserver {
 				} catch (InterruptedException e) {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
-				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple);
+				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getLong("tupleId"));
 				outputQueue.sendToDownstream(nextTuple, dest);
-				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple);
+				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getLong("tupleId"));
 			}
 		}
 		
