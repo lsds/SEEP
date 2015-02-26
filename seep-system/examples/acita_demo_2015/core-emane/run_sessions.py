@@ -61,17 +61,21 @@ def run_sessions(time_str, k, mob, sessions):
 
 def run_session(time_str, k, mob, exp_session, model=None):
     try:
-        session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1'}, persistent=True)
+        session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1', 'controlnet': "172.16.0.0/24"}, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
+        write_replication_factor(k, session.sessiondir)
         """
         if not add_to_server(session): 
             print 'Could not add to server'
             return
         """
+        #session.cfg['controlnet'] = "172.16.0.0/24"
         if not model:
+            # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
+            # settings (2ray).
             session.master = True
             session.location.setrefgeo(47.57917,-122.13232,2.00000)
-            session.location.refscale = 150.0
+            session.location.refscale = 100.0
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass, AtdlOmni"
             session.emane.loadmodels()
 
@@ -134,10 +138,11 @@ def run_session(time_str, k, mob, exp_session, model=None):
             session.shutdown()
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=8):
-    n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i)
+    n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
     session.services.addservicestonode(n, "", services_str, verbose=False)
     n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
     n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
+    #n.cmd([SYSCTL_BIN, "net.ipv4.conf.forwarding.all=1"])
     n.setposition(x=pos[0], y=pos[1])
     return n
 
@@ -174,6 +179,9 @@ def watch_meander_services(sessiondir, node_names):
 
         time.sleep(0.5)
 
+def write_replication_factor(k, session_dir):
+    with open('%s/k.txt'%session_dir, 'w') as f:
+        f.write(str(k))
 
 #def exists_mobility_trace(time_str, session):
 #    return os.path.isfile(

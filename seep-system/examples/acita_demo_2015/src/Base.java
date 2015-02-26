@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
@@ -22,7 +23,7 @@ import uk.ac.imperial.lsds.seep.operator.Connectable;
 
 public class Base implements QueryComposer{
 	private final int CHAIN_LENGTH = 2;
-	private final int REPLICATION_FACTOR = 2;
+	private int REPLICATION_FACTOR;
 	private final boolean AUTO_SCALEOUT = true;
 	private final boolean CONNECT_TO_ALL_DOWNSTREAMS = false;	//Deprecated.
 
@@ -30,6 +31,8 @@ public class Base implements QueryComposer{
 		/** Declare operators **/
 		//TODO: Operator ids
 		//TODO: Stream ids
+		
+		REPLICATION_FACTOR = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 		
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();

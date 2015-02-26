@@ -57,6 +57,8 @@ class MeanderWorker(CoreService):
             cfg += "mkdir %s\n"%log_dir
             cfg += "pwd\n"
             cfg += "ls\n"
+            cfg += "'echo parent directory:'\n"
+            cfg += "ls ..\n"
             cfg += "cp %s/core-emane/vldb/config/run-worker.py .\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/net-rates.sh .\n"%(seep_example_dir)
             cfg += "cp %s/lib/%s %s\n"%(seep_example_dir, seep_jar, lib_dir)
@@ -64,6 +66,7 @@ class MeanderWorker(CoreService):
             cfg += 'echo "cating /etc/hosts"\n'
             cfg += 'cat /etc/hosts\n'
             cfg += "ip route > rt.log\n"
+            cfg += "ifconfig > if.log\n"
             cfg += "./net-rates.sh\n"
             cfg += "./run-worker.py\n"
             cfg += "touch worker.shutdown\n"

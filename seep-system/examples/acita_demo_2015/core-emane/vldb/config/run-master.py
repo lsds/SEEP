@@ -66,7 +66,7 @@ def run_query(master):
 
 def start_master(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
+        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
                 '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
@@ -80,15 +80,23 @@ def stop_master(p):
 def mlog(k, time_str):
     return 'master-k%d-%s.log'%(k,time_str)
 
+def read_k():
+    with open('../k.txt', 'rb') as f:
+        for line in f:
+            return int(line.strip())
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
 
-    parser.add_argument('--workers', dest='w', default='6', help='Total number of workers to start (3)')
-    parser.add_argument('-k', dest='k', default='2', help='Number of replicas for each intermediate operator')
+    parser.add_argument('-k', dest='k', help='Number of replicas for each intermediate operator')
+    parser.add_argument('--workers', dest='w', help='Total number of workers to start')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nomaster', dest='no_master', default=False, help='Disable master (False)')
     
     args=parser.parse_args()
+
+    k = int(args.k) if args.k else read_k()
+    w = int(args.w) if args.w else 2 + (k*2)
     
-    main(int(args.w), int(args.k), args.plot_time_str, not bool(args.no_master))
+    main(w, k, args.plot_time_str, not bool(args.no_master))
 

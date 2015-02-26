@@ -34,7 +34,7 @@ def main(w, k, hostname):
 
 def start_worker(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Worker']
+        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Worker']
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -48,14 +48,22 @@ def stop_worker(worker):
 def wlog(w, k, hostname, time_str):
     return 'worker-w%d-k%d-%s-%s.log'%(w,k,hostname,time_str)
 
+def read_k():
+    with open('../k.txt', 'rb') as f:
+        for line in f:
+            return int(line.strip())
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
 
-    parser.add_argument('--workers', dest='w', default='6', help='Total number of workers to start (3)')
-    parser.add_argument('-k', dest='k', default='2', help='Number of replicas for each intermediate operator')
+    parser.add_argument('-k', dest='k', help='Number of replicas for each intermediate operator')
+    parser.add_argument('--workers', dest='w', help='Total number of workers to start')
     
     args=parser.parse_args()
+
+    k = int(args.k) if args.k else read_k()
+    w = int(args.w) if args.w else 2 + (k*2)
     wname = socket.gethostname()
     
-    main(int(args.w), int(args.k), wname)
+    main(w, k, wname)
 

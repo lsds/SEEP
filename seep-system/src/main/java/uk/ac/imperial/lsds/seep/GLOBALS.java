@@ -48,6 +48,7 @@ public class GLOBALS {
 			InputStream fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
 			globals.load(fis);
 			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
+			globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
 		}
 		catch (FileNotFoundException e1) {
 			System.out.println("Properties file not found "+e1.getMessage());

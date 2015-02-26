@@ -252,7 +252,12 @@ System.out.println("broadcast state and runtime init");
 	public void run(){
 		try {
 		//TODO change this
-		managerS = new ServerSocket(port);
+		if( "true".equals(GLOBALS.valueFor("useCoreAddr")))
+		{
+			managerS = new ServerSocket(port, 50, InetAddress.getByName(GLOBALS.valueFor("coreMainAddr")));
+		}
+		else { managerS = new ServerSocket(port); }
+		
 		LOG.info(" Listening on {}:{}", InetAddress.getLocalHost(), port);
 		BufferedReader bis = null;
 		goOn = true;
