@@ -189,9 +189,9 @@ System.out.println("broadcast state and runtime init");
 		inf.getEiu().scaleOutOperator(opId, 555, newNodeSO);
 	}
 		
-	private void bootstrapCommand(String ip, int port) throws UnknownHostException{
+	private void bootstrapCommand(String ip, InetAddress masterWorkerCommsIp, int port) throws UnknownHostException{
 		InetAddress bootIp = InetAddress.getByName(ip);
-		Node n = new Node(bootIp, port);
+		Node n = new Node(bootIp, masterWorkerCommsIp, port);
 		//add node to the stack
 		inf.addNode(n);
 		if(inf.isSystemRunning()){
@@ -264,6 +264,7 @@ System.out.println("broadcast state and runtime init");
 		while(goOn){
 			try {
 				clientSocket = managerS.accept();
+				InetAddress masterWorkerCommsIp = clientSocket.getInetAddress(); 
 				bis = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 				String com = "";
 				while( (com = bis.readLine()) != null) {
@@ -280,7 +281,7 @@ System.out.println("broadcast state and runtime init");
 						}
 					}
 					else if(token[0].equals("bootstrap")){
-						bootstrapCommand(token[1], Integer.parseInt(token[2]));
+						bootstrapCommand(token[1], masterWorkerCommsIp, Integer.parseInt(token[2]));
 					}
 					else if(token[0].equals("systemStable")){
 						Infrastructure.msh.setSystemStableTime(System.currentTimeMillis());

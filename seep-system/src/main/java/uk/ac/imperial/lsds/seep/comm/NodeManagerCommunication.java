@@ -45,6 +45,7 @@ public class NodeManagerCommunication {
 	public boolean sendObject(Node n, int operatorId, Object o){
 		//Get destiny address, port is preconfigured to 3500 for deployer tasks
 		InetAddress ip = n.getIp();
+		InetAddress masterWorkerCommsIp = n.getMasterWorkerCommsIp();
 		int port = n.getPort();
 /// \bug {creating socket again and again.}
 		Socket connection = null;
@@ -53,7 +54,7 @@ public class NodeManagerCommunication {
 		boolean success = false;
 		try{
 			if(connection == null){
-				connection = new Socket(ip, port);
+				connection = new Socket(masterWorkerCommsIp == null? ip : masterWorkerCommsIp, port);
 				LOG.debug("-> BCU. New socket created, IP: "+ip.toString()+" Port: "+port);
 			}
 			oos = new ExtendedObjectOutputStream(connection.getOutputStream());
@@ -111,10 +112,11 @@ public class NodeManagerCommunication {
 	public void sendFile(Node n, byte[] data){
 		sendObject(n, "CODE");
 		InetAddress ip = n.getIp();
+		InetAddress masterWorkerCommsIp = n.getMasterWorkerCommsIp();
 		int port = n.getPort();
 		Socket connection = null;
 		try{
-			connection = new Socket(ip, port);
+			connection = new Socket(masterWorkerCommsIp == null ? ip : masterWorkerCommsIp, port);
 			DataOutputStream dos = new DataOutputStream(connection.getOutputStream());
 			dos.writeInt(data.length);
 			dos.write(data);

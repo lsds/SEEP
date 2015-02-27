@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-import sys,os,time,re,argparse
+import sys,os,time,re,argparse,math
 from core import pycore
 from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
+from gen_mobility_trace import gen_trace
 
 
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
@@ -64,6 +65,12 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
         session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1', 'controlnet': "172.16.0.0/24"}, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
         write_replication_factor(k, session.sessiondir)
+        trace_file = None
+        if mob > 0.0:
+            trace_params = dict(params)
+            trace_params['h'] = mob + 1.0
+            trace_params['l'] = mob - 1.0
+            trace_file = gen_trace(session.sessiondir, exp_session, trace_params)
         """
         if not add_to_server(session): 
             print 'Could not add to server'
@@ -93,7 +100,7 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
             print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
             # TODO: change any of the EMANE 802.11 parameter values here
-            #values[ names.index('pathlossmode') ] = 'pathloss'
+            values[ names.index('pathlossmode') ] = 'freespace'
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
 
         else:
@@ -103,27 +110,29 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
         services_str = "OLSR|IPForward"
 
         workers = []
-        num_workers = 6
+        num_workers = 2 + (k * 2)
 
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
-                gen_linear_position(2))
+                gen_grid_position(2+params['nodes'], params['nodes'] - 1))
 
         for i in range(3,3+num_workers):
-            pos = gen_linear_position(i)
+            pos = gen_grid_position(i, params['nodes']-1)
             workers.append(create_node(i, session, "%s|MeanderWorker"%services_str, wlan1, pos)) 
        
 
-        # Create auxiliary 'forwarder' nodes if any left
+        routers = []
+        # Create auxiliary 'router' nodes if any left
         for i in range(3+num_workers, 2+params['nodes']):
-            pos = gen_linear_position(i)
-            create_node(i, session, "%s"%services_str, wlan1, pos)
+            pos = gen_grid_position(i, params['nodes']-1)
+            routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
 
-        """
-        node_map = create_node_map(range(0,6), workers)
-        print 'Node map=%s'%node_map
-        mobility_params[4] = ('map', node_map)
-        session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
-        """
+        if trace_file:
+            #node_map = create_node_map(range(0,6), workers)
+            node_map = create_node_map(range(0,params['nodes']-1), workers+routers)
+            print 'Node map=%s'%node_map
+            mobility_params[4] = ('map', node_map)
+            mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
+            session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
@@ -162,6 +171,13 @@ def create_node_map(ns_nums, nodes):
 
 def gen_linear_position(i):
     return (50 * i, 100)
+
+def gen_grid_position(i, nodes, offset=3, spacing=700):
+    if i < offset: raise Exception("Invalid offset for %d: %d"%(i,offset))
+    dim = math.ceil(math.sqrt(nodes))
+    num_x = (i-offset) % dim 
+    num_y = math.floor((i-offset) / dim)
+    return (spacing * num_x, spacing * num_y) 
 
 def add_to_server(session):
     global server

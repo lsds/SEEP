@@ -24,6 +24,7 @@ public class Node implements Serializable{
 	private int nodeId = 0;
 	
 	private InetAddress ip;
+	private InetAddress masterCommsIp;
 	private int port;
 	
 	public int getNodeId(){
@@ -34,13 +35,22 @@ public class Node implements Serializable{
 		return ip;
 	}	
 
+	public InetAddress getMasterWorkerCommsIp(){
+		return masterCommsIp;
+	}
+
 	public int getPort() {
 		return port;
 	}
 
 	public Node setIp(InetAddress newIp){
-		return new Node(newIp, port);
+		return new Node(newIp, masterCommsIp, port);
 	}
+
+	public Node setMasterWorkerCommsIp(InetAddress newMasterCommsIp){
+		return new Node(ip, newMasterCommsIp, port);
+	}
+
 
 	public Node(int nodeId){
 		this.nodeId = nodeId;
@@ -49,6 +59,14 @@ public class Node implements Serializable{
 	public Node(InetAddress ip, int port) {
 		super();
 		this.ip = ip;
+		this.masterCommsIp = null;
+		this.port = port;
+		throw new RuntimeException("TODO: Get rid of this.");
+	}
+	public Node(InetAddress ip, InetAddress masterCommsIp, int port) {
+		super();
+		this.ip = ip;
+		this.masterCommsIp = masterCommsIp;
 		this.port = port;
 	}
 	
@@ -82,7 +100,7 @@ public class Node implements Serializable{
 
 	@Override 
 	public String toString() {
-		return "Node [ip=" + ip + ", port=" + port + "]";
+		return "Node [ip=" + ip + ", masterCommsIp=" + masterCommsIp + ", port=" + port + "]";
 	}
 
 }

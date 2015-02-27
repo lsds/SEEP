@@ -67,8 +67,10 @@ class MeanderWorker(CoreService):
             cfg += 'cat /etc/hosts\n'
             cfg += "ip route > rt.log\n"
             cfg += "ifconfig > if.log\n"
+            cfg += "/sbin/route > rts.log\n"
             cfg += "./net-rates.sh\n"
             cfg += "./run-worker.py\n"
+            cfg += "/sbin/route > rts-end.log\n"
             cfg += "touch worker.shutdown\n"
             #cfg += "java -jar %s/%s Worker\n"%(lib_dir, seep_jar)
 
