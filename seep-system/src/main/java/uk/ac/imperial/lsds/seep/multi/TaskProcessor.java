@@ -38,14 +38,17 @@ public class TaskProcessor implements Runnable {
 					Thread.yield();
 				}
 				task.setGPU(GPU);
-				// System.out.println(String.format("[DBG] p %d (%s) runs task %d", pid, GPU, ((Task) task).taskid));
+				// System.out.println(String.format("[DBG] p %2d (%5s) runs task %6d from query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
 				task.run();
 
 			} catch (Exception e) {
 				e.printStackTrace();
+				System.exit(1);
 			} finally {
-				if (task != null)
+				if (task != null) {
+					// System.out.println(String.format("[DBG] p %d (%s) frees task %6d query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
 					task.free();
+				}
 			}
 		}
 	}

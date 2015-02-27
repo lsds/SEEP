@@ -42,7 +42,7 @@ public class Task implements ITask {
 		this.handler = handler;
 		this.taskid = taskid;
 		this.freeUpTo = freeUpTo;
-		this.queryid = queryid;
+		this.queryid = query.getId();
 		this.next.set(null, false);
 	}
 

@@ -174,6 +174,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		byte [] inputArray = windowBatch.getBuffer().array();
 		int start = windowBatch.getBatchStartPointer();
 		int end   = windowBatch.getBatchEndPointer();
+		System.out.println("[DBG] start " + start + " end " + end);
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
 		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
@@ -198,7 +199,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		TheGPU.getInstance().execute(qid, threads, THREADS_PER_GROUP);
 		
-		outputBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		// outputBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		
 		windowBatch.setBuffer(outputBuffer);
 		

@@ -173,13 +173,13 @@ int main (int argc, char* argv[]) {
 		signal (SIGHUP,  SIG_IGN);
 	printf ("Running...\n");
 	int runs = 0;
-	while (! must_exit && runs++ < 3) {
+	while (! must_exit && runs++ < 100) {
 	 	gpu_exec (qid, threads, threadsPerGroup, operator, NULL, NULL);
 	}
 
-	for (i = 0; i < tuples; i++) {
+	/* for (i = 0; i < tuples; i++) {
 		printf("%6d: flag %3d offset %6d\n", i, flags[i], offsets[i]);
-	}
+	} */
 
 	if (memcmp(input, output, _input_size) != 0) {
 		fprintf(stderr, "Error\n");

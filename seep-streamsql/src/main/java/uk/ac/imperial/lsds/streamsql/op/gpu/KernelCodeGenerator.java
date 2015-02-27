@@ -98,15 +98,19 @@ public class KernelCodeGenerator {
 	public static String getSelectionFunctor (IPredicate predicate) {
 		StringBuilder b = new StringBuilder ();
 		int n = predicate.getNumPredicates();
+		System.out.println("[DBG] #predicates = " + n);
 		b.append("inline int selectf (__global input_t *p) {\n");
-		b.append("\tint value = 0;");
-		b.append("\treturn value & ");
-		for (int i = 0; i < n; i++) {
-			if (i == n - 1)
-				b.append("(p->tuple._1 != 0); \n");
-			else
-				b.append(String.format("(p->tuple._1 != %d) & ", i - 100));
-		}
+		b.append("\tint value = 0;\n");
+		b.append("\treturn 1;\n");
+		
+//		b.append("\treturn value & ");
+//		for (int i = 0; i < n; i++) {
+//			if (i == n - 1)
+//				b.append("(p->tuple._1 != 0); \n");
+//			else
+//				b.append(String.format("(p->tuple._1 != %d) & ", i - 100));
+//		}
+		
 		// b.append("\nint val = ((p->tuple._1 << 8) & 0xFF00FF00) | ((p->tuple._1 >> 8) & 0xFF00FF );\n"); 
 		// b.append("return ((val << 16) | ((val >> 16) & 0xFFFF)) > 0;\n");
 		// b.append("\treturn ((p->tuple._1 << 8) | ((p->tuple._1 >> 8) & 0xFF)) == 1;");

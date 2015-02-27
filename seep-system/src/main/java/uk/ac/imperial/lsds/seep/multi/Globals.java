@@ -33,7 +33,7 @@ public class Globals {
 		try 
 		{
 			InputStream input;
-			String filename = "/mnt/data/cccad3/akolious/SEEP/seep-system/src/main/resources/multioperator.properties";
+			String filename = "/home/akolious/seep/seep-system/src/main/resources/multioperator.properties";
 			if (new File(filename).isFile()) 
 			{
 				System.out.println(filename);

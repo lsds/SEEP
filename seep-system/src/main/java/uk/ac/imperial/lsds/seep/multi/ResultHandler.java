@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class ResultHandler {
 
-	public final int SLOTS = Utils.TASKS;
+	public final int SLOTS = Utils.TASKS; // + 1;
 
 	public IQueryBuffer freeBuffer;
 	
@@ -28,6 +28,8 @@ public class ResultHandler {
 	
 	Semaphore semaphore; /* Protects next */
 	int next;
+
+	public int wraps = 0;
 
 	public ResultHandler (IQueryBuffer freeBuffer) {
 		

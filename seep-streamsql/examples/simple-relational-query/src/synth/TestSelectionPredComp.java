@@ -104,6 +104,8 @@ public class TestSelectionPredComp {
 		 */
 		// MicroOperator uoperator = new MicroOperator (selectionCode, gpuSelectionCode, 1);
 		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
 			uoperator = new MicroOperator (gpuSelectionCode, selectionCode, 1);

@@ -87,7 +87,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		args[3] = _local_output_size;
 		
 		String source = KernelCodeGenerator.getProjection(inputSchema, outputSchema, filename);
-		System.out.println(source);
+		// System.out.println(source);
 		
 		// TheGPU.getInstance().init(1);
 		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);

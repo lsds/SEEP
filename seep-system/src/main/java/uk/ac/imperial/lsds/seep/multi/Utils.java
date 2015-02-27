@@ -2,17 +2,19 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class Utils {
 	
+	public static int BATCH = 8192;
+
 	public static int BUNDLE = 1048576;
 	
 	// Default size of circular input buffers
-	public static int _CIRCULAR_BUFFER_ = 4 * 1024 * 1024; // * 1024 * 1024; // 1073741824;
+	public static int _CIRCULAR_BUFFER_ = 1024 * 1024 * 1024; // * 1024 * 1024; // 1073741824;
 	
 	// Initial size of intermediate array buffers
-	public static int _UNBOUNDED_BUFFER_ = Integer.parseInt(Globals.valueFor("intermediate"));
+	public static int _UNBOUNDED_BUFFER_ = 2 * 1024 * 1024; // 32 * 1024; // 1048576; // Integer.parseInt(Globals.valueFor("intermediate"));
 	
 	// Number of CPU threads
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
-	public static int TASKS = 100000;
+	public static int TASKS = 2048;
 	
 	/* GPU-specific constants */
 	

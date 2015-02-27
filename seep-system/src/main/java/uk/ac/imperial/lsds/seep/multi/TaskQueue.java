@@ -45,14 +45,31 @@ public class TaskQueue {
 //	}
 //	
 //	/* Lock-free */ /* Insert sorted */
+////	public boolean add (Task task) {
+////		// System.out.println("[DBG] add " + task.queryid + ":" + task.taskid);
+////		int taskid = task.taskid;
+////		while (true) {
+////			TaskWindow window = TaskWindow.find(head, taskid);
+////			Task pred = window.pred;
+////			Task curr = window.curr;
+////			if (curr.taskid == taskid) {
+////				return false;
+////			} else {
+////				task.next.set(curr, false);
+////				if (pred.next.compareAndSet(curr, task, false, false)) {
+////					return true; 
+////				}
+////			}
+////		}
+////	}
+//	
+//	/* Lock-free */ /* Insert at the end of the queue */
 //	public boolean add (Task task) {
-//		System.out.println("[DBG] add " + task.queryid + ":" + task.taskid);
-//		int taskid = task.taskid;
 //		while (true) {
-//			TaskWindow window = TaskWindow.find(head, taskid);
+//			TaskWindow window = TaskWindow.findTail(head);
 //			Task pred = window.pred;
 //			Task curr = window.curr;
-//			if (curr.taskid == taskid) {
+//			if (curr.taskid != Integer.MAX_VALUE) {
 //				return false;
 //			} else {
 //				task.next.set(curr, false);
@@ -156,11 +173,16 @@ public class TaskQueue {
 //		while (true) {
 //			/* Estimate task id */
 //			int offset;
-//			int taskid;
+//			int taskid1 = 1, taskid2 = 1;
+//			if (p != 0) {
+//				// taskid1 = offsets[0][0].get() + 10;
+//				// taskid2 = offsets[0][1].get() + 10;
+//				return null;
+//			}
 //			//if (p == 1)
 //			//	taskid = policy[p][q] + offsets[_p][q].get();
 //			//else
-//				taskid = 1;
+//			//	taskid = 1;
 //			// int skip = policy[p][q]; /* 1 if p the fastest processor for q */
 //			// if (skip > 1 && policy.length > 1) {
 //				// offset = Math.min(offsets[_p][q].get(), offsets[p][q].get());
@@ -181,29 +203,72 @@ public class TaskQueue {
 //			 * 
 //			 * Returns pred and curr.
 //			 */
-//			TaskWindow window = TaskWindow.find(head, taskid);
+//			TaskWindow window;
+//			if (p == 0)
+//				window = TaskWindow.findHead(head);
+//			else {
+//				// System.out.println(String.format("[DBG] p %d findNext (%d, %d)", p, taskid1, taskid2));
+//				window = TaskWindow.findNext(head, taskid1, taskid2);
+//			}
 //			Task pred = window.pred;
 //			Task curr = window.curr;
+//			// System.out.println(String.format("[DBG] p %2d pred %3d curr %3d", p, pred.taskid, curr.taskid));
 //			/* Check if curr is not the tail of the queue */
 //			if (curr.taskid == Integer.MAX_VALUE) {
 //				return null;
 //			} else {
 //				/* Mark curr as logically removed */
 //				Task succ = curr.next.getReference();
-//				snip = curr.next.attemptMark(succ, true); 
+//				// snip = curr.next.attemptMark(succ, true);
+//				snip = curr.next.compareAndSet(succ, succ, false, true);
 //				if (!snip)
 //					continue;
 //				pred.next.compareAndSet(curr, succ, false, false); 
 //				/* Nodes are rewired */
 //				offsets[p][q].lazySet(curr.taskid);
-//				// System.out.println(String.format("[DBG] p %d runs task %d", p, curr.taskid));
+//				// System.out.println(String.format("[DBG] p %2d runs task %3d from query %d", p, curr.taskid, curr.queryid));
+//				return curr;
+//			}
+//		}
+//	}
+//	
+//	public Task getFirstTask (int [][] policy, int p, int q) {
+//		boolean snip;
+//		while (true) {
+//			/* The find() method takes a head node and a `taskid`, 
+//			 * and traverses the list, seeking to set pred to the 
+//			 * task with the largest id less than `taskid`, and curr 
+//			 * to the task with the least id greater than or equal to 
+//			 * `taskid`.
+//			 * 
+//			 * Returns pred and curr.
+//			 */
+//			TaskWindow window = TaskWindow.findHead(head);
+//			Task pred = window.pred;
+//			Task curr = window.curr;
+//			// System.out.println(String.format("[DBG] p %2d pred %3d curr %3d", p, pred.taskid, curr.taskid));
+//			/* Check if curr is not the tail of the queue */
+//			if (curr.taskid == Integer.MAX_VALUE) {
+//				return null;
+//			} else {
+//				/* Mark curr as logically removed */
+//				Task succ = curr.next.getReference();
+//				// snip = curr.next.attemptMark(succ, true);
+//				snip = curr.next.compareAndSet(succ, succ, false, true);
+//				if (!snip)
+//					continue;
+//				pred.next.compareAndSet(curr, succ, false, false); 
+//				/* Nodes are rewired */
+//				// offsets[p][q].lazySet(curr.taskid);
+//				// System.out.println(String.format("[DBG] p %2d runs task %3d from query %d", p, curr.taskid, curr.queryid));
 //				return curr;
 //			}
 //		}
 //	}
 //	
 //	public Task poll (int [][] policy, int p, int q) {
-//		return getNextTask(policy, p, q);
+//		// return getNextTask(policy, p, q);
+//		return getFirstTask(policy, p, q);
 //	}
 //	
 //	public int size () {

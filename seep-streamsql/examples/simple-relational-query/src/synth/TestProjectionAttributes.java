@@ -99,6 +99,8 @@ public class TestProjectionAttributes {
 		 * Build and set up the query
 		 */
 		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
 			uoperator = new MicroOperator (gpuProjectionCode, projectionCode, 1);
@@ -116,6 +118,7 @@ public class TestProjectionAttributes {
 		/*
 		 * Set up the stream
 		 */
+		
 		// yields 1MB for byteSize = 32 
 		int actualByteSize = schema.getByteSizeOfTuple();
 		int bufferBundle = actualByteSize * 32768;

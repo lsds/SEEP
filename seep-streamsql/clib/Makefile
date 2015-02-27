@@ -8,9 +8,11 @@ CFL_BASE = -W -Wall -DWARNING -fpic
 CFL_COMMON = $(CFL_BASE) -g
 
 CFLAGS = $(CFL_COMMON)
-CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.55.x86_64/include
-CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.55.x86_64/include/linux
+CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-amd64/include
+CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-amd64/include/linux
 CFLAGS += -I/usr/include
+# OpenCL
+CFLAGS += -I/usr/local/cuda-6.5/include
 
 LIBS = -lOpenCL
 
@@ -28,19 +30,19 @@ uk_ac_imperial_lsds_streamsql_op_gpu_TheGPU.h:
 	javah -classpath $(CLASS_PATH) uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU
 	
 test: test.c libGPU.so
-	$(CC) $(CFLAGS) test.c -o test $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
+	$(CC) $(CFLAGS) test.c -o test $(LIBS) -L/home/akolious/seep/seep-streamsql/clib -lGPU
 
 test_project: test_project.c libGPU.so
-	$(CC) $(CFLAGS) test_project.c -o test_project $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
+	$(CC) $(CFLAGS) test_project.c -o test_project $(LIBS) -L/home/akolious/seep/seep-streamsql/clib -lGPU
 
 test_select: test_select.c libGPU.so
-	$(CC) $(CFLAGS) test_select.c -o test_select $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
+	$(CC) $(CFLAGS) test_select.c -o test_select $(LIBS) -L/home/akolious/seep/seep-streamsql/clib -lGPU
 	
 test_reduce: test_reduce.c libGPU.so
-	$(CC) $(CFLAGS) test_reduce.c -o test_reduce $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU
+	$(CC) $(CFLAGS) test_reduce.c -o test_reduce $(LIBS) -L/home/akolious/seep/seep-streamsql/clib -lGPU
 
 test_aggregate: test_aggregate.c libGPU.so
-	$(CC) $(CFLAGS) test_aggregate.c -o test_aggregate $(LIBS) -L/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib -lGPU -lm
+	$(CC) $(CFLAGS) test_aggregate.c -o test_aggregate $(LIBS) -L/home/akolious/seep/seep-streamsql/clib -lGPU -lm
 
 timer.o: timer.c timer.h
 

@@ -16,7 +16,7 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 	int error = 0;
 	char msg [4096]; /* Compiler message */
 	size_t length;
-	const char *flags = "-cl-fast-relaxed-math -cl-nv-verbose";
+	const char *flags = "-cl-fast-relaxed-math -cl-nv-verbose -cl-nv-arch sm_30";
 	gpuQueryP p = (gpuQueryP) malloc (sizeof(gpu_query_t));
 	if (! p) {
 		fprintf(stderr, "fatal error: out of memory\n");

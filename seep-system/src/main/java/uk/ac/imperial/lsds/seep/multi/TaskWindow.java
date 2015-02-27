@@ -27,7 +27,84 @@ class TaskWindow {
 					curr = pred.next.getReference();
 					succ = curr.next.get(marked);
 				}
-				if (curr.taskid >= taskid)
+				if ((curr.taskid >= taskid))
+					return new TaskWindow (pred, curr);
+				pred = curr;
+				curr = succ;
+			}
+		}
+	}
+
+	public static TaskWindow findTail (Task head) {
+		Task pred = null;
+		Task curr = null;
+		Task succ = null;
+		boolean [] marked = { false };
+		boolean snip;
+		retry: while (true) {
+			pred = head;
+			curr = pred.next.getReference();
+			while (true) {
+				succ = curr.next.get(marked);
+				while (marked[0]) {
+					snip = pred.next.compareAndSet(curr, succ, false, false);
+					if (! snip)
+						continue retry;
+					curr = pred.next.getReference();
+					succ = curr.next.get(marked);
+				}
+				if ((curr.taskid >= Integer.MAX_VALUE))
+					return new TaskWindow (pred, curr);
+				pred = curr;
+				curr = succ;
+			}
+		}
+	}
+
+	public static TaskWindow findHead(Task head) {
+		Task pred = null;
+		Task curr = null;
+		Task succ = null;
+		boolean [] marked = { false };
+		boolean snip;
+		retry: while (true) {
+			pred = head;
+			curr = pred.next.getReference();
+			while (true) {
+				succ = curr.next.get(marked);
+				while (marked[0]) {
+					snip = pred.next.compareAndSet(curr, succ, false, false);
+					if (! snip)
+						continue retry;
+					curr = pred.next.getReference();
+					succ = curr.next.get(marked);
+				}
+				return new TaskWindow (pred, curr);
+			}
+		}
+	}
+
+	public static TaskWindow findNext(Task head, int taskid1, int taskid2) {
+		Task pred = null;
+		Task curr = null;
+		Task succ = null;
+		boolean [] marked = { false };
+		boolean snip;
+		retry: while (true) {
+			pred = head;
+			curr = pred.next.getReference();
+			if (curr.taskid == Integer.MAX_VALUE)
+				return new TaskWindow (pred, curr);
+			while (true) {
+				succ = curr.next.get(marked);
+				while (marked[0]) {
+					snip = pred.next.compareAndSet(curr, succ, false, false);
+					if (! snip)
+						continue retry;
+					curr = pred.next.getReference();
+					succ = curr.next.get(marked);
+				}
+				if ((curr.queryid == 0 && curr.taskid >= taskid1) || (curr.queryid == 1 && curr.taskid >= taskid2) || curr.taskid == Integer.MAX_VALUE)
 					return new TaskWindow (pred, curr);
 				pred = curr;
 				curr = succ;

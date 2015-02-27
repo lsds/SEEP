@@ -81,9 +81,13 @@ public class LatencyMonitor {
 		
 		active.set(false);
 		
-		System.out.println(String.format("[DBG] [LatencyMonitor] %10d measurements", measurements.size()));
-		
 		int length = measurements.size();
+		
+		System.out.println(String.format("[DBG] [LatencyMonitor] %10d measurements", length));
+		
+		if (length < 1)
+			return;
+		
 		double [] array = new double [length];
 		int i = 0;
 		for (Double d: measurements)

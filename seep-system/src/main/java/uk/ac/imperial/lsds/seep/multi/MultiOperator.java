@@ -57,13 +57,13 @@ public class MultiOperator {
 //			threads--;
 //		}
 		
-		this.policy = new int [threads][1];
+		this.policy = new int [threads][2];
 		for (int i = 0; i < threads; i++) {
 			policy [i][0] = 1;
 		}
 		// policy[1][0] = 8;
 
-		this.queue = new TaskQueue(threads, 1); // new ConcurrentLinkedQueue<ITask>();
+		this.queue = new TaskQueue(threads, 2); // new ConcurrentLinkedQueue<ITask>();
 		this.workerPool = new TaskProcessorPool(threads, queue, policy, Utils.HYBRID);
 		this.executor = Executors.newCachedThreadPool();
 		this.queue = workerPool.start(executor);

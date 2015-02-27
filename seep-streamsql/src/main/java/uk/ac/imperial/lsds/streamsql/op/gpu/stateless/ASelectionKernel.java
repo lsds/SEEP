@@ -165,8 +165,8 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		windowBatch.setBuffer(outputBuffer);
 		
-		windowBatch.setTaskId     (taskIdx[0]);
-		windowBatch.setFreeOffset (freeIdx[0]);
+//		windowBatch.setTaskId     (taskIdx[0]);
+//		windowBatch.setFreeOffset (freeIdx[0]);
 		
 		for (int i = 0; i < taskIdx.length - 1; i++) {
 			taskIdx[i] = taskIdx [i + 1];

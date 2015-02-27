@@ -14,23 +14,27 @@ public class ResultCollector {
 		if (taskid < 0) { /* Invalid task id */
 			return ;
 		}
-		int idx = taskid % handler.SLOTS;
-
+		int idx = ((taskid - 1) % handler.SLOTS); // + 1;
+//		if (taskid >= handler.SLOTS)
+//			idx += 1;
+		
 		try {
 			
 			while (! handler.slots.compareAndSet(idx, -1, 0)) {
 				
-				System.err.println(String.format("warning: result collector blocked at %s q %d t %4d", 
-				Thread.currentThread(), query.getId(), taskid));
-				System.err.flush();
-			 	Thread.sleep(1000L);
+				 System.err.println(String.format("warning: result collector blocked at %s q %d t %4d idx %4d", 
+				 Thread.currentThread(), query.getId(), taskid, idx));
+//				 System.err.flush();
+				// Thread.sleep(1000L);
+				 
+				 // System.exit(1);
 				
 				Thread.yield();
 			}
 			
 //			if (query.getId() == 1)
-//				System.out.println(String.format("[DBG] %s get  slot qid %d idx %6d", 
-//				 Thread.currentThread(), query.getId(), idx)); 
+//				System.out.println(String.format("[DBG] %s get  slot qid %d idx %6d (next %6d)", 
+//				 Thread.currentThread(), query.getId(), idx, handler.next)); 
 
 			handler.offsets[idx] = freeOffset;
 			handler.results[idx] = buffer;
@@ -69,9 +73,11 @@ public class ResultCollector {
 				 * Do the actual result forwarding
 				 */
 				if (query.getDownstreamSubQuery() != null) {
-//					System.out.println(String.format("[DBG] %s free qid %d idx %6d", 
+//					System.out.println(String.format("[DBG] %s try free qid %d idx %6d", 
 //					Thread.currentThread(), query.getId(), handler.next));
 					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr)) {
+//						System.err.println(String.format("[DBG] %s failed to free qid %d idx %6d", 
+//						Thread.currentThread(), query.getId(), handler.next));
 						handler.slots.set(handler.next, 1);
 						break;
 					}
@@ -87,7 +93,7 @@ public class ResultCollector {
 //					System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
 //					Thread.currentThread(), query.getId(), handler.next));
 				
-				query.getLatencyMonitor().monitor(buf);
+				// query.getLatencyMonitor().monitor(buf);
 				
 				buf.release();
 
@@ -110,7 +116,21 @@ public class ResultCollector {
 				handler.slots.set(handler.next, -1);
 				
 				/* Increment next */
-				handler.next = (handler.next + 1) % handler.SLOTS;
+				// handler.next = (handler.next + 1) % handler.SLOTS;
+				handler.next = handler.next + 1;
+				handler.next = handler.next % handler.SLOTS;
+				// if (handler.wraps > 0)
+				//	handler.next += 1;
+				//
+				//if (handler.next == 0) {
+				//	handler.wraps ++;
+				//	handler.next += 1; /* We avoid zero */
+				//}
+				
+				// if (taskid >= handler.SLOTS)
+				//	handler.next += 1;
+				// if (handler.next == 0)
+				//	handler.next ++;
 				
 				count ++;
 				
@@ -120,8 +140,8 @@ public class ResultCollector {
 				}
 			}
 			/* Thread exit critical section */
-			// System.out.println(String.format("[DBG] %s released %3d q%d buffers", 
-			//  Thread.currentThread(), count, query.getId()));
+//			if (count > 2) 
+//				System.out.println(String.format("[DBG] %60s released %3d q%d buffers", Thread.currentThread(), count, query.getId()));
 			handler.semaphore.release();
 			
 		} catch (Exception e) {

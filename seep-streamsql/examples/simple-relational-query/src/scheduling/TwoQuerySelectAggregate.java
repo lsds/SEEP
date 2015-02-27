@@ -15,12 +15,15 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
+import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
@@ -73,7 +76,7 @@ public class TwoQuerySelectAggregate {
 		WindowType windowType1 = WindowType.ROW_BASED;
 		long windowRange1      = 1024;
 		long windowSlide1      = 1024;
-		AggregationType aggregationType = AggregationType.SUM;
+		AggregationType aggregationType = AggregationType.MIN;
 		
 		WindowDefinition window1 = 
 			new WindowDefinition (windowType1, windowRange1, windowSlide1);
@@ -91,10 +94,23 @@ public class TwoQuerySelectAggregate {
 		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize1);
 		
 		float selectivity = 100;
-		IPredicate predicate =  new FloatComparisonPredicate(
-				IntComparisonPredicate.LESS_OP, 
-				new FloatColumnReference(1),
-				new FloatConstant(selectivity));
+//		IPredicate predicate =  new FloatComparisonPredicate(
+//				IntComparisonPredicate.LESS_OP, 
+//				new FloatColumnReference(1),
+//				new FloatConstant(selectivity));
+		
+		int numComparisons = 32;
+		
+		IPredicate [] predicates = new IPredicate[numComparisons];
+		
+		for (int i = 0; i < numComparisons; i++) {
+			predicates[i] = new FloatComparisonPredicate(
+					FloatComparisonPredicate.NONLESS_OP, 
+					new FloatColumnReference(1),
+					new FloatConstant(0));
+		}
+		
+		IPredicate predicate =  new ANDPredicate(predicates);
 		
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
@@ -108,7 +124,7 @@ public class TwoQuerySelectAggregate {
 		
 		Set<MicroOperator> operators1 = new HashSet<MicroOperator>();
 		operators1.add(operator1);
-		SubQuery query1 = new SubQuery (1, operators1, schema1, window1, queryConf1);
+		SubQuery query1 = new SubQuery (0, operators1, schema1, window1, queryConf1);
 
 
 		/*
@@ -124,27 +140,51 @@ public class TwoQuerySelectAggregate {
 		int [] offsets2 = offsets1;
 		ITupleSchema schema2 = new TupleSchema (offsets2, schema1.getByteSizeOfTuple());
 		
-		IMicroOperatorCode aggCode = new MicroAggregation(
-				window1,
-				aggregationType,
-				new FloatColumnReference(1)
-				);
+		IMicroOperatorCode aggCode = new Selection(predicate);
+		IMicroOperatorCode gpuAggCode = new ASelectionKernel(predicate, schema1, filename1);
 		
-		System.out.println(String.format("[DBG] %s", aggCode));
-		ReductionKernel gpuAggCode = new ReductionKernel (
-				aggregationType,
-				new FloatColumnReference(1),
-				schema2
-				);
-		gpuAggCode.setSource (filename2);
-		gpuAggCode.setBatchSize(queryConf2.BATCH);
+//		long ppb = window2.panesPerSlide() * (queryConf2.BATCH - 1) + window2.numberOfPanes();
+//		long tpb = ppb * window2.getPaneSize();
+//		int inputSize = (int) tpb * schema2.getByteSizeOfTuple();
+//		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		
+//		IMicroOperatorCode aggCode = new MicroAggregation(
+//				window1,
+//				aggregationType,
+//				new FloatColumnReference(1)
+//				);
+//		
+//		System.out.println(String.format("[DBG] %s", aggCode));
+//		ReductionKernel gpuAggCode = new ReductionKernel (
+//				aggregationType,
+//				new FloatColumnReference(1),
+//				schema2
+//				);
+//		gpuAggCode.setSource (filename2);
+//		gpuAggCode.setBatchSize(queryConf2.BATCH);
 		/* More... */
-		long ppb = window2.panesPerSlide() * (queryConf2.BATCH - 1) + window2.numberOfPanes();
-		long tpb = ppb * window2.getPaneSize();
-		int inputSize = (int) tpb * schema2.getByteSizeOfTuple();
-		System.out.println(String.format("[DBG] %d bytes", inputSize));
-		gpuAggCode.setInputSize (inputSize);
-		gpuAggCode.setup();
+//		long ppb = window2.panesPerSlide() * (queryConf2.BATCH - 1) + window2.numberOfPanes();
+//		long tpb = ppb * window2.getPaneSize();
+//		int inputSize = (int) tpb * schema2.getByteSizeOfTuple();
+//		System.out.println(String.format("[DBG] %d bytes", inputSize));
+//		gpuAggCode.setInputSize (inputSize);
+//		gpuAggCode.setup();
+		
+//		ReductionKernel gpuAggCode = new ReductionKernel (
+//				aggregationType,
+//				new FloatColumnReference(1),
+//				schema2
+//				);
+		
+		/// TheGPU.getInstance().init(1);
+		
+//		gpuAggCode.setSource (filename2);
+//		gpuAggCode.setBatchSize(queryConf2.BATCH);
+//		/* Configure... */
+//		gpuAggCode.setInputSize (inputSize);
+//		gpuAggCode.setup();
 
 		MicroOperator operator2;
 		if (Utils.GPU && ! Utils.HYBRID)
@@ -154,7 +194,7 @@ public class TwoQuerySelectAggregate {
 		
 		Set<MicroOperator> operators2 = new HashSet<MicroOperator>();
 		operators2.add(operator2);
-		SubQuery query2 = new SubQuery (2, operators2, schema2, window2, queryConf2);
+		SubQuery query2 = new SubQuery (1, operators2, schema2, window2, queryConf2);
 
 		query1.connectTo(10000, query2);
 		
@@ -163,7 +203,6 @@ public class TwoQuerySelectAggregate {
 		queries.add(query2);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
-
 
 		/*
 		 * Set up the stream

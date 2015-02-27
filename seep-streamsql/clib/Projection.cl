@@ -1,3 +1,4 @@
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
 
 #define  INPUT_VECTOR_SIZE 2
@@ -58,8 +59,8 @@ __kernel void projectKernel (
 		e);
 	/* wait_group_events (1, &e); */
 
-	__local  input_t* p = (__local  input_t*) &_input [lid * sizeof( input_t)];
-	__local output_t* q = (__local output_t*) &_output[lid * sizeof(output_t)];
+	 __local  input_t* p = (__local  input_t*) &_input [lid * sizeof( input_t)];
+	 __local output_t* q = (__local output_t*) &_output[lid * sizeof(output_t)];
 
 	// q->tuple.t = 0;
 

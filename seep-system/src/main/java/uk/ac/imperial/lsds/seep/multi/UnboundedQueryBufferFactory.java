@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class UnboundedQueryBufferFactory {
 	
-	private static final int _pool_size = 200; /* Initial pool size */
+	private static final int _pool_size = 2048; /* Initial pool size */
 	private static final int _buffer_size = Utils._UNBOUNDED_BUFFER_;
 	
 	private static ConcurrentLinkedQueue<UnboundedQueryBuffer> pool = 
@@ -18,11 +18,11 @@ public class UnboundedQueryBufferFactory {
 	
 	public static UnboundedQueryBuffer newInstance () {
 		UnboundedQueryBuffer buffer;
-		// while ((buffer = pool.poll()) == null)
-		//	;
-		buffer = pool.poll();
-		if (buffer == null) 
-			return new UnboundedQueryBuffer(_buffer_size);
+		while ((buffer = pool.poll()) == null)
+		 	;
+//		buffer = pool.poll();
+//		if (buffer == null) 
+//			return new UnboundedQueryBuffer(_buffer_size);
 		
 		return buffer;
 	}

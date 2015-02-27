@@ -15,9 +15,14 @@ public class WindowBatchFactory {
 	}
 	
 	public static WindowBatch newInstance (int size, int task, int freeOffset, IQueryBuffer buffer, WindowDefinition window, ITupleSchema schema) {
-		WindowBatch batch = pool.poll();
-		if (batch == null)
-			return new WindowBatch(size, task, freeOffset, buffer, window, schema);
+		WindowBatch batch;
+		
+		while ((batch = pool.poll()) == null)
+		 	;
+		
+//		batch = pool.poll();
+//		if (batch == null)
+//			return new WindowBatch(size, task, freeOffset, buffer, window, schema);
 		batch.set(size, task, freeOffset, buffer, window, schema);
 		return batch;
 	}

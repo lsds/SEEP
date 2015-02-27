@@ -30,10 +30,6 @@ public class CopyOfResultHandler {
 	
 	Semaphore semaphore; /* Protects next */
 	int next;
-//	int p1_1 = 0, p2_1 = 0, p3_1 = 0, p4_1 = 0, p5_1 = 0, p6_1 = 0, p7_1 = 0, p8_1 = 0, p9_1 = 0, p10_1 = 0, 
-//	 		p11_1 = 0, p12_1 = 0, p13_1 = 0, p14_1 = 0, p15_1 = 0; 
-//	int p1_2 = 0, p2_2 = 0, p3_2 = 0, p4_2 = 0, p5_2 = 0, p6_2 = 0, p7_2 = 0, p8_2 = 0, p9_2 = 0, p10_2 = 0, 
-//	 		p11_2 = 0, p12_2 = 0, p13_2 = 0, p14_2 = 0, p15_2 = 0; 
 
 	public CopyOfResultHandler (IQueryBuffer freeBuffer) {
 		

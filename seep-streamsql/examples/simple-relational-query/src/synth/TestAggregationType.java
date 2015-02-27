@@ -15,6 +15,8 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 
@@ -85,7 +87,7 @@ public class TestAggregationType {
 		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
 		System.out.println(String.format("[DBG] %d bytes input", inputSize));
 		
-		Utils._CIRCULAR_BUFFER_ = 16 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
 				
 		IMicroOperatorCode aggCode = new MicroAggregation(
 				window,
@@ -94,28 +96,28 @@ public class TestAggregationType {
 				);
 		
 		System.out.println(String.format("[DBG] %s", aggCode));
-//		ReductionKernel gpuAggCode = new ReductionKernel (
-//				aggregationType,
-//				new FloatColumnReference(1),
-//				schema
-//				);
-//		
-//		TheGPU.getInstance().init(1);
-//		
-//		gpuAggCode.setSource (filename);
-//		gpuAggCode.setBatchSize(queryConf.BATCH);
-//		/* Configure... */
-//		gpuAggCode.setInputSize (inputSize);
-//		gpuAggCode.setup();
+		ReductionKernel gpuAggCode = new ReductionKernel (
+				aggregationType,
+				new FloatColumnReference(1),
+				schema
+				);
+		
+		TheGPU.getInstance().init(1);
+		
+		gpuAggCode.setSource (filename);
+		gpuAggCode.setBatchSize(queryConf.BATCH);
+		/* Configure... */
+		gpuAggCode.setInputSize (inputSize);
+		gpuAggCode.setup();
 		
 		/*
 		 * Build and set up the query
 		 */
 		MicroOperator uoperator;
 		if (Utils.GPU)
-			uoperator = new MicroOperator (aggCode, aggCode, 1);
+			uoperator = new MicroOperator (gpuAggCode, aggCode, 1);
 		else
-			uoperator = new MicroOperator (aggCode, 1);
+			uoperator = new MicroOperator (aggCode, gpuAggCode, 1);
 		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);

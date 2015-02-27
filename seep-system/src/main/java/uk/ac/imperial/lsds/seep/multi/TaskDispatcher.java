@@ -18,7 +18,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	private int batch;
 	private int batchRecords;
 	
-	private int nextTask = 0;
+	private int nextTask = 1;
 	
 	/* Some constants for calculating window batches */
 	
@@ -355,7 +355,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	private int getTaskNumber () {
 		int id = nextTask ++;
 		if (nextTask == Integer.MAX_VALUE)
-			nextTask = 0;
+			nextTask = 1;
 		return id;
 	}
 	

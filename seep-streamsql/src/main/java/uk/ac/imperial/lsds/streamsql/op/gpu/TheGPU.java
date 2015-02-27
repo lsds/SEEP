@@ -8,9 +8,9 @@ import sun.misc.Unsafe;
 public class TheGPU {
 	
 	private static final int MAX_QUERIES = 2;
-	private static final int MAX_BUFFERS = 20;
+	private static final int MAX_BUFFERS = 30;
 	
-	private static final String library = "/mnt/data/cccad3/akolious/SEEP/seep-streamsql/clib/libGPU.so";
+	private static final String library = "/home/akolious/seep/seep-streamsql/clib/libGPU.so";
 	
 	private static final TheGPU instance = new TheGPU ();
 	
