@@ -8,7 +8,7 @@ from run_sessions import run_sessions
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
 
-def main(ks,mobilities,sessions,plot_time_str=None):
+def main(ks,mobilities,sessions,params,plot_time_str=None):
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     data_dir = '%s/log'%script_dir
@@ -19,7 +19,7 @@ def main(ks,mobilities,sessions,plot_time_str=None):
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
         # create exp dirs.
         #create_exp_dirs(ks, mobilities, sessions, time_str, data_dir)
-        run_experiment(ks, mobilities, sessions, time_str, data_dir )
+        run_experiment(ks, mobilities, sessions, params, time_str, data_dir )
 
     record_statistics(ks, mobilities, sessions, time_str, data_dir)
 
@@ -40,11 +40,11 @@ def create_exp_dirs(ks, mobilities, sessions, time_str, data_dir):
             for session in range(0, sessions):
                 os.mkdir('%s/%ds'%(mob_dir, session))
 
-def run_experiment(ks, mobilities, sessions, time_str, data_dir):
+def run_experiment(ks, mobilities, sessions, params, time_str, data_dir):
     #TODO: Not using data dir here!
     for k in ks:
         for mob in mobilities:
-            run_sessions(time_str, k,mob,sessions)
+            run_sessions(time_str, k,mob,sessions, params)
                     
 def record_statistics(ks, mobilities, sessions, time_str, data_dir):
     vals = {}
@@ -141,6 +141,7 @@ if __name__ == "__main__":
     #parser.add_argument('--mobility', dest='mobility', default='static', help='mobility model: static,waypoint')
     #parser.add_argument('--query', dest='query_type', default='linear', help='query type: linear,join,mixed,parallel')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
+    parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
 
@@ -148,7 +149,8 @@ if __name__ == "__main__":
     pts=map(lambda x: float(x), args.pts.split(','))
     #mobs=map(lambda x: float(x), [] if args.mobility in 'static' else args.ds.split(','))
     sessions=int(args.sessions)
+    params = {'nodes':int(args.nodes)}
    # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
 
-    main(ks,pts,sessions,plot_time_str=args.plot_time_str)
+    main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

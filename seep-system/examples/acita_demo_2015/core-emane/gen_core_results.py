@@ -41,16 +41,16 @@ def main(exp_dir):
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
 
 def get_src_logfile(exp_dir):
-    return get_logfile_type(exp_dir, is_src_log)
+    return get_logfile(exp_dir, is_src_log)
 
 def get_sink_logfile(exp_dir):
-    return get_logfile_type(exp_dir, is_sink_log)
+    return get_logfile(exp_dir, is_sink_log)
 
-def get_logfile_type(exp_dir, fn):
-    files = glob.glob("%s/*.log"%exp_dir)
+def get_logfile(exp_dir, type_fn):
+    files = glob.glob("%s/*worker*.log"%exp_dir)
     for filename in files:
         with open(filename, 'r') as f:
-            if fn(f): return filename 
+            if type_fn(f): return filename 
     return None
 
 def mean_tput(t_start, t_end, bites):

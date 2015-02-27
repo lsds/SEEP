@@ -54,12 +54,12 @@ cd $scriptDir
 ./gen_core_results.py --expDir $resultsDir
 cd $expDir
 '''
-def run_sessions(time_str, k, mob, sessions):
+def run_sessions(time_str, k, mob, sessions, params):
     for session in range(0, sessions):
         print '*** Running session %d ***'%session
-        run_session(time_str, k, mob, session)
+        run_session(time_str, k, mob, session, params)
 
-def run_session(time_str, k, mob, exp_session, model=None):
+def run_session(time_str, k, mob, exp_session, params, model=None):
     try:
         session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1', 'controlnet': "172.16.0.0/24"}, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
@@ -103,13 +103,20 @@ def run_session(time_str, k, mob, exp_session, model=None):
         services_str = "OLSR|IPForward"
 
         workers = []
-        for i in range(2,8):
+        num_workers = 6
+
+        master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
+                gen_linear_position(2))
+
+        for i in range(3,3+num_workers):
             pos = gen_linear_position(i)
             workers.append(create_node(i, session, "%s|MeanderWorker"%services_str, wlan1, pos)) 
-        
-        master = create_node(8, session, "%s|MeanderMaster"%services_str, wlan1,
-                gen_linear_position(8))
+       
 
+        # Create auxiliary 'forwarder' nodes if any left
+        for i in range(3+num_workers, 2+params['nodes']):
+            pos = gen_linear_position(i)
+            create_node(i, session, "%s"%services_str, wlan1, pos)
 
         """
         node_map = create_node_map(range(0,6), workers)
@@ -120,12 +127,12 @@ def run_session(time_str, k, mob, exp_session, model=None):
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
-        session.node_count=1+1+6
+        session.node_count=1+params['nodes']
         print 'Instantiating session.'
         session.instantiate()
 
         print 'Waiting for a meander worker/master to terminate'
-        watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n, range(2,9)))
+        watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n, range(2,3 + num_workers)))
         #time.sleep(30)
         print 'Collecting data'
         session.datacollect()
@@ -186,13 +193,19 @@ def write_replication_factor(k, session_dir):
 #def exists_mobility_trace(time_str, session):
 #    return os.path.isfile(
 
+def regen_sessions(time_str):
+    raise Exception("TODO")
+
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
+    parser.add_argument('--nodes', dest='nodes', default='7', help = 'Number of core nodes (7)')
     args=parser.parse_args()
+    params = {'nodes':int(args.nodes)}
     if args.plot_time_str:
         time_str = args.plot_time_str
+        regen_sessions(time_str)
     else:
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
-    run_sessions(time_str, 2, 0.00, int(args.sessions))
+        run_sessions(time_str, 2, 0.00, int(args.sessions),params)
