@@ -164,4 +164,12 @@ public class MultiOperator implements OperatorCode, ComposedOperator, Communicat
 		// TODO Auto-generated method stub
 		
 	}
+	
+	@Override
+	public void ack(DataTuple dt) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	
 }

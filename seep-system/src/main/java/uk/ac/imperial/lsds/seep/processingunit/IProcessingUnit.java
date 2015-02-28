@@ -121,4 +121,6 @@ public interface IProcessingUnit {
 
 	public void sendDataDispatched(DataTuple dt, ArrayList<Integer> targets);
 
+	public void ack(DataTuple dt);
+
 }

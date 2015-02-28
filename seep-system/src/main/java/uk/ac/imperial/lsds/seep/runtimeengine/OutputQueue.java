@@ -100,7 +100,11 @@ public class OutputQueue {
 			}
 			if(!stop.get()){
 				TuplePayload tp = tuple.getPayload();
-				tp.timestamp = System.currentTimeMillis(); // assign local ack
+				final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
+				if (!allowOutOfOrderTuples)
+				{
+					tp.timestamp = System.currentTimeMillis(); // assign local ack
+				}
 				channelRecord.addDataToBatch(tp);
 				long currentTime = System.currentTimeMillis();
 				if(channelRecord.getChannelBatchSize() <= 0){

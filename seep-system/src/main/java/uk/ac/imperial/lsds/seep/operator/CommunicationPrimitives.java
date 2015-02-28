@@ -28,4 +28,5 @@ public interface CommunicationPrimitives {
         public void send_to_OpId(DataTuple dt, int opId);
         public void send_to_OpIds(DataTuple[] dt, int[] opId);
         public void send_toIndices(DataTuple[] dts, int[] indices);
+		public void ack(DataTuple dt);
 }

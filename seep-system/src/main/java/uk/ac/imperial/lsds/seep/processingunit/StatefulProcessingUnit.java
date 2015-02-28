@@ -965,5 +965,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 		throw new RuntimeException("TODO");
 		
 	}
+	@Override
+	public void ack(DataTuple dt) { throw new RuntimeException("TMP"); }
 
 }

@@ -132,6 +132,12 @@ public class SubOperator implements SubOperatorAPI, CommunicationPrimitives, Cal
         public void send_all_threadPool(DataTuple dt){
                 
         }
+        
+    	@Override
+    	public void ack(DataTuple dt) {
+    		// TODO Auto-generated method stub
+    		
+    	}
 	
 	/** Implementation of SubOperatorAPI **/
 	

@@ -123,7 +123,6 @@ public class Dispatcher implements IRoutingObserver {
 			else if(dest instanceof SynchronousCommunicationChannel){
 				workers.get(target).send(dt);
 				//outputQueues.get(target).sendToDownstream(dt, dest);
-	
 			}
 			// LOCAL
 			else if(dest instanceof Operator){
@@ -133,6 +132,16 @@ public class Dispatcher implements IRoutingObserver {
 		}
 	}
 	
+	public void ack(DataTuple dt)
+	{
+		
+		long ts = dt.getPayload().timestamp;
+		synchronized(lock)
+		{
+			nodeFctrl.ack(ts);
+		}
+		
+	}
 	public FailureCtrl handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 	{
 		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);
@@ -174,9 +183,9 @@ public class Dispatcher implements IRoutingObserver {
 				} catch (InterruptedException e) {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
-				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getLong("tupleId"));
+				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 				outputQueue.sendToDownstream(nextTuple, dest);
-				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getLong("tupleId"));
+				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 			}
 		}
 		

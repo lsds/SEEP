@@ -104,4 +104,10 @@ public class LocalApi implements API, CommunicationPrimitives, Serializable{
 			throw new UnsupportedOperationException("TODO");
 		}
         
+		@Override
+		public synchronized void ack(DataTuple dt)
+		{
+			throw new UnsupportedOperationException("TODO");
+		}
+        
 }

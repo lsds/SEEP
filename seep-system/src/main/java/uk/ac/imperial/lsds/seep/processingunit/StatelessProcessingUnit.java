@@ -536,5 +536,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			dispatcher.setOutputQueues(outputQueues); 
 		}
 	}
+	
+	@Override
+	public void ack(DataTuple dt)
+	{
+		dispatcher.ack(dt);
+	}
 
 }

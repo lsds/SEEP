@@ -185,10 +185,10 @@ public class Router implements Serializable{
 	
 	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
 	{
-		LOG.debug("Routing data tuple: "+dt.getLong("tupleId"));
+		LOG.debug("Routing data tuple: "+dt.getPayload().timestamp);
 		if (bpRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
-		Integer target = bpRouter.route(dt.getPayload().timestamp);
+		Integer target = bpRouter.route(dt.getLong("tupleId"));
 		if (target != null)
 		{
 			ArrayList<Integer> targets = new ArrayList<>();

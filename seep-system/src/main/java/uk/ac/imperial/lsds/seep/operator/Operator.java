@@ -125,7 +125,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 
 	public synchronized void send_highestWeight(DataTuple dt)
 	{
-		LOG.debug("Operator sending data tuple: "+dt.getLong("tupleId"));
+		LOG.debug("Operator sending data tuple: "+dt.getPayload().timestamp);
 		ArrayList<Integer> targets = router.forward_highestWeight(dt);
 		while (targets == null || targets.isEmpty())
 		{
@@ -223,6 +223,11 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 
 	public void setInputDataIngestionModeForUpstream(int opId, InputDataIngestionMode mode){
 		this.inputDataIngestionMode.put(opId, mode);
+	}
+	
+	public void ack(DataTuple dt)
+	{
+		processingUnit.ack(dt);
 	}
 
 	/** Implementation of QuerySpecificationI **/

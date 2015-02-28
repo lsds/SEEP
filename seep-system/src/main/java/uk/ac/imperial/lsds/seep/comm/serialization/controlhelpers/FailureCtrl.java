@@ -122,6 +122,26 @@ public class FailureCtrl {
 		}
 	}
 	
+	public void ack(long ts)
+	{
+		synchronized(lock)
+		{
+			if (!alives.isEmpty()) 
+			{ 
+				throw new RuntimeException("Tmp: Logic error - only for sink."); 
+			}
+		
+			if (ts > lw && !acks().contains(ts))
+			{
+				acks.add(ts);
+				for (long i = lw + 1; acks.contains(i); i++)
+				{
+					lw++;
+				}
+			}
+		}
+	}
+	
 	public void updateAlives(Set<Long> newAlives)
 	{
 		synchronized(lock)
