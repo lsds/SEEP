@@ -12,7 +12,7 @@ from gen_mobility_trace import gen_trace
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
 conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
 mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',500),
-        ('loop',1),('autostart',5.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
+        ('loop',1),('autostart',1.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
 
 datacollect_template = '''#!/bin/bash
 # session hook script; write commands here to execute on the host at the
@@ -62,7 +62,9 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params, model=None):
     try:
-        session = pycore.Session(cfg={'custom_services_dir':svc_dir, 'preservedir':'1', 'controlnet': "172.16.0.0/24"}, persistent=True)
+        session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
+        if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
+        session = pycore.Session(cfg=session_cfg, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
         write_replication_factor(k, session.sessiondir)
         trace_file = None
@@ -76,7 +78,6 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
             print 'Could not add to server'
             return
         """
-        #session.cfg['controlnet'] = "172.16.0.0/24"
         if not model:
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
@@ -107,7 +108,7 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
             wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
 
-        services_str = "OLSR|IPForward"
+        services_str = "IPForward|OLSR"
 
         workers = []
         num_workers = 2 + (k * 2)
@@ -155,11 +156,15 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
+    n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
     n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
     n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
-    #n.cmd([SYSCTL_BIN, "net.ipv4.conf.forwarding.all=1"])
-    n.setposition(x=pos[0], y=pos[1])
+    #n.cmd([SYSCTL_BIN, "net.ipv4.ip_forward=1"])
+    #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.forwarding=1"])
+    #n.cmd([SYSCTL_BIN, "net.ipv6.conf.all.forwarding=1"])
+    #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.rp_filter=0"])
+    #n.cmd([SYSCTL_BIN, "net.ipv4.conf.default.rp_filter=0"])
     return n
 
 def create_node_map(ns_nums, nodes):
@@ -172,7 +177,7 @@ def create_node_map(ns_nums, nodes):
 def gen_linear_position(i):
     return (50 * i, 100)
 
-def gen_grid_position(i, nodes, offset=3, spacing=700):
+def gen_grid_position(i, nodes, offset=3, spacing=600):
     if i < offset: raise Exception("Invalid offset for %d: %d"%(i,offset))
     dim = math.ceil(math.sqrt(nodes))
     num_x = (i-offset) % dim 
@@ -218,7 +223,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='7', help = 'Number of core nodes (7)')
     args=parser.parse_args()
-    params = {'nodes':int(args.nodes)}
+    params = {'nodes':int(args.nodes), 'controlnet': "172.16.0.0/24"}
     if args.plot_time_str:
         time_str = args.plot_time_str
         regen_sessions(time_str)

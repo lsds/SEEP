@@ -23,6 +23,7 @@ def main(w, k, plot_time_str, run_master):
 
         try:
             if run_master:
+
                 print 'Starting master'
                 master_logfilename = mlog(k, time_str) 
                 master = start_master(master_logfilename, sim_env)
