@@ -48,7 +48,8 @@ public class Source implements StatelessOperator {
 		while(sendIndefinitely || tupleId < numTuples){
 			
 			DataTuple output = data.newTuple(tupleId, value);
-			System.out.println("Source sending tuple id="+tupleId+",t="+output.getPayload().timestamp);
+			output.getPayload().timestamp = tupleId;
+			System.out.println("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
 			api.send_highestWeight(output);
 			
 			

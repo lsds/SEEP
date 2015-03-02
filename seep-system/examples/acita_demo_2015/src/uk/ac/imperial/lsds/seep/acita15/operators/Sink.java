@@ -29,7 +29,10 @@ public class Sink implements StatelessOperator {
 	}
 	
 	public void processData(DataTuple dt) {
-		
+		if (dt.getPayload().timestamp != dt.getLong("tupleId"))
+		{
+			throw new RuntimeException("Logic error: ts " + dt.getPayload().timestamp+ "!= tupleId "+dt.getLong("tupleId"));
+		}
 		if (tuplesReceived == 0)
 		{
 			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
@@ -49,6 +52,8 @@ public class Sink implements StatelessOperator {
 			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived+",total bytes="+totalBytes+",t="+System.currentTimeMillis());
 			System.exit(0);
 		}
+		
+		api.ack(dt);
 	}
 	
 	private void recordTuple(DataTuple dt)
