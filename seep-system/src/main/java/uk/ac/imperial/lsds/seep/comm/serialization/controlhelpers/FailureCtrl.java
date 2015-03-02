@@ -137,6 +137,7 @@ public class FailureCtrl {
 				for (long i = lw + 1; acks.contains(i); i++)
 				{
 					lw++;
+					acks.remove(lw);
 				}
 			}
 		}

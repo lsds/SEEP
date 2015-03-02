@@ -64,6 +64,7 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
     try:
         session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
+	print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
         write_replication_factor(k, session.sessiondir)

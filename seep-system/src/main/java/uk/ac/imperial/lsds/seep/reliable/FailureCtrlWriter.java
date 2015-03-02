@@ -1,11 +1,15 @@
 package uk.ac.imperial.lsds.seep.reliable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 
 public class FailureCtrlWriter implements Runnable {
 
+	private static final Logger logger = LoggerFactory.getLogger(FailureCtrlWriter.class);
 	private final IProcessingUnit processingUnit;
 	private boolean goOn = true;
 
@@ -24,7 +28,7 @@ public class FailureCtrlWriter implements Runnable {
 			System.out.println("ACKWorker: EmitACK");
 			processingUnit.emitACK(currentTsV);
 			*/
-			
+			logger.debug("Writing failure ctrl: "+ fctrl.toString());
 			processingUnit.emitFailureCtrl(fctrl);
 			
 			try{

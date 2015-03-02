@@ -61,9 +61,10 @@ public class Sink implements StatelessOperator {
 		long rxts = System.currentTimeMillis();
 		System.out.println("SNK: Received tuple with cnt="+tuplesReceived 
 				+",id="+dt.getLong("tupleId")
-				+",txts="+dt.getPayload().timestamp
+				+",ts="+dt.getPayload().timestamp
+				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
-				+",latency="+ (rxts - dt.getPayload().timestamp));
+				+",latency="+ (rxts - dt.getPayload().instrumentation_ts));
 	}
 	
 	public void processData(List<DataTuple> arg0) {
