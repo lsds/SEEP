@@ -65,12 +65,12 @@ public class PerformanceMonitor implements Runnable {
 			System.out.println(b);
 			_time = time;
 			
-//			 if (counter++ > 60) {
-//				System.out.println("Done.");
-//				for (int i = 0; i < size; i++)
-//					measurements[i].stop();
-//				break;
-//			 }
+			 if (counter++ > 120) {
+				System.out.println("Done.");
+				// for (int i = 0; i < size; i++)
+				//	measurements[i].stop();
+				break;
+			 }
 		}
 	}
 		

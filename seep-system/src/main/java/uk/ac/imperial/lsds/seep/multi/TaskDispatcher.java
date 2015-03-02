@@ -61,7 +61,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 		this.buffer = new CircularQueryBuffer(Utils._CIRCULAR_BUFFER_);
 		this.window = this.parent.getWindowDefinition();
 		this.schema = this.parent.getSchema();
-		this.handler = new ResultHandler (this.buffer);
+		
+		this.handler = new ResultHandler (this.buffer, parent);
 		
 		this.batch        = this.parent.getQueryConf().BATCH;
 		this.batchRecords = this.parent.getQueryConf()._BATCH_RECORDS;
@@ -103,6 +104,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		this.workerQueue = this.parent.getExecutorQueue();
 		// if (Utils.HYBRID)
 		//	this._workerQueue = this.parent.getGPUExecutorQueue();
+		
+//		if (! parent.isMostUpstream())
+//			this.handler.stopPushing();
 	}
 	
 	@Override

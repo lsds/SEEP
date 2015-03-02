@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.LockSupport;
 
 public class WindowBatchFactory {
 	
@@ -17,8 +18,12 @@ public class WindowBatchFactory {
 	public static WindowBatch newInstance (int size, int task, int freeOffset, IQueryBuffer buffer, WindowDefinition window, ITupleSchema schema) {
 		WindowBatch batch;
 		
-		while ((batch = pool.poll()) == null)
-		 	;
+		while ((batch = pool.poll()) == null) {
+			// System.err.println(String.format("warning: thread %20s blocked at task %d waiting for a batch", 
+			// 		 Thread.currentThread(), task));
+			LockSupport.parkNanos(1L);
+			// ;
+		}
 		
 //		batch = pool.poll();
 //		if (batch == null)

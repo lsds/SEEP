@@ -10,11 +10,11 @@ public class Utils {
 	public static int _CIRCULAR_BUFFER_ = 1024 * 1024 * 1024; // * 1024 * 1024; // 1073741824;
 	
 	// Initial size of intermediate array buffers
-	public static int _UNBOUNDED_BUFFER_ = 2 * 1024 * 1024; // 32 * 1024; // 1048576; // Integer.parseInt(Globals.valueFor("intermediate"));
+	public static int _UNBOUNDED_BUFFER_ = 1024 * 1024; // 32 * 1024; // 1048576; // Integer.parseInt(Globals.valueFor("intermediate"));
 	
 	// Number of CPU threads
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
-	public static int TASKS = 2048;
+	public static int TASKS = 4096;
 	
 	/* GPU-specific constants */
 	

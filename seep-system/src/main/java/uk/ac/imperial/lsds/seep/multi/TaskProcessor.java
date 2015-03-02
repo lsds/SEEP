@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.concurrent.locks.LockSupport;
+
 /* import java.util.concurrent.ConcurrentLinkedQueue; */
 
 public class TaskProcessor implements Runnable {
@@ -34,8 +36,8 @@ public class TaskProcessor implements Runnable {
 				/* while ((task = queue.poll()) == null) { */
 				
 				while ((task = queue.poll(policy, pid, 0)) == null) {
-					/* LockSupport.parkNanos(1L); */
-					Thread.yield();
+					LockSupport.parkNanos(1L);
+					// Thread.yield();
 				}
 				task.setGPU(GPU);
 				// System.out.println(String.format("[DBG] p %2d (%5s) runs task %6d from query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));

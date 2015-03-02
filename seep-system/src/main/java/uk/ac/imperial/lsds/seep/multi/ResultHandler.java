@@ -30,8 +30,10 @@ public class ResultHandler {
 	int next;
 
 	public int wraps = 0;
+	
+	Pusher pusher;
 
-	public ResultHandler (IQueryBuffer freeBuffer) {
+	public ResultHandler (IQueryBuffer freeBuffer, SubQuery query) {
 		
 		this.freeBuffer = freeBuffer;
 		
@@ -44,5 +46,15 @@ public class ResultHandler {
 		
 		next = 0;
 		semaphore = new Semaphore(1, false);
+		
+//		pusher = new Pusher(this, query);
+//		
+//		Thread pusherThr = new Thread(pusher);
+//		pusherThr.setName("Pusher-" + query.getId());
+//		pusherThr.start();
+	}
+
+	public void stopPushing() {
+		((Pusher) pusher).stopWorking();
 	}
 }

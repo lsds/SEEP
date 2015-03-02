@@ -15,7 +15,11 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntAddition;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
@@ -39,6 +43,8 @@ public class TestProjectionAttributes {
 			System.err.println("\t- kernel filename");
 			System.exit(-1);
 		}
+		
+		
 		
 		/*
 		 * Set up configuration of system
@@ -89,6 +95,13 @@ public class TestProjectionAttributes {
 			expression[i+1] = new IntColumnReference((i % (numberOfAttributesInSchema)) + 1);
 		}
 		
+		IntExpression ex = new IntColumnReference(1);
+		int nestingDepth = 8;
+		for (int i = 0; i < nestingDepth; i++) {
+			ex = new IntAddition(new IntMultiplication(new IntConstant(3), ex), new IntConstant(1));
+		}
+		expression[1] = ex;
+		
 		TheGPU.getInstance().init(1);
 		
 		IMicroOperatorCode projectionCode = new Projection (expression);
@@ -113,6 +126,14 @@ public class TestProjectionAttributes {
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
+		
+		try {
+			Thread.sleep(10*1000);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
 		operator.setup();
 
 		/*

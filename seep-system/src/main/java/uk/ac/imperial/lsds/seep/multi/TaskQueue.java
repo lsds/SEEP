@@ -175,9 +175,9 @@ public class TaskQueue {
 //			int offset;
 //			int taskid1 = 1, taskid2 = 1;
 //			if (p != 0) {
-//				// taskid1 = offsets[0][0].get() + 10;
-//				// taskid2 = offsets[0][1].get() + 10;
-//				return null;
+//				taskid1 = offsets[0][0].get() + 100;
+//				taskid2 = offsets[0][1].get() + 100;
+//				// return null;
 //			}
 //			//if (p == 1)
 //			//	taskid = policy[p][q] + offsets[_p][q].get();
@@ -267,8 +267,8 @@ public class TaskQueue {
 //	}
 //	
 //	public Task poll (int [][] policy, int p, int q) {
-//		// return getNextTask(policy, p, q);
-//		return getFirstTask(policy, p, q);
+//		return getNextTask(policy, p, q);
+//		// return getFirstTask(policy, p, q);
 //	}
 //	
 //	public int size () {

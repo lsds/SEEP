@@ -78,16 +78,16 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int putInt (int value) { 
-		try {
+//		try {
 			buffer.putInt(value);
-		} catch (BufferOverflowException e) {
-			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
-			e.printStackTrace();
-			resize ();
-			putInt (value);
-		} finally {
+////		} catch (BufferOverflowException e) {
+//			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
+//			e.printStackTrace();
+//			resize ();
+//			putInt (value);
+//		} finally {
 			return 0;
-		}
+//		}
 	}
 	
 	@Override
@@ -99,16 +99,16 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int putFloat (float value) {
-		try {
+// 		try {
 			buffer.putFloat(value);
-		} catch (BufferOverflowException e) {
-			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
-			e.printStackTrace();
-			resize ();
-			putFloat (value);
-		} finally {
+//		} catch (BufferOverflowException e) {
+//			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
+//			e.printStackTrace();
+//			resize ();
+//			putFloat (value);
+//		} finally {
 			return 0;
-		}
+//		}
 	}
 	
 	@Override
@@ -120,16 +120,16 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int putLong (long value) {
-		try {
+//		try {
 			buffer.putLong(value);
-		} catch (BufferOverflowException e) {
-			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
-			e.printStackTrace();
-			resize ();
-			putLong (value);
-		} finally {
+//		} catch (BufferOverflowException e) {
+//			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
+//			e.printStackTrace();
+//			resize ();
+//			putLong (value);
+//		} finally {
 			return 0;
-		}
+//		}
 	}
 	
 	@Override
@@ -142,17 +142,17 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@SuppressWarnings("finally")
 	public int put (byte [] values) {
 		int size, size_;
-		try {
+		// try {
 			buffer.put(values);
-		} catch (BufferOverflowException e) {
-			e.printStackTrace();
-			size  = buffer.capacity();
-			size_ = (values.length < size) ? (size + size) : (size + values.length);
-			resize (size_);
-			put (values);
-		} finally {
+//		} catch (BufferOverflowException e) {
+//			e.printStackTrace();
+//			size  = buffer.capacity();
+//			size_ = (values.length < size) ? (size + size) : (size + values.length);
+//			resize (size_);
+//			put (values);
+//		} finally {
 			return 0;
-		}
+//		}
 	}
 	
 	@Override
@@ -182,14 +182,14 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	
 	@Override
 	public void resize (int size) {
-		if (size <= buffer.capacity())
-			return ;
-		int offset = buffer.position();
-		buffer.flip();
-		ByteBuffer buffer_ = ByteBuffer.allocate(size);
-		buffer_.put(buffer);
-		buffer = buffer_;
-		buffer.position(offset);
+//		if (size <= buffer.capacity())
+//			return ;
+//		int offset = buffer.position();
+//		buffer.flip();
+//		ByteBuffer buffer_ = ByteBuffer.allocate(size);
+//		buffer_.put(buffer);
+//		buffer = buffer_;
+//		buffer.position(offset);
 	}
 	
 	@Override

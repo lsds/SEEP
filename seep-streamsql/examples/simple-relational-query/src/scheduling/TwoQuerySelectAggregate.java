@@ -99,7 +99,7 @@ public class TwoQuerySelectAggregate {
 //				new FloatColumnReference(1),
 //				new FloatConstant(selectivity));
 		
-		int numComparisons = 32;
+		int numComparisons = 16;
 		
 		IPredicate [] predicates = new IPredicate[numComparisons];
 		
@@ -196,7 +196,7 @@ public class TwoQuerySelectAggregate {
 		operators2.add(operator2);
 		SubQuery query2 = new SubQuery (1, operators2, schema2, window2, queryConf2);
 
-		query1.connectTo(10000, query2);
+		 query1.connectTo(10000, query2);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		queries.add(query1);
@@ -217,10 +217,10 @@ public class TwoQuerySelectAggregate {
 		float value = 0;
 		while (b.hasRemaining()) {
 			b.putLong(1);
-			b.putFloat(value);
-			value = (value + 1) % 100; 
-			for (int i = 12; i < actualByteSize; i += 4)
-				b.putInt(1);
+//			b.putFloat(value);
+//			value = (value + 1) % 100; 
+//			for (int i = 12; i < actualByteSize; i += 4)
+//				b.putInt(1);
 		}
 		
 		try {

@@ -140,7 +140,7 @@ public class ResultCollector {
 				}
 			}
 			/* Thread exit critical section */
-//			if (count > 2) 
+//			if (count > 0) 
 //				System.out.println(String.format("[DBG] %60s released %3d q%d buffers", Thread.currentThread(), count, query.getId()));
 			handler.semaphore.release();
 			

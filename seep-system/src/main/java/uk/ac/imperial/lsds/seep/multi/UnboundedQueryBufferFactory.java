@@ -1,25 +1,38 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.LockSupport;
 
 public class UnboundedQueryBufferFactory {
 	
-	private static final int _pool_size = 2048; /* Initial pool size */
+	private static final int _pool_size = 1024; /* Initial pool size */
 	private static final int _buffer_size = Utils._UNBOUNDED_BUFFER_;
+	
+	private static int count = 0;
 	
 	private static ConcurrentLinkedQueue<UnboundedQueryBuffer> pool = 
 		new ConcurrentLinkedQueue<UnboundedQueryBuffer>();
 	
 	static {
-		int i = _pool_size;
-		while (i-- > 0)
-			pool.add (new UnboundedQueryBuffer(_buffer_size));
+//		int i = _pool_size;
+//		while (i-- > 0)
+//			pool.add (new UnboundedQueryBuffer(_buffer_size));
 	}
 	
 	public static UnboundedQueryBuffer newInstance () {
 		UnboundedQueryBuffer buffer;
-		while ((buffer = pool.poll()) == null)
-		 	;
+		
+		if (count++ < _pool_size) {
+			buffer = new UnboundedQueryBuffer(_buffer_size);
+		} else {
+		
+			while ((buffer = pool.poll()) == null) {
+				System.err.println(String.format("warning: thread %20s blocked waiting for a buffer", 
+						Thread.currentThread()));
+				LockSupport.parkNanos(1L);
+			// ;
+			}
+		}
 //		buffer = pool.poll();
 //		if (buffer == null) 
 //			return new UnboundedQueryBuffer(_buffer_size);
