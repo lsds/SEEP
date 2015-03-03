@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys,os,time,re,argparse,math
+import sys,os,time,re,argparse,math,shutil
 from core import pycore
 from core.constants import *
 from core.mobility import BasicRangeModel
@@ -47,6 +47,8 @@ mkdir -p $resultsDir
 for d in n*.conf 
 do
 	cp $d/log/*.log $resultsDir	
+	cp $d/mappingRecordOut.txt $resultsDir	
+	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
 done
 	
 
@@ -63,6 +65,7 @@ def run_sessions(time_str, k, mob, sessions, params):
 def run_session(time_str, k, mob, exp_session, params, model=None):
     try:
         session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
+        #session_cfg = {'custom_services_dir':svc_dir} 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
 	print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
@@ -91,9 +94,9 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
         #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
         #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
         # set increasing Z coordinates
-            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
+            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=False)
         else:
-            wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=True)
+            wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
 
         wlan1.setposition(x=80,y=50)
 
@@ -108,6 +111,13 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
         else:
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
             wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
+
+        #Copy appropriate mapping constraints.
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        exp_results_dir = '%s/log/%s'%(script_dir, time_str)
+        session_constraints = '%s/session%dsMappingRecord.txt'%(exp_results_dir, exp_session)
+        if os.path.exists(session_constraints):
+            shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         services_str = "IPForward|OLSR"
 

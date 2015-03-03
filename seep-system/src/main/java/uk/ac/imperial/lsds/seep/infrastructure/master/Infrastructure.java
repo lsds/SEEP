@@ -12,15 +12,19 @@
 package uk.ac.imperial.lsds.seep.infrastructure.master;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -29,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -93,7 +98,7 @@ public class Infrastructure {
 	
 	private int baseId = Integer.parseInt(GLOBALS.valueFor("baseId"));
 	
-	private Deque<Node> nodeStack = new ArrayDeque<Node>();
+	private ArrayDeque<Node> nodeStack = new ArrayDeque<Node>();
 	private int numberRunningMachines = 0;
 
 	private boolean systemIsRunning = false;
@@ -336,25 +341,120 @@ public class Infrastructure {
 		monitorMaster.stop();
 	}
 	
-	public void localMapPhysicalOperatorsToNodes(){
-		//	Finally get the mapping for this query and assign real nodes
+	public void localMapPhysicalOperatorsToNodes(){		
+		Map<Integer, String> constraints = readMappingConstraints();
+		  		
+		// First assign any constrained mappings.
 		for(Entry<Integer, Operator> e : queryToNodesMapping.entrySet()){
+			int opId = e.getValue().getOperatorId();
 			Node a = null;
-			try {
-				a = getNodeFromPool();
-			} 
-			catch (NodePoolEmptyException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+			if (constraints.containsKey(opId))
+			{
+				String[] splits = constraints.get(opId).split(":");
+				
+				InetAddress nodeIp = null;
+				try {
+					nodeIp = InetAddress.getByName(splits[0]);
+				} catch (UnknownHostException e1) {
+					LOG.error("Unknown address in constraint:"+constraints.get(opId));
+					System.exit(1);
+				}
+				int nodePort = Integer.parseInt(splits[1]);
+				
+				try {
+					a = getNodeFromPool(nodeIp, nodePort);
+				} catch (NodePoolEmptyException e1) {
+					LOG.error("Node pool empty");
+					System.exit(1);
+				}
+				LOG.info("-> Mapping OP: {} to Node: {}", opId, a);
+				placeNew(e.getValue(), a);
 			}
-			LOG.info("-> Mapping OP: {} to Node: {}", e.getValue().getOperatorId(), a);
-			placeNew(e.getValue(), a);
 		}
+		
+		//	Finally get the mapping for this query and assign remaining ops to real nodes
+		for(Entry<Integer, Operator> e : queryToNodesMapping.entrySet()){
+			int opId = e.getValue().getOperatorId();
+			Node a = null;
+			if (!constraints.containsKey(opId))
+			{	
+				try {
+					a = getNodeFromPool();
+				} 
+				catch (NodePoolEmptyException e1) {
+					LOG.error("Node pool empty");
+					System.exit(1);
+				}
+				constraints.put(opId, ""+a.getIp().getHostAddress() + ":"+a.getPort());
+				LOG.info("Adding constraint: "+opId +"->"+constraints.get(opId));
+				LOG.info("-> Mapping OP: {} to Node: {}", opId, a);
+				placeNew(e.getValue(), a);
+			}
+		}
+				
 		LOG.info("-> All operators have been mapped");
 		Query q = buildMeanderQuery();
 		for(Operator o : queryToNodesMapping.values()){
 			LOG.info("OP: {}, CONF: {}", o.getOperatorId(), o);
 			o.getOpContext().setMeanderQuery(q);
+		}
+		writeMappingConstraints(constraints);
+	}
+	
+	private Map<Integer, String> readMappingConstraints()
+	{
+		Map<Integer, String> constraints = new HashMap<>();
+		File f = new File("../mappingRecordIn.txt");
+		if (!f.exists()) 
+		{ 
+			LOG.warn("No mapping constraints found.");			
+		}
+		else
+		{
+				FileReader fr;
+				try {
+					fr = new FileReader(f);
+					BufferedReader br = new BufferedReader(fr);
+					String constraint;
+					while((constraint = br.readLine()) != null)
+					{
+						String[] splits = constraint.split(",");
+						int opId = Integer.parseInt(splits[0]);
+						if (constraints.containsKey(opId) && !constraints.get(opId).equals(splits[1]))
+						{
+							LOG.error("Logic error: "+ constraints + ",constraint");
+							System.exit(1);
+						}
+						constraints.put(opId, splits[1]);
+					}
+				} catch (Exception e) {
+					LOG.error("Unexpected exception:"+e);
+					System.exit(1);
+				}
+
+		}
+		return constraints;
+	}
+	
+	private void writeMappingConstraints(Map<Integer, String> mappingConstraints)
+	{
+		FileWriter fw = null;
+		try {
+			fw = new FileWriter("mappingRecordOut.txt",true);
+			for (Entry<Integer, String> constraint: mappingConstraints.entrySet())
+			{
+				fw.write(constraint.getKey() + ","+constraint.getValue() +"\n");
+			}
+		} catch (IOException e) {
+			LOG.error("Could not write mapping record!");
+			System.exit(1);
+		}
+		finally { 
+			if (fw != null) { 
+				try {
+					fw.close();
+				} catch (IOException e) {} 
+			} 
 		}
 	}
 	
@@ -772,7 +872,40 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			//nLogger.info("Instantiating EC2 images");
 			//new Thread(new EC2Worker(this)).start();
 		}
-		numberRunningMachines++;
+
+		checkEmptyPool();
+		numberRunningMachines++;		
+		return nodeStack.pop();
+	}
+	
+	public synchronized Node getNodeFromPool(InetAddress nodeIp, int nodePort) throws NodePoolEmptyException
+	{
+		Iterator<Node> iter = nodeStack.iterator();
+		while (iter.hasNext())
+		{
+			Node nxt = iter.next();
+			if (nxt.getIp().equals(nodeIp) && nxt.getPort() == nodePort)
+			{
+				iter.remove();
+				numberRunningMachines++;
+				return nxt;
+			}
+		}
+		
+		if ("true".equals(GLOBALS.valueFor("abortOnNodePoolEmpty")))
+		{
+			LOG.error("No node in pool matching "+nodeIp+":"+nodePort);
+			System.exit(1);
+			return null;
+		}
+		else
+		{
+			throw new NodePoolEmptyException("No node in pool matching "+nodeIp+":"+nodePort);
+		}
+	}
+	
+	private void checkEmptyPool() throws NodePoolEmptyException
+	{
 		if(nodeStack.isEmpty()){
 			if ("true".equals(GLOBALS.valueFor("abortOnNodePoolEmpty")))
 			{
@@ -783,9 +916,7 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 			{
 				throw new NodePoolEmptyException("Node pool is empty, impossible to get more nodes");
 			}
-		}
-		
-		return nodeStack.pop();
+		}		
 	}
 	
 	public synchronized void incrementBaseId(){
