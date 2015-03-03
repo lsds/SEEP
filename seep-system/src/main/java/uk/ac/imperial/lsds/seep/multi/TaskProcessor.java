@@ -12,6 +12,8 @@ public class TaskProcessor implements Runnable {
 	private int pid;
 	boolean GPU;
 	
+	// LocalUnboundedQueryBufferFactory bufferFactory = new LocalUnboundedQueryBufferFactory();
+	
 	/*
 	public TaskProcessor(ConcurrentLinkedQueue<ITask> queue, boolean GPU) {
 		this.queue = queue;
@@ -36,10 +38,13 @@ public class TaskProcessor implements Runnable {
 				/* while ((task = queue.poll()) == null) { */
 				
 				while ((task = queue.poll(policy, pid, 0)) == null) {
+//					System.err.println(String.format("warning: thread %20s blocked waiting for a task", 
+//							Thread.currentThread()));
 					LockSupport.parkNanos(1L);
 					// Thread.yield();
 				}
 				task.setGPU(GPU);
+				// task.setBufferFactory(bufferFactory);
 				// System.out.println(String.format("[DBG] p %2d (%5s) runs task %6d from query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
 				task.run();
 

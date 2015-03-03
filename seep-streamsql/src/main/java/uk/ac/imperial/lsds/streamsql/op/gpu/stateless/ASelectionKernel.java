@@ -107,7 +107,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		String source = KernelCodeGenerator.getSelection (schema, schema, predicate, filename);
 		
-		System.out.println(source);
+		// System.out.println(source);
 		
 		// TheGPU.getInstance().init(1);
 		qid = TheGPU.getInstance().getQuery(source, 2, 1, 3);

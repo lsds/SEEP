@@ -82,7 +82,9 @@ public class TestAggregationGroupBy {
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 				
 		Expression[] groupBy = new Expression[] {
-			new IntColumnReference(2)
+			new IntColumnReference(2),
+			new IntColumnReference(3),
+			new IntColumnReference(4)
 		};
 		
 		IMicroOperatorCode aggCode = new MicroAggregation(

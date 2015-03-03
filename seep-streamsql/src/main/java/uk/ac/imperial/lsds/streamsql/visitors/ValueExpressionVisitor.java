@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.streamsql.visitors;
 
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatDivision;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntAddition;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
@@ -29,4 +31,8 @@ public interface ValueExpressionVisitor {
 	public void visit(FloatColumnReference cr);
 
 	public void visit(LongColumnReference cr);
+
+	public void visit(FloatDivision floatDivision);
+
+	public void visit(FloatMultiplication floatMultiplication);
 }

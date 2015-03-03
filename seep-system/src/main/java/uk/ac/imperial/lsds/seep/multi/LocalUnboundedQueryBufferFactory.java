@@ -1,27 +1,19 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.LockSupport;
 
-public class UnboundedQueryBufferFactory {
+public class LocalUnboundedQueryBufferFactory {
 	
-	private static final int _pool_size = 1; /* Initial pool size */
-	private static final int _buffer_size = Utils._UNBOUNDED_BUFFER_;
+	private final int _buffer_size = Utils._UNBOUNDED_BUFFER_;
 	
-	public static AtomicLong count;
+	//public AtomicLong count;
 	
-	private static ConcurrentLinkedQueue<UnboundedQueryBuffer> pool = 
-		new ConcurrentLinkedQueue<UnboundedQueryBuffer>();
+	private Queue<UnboundedQueryBuffer> pool = 
+		new LinkedList<UnboundedQueryBuffer>();
 	
-	static {
-		int i = _pool_size;
-		while (i-- > 0)
-			pool.add (new UnboundedQueryBuffer(_buffer_size));
-		count = new AtomicLong(_pool_size);
-	}
-	
-	public static UnboundedQueryBuffer newInstance () {
+	public UnboundedQueryBuffer newInstance () {
 		UnboundedQueryBuffer buffer;
 		
 //		if (count++ < _pool_size) {
@@ -37,14 +29,14 @@ public class UnboundedQueryBufferFactory {
 //		}
 		buffer = pool.poll();
 		if (buffer == null) {
-			count.incrementAndGet();
-			return new UnboundedQueryBuffer(_buffer_size);
+			//count.incrementAndGet();
+			return new UnboundedQueryBuffer(_buffer_size, this);
 		}
 		
 		return buffer;
 	}
 	
-	public static void free (UnboundedQueryBuffer buffer) {
+	public void free (UnboundedQueryBuffer buffer) {
 		buffer.clear();
 		
 		// System.out.println("FREE BUFFER " + buffer + " position " + buffer.position());

@@ -7,10 +7,20 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	
 	ByteBuffer buffer;
 	
+	LocalUnboundedQueryBufferFactory bufferFactory;
+
 	public UnboundedQueryBuffer (int size) {
 		if (size <= 0)
 			throw new IllegalArgumentException("Buffer size must be greater than 0."); 
 		buffer = ByteBuffer.allocate(size); 
+	}
+	
+	public UnboundedQueryBuffer (int size, LocalUnboundedQueryBufferFactory bufferFactory) {
+		if (size <= 0)
+			throw new IllegalArgumentException("Buffer size must be greater than 0."); 
+		buffer = ByteBuffer.allocate(size); 
+		
+		this.bufferFactory = bufferFactory;
 	}
 	
 	@Override
@@ -201,6 +211,7 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	public void release() {
 		UnboundedQueryBufferFactory.free(this);
+//		bufferFactory.free(this);
 	}
 
 	@Override

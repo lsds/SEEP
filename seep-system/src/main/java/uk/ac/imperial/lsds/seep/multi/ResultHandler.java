@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class ResultHandler {
 
-	public final int SLOTS = Utils.TASKS; // + 1;
+	public final int SLOTS = Utils.TASKS * 4; // + 1;
 
 	public IQueryBuffer freeBuffer;
 	

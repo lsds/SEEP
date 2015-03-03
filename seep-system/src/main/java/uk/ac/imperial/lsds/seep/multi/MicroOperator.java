@@ -53,13 +53,13 @@ public class MicroOperator {
 		return id;
 	}
 
-	public void process(WindowBatch windowBatch, IWindowAPI api, boolean GPU) {
+	public void process(WindowBatch windowBatch, IWindowAPI api, boolean GPU) {// , LocalUnboundedQueryBufferFactory bufferFactory) {
 		if (GPU) {
 			// System.out.println(String.format("[DBG] Running task %d on GPU", windowBatch.getTaskId()));
 			this.gpuCode.processData(windowBatch, api);
 		} else {
 			// System.out.println(String.format("[DBG] Running task %d on CPU", windowBatch.getTaskId()));
-			this.cpuCode.processData(windowBatch, api);
+			this.cpuCode.processData(windowBatch, api); //, bufferFactory);
 		}
 	}
 	

@@ -13,11 +13,21 @@ public class Task implements ITask {
 	public int queryid;
 	public AtomicMarkableReference<Task> next;
 	
+	private LocalUnboundedQueryBufferFactory bufferFactory;
+	
 	private boolean	GPU	= false;
 
 	@Override
 	public void setGPU(boolean GPU) {
 		this.GPU = GPU;
+	}
+
+	public LocalUnboundedQueryBufferFactory getBufferFactory() {
+		return bufferFactory;
+	}
+
+	public void setBufferFactory(LocalUnboundedQueryBufferFactory bufferFactory) {
+		this.bufferFactory = bufferFactory;
 	}
 
 	public Task() {
@@ -52,7 +62,7 @@ public class Task implements ITask {
 		MicroOperator next = query.getMostUpstreamMicroOperator();
 
 		while (next != null) {
-			next.process(this.batch, this, GPU);
+			next.process(this.batch, this, GPU); //, this.bufferFactory);
 			next = next.getLocalDownstream();
 		}
 		

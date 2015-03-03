@@ -7,4 +7,7 @@ public interface ITask extends IWindowAPI {
 	public void free();
 	
 	public void setGPU (boolean GPU);
+	
+	// public void setBufferFactory(LocalUnboundedQueryBufferFactory bufferFactory);
+	
 }

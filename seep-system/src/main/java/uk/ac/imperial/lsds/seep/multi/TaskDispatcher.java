@@ -115,7 +115,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		while ((idx = buffer.put(data)) < 0) {
 			// System.err.println(String.format("warning: dispatcher blocked at %s q %d", Thread.currentThread(), parent.getId())); 
 			Thread.yield();
-			// LockSupport.parkNanos(100000000L);
+			// LockSupport.parkNanos(1L);
 		}
 		assemble (idx, data.length);
 	}

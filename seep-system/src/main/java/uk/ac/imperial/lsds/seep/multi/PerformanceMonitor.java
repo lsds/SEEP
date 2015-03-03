@@ -60,12 +60,18 @@ public class PerformanceMonitor implements Runnable {
 			for (int i = 0; i < size; i++)
 				b.append(measurements[i].info(dt));
 			b.append(String.format(" q %6d", operator.getExecutorQueueSize()));
+			
+			/* Append factory sizes */
+			b.append(String.format(" t %6d", TaskFactory.count.get()));
+			b.append(String.format(" w %6d", WindowBatchFactory.count.get()));
+			b.append(String.format(" b %6d", UnboundedQueryBufferFactory.count.get()));
+			
 			/* if (Utils.HYBRID)
 			 *	b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize())); */
 			System.out.println(b);
 			_time = time;
 			
-			 if (counter++ > 120) {
+			 if (counter++ > 60) {
 				System.out.println("Done.");
 				// for (int i = 0; i < size; i++)
 				//	measurements[i].stop();

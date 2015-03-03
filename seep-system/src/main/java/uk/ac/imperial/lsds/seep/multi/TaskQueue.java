@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -19,6 +20,23 @@ public class TaskQueue {
 	
 	public boolean add (Task task) {
 		return queue.add(task);
+	}
+	
+	private AtomicBoolean _switch = new AtomicBoolean(false);
+	public Task raul_s_poll (int [][] policy, int p, int q) {
+		if(_switch.get()){
+			_switch.set(false);
+			synchronized(this){
+				return queue.poll();
+			}
+		} else{
+			_switch.set(true);
+			return queue.poll();
+		}
+	}
+	
+	public synchronized Task synch_poll (int [][] policy, int p, int q) {
+		return queue.poll();
 	}
 	
 	public Task poll (int [][] policy, int p, int q) {

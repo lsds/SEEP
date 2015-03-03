@@ -15,6 +15,11 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatDivision;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntAddition;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
@@ -95,12 +100,32 @@ public class TestProjectionAttributes {
 			expression[i+1] = new IntColumnReference((i % (numberOfAttributesInSchema)) + 1);
 		}
 		
-		IntExpression ex = new IntColumnReference(1);
-		int nestingDepth = 8;
+		int nestingDepth = 64;
+		
+		FloatExpression ex1 = new FloatColumnReference(1);
 		for (int i = 0; i < nestingDepth; i++) {
-			ex = new IntAddition(new IntMultiplication(new IntConstant(3), ex), new IntConstant(1));
+			ex1 = new FloatDivision(new FloatMultiplication(new FloatConstant(3), ex1), new FloatConstant(2));
 		}
-		expression[1] = ex;
+//		
+//		IntExpression ex2 = new IntColumnReference(2);
+//		for (int i = 0; i < nestingDepth; i++) {
+//			ex2 = new IntAddition(new IntMultiplication(new IntConstant(3), ex2), new IntConstant(1));
+//		}
+//		
+//		IntExpression ex3 = new IntColumnReference(3);
+//		for (int i = 0; i < nestingDepth; i++) {
+//			ex3 = new IntAddition(new IntMultiplication(new IntConstant(3), ex3), new IntConstant(1));
+//		}
+//		
+//		IntExpression ex4 = new IntColumnReference(4);
+//		for (int i = 0; i < nestingDepth; i++) {
+//			ex4 = new IntAddition(new IntMultiplication(new IntConstant(3), ex4), new IntConstant(1));
+//		}
+		
+		expression[1] = ex1;
+//		expression[2] = ex2;
+//		expression[3] = ex3;
+//		expression[4] = ex4;
 		
 		TheGPU.getInstance().init(1);
 		
@@ -127,12 +152,12 @@ public class TestProjectionAttributes {
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		
-		try {
-			Thread.sleep(10*1000);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+//		try {
+//			Thread.sleep(10*1000);
+//		} catch (InterruptedException e1) {
+//			// TODO Auto-generated catch block
+//			e1.printStackTrace();
+//		}
 		
 		operator.setup();
 
@@ -150,7 +175,8 @@ public class TestProjectionAttributes {
 		// fill the buffer
 		while (b.hasRemaining()) {
 			b.putLong(System.nanoTime());
-			for (int i = 8; i < actualByteSize; i += 4)
+			b.putFloat(1);
+			for (int i = 12; i < actualByteSize; i += 4)
 				b.putInt(1);
 		}
 		

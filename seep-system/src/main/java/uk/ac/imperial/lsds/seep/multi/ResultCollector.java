@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.seep.multi;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
 import uk.ac.imperial.lsds.seep.multi.join.JoinResultHandler;
 
@@ -29,7 +30,8 @@ public class ResultCollector {
 				 
 				 // System.exit(1);
 				
-				Thread.yield();
+				// Thread.yield();
+				LockSupport.parkNanos(1L);
 			}
 			
 //			if (query.getId() == 1)
