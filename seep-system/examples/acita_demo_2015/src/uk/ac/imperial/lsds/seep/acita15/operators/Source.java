@@ -16,6 +16,9 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
@@ -25,6 +28,7 @@ import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 public class Source implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
+	private static final Logger logger = LoggerFactory.getLogger(Source.class);
 	
 	public void setUp() {
 		System.out.println("Setting up SOURCE operator with id="+api.getOperatorId());
@@ -49,7 +53,14 @@ public class Source implements StatelessOperator {
 			
 			DataTuple output = data.newTuple(tupleId, value);
 			output.getPayload().timestamp = tupleId;
-			System.out.println("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
+			if (tupleId % 1000 == 0)
+			{
+				logger.info("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
+			}
+			else
+			{
+				logger.debug("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
+			}
 			api.send_highestWeight(output);
 			
 			

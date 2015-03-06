@@ -1,9 +1,11 @@
 #!/usr/bin/python
 import subprocess,argparse
 
-default_duration = '10000'
-default_x = '1500'
-default_y = '1500' 
+default_duration = '100000'
+#default_x = '1500'
+default_x = '5000'
+#default_y = '1500' 
+default_y = '5000' 
 default_speed = 2.0
 default_p = '2.0' 
 trace_name = 'r_waypoints'

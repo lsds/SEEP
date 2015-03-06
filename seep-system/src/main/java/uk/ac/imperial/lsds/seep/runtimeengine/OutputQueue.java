@@ -122,7 +122,7 @@ public class OutputQueue {
 							channelRecord.getOutput().flush();
 							flushed = true;
 						}
-						catch(KryoException e)
+						catch(KryoException|IllegalArgumentException e)
 						{
 							//TODO: Get rid of this global. Might want to
 							//Have different behaviour for different instances.

@@ -35,6 +35,13 @@ def main(w, k, plot_time_str, run_master):
 
             if run_master:
                 deploy_query(master)
+
+                print 'Waiting for deployed complete signal.'
+                wait_for_deploy(master)
+                
+                if not master.poll() is None:
+                    return
+
                 time.sleep(5)
 
                 run_query(master)
@@ -67,7 +74,7 @@ def run_query(master):
 
 def start_master(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Master',
+        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master',
                 '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
@@ -85,6 +92,12 @@ def read_k():
     with open('../k.txt', 'rb') as f:
         for line in f:
             return int(line.strip())
+
+def wait_for_deploy(master):
+    while not os.path.exists("deployComplete.txt"):
+        if not master.poll() is None:
+            return
+        time.sleep(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')

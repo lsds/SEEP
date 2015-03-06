@@ -143,6 +143,7 @@ if __name__ == "__main__":
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
     parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
+    parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
 
@@ -152,7 +153,8 @@ if __name__ == "__main__":
     sessions=int(args.sessions)
     params = {'nodes':int(args.nodes)}
     if not args.disable_ctrl_net: params['controlnet']='172.16.0.0/24'
-   # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
+    # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
+    if args.model: params['model']=args.model
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

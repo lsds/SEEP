@@ -214,7 +214,7 @@ public class CoreProcessingLogic implements Serializable{
 		}
 	}
 	
-	public synchronized void processFailureCtrl(FailureCtrl fctrl, int downOpId)
+	public void processFailureCtrl(FailureCtrl fctrl, int downOpId)
 	{
 		//TODO: Effectively this implements the defaultFailureCtrlHandler.
 		//Presuming it won't block then should be ok to just do it in this

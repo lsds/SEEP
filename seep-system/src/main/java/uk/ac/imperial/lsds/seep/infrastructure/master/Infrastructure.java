@@ -671,6 +671,26 @@ public class Infrastructure {
 			}
 		}
 		LOG.debug("-> Deploying query...DONE");
+		writeDeployComplete();
+	}
+	
+	private void writeDeployComplete()
+	{
+		FileWriter fw = null;
+		try {
+			fw = new FileWriter("deployComplete.txt",true);
+			fw.write("DONE\n");
+		} catch (IOException e) {
+			LOG.error("Could not write deploy complete!");
+			System.exit(1);
+		}
+		finally { 
+			if (fw != null) { 
+				try {
+					fw.close();
+				} catch (IOException e) {} 
+			} 
+		}
 	}
 
 	public void reDeploy(Node n){

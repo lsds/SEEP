@@ -237,52 +237,91 @@ public class PUContext {
 	
 	
 	private void createRemoteSynchronousCommunication(int opID, InetAddress ip, int portD, int portC, String type){
-		Socket socketD = null;
-		Socket socketC = null;
-		Socket socketBlind = null;
-		int blindPort = new Integer(GLOBALS.valueFor("blindSocket"));
-		
-		try{
-			if(type.equals("down")){
-				LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
-				socketD = new Socket(ip, portD);
-				if(portC != 0){
-					socketC = new Socket(ip, portC);
-				}					
+		if ("true".equals(GLOBALS.valueFor("syncConnectBeforeAck")))
+		{
+			Socket socketD = null;
+			Socket socketC = null;
+			Socket socketBlind = null;
+			int blindPort = new Integer(GLOBALS.valueFor("blindSocket"));
+			
+			try{
+				if(type.equals("down")){
+					LOG.debug("-> Trying remote downstream conn to: {}/{}", ip.toString(), portD);
+					socketD = new Socket(ip, portD);
+					if(portC != 0){
+						socketC = new Socket(ip, portC);
+					}					
+						
+					IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer() : new Buffer();
 					
-				IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer() : new Buffer();
-				
-				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
-				downstreamTypeConnection.add(con);
-				remoteDownstream.add(con);
-/// \todo{here a 40000 is used, change this line to make it properly}
-				downstreamBuffers.put((portD-40000), buffer);
+					SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
+					downstreamTypeConnection.add(con);
+					remoteDownstream.add(con);
+	/// \todo{here a 40000 is used, change this line to make it properly}
+					downstreamBuffers.put((portD-40000), buffer);
+				}
+				else if(type.equals("up")){
+					LOG.debug("-> Trying remote upstream conn to: {}/{}", ip.toString(), portC);
+					socketC = new Socket(ip, portC);
+					//socketBlind = new Socket(ip, blindPort);
+					SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
+					upstreamTypeConnection.add(con);
+					remoteUpstream.add(con);
+				}
 			}
-			else if(type.equals("up")){
-				LOG.debug("-> Trying remote upstream conn to: {}/{}", ip.toString(), portC);
-				socketC = new Socket(ip, portC);
-				//socketBlind = new Socket(ip, blindPort);
-				SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, null, socketC, socketBlind, null);
-				upstreamTypeConnection.add(con);
-				remoteUpstream.add(con);
+			catch(IOException io){
+				LOG.error("-> PUContext. While establishing remote connection "+io.getMessage());
+				if(socketD != null){
+					LOG.error("-> Data Conn to: "+socketD.toString());
+				}
+				else if(socketC != null){
+					LOG.error("-> Control Conn to: "+socketC.toString());
+				}
+				else{
+					LOG.error("-> Socket objects are BOTH NULL");
+	
+				}
+				io.printStackTrace();
+				createDeferredRemoteSynchronousCommunication(opID, ip, portD, portC, type);
 			}
 		}
-		catch(IOException io){
-			LOG.error("-> PUContext. While establishing remote connection "+io.getMessage());
-			if(socketD != null){
-				LOG.error("-> Data Conn to: "+socketD.toString());
-			}
-			else if(socketC != null){
-				LOG.error("-> Control Conn to: "+socketC.toString());
-			}
-			else{
-				LOG.error("-> Socket objects are BOTH NULL");
-
-			}
-			io.printStackTrace();
+		else
+		{
+			createDeferredRemoteSynchronousCommunication(opID, ip, portD, portC, type);
 		}
 	}
 	
+	private void createDeferredRemoteSynchronousCommunication(int opID, InetAddress ip, int portD, int portC, String type)
+	{
+		if(type.equals("down")){
+			LOG.debug("-> Trying remote deferred downstream conn to: {}/{}", ip.toString(), portD);
+			/*
+			socketD = new Socket(ip, portD);
+			if(portC != 0){
+				socketC = new Socket(ip, portC);
+			}					
+			*/
+			IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer() : new Buffer();
+			
+			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, portD, portC, buffer);
+			downstreamTypeConnection.add(con);
+			remoteDownstream.add(con);
+/// \todo{here a 40000 is used, change this line to make it properly}
+			downstreamBuffers.put((portD-40000), buffer);
+			con.deferredInit();
+		}
+		else if(type.equals("up")){
+			LOG.debug("-> Trying remote deferred upstream conn to: {}/{}", ip.toString(), portC);
+			/*
+			socketC = new Socket(ip, portC);
+			*/
+			//socketBlind = new Socket(ip, blindPort);
+			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, 0, portC, null);
+			upstreamTypeConnection.add(con);
+			remoteUpstream.add(con);
+			con.deferredInit();
+		}		
+	}
 	
 	public SynchronousCommunicationChannel getCCIfromOpId(int opId, String type){
 		if(type.equals("d")){

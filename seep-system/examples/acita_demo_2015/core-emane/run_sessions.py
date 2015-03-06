@@ -9,8 +9,10 @@ from core.emane.ieee80211abg import EmaneIeee80211abgModel
 from gen_mobility_trace import gen_trace
 
 
+script_dir = os.path.dirname(os.path.realpath(__file__))
 svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
 conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
+seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
 mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',500),
         ('loop',1),('autostart',1.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
 
@@ -62,15 +64,16 @@ def run_sessions(time_str, k, mob, sessions, params):
         print '*** Running session %d ***'%session
         run_session(time_str, k, mob, session, params)
 
-def run_session(time_str, k, mob, exp_session, params, model=None):
+def run_session(time_str, k, mob, exp_session, params):
     try:
         session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
         #session_cfg = {'custom_services_dir':svc_dir} 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
-	print 'params=',params
+        print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
         write_replication_factor(k, session.sessiondir)
+        copy_seep_jar(session.sessiondir)
         trace_file = None
         if mob > 0.0:
             trace_params = dict(params)
@@ -82,6 +85,8 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
             print 'Could not add to server'
             return
         """
+        model = params.get('model', None)
+        print 'Model=', model
         if not model:
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
@@ -91,29 +96,28 @@ def run_session(time_str, k, mob, exp_session, params, model=None):
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass, AtdlOmni"
             session.emane.loadmodels()
 
-        #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
-        #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
-        # set increasing Z coordinates
+            #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
+            #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
+            # set increasing Z coordinates
             wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=False)
-        else:
-            wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
-
-        wlan1.setposition(x=80,y=50)
-
-        if not model:
+            wlan1.setposition(x=80,y=50)
             names = EmaneIeee80211abgModel.getnames()
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
             print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('pathlossmode') ] = 'freespace'
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
-
         else:
+            wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
+            wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
-            wlan1.setmodel(BasicRangeModel, BasicRangeModel.getdefaultvalues())
+            model_cfg = list(BasicRangeModel.getdefaultvalues())
+            model_cfg[0] = '700' #Similar to default effective emane range.
+            model_cfg[1] = '11000' #Similar to default emane bandwidth.
+            print 'Basic Range configured values: %s'%(str(model_cfg))
+            wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
 
         #Copy appropriate mapping constraints.
-        script_dir = os.path.dirname(os.path.realpath(__file__))
         exp_results_dir = '%s/log/%s'%(script_dir, time_str)
         session_constraints = '%s/session%dsMappingRecord.txt'%(exp_results_dir, exp_session)
         if os.path.exists(session_constraints):
@@ -221,6 +225,11 @@ def watch_meander_services(sessiondir, node_names):
 def write_replication_factor(k, session_dir):
     with open('%s/k.txt'%session_dir, 'w') as f:
         f.write(str(k))
+
+def copy_seep_jar(session_dir):
+    dest = '%s/lib'%session_dir
+    os.mkdir(dest)
+    shutil.copy('%s/../lib/%s'%(script_dir,seep_jar), dest)
 
 #def exists_mobility_trace(time_str, session):
 #    return os.path.isfile(

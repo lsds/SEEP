@@ -80,10 +80,12 @@ public class RoutingController implements Runnable{
 				weightsCopy = new HashMap<>(weights);
 			}
 			
+			logger.info("Routing controller sending weights upstream: "+weightsCopy);
+			
 			if (numLogicalInputs > 1)
 			{
 				ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), new HashSet<Long>());
-				owner.getControlDispatcher().sendAllUpstreams(ct);
+				owner.getControlDispatcher().sendAllUpstreams(ct, false);
 			}
 			else
 			{

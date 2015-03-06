@@ -844,13 +844,15 @@ public class CoreRE {
 	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
 	{
 		if (controlDispatcher == null) { return; }
-		LOG.info("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
+		LOG.debug("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		for (int upOpIndex : upOpIndexes)
 		{
 			int upOpId = processingUnit.getOperator().getOpContext().getUpOpIdFromIndex(upOpIndex);
+			LOG.debug("Writing failure ctrl to up op id:"+upOpId);
 			DataStructureI dso = dsa.getUniqueDso();
 			if (dso == null) { dso = dsa.getDataStructureIForOp(upOpId); }
 			FailureCtrl upFctrl = dso.purge(nodeFctrl);
+			LOG.debug("Writing failure ctrl, node="+nodeFctrl+",upOp="+upFctrl);
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, processingUnit.getOperator().getOperatorId(), upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);

@@ -34,7 +34,7 @@ def main(w, k, hostname):
 
 def start_worker(logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/lib/%s'%(eg_dir, seep_jar), 'Worker']
+        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker']
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 

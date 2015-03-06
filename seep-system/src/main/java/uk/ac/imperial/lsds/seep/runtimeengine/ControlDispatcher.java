@@ -98,6 +98,11 @@ public class ControlDispatcher {
 			sendUpstream(ct, i);
 		}
 	}
+	public void sendAllUpstreams(ControlTuple ct, boolean block){
+		for(int i = 0; i < puCtx.getUpstreamTypeConnection().size(); i++) {
+			sendUpstream(ct, i, block);
+		}
+	}
 
 	public void sendUpstream(ControlTuple ct, int index)
 	{
@@ -115,6 +120,7 @@ public class ControlDispatcher {
 			if (socket == null)
 			{
 				if (block) { throw new RuntimeException("Logic error."); }
+				LOG.warn("Dropping control msg as control socket is null.");
 				return;
 			}
 			
@@ -263,7 +269,7 @@ public class ControlDispatcher {
 				Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
 				if (socket == null)
 				{
-					if (!block) { throw new RuntimeException("Logic error."); }
+					if (block) { throw new RuntimeException("Logic error."); }
 					return;
 				}
 				

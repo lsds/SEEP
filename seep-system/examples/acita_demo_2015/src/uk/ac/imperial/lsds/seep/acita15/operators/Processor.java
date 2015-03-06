@@ -12,20 +12,30 @@ package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 public class Processor implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
-
+	private static final Logger logger = LoggerFactory.getLogger(Processor.class);
 	
 	public void processData(DataTuple data) {
 		long tupleId = data.getLong("tupleId");
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
 		DataTuple outputTuple = data.setValues(tupleId, value);
-		System.out.println("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+		if (tupleId % 1000 == 0)
+		{
+			logger.info("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+		}
+		else
+		{
+			logger.debug("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+		}
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -37,7 +47,14 @@ public class Processor implements StatelessOperator{
 			String value = data.getString("value") + "," + api.getOperatorId();
 			
 			DataTuple outputTuple = data.setValues(tupleId, value);
-			System.out.println("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+			if (tupleId % 1000 == 0)
+			{
+				logger.info("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+			}
+			else
+			{
+				logger.debug("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+			}
 		}
 		throw new RuntimeException("TODO"); 
 	}

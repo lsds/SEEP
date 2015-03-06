@@ -17,6 +17,9 @@ import java.net.Socket;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
@@ -32,6 +35,7 @@ import com.esotericsoftware.kryo.io.Output;
 */
 public class SynchronousCommunicationChannel implements EndPoint{
 
+	private static final Logger logger = LoggerFactory.getLogger(SynchronousCommunicationChannel.class);
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
@@ -55,6 +59,10 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private BatchTuplePayload batch = new BatchTuplePayload();
 	private int channelBatchSize = Integer.parseInt(GLOBALS.valueFor("batchLimit"));
 	private long tick = 0;
+	private boolean deferredInit = false;
+	private InetAddress deferredIp = null;
+	private int deferredPortD = -1;
+	private int deferredPortC = -1;
 
 	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer){
 		this.targetOperatorId = opId;
@@ -76,6 +84,15 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
+		this.targetOperatorId = opId;
+		this.buffer = buffer;
+		this.deferredInit = true;
+		this.deferredIp = deferredIp;
+		this.deferredPortD = deferredPortD;
+		this.deferredPortC = deferredPortC;
 	}
 	
 	public int getOperatorId(){
@@ -131,17 +148,31 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	 * @return the new socket.
 	 */
 	public Socket reopenDownstreamDataSocket()
-	{
-		if (downstreamDataSocket == null) { throw new RuntimeException("No data socket on this channel."); }
-		
-		InetAddress ip = downstreamDataSocket.getInetAddress();
-		int port = downstreamDataSocket.getPort();
-		
-		//Try to close the current downstream data socket and output stream
-		try { output.close(); } 
-		catch (KryoException e) { e.printStackTrace(); } 
-		try { downstreamDataSocket.close(); } 
-		catch (IOException e) {e.printStackTrace();} 
+	{	
+		logger.info("Reopening downstream data socket");
+		InetAddress ip = null;
+		int port = -1;
+		if (downstreamDataSocket != null)
+		{			
+			ip = downstreamDataSocket.getInetAddress();
+			port = downstreamDataSocket.getPort();
+			logger.info("Existing downstream data socket not null: "+ip);
+			//Try to close the current downstream data socket and output stream
+			try { output.close(); } 
+			catch (KryoException e) { e.printStackTrace(); } 
+			try { downstreamDataSocket.close(); } 
+			catch (IOException e) {e.printStackTrace();}
+		}
+		else if (downstreamDataSocket == null && deferredInit) 
+		{ 
+			logger.info("Trying a deferred init of data channel to "+deferredIp);
+			ip = deferredIp;
+			port = deferredPortD;
+		}
+		else
+		{
+			throw new RuntimeException("No data socket on this channel."); 
+		}
 		output = null;
 		downstreamDataSocket = null;
 
@@ -166,15 +197,35 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					try { tmpSocket.close(); } 
 					catch (IOException e1) {} 
 				}
-				if (numReconnects < 1)
+				if (numReconnects < 1 || numReconnects % 100 == 0)
 				{
-					e.printStackTrace();
-					numReconnects++;
+					logger.error("Data connection "+ numReconnects+" failed: "+e);					
 				}
+				else
+				{
+					logger.debug("Data connection "+ numReconnects+" failed: "+e);
+				}
+				numReconnects++;
 			}
 		}
+		logger.info("Successefully connected data channel to "+downstreamDataSocket.getInetAddress());
 		return downstreamDataSocket;
 	}
+	
+	/** Only call once, and only if the deferred init constructor was used */
+	public void deferredInit()
+	{
+		logger.info("Starting deferred init to "+deferredIp);
+		if (!deferredInit) { throw new RuntimeException("Logic error."); }
+		deferredInitDownstreamControlSocket();
+	}
+	
+	private void deferredInitDownstreamControlSocket()
+	{				
+		if (deferredPortC <= 0) { return; }
+		openDownstreamControlSocketNonBlocking(deferredIp, deferredPortC);
+	}
+	
 	
 	/** 
 	 * dokeeffe TODO: Should probably allow this to be 
@@ -185,8 +236,15 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	{
 		if (prevSocketToClose == null) 
 		{ 
-			//Temp sanity check, should probably remove this restriction.
-			throw new RuntimeException("Previous socket should never be null."); 
+			if (!deferredInit)
+			{
+				//Temp sanity check, should probably remove this restriction.
+				throw new RuntimeException("Previous socket should never be null.");
+			}
+			else
+			{
+				return;
+			}
 		}
 		
 		final InetAddress ip;
@@ -206,16 +264,22 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				catch(IOException e) {
 					e.printStackTrace(); /*Urgh*/ 
 				}
-	
+				logger.info("Another caller already reopening control socket.");
 				//Another caller is already reopening the socket.
 				return;
 			}			
 		}
 
+		openDownstreamControlSocketNonBlocking(ip, port);		
+	}
+	
+	private void openDownstreamControlSocketNonBlocking(final InetAddress ip, final int port)
+	{
 		new Thread(new Runnable() 
 		{
 			public void run()
 			{
+				int reconnectCount = 0;
 				while(true)
 				{
 					Socket tmpSocket = null;
@@ -226,14 +290,22 @@ public class SynchronousCommunicationChannel implements EndPoint{
 						{
 							downstreamControlSocket = tmpSocket;
 							controlSocketLock.notifyAll();
+							logger.info("Successfully connected to control socket "+ip+":"+port);
 							return;
 							//return downstreamControlSocket;
 						}
 					}
 					catch(IOException e)
 					{
-						e.printStackTrace(); // Urgh
+						/*
+						if (reconnectCount < 1)
+						{
+							e.printStackTrace(); // Urgh
+						}
+						*/
+						e.printStackTrace();
 					}
+					reconnectCount++;
 					//dokeeffe TODO: N.B. If some other exception causes this
 					//thread to fail then this connection will be stuck forever
 					//as there is no way for another thread to restart the connection
@@ -241,8 +313,9 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				}
 			}
 		}).start();
-		
 	}
+	
+	
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;

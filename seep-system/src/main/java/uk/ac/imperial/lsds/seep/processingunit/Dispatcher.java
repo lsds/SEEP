@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -32,6 +33,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long FAILURE_TIMEOUT = 30 * 1000;
 	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
+	private int MAX_NODE_OUT_BUFFER_TUPLES = Integer.MAX_VALUE;
 	private final FailureCtrl nodeFctrl = new FailureCtrl();
 	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();
 	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//TODO: Perhaps change to a delayQueue
@@ -79,6 +81,17 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void startRoutingCtrlWorkers()
 	{
+		
+		synchronized(lock)
+		{
+			String srcMaxBufferMB = GLOBALS.valueFor("srcMaxBufferMB");
+			if (srcMaxBufferMB != null && owner.getOperator().getOpContext().isSource())
+			{
+				int tupleSize = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));			
+				MAX_NODE_OUT_BUFFER_TUPLES = (Integer.parseInt(srcMaxBufferMB) * 1024 * 1024) / tupleSize;
+				//MAX_NODE_OUT_BUFFER_TUPLES = Integer.parseInt(srcMaxBufferMB) / tupleSize;
+			}
+		}
 		for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
 		{
 			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
@@ -105,6 +118,18 @@ public class Dispatcher implements IRoutingObserver {
 			if (nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }
 			else
 			{
+				while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES)
+				{
+					//logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
+					return;
+					/*
+					try
+					{
+						lock.wait();
+					}
+					catch(InterruptedException e) {}
+					*/
+				}
 				//TODO: Flow control if total q length > max q for round robin?
 				nodeOutBuffer.put(dt.getPayload().timestamp, dt);
 				nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
@@ -371,6 +396,7 @@ public class Dispatcher implements IRoutingObserver {
 			boolean changed = false;
 			synchronized(lock)
 			{
+				logger.debug("Handling failure ctrl = "+nodeFctrl+", with node out buf size="+nodeOutBuffer.size());
 				Iterator<Long> iter = nodeOutBuffer.keySet().iterator();
 				while (iter.hasNext())
 				{
@@ -382,6 +408,8 @@ public class Dispatcher implements IRoutingObserver {
 						changed = true;
 					}
 				}
+				if (changed) { lock.notifyAll(); }
+				logger.debug("Post purge node out buf size="+nodeOutBuffer.size());
 			}
 			return changed;
 		}
