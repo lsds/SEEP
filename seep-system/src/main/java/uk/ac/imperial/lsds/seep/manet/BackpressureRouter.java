@@ -21,6 +21,7 @@ public class BackpressureRouter {
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
 	private int switchCount = 0;
+	private final Object lock = new Object(){};
 
 	
 	public BackpressureRouter(OperatorContext opContext) {
@@ -38,17 +39,20 @@ public class BackpressureRouter {
 	
 	public Integer route(long batchId)
 	{
-		Integer downOpId = maxWeightOpId();
-		
-		if (downOpId != lastRouted)
+		synchronized(lock)
 		{
-			switchCount++;
-			logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
-			lastRouted = downOpId;
-		}
-		if (downOpId != null)
-		{
-			return opContext.getDownOpIndexFromOpId(downOpId);
+			Integer downOpId = maxWeightOpId();
+			
+			if (downOpId != lastRouted)
+			{
+				switchCount++;
+				logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
+				lastRouted = downOpId;
+			}
+			if (downOpId != null)
+			{
+				return opContext.getDownOpIndexFromOpId(downOpId);
+			}
 		}
 		//TODO: Unmatched;
 		return null;
@@ -56,10 +60,23 @@ public class BackpressureRouter {
 	
 	public void handleDownUp(DownUpRCtrl downUp)
 	{
-		if (!weights.containsKey(downUp.getOpId()))
+		synchronized(lock)
 		{
-			throw new RuntimeException("Logic error?");
+			if (!weights.containsKey(downUp.getOpId()))
+			{
+				throw new RuntimeException("Logic error?");
+			}
+			logger.debug("BP router handling downup rctrl: "+ downUp);
+			weights.put(downUp.getOpId(), downUp.getWeight());
+			if (downUp.getUnmatched() != null)
+			{
+				//TODO: Tmp hack: Null here indicates a local update because
+				//an attempt to send a q length msg upstream failed - should
+				//clean it up to perhaps use a different method.
+				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
+			}
 		}
+<<<<<<< Updated upstream
 		logger.debug("BP router handling downup rctrl: "+ downUp);
 		weights.put(downUp.getOpId(), downUp.getWeight());
 		if (downUp.getUnmatched() != null)
@@ -67,18 +84,23 @@ public class BackpressureRouter {
 			unmatched.put(downUp.getOpId(), downUp.getUnmatched());
 		}
 		logger.info("Backpressure router weights= "+weights);
+=======
+>>>>>>> Stashed changes
 	}
 	
 	private Integer maxWeightOpId()
 	{
 		Integer result = null;
 		double maxWeight = 0;
-		for (Integer opId : weights.keySet())
+		synchronized(lock)
 		{
-			double opWeight = weights.get(opId);
-			if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
+			for (Integer opId : weights.keySet())
+			{
+				double opWeight = weights.get(opId);
+				if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
+			}
+			logger.debug("Backpressure router weights= "+weights);
 		}
-		logger.debug("Backpressure router weights= "+weights);
 		return result;
 	}
 	
