@@ -123,19 +123,23 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 		processingUnit.sendData(dt, targets);
 	}
 
-	public synchronized void send_highestWeight(DataTuple dt)
+	public void send_highestWeight(DataTuple dt)
 	{
-		LOG.debug("Operator sending data tuple: "+dt.getPayload().timestamp);
-		ArrayList<Integer> targets = router.forward_highestWeight(dt);
-		while (targets == null || targets.isEmpty())
+		ArrayList<Integer> targets = null;
+		synchronized(this)
 		{
-			LOG.debug("Nowhere to send tuple, waiting for routing change.");
-			try {
-				this.wait();
-			} catch (InterruptedException e) {
-				LOG.debug("TODO: Check if router closed.");
-			}
+			LOG.debug("Operator sending data tuple: "+dt.getPayload().timestamp);
 			targets = router.forward_highestWeight(dt);
+			while (targets == null || targets.isEmpty())
+			{
+				LOG.debug("Nowhere to send tuple, waiting for routing change.");
+				try {
+					this.wait();
+				} catch (InterruptedException e) {
+					LOG.debug("TODO: Check if router closed.");
+				}
+				targets = router.forward_highestWeight(dt);
+			}
 		}
 		
 		processingUnit.sendDataDispatched(dt, targets);

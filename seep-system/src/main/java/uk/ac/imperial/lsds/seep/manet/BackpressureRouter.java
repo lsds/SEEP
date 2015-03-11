@@ -19,6 +19,8 @@ public class BackpressureRouter {
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Set<Long>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
+	private Integer lastRouted = null;
+	private int switchCount = 0;
 
 	
 	public BackpressureRouter(OperatorContext opContext) {
@@ -31,11 +33,19 @@ public class BackpressureRouter {
 			weights.put(downOpId, INITIAL_WEIGHT);
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
+		logger.info("Initial weights: "+weights);
 	}
 	
 	public Integer route(long batchId)
 	{
 		Integer downOpId = maxWeightOpId();
+		
+		if (downOpId != lastRouted)
+		{
+			switchCount++;
+			logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
+			lastRouted = downOpId;
+		}
 		if (downOpId != null)
 		{
 			return opContext.getDownOpIndexFromOpId(downOpId);
@@ -52,7 +62,11 @@ public class BackpressureRouter {
 		}
 		logger.debug("BP router handling downup rctrl: "+ downUp);
 		weights.put(downUp.getOpId(), downUp.getWeight());
-		unmatched.put(downUp.getOpId(), downUp.getUnmatched());
+		if (downUp.getUnmatched() != null)
+		{
+			unmatched.put(downUp.getOpId(), downUp.getUnmatched());
+		}
+		logger.info("Backpressure router weights= "+weights);
 	}
 	
 	private Integer maxWeightOpId()

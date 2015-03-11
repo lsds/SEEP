@@ -104,12 +104,12 @@ public class ControlDispatcher {
 		}
 	}
 
-	public void sendUpstream(ControlTuple ct, int index)
+	public boolean sendUpstream(ControlTuple ct, int index)
 	{
-		sendUpstream(ct, index, true);
+		return sendUpstream(ct, index, true);
 	}
 	
-	public void sendUpstream(ControlTuple ct, int index, boolean block){
+	public boolean sendUpstream(ControlTuple ct, int index, boolean block){
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
 		SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
 		int numRetries = 0;
@@ -121,7 +121,7 @@ public class ControlDispatcher {
 			{
 				if (block) { throw new RuntimeException("Logic error."); }
 				LOG.warn("Dropping control msg as control socket is null.");
-				return;
+				break;
 			}
 			
 			Output output = null;
@@ -147,6 +147,8 @@ public class ControlDispatcher {
 				if (!block) { break; }
 			}
 		}
+		if (!success) { LOG.warn("Sending control tuple upstream failed"); }
+		return success;
 	}
 	
 	public void sendOpenSessionWaitACK(ControlTuple ct, int index){
@@ -255,9 +257,9 @@ public class ControlDispatcher {
 		}
 	}
 	
-	public void sendDownstream(ControlTuple ct, int index) { sendDownstream(ct, index, true); }
+	public boolean sendDownstream(ControlTuple ct, int index) { return sendDownstream(ct, index, true); }
 	
-	public void sendDownstream(ControlTuple ct, int index, boolean block) 
+	public boolean sendDownstream(ControlTuple ct, int index, boolean block) 
 	{
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
 		if (obj instanceof SynchronousCommunicationChannel){
@@ -270,7 +272,7 @@ public class ControlDispatcher {
 				if (socket == null)
 				{
 					if (block) { throw new RuntimeException("Logic error."); }
-					return;
+					break;
 				}
 				
 				Output output = null;
@@ -294,7 +296,9 @@ public class ControlDispatcher {
 					if (!block) { break; }
 				}
 			}
+			return success;
 		}
+		else { throw new RuntimeException("Logic error?"); }
 	}
 	
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){

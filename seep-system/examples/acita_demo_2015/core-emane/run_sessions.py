@@ -66,8 +66,8 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
     try:
-        session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
-        #session_cfg = {'custom_services_dir':svc_dir} 
+        #session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
+        session_cfg = {'custom_services_dir':svc_dir} 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
@@ -174,7 +174,7 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
     n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
-    n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
+    #n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.ip_forward=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.forwarding=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv6.conf.all.forwarding=1"])

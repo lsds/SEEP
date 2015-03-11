@@ -18,6 +18,7 @@ import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -108,6 +109,10 @@ public class Dispatcher implements IRoutingObserver {
 		fDetectorT.start();
 	}
 	
+	/**
+	 * TODO: Need to rearrange locking so that caller can block on 
+	 * a full node out buffer without causing a deadlock.
+	 */
 	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
 	{		
 		if (targets == null || targets.isEmpty()) { throw new RuntimeException("Logic error."); }
@@ -120,15 +125,15 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES)
 				{
-					//logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
-					return;
-					/*
+					logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
+					//return
+					
 					try
 					{
 						lock.wait();
 					}
 					catch(InterruptedException e) {}
-					*/
+					if (nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }					
 				}
 				//TODO: Flow control if total q length > max q for round robin?
 				nodeOutBuffer.put(dt.getPayload().timestamp, dt);
@@ -155,6 +160,7 @@ public class Dispatcher implements IRoutingObserver {
 				throw new RuntimeException("TODO");
 			}
 		}
+		return;
 	}
 	
 	public void ack(DataTuple dt)
@@ -194,7 +200,15 @@ public class Dispatcher implements IRoutingObserver {
 		
 		public void send(DataTuple dt)
 		{
-			tupleQueue.add(dt);
+			//TODO: this needs to be thread safe.
+			if (!tupleQueue.contains(dt))
+			{
+				tupleQueue.add(dt);
+			}
+			else
+			{
+				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
+			}
 		}
 		
 		@Override
@@ -252,15 +266,18 @@ public class Dispatcher implements IRoutingObserver {
 			// while true
 			while (true)
 			{
-				int totalQueueLength = 0;
+				int tupleQueueLength = 0;
+				int bufLength = 0;
 				int downIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId);
 				synchronized(lock)
 				{
 					//measure tuple queue length
-					totalQueueLength += workers.get(downIndex).queueLength();
+					tupleQueueLength = workers.get(downIndex).queueLength();
 					//measure buf length
-					totalQueueLength += bufLength(downId);
+					bufLength = bufLength(downId);
 				}	
+				int totalQueueLength = tupleQueueLength + bufLength;
+				logger.debug("Total queue length to "+downId + " = "+ totalQueueLength+"("+tupleQueueLength+"/"+bufLength+")");
 				//Create and send control tuple
 				sendQueueLength(totalQueueLength);
 				
@@ -288,7 +305,11 @@ public class Dispatcher implements IRoutingObserver {
 			int localOpId = owner.getOperator().getOperatorId();
 			ControlTuple ct = new ControlTuple(ControlTupleType.UP_DOWN_RCTRL, localOpId, queueLength);
 			logger.debug("Sending control tuple downstream from "+localOpId+" with queue length="+queueLength);
-			owner.getOwner().getControlDispatcher().sendDownstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId), false);
+			boolean flushSuccess = owner.getOwner().getControlDispatcher().sendDownstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId), false);
+			if (!flushSuccess)
+			{
+				owner.getOperator().getRouter().update_highestWeight(new DownUpRCtrl(downId, -1.0, null));
+			}
 		}
 	}
 	
@@ -360,6 +381,7 @@ public class Dispatcher implements IRoutingObserver {
 
 					if (target >= 0)
 					{
+						logger.warn("Retransmitting tuple "+dt.getPayload().timestamp +" to "+target);
 						workers.get(target).send(dt);
 						synchronized(lock)
 						{

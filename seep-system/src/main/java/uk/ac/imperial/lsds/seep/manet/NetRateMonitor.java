@@ -20,7 +20,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 public class NetRateMonitor implements Runnable {
 
 	private final static Logger logger = LoggerFactory.getLogger(NetRateMonitor.class);
-	private final static long NET_MONITOR_DELAY = 10 * 1000;
+	private final static long NET_MONITOR_DELAY = 2 * 1000;
 	private final Object lock = new Object(){};
 	private final RoutingController rController;
 	private Map <Integer, String> upOpIds;

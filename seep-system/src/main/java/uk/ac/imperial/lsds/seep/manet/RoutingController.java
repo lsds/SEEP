@@ -144,6 +144,7 @@ public class RoutingController implements Runnable{
 							new Double(1.0 / cost.doubleValue()));
 				}
 			}
+			logger.debug("Updated upstream net rates: "+upstreamNetRates);
 			updateWeight();
 			lock.notifyAll();
 		}
@@ -201,6 +202,7 @@ public class RoutingController implements Runnable{
 			{
 				weights.put(nodeId, aggregate(joinWeights));
 			}
+			logger.info("Updated routing controller weights: "+ weights);
 	}
 	
 	private double computeWeight(int qLenUpstream, int qLenLocal, double netRate, double pRate)
