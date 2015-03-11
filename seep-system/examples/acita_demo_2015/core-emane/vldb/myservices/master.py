@@ -39,7 +39,7 @@ class MeanderMaster(CoreService):
         ''' Return a string that will be written to filename, or sent to the
             GUI for user customization.
         '''
-        repo_dir = "/data/dev/seep-github"
+        repo_dir = "%s/../../../../../.."%os.path.dirname(os.path.realpath(__file__))
         seep_example_dir = "%s/seep-system/examples/acita_demo_2015"%repo_dir
         #seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
         query_jar = "acita_demo_2015.jar"

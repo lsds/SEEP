@@ -45,7 +45,8 @@ class MeanderWorker(CoreService):
             cfg = "touch worker.shutdown\n"
             return cfg
         else:
-            repo_dir = "/data/dev/seep-github"
+            #repo_dir = "/data/dev/seep-github"
+            repo_dir = "%s/../../../../../.."%os.path.dirname(os.path.realpath(__file__))
             seep_example_dir = "%s/seep-system/examples/acita_demo_2015"%repo_dir
             #seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
             #lib_dir = "lib"

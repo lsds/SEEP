@@ -8,10 +8,12 @@ from core.mobility import Ns2ScriptedMobility
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
 from gen_mobility_trace import gen_trace
 
-
 script_dir = os.path.dirname(os.path.realpath(__file__))
-svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
-conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
+#repo_dir = '%s/../../../..'
+#svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
+svc_dir='%s/vldb/myservices'%script_dir
+#conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
+conf_dir='%s/vldb/config'%script_dir
 seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
 mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',500),
         ('loop',1),('autostart',1.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
@@ -66,8 +68,8 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
     try:
-        #session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
-        session_cfg = {'custom_services_dir':svc_dir} 
+        session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
+        #session_cfg = {'custom_services_dir':svc_dir} 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
