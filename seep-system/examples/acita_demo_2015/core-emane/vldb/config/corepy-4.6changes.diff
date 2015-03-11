@@ -1,0 +1,33 @@
+diff --git a/mobility.py b/mobility.py
+index 97b3e4b..708e53c 100644
+--- a/mobility.py
++++ b/mobility.py
+@@ -914,7 +914,6 @@ class Ns2ScriptedMobility(WayPointMobility):
+         elif typestr == "pause":
+             filename = self.script_pause
+         elif typestr == "stop":
+-            raise Exception("Mobility script stopping!")
+             filename = self.script_stop
+         if filename is None or filename == '':
+             return
+diff --git a/session.py b/session.py
+index 7bbaa60..edc3a0e 100644
+--- a/session.py
++++ b/session.py
+@@ -222,8 +222,6 @@ class Session(object):
+         replies = []
+ 
+         if not self.isconnected():
+-            self.warn("Modified session - running hook with no connection.")
+-            self.runhook(state)
+             return replies
+         if info:
+             statename = coreapi.state_name(state)
+@@ -646,7 +644,6 @@ class Session(object):
+         self.emane.shutdown()
+         self.updatectrlifhosts(remove=True)
+         self.addremovectrlif(node=None, remove=True)
+-	self.setstate(coreapi.CORE_EVENT_DATACOLLECT_STATE, info=True, sendevent=True)
+         # self.checkshutdown() is currently invoked from node delete handler
+     
+     def checkshutdown(self):
