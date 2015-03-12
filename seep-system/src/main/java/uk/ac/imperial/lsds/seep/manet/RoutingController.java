@@ -140,8 +140,11 @@ public class RoutingController implements Runnable{
 							.intValue()) {
 						upstreamNetRates.get(i).put(upstreamId, new Double(0));
 					}
-					upstreamNetRates.get(i).put(upstreamId,
-							new Double(1.0 / cost.doubleValue()));
+					else
+					{
+						upstreamNetRates.get(i).put(upstreamId,
+								new Double(1.0 / cost.doubleValue()));
+					}
 				}
 			}
 			logger.debug("Updated upstream net rates: "+upstreamNetRates);

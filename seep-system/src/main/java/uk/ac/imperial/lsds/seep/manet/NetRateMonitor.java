@@ -30,6 +30,7 @@ public class NetRateMonitor implements Runnable {
 		this.upOpIds = upOpIds;
 		this.rController = rController;
 		coreDeployment = "true".equals(GLOBALS.valueFor("useCoreAddr"));
+		logger.info("Net rate monitor using up op id to addr mapping: "+upOpIds);
 	}
 	
 	private void setUpOpIds(Map<Integer, String> newUpOpIds)

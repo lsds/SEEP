@@ -126,6 +126,7 @@ def run_session(time_str, k, mob, exp_session, params):
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         services_str = "IPForward|OLSR"
+        #services_str = "IPForward|OLSRETX"
 
         workers = []
         num_workers = 2 + (k * 2)

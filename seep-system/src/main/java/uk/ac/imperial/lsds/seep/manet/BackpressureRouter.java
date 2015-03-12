@@ -75,17 +75,8 @@ public class BackpressureRouter {
 				//clean it up to perhaps use a different method.
 				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
 			}
+			logger.debug("Backpressure router weights= "+weights);
 		}
-<<<<<<< Updated upstream
-		logger.debug("BP router handling downup rctrl: "+ downUp);
-		weights.put(downUp.getOpId(), downUp.getWeight());
-		if (downUp.getUnmatched() != null)
-		{
-			unmatched.put(downUp.getOpId(), downUp.getUnmatched());
-		}
-		logger.info("Backpressure router weights= "+weights);
-=======
->>>>>>> Stashed changes
 	}
 	
 	private Integer maxWeightOpId()
