@@ -125,8 +125,7 @@ def run_session(time_str, k, mob, exp_session, params):
         if os.path.exists(session_constraints):
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
-        services_str = "IPForward|OLSR"
-        #services_str = "IPForward|OLSRETX"
+        services_str = "IPForward|%s"%params['net-routing']
 
         workers = []
         num_workers = 2 + (k * 2)
@@ -246,7 +245,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='7', help = 'Number of core nodes (7)')
     args=parser.parse_args()
-    params = {'nodes':int(args.nodes), 'controlnet': "172.16.0.0/24"}
+    params = {'nodes':int(args.nodes), 'controlnet': "172.16.0.0/24", 'net-routing':'OLSR'}
     if args.plot_time_str:
         time_str = args.plot_time_str
         regen_sessions(time_str)
