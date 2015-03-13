@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -49,7 +50,7 @@ public class NetRateMonitor implements Runnable {
 		{
 			while(true)
 			{
-				Map<Integer, Integer> upstreamCosts = null;
+				Map<Integer, Double> upstreamCosts = null;
 				if (coreDeployment)
 				{
 					upstreamCosts = parseRoutes(readRoutes());
@@ -57,10 +58,10 @@ public class NetRateMonitor implements Runnable {
 				}
 				else
 				{
-					upstreamCosts = new HashMap<Integer, Integer>();
+					upstreamCosts = new HashMap<Integer, Double>();
 					for (Integer upOp : upOpIds.keySet())
 					{
-						upstreamCosts.put(upOp, 1); 
+						upstreamCosts.put(upOp, 1.0); 
 					}
 				}
 				
@@ -101,10 +102,10 @@ public class NetRateMonitor implements Runnable {
 		return result;
 	}
 	
-	private Map<Integer, Integer> parseRoutes(List<String> routes)
+	private Map<Integer, Double> parseRoutes(List<String> routes)
 	{
 		logger.info("Read routes: "+routes);
-		Map<Integer, Integer> upstreamCosts = new HashMap<>();
+		Map<Integer, Double> upstreamCosts = new HashMap<>();
 		logger.info("Checking routes against upOpIds: "+upOpIds);
 		for (String route : routes)
 		{
@@ -113,7 +114,7 @@ public class NetRateMonitor implements Runnable {
 			Integer upOpId = getUpOpId(splits[1]);
 			if (upOpId != null)
 			{
-				upstreamCosts.put(upOpId, Integer.parseInt(splits[2]));
+				upstreamCosts.put(upOpId, Double.parseDouble(splits[2]));
 			}
 		}
 		
@@ -125,8 +126,18 @@ public class NetRateMonitor implements Runnable {
 	{
 		for (Integer upOpId : upOpIds.keySet())
 		{
+			String upOpHostname = upOpIds.get(upOpId);
 			//TODO: What if two workers on the same node!
-			if (upOpIds.get(upOpId).equals(hostname))
+			String upOpIp = null;
+			try
+			{
+				upOpIp = InetAddress.getByName(upOpHostname).getHostAddress();
+			}
+			catch(UnknownHostException e)
+			{
+				logger.error("Unknown host for upOpId: " +e);
+			}
+			if (upOpHostname.equals(hostname) || upOpIp != null && upOpIp.equals(hostname))
 			{
 				return upOpId;
 			}

@@ -123,7 +123,7 @@ public class RoutingController implements Runnable{
 		}
 	}
 	
-	public void handleNetCostsUpdate(Map<Integer, Integer> upstreamCosts)
+	public void handleNetCostsUpdate(Map<Integer, Double> upstreamCosts)
 	{
 		synchronized (lock) {
 			for (int i = 0; i < upstreamNetRates.size(); i++) {
@@ -131,9 +131,9 @@ public class RoutingController implements Runnable{
 						.iterator();
 				while (iter.hasNext()) {
 					Integer upstreamId = iter.next();
-					Integer cost = upstreamCosts.get(upstreamId);
+					Double cost = upstreamCosts.get(upstreamId);
 					if (cost==null) {
-						cost = GraphUtil.SUB_INFINITE_DISTANCE;
+						cost = new Double(GraphUtil.SUB_INFINITE_DISTANCE);
 					}
 					
 					if (cost.intValue() >= GraphUtil.SUB_INFINITE_DISTANCE
