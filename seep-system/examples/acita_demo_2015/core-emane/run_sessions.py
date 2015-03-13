@@ -62,14 +62,14 @@ cd $scriptDir
 cd $expDir
 '''
 def run_sessions(time_str, k, mob, sessions, params):
-    for session in range(0, sessions):
+    for session in sessions:
         print '*** Running session %d ***'%session
         run_session(time_str, k, mob, session, params)
 
 def run_session(time_str, k, mob, exp_session, params):
     try:
-        session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
-        #session_cfg = {'custom_services_dir':svc_dir} 
+        #session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
+        session_cfg = {'custom_services_dir':svc_dir} 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
@@ -242,10 +242,11 @@ def regen_sessions(time_str):
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
+    parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='7', help = 'Number of core nodes (7)')
     args=parser.parse_args()
-    params = {'nodes':int(args.nodes), 'controlnet': "172.16.0.0/24", 'net-routing':'OLSR'}
+    params = {'nodes':int(args.nodes), 'controlnet': "172.16.0.0/24", 'net-routing':'OLSR', 'specific':args.specific}
     if args.plot_time_str:
         time_str = args.plot_time_str
         regen_sessions(time_str)

@@ -13,15 +13,16 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     data_dir = '%s/log'%script_dir
 
+    session_ids = [sessions] if params['specific'] else range(0,sessions)
     if plot_time_str:
         time_str = plot_time_str
     else:
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
         # create exp dirs.
         #create_exp_dirs(ks, mobilities, sessions, time_str, data_dir)
-        run_experiment(ks, mobilities, sessions, params, time_str, data_dir )
+        run_experiment(ks, mobilities, session_ids, params, time_str, data_dir )
 
-    record_statistics(ks, mobilities, sessions, time_str, data_dir)
+    record_statistics(ks, mobilities, session_ids, time_str, data_dir)
 
     plot_tput_vs_mobility(time_str, script_dir, data_dir)
     plot_median_tput_vs_mobility(time_str, script_dir, data_dir)
@@ -61,7 +62,7 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir):
             tputs = get_tputs(k, mob, sessions, time_str, data_dir)
             raw_vals[k][mob] = tputs
             stats = {}
-            for session in range(0, sessions): 
+            for session in sessions: 
                 stats[session] = {'MEAN-TPUT':tputs[session]}
             vals[k][mob] = stats 
             meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(tputs.values())  
@@ -99,7 +100,7 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir):
 
 def get_tputs(k, mob, sessions, time_str, data_dir):
     tputs = {} 
-    for session in range(0,sessions):
+    for session in sessions:
         logfilename = '%s/tput.txt'%(get_session_dir(k,mob,session,time_str,data_dir))
         tput = get_tput(logfilename)
         tputs[session] = tput 
@@ -138,6 +139,7 @@ if __name__ == "__main__":
     parser.add_argument('--ks', dest='ks', default='1,2,3,5', help='replication factors [1,2,3,5]')
     parser.add_argument('--pausetimes', dest='pts', default='0.0,2.0,4.0,6.0,8.0', help='pause times [0.0,2.0,4.0,6.0,8.0]')
     parser.add_argument('--sessions', dest='sessions', default='2', help='number of sessions (2)')
+    parser.add_argument('--specific', dest='specific', default=False, action='store_true')
     #parser.add_argument('--mobility', dest='mobility', default='static', help='mobility model: static,waypoint')
     #parser.add_argument('--query', dest='query_type', default='linear', help='query type: linear,join,mixed,parallel')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
@@ -159,6 +161,7 @@ if __name__ == "__main__":
     # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
+    params['specific']=args.specific
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 
