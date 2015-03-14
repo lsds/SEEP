@@ -208,7 +208,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				numReconnects++;
 			}
 		}
-		logger.info("Successefully connected data channel to "+downstreamDataSocket.getInetAddress());
+		logger.info("Successfully connected data channel to "+downstreamDataSocket.getInetAddress());
 		return downstreamDataSocket;
 	}
 	

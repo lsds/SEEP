@@ -22,13 +22,15 @@ public class Processor implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Processor.class);
+	private int processed = 0;
 	
 	public void processData(DataTuple data) {
 		long tupleId = data.getLong("tupleId");
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
 		DataTuple outputTuple = data.setValues(tupleId, value);
-		if (tupleId % 1000 == 0)
+		processed++;
+		if (processed % 1000 == 0)
 		{
 			logger.info("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 		}
@@ -47,7 +49,8 @@ public class Processor implements StatelessOperator{
 			String value = data.getString("value") + "," + api.getOperatorId();
 			
 			DataTuple outputTuple = data.setValues(tupleId, value);
-			if (tupleId % 1000 == 0)
+			processed++;
+			if (processed % 1000 == 0)
 			{
 				logger.info("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 			}

@@ -116,7 +116,7 @@ public class OutputQueue {
 					{
 						try
 						{
-							LOG.debug("Writing batch tuple: "+msg);
+							LOG.debug("Writing batch tuple to "+dest.getOperatorId()+", msg="+msg);
 							k.writeObject(channelRecord.getOutput(), msg);
 							//Flush the buffer to the stream
 							channelRecord.getOutput().flush();
@@ -124,6 +124,7 @@ public class OutputQueue {
 						}
 						catch(KryoException|IllegalArgumentException e)
 						{
+							LOG.error("Writing batch to "+dest.getOperatorId() + " failed, msg="+ msg);
 							//TODO: Get rid of this global. Might want to
 							//Have different behaviour for different instances.
 							if(!"true".equals(GLOBALS.valueFor("autoReconnectChannel")))

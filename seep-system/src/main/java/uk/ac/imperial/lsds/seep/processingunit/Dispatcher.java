@@ -31,7 +31,7 @@ public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private static final Logger logger = LoggerFactory.getLogger(Dispatcher.class);
-	private static final long FAILURE_TIMEOUT = 30 * 1000;
+	private static final long FAILURE_TIMEOUT = 60 * 1000;
 	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	private int MAX_NODE_OUT_BUFFER_TUPLES = Integer.MAX_VALUE;
@@ -318,7 +318,7 @@ public class Dispatcher implements IRoutingObserver {
 	{	
 		public void run()
 		{
-			if (outputQueues.size() <= 1) { throw new RuntimeException("No need?"); }
+			//if (outputQueues.size() <= 1) { throw new RuntimeException("No need?"); }
 			
 			while(true)
 			{

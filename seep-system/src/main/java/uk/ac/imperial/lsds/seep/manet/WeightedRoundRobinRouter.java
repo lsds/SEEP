@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.manet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 				double[] weightRanges = getWeightRanges(activeOpIds);
 				
 				double rand = random.nextDouble();
-				
+				logger.debug("Ranges="+Arrays.toString(weightRanges)+",rand="+rand);
 				for (int i = 0; i < weightRanges.length; i++)
 				{
 					double range = weightRanges[i];
@@ -115,10 +116,12 @@ public class WeightedRoundRobinRouter implements IRouter {
 	{
 		double[] result = new double[activeOpIds.size()];
 		double total = getTotalWeight(activeOpIds);
+		double accum = 0;
 		for (int i = 0; i < activeOpIds.size(); i++)
 		{
 			double range = weights.get(activeOpIds.get(i)) / total;
-			result[i] = range;
+			result[i] = range + accum;
+			accum  += range;
 		}
 		return result;
 	}

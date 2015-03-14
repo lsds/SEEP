@@ -117,7 +117,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			
 			while(goOn){
 				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
-				LOG.debug("Received new batch: "+ batchTuplePayload);
+				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload);
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
 				for(TuplePayload t_payload : batch)
 				{
