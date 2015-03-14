@@ -136,7 +136,7 @@ public class RoutingController implements Runnable{
 						cost = new Double(GraphUtil.SUB_INFINITE_DISTANCE);
 					}
 					
-					if (cost.intValue() >= GraphUtil.SUB_INFINITE_DISTANCE
+					if (cost >= GraphUtil.SUB_INFINITE_DISTANCE
 							.intValue()) {
 						upstreamNetRates.get(i).put(upstreamId, new Double(0));
 					}
