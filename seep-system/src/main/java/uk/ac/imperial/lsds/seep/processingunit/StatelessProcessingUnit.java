@@ -33,6 +33,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
+import uk.ac.imperial.lsds.seep.manet.RoundRobinRouter;
+import uk.ac.imperial.lsds.seep.manet.WeightedRoundRobinRouter;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
@@ -441,7 +443,19 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx.configureOperatorConnections(runningOp);
 		if (dispatcher != null)
 		{
-			getOperator().getRouter().setBackpressureRouting(new BackpressureRouter(getOperator().getOpContext()));
+			if ("roundRobin".equals(GLOBALS.valueFor("meanderRouting")))
+			{
+				getOperator().getRouter().setMeanderRouting(new RoundRobinRouter(getOperator().getOpContext()));
+			}
+			else if ("weightedRoundRobin".equals(GLOBALS.valueFor("meanderRouting")))
+			{
+				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
+
+			}
+			else
+			{
+				getOperator().getRouter().setMeanderRouting(new BackpressureRouter(getOperator().getOpContext()));
+			}
 		}
 		return ctx;
 	}

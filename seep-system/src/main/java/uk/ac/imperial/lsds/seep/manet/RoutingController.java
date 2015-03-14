@@ -215,7 +215,8 @@ public class RoutingController implements Runnable{
 		//if there is no link we will still have a weight of 0,
 		//But when sending initially it will act as a gradient.
 		//Not sure if it will overload the queues though?
-		return (qLenUpstream + 1 - qLenLocal) * netRate * pRate;
+		//return (qLenUpstream + 1 - qLenLocal) * netRate * pRate;
+		return netRate * pRate;
 	}
 	
 	private double aggregate(Set<Double> joinWeights)

@@ -3,19 +3,18 @@ package uk.ac.imperial.lsds.seep.manet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
-public class BackpressureRouter implements IRouter {
-
-	private final static Logger logger = LoggerFactory.getLogger(BackpressureRouter.class);
+public class RoundRobinRouter implements IRouter {
+	private final static Logger logger = LoggerFactory.getLogger(RoundRobinRouter.class);
 	private final static double INITIAL_WEIGHT = 1;
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Set<Long>> unmatched;
@@ -23,13 +22,16 @@ public class BackpressureRouter implements IRouter {
 	private Integer lastRouted = null;
 	private int switchCount = 0;
 	private final Object lock = new Object(){};
-
+	private int nextRoundRobinIndex = 0;
+	private final ArrayList<Integer> downOps;
 	
-	public BackpressureRouter(OperatorContext opContext) {
+	
+	
+	public RoundRobinRouter(OperatorContext opContext) {
 		this.weights = new HashMap<>();
 		this.unmatched = new HashMap<>();
 		this.opContext = opContext;
-		ArrayList<Integer> downOps = opContext.getDownstreamOpIdList();
+		this.downOps = opContext.getDownstreamOpIdList();
 		for (int downOpId : downOps)
 		{
 			weights.put(downOpId, INITIAL_WEIGHT);
@@ -38,12 +40,32 @@ public class BackpressureRouter implements IRouter {
 		logger.info("Initial weights: "+weights);
 	}
 	
-	public Integer route(long batchId)
-	{
-		
+	@Override
+	public Integer route(long batchId) {
 		synchronized(lock)
 		{
 			Integer downOpId = maxWeightOpId();
+			
+			if (downOpId != null)
+			{
+				//At least one downstream is up
+				int initialIndex = nextRoundRobinIndex;
+				while (true)
+				{
+					if (weights.get(downOps.get(nextRoundRobinIndex)) > 0)
+					{
+						downOpId = downOps.get(nextRoundRobinIndex);
+						nextRoundRobinIndex = ((nextRoundRobinIndex + 1) % downOps.size());
+						break;
+					}
+					else 
+					{ 
+						nextRoundRobinIndex = ((nextRoundRobinIndex + 1) % downOps.size());
+						if (nextRoundRobinIndex == initialIndex) { throw new RuntimeException("Logic error - no op found!"); }
+					}
+	
+				}
+			}
 			
 			if (downOpId != lastRouted)
 			{
@@ -58,19 +80,17 @@ public class BackpressureRouter implements IRouter {
 		}
 		//TODO: Unmatched;
 		return null;		
-		
-	
 	}
-	
-	public void handleDownUp(DownUpRCtrl downUp)
-	{
+
+	@Override
+	public void handleDownUp(DownUpRCtrl downUp) {
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
 			{
 				throw new RuntimeException("Logic error?");
 			}
-			logger.debug("BP router handling downup rctrl: "+ downUp);
+			logger.debug("RR router handling downup rctrl: "+ downUp);
 			weights.put(downUp.getOpId(), downUp.getWeight());
 			if (downUp.getUnmatched() != null)
 			{
@@ -79,7 +99,7 @@ public class BackpressureRouter implements IRouter {
 				//clean it up to perhaps use a different method.
 				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
 			}
-			logger.debug("Backpressure router weights= "+weights);
+			logger.debug("RR router weights= "+weights);
 		}
 	}
 	
@@ -94,10 +114,9 @@ public class BackpressureRouter implements IRouter {
 				double opWeight = weights.get(opId);
 				if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
 			}
-			logger.debug("maxWeight: Backpressure router weights= "+weights);
+			logger.debug("maxWeight: Round robin router weights= "+weights);
 		}
 		return result;
 	}
-	
-	
+
 }

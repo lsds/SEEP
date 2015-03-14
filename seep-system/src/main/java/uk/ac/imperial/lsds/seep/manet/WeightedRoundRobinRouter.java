@@ -4,18 +4,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
-public class BackpressureRouter implements IRouter {
-
-	private final static Logger logger = LoggerFactory.getLogger(BackpressureRouter.class);
+public class WeightedRoundRobinRouter implements IRouter {
+	private final static Logger logger = LoggerFactory.getLogger(WeightedRoundRobinRouter.class);
 	private final static double INITIAL_WEIGHT = 1;
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Set<Long>> unmatched;
@@ -23,9 +22,10 @@ public class BackpressureRouter implements IRouter {
 	private Integer lastRouted = null;
 	private int switchCount = 0;
 	private final Object lock = new Object(){};
-
+	private final Random random = new Random(0);
 	
-	public BackpressureRouter(OperatorContext opContext) {
+	
+	public WeightedRoundRobinRouter(OperatorContext opContext) {
 		this.weights = new HashMap<>();
 		this.unmatched = new HashMap<>();
 		this.opContext = opContext;
@@ -38,39 +38,56 @@ public class BackpressureRouter implements IRouter {
 		logger.info("Initial weights: "+weights);
 	}
 	
-	public Integer route(long batchId)
-	{
+	@Override
+	public Integer route(long batchId) {
+
+		Integer downOpId = null;
 		
 		synchronized(lock)
 		{
-			Integer downOpId = maxWeightOpId();
+			ArrayList<Integer> activeOpIds = getActiveOpIds();
 			
+			if (!activeOpIds.isEmpty())
+			{
+				double[] weightRanges = getWeightRanges(activeOpIds);
+				
+				double rand = random.nextDouble();
+				
+				for (int i = 0; i < weightRanges.length; i++)
+				{
+					double range = weightRanges[i];
+					if (rand <= range)
+					{
+						downOpId = activeOpIds.get(i);
+						break;
+					}
+				}
+				if (downOpId == null) { throw new RuntimeException("Logic error."); }
+			}
 			if (downOpId != lastRouted)
 			{
 				switchCount++;
 				logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
 				lastRouted = downOpId;
 			}
+			
 			if (downOpId != null)
 			{
 				return opContext.getDownOpIndexFromOpId(downOpId);
 			}
 		}
-		//TODO: Unmatched;
-		return null;		
-		
-	
+		return null;
 	}
-	
-	public void handleDownUp(DownUpRCtrl downUp)
-	{
+
+	@Override
+	public void handleDownUp(DownUpRCtrl downUp) {
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
 			{
 				throw new RuntimeException("Logic error?");
 			}
-			logger.debug("BP router handling downup rctrl: "+ downUp);
+			logger.debug("Weighted rr router handling downup rctrl: "+ downUp);
 			weights.put(downUp.getOpId(), downUp.getWeight());
 			if (downUp.getUnmatched() != null)
 			{
@@ -79,25 +96,42 @@ public class BackpressureRouter implements IRouter {
 				//clean it up to perhaps use a different method.
 				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
 			}
-			logger.debug("Backpressure router weights= "+weights);
+			logger.debug("Weighted rr router weights= "+weights);
 		}
 	}
-	
-	private Integer maxWeightOpId()
+
+	private ArrayList<Integer> getActiveOpIds()
 	{
-		Integer result = null;
-		double maxWeight = 0;
-		synchronized(lock)
+		ArrayList<Integer> result = new ArrayList<>();
+		for (Integer opId : weights.keySet())
+		{		
+			if (weights.get(opId) > 0) { result.add(opId); }
+		}
+		logger.debug("getActiveOpIds: Active op ids= "+result);
+		return result;
+	}
+	
+	private double[] getWeightRanges(ArrayList<Integer> activeOpIds)
+	{
+		double[] result = new double[activeOpIds.size()];
+		double total = getTotalWeight(activeOpIds);
+		for (int i = 0; i < activeOpIds.size(); i++)
 		{
-			for (Integer opId : weights.keySet())
-			{
-				double opWeight = weights.get(opId);
-				if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
-			}
-			logger.debug("maxWeight: Backpressure router weights= "+weights);
+			double range = weights.get(activeOpIds.get(i)) / total;
+			result[i] = range;
 		}
 		return result;
 	}
 	
-	
+	private double getTotalWeight(ArrayList<Integer> activeOpIds)
+	{
+		double total = 0;
+		for (Integer opId : activeOpIds)
+		{
+			total += weights.get(opId); 
+		}
+		return total;
+		
+		
+	}
 }

@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
+import uk.ac.imperial.lsds.seep.manet.IRouter;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.operator.StatefulOperator;
@@ -49,7 +50,7 @@ public class Router implements Serializable{
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
 
 	private ArrayList<IRoutingObserver> observers = new ArrayList<>(1);
-	private BackpressureRouter bpRouter = null;
+	private IRouter meanderRouter = null;
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -61,12 +62,12 @@ public class Router implements Serializable{
 		this.routeInfo = routeInfo;
 	}
 	
-	public void setBackpressureRouting(BackpressureRouter bpRouter)
+	public void setMeanderRouting(IRouter meanderRouter)
 	{
-		this.bpRouter = bpRouter;
+		this.meanderRouter = meanderRouter;
 	}
 	
-	public BackpressureRouter getBackpressureRouting() { return bpRouter; }
+	public IRouter getMeanderRouting() { return meanderRouter; }
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
@@ -186,9 +187,9 @@ public class Router implements Serializable{
 	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
 	{
 		LOG.debug("Routing data tuple: "+dt.getPayload().timestamp);
-		if (bpRouter == null) { throw new RuntimeException("Logic error?"); }
+		if (meanderRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
-		Integer target = bpRouter.route(dt.getLong("tupleId"));
+		Integer target = meanderRouter.route(dt.getLong("tupleId"));
 		if (target != null)
 		{
 			ArrayList<Integer> targets = new ArrayList<>();
@@ -251,12 +252,12 @@ public class Router implements Serializable{
 	
 	public void update_highestWeight(DownUpRCtrl downUp)
 	{
-		if (bpRouter == null) 
+		if (meanderRouter == null) 
 		{ 
-			LOG.warn("Ignoring down-up routing ctrl - backpressure router doesn't exist yet.");
+			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
 			return;
 		}
-		bpRouter.handleDownUp(downUp);
+		meanderRouter.handleDownUp(downUp);
 		//downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_highestWeight(newTarget);
 		notifyObservers();
 	}
