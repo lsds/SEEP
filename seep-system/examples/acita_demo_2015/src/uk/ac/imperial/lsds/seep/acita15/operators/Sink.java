@@ -21,6 +21,7 @@ public class Sink implements StatelessOperator {
 	private long numTuples;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
+	private final Stats stats = new Stats();
 	
 	public void setUp() {
 		System.out.println("Setting up SINK operator with id="+api.getOperatorId());
@@ -52,7 +53,7 @@ public class Sink implements StatelessOperator {
 			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived+",total bytes="+totalBytes+",t="+System.currentTimeMillis());
 			System.exit(0);
 		}
-		
+		stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
 		api.ack(dt);
 	}
 	
@@ -68,5 +69,38 @@ public class Sink implements StatelessOperator {
 	}
 	
 	public void processData(List<DataTuple> arg0) {
+	}
+	private static class Stats {
+		private final long MIN_INTERVAL= 1 * 1000;
+		private long tStart = System.currentTimeMillis();
+		private long byteCount = 0;
+
+		//TODO: Initial tStart?
+		public String reset(long t)
+		{
+			long interval = t - tStart;
+			
+			double intervalTput = computeTput(byteCount, interval);
+			byteCount = 0;
+			tStart = t;
+			return "t="+t+",interval="+interval+",tput="+intervalTput;
+		}
+
+		public void add(long t, long bytes)
+		{
+			byteCount+=bytes;
+			if (t - tStart > MIN_INTERVAL)
+			{
+				System.out.println(reset(t));
+			}
+		}
+
+		private double computeTput(long bytes, long interval)
+		{
+			if (interval < 0) { throw new RuntimeException("Logic error."); }
+			if (interval == 0) { return 0; }
+			return ((8 * bytes * 1000) / interval)/1024;
+		}
+
 	}
 }
