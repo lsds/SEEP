@@ -148,6 +148,7 @@ if __name__ == "__main__":
     parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSR',
             help='Net layer routing alg (OLSR, OLSRETX)')
+    parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -162,6 +163,7 @@ if __name__ == "__main__":
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
     params['specific']=args.specific
+    params['preserve']=args.preserve
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

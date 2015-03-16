@@ -11,6 +11,7 @@
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.util.List;
+import java.io.Serializable;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -70,7 +71,7 @@ public class Sink implements StatelessOperator {
 	
 	public void processData(List<DataTuple> arg0) {
 	}
-	private static class Stats {
+	private static class Stats implements Serializable {
 		private final long MIN_INTERVAL= 1 * 1000;
 		private long tStart = System.currentTimeMillis();
 		private long byteCount = 0;

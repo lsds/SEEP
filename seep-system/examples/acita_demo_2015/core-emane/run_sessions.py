@@ -6,9 +6,14 @@ from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
-from gen_mobility_trace import gen_trace
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
+#script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
+
+print 'Appending script_dir to path'
+#sys.path.append(script_dir)
+from gen_mobility_trace import gen_trace
+
 #repo_dir = '%s/../../../..'
 #svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
 svc_dir='%s/vldb/myservices'%script_dir
@@ -68,12 +73,16 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
     try:
-        #session_cfg = {'custom_services_dir':svc_dir, 'preservedir':'1'} 
         session_cfg = {'custom_services_dir':svc_dir} 
+        if params['preserve']: session_cfg['preservedir'] = '1' 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
+
+        if not add_to_server(session): 
+            print 'Could not add to server'
+
         write_replication_factor(k, session.sessiondir)
         copy_seep_jar(session.sessiondir)
         trace_file = None
@@ -82,11 +91,9 @@ def run_session(time_str, k, mob, exp_session, params):
             trace_params['h'] = mob + 1.0
             trace_params['l'] = mob - 1.0
             trace_file = gen_trace(session.sessiondir, exp_session, trace_params)
-        """
-        if not add_to_server(session): 
-            print 'Could not add to server'
-            return
-        """
+            print 'Trace file=',trace_file
+
+
         model = params.get('model', None)
         print 'Model=', model
         if not model:
@@ -154,7 +161,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
-        session.node_count=1+params['nodes']
+        session.node_count="%d"%(1+params['nodes'])
         print 'Instantiating session.'
         session.instantiate()
 
@@ -176,7 +183,7 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
     n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
-    #n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
+    n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.ip_forward=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.forwarding=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv6.conf.all.forwarding=1"])
@@ -211,7 +218,6 @@ def add_to_server(session):
         return False
 
 def create_datacollect_hook(time_str, k, mob, exp_session):
-    script_dir = os.path.dirname(os.path.realpath(__file__))
     print 'Script dir = %s'%script_dir
     return datacollect_template%(script_dir, time_str, k, mob, exp_session)
 
@@ -241,15 +247,34 @@ def regen_sessions(time_str):
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
+    parser.add_argument('--k', dest='k', default='2', help='replication factors (2)')
+    parser.add_argument('--pausetime', dest='pt', default='2.0', help='pause time (2.0)')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
-    parser.add_argument('--nodes', dest='nodes', default='7', help = 'Number of core nodes (7)')
+    parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
+    parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
+    parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
+    parser.add_argument('--routing', dest='routing', default='OLSR',
+            help='Net layer routing alg (OLSR, OLSRETX)')
+    parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
     args=parser.parse_args()
-    params = {'nodes':int(args.nodes), 'controlnet': "172.16.0.0/24", 'net-routing':'OLSR', 'specific':args.specific}
+
+    k=int(args.k)
+    pt=float(args.pt)
+    params = {'nodes':int(args.nodes)}
+    if not args.disable_ctrl_net: params['controlnet']='172.16.0.0/24'
+    # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
+    if args.model: params['model']=args.model
+    params['net-routing']=args.routing
+    params['specific']=args.specific
+    params['preserve']=args.preserve
+
+    sessions = int(args.sessions)
+    session_ids = [sessions] if args.specific else range(0,sessions)
     if args.plot_time_str:
         time_str = args.plot_time_str
         regen_sessions(time_str)
     else:
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
-        run_sessions(time_str, 2, 0.00, int(args.sessions),params)
+        run_sessions(time_str, k, pt, session_ids,params)
