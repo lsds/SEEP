@@ -137,6 +137,7 @@ script_dir+'/vldb/config/median_tput_vs_mobility.plt'], cwd=exp_dir)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
     parser.add_argument('--ks', dest='ks', default='1,2,3,5', help='replication factors [1,2,3,5]')
+    parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
     parser.add_argument('--pausetimes', dest='pts', default='0.0,2.0,4.0,6.0,8.0', help='pause times [0.0,2.0,4.0,6.0,8.0]')
     parser.add_argument('--sessions', dest='sessions', default='2', help='number of sessions (2)')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true')
@@ -164,6 +165,7 @@ if __name__ == "__main__":
     params['net-routing']=args.routing
     params['specific']=args.specific
     params['preserve']=args.preserve
+    params['h']=int(args.h)
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

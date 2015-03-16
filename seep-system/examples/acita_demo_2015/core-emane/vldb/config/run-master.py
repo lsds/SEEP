@@ -2,18 +2,13 @@
 
 import subprocess,os,time,re,argparse
 
-logical_ops = 4
 eg_dir = os.path.dirname(os.path.realpath(__file__))
 seep_jar = 'seep-system-0.0.1-SNAPSHOT.jar'
 query_jar = 'acita_demo_2015.jar'
 query_base = 'Base'
 data_dir = '%s/log'%eg_dir
 
-def main(w, k, plot_time_str, run_master):
-    print 'Starting %d workers to execute query with %d logical operators and %d op replicas'%(w,logical_ops,k)
-    if w < 2 + (logical_ops - 2) * k:
-        raise Exception("Not enough workers (%d) for chain query with %d logical operators (including src and sink) given replication factor %d"%(w,logical_ops, k))
-    
+def main(k, h, plot_time_str, run_master):
     sim_env = os.environ.copy()
        
     if plot_time_str:
@@ -26,7 +21,7 @@ def main(w, k, plot_time_str, run_master):
 
                 print 'Starting master'
                 master_logfilename = mlog(k, time_str) 
-                master = start_master(master_logfilename, sim_env)
+                master = start_master(k,h, master_logfilename, sim_env)
 
                 time.sleep(5)
 
@@ -72,10 +67,9 @@ def run_query(master):
     master.stdin.write('\n')
     print 'Started query'
 
-def start_master(logfilename, sim_env):
+def start_master(k, h, logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master',
-                '%s/dist/%s'%(eg_dir,query_jar), query_base]
+        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h, '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -93,6 +87,11 @@ def read_k():
         for line in f:
             return int(line.strip())
 
+def read_h():
+    with open('../h.txt', 'rb') as f:
+        for line in f:
+            return int(line.strip())
+
 def wait_for_deploy(master):
     while not os.path.exists("deployComplete.txt"):
         if not master.poll() is None:
@@ -102,15 +101,15 @@ def wait_for_deploy(master):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
 
-    parser.add_argument('-k', dest='k', help='Number of replicas for each intermediate operator')
-    parser.add_argument('--workers', dest='w', help='Total number of workers to start')
+    parser.add_argument('--k', dest='k', help='Number of replicas for each intermediate operator')
+    parser.add_argument('--h', dest='h', help='Number of logical operators (chain)')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nomaster', dest='no_master', default=False, help='Disable master (False)')
     
     args=parser.parse_args()
 
     k = int(args.k) if args.k else read_k()
-    w = int(args.w) if args.w else 2 + (k*2)
+    h = int(args.h) if args.h else read_h()
     
-    main(w, k, args.plot_time_str, not bool(args.no_master))
+    main(k, h, args.plot_time_str, not bool(args.no_master))
 

@@ -22,7 +22,7 @@ import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 
 public class Base implements QueryComposer{
-	private final int CHAIN_LENGTH = 2;
+	private int CHAIN_LENGTH;
 	private int REPLICATION_FACTOR;
 	private final boolean AUTO_SCALEOUT = true;
 	private final boolean CONNECT_TO_ALL_DOWNSTREAMS = false;	//Deprecated.
@@ -33,6 +33,7 @@ public class Base implements QueryComposer{
 		//TODO: Stream ids
 		
 		REPLICATION_FACTOR = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+		CHAIN_LENGTH = Integer.parseInt(GLOBALS.valueFor("chainLength"));
 		
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();

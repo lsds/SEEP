@@ -84,6 +84,7 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Could not add to server'
 
         write_replication_factor(k, session.sessiondir)
+        write_chain_length(params['h'], session.sessiondir)
         copy_seep_jar(session.sessiondir)
         trace_file = None
         if mob > 0.0:
@@ -135,7 +136,7 @@ def run_session(time_str, k, mob, exp_session, params):
         services_str = "IPForward|%s"%params['net-routing']
 
         workers = []
-        num_workers = 2 + (k * 2)
+        num_workers = 2 + (k * params['h'])
 
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1))
@@ -234,6 +235,10 @@ def write_replication_factor(k, session_dir):
     with open('%s/k.txt'%session_dir, 'w') as f:
         f.write(str(k))
 
+def write_chain_length(h, session_dir):
+    with open('%s/h.txt'%session_dir, 'w') as f:
+        f.write(str(h))
+
 def copy_seep_jar(session_dir):
     dest = '%s/lib'%session_dir
     os.mkdir(dest)
@@ -248,6 +253,7 @@ def regen_sessions(time_str):
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--k', dest='k', default='2', help='replication factors (2)')
+    parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
     parser.add_argument('--pausetime', dest='pt', default='2.0', help='pause time (2.0)')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
@@ -269,6 +275,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['net-routing']=args.routing
     params['specific']=args.specific
     params['preserve']=args.preserve
+    params['h']=int(args.h)
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)

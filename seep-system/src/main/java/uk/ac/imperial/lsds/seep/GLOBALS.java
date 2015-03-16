@@ -49,6 +49,8 @@ public class GLOBALS {
 			globals.load(fis);
 			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
 			globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
+			globals.put("chainLength", System.getProperty("chainLength", "1"));
+			LOG.info("Loaded global properties="+propsToString());
 		}
 		catch (FileNotFoundException e1) {
 			System.out.println("Properties file not found "+e1.getMessage());
