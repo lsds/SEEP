@@ -117,6 +117,8 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('pathlossmode') ] = 'freespace'
+            values[ names.index('multicastrate') ] = '1'
+            values[ names.index('txpower') ] = '-10.0'
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
         else:
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
