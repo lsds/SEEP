@@ -150,6 +150,7 @@ if __name__ == "__main__":
     parser.add_argument('--routing', dest='routing', default='OLSR',
             help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
+    parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -166,6 +167,7 @@ if __name__ == "__main__":
     params['specific']=args.specific
     params['preserve']=args.preserve
     params['h']=int(args.h)
+    params['saveconfig']=args.saveconfig
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

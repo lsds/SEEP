@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 
 import org.slf4j.Logger;
@@ -75,6 +76,7 @@ public class ControlDispatcher {
 		k.register(MemoryChunk.class);
 		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
+		k.register(BitSet.class);
 		k.register(BackupOperatorState.class);
 		k.register(byte[].class);
 		k.register(RawData.class);

@@ -1,0 +1,242 @@
+node n1 {
+    type wlan
+    network-config {
+	hostname wlan1
+	!
+	interface wireless
+	 ip address 10.0.0.0/32
+	 ipv6 address 2001:0::0/128
+	!
+	mobmodel
+	coreapi
+	emane_ieee80211abg
+	!
+    }
+    custom-config {
+	custom-config-id emane_ieee80211abg
+	custom-command {1 11 3 1 1 2 11 10 11 2 10 10 10 10 10 10 9 9 9 10 10 11 4 11 4 4 11 11 10 2 9 9}
+	config {
+	mode=0
+	enablepromiscuousmode=0
+	distance=300
+	unicastrate=4
+	multicastrate=1
+	rtsthreshold=0
+	wmmenable=0
+	pcrcurveuri=/usr/share/emane/models/ieee80211abg/xml/ieee80211pcr.xml
+	flowcontrolenable=0
+	flowcontroltokens=10
+	queuesize=0:255 1:255 2:255 3:255
+	cwmin=0:32 1:32 2:16 3:8
+	cwmax=0:1024 1:1024 2:64 3:16
+	aifs=0:2 1:2 2:2 3:1
+	txop=0:0 1:0 2:0 3:0
+	retrylimit=0:3 1:3 2:3 3:3
+	antennagain=0.0
+	antennaazimuth=0.0
+	antennaelevation=0.0
+	antennaprofileid=1
+	antennaprofilemanifesturi=
+	antennaprofileenable=0
+	bandwidth=1M
+	defaultconnectivitymode=1
+	frequency=2.347G
+	frequencyofinterest=2.347G
+	frequencyofinterestfilterenable=1
+	noiseprocessingmode=0
+	pathlossmode=freespace
+	subid=1
+	systemnoisefigure=4.0
+	txpower=0.0
+	}
+    }
+    custom-config {
+	custom-config-id basic_range
+	custom-command {3 3 9 9 9}
+	config {
+	range=275
+	bandwidth=54000000
+	jitter=0
+	delay=20000
+	error=0
+	}
+    }
+    canvas c1
+    iconcoords {94.0 76.0}
+    labelcoords {94.0 108.0}
+    interface-peer {e0 n2}
+    interface-peer {e1 n3}
+    interface-peer {e2 n4}
+    interface-peer {e3 n5}
+}
+
+node n2 {
+    type router
+    model seep-master
+    network-config {
+	hostname n2
+	!
+	interface eth0
+	 ip address 10.0.0.1/32
+	 ipv6 address 2001:0::1/128
+	!
+    }
+    canvas c1
+    iconcoords {215.0 87.0}
+    labelcoords {215.0 119.0}
+    interface-peer {eth0 n1}
+}
+
+node n3 {
+    type router
+    model seep-worker
+    network-config {
+	hostname n3
+	!
+	interface eth0
+	 ip address 10.0.0.2/32
+	 ipv6 address 2001:0::2/128
+	!
+    }
+    canvas c1
+    iconcoords {534.0 238.0}
+    labelcoords {534.0 270.0}
+    interface-peer {eth0 n1}
+}
+
+node n4 {
+    type router
+    model seep-worker
+    network-config {
+	hostname n4
+	!
+	interface eth0
+	 ip address 10.0.0.3/32
+	 ipv6 address 2001:0::3/128
+	!
+    }
+    canvas c1
+    iconcoords {676.0 399.0}
+    labelcoords {676.0 431.0}
+    interface-peer {eth0 n1}
+}
+
+node n5 {
+    type router
+    model seep-worker
+    network-config {
+	hostname n5
+	!
+	interface eth0
+	 ip address 10.0.0.4/32
+	 ipv6 address 2001:0::4/128
+	!
+    }
+    canvas c1
+    iconcoords {160.0 262.0}
+    labelcoords {160.0 294.0}
+    interface-peer {eth0 n1}
+}
+
+node n6 {
+    type router
+    model seep-worker
+    network-config {
+	hostname n6
+	!
+    }
+    canvas c1
+    iconcoords {365.0 400.0}
+    labelcoords {365.0 432.0}
+}
+
+link l1 {
+    nodes {n1 n2}
+}
+
+link l2 {
+    nodes {n1 n3}
+}
+
+link l3 {
+    nodes {n1 n4}
+}
+
+link l4 {
+    nodes {n1 n5}
+}
+
+canvas c1 {
+    name {Canvas1}
+}
+
+hook 2:configuration_hook.sh {
+#!/bin/sh
+# session hook script; write commands here to execute on the host at the
+# specified state
+echo "2" > k.txt
+echo "1" > h.txt
+mkdir lib
+cp /home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/lib/seep-system-0.0.1-SNAPSHOT.jar lib
+}
+
+hook 5:datacollect_hook.sh {
+#!/bin/sh
+# session hook script; write commands here to execute on the host at the
+# specified state
+#scriptDir=%s
+scriptDir=/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane
+#timeStr=%s
+timeStr=TODO
+#k=%dk
+k=1k
+#mob=%.2fm
+mob=0.00m
+#session=%ds
+session=TODOs
+resultsDir=$scriptDir/log/$timeStr/$k/$mob/$session
+
+expDir=$(pwd)
+
+echo $expDir >> /tmp/datacollect.log
+echo $scriptDir >> /tmp/datacollect.log
+echo $timeStr >> /tmp/datacollect.log
+echo $resultsDir >> /tmp/datacollect.log
+
+mkdir -p $resultsDir
+
+# Copy all log files to results dir
+for d in n*.conf 
+do
+	cp $d/log/*.log $resultsDir	
+	cp $d/mappingRecordOut.txt $resultsDir	
+	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
+done
+	
+
+cd $scriptDir
+#./gen_core_results.py --expDir log/$timeStr 
+./gen_core_results.py --expDir $resultsDir
+cd $expDir
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses yes
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+    controlnet=172.16.0.0/24
+    enablerj45=1
+    enablesdt=0
+    preservedir=0
+}
+

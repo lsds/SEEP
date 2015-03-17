@@ -6,6 +6,7 @@ from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
+from core.misc.xmlutils import savesessionxml
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
@@ -101,7 +102,7 @@ def run_session(time_str, k, mob, exp_session, params):
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
             session.master = True
-            session.location.setrefgeo(47.57917,-122.13232,2.00000)
+            session.location.setrefgeo(47.5791667,-122.132322,2.00000)
             session.location.refscale = 100.0
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass, AtdlOmni"
             session.emane.loadmodels()
@@ -163,6 +164,11 @@ def run_session(time_str, k, mob, exp_session, params):
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(1+params['nodes'])
+        if params['saveconfig']:
+            print 'Saving session config.'
+            savesessionxml(session, '%s/session.xml'%session.sessiondir)
+            #savesessionxml(session, '/tmp/session.xml')
+
         print 'Instantiating session.'
         session.instantiate()
 
@@ -179,6 +185,7 @@ def run_session(time_str, k, mob, exp_session, params):
         if session:
             session.shutdown()
 
+#def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
 def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
     n.setposition(x=pos[0], y=pos[1])
@@ -207,7 +214,7 @@ def gen_grid_position(i, nodes, offset=3, spacing=600):
     dim = math.ceil(math.sqrt(nodes))
     num_x = (i-offset) % dim 
     num_y = math.floor((i-offset) / dim)
-    return (spacing * num_x, spacing * num_y) 
+    return (int(spacing * num_x), int(spacing * num_y)) 
 
 def add_to_server(session):
     global server
@@ -264,6 +271,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--routing', dest='routing', default='OLSR',
             help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
+    parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -276,6 +284,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['specific']=args.specific
     params['preserve']=args.preserve
     params['h']=int(args.h)
+    params['saveconfig']=args.saveconfig
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)
