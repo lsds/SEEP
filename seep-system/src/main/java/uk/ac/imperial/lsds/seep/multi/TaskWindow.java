@@ -111,5 +111,43 @@ class TaskWindow {
 			}
 		}
 	}
+	
+	
+	public static TaskWindow findNextSkipCost(Task head, int[][] policy, int p) {
+		Task pred = null;
+		Task curr = null;
+		Task succ = null;
+		boolean [] marked = { false };
+		boolean snip;
+		int _p = (p + 1) % 2; /* The other processor */
+		double skip_cost = 0;
+		retry: while (true) {
+			pred = head;
+			curr = pred.next.getReference();
+			if (curr.taskid == Integer.MAX_VALUE)
+				return new TaskWindow (pred, curr);
+			while (true) {
+				succ = curr.next.get(marked);
+				while (marked[0]) {
+					snip = pred.next.compareAndSet(curr, succ, false, false);
+					if (! snip)
+						continue retry;
+					curr = pred.next.getReference();
+					succ = curr.next.get(marked);
+				}
+				
+				if (curr.taskid == Integer.MAX_VALUE)
+					return new TaskWindow (pred, curr);
+				
+				if (policy[p][curr.queryid] <= policy[_p][curr.queryid] || skip_cost > 1.0)
+					return new TaskWindow (pred, curr);
+
+				skip_cost += 1.0 / policy[p][curr.queryid];;
+				
+				pred = curr;
+				curr = succ;
+			}
+		}
+	}
 }
 
