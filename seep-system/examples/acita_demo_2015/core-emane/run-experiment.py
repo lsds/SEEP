@@ -170,8 +170,8 @@ if __name__ == "__main__":
     params['preserve']=args.preserve
     params['h']=int(args.h)
     params['saveconfig']=args.saveconfig
-    params['constraints']=constraints
-    params['placement']=placement
+    params['constraints']=args.constraints
+    params['placement']=args.placement
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

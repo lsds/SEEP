@@ -314,8 +314,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['preserve']=args.preserve
     params['h']=int(args.h)
     params['saveconfig']=args.saveconfig
-    params['constraints']=constraints
-    params['placement']=placement
+    params['constraints']=args.constraints
+    params['placement']=args.placement
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)
