@@ -117,7 +117,8 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('pathlossmode') ] = 'freespace'
-            values[ names.index('multicastrate') ] = '1'
+            values[ names.index('multicastrate') ] = '4'
+            values[ names.index('unicastrate') ] = '4'
             values[ names.index('txpower') ] = '-10.0'
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
         else:
@@ -135,6 +136,11 @@ def run_session(time_str, k, mob, exp_session, params):
         session_constraints = '%s/session%dsMappingRecord.txt'%(exp_results_dir, exp_session)
         if os.path.exists(session_constraints):
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
+        elif params['constraints']:
+            session_constraints = '%s/tmp/%s'%(script_dir, params['constraints'])
+            if not os.path.exists(session_constraints):
+                raise Exception("Could not find sessions constraints: %s"%sesiosn_constraints)
+            shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         services_str = "IPForward|%s"%params['net-routing']
 
@@ -144,15 +150,21 @@ def run_session(time_str, k, mob, exp_session, params):
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1))
 
+        placements = get_initial_placements(params['placement'], mob)
         for i in range(3,3+num_workers):
-            pos = gen_grid_position(i, params['nodes']-1)
+            if placements:
+                pos = placements[i]
+            else:
+                pos = gen_grid_position(i, params['nodes']-1)
             workers.append(create_node(i, session, "%s|MeanderWorker"%services_str, wlan1, pos)) 
        
-
         routers = []
         # Create auxiliary 'router' nodes if any left
         for i in range(3+num_workers, 2+params['nodes']):
-            pos = gen_grid_position(i, params['nodes']-1)
+            if placements:
+                pos = placements[i]
+            else:
+                pos = gen_grid_position(i, params['nodes']-1)
             routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
 
         if trace_file:
@@ -207,6 +219,19 @@ def create_node_map(ns_nums, nodes):
     print 'ns_nums=%s'%str(ns_nums)
     print 'nodes=%s'%str(nodes)
     return ",".join(map(lambda (ns_num, node) : "%d:%d"%(ns_num,node.objid), zip(ns_nums, nodes)))
+
+def get_initial_placement(placements, mobility):
+    if not placements or mobility > 0.0:
+        return None
+    else:
+        result = {}
+        placements_path = '%s/tmp/%s'%(script_dir, placements)
+        with open(placements_path, 'r') as pf:
+            for line in pf:
+                els = map(int, line.split(','))
+                result[els[0]] = (els[1], els[2])
+
+        return result
 
 def gen_linear_position(i):
     return (50 * i, 100)
@@ -274,6 +299,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
             help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
+    parser.add_argument('--constraints', dest='constraints', default='', help='Export the session configuration to an XML file')
+    parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -287,6 +314,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['preserve']=args.preserve
     params['h']=int(args.h)
     params['saveconfig']=args.saveconfig
+    params['constraints']=constraints
+    params['placement']=placement
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)

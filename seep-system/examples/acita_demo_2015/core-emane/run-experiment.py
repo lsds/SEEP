@@ -151,6 +151,8 @@ if __name__ == "__main__":
             help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
+    parser.add_argument('--constraints', dest='constraints', default='', help='Initial mapping constraints for each session ')
+    parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -168,6 +170,8 @@ if __name__ == "__main__":
     params['preserve']=args.preserve
     params['h']=int(args.h)
     params['saveconfig']=args.saveconfig
+    params['constraints']=constraints
+    params['placement']=placement
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 
