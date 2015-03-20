@@ -220,7 +220,7 @@ def create_node_map(ns_nums, nodes):
     print 'nodes=%s'%str(nodes)
     return ",".join(map(lambda (ns_num, node) : "%d:%d"%(ns_num,node.objid), zip(ns_nums, nodes)))
 
-def get_initial_placement(placements, mobility):
+def get_initial_placements(placements, mobility):
     if not placements or mobility > 0.0:
         return None
     else:
