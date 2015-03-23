@@ -48,7 +48,7 @@ public class Source implements StatelessOperator {
 		
 		final String value = generateFrame(tupleSizeChars);
 		
-		System.out.println("Source sending started at t="+System.currentTimeMillis());
+		logger.info("Source sending started at t="+System.currentTimeMillis());
 		while(sendIndefinitely || tupleId < numTuples){
 			
 			DataTuple output = data.newTuple(tupleId, value);

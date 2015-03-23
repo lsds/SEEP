@@ -137,19 +137,20 @@ def run_session(time_str, k, mob, exp_session, params):
         if os.path.exists(session_constraints):
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
         elif params['constraints']:
-            session_constraints = '%s/tmp/%s'%(script_dir, params['constraints'])
+            session_constraints = '%s/static/%s'%(script_dir, params['constraints'])
             if not os.path.exists(session_constraints):
                 raise Exception("Could not find sessions constraints: %s"%sesiosn_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         services_str = "IPForward|%s"%params['net-routing']
 
-        workers = []
-        num_workers = 2 + (k * params['h'])
 
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1))
 
+        workers = []
+        num_workers = 2 + (k * params['h'])
+	print 'Creating %d workers'%num_workers
         placements = get_initial_placements(params['placement'], mob)
         for i in range(3,3+num_workers):
             if placements:
@@ -199,8 +200,8 @@ def run_session(time_str, k, mob, exp_session, params):
         if session:
             session.shutdown()
 
-#def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
-def create_node(i, session, services_str, wlan, pos, ip_offset=8):
+def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
+#def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
     n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
@@ -225,7 +226,7 @@ def get_initial_placements(placements, mobility):
         return None
     else:
         result = {}
-        placements_path = '%s/tmp/%s'%(script_dir, placements)
+        placements_path = '%s/static/%s'%(script_dir, placements)
         with open(placements_path, 'r') as pf:
             for line in pf:
                 els = map(int, line.split(','))
