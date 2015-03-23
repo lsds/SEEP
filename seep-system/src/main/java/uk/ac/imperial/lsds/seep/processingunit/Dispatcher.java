@@ -35,6 +35,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	private int MAX_NODE_OUT_BUFFER_TUPLES = Integer.MAX_VALUE;
+	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final FailureCtrl nodeFctrl = new FailureCtrl();
 	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();
 	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//TODO: Perhaps change to a delayQueue
@@ -44,6 +45,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
 	private final IProcessingUnit owner;
 	private ArrayList<OutputQueue> outputQueues;
+	private final boolean bestEffort;
 
 	
 	private final Object lock = new Object(){};
@@ -51,6 +53,8 @@ public class Dispatcher implements IRoutingObserver {
 	public Dispatcher(IProcessingUnit owner)
 	{
 		this.owner = owner;
+		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
+		MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
 	}
 	
 	public FailureCtrl getNodeFailureCtrl()
@@ -105,6 +109,11 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void startFailureDetector()
 	{
+		if (bestEffort)
+		{
+			logger.error("Logic error - starting failure detector for best effort reliability.");
+			System.exit(1);
+		}
 		Thread fDetectorT = new Thread(failureDetector);
 		fDetectorT.start();
 	}
@@ -114,10 +123,41 @@ public class Dispatcher implements IRoutingObserver {
 	 * a full node out buffer without causing a deadlock.
 	 */
 	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
-	{		
+	{
 		if (targets == null || targets.isEmpty()) { throw new RuntimeException("Logic error."); }
 		if (targets.size() > 1) { throw new RuntimeException("TODO."); }
-
+		
+		if (!bestEffort)
+		{
+			dispatchReliable(dt, targets);
+		}
+		else
+		{
+			dispatchBestEffort(dt, targets);
+		}
+	}
+	
+	
+	private void dispatchBestEffort(DataTuple dt, ArrayList<Integer> targets)
+	{
+		synchronized(lock)
+		{
+			while (totalQueueSize() > MAX_TOTAL_QUEUE_SIZE)
+			{
+				logger.debug("Best effort dispatcher waiting on full queues, size="+totalQueueSize());
+				try
+				{
+					lock.wait();
+				}
+				catch(InterruptedException e) {}
+			}
+		}
+		sendToDispatcher(dt, targets);
+		return;
+	}
+	
+	private void dispatchReliable(DataTuple dt, ArrayList<Integer> targets)
+	{		
 		synchronized(lock)
 		{
 			if (nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }
@@ -141,6 +181,24 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
+		sendToDispatcher(dt, targets);
+
+		return;
+	}
+	
+	//Should be called with lock held
+	private int totalQueueSize()
+	{
+		int total = 0;
+		for (DispatcherWorker worker : workers.values())
+		{
+			total += worker.queueLength();
+		}
+		return total;
+	}
+	
+	private void sendToDispatcher(DataTuple dt, ArrayList<Integer> targets)
+	{
 		for(int i = 0; i<targets.size(); i++){
 			int target = targets.get(i);
 			EndPoint dest = owner.getPUContext().getDownstreamTypeConnection().elementAt(target);
@@ -160,8 +218,8 @@ public class Dispatcher implements IRoutingObserver {
 				throw new RuntimeException("TODO");
 			}
 		}
-		return;
 	}
+	
 	
 	public void ack(DataTuple dt)
 	{

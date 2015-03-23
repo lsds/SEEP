@@ -299,7 +299,7 @@ public class CoreRE {
 				LOG.info("-> ACK Worker working on {}", nodeDescr.getNodeId());
 			}
 		}
-		else if(GLOBALS.valueFor("fctrlWorkerActive").equals("true"))
+		else if(!GLOBALS.valueFor("reliability").equals("bestEffort") && GLOBALS.valueFor("fctrlWorkerActive").equals("true"))
 		{
 			OperatorContext opCtx = processingUnit.getOperator().getOpContext(); 
 			if(opCtx.isSink() || !opCtx.isSource())
@@ -333,7 +333,10 @@ public class CoreRE {
 			if (!processingUnit.getOperator().getOpContext().isSink())
 			{
 				processingUnit.getDispatcher().startRoutingCtrlWorkers();
-				processingUnit.getDispatcher().startFailureDetector();
+				if (!GLOBALS.valueFor("reliability").equals("bestEffort"))
+				{
+					processingUnit.getDispatcher().startFailureDetector();
+				}
 			}
 		}
 	}
