@@ -20,7 +20,8 @@ def main(exp_dir):
     with open(src_log, 'r') as src:
         # Get time src sent first message
         t_src_begin = src_tx_begin(src)
-        if not t_src_begin: raise Exception("Could not find t_src_begin.")
+        #if not t_src_begin: raise Exception("Could not find t_src_begin.")
+        if not t_src_begin: "WARNING: Could not find t_src_begin."
 
     with open(sink_log, 'r') as sink:
         # Get time sink received first message
@@ -32,12 +33,13 @@ def main(exp_dir):
         #rx_latencies = sink_rx_latencies(lines)
 
 
-    # Compute the mean tput
-    src_sink_mean_tput = mean_tput(t_src_begin, t_sink_end, total_bytes)
-    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
-
     # Record the tput, k, w, query name etc.
-    record_stat('%s/tput.txt'%exp_dir, {'src_sink_mean_tput':src_sink_mean_tput})
+    # Compute the mean tput
+    if t_src_begin: 
+        src_sink_mean_tput = mean_tput(t_src_begin, t_sink_end, total_bytes)
+        record_stat('%s/tput.txt'%exp_dir, {'src_sink_mean_tput':src_sink_mean_tput})
+
+    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
 
 def get_src_logfile(exp_dir):

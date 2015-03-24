@@ -3,4 +3,7 @@ Core
 Emane
 Nrlolsr
 BonnMotion
-olsrd 0.6.3 from ppa at https://launchpad.net/~guardianproject/+archive/ubuntu/commotion 
+Maven (you'll perhaps need to manually install soot-framework-2.5.0.jar into the local mvn repository
+using the suggested mvn install ... when mvn clean compile assembly:single fails).
+olsrd 0.6.3 from ppa at https://launchpad.net/~guardianproject/+archive/ubuntu/commotion (Don't forget to update before installing!).
+

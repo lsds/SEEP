@@ -108,7 +108,8 @@ def get_tputs(k, mob, sessions, time_str, data_dir):
     return tputs
 
 def get_tput(logfilename):
-    regex = re.compile('src_sink_mean_tput=(\d+)')
+    #regex = re.compile('src_sink_mean_tput=(\d+)')
+    regex = re.compile('sink_sink_mean_tput=(\d+)')
     with open(logfilename, 'r') as tput_log:
         for line in tput_log:
             match = re.search(regex, line)
