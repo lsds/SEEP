@@ -392,8 +392,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				checkForRetransmissions();
 				
-				//TODO: This will cause a full iteration over node out timers
-				// every second!
+				//TODO: This will enforce a minimum wait of RETRANSMIT_CH
 				synchronized(lock)
 				{
 					long waitStart = System.currentTimeMillis();
