@@ -32,7 +32,7 @@ public class Dispatcher implements IRoutingObserver {
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private static final Logger logger = LoggerFactory.getLogger(Dispatcher.class);
 	private static final long FAILURE_TIMEOUT = 60 * 1000;
-	private static final long RETRANSMIT_CHECK_INTERVAL = 1 * 1000;
+	private static final long RETRANSMIT_CHECK_INTERVAL = 10 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	private int MAX_NODE_OUT_BUFFER_TUPLES = Integer.MAX_VALUE;
 	private final int MAX_TOTAL_QUEUE_SIZE;
@@ -124,19 +124,23 @@ public class Dispatcher implements IRoutingObserver {
 	 */
 	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
 	{
+		dispatch(dt, targets, false);
+	}
+	
+	private void dispatch(DataTuple dt, ArrayList<Integer> targets, boolean retransmission)
+	{
 		if (targets == null || targets.isEmpty()) { throw new RuntimeException("Logic error."); }
 		if (targets.size() > 1) { throw new RuntimeException("TODO."); }
 		
 		if (!bestEffort)
 		{
-			dispatchReliable(dt, targets);
+			dispatchReliable(dt, targets, retransmission);
 		}
 		else
 		{
 			dispatchBestEffort(dt, targets);
-		}
+		}		
 	}
-	
 	
 	private void dispatchBestEffort(DataTuple dt, ArrayList<Integer> targets)
 	{
@@ -156,14 +160,19 @@ public class Dispatcher implements IRoutingObserver {
 		return;
 	}
 	
-	private void dispatchReliable(DataTuple dt, ArrayList<Integer> targets)
+	private void dispatchReliable(DataTuple dt, ArrayList<Integer> targets, boolean retransmission)
 	{		
 		synchronized(lock)
 		{
-			if (nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }
+			if (nodeOutBuffer.containsKey(dt.getPayload().timestamp) && !retransmission) 
+			{
+				logger.info("Discarding tuple already added to node out buffer: "+dt.getPayload().timestamp);
+				return; 
+			}
 			else
 			{
-				while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES)
+				while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES ||
+						(!retransmission && totalQueueSize() > MAX_TOTAL_QUEUE_SIZE))
 				{
 					logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
 					//return
@@ -173,7 +182,8 @@ public class Dispatcher implements IRoutingObserver {
 						lock.wait();
 					}
 					catch(InterruptedException e) {}
-					if (nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }					
+					
+					if (!retransmission && nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }					
 				}
 				//TODO: Flow control if total q length > max q for round robin?
 				nodeOutBuffer.put(dt.getPayload().timestamp, dt);
@@ -405,12 +415,24 @@ public class Dispatcher implements IRoutingObserver {
 			Set<Long> timerKeys = new HashSet<Long>();
 			synchronized(lock)
 			{
+				int maxRetransmits = MAX_TOTAL_QUEUE_SIZE - totalQueueSize();
+				if (maxRetransmits <= 0) 
+				{
+					logger.info("Skipping retransmission as no space in output queues.");
+					return;
+				}
+				
 				//TODO: Really don't want to be holding the lock for this long.
 				for(Map.Entry<Long, Long> entry : nodeOutTimers.entrySet())
 				{
 					if (entry.getValue() + FAILURE_TIMEOUT  < System.currentTimeMillis())
 					{
 						timerKeys.add(entry.getKey());
+						if (timerKeys.size() > maxRetransmits)
+						{
+							//TODO: This is a bit arbitrary, should probably sort by age and then trim?
+							break;
+						}
 						//entry.setValue(System.currentTimeMillis());
 					}
 				}
@@ -450,6 +472,11 @@ public class Dispatcher implements IRoutingObserver {
 								nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
 							}
 						}
+					}
+					else
+					{
+						//TODO: This might change once there are 'unmatched' hints.
+						return;
 					}
 				}
 			}					

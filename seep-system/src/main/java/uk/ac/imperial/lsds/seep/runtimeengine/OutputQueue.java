@@ -138,7 +138,9 @@ public class OutputQueue {
 					// We save the data
 					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
-						if(GLOBALS.valueFor("TTT").equals("TRUE") || GLOBALS.valueFor("reliability").equals("bestEffort")){
+						if(GLOBALS.valueFor("TTT").equals("TRUE") || 
+								GLOBALS.valueFor("reliability").equals("bestEffort") ||
+								GLOBALS.valueFor("noBufferSave").equals("true")){
 							
 						}
 						else{
