@@ -399,10 +399,10 @@ public class Dispatcher implements IRoutingObserver {
 					long waitStart = System.currentTimeMillis();
 					long now = waitStart;
 					
-					while (waitStart + RETRANSMIT_CHECK_INTERVAL < now)
+					while (waitStart + RETRANSMIT_CHECK_INTERVAL > now)
 					{
 						try {
-							lock.wait(now - (waitStart + RETRANSMIT_CHECK_INTERVAL));
+							lock.wait((waitStart + RETRANSMIT_CHECK_INTERVAL) - now);
 						} catch (InterruptedException e) {}
 						now = System.currentTimeMillis();
 					}
