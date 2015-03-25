@@ -7,24 +7,27 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	
 	ByteBuffer buffer;
 	
-	LocalUnboundedQueryBufferFactory bufferFactory;
-
-	public UnboundedQueryBuffer (int size) {
-		if (size <= 0)
-			throw new IllegalArgumentException("Buffer size must be greater than 0."); 
-		buffer = ByteBuffer.allocate(size); 
-	}
+	private boolean isDirect = false;
 	
-	public UnboundedQueryBuffer (int size, LocalUnboundedQueryBufferFactory bufferFactory) {
-		if (size <= 0)
-			throw new IllegalArgumentException("Buffer size must be greater than 0."); 
-		buffer = ByteBuffer.allocate(size); 
+	private int id;
+	
+	public UnboundedQueryBuffer (int id, int size, boolean isDirect) {
 		
-		this.bufferFactory = bufferFactory;
+		if (size <= 0)
+			throw new IllegalArgumentException("Buffer size must be greater than 0.");
+		
+		this.id = id;
+		this.isDirect = isDirect;
+		
+		if (! isDirect) {
+			buffer = ByteBuffer.allocate(size);
+		} else {
+			buffer = ByteBuffer.allocateDirect(size);
+		}
 	}
 	
 	@Override
-	public int getInt (int offset) { 
+	public int getInt (int offset) {
 		return buffer.getInt(offset); 
 	}
 	
@@ -39,8 +42,11 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	}
 	
 	@Override
-	public byte [] array () { 
-		return buffer.array(); 
+	public byte [] array () {
+		if (! this.isDirect)
+			return buffer.array();
+		else
+			throw new UnsupportedOperationException("error: cannot get array from a direct buffer");
 	}
 	
 	@Override
@@ -88,16 +94,15 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int putInt (int value) { 
-//		try {
+		try {
 			buffer.putInt(value);
-////		} catch (BufferOverflowException e) {
-//			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
-//			e.printStackTrace();
-//			resize ();
-//			putInt (value);
-//		} finally {
+		} catch (BufferOverflowException e) {
+			e.printStackTrace();
+			/* resize ();
+			putInt (value); */
+		} finally {
 			return 0;
-//		}
+		}
 	}
 	
 	@Override
@@ -109,16 +114,15 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int putFloat (float value) {
-// 		try {
+ 		try {
 			buffer.putFloat(value);
-//		} catch (BufferOverflowException e) {
-//			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
-//			e.printStackTrace();
-//			resize ();
-//			putFloat (value);
-//		} finally {
+		} catch (BufferOverflowException e) {
+			e.printStackTrace();
+			/* resize ();
+			putFloat (value); */
+		} finally {
 			return 0;
-//		}
+		}
 	}
 	
 	@Override
@@ -130,16 +134,15 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int putLong (long value) {
-//		try {
+		try {
 			buffer.putLong(value);
-//		} catch (BufferOverflowException e) {
-//			System.out.println(String.format("[DBG] %d/%d", buffer.position(), buffer.capacity()));
-//			e.printStackTrace();
-//			resize ();
-//			putLong (value);
-//		} finally {
+		} catch (BufferOverflowException e) {
+			e.printStackTrace();
+			/* resize ();
+			putLong (value); */
+		} finally {
 			return 0;
-//		}
+		}
 	}
 	
 	@Override
@@ -151,36 +154,41 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	@Override
 	@SuppressWarnings("finally")
 	public int put (byte [] values) {
-		int size, size_;
-		// try {
+		/* int size, size_; */
+		try {
 			buffer.put(values);
-//		} catch (BufferOverflowException e) {
-//			e.printStackTrace();
-//			size  = buffer.capacity();
-//			size_ = (values.length < size) ? (size + size) : (size + values.length);
-//			resize (size_);
-//			put (values);
-//		} finally {
+		} catch (BufferOverflowException e) {
+			e.printStackTrace();
+			/* size  = buffer.capacity();
+			size_ = (values.length < size) ? (size + size) : (size + values.length);
+			resize (size_);
+			put (values); */
+		} finally {
 			return 0;
-//		}
+		}
 	}
 	
 	@Override
-	public int put(byte [] source, int offset, int length) {
-		
+	public int put (byte [] source, int offset, int length) {
 		/* Check bounds and normalise indices of source byte array */
-		
 		buffer.put(source, offset, length);
 		return 0;
 	}
 	
 	@Override
+	public int put (byte [] values, int length) {
+		buffer.put(values, 0, length);
+		return 0;
+	}
+	
+	@Override
 	public int put (IQueryBuffer buffer) {
-		return buffer.put(buffer.array());
+		return buffer.put(buffer);
 	}
 	
 	@Override
 	public int put (IQueryBuffer source, int offset, int length) {
+		// System.out.println("put " + offset + " " + length + " remaining " + buffer.remaining());
 		return put (source.array(), offset, length);
 	}
 	
@@ -192,56 +200,84 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 	
 	@Override
 	public void resize (int size) {
-//		if (size <= buffer.capacity())
-//			return ;
-//		int offset = buffer.position();
-//		buffer.flip();
-//		ByteBuffer buffer_ = ByteBuffer.allocate(size);
-//		buffer_.put(buffer);
-//		buffer = buffer_;
-//		buffer.position(offset);
+		if (size <= buffer.capacity())
+			return ;
+		int offset = buffer.position();
+		buffer.flip();
+		ByteBuffer buffer_ = ByteBuffer.allocate(size);
+		buffer_.put(buffer);
+		buffer = buffer_;
+		buffer.position(offset);
 	}
 	
 	@Override
 	public void free (int index) {
-		throw new UnsupportedOperationException
-		("error: cannot free bytes in an unbounded buffer");
+		throw new UnsupportedOperationException("error: cannot free an unbounded buffer");
 	}
 
 	@Override
 	public void release() {
+		
 		UnboundedQueryBufferFactory.free(this);
-//		bufferFactory.free(this);
 	}
 
 	@Override
 	public byte [] array (int offset, int length) {
+		
+		if (isDirect)
+			throw new UnsupportedOperationException("error: cannot get array from a direct buffer");
+		
 		byte [] result = new byte [length];
 		System.arraycopy(buffer.array(), offset, result, 0, length);
 		return result;
 	}
 
 	@Override
-	public void appendBytesTo (int offset, int length, IQueryBuffer toBuffer) {
+	public void appendBytesTo (int offset, int length, IQueryBuffer destination) {
 		
 		/* Check bounds and normalise indices of this byte array */
+		if (isDirect)
+			throw new UnsupportedOperationException("error: cannot append bytes to a direct buffer");
 		
-		toBuffer.put(this.buffer.array(), offset, length);
+		destination.put(this.buffer.array(), offset, length);
 	}
-
+	
 	@Override
-	public void appendBytesTo(int start, int end, byte[] destination) {
+	public void appendBytesTo (int start, int end, byte [] destination) {
+		
+		if (isDirect)
+			throw new UnsupportedOperationException("error: cannot append bytes to a direct buffer");
 		
 		System.arraycopy(this.buffer.array(), start, destination, 0, end - start);
 	}
-
+	
 	@Override
 	public void position(int index) {
+		
 		this.buffer.position(index);
 	}
 
 	@Override
 	public int normalise(long index) {
+		
 		return (int) index;
+	}
+
+	@Override
+	public long getBytesProcessed() {
+		
+		throw new UnsupportedOperationException("error: cannot get bytes processed from an unbounded buffer");
+	}
+
+	@Override
+	public boolean isDirect() {
+		
+		return this.isDirect;
+	}
+
+	@Override
+	public int getBufferId() {
+		
+		return id;
 	}
 }

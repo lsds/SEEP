@@ -38,8 +38,8 @@ public class PerformanceMonitor implements Runnable {
 			System.out.println(String.format("[DBG] [MultiOperator] S %3d", query.getId()));
 			measurements[idx++] = 
 				new Measurement (query.getId(), 
-						(CircularQueryBuffer) query.getTaskDispatcher().getBuffer(), 
-						(CircularQueryBuffer) query.getTaskDispatcher().getSecondBuffer(),
+						query.getTaskDispatcher().getBuffer(), 
+						query.getTaskDispatcher().getSecondBuffer(),
 						query.getLatencyMonitor());
 		}
 	}
@@ -71,20 +71,20 @@ public class PerformanceMonitor implements Runnable {
 			System.out.println(b);
 			_time = time;
 			
-			 if (counter++ > 60) {
-				System.out.println("Done.");
-				// for (int i = 0; i < size; i++)
-				//	measurements[i].stop();
-				break;
-			 }
+//			 if (counter++ > 60) {
+//				System.out.println("Done.");
+//				for (int i = 0; i < size; i++)
+//					measurements[i].stop();
+//				break;
+//			 }
 		}
 	}
 		
 	class Measurement {
 		
 		int id;
-		CircularQueryBuffer buffer;
-		CircularQueryBuffer secondBuffer;
+		IQueryBuffer buffer;
+		IQueryBuffer secondBuffer;
 		
 		LatencyMonitor monitor;
 		
@@ -92,7 +92,7 @@ public class PerformanceMonitor implements Runnable {
 		double Dt, MBps;
 		double MB, _1MB_ = 1048576.0;
 
-		public Measurement (int id, CircularQueryBuffer buffer, CircularQueryBuffer secondBuffer, LatencyMonitor monitor) {
+		public Measurement (int id, IQueryBuffer buffer, IQueryBuffer secondBuffer, LatencyMonitor monitor) {
 			this.id = id;
 			this.buffer = buffer;	
 			this.secondBuffer = secondBuffer;	
@@ -123,7 +123,8 @@ public class PerformanceMonitor implements Runnable {
 //				if (MB == 0)
 //					System.out.println("zero...");
 				MBps = MB / Dt;
-				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps [%s] ", id, MBps, ((MBps / 1024.) * 8.), monitor);
+				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps [%s] ", 
+						id, MBps, ((MBps / 1024.) * 8.), monitor);
 			}
 			_bytes = bytes;
 			return s;

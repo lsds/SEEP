@@ -51,21 +51,24 @@ public class LatencyMonitor {
 			);
 	}
 	
-	public void monitor (IQueryBuffer buffer) {
+	public void monitor (IQueryBuffer buffer, int taskid) {
 		
 		if (! this.active.get())
 			return ;
 		
+		// System.out.println("[DBG] In latency monitor: task " + taskid);
+		
 		double dt = 0;
 		/* Check buffer */
+		
 		long t1 = buffer.getLong(0);
 		
 		long t2 = System.nanoTime();
 		dt = (t2 - t1) / 1000000.0; /* In milliseconds */
+
+		// System.out.println("[DBG] Timestamp in latency monitor is " + t1 + "; dt is " + dt);
 		
 		measurements.add(dt);
-		
-		// System.out.println("[DBG] Timestamp in latency monitor is " + t1 + "; dt is " + dt);
 		
 		latency += dt;
 		// System.out.println("[DBG] cummulative latency in latency monitor is " + latency);

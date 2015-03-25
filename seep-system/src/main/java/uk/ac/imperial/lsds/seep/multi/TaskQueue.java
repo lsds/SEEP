@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /* 
@@ -286,8 +288,8 @@ public class TaskQueue {
 	}
 	
 	public Task poll (int [][] policy, int p, int q) {
-		return getNextTask(policy, p, q);
-		//return getFirstTask(policy, p, q);
+		//return getNextTask(policy, p, q);
+		return getFirstTask(policy, p, q);
 	}
 	
 	public int size () {

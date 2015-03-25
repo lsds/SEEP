@@ -14,7 +14,7 @@ public class Utils {
 	
 	// Number of CPU threads
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
-	public static int TASKS = 1024 * 1024;
+	public static int TASKS = 2 * 1024 * 1024;
 	
 	/* GPU-specific constants */
 	

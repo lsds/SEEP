@@ -63,7 +63,7 @@ public class Pusher implements Runnable {
 					// }
 					// query.getDownstreamSubQuery().getTaskDispatcher().dispatch(arr);
 					
-					query.getDownstreamSubQuery().getTaskDispatcher().dispatch(arr);
+					query.getDownstreamSubQuery().getTaskDispatcher().dispatch(arr, arr.length);
 				}
 				
 				/* Forward to the distributed API */

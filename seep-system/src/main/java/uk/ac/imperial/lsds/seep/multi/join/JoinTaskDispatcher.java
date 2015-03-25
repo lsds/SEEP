@@ -54,8 +54,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	public JoinTaskDispatcher (SubQuery parent) {
 		
 		this.parent = parent;
-		this.firstBuffer = new CircularQueryBuffer(Utils._CIRCULAR_BUFFER_);
-		this.secondBuffer = new CircularQueryBuffer(Utils._CIRCULAR_BUFFER_);
+		this.firstBuffer = new CircularQueryBuffer(parent.getId(), Utils._CIRCULAR_BUFFER_, false);
+		this.secondBuffer = new CircularQueryBuffer(parent.getId(), Utils._CIRCULAR_BUFFER_, false);
 		
 		this.firstWindow = this.parent.getWindowDefinition();
 		this.firstSchema = this.parent.getSchema();
@@ -81,15 +81,15 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	}
 	
 	@Override
-	public void dispatch (byte [] data) {
+	public void dispatch (byte [] data, int length) {
 		
 		/*
 		 * write the data to the buffer
 		 */
-		while ((this.firstEndIndex = firstBuffer.put(data)) < 0) 
+		while ((this.firstEndIndex = firstBuffer.put(data, length)) < 0) 
 			Thread.yield();
 
-		this.firstEndIndex += data.length - firstTupleSize;
+		this.firstEndIndex += length - firstTupleSize;
 		
 		synchronized (lock) {
 			if (firstEndIndex < firstStartIndex)
@@ -133,14 +133,14 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	
 	
 	@Override
-	public void dispatchSecond(byte [] data) {
+	public void dispatchSecond (byte [] data, int length) {
 		/*
 		 * write the data to the buffer
 		 */
-		while ((this.secondEndIndex = secondBuffer.put(data)) < 0) 
+		while ((this.secondEndIndex = secondBuffer.put(data, length)) < 0) 
 			Thread.yield();
 
-		this.secondEndIndex += data.length - secondTupleSize;
+		this.secondEndIndex += length - secondTupleSize;
 
 		synchronized (lock) {
 			if (secondEndIndex < secondStartIndex)
@@ -263,7 +263,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	}
 
 	@Override
-	public boolean tryDispatch(byte[] data) {
+	public boolean tryDispatch (byte[] data, int length) {
 		// TODO Auto-generated method stub
 		return false;
 	}

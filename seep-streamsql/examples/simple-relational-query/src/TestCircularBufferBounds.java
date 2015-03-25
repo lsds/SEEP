@@ -5,7 +5,7 @@ import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
 public class TestCircularBufferBounds {
 	
 	public static void main (String [] args) {
-		CircularQueryBuffer buffer = new CircularQueryBuffer (1024);
+		CircularQueryBuffer buffer = new CircularQueryBuffer (0, 1024, false);
 		byte [] data = new byte [256];
 		ByteBuffer b = ByteBuffer.wrap(data);
 		while (b.hasRemaining())

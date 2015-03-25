@@ -58,7 +58,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public TaskDispatcher (SubQuery parent) {
 		
 		this.parent = parent;
-		this.buffer = new CircularQueryBuffer(Utils._CIRCULAR_BUFFER_);
+		this.buffer = new CircularQueryBuffer(parent.getId(), Utils._CIRCULAR_BUFFER_, false);
 		this.window = this.parent.getWindowDefinition();
 		this.schema = this.parent.getSchema();
 		
@@ -110,23 +110,24 @@ public class TaskDispatcher implements ITaskDispatcher {
 	}
 	
 	@Override
-	public void dispatch (byte [] data) {
+	public void dispatch (byte [] data, int length) {
 		int idx;
-		while ((idx = buffer.put(data)) < 0) {
+		while ((idx = buffer.put(data, length)) < 0) {
 			// System.err.println(String.format("warning: dispatcher blocked at %s q %d", Thread.currentThread(), parent.getId())); 
 			Thread.yield();
+			//;
 			// LockSupport.parkNanos(1L);
 		}
-		assemble (idx, data.length);
+		assemble (idx, length);
 	}
 	
 	@Override
-	public boolean tryDispatch(byte[] data) {
+	public boolean tryDispatch(byte [] data, int length) {
 		int idx;
-		if ((idx = buffer.put(data)) < 0) {
+		if ((idx = buffer.put(data, length)) < 0) {
 			return false;
 		}
-		assemble (idx, data.length);
+		assemble (idx, length);
 		return true;
 	}
 	
@@ -369,7 +370,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	}
 
 	@Override
-	public void dispatchSecond(byte[] data) {
+	public void dispatchSecond (byte [] data, int length) {
 		throw new UnsupportedOperationException("Cannot dispatch to second buffer since this is a single-input dispatcher");
 	}
 

@@ -2,6 +2,7 @@ package synth;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -10,6 +11,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -26,7 +28,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.AProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -79,7 +80,6 @@ public class TestProjectionAttributes {
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
 		
-		
 		int[] offsets = new int[numberOfAttributesInSchema + 1];
 		// first attribute is timestamp
 		offsets[0] = 0;
@@ -100,7 +100,7 @@ public class TestProjectionAttributes {
 			expression[i+1] = new IntColumnReference((i % (numberOfAttributesInSchema)) + 1);
 		}
 		
-		int nestingDepth = 64;
+		int nestingDepth = 8;
 		
 		FloatExpression ex1 = new FloatColumnReference(1);
 		for (int i = 0; i < nestingDepth; i++) {
@@ -127,17 +127,31 @@ public class TestProjectionAttributes {
 //		expression[3] = ex3;
 //		expression[4] = ex4;
 		
+		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
+		long tpb = ppb * window.getPaneSize();
+		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+		
+		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
+		System.out.println("[DBG] offset is " + batchOffset);
+		
 		TheGPU.getInstance().init(1);
 		
 		IMicroOperatorCode projectionCode = new Projection (expression);
 		System.out.println(String.format("[DBG] %s", projectionCode));
 		IMicroOperatorCode gpuProjectionCode = new AProjectionKernel(expression, schema, filename);
 		
+		((AProjectionKernel) gpuProjectionCode).setInputSize(inputSize);
+		((AProjectionKernel) gpuProjectionCode).setup();
+		
 		/*
 		 * Build and set up the query
 		 */
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		
+		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024; // Integer.parseInt(args[2]) * 64 * 32 * 1024; /* 64 tasks in queue */
+		Utils._UNBOUNDED_BUFFER_ = inputSize;
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
@@ -160,49 +174,95 @@ public class TestProjectionAttributes {
 //		}
 		
 		operator.setup();
+		
+		TheGPU.getInstance().bind(1);
 
 		/*
 		 * Set up the stream
 		 */
 		
-		// yields 1MB for byteSize = 32 
+		int tuplesPerInsert = 32768;
 		int actualByteSize = schema.getByteSizeOfTuple();
-		int bufferBundle = actualByteSize * 32768;
+		int bufferBundle = actualByteSize * tuplesPerInsert; // yields 1MB for byteSize = 32 
 		byte [] data = new byte [bufferBundle];
-		ByteBuffer b = ByteBuffer.wrap(data);
-		// b.order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer b = ByteBuffer.wrap(data); // .order(ByteOrder.LITTLE_ENDIAN);
 		
 		// fill the buffer
+		Random r = new Random();
 		while (b.hasRemaining()) {
-			b.putLong(System.nanoTime());
+			b.putLong(0);
+			// b.putFloat(r.nextFloat());
 			b.putFloat(1);
 			for (int i = 12; i < actualByteSize; i += 4)
 				b.putInt(1);
 		}
 		
-		// System.out.println("[DBG] First timestamp is " + b.getLong(0));
+		/* Populate timestamps */
+		long nextBatchStartPointer = 0L;
+		long count = 1L;
+		while (nextBatchStartPointer < tuplesPerInsert) {
+			int normalisedIndex = (int) (nextBatchStartPointer % tuplesPerInsert) * actualByteSize;
+			b.putLong(normalisedIndex, System.nanoTime());
+			// System.out.println("Set batch timestamp at " + normalisedIndex + " to be " + b.getLong(normalisedIndex));
+			nextBatchStartPointer += batchOffset;
+		}
 		
 		try {
 			while (true) {
-				operator.processData (data);
-				b.putLong(0, System.nanoTime());
-//				System.out.println("[DBG] Second timestamp is " + b.getLong(0));
-//				operator.processData (data);
-//				b.putLong(0, System.nanoTime());
-//				System.out.println("[DBG] Third timestamp is " + b.getLong(0));
-//				operator.processData (data);
-//				b.putLong(0, System.nanoTime());
-//				System.out.println("[DBG] Fourth timestamp is " + b.getLong(0));
-//				operator.processData (data);
-//				break;
-				/* Update timestamps */
 				// for (int i = 0; i < 32768; i++)
-				//	b.putLong(i * actualByteSize, System.nanoTime());
-				// b.putLong(0, System.nanoTime());
+				//	b.putLong(i * 32, 0L);
+				operator.processData (data);
+				count ++;
+				while (nextBatchStartPointer < tuplesPerInsert * count) {
+					int normalisedIndex = (int) (nextBatchStartPointer % tuplesPerInsert) * actualByteSize;
+					b.putLong(normalisedIndex, System.nanoTime());
+					// System.out.println("Set batch timestamp at " + normalisedIndex + " to be " + b.getLong(normalisedIndex));
+					nextBatchStartPointer += batchOffset;
+				}
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 
 			System.exit(1);
 		}
+		
+//		// yields 1MB for byteSize = 32 
+//		int actualByteSize = schema.getByteSizeOfTuple();
+//		int bufferBundle = actualByteSize * 32768;
+//		byte [] data = new byte [bufferBundle];
+//		ByteBuffer b = ByteBuffer.wrap(data);
+//		// b.order(ByteOrder.LITTLE_ENDIAN);
+//		
+//		// fill the buffer
+//		while (b.hasRemaining()) {
+//			b.putLong(System.nanoTime());
+//			b.putFloat(1);
+//			for (int i = 12; i < actualByteSize; i += 4)
+//				b.putInt(1);
+//		}
+//		
+//		// System.out.println("[DBG] First timestamp is " + b.getLong(0));
+//		
+//		try {
+//			while (true) {
+//				operator.processData (data);
+//				b.putLong(0, System.nanoTime());
+////				System.out.println("[DBG] Second timestamp is " + b.getLong(0));
+////				operator.processData (data);
+////				b.putLong(0, System.nanoTime());
+////				System.out.println("[DBG] Third timestamp is " + b.getLong(0));
+////				operator.processData (data);
+////				b.putLong(0, System.nanoTime());
+////				System.out.println("[DBG] Fourth timestamp is " + b.getLong(0));
+////				operator.processData (data);
+////				break;
+//				/* Update timestamps */
+//				// for (int i = 0; i < 32768; i++)
+//				//	b.putLong(i * actualByteSize, System.nanoTime());
+//				// b.putLong(0, System.nanoTime());
+//			}
+//		} catch (Exception e) { 
+//			e.printStackTrace(); 
+//			System.exit(1);
+//		}
 	}
 }

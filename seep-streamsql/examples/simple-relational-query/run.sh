@@ -8,7 +8,8 @@ JCP=${JCP}:src
 JCP=${JCP}:lib/seep-streamsql-0.0.1-SNAPSHOT.jar
 JCP=${JCP}:lib/seep-system-0.0.1-SNAPSHOT.jar
 
-OPTS="-server -XX:+UseConcMarkSweepGC -XX:NewRatio=2 -Xms8g -Xmx8g -Xloggc:test-gc.out"
+# OPTS="-Xloggc:test-gc.out"
+OPTS="-server -XX:+UseConcMarkSweepGC -XX:NewRatio=2 -XX:SurvivorRatio=16 -Xms48g -Xmx48g"
 
 # if [ $# -gt 1 ]; then
 #    echo $USAGE
@@ -17,7 +18,8 @@ OPTS="-server -XX:+UseConcMarkSweepGC -XX:NewRatio=2 -Xms8g -Xmx8g -Xloggc:test-
 
 CLASS=$1
 
-valgrind --error-limit=no --leak-check=full --show-reachable=yes java $OPTS -Djava.library.path="/mnt/data/cccad3/akolious/aparapi/com.amd.aparapi.jni/dist" -cp $JCP $CLASS $2 # 2>&1 >test.out &
+# valgrind --error-limit=no --leak-check=full --show-reachable=yes 
+java $OPTS -cp $JCP $CLASS $2 # 2>&1 >test.out &
 
 # seep_pid=$!
 # top -b -n120 -d 1 | grep "Cpu" >> test-cpu.out

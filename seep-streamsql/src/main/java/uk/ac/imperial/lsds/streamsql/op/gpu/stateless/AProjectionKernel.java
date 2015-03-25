@@ -4,13 +4,13 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
@@ -24,6 +24,8 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	private static final int THREADS_PER_GROUP = 128;
 	
 	private static final int PIPELINES = 2;
+
+	private boolean pinned = false;
 	
 	private Expression[] expressions;
 	private ITupleSchema inputSchema, outputSchema;
@@ -54,7 +56,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		this.filename = filename;
 		
-		setup();
+		// setup();
 	}
 	
 	public AProjectionKernel (Expression[] expressions) {
@@ -65,10 +67,16 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		this(new Expression[] { expression }, null, null);
 	}
 	
-	private void setup() {
+	public void setInputSize (int inputSize) {
+		this._input_size = inputSize;
+	}
+	
+	public void setup() {
 		
 		/* Configure kernel arguments */
-		this._input_size = _default_input_size;
+		// this._input_size = _default_input_size;
+		
+		System.out.println("In projection kernel, the input size is " + _input_size);
 		this.tuples = _input_size / inputSchema.getByteSizeOfTuple();
 		
 		this.threads = tuples;
@@ -115,6 +123,11 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
+		
+		if (! pinned) {
+			// TheGPU.getInstance().bind(2);
+			pinned = true;
+		}
 				
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
@@ -128,6 +141,9 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
+		
+		// System.out.println("[DBG] output buffer capacity is " + outputBuffer.capacity());
+		
 		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		

@@ -25,14 +25,24 @@ public class MultiOperator {
 		this.id = id;
 	}
 
-	public void processData(byte[] values) {
+	public void processData (byte[] values) {
 
-		this.dispatcher.dispatch(values);
+		this.dispatcher.dispatch (values, values.length);
+	}
+	
+	public void processData (byte[] values, int length) {
+
+		this.dispatcher.dispatch (values, length);
 	}
 
-	public void processDataSecond(byte[] values) {
+	public void processDataSecond (byte [] values) {
 
-		this.dispatcher.dispatchSecond(values);
+		this.dispatcher.dispatchSecond(values,  values.length);
+	}
+	
+	public void processDataSecond (byte [] values, int length) {
+
+		this.dispatcher.dispatchSecond(values,  length);
 	}
 
 	public void setup() {
@@ -61,7 +71,11 @@ public class MultiOperator {
 		for (int i = 0; i < threads; i++) {
 			policy [i][0] = 1;
 		}
-		// policy[1][0] = 8;
+		policy[0][0] = 1;
+		policy[0][1] = 1;
+		
+//		policy[1][0] = 4;
+//		policy[1][1] = 4;
 
 		this.queue = new TaskQueue(threads, 2); // new ConcurrentLinkedQueue<ITask>();
 		this.workerPool = new TaskProcessorPool(threads, queue, policy, Utils.HYBRID);

@@ -8,6 +8,7 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.ProjectionKerne
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.SelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.AProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.DummyKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -38,4 +39,6 @@ public interface OperatorVisitor {
 	public void visit(ASelectionKernel aSelectionKernel);
 
 	public void visit(AggregationKernel aggregationKernel);
+
+	public void visit(DummyKernel dummyKernel);
 }

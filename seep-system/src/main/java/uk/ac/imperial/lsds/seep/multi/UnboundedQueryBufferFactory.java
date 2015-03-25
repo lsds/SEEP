@@ -6,23 +6,25 @@ import java.util.concurrent.locks.LockSupport;
 
 public class UnboundedQueryBufferFactory {
 	
-	private static final int _pool_size = 1; /* Initial pool size */
+	private static final int _pool_size = 0; /* Initial pool size */
 	private static final int _buffer_size = Utils._UNBOUNDED_BUFFER_;
 	
-	public static AtomicLong count;
+	public static AtomicLong count = new AtomicLong(0L);
 	
-	private static ConcurrentLinkedQueue<UnboundedQueryBuffer> pool = 
-		new ConcurrentLinkedQueue<UnboundedQueryBuffer>();
+	private static ConcurrentLinkedQueue<IQueryBuffer> pool = 
+		new ConcurrentLinkedQueue<IQueryBuffer>();
 	
 	static {
 		int i = _pool_size;
-		while (i-- > 0)
-			pool.add (new UnboundedQueryBuffer(_buffer_size));
-		count = new AtomicLong(_pool_size);
+		while (i-- > 0) {
+			int id = (int) count.getAndIncrement();
+			pool.add (new UnboundedQueryBuffer(id, _buffer_size, false));
+			// pool.add (new UnsafeUnboundedQueryBuffer(id, _buffer_size));
+		}
 	}
 	
-	public static UnboundedQueryBuffer newInstance () {
-		UnboundedQueryBuffer buffer;
+	public static IQueryBuffer newInstance () {
+		IQueryBuffer buffer;
 		
 //		if (count++ < _pool_size) {
 //			buffer = new UnboundedQueryBuffer(_buffer_size);
@@ -37,14 +39,15 @@ public class UnboundedQueryBufferFactory {
 //		}
 		buffer = pool.poll();
 		if (buffer == null) {
-			count.incrementAndGet();
-			return new UnboundedQueryBuffer(_buffer_size);
+			int id = (int) count.getAndIncrement();
+			return new UnboundedQueryBuffer(id, _buffer_size, false);
+			// return new UnsafeUnboundedQueryBuffer(id, _buffer_size);
 		}
 		
 		return buffer;
 	}
 	
-	public static void free (UnboundedQueryBuffer buffer) {
+	public static void free (IQueryBuffer buffer) {
 		buffer.clear();
 		
 		// System.out.println("FREE BUFFER " + buffer + " position " + buffer.position());

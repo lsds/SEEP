@@ -101,21 +101,22 @@ public class KernelCodeGenerator {
 		System.out.println("[DBG] #predicates = " + n);
 		b.append("inline int selectf (__global input_t *p) {\n");
 		b.append("\tint value = 0;\n");
-		b.append("\treturn 1;\n");
+		// b.append("\treturn 1;\n");
 		
-//		b.append("\treturn value & ");
-//		for (int i = 0; i < n; i++) {
-//			if (i == n - 1)
-//				b.append("(p->tuple._1 != 0); \n");
-//			else
-//				b.append(String.format("(p->tuple._1 != %d) & ", i - 100));
-//		}
+		b.append("\tvalue = value & ");
+		for (int i = 0; i < n; i++) {
+			if (i == n - 1)
+				b.append("(p->tuple._1 != 0); \n");
+			else
+				b.append(String.format("(p->tuple._1 != %d) & ", i - 100));
+		}
 		
 		// b.append("\nint val = ((p->tuple._1 << 8) & 0xFF00FF00) | ((p->tuple._1 >> 8) & 0xFF00FF );\n"); 
 		// b.append("return ((val << 16) | ((val >> 16) & 0xFFFF)) > 0;\n");
 		// b.append("\treturn ((p->tuple._1 << 8) | ((p->tuple._1 >> 8) & 0xFF)) == 1;");
 		// b.append("\tint value = 0;\n");
 		// b.append("\treturn value & (p->tuple._1 > -1);\n");
+		b.append("\treturn 1;\n");
 		b.append("}\n");
 		return b.toString();
 	}
@@ -133,8 +134,14 @@ public class KernelCodeGenerator {
 			idx += 1;
 			if (idx >= input.getNumberOfAttributes())
 				idx = 1;
-			b.append(String.format("\tq->tuple._%d = p->tuple._%d;\n",
-					i, idx));
+			if (i == 1) {
+				b.append("\tq->tuple._1 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._1 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
+				b.append("\tq->tuple._2 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._2 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
+				b.append("\tq->tuple._3 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._3 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
+				b.append("\tq->tuple._4 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._4 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
+			} else {
+				b.append(String.format("\tq->tuple._%d = p->tuple._%d;\n", i, idx));
+			}
 		}
 		b.append("}\n");
 		return b.toString();
@@ -144,7 +151,7 @@ public class KernelCodeGenerator {
 		return load (filename);
 	}
 	
-	private static String load (String filename) {
+	public static String load (String filename) {
 		File file = new File(filename);
 		try {
 			byte [] bytes = Files.readAllBytes(file.toPath());

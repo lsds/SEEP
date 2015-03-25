@@ -59,7 +59,7 @@ public class TestMicroAggregationKernel {
 		
 		/* System.out.println(String.format("[DBG] %s", aggregation)); */
 		
-		IQueryBuffer buffer = new UnboundedQueryBuffer(Utils.BUNDLE);
+		IQueryBuffer buffer = new UnboundedQueryBuffer(0, Utils.BUNDLE, false);
 		/* Populate input data */
 		buffer.getByteBuffer().order(ByteOrder.LITTLE_ENDIAN);
 		while (buffer.getByteBuffer().hasRemaining())

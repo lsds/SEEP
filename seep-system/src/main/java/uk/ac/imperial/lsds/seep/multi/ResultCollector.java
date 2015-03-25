@@ -49,6 +49,7 @@ public class ResultCollector {
 			if (! handler.semaphore.tryAcquire())
 				return;
 			
+			int count_freed = 0;
 			/* No other thread can enter this section */
 			
 			/* Is slot `index` occupied? 
@@ -70,14 +71,14 @@ public class ResultCollector {
 
 				IQueryBuffer buf = handler.results[handler.next];
 				byte [] arr = buf.array();
-
+				
 				/*
 				 * Do the actual result forwarding
 				 */
 				if (query.getDownstreamSubQuery() != null) {
 //					System.out.println(String.format("[DBG] %s try free qid %d idx %6d", 
 //					Thread.currentThread(), query.getId(), handler.next));
-					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr)) {
+					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr, arr.length)) {
 //						System.err.println(String.format("[DBG] %s failed to free qid %d idx %6d", 
 //						Thread.currentThread(), query.getId(), handler.next));
 						handler.slots.set(handler.next, 1);
@@ -95,7 +96,7 @@ public class ResultCollector {
 //					System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
 //					Thread.currentThread(), query.getId(), handler.next));
 				
-				// query.getLatencyMonitor().monitor(buf);
+				query.getLatencyMonitor().monitor(buf, handler.next);
 				
 				buf.release();
 
@@ -109,6 +110,8 @@ public class ResultCollector {
 							Thread.currentThread(), query.getId(), handler.next));
 					System.exit(1);
 				}
+				
+				count_freed += 1;
 				
 //				if (query.getId() ==  1)
 //					System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
@@ -134,11 +137,13 @@ public class ResultCollector {
 				// if (handler.next == 0)
 				//	handler.next ++;
 				
-				count ++;
-				
 				/* Check if next is ready to be pushed */
-				if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
-					busy = false;
+				if (count_freed < 20) {
+					if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
+						busy = false;
+					}
+				} else {
+				 	busy = false;
 				}
 			}
 			/* Thread exit critical section */
@@ -184,7 +189,7 @@ public class ResultCollector {
 				 */
 				if (query.getDownstreamSubQuery() != null)
 					query.getDownstreamSubQuery().getTaskDispatcher()
-							.dispatch(handler.results.get(handler.next).array());
+							.dispatch(handler.results.get(handler.next).array(), handler.results.get(handler.next).array().length);
 
 				if (index != Integer.MIN_VALUE)
 					handler.firstFreeBuffer.free(index);

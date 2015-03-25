@@ -12,6 +12,8 @@ public class TaskProcessor implements Runnable {
 	private int pid;
 	boolean GPU;
 	
+	private int sel_pid = 0;
+	
 	// LocalUnboundedQueryBufferFactory bufferFactory = new LocalUnboundedQueryBufferFactory();
 	
 	/*
@@ -25,27 +27,40 @@ public class TaskProcessor implements Runnable {
 		this.queue = queue;
 		this.policy = policy;
 		this.GPU = GPU;
+		
+		if (GPU)
+			sel_pid = 0;
+		else
+			sel_pid = 1;
 	}
 
 	@Override
 	public void run() {
 		ITask task = null;
-		if (GPU)
+		if (GPU) {
 			System.out.println ("GPU thread is " + Thread.currentThread());
+//			TheGPU.getInstance().bind(1);
+		} else {
+			
+			// sel_pid = 1;
+			// TheGPU.getInstance().bind(pid + 3);
+		}
+		TheGPU.getInstance().bind(pid + 1);
 		while (true) {
 			try {
 
 				/* while ((task = queue.poll()) == null) { */
 				
-				while ((task = queue.poll(policy, pid, 0)) == null) {
+				while ((task = queue.poll(policy, sel_pid, 0)) == null) {
 //					System.err.println(String.format("warning: thread %20s blocked waiting for a task", 
 //							Thread.currentThread()));
 					LockSupport.parkNanos(1L);
-					// Thread.yield();
+					//Thread.yield();
+					// ;
 				}
 				task.setGPU(GPU);
 				// task.setBufferFactory(bufferFactory);
-				// System.out.println(String.format("[DBG] p %2d (%5s) runs task %6d from query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
+				// System.out.println(String.format("[DBG] p %2d (%d) (%5s) runs task %6d from query %d", pid, sel_pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
 				task.run();
 
 			} catch (Exception e) {

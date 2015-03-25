@@ -5,7 +5,7 @@ import java.util.concurrent.locks.LockSupport;
 
 public class WindowBatchFactory {
 	
-	private static final int _pool_size = 1; // Utils.TASKS; /* Initial pool size */
+	private static final int _pool_size = 0; // Utils.TASKS; /* Initial pool size */
 	
 	public static AtomicLong count;
 	
@@ -40,7 +40,9 @@ public class WindowBatchFactory {
 	
 	public static void free (WindowBatch batch) {
 		/* The pool is ever growing based on peek demand */
+		
 		batch.clear();
+		
 		pool.offer (batch);
 	}
 }

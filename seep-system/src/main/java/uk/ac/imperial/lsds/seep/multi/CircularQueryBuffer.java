@@ -6,13 +6,18 @@ import java.util.concurrent.atomic.AtomicLong;
 public class CircularQueryBuffer implements IQueryBuffer {
 	
 	private static final int _default_capacity = Utils._CIRCULAR_BUFFER_;
-	private byte [] data;
+	
+	private boolean isDirect = false;
+	
+	private int id;
+	
+	private byte [] data = null;
 	private int size;
 	private final PaddedAtomicLong start;
 	private final PaddedAtomicLong end;
 	private long mask;
-	long wraps;
-	ByteBuffer buffer;
+	private long wraps;
+	private ByteBuffer buffer;
 	
 	private AtomicLong bytesProcessed;
 	private PaddedLong h;
@@ -21,11 +26,17 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return 1 << (32 - Integer.numberOfLeadingZeros(size - 1));
 	}
 	
-	public CircularQueryBuffer () {
-		this (_default_capacity);
+	public CircularQueryBuffer (int id) {
+		
+		this (id, _default_capacity, false);
 	}
 	
-	public CircularQueryBuffer (int _size) { 
+	public CircularQueryBuffer (int id, int capacity) {
+		
+		this (id, capacity, false);
+	}
+	
+	public CircularQueryBuffer (int id, int _size, boolean isDirect) { 
 		
 		if (_size <= 0)
 			throw new IllegalArgumentException("error: buffer size must be greater than 0");
@@ -39,14 +50,27 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		
 		/* Also, check if buffer size is a multiple of tuple size */
 		
-		data = new byte [this.size];
+		this.isDirect = isDirect;
+		this.id = id;
+		
 		start = new PaddedAtomicLong (0L);
 		end = new PaddedAtomicLong (0L);
+		
 		mask = this.size - 1;
 		wraps = 0;
-		buffer = ByteBuffer.wrap(data);
+		
 		bytesProcessed = new AtomicLong (0L);
 		h = new PaddedLong (0L);
+		
+		if (! this.isDirect) {
+			
+			data = new byte [this.size];
+			buffer = ByteBuffer.wrap(data);
+			
+		} else {
+			
+			buffer = ByteBuffer.allocateDirect(this.size);
+		}
 	}
 	
 	@Override
@@ -72,6 +96,9 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	/* Avoid using this function, as it creates intermediate byte [] objects */
 	@Override
 	public byte [] array (int offset, int length) {
+		if (data == null) {
+			throw new UnsupportedOperationException("error: cannot get from a direct buffer");
+		}
 		byte [] result = new byte [length];
 		System.arraycopy(data, offset, result, 0, length);
 		return result;
@@ -153,12 +180,17 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	
 	@Override
 	public int put (byte [] values) {
+		return put (values, values.length);
+	}
+	
+	@Override
+	public int put (byte [] values, int length) {
 		
-		if (values == null)
+		if (values == null || length <= 0)
 			throw new NullPointerException("error: cannot put null values to a circular buffer");
 		
 		final long _end = end.get();
-		final long wrapPoint = (_end + values.length - 1) - size;
+		final long wrapPoint = (_end + length - 1) - size;
 		if (h.value <= wrapPoint) {
 			h.value = start.get();
 			if (h.value <= wrapPoint) {
@@ -168,20 +200,34 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		}
 		
 		int index = normalise (_end);
-		if (values.length > (size - index)) { /* Copy in two parts */
+		if (length > (size - index)) { /* Copy in two parts */
 			int right = size - index;
-			int left  = values.length - (size - index);
-			System.arraycopy(values, 0, data, index, right);
-			System.arraycopy(values, size - index, data, 0, left);
-			//System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left));
+			int left  = length - (size - index);
+			if (! this.isDirect) {
+				System.arraycopy(values, 0, data, index, right);
+				System.arraycopy(values, size - index, data, 0, left);
+			} else {
+				/* For a direct buffer, set position to index */
+				buffer.position(index);
+				buffer.put(values, 0, right);
+				buffer.position(0);
+				buffer.put(values, size - index, left);
+			}
+			/* System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left)); */
 		} else {
-			System.arraycopy(values, 0, data, index, values.length);
+			if (! this.isDirect)
+				System.arraycopy(values, 0, data, index, length);
+			else {
+				/* For a direct buffer, set position to index */
+				buffer.position(index);
+				buffer.put(values);
+			}
 		}
-		int p = normalise (_end + values.length);
+		int p = normalise (_end + length);
 		if (p <= index)
 			wraps ++;
 		/* buffer.position(p); */
-		end.lazySet(_end + values.length);
+		end.lazySet(_end + length);
 		return index;
 	}
 	
@@ -220,7 +266,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			bytes = size - index + offset + 1;
 		else
 			bytes = offset - index + 1;
-		/* System.out.println(String.format("[DBG] %6d bytes processed; new start is %6d", bytes, _start + bytes)); */
+		// System.out.println(String.format("[DBG] q %d %6d bytes processed; new start is %6d", this.id, bytes, _start + bytes));
 		bytesProcessed.addAndGet(bytes);
 		/* Set new start pointer */
 		start.lazySet(_start + bytes);
@@ -255,15 +301,25 @@ public class CircularQueryBuffer implements IQueryBuffer {
 
 	@Override
 	public void appendBytesTo (int offset, int length, IQueryBuffer destination) {
+		if (isDirect) {
+			System.err.println("Fatal error.");
+			System.exit(1);
+			// throw new UnsupportedOperationException("error: cannot append bytes from a circular buffer");
+		}
 		int start = normalise(offset);
 		destination.getByteBuffer().put(this.data, start, length);
 	}
 	
 	@Override
 	public void appendBytesTo (int start, int end, byte [] destination) {
+		
+		if (isDirect)
+			throw new UnsupportedOperationException("error: cannot append bytes from a direct buffer");
+		
 		if (end > start) {
-			//System.out.println(
-			//	String.format("[DBG] [appendBytesTo] start %7d end %7d destination %7d bytes", start, end, destination.length));
+			/* System.out.println(
+			 * String.format("[DBG] [appendBytesTo] start %7d end %7d destination %7d bytes", 
+			 * start, end, destination.length)); */
 			System.arraycopy(this.data, start, destination, 0, end - start);
 		} else {
 			/* Copy in two parts */
@@ -280,5 +336,17 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	@Override
 	public void position(int index) {
 		throw new UnsupportedOperationException("error: cannot set position to a circular buffer");
+	}
+
+	@Override
+	public boolean isDirect() {
+		
+		return this.isDirect;
+	}
+
+	@Override
+	public int getBufferId() {
+		
+		return this.id;
 	}
 }

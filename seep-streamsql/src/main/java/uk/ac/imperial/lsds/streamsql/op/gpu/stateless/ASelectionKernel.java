@@ -1,16 +1,18 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu.stateless;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
@@ -26,18 +28,20 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	 * This size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_size = Utils._GPU_INPUT_;
+	private static int _default_size = Utils._GPU_INPUT_;
 	/*
 	 * Operator configuration parameters
 	 */
-	private static final int THREADS_PER_GROUP = 256;
-	private static final int TUPLES_PER_THREAD = 1;
+	private static final int THREADS_PER_GROUP = 128;
+	private static final int TUPLES_PER_THREAD = 2;
 	
 	private static final int _INT_ = 4; /* sizeof(int) */
 	
 	private static final int PIPELINES = 2;
 	
 	int qid; /* Query id */
+	
+	private boolean pinned = false;
 	
 	private int [] args; /* Arguments to the selection kernel */
 	
@@ -53,6 +57,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	/* Temporary storage */
 	byte [] flags;
 	byte [] offsets;
+	byte [] groupOffsets;
 	
 	public ASelectionKernel (IPredicate predicate, ITupleSchema schema,
 		String filename) {
@@ -63,7 +68,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		this._input_size = _default_size;
 		
-		setup ();
+		// setup ();
 	}
 	
 	public ASelectionKernel (IPredicate predicate, ITupleSchema schema) {
@@ -78,7 +83,11 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		return this.predicate;
 	}
 	
-	private void setup () {
+	public void setInputSize (int inputSize) {
+		this._input_size = inputSize;
+	}
+	
+	public void setup () {
 		
 		/* Configure kernel arguments */
 		this.tuples  = this._input_size / schema.getByteSizeOfTuple();
@@ -103,23 +112,25 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		args[1] = tuples; 
 		args[2] = _bundle;
 		args[3] = bundles;
-		args[4] = _INT_ * THREADS_PER_GROUP;
+		args[4] = 2 * _INT_ * THREADS_PER_GROUP;
 		
 		String source = KernelCodeGenerator.getSelection (schema, schema, predicate, filename);
 		
-		// System.out.println(source);
+		System.out.println(source);
 		
 		// TheGPU.getInstance().init(1);
-		qid = TheGPU.getInstance().getQuery(source, 2, 1, 3);
+		
+		qid = TheGPU.getInstance().getQuery(source, 2, 1, 4);
 		
 		System.out.println(String.format("[DBG] GPU selection qid %d", qid));
 		
 		TheGPU.getInstance().setInput (qid, 0, _input_size);
 		/* These are read-write buffers */
-		TheGPU.getInstance().setOutput(qid, 0, _INT_ * tuples, 0);
-		TheGPU.getInstance().setOutput(qid, 1, _INT_ * tuples, 0);
+		 TheGPU.getInstance().setOutput(qid, 0, _INT_ * tuples, 0);
+		 TheGPU.getInstance().setOutput(qid, 1, _INT_ * tuples, 0);
+		 TheGPU.getInstance().setOutput(qid, 2, _INT_ * groups, 0);
 		/* Output is write-only */
-		TheGPU.getInstance().setOutput(qid, 2, _input_size, 1);
+		TheGPU.getInstance().setOutput(qid, 3, _input_size, 1);
 		
 		TheGPU.getInstance().setKernelSelect (qid, args);
 		
@@ -133,12 +144,23 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		flags   = new byte [_INT_ * tuples];
 		offsets = new byte [_INT_ * tuples];
 		
+		groupOffsets = new byte [_INT_ * groups];
+		
 		Arrays.fill(flags  , (byte) 0);
 		Arrays.fill(offsets, (byte) 0);
+		
+		Arrays.fill(groupOffsets, (byte) 0);
+		
+		
 	}
 	
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
+		
+		if (! pinned) {
+			TheGPU.getInstance().bind(1);
+			pinned = true;
+		}
 		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
@@ -151,22 +173,40 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		int start = windowBatch.getBatchStartPointer();
 		int end   = windowBatch.getBatchEndPointer();
 		
+		// System.out.println(String.format("[DBG] GPU selection start %10d end %10d", start, end));
+		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
 		
-		TheGPU.getInstance().setOutputBuffer(qid, 0, flags);
-		TheGPU.getInstance().setOutputBuffer(qid, 1, offsets);
+		 TheGPU.getInstance().setOutputBuffer(qid, 0, flags);
+		 TheGPU.getInstance().setOutputBuffer(qid, 1, offsets);
+		 TheGPU.getInstance().setOutputBuffer(qid, 2, groupOffsets);
 		
-		
-		TheGPU.getInstance().setOutputBuffer(qid, 2, outputBuffer.array());
+		TheGPU.getInstance().setOutputBuffer(qid, 3, outputBuffer.array());
 		
 		TheGPU.getInstance().execute(qid, threads, THREADS_PER_GROUP);
 		
+//		/* Print flags and offsets */
+//		ByteBuffer b1 = ByteBuffer.wrap(flags).order(ByteOrder.LITTLE_ENDIAN);
+//		ByteBuffer b2 = ByteBuffer.wrap(offsets).order(ByteOrder.LITTLE_ENDIAN);
+//		b1.clear();
+//		b2.clear();
+//		int count = 0;
+//		while (b1.hasRemaining() && b2.hasRemaining() && count < 256) {
+//			System.out.println(String.format("[DBG] [select] flag %13d offset %13d", b1.getInt(), b2.getInt()));
+//			count ++;
+//		}
+//		System.out.println(String.format("[DBG] [select] %d entries", count));
+		
+//		outputBuffer.position(_INT_ * tuples);
+		
+		outputBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		
 		windowBatch.setBuffer(outputBuffer);
 		
-//		windowBatch.setTaskId     (taskIdx[0]);
-//		windowBatch.setFreeOffset (freeIdx[0]);
+		windowBatch.setTaskId     (taskIdx[0]);
+		windowBatch.setFreeOffset (freeIdx[0]);
 		
 		for (int i = 0; i < taskIdx.length - 1; i++) {
 			taskIdx[i] = taskIdx [i + 1];

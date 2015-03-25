@@ -10,12 +10,12 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
@@ -131,7 +131,7 @@ public class TestAggregationType {
 		 * Set up the stream
 		 */
 		// yields 1MB for byteSize = 32 
-		int tuplesPerInsert = 32768;
+		int tuplesPerInsert = 32768 / 1024;
 		int actualByteSize = schema.getByteSizeOfTuple();
 		int bufferBundle = actualByteSize * tuplesPerInsert; // yields 1MB for byteSize = 32 
 		byte [] data = new byte [bufferBundle];

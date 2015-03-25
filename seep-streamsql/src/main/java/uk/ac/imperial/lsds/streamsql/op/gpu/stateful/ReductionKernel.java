@@ -6,6 +6,7 @@ import java.nio.ByteOrder;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
@@ -18,7 +19,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
-import uk.ac.imperial.lsds.streamsql.op.gpu.TheGPU;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
@@ -32,9 +32,10 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	/*
 	 * Operator configuration parameters
 	 */
-	private static final int THREADS_PER_GROUP = 256;
+	private static final int THREADS_PER_GROUP = 256 ;
 	
 	private static final int PIPELINES = 2;
+	private boolean pinned = false;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
@@ -167,6 +168,11 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
+		if (! pinned) {
+			TheGPU.getInstance().bind(2);
+			pinned = true;
+		}
+		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
 		
@@ -174,7 +180,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		byte [] inputArray = windowBatch.getBuffer().array();
 		int start = windowBatch.getBatchStartPointer();
 		int end   = windowBatch.getBatchEndPointer();
-		System.out.println("[DBG] start " + start + " end " + end);
+		// System.out.println("[DBG] start " + start + " end " + end);
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
 		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());

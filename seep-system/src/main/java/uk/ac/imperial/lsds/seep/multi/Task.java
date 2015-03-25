@@ -13,21 +13,11 @@ public class Task implements ITask {
 	public int queryid;
 	public AtomicMarkableReference<Task> next;
 	
-	private LocalUnboundedQueryBufferFactory bufferFactory;
-	
 	private boolean	GPU	= false;
 
 	@Override
 	public void setGPU(boolean GPU) {
 		this.GPU = GPU;
-	}
-
-	public LocalUnboundedQueryBufferFactory getBufferFactory() {
-		return bufferFactory;
-	}
-
-	public void setBufferFactory(LocalUnboundedQueryBufferFactory bufferFactory) {
-		this.bufferFactory = bufferFactory;
 	}
 
 	public Task() {
