@@ -244,7 +244,12 @@ public class Dispatcher implements IRoutingObserver {
 	public FailureCtrl handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 	{
 		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);
-		return new FailureCtrl(nodeFctrl);
+		FailureCtrl toUpstream = new FailureCtrl(nodeFctrl);
+		synchronized(lock)
+		{
+			toUpstream.updateAlives(nodeOutBuffer.keySet());
+		}
+		return toUpstream;
 	}
 	
 	public void routingChanged()
