@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +48,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final IProcessingUnit owner;
 	private ArrayList<OutputQueue> outputQueues;
 	private final boolean bestEffort;
+	private OperatorOutputQueue opQueue;
 
 	
 	private final Object lock = new Object(){};
@@ -98,6 +99,9 @@ public class Dispatcher implements IRoutingObserver {
 				MAX_NODE_OUT_BUFFER_TUPLES = (Integer.parseInt(srcMaxBufferMB) * 1024 * 1024) / tupleSize;
 				//MAX_NODE_OUT_BUFFER_TUPLES = Integer.parseInt(srcMaxBufferMB) / tupleSize;
 			}
+			//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
+			opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
+			
 		}
 		for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
 		{
@@ -106,7 +110,11 @@ public class Dispatcher implements IRoutingObserver {
 			Thread workerT = new Thread(worker);
 			rctrlWorkers.add(worker);
 			workerT.start();
-		}		
+		}	
+		
+		//TODO: Is this safe?
+		Thread mainT = new Thread(new DispatcherMain());
+		mainT.start();
 	}
 	
 	public void startFailureDetector()
@@ -124,18 +132,12 @@ public class Dispatcher implements IRoutingObserver {
 	 * TODO: Need to rearrange locking so that caller can block on 
 	 * a full node out buffer without causing a deadlock.
 	 */
-	/*
-	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
-	{
-		dispatch(dt, targets, false);
-	}
-	*/
 	public void dispatch(DataTuple dt) { dispatch(dt, false); }
 	public void dispatch(DataTuple dt, boolean retransmission)
 	{
 		if (!bestEffort)
 		{
-			dispatchReliable(dt, retransmission);
+			dispatchReliable(dt, retransmission); 
 		}
 		else
 		{
@@ -143,25 +145,17 @@ public class Dispatcher implements IRoutingObserver {
 		}	
 	}
 	
+	private void dispatchBestEffort(DataTuple dt)
+	{
+		//TODO: for reliable should check if already in queue or node out buf.
+		opQueue.add(dt);
+	}
+	
+	private void dispatchReliable(DataTuple dt, boolean retransmission) { throw new RuntimeException("TODO"); }
+	
 	
 	/*
-	private void dispatch(DataTuple dt, ArrayList<Integer> targets, boolean retransmission)
-	{
-		if (targets == null || targets.isEmpty()) { throw new RuntimeException("Logic error."); }
-		if (targets.size() > 1) { throw new RuntimeException("TODO."); }
-		
-		if (!bestEffort)
-		{
-			dispatchReliable(dt, targets, retransmission);
-		}
-		else
-		{
-			dispatchBestEffort(dt, targets);
-		}		
-	}
-	*/
-	
-	private void dispatchBestEffort(DataTuple dt)
+	private void dispatchBestEffortOld(DataTuple dt)
 	{
 		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
 		synchronized(lock)
@@ -223,16 +217,15 @@ public class Dispatcher implements IRoutingObserver {
 		//Drop the lock before sending.
 		sendToDispatcher(dt, targets);
 	}
+	*/
 	
 	public int getTotalQlen()
 	{
-		synchronized(lock)
-		{
-			return totalQueueSize();
-		}
+		return opQueue.size();
 	}
 	
 	//Should be called with lock held
+	/*
 	private int totalQueueSize()
 	{
 		int total = 0;
@@ -242,6 +235,7 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		return total;
 	}
+	*/
 	
 	private void sendToDispatcher(DataTuple dt, ArrayList<Integer> targets)
 	{
@@ -269,14 +263,17 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void ack(DataTuple dt)
 	{
+		throw new RuntimeException("Logic error."); 
 		
+		/*
 		long ts = dt.getPayload().timestamp;
 		synchronized(lock)
 		{
 			nodeFctrl.ack(ts);
 		}
-		
+		*/		
 	}
+	
 	public FailureCtrl handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 	{
 		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);
@@ -285,7 +282,8 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			toUpstream.updateAlives(nodeOutBuffer.keySet());
 		}
-		return toUpstream;
+		//return toUpstream;
+		throw new RuntimeException("TODO"); 
 	}
 	
 	public void routingChanged()
@@ -295,9 +293,26 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void stop(int target) { throw new RuntimeException("TODO"); }
 	
+	
+	public class DispatcherMain implements Runnable
+	{
+		public DispatcherMain() {}
+		public void run()
+		{
+			while(true)
+			{
+				//iterate sending tuples to the appropriate downstreams.
+				throw new RuntimeException("TODO"); 
+				
+			}
+		}
+	}
+	
+	
 	public class DispatcherWorker implements Runnable
 	{
-		private final BlockingQueue<DataTuple> tupleQueue = new LinkedBlockingQueue<DataTuple>();	//TODO: Want a priority set perhaps?
+		//private final BlockingQueue<DataTuple> tupleQueue = new LinkedBlockingQueue<DataTuple>();	//TODO: Want a priority set perhaps?
+		private final BlockingQueue<DataTuple> tupleQueue = new ArrayBlockingQueue<DataTuple>(1);
 		private final OutputQueue outputQueue;
 		private final EndPoint dest;
 		
@@ -375,6 +390,7 @@ public class Dispatcher implements IRoutingObserver {
 			// while true
 			while (true)
 			{
+				/*
 				int tupleQueueLength = 0;
 				int bufLength = 0;
 				int downIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId);
@@ -389,15 +405,21 @@ public class Dispatcher implements IRoutingObserver {
 				logger.debug("Total queue length to "+downId + " = "+ totalQueueLength+"("+tupleQueueLength+"/"+bufLength+")");
 				//Create and send control tuple
 				sendQueueLength(totalQueueLength);
+				*/
+				int totalQueueLength = getTotalQlen();
+				//N.B. TODO: This doesn't include anything in the arrayblockingqueues.
+				logger.debug("Total queue length to "+downId + " = "+ totalQueueLength);
+				//Create and send control tuple
+				sendQueueLength(totalQueueLength);
 				
 				//wait for interval
 				try {
 					Thread.sleep(ROUTING_CTRL_DELAY);
 				} catch (InterruptedException e) {}
-				logger.warn("TODO: Locking?");
 			}
 		}
 		
+		/*
 		private int bufLength(int opId)
 		{
 			SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
@@ -408,6 +430,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			else { throw new RuntimeException("Logic error."); }
 		}
+		*/
 		
 		private void sendQueueLength(int queueLength)
 		{
@@ -455,7 +478,7 @@ public class Dispatcher implements IRoutingObserver {
 			Set<Long> timerKeys = new HashSet<Long>();
 			synchronized(lock)
 			{
-				int maxRetransmits = MAX_TOTAL_QUEUE_SIZE - totalQueueSize();
+				int maxRetransmits = MAX_TOTAL_QUEUE_SIZE - opQueue.size();
 				if (maxRetransmits <= 0) 
 				{
 					logger.info("Skipping retransmission as no space in output queues.");
@@ -610,12 +633,12 @@ public class Dispatcher implements IRoutingObserver {
 		}
 	}
 	
-	public class ProcessingOutputQueue
+	public class OperatorOutputQueue
 	{
 		private SortedMap<Long, DataTuple> queue;
 		private final int maxSize;
 		
-		public ProcessingOutputQueue(int maxSize)
+		public OperatorOutputQueue(int maxSize)
 		{
 			this.maxSize = maxSize;
 			queue = new TreeMap<>();
