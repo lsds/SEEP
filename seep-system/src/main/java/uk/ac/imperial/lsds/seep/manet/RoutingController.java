@@ -161,7 +161,7 @@ public class RoutingController implements Runnable{
 		}
 	}
 	
-	private int getLocalQLen()
+	private int getLocalInputQLen()
 	{
 		if (owner.getDSA().getUniqueDso() != null)
 		{
@@ -173,13 +173,26 @@ public class RoutingController implements Runnable{
 		}
 	}
 	
+	private int getLocalOutputQLen()
+	{
+		if (owner.getProcessingUnit().getDispatcher() != null)
+		{
+			return owner.getProcessingUnit().getDispatcher().getTotalQlen();
+		}
+		else
+		{
+			throw new RuntimeException("Logic error.");
+		}
+	}
+	
 	private void updateWeight()
 	{
 
 			Set<Double> joinWeights = new HashSet<>();
 
 			if (numLogicalInputs > 1) { throw new RuntimeException("TODO: What if join?"); }
-			int localQlen = getLocalQLen();	//TODO: What if join!			
+			int localInputQlen = getLocalInputQLen();	//TODO: What if join!
+			int localOutputQlen = getLocalOutputQLen();
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
 				//Iterator<Integer> iter = query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i].iterator();
@@ -189,7 +202,7 @@ public class RoutingController implements Runnable{
 				{
 					Integer upstreamId = iter.next();
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
-							localQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
+							localInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					if (numLogicalInputs == 1)
 					{
 						weights.put(upstreamId, weight);

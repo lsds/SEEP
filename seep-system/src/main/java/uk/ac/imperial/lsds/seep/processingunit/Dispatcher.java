@@ -196,6 +196,13 @@ public class Dispatcher implements IRoutingObserver {
 		return;
 	}
 	
+	public int getTotalQlen()
+	{
+		synchronized(lock)
+		{
+			return totalQueueSize();
+		}
+	}
 	//Should be called with lock held
 	private int totalQueueSize()
 	{
@@ -537,6 +544,10 @@ public class Dispatcher implements IRoutingObserver {
 					{
 						//Only refresh the newly updated alives
 						//TODO: Could perhaps use the time the fctrl was sent instead.
+						//Note that newAlives might contain the ids of tuples never
+						//received at this operator. In theory we could keep track of them
+						//in order to forward them upstream even though we can't replay
+						//them directly from this node in the event of a timeout.
 						nodeOutTimers.put(nxtAlive, System.currentTimeMillis());
 					}
 				}
