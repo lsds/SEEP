@@ -40,8 +40,8 @@
     <Node id="2" name="n2" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:04</address>
-        <address>10.0.0.10/32</address>
-        <address>2001::10/128</address>
+        <address>10.0.0.1/32</address>
+        <address>2001::1/128</address>
         <model name="emane_ieee80211abg" type="wireless">
           <mode>0</mode>
           <enablepromiscuousmode>0</enablepromiscuousmode>
@@ -81,22 +81,22 @@
     <Node id="3" name="n3" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:05</address>
-        <address>10.0.0.11/32</address>
-        <address>2001::11/128</address>
+        <address>10.0.0.2/32</address>
+        <address>2001::2/128</address>
       </interface>
     </Node>
     <Node id="4" name="n4" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:06</address>
-        <address>10.0.0.12/32</address>
-        <address>2001::12/128</address>
+        <address>10.0.0.3/32</address>
+        <address>2001::3/128</address>
       </interface>
     </Node>
     <Node id="5" name="n5" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:07</address>
-        <address>10.0.0.13/32</address>
-        <address>2001::13/128</address>
+        <address>10.0.0.4/32</address>
+        <address>2001::4/128</address>
       </interface>
     </Node>
   </NetworkPlan>
@@ -108,7 +108,7 @@
     </Node>
     <Node name="n2">
       <motion type="stationary">
-        <point>183,202</point>
+        <point>308,394</point>
       </motion>
     </Node>
     <Node name="n3">
@@ -118,12 +118,12 @@
     </Node>
     <Node name="n4">
       <motion type="stationary">
-        <point>473,324</point>
+        <point>477,667</point>
       </motion>
     </Node>
     <Node name="n5">
       <motion type="stationary">
-        <point>848,198</point>
+        <point>641,397</point>
       </motion>
     </Node>
   </MotionPlan>
