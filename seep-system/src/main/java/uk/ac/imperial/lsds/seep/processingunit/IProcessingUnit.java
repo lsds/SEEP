@@ -119,7 +119,7 @@ public interface IProcessingUnit {
 
 	public PUContext getPUContext();
 
-	public void sendDataDispatched(DataTuple dt, ArrayList<Integer> targets);
+	public void sendDataDispatched(DataTuple dt);
 
 	public void ack(DataTuple dt);
 

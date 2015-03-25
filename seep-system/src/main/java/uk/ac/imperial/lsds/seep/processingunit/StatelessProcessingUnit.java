@@ -320,9 +320,15 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		}
 	}
         
+	/*
 	public void sendDataDispatched(DataTuple dt, ArrayList<Integer> targets)
 	{
 		dispatcher.dispatch(dt, targets);
+	}
+	*/
+	public void sendDataDispatched(DataTuple dt)
+	{
+		dispatcher.dispatch(dt);
 	}
 	
         @Override

@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -122,11 +124,27 @@ public class Dispatcher implements IRoutingObserver {
 	 * TODO: Need to rearrange locking so that caller can block on 
 	 * a full node out buffer without causing a deadlock.
 	 */
+	/*
 	public void dispatch(DataTuple dt, ArrayList<Integer> targets)
 	{
 		dispatch(dt, targets, false);
 	}
+	*/
+	public void dispatch(DataTuple dt) { dispatch(dt, false); }
+	public void dispatch(DataTuple dt, boolean retransmission)
+	{
+		if (!bestEffort)
+		{
+			dispatchReliable(dt, retransmission);
+		}
+		else
+		{
+			dispatchBestEffort(dt);
+		}	
+	}
 	
+	
+	/*
 	private void dispatch(DataTuple dt, ArrayList<Integer> targets, boolean retransmission)
 	{
 		if (targets == null || targets.isEmpty()) { throw new RuntimeException("Logic error."); }
@@ -141,12 +159,14 @@ public class Dispatcher implements IRoutingObserver {
 			dispatchBestEffort(dt, targets);
 		}		
 	}
+	*/
 	
-	private void dispatchBestEffort(DataTuple dt, ArrayList<Integer> targets)
+	private void dispatchBestEffort(DataTuple dt)
 	{
+		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
 		synchronized(lock)
 		{
-			while (totalQueueSize() > MAX_TOTAL_QUEUE_SIZE)
+			while (totalQueueSize() > MAX_TOTAL_QUEUE_SIZE || targets.isEmpty())
 			{
 				logger.debug("Best effort dispatcher waiting on full queues, size="+totalQueueSize());
 				try
@@ -154,13 +174,14 @@ public class Dispatcher implements IRoutingObserver {
 					lock.wait();
 				}
 				catch(InterruptedException e) {}
+				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
 			}
 		}
+		//Drop the lock before sending
 		sendToDispatcher(dt, targets);
-		return;
 	}
 	
-	private void dispatchReliable(DataTuple dt, ArrayList<Integer> targets, boolean retransmission)
+	private void dispatchReliable(DataTuple dt, boolean retransmission)
 	{		
 		synchronized(lock)
 		{
@@ -169,31 +190,38 @@ public class Dispatcher implements IRoutingObserver {
 				logger.info("Discarding tuple already added to node out buffer: "+dt.getPayload().timestamp);
 				return; 
 			}
-			else
+		}
+	
+		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+		synchronized(lock)
+		{
+			while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES ||
+					(!retransmission && totalQueueSize() > MAX_TOTAL_QUEUE_SIZE) ||
+					targets.isEmpty())
 			{
-				while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES ||
-						(!retransmission && totalQueueSize() > MAX_TOTAL_QUEUE_SIZE))
+				logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
+				//return
+				
+				try
 				{
-					logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
-					//return
-					
-					try
-					{
-						lock.wait();
-					}
-					catch(InterruptedException e) {}
-					
-					if (!retransmission && nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }					
+					lock.wait();
 				}
-				//TODO: Flow control if total q length > max q for round robin?
-				nodeOutBuffer.put(dt.getPayload().timestamp, dt);
-				nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
+				catch(InterruptedException e) {}
+				
+				if (!retransmission && nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }
+				//TODO: Any way to drop the lock before calling this?
+				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+				
 			}
+
+			
+			//TODO: Flow control if total q length > max q for round robin?
+			nodeOutBuffer.put(dt.getPayload().timestamp, dt);
+			nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
 		}
 		
+		//Drop the lock before sending.
 		sendToDispatcher(dt, targets);
-
-		return;
 	}
 	
 	public int getTotalQlen()
@@ -203,6 +231,7 @@ public class Dispatcher implements IRoutingObserver {
 			return totalQueueSize();
 		}
 	}
+	
 	//Should be called with lock held
 	private int totalQueueSize()
 	{
@@ -579,5 +608,120 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			return true;
 		}
+	}
+	
+	public class ProcessingOutputQueue
+	{
+		private SortedMap<Long, DataTuple> queue;
+		private final int maxSize;
+		
+		public ProcessingOutputQueue(int maxSize)
+		{
+			this.maxSize = maxSize;
+			queue = new TreeMap<>();
+		}
+		
+		public void add(DataTuple dt)
+		{
+			synchronized(lock)
+			{
+				while (queue.size() > maxSize)
+				{
+					try { lock.wait();} 
+					catch (InterruptedException e) {}
+				}
+				queue.put(dt.getPayload().timestamp, dt);
+				lock.notifyAll();
+			}
+		}
+		
+		public int size() { synchronized(lock) { return queue.size(); }}
+		public DataTuple remove(long ts)
+		{
+			DataTuple dt = null;
+			synchronized(lock)
+			{
+				dt = queue.remove(ts);
+				if (dt != null) { lock.notifyAll() ; }
+			}
+			return dt;
+		}
+		
+		public Map<Long, DataTuple> removeAll(Set<Long> tsSet)
+		{
+			Map<Long, DataTuple> removed = new TreeMap<>();
+			synchronized(lock)
+			{
+				//Optimization - iterate over the smaller of the q and the tsSet
+				if (tsSet.size() < queue.size())
+				{
+					for (Long ts : tsSet)
+					{
+						DataTuple dt = queue.remove(ts);
+						if (dt != null) { removed.put(ts,  dt); }
+					}
+				}
+				else
+				{
+					for (Long qts : queue.keySet())
+					{
+						if (tsSet.contains(qts))
+						{
+							DataTuple dt = queue.remove(qts);
+							if (dt != null) { removed.put(qts,  dt); }
+						}
+					}
+				}
+				if (!removed.isEmpty()) { lock.notifyAll(); }
+			}
+			return removed;
+		}
+		
+		public SortedMap<Long, DataTuple> removeOlderInclusive(long ts)
+		{
+			synchronized(lock)
+			{
+				SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				SortedMap<Long, DataTuple> remainder = queue.tailMap(ts+1);
+				if (remainder == null || remainder.isEmpty()) { queue.clear(); }
+				else { queue = remainder; }
+				if (removed != null && !removed.isEmpty()) { lock.notifyAll(); }
+				return removed;
+			}
+		}
+		
+		public boolean contains(long ts)
+		{
+			synchronized(lock) { return queue.containsKey(ts); }
+		}
+		
+		public boolean isEmpty()
+		{
+			synchronized(lock) { return queue.isEmpty(); }
+		}
+		
+		public DataTuple tryRemoveHead()
+		{
+			synchronized(lock)
+			{
+				if (queue.isEmpty()) { return null; }
+				else 
+				{ 
+					DataTuple dt = queue.remove(queue.firstKey());
+					lock.notifyAll();
+					return dt;
+				}
+			}
+		}
+		
+		public DataTuple tryPeekHead()
+		{
+			synchronized(lock)
+			{
+				if (queue.isEmpty()) { return null; }
+				else { return queue.get(queue.firstKey()); }
+			}
+		}
+		
 	}
 }

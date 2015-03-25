@@ -26,7 +26,7 @@ import uk.ac.imperial.lsds.seep.processingunit.IProcessingUnit;
 import uk.ac.imperial.lsds.seep.processingunit.StatefulProcessingUnit;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
 
-public class Operator implements Serializable, EndPoint, Connectable, Callback, IRoutingObserver {
+public class Operator implements Serializable, EndPoint, Connectable, Callback {
 
 	private static final long serialVersionUID = 1L;
 	private final Logger LOG = LoggerFactory.getLogger(Operator.class);
@@ -99,7 +99,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 
 	public void setRouter(Router router){
 		this.router = router;
-		router.addObserver(this);
+		//router.addObserver(this);
 	}
 
 	public void setProcessingUnit(IProcessingUnit processingUnit){
@@ -125,6 +125,7 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 
 	public void send_highestWeight(DataTuple dt)
 	{
+		/*
 		ArrayList<Integer> targets = null;
 		synchronized(this)
 		{
@@ -143,6 +144,8 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 		}
 		
 		processingUnit.sendDataDispatched(dt, targets);
+		*/
+		processingUnit.sendDataDispatched(dt);
 	}
 
 	// Send to a particular downstream index
@@ -304,12 +307,14 @@ public class Operator implements Serializable, EndPoint, Connectable, Callback, 
 		this.setInputDataIngestionModeForUpstream(down.getOperatorId(), mode);
 	}
 
+	/*
 	@Override
 	public void routingChanged()
 	{
 		LOG.debug("Routing changed!");
 		synchronized(this) { this.notifyAll(); }
 	}
+	*/
 	/** HELPER METHODS **/
 
 	@Override 
