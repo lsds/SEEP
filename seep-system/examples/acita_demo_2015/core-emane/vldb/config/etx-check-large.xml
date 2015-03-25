@@ -40,8 +40,8 @@
     <Node id="2" name="n2" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:08</address>
-        <address>10.0.0.10/32</address>
-        <address>2001::10/128</address>
+        <address>10.0.0.1/32</address>
+        <address>2001::1/128</address>
         <model name="emane_ieee80211abg" type="wireless">
           <mode>0</mode>
           <enablepromiscuousmode>0</enablepromiscuousmode>
@@ -81,50 +81,50 @@
     <Node id="3" name="n3" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:09</address>
-        <address>10.0.0.11/32</address>
-        <address>2001::11/128</address>
+        <address>10.0.0.2/32</address>
+        <address>2001::2/128</address>
       </interface>
     </Node>
     <Node id="4" name="n4" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:0a</address>
-        <address>10.0.0.12/32</address>
-        <address>2001::12/128</address>
+        <address>10.0.0.3/32</address>
+        <address>2001::3/128</address>
       </interface>
     </Node>
     <Node id="5" name="n5" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:0b</address>
-        <address>10.0.0.13/32</address>
-        <address>2001::13/128</address>
+        <address>10.0.0.4/32</address>
+        <address>2001::4/128</address>
       </interface>
     </Node>
     <Node id="6" name="n6" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:0c</address>
-        <address>10.0.0.14/32</address>
-        <address>2001::14/128</address>
+        <address>10.0.0.5/32</address>
+        <address>2001::5/128</address>
       </interface>
     </Node>
     <Node id="7" name="n7" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:0d</address>
-        <address>10.0.0.15/32</address>
-        <address>2001::15/128</address>
+        <address>10.0.0.6/32</address>
+        <address>2001::6/128</address>
       </interface>
     </Node>
     <Node id="8" name="n8" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:0e</address>
-        <address>10.0.0.16/32</address>
-        <address>2001::16/128</address>
+        <address>10.0.0.7/32</address>
+        <address>2001::7/128</address>
       </interface>
     </Node>
     <Node id="9" name="n9" type="olsretx-router">
       <interface name="eth0" net="wlan1">
         <address type="mac">00:00:00:aa:00:0f</address>
-        <address>10.0.0.17/32</address>
-        <address>2001::17/128</address>
+        <address>10.0.0.8/32</address>
+        <address>2001::8/128</address>
       </interface>
     </Node>
   </NetworkPlan>
@@ -141,37 +141,37 @@
     </Node>
     <Node name="n3">
       <motion type="stationary">
-        <point>859,67</point>
+        <point>859,59</point>
       </motion>
     </Node>
     <Node name="n4">
       <motion type="stationary">
-        <point>862,800</point>
+        <point>863,890</point>
       </motion>
     </Node>
     <Node name="n5">
       <motion type="stationary">
-        <point>1380,405</point>
+        <point>1419,422</point>
       </motion>
     </Node>
     <Node name="n6">
       <motion type="stationary">
-        <point>525,222</point>
+        <point>499,114</point>
       </motion>
     </Node>
     <Node name="n7">
       <motion type="stationary">
-        <point>532,632</point>
+        <point>465,747</point>
       </motion>
     </Node>
     <Node name="n8">
       <motion type="stationary">
-        <point>1106,209</point>
+        <point>1228,160</point>
       </motion>
     </Node>
     <Node name="n9">
       <motion type="stationary">
-        <point>1116,625</point>
+        <point>1238,718</point>
       </motion>
     </Node>
   </MotionPlan>
