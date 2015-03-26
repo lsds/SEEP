@@ -65,8 +65,10 @@ class MeanderWorker(CoreService):
             cfg += "cp %s/core-emane/vldb/config/run-worker.py .\n"%(seep_example_dir)
             if filter(lambda service: service._name == "OLSRETX", services):
                 cfg += "cp %s/core-emane/vldb/config/olsrd-net-rates.sh net-rates.sh\n"%(seep_example_dir)
+                cfg += "cp %s/core-emane/vldb/config/olsrd-net-topology.sh net-topology.sh\n"%(seep_example_dir)
             else:
                 cfg += "cp %s/core-emane/vldb/config/net-rates.sh .\n"%(seep_example_dir)
+                cfg += "cp %s/core-emane/vldb/config/net-topology.sh .\n"%(seep_example_dir)
             #cfg += "cp %s/lib/%s %s\n"%(seep_example_dir, seep_jar, lib_dir)
             cfg += 'echo "Starting MeanderWorker on `hostname`(`hostname -i`)"\n'
             cfg += 'echo "cating /etc/hosts"\n'

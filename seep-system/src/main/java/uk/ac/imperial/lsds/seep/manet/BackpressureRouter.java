@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.manet;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -98,6 +99,10 @@ public class BackpressureRouter implements IRouter {
 		}
 		return result;
 	}
-	
-	
+
+	@Override
+	public void updateNetTopology(
+			Map<InetAddress, Map<InetAddress, Double>> linkState) {
+		throw new RuntimeException("Logic error");		
+	}
 }

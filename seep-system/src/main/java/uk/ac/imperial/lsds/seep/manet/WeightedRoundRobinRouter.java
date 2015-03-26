@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.manet;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -133,8 +134,12 @@ public class WeightedRoundRobinRouter implements IRouter {
 		{
 			total += weights.get(opId); 
 		}
-		return total;
-		
-		
+		return total;		
+	}
+	
+	@Override
+	public void updateNetTopology(
+			Map<InetAddress, Map<InetAddress, Double>> linkState) {
+		throw new RuntimeException("Logic error");		
 	}
 }

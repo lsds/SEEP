@@ -1,0 +1,165 @@
+package uk.ac.imperial.lsds.seep.manet;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Set;
+import uk.ac.imperial.lsds.seep.GLOBALS;
+import uk.ac.imperial.lsds.seep.comm.routing.Router;
+
+public class NetTopologyMonitor implements Runnable {
+	private final static Logger logger = LoggerFactory.getLogger(NetRateMonitor.class);
+	private final static long NET_MONITOR_DELAY = 2 * 1000;
+	private final Object lock = new Object(){};
+	
+	private final Query meanderQuery;
+
+	private final boolean coreDeployment;
+	private final Router router;
+	
+	public NetTopologyMonitor(int localOpId, Query meanderQuery, Router router)
+	{
+		this.meanderQuery = meanderQuery;
+		this.router = router;
+		coreDeployment = "true".equals(GLOBALS.valueFor("useCoreAddr"));
+	}
+	
+	/*
+	private void setOpIds(Map<Integer, String> newUpOpIds, Map<Integer, String> newAllOpIds)
+	{
+		synchronized(lock) { 
+			this.upOpIds = newUpOpIds; 
+			this.allOpIds = newAllOpIds;
+			lock.notifyAll();
+		}
+	}*/
+		
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		synchronized(lock)
+		{
+			while(true)
+			{
+				if (coreDeployment)
+				{
+					Map<InetAddress, Map<InetAddress, Double>> linkState = parseTopology(readTopology());
+					router.getMeanderRouting().updateNetTopology(linkState);
+					//upstreamCosts = parseRoutes(readRoutes());
+					//TODO: Add empty routes/costs?
+					//throw new RuntimeException("TODO"); 
+				}
+				else
+				{
+					throw new RuntimeException("TODO"); 
+				}
+				
+				/*
+				if (upstreamCosts !=  null)
+				{
+					rController.handleNetCostsUpdate(upstreamCosts);
+				}
+				*/
+				
+				try {
+					Thread.sleep(NET_MONITOR_DELAY);
+				} catch (InterruptedException e) {
+				}
+			}
+		}
+	}
+	
+	private Map<InetAddress, Map<InetAddress, Double>> parseTopology(List<String> links)
+	{
+		logger.info("Read links: "+links);
+		Map<InetAddress, Map<InetAddress, Double>> linkState = new HashMap<>();
+		
+		for (String link : links)
+		{
+			String[] splits = link.split(" ");
+			//TODO: Convert hostname/ip addresses to op ids (or vice versa)
+			
+			InetAddress srcAddr = null;
+			InetAddress destAddr = null;
+						
+			try {
+				srcAddr = InetAddress.getByName(splits[0]);
+				destAddr = InetAddress.getByName(splits[1]);
+			} catch (UnknownHostException e) {
+				logger.error("Exception parsing host ip: "+e);
+				System.exit(1);
+			}
+			
+			Double cost = Double.parseDouble(splits[2]);
+
+			if (!linkState.containsKey(srcAddr))
+			{
+				linkState.put(srcAddr, new HashMap<InetAddress, Double>());
+			}
+			if (linkState.get(srcAddr).containsKey(destAddr))
+			{
+				if (! (linkState.get(srcAddr).get(destAddr).doubleValue() == cost.doubleValue()))
+				{
+					throw new RuntimeException("TODO: Asymmetric links."); 
+				}
+			}
+			linkState.get(srcAddr).put(destAddr, cost);
+			if (!linkState.containsKey(destAddr))
+			{
+				linkState.put(destAddr, new HashMap<InetAddress, Double>());
+			}
+			if (linkState.get(destAddr).containsKey(srcAddr))
+			{
+				if (! (linkState.get(destAddr).get(srcAddr).doubleValue() == cost.doubleValue()))
+				{
+					throw new RuntimeException("TODO: Asymmetric links."); 
+				}
+			}
+			
+			linkState.get(destAddr).put(srcAddr, cost);					
+		}
+		
+		logger.info("Net link state: "+ linkState);
+		return linkState;
+	}
+	
+	private List<String> readTopology()
+	{
+		//String cmd = "route | grep '^n' | tr -s ' ' | cut -d' ' -f1,5 | grep ' 1$' | sed \"s/^/`hostname` /\"";
+		String cmd = "./net-topology.sh";
+		ProcessBuilder pb = new ProcessBuilder("/bin/bash", cmd);
+		Process process = null;
+		List<String> result = new LinkedList<>();
+		try {
+			process = pb.start();
+		
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			
+			String line = "";
+			while ((line = reader.readLine()) != null)
+			{
+				result.add(line);
+			}
+		} catch (IOException e) {
+			logger.error("Error reading topology: "+e);
+			System.exit(0);	//TODO: A bit harsh?
+		}
+		return result;
+	}
+	
+	//Return set as might want multiple workers on the same node.
+	Set<Integer> getOpIds(String addr)
+	{
+		throw new RuntimeException("TODO"); 
+	}
+}

@@ -34,6 +34,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
 import uk.ac.imperial.lsds.seep.manet.RoundRobinRouter;
+import uk.ac.imperial.lsds.seep.manet.ShortestPathRouter;
 import uk.ac.imperial.lsds.seep.manet.WeightedRoundRobinRouter;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -449,14 +450,19 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx.configureOperatorConnections(runningOp);
 		if (dispatcher != null)
 		{
-			if ("roundRobin".equals(GLOBALS.valueFor("meanderRouting")))
+			String routingAlg = GLOBALS.valueFor("meanderRouting");
+			if ("roundRobin".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new RoundRobinRouter(getOperator().getOpContext()));
 			}
-			else if ("weightedRoundRobin".equals(GLOBALS.valueFor("meanderRouting")))
+			else if ("weightedRoundRobin".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
 
+			}
+			else if ("shortestPath".equals(routingAlg))
+			{
+				getOperator().getRouter().setMeanderRouting(new ShortestPathRouter(getOperator().getOpContext()));
 			}
 			else
 			{

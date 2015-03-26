@@ -43,6 +43,8 @@ import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassL
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
 import uk.ac.imperial.lsds.seep.manet.CostHandler;
 import uk.ac.imperial.lsds.seep.manet.NetRateMonitor;
+import uk.ac.imperial.lsds.seep.manet.NetTopologyMonitor;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.manet.RoutingController;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
@@ -98,6 +100,8 @@ public class CoreRE {
 	private Thread rControllerT = null;
 	
 	private NetRateMonitor netRateMonitor = null;
+	private NetTopologyMonitor netTopologyMonitor = null;
+	private Thread ntMonT = null;
 	private Thread nrMonT = null;
 	
 	static ControlTuple genericAck;
@@ -290,6 +294,12 @@ public class CoreRE {
 		}
 		LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
 		
+		setUpFaultTolerance();
+		setUpRouting();
+	}
+	
+	private void setUpFaultTolerance()
+	{
 		// If ackworker is active
 		if(GLOBALS.valueFor("ackWorkerActive").equals("true")){
 			//If this is the sink operator (extremely ugly)
@@ -307,40 +317,57 @@ public class CoreRE {
 				processingUnit.createAndRunFailureCtrlWriter();
 			}
 		}
-		
-		if (GLOBALS.valueFor("backpressureRouting").equals("true"))
+	}
+	
+	private void setUpRouting()
+	{
+		if (GLOBALS.valueFor("enableMeanderRouting").equals("true"))
 		{
-			if (!processingUnit.getOperator().getOpContext().isSource())
-			{
-				routingController = new RoutingController(this);
-				Thread rControllerT = new Thread(routingController);
-				rControllerT.start();
-				
-				ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
-				Map<Integer, String> upOpIdAddrs = new HashMap<>();
-				
-				for (Integer upOpId : upOpIds)
+			if (GLOBALS.valueFor("meanderRouting").equals("shortestPath"))
+			{				
+				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
-					OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getUpstreamLocation(upOpId);
-					upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
-					
+					Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
+				
+					netTopologyMonitor = new NetTopologyMonitor(processingUnit.getOperator().getOperatorId(), meanderQuery, processingUnit.getOperator().getRouter());
+					ntMonT = new Thread(netTopologyMonitor);
+					ntMonT.start();
 				}
 				
-				netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
-				nrMonT = new Thread(netRateMonitor);
-				nrMonT.start();
 			}
-			if (!processingUnit.getOperator().getOpContext().isSink())
+			else
 			{
-				processingUnit.getDispatcher().startRoutingCtrlWorkers();
-				if (!GLOBALS.valueFor("reliability").equals("bestEffort"))
+				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
-					processingUnit.getDispatcher().startFailureDetector();
+					routingController = new RoutingController(this);
+					Thread rControllerT = new Thread(routingController);
+					rControllerT.start();
+					
+					ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
+					Map<Integer, String> upOpIdAddrs = new HashMap<>();
+					
+					for (Integer upOpId : upOpIds)
+					{
+						OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getUpstreamLocation(upOpId);
+						upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
+						
+					}
+					
+					netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
+					nrMonT = new Thread(netRateMonitor);
+					nrMonT.start();					
+				}
+				if (!processingUnit.getOperator().getOpContext().isSink())
+				{
+					processingUnit.getDispatcher().startRoutingCtrlWorkers();
+					if (!GLOBALS.valueFor("reliability").equals("bestEffort"))
+					{
+						processingUnit.getDispatcher().startFailureDetector();
+					}
 				}
 			}
 		}
 	}
-	
     /**
      * This method is blocking. So, basically, if invoked from NodeManager directly,
      * we are unable to send any more control tuples to the node.

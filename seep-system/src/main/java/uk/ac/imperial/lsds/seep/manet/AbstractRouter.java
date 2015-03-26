@@ -1,5 +1,8 @@
 package uk.ac.imperial.lsds.seep.manet;
 
+import java.net.InetAddress;
+import java.util.Map;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 
 public class AbstractRouter implements IRouter {
@@ -16,4 +19,9 @@ public class AbstractRouter implements IRouter {
 
 	}
 
+	@Override
+	public void updateNetTopology(
+			Map<InetAddress, Map<InetAddress, Double>> linkState) {
+		throw new RuntimeException("Logic error");		
+	}
 }
