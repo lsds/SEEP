@@ -11,6 +11,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long FAILURE_TIMEOUT = 60 * 1000;
 	private static final long RETRANSMIT_CHECK_INTERVAL = 10 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
+	private static final long SEND_TIMEOUT = 1 * 1000;
 	private int MAX_NODE_OUT_BUFFER_TUPLES = Integer.MAX_VALUE;
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final FailureCtrl nodeFctrl = new FailureCtrl();
@@ -48,7 +50,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final IProcessingUnit owner;
 	private ArrayList<OutputQueue> outputQueues;
 	private final boolean bestEffort;
-	private OperatorOutputQueue opQueue;
+	private final OperatorOutputQueue opQueue;
 
 	
 	private final Object lock = new Object(){};
@@ -58,6 +60,8 @@ public class Dispatcher implements IRoutingObserver {
 		this.owner = owner;
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+		//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
+		opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
 	}
 	
 	public FailureCtrl getNodeFailureCtrl()
@@ -99,8 +103,6 @@ public class Dispatcher implements IRoutingObserver {
 				MAX_NODE_OUT_BUFFER_TUPLES = (Integer.parseInt(srcMaxBufferMB) * 1024 * 1024) / tupleSize;
 				//MAX_NODE_OUT_BUFFER_TUPLES = Integer.parseInt(srcMaxBufferMB) / tupleSize;
 			}
-			//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
-			opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
 			
 		}
 		for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
@@ -263,15 +265,21 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void ack(DataTuple dt)
 	{
-		throw new RuntimeException("Logic error."); 
-		
-		/*
-		long ts = dt.getPayload().timestamp;
-		synchronized(lock)
+		if (!bestEffort)
 		{
-			nodeFctrl.ack(ts);
+			throw new RuntimeException("TODO");
+			/*
+			 TODO: Should be acking selectively here?
+			 Or perhaps refactor.
+			long ts = dt.getPayload().timestamp;
+			synchronized(lock)
+			{
+				nodeFctrl.ack(ts);
+			}
+			*/		
 		}
-		*/		
+		
+
 	}
 	
 	public FailureCtrl handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
@@ -302,8 +310,42 @@ public class Dispatcher implements IRoutingObserver {
 			while(true)
 			{
 				//iterate sending tuples to the appropriate downstreams.
-				throw new RuntimeException("TODO"); 
+				DataTuple dt = opQueue.tryPeekHead();
+				ArrayList<Integer> targets = null;
+				if (dt != null) { targets = owner.getOperator().getRouter().forward_highestWeight(dt); }
+				while(dt == null || targets == null || targets.isEmpty())
+				{
+					synchronized(lock)
+					{
+						try { lock.wait(); } catch (InterruptedException e) {}
+					}
+					dt = opQueue.tryPeekHead();
+					if (dt != null) { targets = owner.getOperator().getRouter().forward_highestWeight(dt); }
+				}
 				
+				//Option 1: Don't remove unless there is space in target
+				//Problem: Will just end up busy spinning
+				//Could have disp workers signal lock when there is space (i.e. get rid of arrayblocking queue).
+				//Option 2: Iterate over targets in priority order
+				//Problem: Could still end up with problem 1.
+				//Option 3: Try to send to blocked queue, with no timeout.
+				//Problem: If routing changes the whole dispatcher will be blocked
+				//Solution: Could wait on a notify and check the head of line or routing hasn't changed.
+				//Essentially repeating the above.
+				//Option 4: Send to blocking queue with a timeout.
+				//Problem: A bit crude. Can't check if the tuple has been acked, routing has changed or a 
+				//higher priority tuple has been queued. Simplest for now though perhaps. More importantly
+				//could hurt parallelism? Can perhaps avoid with priorities. 
+				boolean success = workers.get(targets.get(0)).trySend(dt, SEND_TIMEOUT);
+				if (success)
+				{
+					dt = opQueue.remove(dt.getPayload().timestamp);
+					if (dt != null)
+					{
+						if (!bestEffort) { throw new RuntimeException("TODO: Add to node out buf/timer."); }
+					}
+					else { throw new RuntimeException("TODO: Reliability handling."); }
+				}
 			}
 		}
 	}
@@ -332,6 +374,24 @@ public class Dispatcher implements IRoutingObserver {
 			else
 			{
 				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
+			}
+		}
+		
+		public boolean trySend(DataTuple dt, long timeout)
+		{
+			//TODO: this needs to be thread safe.
+			if (!tupleQueue.contains(dt))
+			{
+				try {
+					return tupleQueue.offer(dt, timeout, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {
+					return false;
+				}
+			}
+			else
+			{
+				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
+				return true;
 			}
 		}
 		

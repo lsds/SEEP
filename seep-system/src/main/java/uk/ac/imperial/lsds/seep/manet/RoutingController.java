@@ -177,6 +177,10 @@ public class RoutingController implements Runnable{
 	{
 		if (owner.getProcessingUnit().getDispatcher() != null)
 		{
+			/*
+			if (owner.getProcessingUnit().getOperator().getOpContext().isSink())
+			{ throw new RuntimeException("Logic error."); }
+			*/
 			return owner.getProcessingUnit().getDispatcher().getTotalQlen();
 		}
 		else
