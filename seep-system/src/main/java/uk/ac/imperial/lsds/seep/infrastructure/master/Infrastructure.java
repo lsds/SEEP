@@ -463,11 +463,20 @@ public class Infrastructure {
 		//TreeMap logicalTopology
 		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
 		//TODO: Generalize this for non-face recognition queries.
+		int chainLength = Integer.parseInt(GLOBALS.valueFor("chainLength"));
+		
+		for (int i = 1; i <= chainLength+2; i++)
+		{
+			if (i == 1) { logicalTopology.put(1, new Integer[]{}); } //src
+			else { logicalTopology.put(i, new Integer[]{i - 1}); }
+		}
+		/*
 		logicalTopology.put(1, new Integer[]{}); //src
 		logicalTopology.put(2, new Integer[]{1}); //face detector
 		logicalTopology.put(3, new Integer[]{2}); //face recognizer
 		logicalTopology.put(4, new Integer[]{3}); //sink
-
+		*/
+		
 		//TreeMap log2Phys
 		//use SEEP operator ids here for now. Will need to also store operator id <-> (node_addr, port) mapping
 		//Will probably need to change the getCost function in LinkCostHandler too to look up the costs by node_addr
