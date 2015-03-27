@@ -79,21 +79,6 @@ public class Dispatcher implements IRoutingObserver {
 		//threading etc.
 		this.outputQueues = outputQueues;
 		
-		for(int i = 0; i < outputQueues.size(); i++)
-		{
-			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
-			DispatcherWorker worker = new DispatcherWorker(outputQueues.get(i), owner.getPUContext().getDownstreamTypeConnection().elementAt(i));			
-			Thread workerT = new Thread(worker);
-			workers.put(i, worker);
-			workerT.start();
-		}
-		
-		
-	}
-	
-	public void startRoutingCtrlWorkers()
-	{
-		
 		synchronized(lock)
 		{
 			String srcMaxBufferMB = GLOBALS.valueFor("srcMaxBufferMB");
@@ -105,6 +90,19 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			
 		}
+		
+		for(int i = 0; i < outputQueues.size(); i++)
+		{
+			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
+			DispatcherWorker worker = new DispatcherWorker(outputQueues.get(i), owner.getPUContext().getDownstreamTypeConnection().elementAt(i));			
+			Thread workerT = new Thread(worker);
+			workers.put(i, worker);
+			workerT.start();
+		}		
+	}
+	
+	public void startRoutingCtrlWorkers()
+	{
 		for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
 		{
 			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
