@@ -12,14 +12,15 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
+import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 
 public class ShortestPathRouter implements IRouter {
 
 	private final static Logger logger = LoggerFactory.getLogger(ShortestPathRouter.class);
 	private final OperatorContext opContext;
 	private final Query query;
-	private final int localPhysicalId;
-	private Map<InetAddress, Map<InetAddress, Double>> netTopology = null;
+	private final Integer localPhysicalId;
+	private Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> netTopology = null;
 	private volatile Integer currentNextHop = null;
 	private final Object lock = new Object(){};
 
@@ -38,34 +39,57 @@ public class ShortestPathRouter implements IRouter {
 	}
 
 	@Override
-	public void updateNetTopology(Map<InetAddress, Map<InetAddress, Double>> newNetTopology)
+	public void updateNetTopology(Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> newNetTopology)
 	{
 		//TODO: Sync?
 		synchronized(lock)
 		{
 			this.netTopology = newNetTopology;
 			
+			//Ensure all query nodes at least exist in the net topology.
+			addMissingWorkerNodes();
+			
 			//TODO: Convert to something graph util can handle.
 			Map initialAppTopology = computeInitialAppTopology(netTopology);
 			Map appTopology = computeFinalAppTopology(initialAppTopology);
 			logger.info("App topology (localOpId="+localPhysicalId+": "+ appTopology);
-			Integer nextHop = useBandwidthMetric() ?
-					GraphUtil.nextHopBandwidth(localPhysicalId, query.getSinkPhysicalId(), appTopology) :
-						GraphUtil.nextHop(localPhysicalId, query.getSinkPhysicalId(), appTopology);
-					if (nextHop == null) { currentNextHop = null; }
-					else
-					{
-						throw new RuntimeException("TODO: Convert to operator id/index?");
-					}
+			//InetAddressNodeId sink = new InetAddressNodeId(query.getNodeAddress(query.getSinkPhysicalId()));
+			Integer sink = query.getSinkPhysicalId();
+			Integer nextHop = (Integer)(useBandwidthMetric() ?
+					GraphUtil.nextHopBandwidth(localPhysicalId, sink, appTopology) :
+						GraphUtil.nextHop(localPhysicalId, sink, appTopology));
+			if (nextHop == null) { currentNextHop = null; }
+			else
+			{
+				currentNextHop = opContext.getDownOpIndexFromOpId(nextHop);
+			}
 		}
 	}
 
+	private void addMissingWorkerNodes()
+	{
+		for (Object logicalIdObj : query.getLogicalNodeIds())
+		{
+			for(Object physicalIdObj : query.getPhysicalNodeIds((Integer)logicalIdObj))
+			{
+				InetAddress physAddr = query.getNodeAddress((Integer)physicalIdObj);
+				if (!netTopology.containsKey(physAddr))
+				{
+					netTopology.put(new InetAddressNodeId(physAddr), new HashMap<InetAddressNodeId,Double>());
+					//TODO: Asym links
+				}
+			}
+		}
+		
+		throw new RuntimeException("TODO: What if the logical query is wrong!");
+	}
+	
 	private Map computeFinalAppTopology(Map initialAppTopology)
 	{
 		//TODO: Joins.
 		return initialAppTopology;
 	}
-	private Map computeInitialAppTopology(Map<InetAddress, Map<InetAddress, Double>> currentNetTopology)
+	private Map computeInitialAppTopology(Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> currentNetTopology)
 	{
 		Map appTopology = initAppNodesMap();
 		if (query.hasReplication())
@@ -96,7 +120,7 @@ public class ShortestPathRouter implements IRouter {
 	}
 	private Map computeUnreplicatedAppTopology(Map appTopology)
 	{
-		Integer unitCost = new Integer(1);
+		Double unitCost = new Double(1);
 		Iterator iter = appTopology.keySet().iterator();
 		while (iter.hasNext())
 		{
@@ -119,8 +143,10 @@ public class ShortestPathRouter implements IRouter {
 		while (srcIter.hasNext())
 		{
 			Integer sourceId = (Integer)srcIter.next();
-			Integer sourceNodeId = query.addrToNodeId(query.getNodeAddress(sourceId));
-			Map sourceCosts = useBandwidthMetric() ? GraphUtil.widestPaths(sourceNodeId, currentNetTopology):GraphUtil.shortestPaths(sourceNodeId, currentNetTopology);
+			//Integer sourceNodeId = query.addrToNodeId(query.getNodeAddress(sourceId));
+			InetAddressNodeId sourceNodeAddr = new InetAddressNodeId(query.getNodeAddress(sourceId));
+			
+			Map sourceCosts = useBandwidthMetric() ? GraphUtil.widestPaths(sourceNodeAddr, currentNetTopology):GraphUtil.shortestPaths(sourceNodeAddr, currentNetTopology);
 			Integer sourceLogicalId = query.getLogicalNodeId(sourceId);
 			Integer nextHopLogicalId = query.getNextHopLogicalNodeId(sourceLogicalId);
 			toProcess.add(nextHopLogicalId);
@@ -129,8 +155,9 @@ public class ShortestPathRouter implements IRouter {
 			while(nextOpIter.hasNext())
 			{
 				Integer nextOp = (Integer)nextOpIter.next();
-				Integer nextOpNodeId = query.addrToNodeId(query.getNodeAddress(nextOp));
-				setLinkCost(sourceId, nextOp, sourceCosts.get(nextOpNodeId), appTopology);
+				//Integer nextOpNodeId = query.addrToNodeId(query.getNodeAddress(nextOp));
+				InetAddressNodeId nextOpNodeAddr = new InetAddressNodeId(query.getNodeAddress(nextOp));
+				setLinkCost(sourceId, nextOp, sourceCosts.get(nextOpNodeAddr), appTopology);
 			}
 		}
 		//TODO Could probably define a QueryIterator class
@@ -152,14 +179,18 @@ public class ShortestPathRouter implements IRouter {
 					while (physIter.hasNext())
 					{
 						Integer physicalId = (Integer)physIter.next();
-						Integer physicalNodeId = query.addrToNodeId(query.getNodeAddress(physicalId));
-						Map opCosts = useBandwidthMetric() ? GraphUtil.widestPaths(physicalNodeId, currentNetTopology) : GraphUtil.shortestPaths(physicalNodeId, currentNetTopology);
+						//Integer physicalNodeId = query.addrToNodeId(query.getNodeAddress(physicalId));
+						InetAddressNodeId physicalNodeAddr = new InetAddressNodeId(query.getNodeAddress(physicalId));
+						
+						
+						Map opCosts = useBandwidthMetric() ? GraphUtil.widestPaths(physicalNodeAddr, currentNetTopology) : GraphUtil.shortestPaths(physicalNodeAddr, currentNetTopology);
 						Iterator nextHopPhysIter = nextHopPhysicalIds.iterator();
 						while (nextHopPhysIter.hasNext())
 						{
 							Integer nextHopPhysicalId = (Integer)nextHopPhysIter.next();
-							Integer nextHopPhysicalNodeId = query.addrToNodeId(query.getNodeAddress(nextHopPhysicalId));
-							setLinkCost(physicalId, nextHopPhysicalId, opCosts.get(nextHopPhysicalNodeId), appTopology);
+							//Integer nextHopPhysicalNodeId = query.addrToNodeId(query.getNodeAddress(nextHopPhysicalId));
+							InetAddressNodeId nextHopPhysicalNodeAddr = new InetAddressNodeId(query.getNodeAddress(nextHopPhysicalId));
+							setLinkCost(physicalId, nextHopPhysicalId, opCosts.get(nextHopPhysicalNodeAddr), appTopology);						
 						}
 					}
 				}

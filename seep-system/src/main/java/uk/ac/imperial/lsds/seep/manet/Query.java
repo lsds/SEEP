@@ -26,6 +26,7 @@ public class Query implements Serializable
 	private final TreeMap log2phys; //TreeMap<Integer -> Set<Integer>>
 	private final Map phys2log; //HashMap<Integer -> Integer>
 	private final Map<Integer, InetAddress> phys2addr;
+	private final Map<InetAddress, Set<Integer>> addr2phys;
 	private final Set parallelized;
 
 
@@ -43,6 +44,7 @@ public class Query implements Serializable
 		this.parallelized = parallelized;
 		this.phys2log = computePhys2log();
 		this.phys2addr = phys2addr;
+		this.addr2phys = computeAddr2phys();
 
 		logger.info("Number of logical nodes:"+logicalTopology.size());
 		logger.info("Logical topology: "+ logicalTopologyToString());
@@ -71,6 +73,21 @@ public class Query implements Serializable
 		return result;
 	}
 
+	private Map<InetAddress, Set<Integer>> computeAddr2phys()
+	{
+		Map<InetAddress, Set<Integer>> result = new HashMap<>();
+		for (Integer id : phys2addr.keySet())
+		{
+			InetAddress addr = phys2addr.get(id);
+			if (!result.containsKey(addr))
+			{
+				result.put(addr, new HashSet<Integer>());
+			}
+			result.get(addr).add(id);
+		}
+		return result;
+	}
+	
 	//TODO: Change this name to getPhysicalIds
 	public Set getPhysicalNodeIds(Integer logicalId)
 	{
@@ -464,6 +481,12 @@ public class Query implements Serializable
 
 	public Integer addrToNodeId(InetAddress addr)
 	{
-		throw new RuntimeException("TODO");
+		Set<Integer> result = addr2phys.get(addr);
+		if (!(result.size() == 1))
+		{
+			throw new RuntimeException("TODO: Won't work with two workers on the same node, need to include the port.");			
+		}
+		for (Integer id : result) { return id; }
+		return null;
 	}
 }

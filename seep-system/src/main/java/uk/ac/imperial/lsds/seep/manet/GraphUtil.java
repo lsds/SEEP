@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Collections;
 import java.util.Comparator;
+import java.net.InetAddress;
 import java.text.MessageFormat;
 
 import org.slf4j.Logger;
@@ -19,6 +20,8 @@ public class GraphUtil {
 	public final static Double MAX_BANDWIDTH = new Double(Double.MAX_VALUE);
 
 	public static void logTopology(Map graph) {
+		
+		//TODO: Fix up generics
 		if (graph == null)
 		{
 			log.info("Topology:<null>");
@@ -63,14 +66,14 @@ public class GraphUtil {
 	}
 
 
-	public static Map shortestPaths(Integer source, Map graph)
+	public static Map shortestPaths(Comparable source, Map graph)
 	{
 		Djikstra djikstra = new Djikstra(graph);
 		djikstra.execute(source);
 		return djikstra.getShortestDistances();
 	}
 
-	public static Integer nextHop(Integer source, Integer dest, Map graph)
+	public static Comparable nextHop(Comparable source, Comparable dest, Map graph)
 	{
 		Djikstra djikstra = new Djikstra(graph);
 		//TODO Should perhaps have another execute(source, dest) method
@@ -87,14 +90,14 @@ public class GraphUtil {
 		public AbstractDjikstra(Map map) { this.map = map; }
 		protected final Set settledNodes = new HashSet();
 
-		protected boolean isSettled(Integer id) { return settledNodes.contains(id); }
+		protected boolean isSettled(Comparable id) { return settledNodes.contains(id); }
 
 		protected final Map predecessors = new HashMap();
-		protected void setPredecessor(Integer id, Integer predecessor) { predecessors.put(id, predecessor); }
-		protected Integer getPredecessor(Integer id)
+		protected void setPredecessor(Comparable id, Comparable predecessor) { predecessors.put(id, predecessor); }
+		protected Comparable getPredecessor(Comparable id)
 		{
 			Object predecessor = predecessors.get(id);
-			return (predecessor == null) ? null : (Integer)predecessor;
+			return (predecessor == null) ? null : (Comparable)predecessor;
 		}
 
 		//Unfortunately no PriorityQueue in Java 1.4 so just
@@ -102,25 +105,53 @@ public class GraphUtil {
 		//to run under a newer version of Java at some point.
 		protected final Set unsettledNodes = new HashSet();
 
-		protected Set getNeighbours(Integer id)
+		protected Set getNeighbours(Comparable id)
 		{
 			return ((Map)map.get(id)).keySet();
 		}
 
-		public abstract void execute(Integer source);
-		protected abstract Integer getBestNextHop(Integer source, Integer dest);
-		protected abstract void relaxNeighbours(Integer u);
+		public abstract void execute(Comparable source);
+		protected abstract Comparable getBestNextHop(Comparable source, Comparable dest);
+		protected abstract void relaxNeighbours(Comparable u);
 	}
 
 
+	private interface NodeId extends Comparable {}
+	
+	/*
+	public static class IntegerNodeId implements NodeId
+	{
+		private final Integer id;
+		public IntegerNodeId(Integer id) { this.id = id; }
+		@Override
+		public int compareTo(Object other) { return id.compareTo(((IntegerNodeId) other).id); }
+		@Override
+		public boolean equals(Object other) { return id.equals(((IntegerNodeId)other).id); }
+		@Override
+		public int hashCode() { return id.hashCode(); }
+	}
+	*/
+	public static class InetAddressNodeId implements NodeId
+	{
+		private final InetAddress id;
+		public InetAddressNodeId(InetAddress id) { this.id = id; }
+		@Override
+		public int compareTo(Object other) { return new Integer(id.hashCode()).compareTo(new Integer(other.hashCode())); }
+		@Override
+		public boolean equals(Object other) { return id.equals(((InetAddressNodeId)other).id); }
+		@Override
+		public int hashCode() { return id.hashCode(); }
+	}
+	
+	
 	private static class Djikstra extends AbstractDjikstra
 	{
 
 		public Djikstra(Map map) { super(map); }
 
 		private final Map shortestDistances = new HashMap();
-		private void setShortestDistance(Integer id, Double distance) { shortestDistances.put(id, distance); }
-		private Double getShortestDistance(Integer id)
+		private void setShortestDistance(Comparable id, Double distance) { shortestDistances.put(id, distance); }
+		private Double getShortestDistance(Comparable id)
 		{
 			Object d = shortestDistances.get(id);
 			return (d == null) ? INFINITE_DISTANCE : (Double)d;
@@ -130,7 +161,7 @@ public class GraphUtil {
 
 		//Presumes execute has been called for source
 		@Override
-		protected Integer getBestNextHop(Integer source, Integer dest)
+		protected Comparable getBestNextHop(Comparable source, Comparable dest)
 		{
 			if (getShortestDistance(dest).doubleValue() >= SUB_INFINITE_DISTANCE.doubleValue())
 			{
@@ -138,9 +169,9 @@ public class GraphUtil {
 				return null;
 			}
 
-			Integer best = dest;
-			Integer predecessor = getPredecessor(best);
-			while (predecessor != null && predecessor.intValue() != source.intValue())
+			Comparable best = dest;
+			Comparable predecessor = getPredecessor(best);
+			while (predecessor != null && !(predecessor.equals(source)))
 			{
 				best = predecessor;
 				predecessor = getPredecessor(best);
@@ -153,8 +184,8 @@ public class GraphUtil {
 			@Override
 			public int compare(Object o1, Object o2)
 			{
-				Integer left = (Integer)o1;
-				Integer right = (Integer)o2;
+				Comparable left = (Comparable)o1;
+				Comparable right = (Comparable)o2;
 
 				double shortestDistanceLeft = getShortestDistance(left).doubleValue();
 				double shortestDistanceRight = getShortestDistance(right).doubleValue();
@@ -165,14 +196,14 @@ public class GraphUtil {
 			}
 		};
 
-		private Integer extractMin()
+		private Comparable extractMin()
 		{
 			Object min = Collections.min(unsettledNodes, comp);
 			unsettledNodes.remove(min);
-			return (Integer)min;
+			return (Comparable)min;
 		}
 
-		private void init(Integer source)
+		private void init(Comparable source)
 		{
 			settledNodes.clear();
 			unsettledNodes.clear();
@@ -189,15 +220,15 @@ public class GraphUtil {
 			Iterator iter = map.keySet().iterator();
 			while (iter.hasNext())
 			{
-				setShortestDistance((Integer)iter.next(),INFINITE_DISTANCE);
+				setShortestDistance((Comparable)iter.next(),INFINITE_DISTANCE);
 			}
 		}
 
 		@Override
-		public void execute(Integer source)
+		public void execute(Comparable source)
 		{
 			init(source);
-			Integer u;
+			Comparable u;
 
 			while (!unsettledNodes.isEmpty())
 			{
@@ -210,12 +241,12 @@ public class GraphUtil {
 		}
 
 		@Override
-		protected void relaxNeighbours(Integer u)
+		protected void relaxNeighbours(Comparable u)
 		{
 			Iterator neighbourIter = getNeighbours(u).iterator();
 			while (neighbourIter.hasNext())
 			{
-				Integer v = (Integer)neighbourIter.next();
+				Comparable v = (Comparable)neighbourIter.next();
 				if (isSettled(v)) continue;
 
 				double shortDist = getShortestDistance(u).doubleValue() + getDistance(u,v).doubleValue();
@@ -228,7 +259,7 @@ public class GraphUtil {
 			}
 		}
 
-		private Double getDistance(Integer u, Integer v)
+		private Double getDistance(Comparable u, Comparable v)
 		{
 			assert ((Map)map.get(u)).keySet().contains(v);
 
@@ -236,14 +267,14 @@ public class GraphUtil {
 		}
 	}
 
-	public static Map widestPaths(Integer source, Map graph)
+	public static Map widestPaths(Comparable source, Map graph)
 	{
 		DjikstraBandwidth djikstra = new DjikstraBandwidth(graph);
 		djikstra.execute(source);
 		return djikstra.getWidestPaths();
 	}
 
-	public static Integer nextHopBandwidth(Integer source, Integer dest, Map graph)
+	public static Comparable nextHopBandwidth(Comparable source, Comparable dest, Map graph)
 	{
 		DjikstraBandwidth djikstra = new DjikstraBandwidth(graph);
 		//TODO Should perhaps have another execute(source, dest) method
@@ -257,21 +288,21 @@ public class GraphUtil {
 
 		private final Map getWidestPaths() { return Collections.unmodifiableMap(widestPaths); }
 		private final Map widestPaths = new HashMap();
-		private void setWidestPath(Integer id, Double width) { widestPaths.put(id, width); }
-		private Double getWidestPath(Integer id)
+		private void setWidestPath(Comparable id, Double width) { widestPaths.put(id, width); }
+		private Double getWidestPath(Comparable id)
 		{
 			Object w = widestPaths.get(id);
 			return (w == null) ? new Double(0) : (Double)w;
 		}
 
-		private Double getWidth(Integer u, Integer v)
+		private Double getWidth(Comparable u, Comparable v)
 		{
 			assert ((Map)map.get(u)).keySet().contains(v);
 
 			return ((Map)map.get(u)).keySet().contains(v) ? (Double)((Map)map.get(u)).get(v) : new Double(0) /*Should never happen*/;
 		}
 
-		private void init(Integer source)
+		private void init(Comparable source)
 		{
 			settledNodes.clear();
 			unsettledNodes.clear();
@@ -288,15 +319,15 @@ public class GraphUtil {
 			Iterator iter = map.keySet().iterator();
 			while (iter.hasNext())
 			{
-				setWidestPath((Integer)iter.next(),new Double(0));
+				setWidestPath((Comparable)iter.next(),new Double(0));
 			}
 		}
 
 		@Override
-		public void execute(Integer source)
+		public void execute(Comparable source)
 		{
 			init(source);
-			Integer u;
+			Comparable u;
 
 			while (!unsettledNodes.isEmpty())
 			{
@@ -309,12 +340,12 @@ public class GraphUtil {
 		}
 
 		@Override
-		protected void relaxNeighbours(Integer u)
+		protected void relaxNeighbours(Comparable u)
 		{
 			Iterator neighbourIter = getNeighbours(u).iterator();
 			while (neighbourIter.hasNext())
 			{
-				Integer v = (Integer)neighbourIter.next();
+				Comparable v = (Comparable)neighbourIter.next();
 				if (isSettled(v)) continue;
 
 				double widestPath = Math.min(getWidestPath(u).doubleValue(), getWidth(u,v).doubleValue());
@@ -327,11 +358,11 @@ public class GraphUtil {
 			}
 		}
 
-		private Integer extractMax()
+		private Comparable extractMax()
 		{
 			Object max = Collections.max(unsettledNodes, comp);
 			unsettledNodes.remove(max);
-			return (Integer)max;
+			return (Comparable)max;
 		}
 
 		private final Comparator comp = new Comparator()
@@ -339,8 +370,8 @@ public class GraphUtil {
 			@Override
 			public int compare(Object o1, Object o2)
 			{
-				Integer left = (Integer)o1;
-				Integer right = (Integer)o2;
+				Comparable left = (Comparable)o1;
+				Comparable right = (Comparable)o2;
 
 				double widestPathLeft = getWidestPath(left).doubleValue();
 				double widestPathRight = getWidestPath(right).doubleValue();
@@ -353,7 +384,7 @@ public class GraphUtil {
 
 		//Presumes execute has been called for source
 		@Override
-		protected Integer getBestNextHop(Integer source, Integer dest)
+		protected Comparable getBestNextHop(Comparable source, Comparable dest)
 		{
 			if (getWidestPath(dest).intValue() == 0)
 			{
@@ -361,9 +392,9 @@ public class GraphUtil {
 				return null;
 			}
 
-			Integer best = dest;
-			Integer predecessor = getPredecessor(best);
-			while (predecessor != null && predecessor.intValue() != source.intValue())
+			Comparable best = dest;
+			Comparable predecessor = getPredecessor(best);
+			while (predecessor != null && !(predecessor.equals(source)))
 			{
 				best = predecessor;
 				predecessor = getPredecessor(best);

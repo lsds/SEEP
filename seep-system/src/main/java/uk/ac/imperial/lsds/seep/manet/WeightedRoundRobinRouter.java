@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
 public class WeightedRoundRobinRouter implements IRouter {
@@ -139,7 +140,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 	
 	@Override
 	public void updateNetTopology(
-			Map<InetAddress, Map<InetAddress, Double>> linkState) {
+			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState) {
 		throw new RuntimeException("Logic error");		
 	}
 }

@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.routing.Router;
+import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 
 public class NetTopologyMonitor implements Runnable {
 	private final static Logger logger = LoggerFactory.getLogger(NetRateMonitor.class);
@@ -53,7 +54,7 @@ public class NetTopologyMonitor implements Runnable {
 			{
 				if (coreDeployment)
 				{
-					Map<InetAddress, Map<InetAddress, Double>> linkState = parseTopology(readTopology());
+					Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState = parseTopology(readTopology());
 					router.getMeanderRouting().updateNetTopology(linkState);
 					//upstreamCosts = parseRoutes(readRoutes());
 					//TODO: Add empty routes/costs?
@@ -79,22 +80,22 @@ public class NetTopologyMonitor implements Runnable {
 		}
 	}
 	
-	private Map<InetAddress, Map<InetAddress, Double>> parseTopology(List<String> links)
+	private Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> parseTopology(List<String> links)
 	{
 		logger.info("Read links: "+links);
-		Map<InetAddress, Map<InetAddress, Double>> linkState = new HashMap<>();
+		Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState = new HashMap<>();
 		
 		for (String link : links)
 		{
 			String[] splits = link.split(" ");
 			//TODO: Convert hostname/ip addresses to op ids (or vice versa)
 			
-			InetAddress srcAddr = null;
-			InetAddress destAddr = null;
+			InetAddressNodeId srcAddr = null;
+			InetAddressNodeId destAddr = null;
 						
 			try {
-				srcAddr = InetAddress.getByName(splits[0]);
-				destAddr = InetAddress.getByName(splits[1]);
+				srcAddr = new GraphUtil.InetAddressNodeId(InetAddress.getByName(splits[0]));
+				destAddr = new InetAddressNodeId(InetAddress.getByName(splits[1]));
 			} catch (UnknownHostException e) {
 				logger.error("Exception parsing host ip: "+e);
 				System.exit(1);
@@ -104,7 +105,7 @@ public class NetTopologyMonitor implements Runnable {
 
 			if (!linkState.containsKey(srcAddr))
 			{
-				linkState.put(srcAddr, new HashMap<InetAddress, Double>());
+				linkState.put(srcAddr, new HashMap<InetAddressNodeId, Double>());
 			}
 			if (linkState.get(srcAddr).containsKey(destAddr))
 			{
@@ -116,7 +117,7 @@ public class NetTopologyMonitor implements Runnable {
 			linkState.get(srcAddr).put(destAddr, cost);
 			if (!linkState.containsKey(destAddr))
 			{
-				linkState.put(destAddr, new HashMap<InetAddress, Double>());
+				linkState.put(destAddr, new HashMap<InetAddressNodeId, Double>());
 			}
 			if (linkState.get(destAddr).containsKey(srcAddr))
 			{

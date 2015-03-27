@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 
 public class AbstractRouter implements IRouter {
 
@@ -18,10 +19,10 @@ public class AbstractRouter implements IRouter {
 		// TODO Auto-generated method stub
 
 	}
-
+	
 	@Override
 	public void updateNetTopology(
-			Map<InetAddress, Map<InetAddress, Double>> linkState) {
+			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState) {
 		throw new RuntimeException("Logic error");		
 	}
 }

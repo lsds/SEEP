@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
 public class BackpressureRouter implements IRouter {
@@ -102,7 +103,7 @@ public class BackpressureRouter implements IRouter {
 
 	@Override
 	public void updateNetTopology(
-			Map<InetAddress, Map<InetAddress, Double>> linkState) {
+			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState) {
 		throw new RuntimeException("Logic error");		
 	}
 }
