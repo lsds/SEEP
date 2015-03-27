@@ -14,8 +14,8 @@ import org.slf4j.LoggerFactory;
 
 public class GraphUtil {
 	private final static Logger log = LoggerFactory.getLogger(GraphUtil.class);
-	public final static Integer INFINITE_DISTANCE = new Integer(1000000);
-	public final static Integer SUB_INFINITE_DISTANCE = new Integer(999999);
+	public final static Double INFINITE_DISTANCE = new Double(1000000);
+	public final static Double SUB_INFINITE_DISTANCE = new Double(999999);
 	public final static Double MAX_BANDWIDTH = new Double(Double.MAX_VALUE);
 
 	public static void logTopology(Map graph) {
@@ -49,7 +49,7 @@ public class GraphUtil {
 		while (iter.hasNext())
 		{
 			Integer dest = (Integer)iter.next();
-			Integer cost = (Integer)costs.get(dest);
+			Double cost = (Double)costs.get(dest);
 			Object[] destCost = { dest, cost };
 			log.info(MessageFormat.format("d({0,number,integer})={1,number,integer}", destCost));
 		}
@@ -119,11 +119,11 @@ public class GraphUtil {
 		public Djikstra(Map map) { super(map); }
 
 		private final Map shortestDistances = new HashMap();
-		private void setShortestDistance(Integer id, Integer distance) { shortestDistances.put(id, distance); }
-		private Integer getShortestDistance(Integer id)
+		private void setShortestDistance(Integer id, Double distance) { shortestDistances.put(id, distance); }
+		private Double getShortestDistance(Integer id)
 		{
 			Object d = shortestDistances.get(id);
-			return (d == null) ? INFINITE_DISTANCE : (Integer)d;
+			return (d == null) ? INFINITE_DISTANCE : (Double)d;
 		}
 
 		private final Map getShortestDistances() { return Collections.unmodifiableMap(shortestDistances); }
@@ -132,7 +132,7 @@ public class GraphUtil {
 		@Override
 		protected Integer getBestNextHop(Integer source, Integer dest)
 		{
-			if (getShortestDistance(dest).intValue() >= SUB_INFINITE_DISTANCE.intValue())
+			if (getShortestDistance(dest).doubleValue() >= SUB_INFINITE_DISTANCE.doubleValue())
 			{
 				//Infinite distance => no path
 				return null;
@@ -156,8 +156,8 @@ public class GraphUtil {
 				Integer left = (Integer)o1;
 				Integer right = (Integer)o2;
 
-				int shortestDistanceLeft = getShortestDistance(left).intValue();
-				int shortestDistanceRight = getShortestDistance(right).intValue();
+				double shortestDistanceLeft = getShortestDistance(left).doubleValue();
+				double shortestDistanceRight = getShortestDistance(right).doubleValue();
 
 				if (shortestDistanceLeft > shortestDistanceRight) { return 1; }
 				else if (shortestDistanceLeft < shortestDistanceRight) { return -1; }
@@ -180,7 +180,7 @@ public class GraphUtil {
 			predecessors.clear();
 
 			initShortestDistances();
-			setShortestDistance(source, new Integer(0));
+			setShortestDistance(source, new Double(0));
 			unsettledNodes.add(source);
 		}
 
@@ -218,21 +218,21 @@ public class GraphUtil {
 				Integer v = (Integer)neighbourIter.next();
 				if (isSettled(v)) continue;
 
-				int shortDist = getShortestDistance(u).intValue() + getDistance(u,v).intValue();
+				double shortDist = getShortestDistance(u).doubleValue() + getDistance(u,v).doubleValue();
 				if (shortDist < getShortestDistance(v).intValue())
 				{
-					setShortestDistance(v, new Integer(shortDist));
+					setShortestDistance(v, new Double(shortDist));
 					setPredecessor(v,u);
 					unsettledNodes.add(v);
 				}
 			}
 		}
 
-		private Integer getDistance(Integer u, Integer v)
+		private Double getDistance(Integer u, Integer v)
 		{
 			assert ((Map)map.get(u)).keySet().contains(v);
 
-			return ((Map)map.get(u)).keySet().contains(v) ? (Integer)((Map)map.get(u)).get(v) : INFINITE_DISTANCE /*Should never happen*/;
+			return ((Map)map.get(u)).keySet().contains(v) ? (Double)((Map)map.get(u)).get(v) : INFINITE_DISTANCE /*Should never happen*/;
 		}
 	}
 
