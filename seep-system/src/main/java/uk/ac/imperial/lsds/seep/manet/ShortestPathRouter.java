@@ -81,7 +81,7 @@ public class ShortestPathRouter implements IRouter {
 			}
 		}
 		
-		throw new RuntimeException("TODO: What if the logical query is wrong!");
+		logger.debug("TODO: What if the logical query is wrong!");
 	}
 	
 	private Map computeFinalAppTopology(Map initialAppTopology)

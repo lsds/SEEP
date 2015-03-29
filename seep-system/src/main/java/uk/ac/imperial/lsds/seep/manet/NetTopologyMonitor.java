@@ -109,9 +109,11 @@ public class NetTopologyMonitor implements Runnable {
 			}
 			if (linkState.get(srcAddr).containsKey(destAddr))
 			{
-				if (! (linkState.get(srcAddr).get(destAddr).doubleValue() == cost.doubleValue()))
+				Double existingCost = linkState.get(srcAddr).get(destAddr);
+				if (! (existingCost.doubleValue() == cost.doubleValue()))
 				{
-					throw new RuntimeException("TODO: Asymmetric links."); 
+					logger.error("TODO: Asymmetric links.");
+					cost = Math.max(cost, existingCost);
 				}
 			}
 			linkState.get(srcAddr).put(destAddr, cost);
@@ -121,9 +123,11 @@ public class NetTopologyMonitor implements Runnable {
 			}
 			if (linkState.get(destAddr).containsKey(srcAddr))
 			{
-				if (! (linkState.get(destAddr).get(srcAddr).doubleValue() == cost.doubleValue()))
+				Double existingCost = linkState.get(destAddr).get(srcAddr); 
+				if (! (existingCost.doubleValue() == cost.doubleValue()))
 				{
-					throw new RuntimeException("TODO: Asymmetric links."); 
+					logger.error("TODO: Asymmetric links.");
+					cost = Math.max(cost, existingCost); 
 				}
 			}
 			
