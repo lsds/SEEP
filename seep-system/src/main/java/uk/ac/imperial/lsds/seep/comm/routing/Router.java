@@ -19,6 +19,7 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
@@ -257,7 +258,10 @@ public class Router implements Serializable{
 			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
 			return;
 		}
-		meanderRouter.handleDownUp(downUp);
+		if (downUp != null)
+		{
+			meanderRouter.handleDownUp(downUp);
+		}
 		//downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_highestWeight(newTarget);
 		notifyObservers();
 	}

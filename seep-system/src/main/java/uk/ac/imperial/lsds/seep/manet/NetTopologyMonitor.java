@@ -56,6 +56,7 @@ public class NetTopologyMonitor implements Runnable {
 				{
 					Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState = parseTopology(readTopology());
 					router.getMeanderRouting().updateNetTopology(linkState);
+					router.update_highestWeight(null);
 					//upstreamCosts = parseRoutes(readRoutes());
 					//TODO: Add empty routes/costs?
 					//throw new RuntimeException("TODO"); 
