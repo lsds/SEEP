@@ -64,15 +64,6 @@ public class Dispatcher implements IRoutingObserver {
 		opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
 	}
 	
-	public FailureCtrl getNodeFailureCtrl()
-	{
-		FailureCtrl copy = null;
-		synchronized(lock)
-		{
-			copy = new FailureCtrl(nodeFctrl);
-		}
-		return copy;
-	}
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
 	{
 		//TODO: Not sure how well this will work wrt connection updates,
@@ -98,7 +89,8 @@ public class Dispatcher implements IRoutingObserver {
 			Thread workerT = new Thread(worker);
 			workers.put(i, worker);
 			workerT.start();
-		}		
+		}
+		logger.info("Set dispatcher output queues and started dispatcher workers.");
 	}
 	
 	public void startRoutingCtrlWorkers()
@@ -110,11 +102,17 @@ public class Dispatcher implements IRoutingObserver {
 			Thread workerT = new Thread(worker);
 			rctrlWorkers.add(worker);
 			workerT.start();
-		}	
+		}
 		
+		logger.info("Started dispatcher routing control workers.");
+	}
+	
+	public void startDispatcherMain()
+	{
 		//TODO: Is this safe?
 		Thread mainT = new Thread(new DispatcherMain());
 		mainT.start();
+		logger.info("Started dispatcher main.");
 	}
 	
 	public void startFailureDetector()
@@ -126,6 +124,18 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		Thread fDetectorT = new Thread(failureDetector);
 		fDetectorT.start();
+		
+		logger.info("Started dispatcher failure detector.");
+	}
+	
+	public FailureCtrl getNodeFailureCtrl()
+	{
+		FailureCtrl copy = null;
+		synchronized(lock)
+		{
+			copy = new FailureCtrl(nodeFctrl);
+		}
+		return copy;
 	}
 	
 	/**

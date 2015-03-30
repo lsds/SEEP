@@ -19,7 +19,7 @@ import uk.ac.imperial.lsds.seep.comm.routing.Router;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 
 public class NetTopologyMonitor implements Runnable {
-	private final static Logger logger = LoggerFactory.getLogger(NetRateMonitor.class);
+	private final static Logger logger = LoggerFactory.getLogger(NetTopologyMonitor.class);
 	private final static long NET_MONITOR_DELAY = 2 * 1000;
 	private final Object lock = new Object(){};
 	
@@ -101,7 +101,11 @@ public class NetTopologyMonitor implements Runnable {
 				System.exit(1);
 			}
 			
-			Double cost = Double.parseDouble(splits[2]);
+			Double cost = GraphUtil.INFINITE_DISTANCE;
+			if (!"INFINITE".equals(splits[2]))
+			{
+				cost = Double.parseDouble(splits[2]);
+			}
 
 			if (!linkState.containsKey(srcAddr))
 			{

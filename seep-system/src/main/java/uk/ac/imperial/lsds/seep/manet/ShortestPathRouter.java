@@ -35,6 +35,7 @@ public class ShortestPathRouter implements IRouter {
 	@Override
 	public Integer route(long batchId) {
 		// TODO Auto-generated method stub
+		logger.debug("Routing to next hop: "+currentNextHop);
 		return currentNextHop;
 	}
 
@@ -46,22 +47,37 @@ public class ShortestPathRouter implements IRouter {
 		{
 			this.netTopology = newNetTopology;
 			
+			GraphUtil.logTopology(netTopology);
 			//Ensure all query nodes at least exist in the net topology.
 			addMissingWorkerNodes();
+			GraphUtil.logTopology(netTopology);
 			
 			//TODO: Convert to something graph util can handle.
 			Map initialAppTopology = computeInitialAppTopology(netTopology);
 			Map appTopology = computeFinalAppTopology(initialAppTopology);
-			logger.info("App topology (localOpId="+localPhysicalId+": "+ appTopology);
+			logger.debug("App topology (localOpId="+localPhysicalId+": "+ appTopology);
+			GraphUtil.logTopology(appTopology);
 			//InetAddressNodeId sink = new InetAddressNodeId(query.getNodeAddress(query.getSinkPhysicalId()));
 			Integer sink = query.getSinkPhysicalId();
 			Integer nextHop = (Integer)(useBandwidthMetric() ?
 					GraphUtil.nextHopBandwidth(localPhysicalId, sink, appTopology) :
 						GraphUtil.nextHop(localPhysicalId, sink, appTopology));
-			if (nextHop == null) { currentNextHop = null; }
+			if (nextHop == null) 
+			{ 
+				if (currentNextHop != nextHop)
+				{
+					logger.debug("Switching next hop from "+currentNextHop +" to null");
+				}
+				currentNextHop = null;
+			}
 			else
 			{
-				currentNextHop = opContext.getDownOpIndexFromOpId(nextHop);
+				int nextHopIndex = opContext.getDownOpIndexFromOpId(nextHop);
+				if (currentNextHop == null || currentNextHop !=  nextHopIndex)
+				{
+					logger.debug("Switching next hop from "+currentNextHop +" to "+nextHopIndex);
+				}
+				currentNextHop = nextHopIndex;
 			}
 		}
 	}
@@ -72,10 +88,10 @@ public class ShortestPathRouter implements IRouter {
 		{
 			for(Object physicalIdObj : query.getPhysicalNodeIds((Integer)logicalIdObj))
 			{
-				InetAddress physAddr = query.getNodeAddress((Integer)physicalIdObj);
+				InetAddressNodeId physAddr = new InetAddressNodeId(query.getNodeAddress((Integer)physicalIdObj));
 				if (!netTopology.containsKey(physAddr))
 				{
-					netTopology.put(new InetAddressNodeId(physAddr), new HashMap<InetAddressNodeId,Double>());
+					netTopology.put(physAddr, new HashMap<InetAddressNodeId,Double>());
 					//TODO: Asym links
 				}
 			}
@@ -147,6 +163,7 @@ public class ShortestPathRouter implements IRouter {
 			InetAddressNodeId sourceNodeAddr = new InetAddressNodeId(query.getNodeAddress(sourceId));
 			
 			Map sourceCosts = useBandwidthMetric() ? GraphUtil.widestPaths(sourceNodeAddr, currentNetTopology):GraphUtil.shortestPaths(sourceNodeAddr, currentNetTopology);
+			logger.debug("Source ("+sourceId+","+sourceNodeAddr+") costs: "+ sourceCosts);
 			Integer sourceLogicalId = query.getLogicalNodeId(sourceId);
 			Integer nextHopLogicalId = query.getNextHopLogicalNodeId(sourceLogicalId);
 			toProcess.add(nextHopLogicalId);
@@ -184,6 +201,7 @@ public class ShortestPathRouter implements IRouter {
 						
 						
 						Map opCosts = useBandwidthMetric() ? GraphUtil.widestPaths(physicalNodeAddr, currentNetTopology) : GraphUtil.shortestPaths(physicalNodeAddr, currentNetTopology);
+						logger.debug("Op ("+physicalId+","+physicalNodeAddr+") costs: "+ opCosts);
 						Iterator nextHopPhysIter = nextHopPhysicalIds.iterator();
 						while (nextHopPhysIter.hasNext())
 						{

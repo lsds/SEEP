@@ -32,13 +32,13 @@ public class GraphUtil {
 		Iterator srcIter = graph.keySet().iterator();
 		while (srcIter.hasNext())
 		{
-			Integer srcId = (Integer)srcIter.next();
+			Comparable srcId = (Comparable)srcIter.next();
 			String neighbourList = "Src=" + srcId + " : Neighbours=";
 			Map links = (Map)graph.get(srcId);
 			Iterator destIter = links.keySet().iterator();
 			while (destIter.hasNext())
 			{
-				Integer destId = (Integer)destIter.next();
+				Comparable destId = (Comparable)destIter.next();
 				neighbourList += " " + destId + "(" + links.get(destId) + ")";
 			}
 			log.info(neighbourList);
@@ -51,7 +51,7 @@ public class GraphUtil {
 
 		while (iter.hasNext())
 		{
-			Integer dest = (Integer)iter.next();
+			Comparable dest = (Comparable)iter.next();
 			Double cost = (Double)costs.get(dest);
 			Object[] destCost = { dest, cost };
 			log.info(MessageFormat.format("d({0,number,integer})={1,number,integer}", destCost));
@@ -68,6 +68,7 @@ public class GraphUtil {
 
 	public static Map shortestPaths(Comparable source, Map graph)
 	{
+		log.debug("Computing shortest path from "+source+ " given graph: "+graph);
 		Djikstra djikstra = new Djikstra(graph);
 		djikstra.execute(source);
 		return djikstra.getShortestDistances();
@@ -136,11 +137,12 @@ public class GraphUtil {
 		private final InetAddress id;
 		public InetAddressNodeId(InetAddress id) { this.id = id; }
 		@Override
-		public int compareTo(Object other) { return new Integer(id.hashCode()).compareTo(new Integer(other.hashCode())); }
+		public int compareTo(Object other) { return this.toString().compareTo(((InetAddressNodeId)other).toString()); }
 		@Override
 		public boolean equals(Object other) { return id.equals(((InetAddressNodeId)other).id); }
 		@Override
 		public int hashCode() { return id.hashCode(); }
+		public String toString() { return id.getHostAddress(); }
 	}
 	
 	
@@ -150,7 +152,11 @@ public class GraphUtil {
 		public Djikstra(Map map) { super(map); }
 
 		private final Map shortestDistances = new HashMap();
-		private void setShortestDistance(Comparable id, Double distance) { shortestDistances.put(id, distance); }
+		private void setShortestDistance(Comparable id, Double distance) 
+		{ 
+			shortestDistances.put(id, distance); 
+		}
+		
 		private Double getShortestDistance(Comparable id)
 		{
 			Object d = shortestDistances.get(id);
@@ -250,7 +256,7 @@ public class GraphUtil {
 				if (isSettled(v)) continue;
 
 				double shortDist = getShortestDistance(u).doubleValue() + getDistance(u,v).doubleValue();
-				if (shortDist < getShortestDistance(v).intValue())
+				if (shortDist < getShortestDistance(v).doubleValue())
 				{
 					setShortestDistance(v, new Double(shortDist));
 					setPredecessor(v,u);

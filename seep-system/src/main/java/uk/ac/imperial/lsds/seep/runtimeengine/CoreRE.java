@@ -333,7 +333,10 @@ public class CoreRE {
 					ntMonT = new Thread(netTopologyMonitor);
 					ntMonT.start();
 				}
-				
+				if (!processingUnit.getOperator().getOpContext().isSink())
+				{
+					processingUnit.getDispatcher().startDispatcherMain();
+				}
 			}
 			else
 			{
@@ -360,6 +363,7 @@ public class CoreRE {
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
 					processingUnit.getDispatcher().startRoutingCtrlWorkers();
+					processingUnit.getDispatcher().startDispatcherMain();
 					if (!GLOBALS.valueFor("reliability").equals("bestEffort"))
 					{
 						processingUnit.getDispatcher().startFailureDetector();
