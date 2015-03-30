@@ -330,6 +330,7 @@ public class Dispatcher implements IRoutingObserver {
 					dt = opQueue.tryPeekHead();
 					if (dt != null) { targets = owner.getOperator().getRouter().forward_highestWeight(dt); }
 				}
+				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets.get(0));
 				
 				//Option 1: Don't remove unless there is space in target
 				//Problem: Will just end up busy spinning
@@ -350,10 +351,20 @@ public class Dispatcher implements IRoutingObserver {
 					dt = opQueue.remove(dt.getPayload().timestamp);
 					if (dt != null)
 					{
-						if (!bestEffort) { throw new RuntimeException("TODO: Add to node out buf/timer."); }
+						if (!bestEffort) { 
+							logger.error("TODO: Add to node out buf/timer.");
+							throw new RuntimeException("TODO: Add to node out buf/timer."); }
 					}
-					else { throw new RuntimeException("TODO: Reliability handling."); }
+					else { 
+						logger.error("TODO: Reliablity handling.");
+						throw new RuntimeException("TODO: Reliability handling."); 
+					}
 				}
+				else
+				{
+					logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+targets.get(0));
+				}
+				
 			}
 		}
 	}
