@@ -38,6 +38,8 @@ public class Sink implements StatelessOperator {
 		if (tuplesReceived == 0)
 		{
 			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
+			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
+			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
 		}
 		
 		tuplesReceived++;

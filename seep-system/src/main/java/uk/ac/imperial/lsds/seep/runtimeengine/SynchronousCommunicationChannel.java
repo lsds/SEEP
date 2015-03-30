@@ -297,13 +297,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					}
 					catch(IOException e)
 					{
-						/*
 						if (reconnectCount < 1)
 						{
 							e.printStackTrace(); // Urgh
 						}
-						*/
-						e.printStackTrace();
+						//e.printStackTrace();
 					}
 					reconnectCount++;
 					//dokeeffe TODO: N.B. If some other exception causes this
