@@ -60,7 +60,9 @@ do
 	cp $d/mappingRecordOut.txt $resultsDir	
 	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
 done
-	
+
+#Copy mobility params if they exist
+cp r_waypoints.params $resultsDir
 
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
