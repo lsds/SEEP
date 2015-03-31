@@ -37,6 +37,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append(getOutputHeader(output, _output_vector_size, isFloat));
 		b.append("\n");
+		b.append("#define __bswap_constant_32(x) ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))\n");
 		return b.toString();
 	}
 	
@@ -101,14 +102,17 @@ public class KernelCodeGenerator {
 		System.out.println("[DBG] #predicates = " + n);
 		b.append("inline int selectf (__global input_t *p) {\n");
 		b.append("\tint value = 0;\n");
+		b.append("\tint attr = __bswap_constant_32(p->tuple._1);\n");
 		// b.append("\treturn 1;\n");
 		
 		b.append("\tvalue = value & ");
 		for (int i = 0; i < n; i++) {
 			if (i == n - 1)
-				b.append("(p->tuple._1 != 0); \n");
+				b.append("(attr != 0); \n");
+				// b.append("(p->tuple._1 != 0); \n");
 			else
-				b.append(String.format("(p->tuple._1 != %d) & ", i - 100));
+				b.append(String.format("(attr != %d) & ", i - 100));
+				// b.append(String.format("(p->tuple._1 != %d) & ", i - 100));
 		}
 		
 		// b.append("\nint val = ((p->tuple._1 << 8) & 0xFF00FF00) | ((p->tuple._1 >> 8) & 0xFF00FF );\n"); 
@@ -116,7 +120,8 @@ public class KernelCodeGenerator {
 		// b.append("\treturn ((p->tuple._1 << 8) | ((p->tuple._1 >> 8) & 0xFF)) == 1;");
 		// b.append("\tint value = 0;\n");
 		// b.append("\treturn value & (p->tuple._1 > -1);\n");
-		b.append("\treturn 1;\n");
+		b.append("\treturn value;\n");
+		// b.append("\treturn 1;\n");
 		b.append("}\n");
 		return b.toString();
 	}
@@ -134,8 +139,8 @@ public class KernelCodeGenerator {
 			idx += 1;
 			if (idx >= input.getNumberOfAttributes())
 				idx = 1;
-			if (i == 1) {
-				b.append("\tq->tuple._1 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._1 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
+			 if (i < 5) {
+				b.append("\tq->tuple._1 = 3. * 3. * 3. * 3. * 3. * 3. * 3. * (3. * p->tuple._1 / 2.) / 2. / 2. / 2. / 2. / 2. / 2. / 2.;\n");
 				b.append("\tq->tuple._2 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._2 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
 				b.append("\tq->tuple._3 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._3 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");
 				b.append("\tq->tuple._4 = 3 * 3 * 3 * 3 * 3 * 3 * 3 * (3 * p->tuple._4 / 2) / 2 / 2 / 2 / 2 / 2 / 2 / 2;\n");

@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 /* import java.util.concurrent.ConcurrentLinkedQueue; */
@@ -14,7 +15,8 @@ public class TaskProcessor implements Runnable {
 	
 	private int sel_pid = 0;
 	
-	// LocalUnboundedQueryBufferFactory bufferFactory = new LocalUnboundedQueryBufferFactory();
+	/* Measurements */
+	private AtomicLong tasksProcessed;
 	
 	/*
 	public TaskProcessor(ConcurrentLinkedQueue<ITask> queue, boolean GPU) {
@@ -29,9 +31,11 @@ public class TaskProcessor implements Runnable {
 		this.GPU = GPU;
 		
 		if (GPU)
-			sel_pid = 0;
+			this.sel_pid = 0;
 		else
-			sel_pid = 1;
+			this.sel_pid = 1;
+		
+		this.tasksProcessed = new AtomicLong (0L);
 	}
 
 	@Override
@@ -43,12 +47,12 @@ public class TaskProcessor implements Runnable {
 		} else {
 			
 			// sel_pid = 1;
-			// TheGPU.getInstance().bind(pid + 3);
+			TheGPU.getInstance().bind(pid + 1);
 		}
-		TheGPU.getInstance().bind(pid + 1);
+		// TheGPU.getInstance().bind(pid + 8);
 		while (true) {
 			try {
-
+				
 				/* while ((task = queue.poll()) == null) { */
 				
 				while ((task = queue.poll(policy, sel_pid, 0)) == null) {
@@ -58,9 +62,17 @@ public class TaskProcessor implements Runnable {
 					//Thread.yield();
 					// ;
 				}
+				
 				task.setGPU(GPU);
 				// task.setBufferFactory(bufferFactory);
 				// System.out.println(String.format("[DBG] p %2d (%d) (%5s) runs task %6d from query %d", pid, sel_pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
+				
+//				if (this.pid > 4) {
+//					Thread.sleep(5);
+//				}
+				
+				tasksProcessed.incrementAndGet();
+				
 				task.run();
 
 			} catch (Exception e) {
@@ -69,9 +81,14 @@ public class TaskProcessor implements Runnable {
 			} finally {
 				if (task != null) {
 					// System.out.println(String.format("[DBG] p %d (%s) frees task %6d query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
+					
 					task.free();
 				}
 			}
 		}
+	}
+
+	public long getProcessedTasks() {
+		return tasksProcessed.get();
 	}
 }

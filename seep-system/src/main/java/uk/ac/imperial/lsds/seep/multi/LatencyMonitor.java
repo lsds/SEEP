@@ -32,6 +32,10 @@ public class LatencyMonitor {
 		measurements = new ArrayList<Double>();
 	}
 	
+	public void disable () {
+		active.set(false);
+	}
+	
 	@Override
 	public String toString () {
 		

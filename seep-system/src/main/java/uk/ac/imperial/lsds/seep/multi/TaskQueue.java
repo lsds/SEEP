@@ -50,6 +50,8 @@ public class TaskQueue {
 	private AtomicInteger [][] offsets;
 	private AtomicInteger min;
 	
+	private AtomicBoolean gpu;
+	
 	private Task head;
 	
 	public TaskQueue (int p, int q) {
@@ -58,6 +60,7 @@ public class TaskQueue {
 			for (int j = 0; j < q; j++)
 				offsets[i][j] = new AtomicInteger(0);
 		min = new AtomicInteger(Integer.MAX_VALUE);
+		gpu = new AtomicBoolean(false);
 		head = new Task ();
 		Task tail = new Task (null, null, null, Integer.MAX_VALUE, 0, Integer.MAX_VALUE);
 		while (! head.next.compareAndSet(null, tail, false, false));
@@ -230,7 +233,7 @@ public class TaskQueue {
 //				window = TaskWindow.findNext(head, taskid1, taskid2);
 //			}
 				
-			TaskWindow window = TaskWindow.findNextSkipCost(head, policy, p);
+			TaskWindow window = TaskWindow.findNextSkipCost(head, policy, p, offsets);
 			Task pred = window.pred;
 			Task curr = window.curr;
 			// System.out.println(String.format("[DBG] p %2d pred %3d curr %3d", p, pred.taskid, curr.taskid));
@@ -246,6 +249,8 @@ public class TaskQueue {
 					continue;
 				pred.next.compareAndSet(curr, succ, false, false); 
 				/* Nodes are rewired */
+				if (p == 0)
+					offsets[p][curr.queryid].lazySet(curr.taskid);
 				// offsets[p][q].lazySet(curr.taskid);
 				// System.out.println(String.format("[DBG] p %2d runs task %3d from query %d", p, curr.taskid, curr.queryid));
 				return curr;
@@ -270,6 +275,7 @@ public class TaskQueue {
 			// System.out.println(String.format("[DBG] p %2d pred %3d curr %3d", p, pred.taskid, curr.taskid));
 			/* Check if curr is not the tail of the queue */
 			if (curr.taskid == Integer.MAX_VALUE) {
+				// System.out.println(String.format("[DBG] p %2d empty queue", p));
 				return null;
 			} else {
 				/* Mark curr as logically removed */
@@ -280,7 +286,8 @@ public class TaskQueue {
 					continue;
 				pred.next.compareAndSet(curr, succ, false, false); 
 				/* Nodes are rewired */
-				// offsets[p][q].lazySet(curr.taskid);
+				// if (p == 0)
+				//	offsets[p][curr.queryid].lazySet(curr.taskid);
 				// System.out.println(String.format("[DBG] p %2d runs task %3d from query %d", p, curr.taskid, curr.queryid));
 				return curr;
 			}
@@ -288,7 +295,15 @@ public class TaskQueue {
 	}
 	
 	public Task poll (int [][] policy, int p, int q) {
-		//return getNextTask(policy, p, q);
+//		if (gpu.get())
+//			return null;
+//		if (p == 0)
+//			gpu.set(true);
+		// Task t = getNextTask(policy, p, q);
+//		if (gpu.get())
+//			gpu.set(false);
+		// return t;
+		// return getNextTask(policy, p, q);
 		return getFirstTask(policy, p, q);
 	}
 	

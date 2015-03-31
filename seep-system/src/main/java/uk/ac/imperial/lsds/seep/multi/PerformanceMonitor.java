@@ -16,6 +16,8 @@ public class PerformanceMonitor implements Runnable {
 	private int size;
 		
 	private Measurement [] measurements;
+	
+	private long [] _tasksProcessed;
 		
 	static final Comparator<SubQuery> ordering = 
 		new Comparator<SubQuery>() {
@@ -25,7 +27,7 @@ public class PerformanceMonitor implements Runnable {
 			return (q.getId() < p.getId()) ? -1 : 1;
 		}
 	};
-		
+	
 	public PerformanceMonitor (MultiOperator operator) {
 		this.operator = operator;
 			
@@ -42,6 +44,10 @@ public class PerformanceMonitor implements Runnable {
 						query.getTaskDispatcher().getSecondBuffer(),
 						query.getLatencyMonitor());
 		}
+		
+		_tasksProcessed = new long [Utils.THREADS];
+		for (int i = 0; i < _tasksProcessed.length; i++)
+			_tasksProcessed[i] = 0L;
 	}
 	
 	@Override
@@ -61,22 +67,30 @@ public class PerformanceMonitor implements Runnable {
 				b.append(measurements[i].info(dt));
 			b.append(String.format(" q %6d", operator.getExecutorQueueSize()));
 			
+			for (int i = 0; i < _tasksProcessed.length; i++) {
+				long tasksProcessed_ = operator.getTaskProcessorPool().getProcessedTasks(i);
+				long delta = tasksProcessed_ - _tasksProcessed[i];
+				double tps = (double) delta / (dt / 1000.);
+				b.append(String.format(" p%02d %5.1f", i, tps));
+				_tasksProcessed[i] = tasksProcessed_;
+			}
+			
 			/* Append factory sizes */
 			b.append(String.format(" t %6d", TaskFactory.count.get()));
 			b.append(String.format(" w %6d", WindowBatchFactory.count.get()));
 			b.append(String.format(" b %6d", UnboundedQueryBufferFactory.count.get()));
-			
+						
 			/* if (Utils.HYBRID)
 			 *	b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize())); */
 			System.out.println(b);
 			_time = time;
 			
-//			 if (counter++ > 60) {
-//				System.out.println("Done.");
-//				for (int i = 0; i < size; i++)
-//					measurements[i].stop();
-//				break;
-//			 }
+			 if (counter++ > 60) {
+				System.out.println("Done.");
+				for (int i = 0; i < size; i++)
+					measurements[i].stop();
+				break;
+			 }
 		}
 	}
 		

@@ -49,7 +49,6 @@ public class ResultCollector {
 			if (! handler.semaphore.tryAcquire())
 				return;
 			
-			int count_freed = 0;
 			/* No other thread can enter this section */
 			
 			/* Is slot `index` occupied? 
@@ -111,7 +110,7 @@ public class ResultCollector {
 					System.exit(1);
 				}
 				
-				count_freed += 1;
+				count += 1;
 				
 //				if (query.getId() ==  1)
 //					System.out.println(String.format("[DBG] %s free slot qid %d idx %6d", 
@@ -138,16 +137,14 @@ public class ResultCollector {
 				//	handler.next ++;
 				
 				/* Check if next is ready to be pushed */
-				if (count_freed < 20) {
-					if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
-						busy = false;
-					}
-				} else {
-				 	busy = false;
-				}
+				
+				if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
+					busy = false;
+				 }
+				
 			}
 			/* Thread exit critical section */
-//			if (count > 0) 
+//			if (count > 1) 
 //				System.out.println(String.format("[DBG] %60s released %3d q%d buffers", Thread.currentThread(), count, query.getId()));
 			handler.semaphore.release();
 			

@@ -32,12 +32,12 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	/*
 	 * Operator configuration parameters
 	 */
-	private static final int THREADS_PER_GROUP = 128;
+	private static final int THREADS_PER_GROUP = 256;
 	private static final int TUPLES_PER_THREAD = 2;
 	
 	private static final int _INT_ = 4; /* sizeof(int) */
 	
-	private static final int PIPELINES = 2;
+	private static final int PIPELINES = 1;
 	
 	int qid; /* Query id */
 	
@@ -187,17 +187,18 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		TheGPU.getInstance().execute(qid, threads, THREADS_PER_GROUP);
 		
-//		/* Print flags and offsets */
-//		ByteBuffer b1 = ByteBuffer.wrap(flags).order(ByteOrder.LITTLE_ENDIAN);
-//		ByteBuffer b2 = ByteBuffer.wrap(offsets).order(ByteOrder.LITTLE_ENDIAN);
+///*//		/* Print flags and offsets */
+//		ByteBuffer b1 = ByteBuffer.allocate(flags.length).order(ByteOrder.LITTLE_ENDIAN);
+//		b1.put(flags);
+////		ByteBuffer b2 = ByteBuffer.wrap(offsets).order(ByteOrder.LITTLE_ENDIAN);
 //		b1.clear();
-//		b2.clear();
+////		b2.clear();
 //		int count = 0;
-//		while (b1.hasRemaining() && b2.hasRemaining() && count < 256) {
-//			System.out.println(String.format("[DBG] [select] flag %13d offset %13d", b1.getInt(), b2.getInt()));
+//		while (b1.hasRemaining() && count < 256) {
+//			System.out.println(String.format("[DBG] [select] flag %13d", b1.getInt()));
 //			count ++;
 //		}
-//		System.out.println(String.format("[DBG] [select] %d entries", count));
+//		System.out.println(String.format("[DBG] [select] %d entries", count));*/
 		
 //		outputBuffer.position(_INT_ * tuples);
 		

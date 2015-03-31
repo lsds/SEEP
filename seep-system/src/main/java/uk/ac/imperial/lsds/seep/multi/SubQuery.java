@@ -47,6 +47,7 @@ public class SubQuery {
 		}
 		
 		this.latencyMonitor = new LatencyMonitor();
+		this.latencyMonitor.disable();
 		
 		this.dispatcher = new TaskDispatcher(this);
 	}

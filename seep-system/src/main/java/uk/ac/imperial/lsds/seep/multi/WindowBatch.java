@@ -54,6 +54,9 @@ public class WindowBatch {
 		this.windowStartPointers = new int [batchSize]; // null;
 		this.windowEndPointers = new int [batchSize]; // null;
 		
+		this.windowStartPointers = null;
+		this.windowEndPointers = null;
+		
 		this.initialised = false;
 		
 		this.batchStartTime = -1;
@@ -76,10 +79,9 @@ public class WindowBatch {
 		
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
-		// this.windowStartPointers = null;
-		// this.windowEndPointers = null;
-		Arrays.fill(windowStartPointers, -1);
-		Arrays.fill(windowEndPointers,   -1);
+		this.windowEndPointers = null;
+		// Arrays.fill(windowStartPointers, -1);
+		// Arrays.fill(windowEndPointers,   -1);
 		
 		this.initialised = false;
 		
@@ -168,11 +170,11 @@ public class WindowBatch {
 	
 	public void initWindowPointers () {
 		
-		// windowStartPointers = new int [batchSize];
-		// windowEndPointers   = new int [batchSize];
+		windowStartPointers = new int [batchSize];
+		windowEndPointers   = new int [batchSize];
 		
-		Arrays.fill(windowStartPointers, -1);
-		Arrays.fill(windowEndPointers,   -1);
+		// Arrays.fill(windowStartPointers, -1);
+		// Arrays.fill(windowEndPointers,   -1);
 		
 		if (batchStartPointer < 0 && batchEndPointer < 0)
 			return ;

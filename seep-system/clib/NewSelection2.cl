@@ -1,3 +1,55 @@
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
+
+#define T int
+#define identity 0
+#define indexof(x) x
+#define apply(a,b) (a + b)
+
+typedef struct {
+    long t;
+    int _1;
+    int _2;
+    int _3;
+    int _4;
+    int _5;
+    int _6;
+} input_tuple_t __attribute__((aligned(1)));
+
+typedef union {
+        input_tuple_t tuple;
+        uchar16 vectors[2];
+} input_t;
+
+/* Since this is a selection, the output type is the same as the input */
+// #define output_t input_t
+
+typedef struct {
+    long t;
+    int _1;
+    int _2;
+    int _3;
+    int _4;
+    int _5;
+    int _6;
+} output_tuple_t __attribute__((aligned(1)));
+
+typedef union {
+        output_tuple_t tuple;
+        uchar16 vectors[2];
+} output_t;
+
+#define __bswap_constant_32(x) ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
+
+inline int selectf (__global input_t *p) {
+        // return 1; // p->tuple._1 == 1;
+	int val = __bswap_constant_32(p->tuple._1);
+	if (val == 1)
+		return 1;
+	else
+		return 0;
+}
+
 /*
  * Up-sweep (reduce) on a local array `data` of length `length`.
  * `length` must be a power of two.
@@ -109,8 +161,6 @@ __kernel void selectKernel2 (
 	flags[lane0] = selectf (p1);
 	flags[lane1] = selectf (p2);
 	
-//	flags[lane0] = 100;
-//	flags[lane1] = 101;	
 	
 	// copy into local data padding elements >= n with 0
 	x[local_lane0] = (lane0 < tuples) ? flags[lane0] : 0;
@@ -126,7 +176,7 @@ __kernel void selectKernel2 (
 	// a sweepdown on each subarray
 	downsweep(x, m);
 	
-	//  copy back to global data
+	// copy back to global data
 	if (lane0 < tuples) {
 	offsets[lane0] = x[local_lane0];
 	}
@@ -167,10 +217,10 @@ __kernel void compactKernel2 (
 	int local_lane0 = (2*lid) ;
 	int local_lane1 = (2*lid)+1;
 	int grpid = get_group_id(0);
-
+	
 	/* Compute pivot value */
-
-      __local int pivot;
+	
+        __local int pivot;
         if (lid == 0) {
         	pivot = 0;
                 if (grpid > 0) {
@@ -181,8 +231,8 @@ __kernel void compactKernel2 (
                 }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-
-
+	
+	
 	// copy into local data padding elements >= n with identity
 	//
 	// x[local_lane0] = (lane0 < tuples) ? offsets[lane0] : 0;
@@ -199,7 +249,7 @@ __kernel void compactKernel2 (
 
 	//barrier(CLK_LOCAL_MEM_FENCE);
 	//
-
+	
 	if (flags[lane0] == 1) {
 		const int q1 = (offsets[lane0] + pivot) * sizeof(output_t);
 		const int p1 = lane0 * sizeof(input_t);
@@ -220,3 +270,4 @@ __kernel void compactKernel2 (
 		y1->vectors[1] = x1->vectors[1];
 	}
 }
+

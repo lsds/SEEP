@@ -71,12 +71,16 @@ public class MultiOperator {
 		for (int i = 0; i < threads; i++) {
 			policy [i][0] = 1;
 		}
-		policy[0][0] = 1;
-		policy[0][1] = 1;
 		
-//		policy[1][0] = 4;
-//		policy[1][1] = 4;
-
+		if (threads > 1) {
+			
+			policy[0][0] =  10; /* The fast processor */
+			policy[1][0] =   1;
+			
+			policy[1][0] =   1;
+			policy[1][1] =   1;
+		}
+		
 		this.queue = new TaskQueue(threads, 2); // new ConcurrentLinkedQueue<ITask>();
 		this.workerPool = new TaskProcessorPool(threads, queue, policy, Utils.HYBRID);
 		this.executor = Executors.newCachedThreadPool();
@@ -121,6 +125,9 @@ public class MultiOperator {
 	public Set<SubQuery> getSubQueries() {
 		return this.subQueries;
 	}
+	
+	public TaskProcessorPool getTaskProcessorPool () { return workerPool; }
+	
 	/*
 	public int getSecondExecutorQueueSize() {
 		return this._queue.size();

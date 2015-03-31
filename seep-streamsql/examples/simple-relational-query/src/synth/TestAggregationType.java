@@ -47,6 +47,7 @@ public class TestAggregationType {
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
+		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		int batchSize = Integer.parseInt(args[2]);
 		
@@ -114,7 +115,7 @@ public class TestAggregationType {
 		 * Build and set up the query
 		 */
 		MicroOperator uoperator;
-		if (Utils.GPU)
+		if (Utils.GPU && ! Utils.HYBRID)
 			uoperator = new MicroOperator (gpuAggCode, aggCode, 1);
 		else
 			uoperator = new MicroOperator (aggCode, gpuAggCode, 1);
@@ -126,6 +127,8 @@ public class TestAggregationType {
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
+		
+		TheGPU.getInstance().bind(0);
 
 		/*
 		 * Set up the stream

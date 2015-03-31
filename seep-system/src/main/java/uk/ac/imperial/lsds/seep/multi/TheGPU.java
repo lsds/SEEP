@@ -130,6 +130,9 @@ public class TheGPU {
 	public native int setOutput (int queryId, int index, int size, int writeOnly);
 	public native int setOutput (int queryId, int index, ByteBuffer buffer, int size, int writeOnly);
 	public native int execute (int queryId, int threads, int threadsPerGroup);
+	
+	public native int executeCustom (int queryId, int threads, int threadsPerGroup, int _threads, int _threadsPerGroup);
+	
 	public native int free ();
 	/* Operator-specific function calls */
 	public native int setKernelDummy     (int queryId, int [] args);

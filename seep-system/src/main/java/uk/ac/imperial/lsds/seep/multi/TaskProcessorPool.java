@@ -8,7 +8,7 @@ public class TaskProcessorPool {
 	private int workers;
 	/* private ConcurrentLinkedQueue<ITask>	queue; */
 	private TaskQueue queue;
-	private TaskProcessor[] processor;
+	private TaskProcessor [] processor;
 	private int [][] policy;
 	
 	/*
@@ -60,5 +60,9 @@ public class TaskProcessorPool {
 		for (int i = 0; i < workers; i++)
 			executor.execute(this.processor[i]);
 		return queue;
+	}
+	
+	public long getProcessedTasks (int pid) {
+		return processor[pid].getProcessedTasks();
 	}
 }

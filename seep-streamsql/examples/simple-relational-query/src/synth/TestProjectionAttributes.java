@@ -50,8 +50,6 @@ public class TestProjectionAttributes {
 			System.exit(-1);
 		}
 		
-		
-		
 		/*
 		 * Set up configuration of system
 		 */
@@ -175,7 +173,7 @@ public class TestProjectionAttributes {
 		
 		operator.setup();
 		
-		TheGPU.getInstance().bind(1);
+		TheGPU.getInstance().bind(0);
 
 		/*
 		 * Set up the stream

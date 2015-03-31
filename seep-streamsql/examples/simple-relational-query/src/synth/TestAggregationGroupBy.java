@@ -10,6 +10,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -50,6 +51,7 @@ public class TestAggregationGroupBy {
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
+		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = Integer.parseInt(args[1]);
 		QueryConf queryConf = new QueryConf(Integer.parseInt(args[2]), 1024);
@@ -80,6 +82,13 @@ public class TestAggregationGroupBy {
 		}
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
+		
+		TheGPU.getInstance().init(1);
+		
+		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
+		long tpb = ppb * window.getPaneSize();
+		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] %d bytes input", inputSize));
 				
 		Expression[] groupBy = new Expression[] {
 			new IntColumnReference(2),
@@ -99,7 +108,12 @@ public class TestAggregationGroupBy {
 				new FloatColumnReference(1), schema //,
 				// groupBy
 				);
+		
 		((AggregationKernel) gpuAggCode).setSource(filename);
+		((AggregationKernel) gpuAggCode).setInputSize(inputSize);
+		((AggregationKernel) gpuAggCode).setBatchSize(queryConf.BATCH);
+		((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());
+		((AggregationKernel) gpuAggCode).setup();
 		
 		/*
 		 * Build and set up the query
@@ -117,6 +131,8 @@ public class TestAggregationGroupBy {
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
+		
+		
 
 		/*
 		 * Set up the stream

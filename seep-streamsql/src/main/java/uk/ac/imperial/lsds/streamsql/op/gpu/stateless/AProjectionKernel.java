@@ -125,7 +125,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
 		if (! pinned) {
-			// TheGPU.getInstance().bind(2);
+			TheGPU.getInstance().bind(1);
 			pinned = true;
 		}
 				
