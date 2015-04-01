@@ -9,14 +9,27 @@ public class IntMap {
 	
 	int size = 0;
 	
+	int id = -1;
+	
 	public int size() {
 		return this.size;
 	}
 	
-	public IntMap() {
+	public IntMap(int id) {
 		content = new IntMapEntry[INTMAP_CONTENT_SIZE];
+		for (int i = 0; i < content.length; i++)
+			content[i] = null;
+		this.id = id;
 	}
 	
+	public int getId () {
+		return id;
+	}
+	
+	public void setId (int id) {
+		this.id = id;
+	}
+
 	public void put(int key, int value) {
 		IntMapEntry current = content[hash(key)];
 		
@@ -53,7 +66,6 @@ public class IntMap {
 		return false;
 	}
 
-	
 	public int get(int key) {
 		IntMapEntry current = content[hash(key)];
 		
@@ -70,18 +82,22 @@ public class IntMap {
 		return key & (INTMAP_CONTENT_SIZE-1);
 	}
 	
-	public void clear() {
+	public int clear() {
 		size = 0;
+		int count = 0;
 		for (int i = 0; i < INTMAP_CONTENT_SIZE; i++) {
 			if (content[i] != null) {
 				IntMapEntry e = content[i];
-				while (e.next != null) {
+				while (e != null) {
 					IntMapEntry f = e.next;
-					e.release();
+					e.release(); 
+					count++;
 					e = f;
 				}
+				content[i] = null;
 			}
 		}
+		return count;
 	}
 	
 	public void remove(int key) {
@@ -133,7 +149,10 @@ public class IntMap {
 	}
 	
 	public void release() {
+		// System.out.println(String.format("[DBG] %d entries in map %d", this.size, this.getId()));
+		// int freed = 
 		clear();
+		// System.out.println(String.format("[DBG] %d entries free'd", freed));
+		IntMapFactory.free(this);
 	}
-
 }

@@ -1,10 +1,13 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapEntryFactory {
 	
-	private static int _pool_size = 10000000;
+	private static int _pool_size = 1024;
+	
+	public static AtomicLong count;
 	
 	private static ConcurrentLinkedQueue<IntMapEntry> pool = 
 		new ConcurrentLinkedQueue<IntMapEntry>();
@@ -13,12 +16,15 @@ public class IntMapEntryFactory {
 		int i = _pool_size;
 		while (i-- > 0)
 			pool.add (new IntMapEntry(-1, -1, null));
+		count = new AtomicLong(_pool_size);
 	}
 	
 	public static IntMapEntry newInstance (int key, int value, IntMapEntry next) {
 		IntMapEntry e = pool.poll();
-		if (e == null)
-			return new IntMapEntry(key, value, next);
+		if (e == null) {
+			e = new IntMapEntry(key, value, next);
+			count.incrementAndGet();
+		}
 		e.set(key, value, next);
 		return e;
 	}

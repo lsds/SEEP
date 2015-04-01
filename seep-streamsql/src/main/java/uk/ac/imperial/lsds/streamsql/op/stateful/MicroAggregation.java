@@ -50,8 +50,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		if (this.aggregationType == AggregationType.COUNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);		
+			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);	
 		}
+		
+		if (this.doIncremental)
+			System.out.println("[DBG] incremental computation");
+		else
+			System.out.println("[DBG] non-incremental computation");
 		
 		Expression[] tmpAllOutAttributes = new Expression[2];
 		tmpAllOutAttributes[0] = this.timestampReference;
@@ -121,10 +126,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
-
+		
 		/*
 		 * Make sure the batch is initialised
 		 */
+		// System.out.println("[DBG] aggregation task " + windowBatch.getTaskId());
 		windowBatch.initWindowPointers();
 //		System.out.println("RUN aggregration");
 
@@ -258,7 +264,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	}
 	
 	private void processDataPerWindowWithGroupBy(WindowBatch windowBatch, IWindowAPI api) {
-
+		
+		/* System.out.println(String.format("[DBG] process data per window with group-by: task id %05d %6d int maps %6d int map entries", 
+				windowBatch.getTaskId(), IntMapFactory.count.get(), IntMapEntryFactory.count.get())); */
+		
 		windowBatch.initWindowPointers();
 		
 		int[] startPointers = windowBatch.getWindowStartPointers();
@@ -286,9 +295,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			 */
 			if (inWindowStartOffset != -1) {
 
-				keyOffsets = new IntMap();
+				keyOffsets = IntMapFactory.newInstance();
 				if (this.aggregationType == AggregationType.AVG) 
-					windowTupleCount = new IntMap();
+					windowTupleCount = IntMapFactory.newInstance();
 				
 				windowBuffer.position(0);
 
@@ -432,13 +441,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					} else {
 						startPointers[currentWindow] = tmpStart;
 						endPointers[currentWindow] = outBuffer.position() - 1;
-					}
-					
-					keyOffsets.release();
-					if (aggregationType == AggregationType.AVG) 
-						windowTupleCount.release();
-					
+					}					
 				}
+				keyOffsets.release();
+				if (aggregationType == AggregationType.AVG) 
+					windowTupleCount.release();
 			}
 		}
 		
@@ -482,11 +489,11 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
 		
-		IntMap keyOffsets = new IntMap();
+		IntMap keyOffsets = IntMapFactory.newInstance();
 		IntMap windowTupleCount = null;
 
 		if (this.aggregationType == AggregationType.AVG) 
-			windowTupleCount = new IntMap();
+			windowTupleCount = IntMapFactory.newInstance();
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
