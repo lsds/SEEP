@@ -1,7 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -13,16 +12,21 @@ public class MultiOperator {
 	private int				id;
 
 	private ITaskDispatcher	dispatcher;
-	/* private ConcurrentLinkedQueue<ITask>	queue, _queue; */
+	
 	private TaskQueue queue;
-	private TaskProcessorPool workerPool, _workerPool;
-	private Executor executor, _executor;
+	private TaskProcessorPool workerPool;
+	private Executor executor;
+	
+	int nqueries = 1;
+	int nclasses = 2;
 	
 	int [][] policy;
 
-	public MultiOperator(Set<SubQuery> subQueries, int id) {
+	public MultiOperator (Set<SubQuery> subQueries, int id) {
 		this.subQueries = subQueries;
 		this.id = id;
+		
+		this.nqueries = this.subQueries.size();
 	}
 
 	public void processData (byte[] values) {
@@ -46,42 +50,15 @@ public class MultiOperator {
 	}
 
 	public void setup() {
-
-//		if (Utils.HYBRID) {
-//			/*
-//			 * Allocate one thread for the GPU executor service, and the
-//			 * remaining threads to the CPU executor service.
-//			 */
-//			if (threads < 2) {
-//				throw new IllegalArgumentException(
-//						"error: insufficient number of threads for hybrid execution mode");
-//			}
-//			/*
-//			 * Allocate one out of `threads` workers to the GPU.
-//			 */
-//			this._queue = new ConcurrentLinkedQueue<ITask>();
-//			this._workerPool = new TaskProcessorPool(1, _queue);
-//			this._executor = Executors.newCachedThreadPool();
-//			this._queue = _workerPool.start(_executor);
-//
-//			threads--;
-//		}
 		
-		this.policy = new int [threads][2];
-		for (int i = 0; i < threads; i++) {
-			policy [i][0] = 1;
+		this.policy = new int [nclasses][nqueries];
+		for (int i = 0; i < nclasses; i++) {
+			for (int j = 0; j < nqueries; j++) {
+				policy [i][j] = 1;
+			}
 		}
 		
-		if (threads > 1) {
-			
-			policy[0][0] =  10; /* The fast processor */
-			policy[1][0] =   1;
-			
-			policy[1][0] =   1;
-			policy[1][1] =   1;
-		}
-		
-		this.queue = new TaskQueue(threads, 2); // new ConcurrentLinkedQueue<ITask>();
+		this.queue = new TaskQueue(threads, nqueries);
 		this.workerPool = new TaskProcessorPool(threads, queue, policy, Utils.HYBRID);
 		this.executor = Executors.newCachedThreadPool();
 		this.queue = workerPool.start(executor);
@@ -92,7 +69,7 @@ public class MultiOperator {
 			if (q.isMostUpstream())
 				this.dispatcher = q.getTaskDispatcher();
 		}
-
+		
 		Thread monitor = new Thread(new PerformanceMonitor(this));
 		monitor.setName("Monitor");
 		monitor.start();
@@ -102,22 +79,10 @@ public class MultiOperator {
 		return id;
 	}
 	
-	/*
-	public ConcurrentLinkedQueue<ITask> getExecutorQueue() {
-		return this.queue;
-	}
-	*/
-	
 	public TaskQueue getExecutorQueue() {
 		return this.queue;
 	}
 	
-	/*
-	public ConcurrentLinkedQueue<ITask> getGPUExecutorQueue() {
-		return _queue;
-	}
-	*/
-
 	public int getExecutorQueueSize() {
 		return this.queue.size();
 	}
@@ -126,11 +91,27 @@ public class MultiOperator {
 		return this.subQueries;
 	}
 	
-	public TaskProcessorPool getTaskProcessorPool () { return workerPool; }
-	
-	/*
-	public int getSecondExecutorQueueSize() {
-		return this._queue.size();
+	public TaskProcessorPool getTaskProcessorPool () { 
+		return workerPool; 
 	}
-	*/
+
+	public void updatePolicy(int[][] policy_) {
+		for (int i = 0; i < nclasses; i++)
+			for (int j = 0; j < nqueries; j++)
+				policy[i][j] = policy_[i][j];
+	}
+
+	public Object policyToString() {
+		StringBuilder b = new StringBuilder("[");
+		for (int i = 0; i < nclasses; i++) {
+			for (int j = 0; j < nqueries; j++) {
+				if (i == nclasses && j == nqueries)
+					b.append(String.format("[%d][%d]=%4d",  i, j, policy[i][j]));
+				else
+					b.append(String.format("[%d][%d]=%4d ", i, j, policy[i][j]));
+			}
+		}
+		b.append("]");
+		return b.toString();
+	}
 }

@@ -3,76 +3,70 @@ package uk.ac.imperial.lsds.seep.multi;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
-/* import java.util.concurrent.ConcurrentLinkedQueue; */
-
 public class TaskProcessor implements Runnable {
 
-	/* ConcurrentLinkedQueue<ITask> queue; */
 	TaskQueue queue;
 	private int [][] policy;
 	private int pid;
 	boolean GPU;
 	
-	private int sel_pid = 0;
+	private int cid = 0; /* Processor class: GPU (0) or CPU (1) */
 	
 	/* Measurements */
-	private AtomicLong tasksProcessed;
+	private AtomicLong [] tasksProcessed;
 	
-	/*
-	public TaskProcessor(ConcurrentLinkedQueue<ITask> queue, boolean GPU) {
-		this.queue = queue;
-		this.GPU = GPU;
-	}
-	*/
-	public TaskProcessor(int pid, TaskQueue queue, int [][] policy, boolean GPU) {
+	public TaskProcessor (int pid, TaskQueue queue, int [][] policy, boolean GPU) {
+		
 		this.pid = pid;
 		this.queue = queue;
 		this.policy = policy;
 		this.GPU = GPU;
 		
-		if (GPU)
-			this.sel_pid = 0;
-		else
-			this.sel_pid = 1;
+		if (GPU) this.cid = 0;
+		else 
+			this.cid = 1;
 		
-		this.tasksProcessed = new AtomicLong (0L);
+		int nqueries = policy[0].length;
+		this.tasksProcessed = new AtomicLong [nqueries];
+		
+		for (int i = 0; i < nqueries; i++)
+			this.tasksProcessed[i] = new AtomicLong (0L);
 	}
 
 	@Override
 	public void run() {
-		ITask task = null;
+		Task task = null;
 		if (GPU) {
-			System.out.println ("GPU thread is " + Thread.currentThread());
-//			TheGPU.getInstance().bind(1);
+			System.out.println ("[DBG] GPU thread is " + Thread.currentThread());
+			/* TheGPU.getInstance().bind(1); */
 		} else {
-			
-			// sel_pid = 1;
-			TheGPU.getInstance().bind(pid + 1);
+			/* TheGPU.getInstance().bind(pid + 1); */
 		}
-		// TheGPU.getInstance().bind(pid + 8);
+		
 		while (true) {
 			try {
-				
-				/* while ((task = queue.poll()) == null) { */
-				
-				while ((task = queue.poll(policy, sel_pid, 0)) == null) {
-//					System.err.println(String.format("warning: thread %20s blocked waiting for a task", 
-//							Thread.currentThread()));
+				while ((task = queue.poll(policy, cid, 0)) == null) {
 					LockSupport.parkNanos(1L);
-					//Thread.yield();
-					// ;
 				}
 				
+				/* Testing Java pass-by-value policy table
+				 * 
+				 * if (task.taskid % 100 == 0) {
+					StringBuilder b = new StringBuilder(String.format("[DBG] p%02d [", pid));
+					for (int i = 0; i < policy.length; i++) {
+						for (int j = 0; j < policy[0].length; j++) {
+							if (i == policy.length && j == policy[0].length)
+								b.append(String.format("[%d][%d]=%4d",  i, j, policy[i][j]));
+							else
+								b.append(String.format("[%d][%d]=%4d ", i, j, policy[i][j]));
+						}
+					}
+					b.append("]");
+					System.out.println(b);
+				} */
+				
 				task.setGPU(GPU);
-				// task.setBufferFactory(bufferFactory);
-				// System.out.println(String.format("[DBG] p %2d (%d) (%5s) runs task %6d from query %d", pid, sel_pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
-				
-//				if (this.pid > 4) {
-//					Thread.sleep(5);
-//				}
-				
-				tasksProcessed.incrementAndGet();
-				
+				tasksProcessed[task.queryid].incrementAndGet();
 				task.run();
 
 			} catch (Exception e) {
@@ -80,15 +74,15 @@ public class TaskProcessor implements Runnable {
 				System.exit(1);
 			} finally {
 				if (task != null) {
-					// System.out.println(String.format("[DBG] p %d (%s) frees task %6d query %d", pid, GPU, ((Task) task).taskid, ((Task) task).queryid));
-					
+					/* System.out.println(String.format("[DBG] p %d (%s) frees task %6d query %d", 
+					 * pid, GPU, ((Task) task).taskid, ((Task) task).queryid)); */
 					task.free();
 				}
 			}
 		}
 	}
-
-	public long getProcessedTasks() {
-		return tasksProcessed.get();
+	
+	public long getProcessedTasks(int qid) {
+		return tasksProcessed[qid].get();
 	}
 }

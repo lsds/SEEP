@@ -17,7 +17,8 @@ public class PerformanceMonitor implements Runnable {
 		
 	private Measurement [] measurements;
 	
-	private long [] _tasksProcessed;
+	private long [][] _tasksProcessed;
+	private int  [][] policy_; /* New policy */
 		
 	static final Comparator<SubQuery> ordering = 
 		new Comparator<SubQuery>() {
@@ -45,9 +46,16 @@ public class PerformanceMonitor implements Runnable {
 						query.getLatencyMonitor());
 		}
 		
-		_tasksProcessed = new long [Utils.THREADS];
+		_tasksProcessed = new long [Utils.THREADS][size];
 		for (int i = 0; i < _tasksProcessed.length; i++)
-			_tasksProcessed[i] = 0L;
+			for (int j = 0; j < size; j++)
+				_tasksProcessed[i][j] = 0L;
+		
+		policy_ = new int [2][size];
+		for (int j = 0; j < size; j++) {
+			policy_[0][j] = 0;
+			policy_[1][j] = 0;
+		}
 	}
 	
 	@Override
@@ -67,15 +75,30 @@ public class PerformanceMonitor implements Runnable {
 				b.append(measurements[i].info(dt));
 			b.append(String.format(" q %6d", operator.getExecutorQueueSize()));
 			
+			/* Reset CPU tasks/sec per query since it is not accumulative */
+			for (int j = 0; j < size; j++)
+				policy_[1][j] = 0;
+			
+			/* Iterate over worker threads */
 			for (int i = 0; i < _tasksProcessed.length; i++) {
-				long tasksProcessed_ = operator.getTaskProcessorPool().getProcessedTasks(i);
-				long delta = tasksProcessed_ - _tasksProcessed[i];
-				double tps = (double) delta / (dt / 1000.);
-				b.append(String.format(" p%02d %5.1f", i, tps));
-				_tasksProcessed[i] = tasksProcessed_;
+				/* Iterate over queries */
+				for (int j = 0; j < size; j++) {
+					long tasksProcessed_ = operator.getTaskProcessorPool().getProcessedTasks(i, j);
+					long delta = tasksProcessed_ - _tasksProcessed[i][j];
+					double tps = (double) delta / (dt / 1000.);
+					b.append(String.format(" p%02d q%d %5.1f", i, j, tps));
+					if (Utils.HYBRID && i == 0) {
+						policy_[0][j] = (int) Math.floor(tps);
+					} else {
+						policy_[1][j] += (int) Math.floor(tps);
+					}
+					_tasksProcessed[i][j] = tasksProcessed_;
+				}
+				operator.updatePolicy(policy_);
 			}
 			
 			/* Append factory sizes */
+			b.append(String.format(" %20s", operator.policyToString()));
 			b.append(String.format(" t %6d", TaskFactory.count.get()));
 			b.append(String.format(" w %6d", WindowBatchFactory.count.get()));
 			b.append(String.format(" b %6d", UnboundedQueryBufferFactory.count.get()));
@@ -83,14 +106,15 @@ public class PerformanceMonitor implements Runnable {
 			/* if (Utils.HYBRID)
 			 *	b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize())); */
 			System.out.println(b);
+			
 			_time = time;
 			
-			 if (counter++ > 60) {
+			if (counter++ > 60) {
 				System.out.println("Done.");
 				for (int i = 0; i < size; i++)
 					measurements[i].stop();
 				break;
-			 }
+			}
 		}
 	}
 		
@@ -134,8 +158,6 @@ public class PerformanceMonitor implements Runnable {
 			if (_bytes > 0) {
 				Dt = (delta / 1000.0);
 				MB = (bytes - _bytes) / _1MB_;
-//				if (MB == 0)
-//					System.out.println("zero...");
 				MBps = MB / Dt;
 				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps [%s] ", 
 						id, MBps, ((MBps / 1024.) * 8.), monitor);
