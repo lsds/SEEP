@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapEntryFactory {
 	
-	private static int _pool_size = 1024;
+	private static int _pool_size = 1;
 	
 	public static AtomicLong count;
 	

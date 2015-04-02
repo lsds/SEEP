@@ -106,19 +106,22 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		return sb.toString();
 	}
 
-	private int getGroupByKey(IQueryBuffer buffer, ITupleSchema schema,
-			int offset) {
+	private int getGroupByKey(IQueryBuffer buffer, ITupleSchema schema, int offset, byte [] bytes) {
+		
 		int result = 1;
-
+		
 		for (int i = 0; i < this.groupByAttributes.length; i++) {
-			result = 31
-					* result
-					+ Arrays.hashCode(this.groupByAttributes[i].evalAsByteArray(buffer, schema,
-							offset));
+			
+			this.groupByAttributes[i].evalAsByteArray(buffer, schema, offset, bytes);
+			int __result = 1;
+			for (int j = 0; j < bytes.length; j++)
+				__result =  31 * __result + bytes[j];
+			result = 31 * result + __result; /* Arrays.hashCode(bytes); */
+			
 		}
 		return result;
 	}
-
+	
 	@Override
 	public void accept(OperatorVisitor ov) {
 		ov.visit(this);
@@ -265,8 +268,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	
 	private void processDataPerWindowWithGroupBy(WindowBatch windowBatch, IWindowAPI api) {
 		
-		/* System.out.println(String.format("[DBG] process data per window with group-by: task id %05d %6d int maps %6d int map entries", 
-				windowBatch.getTaskId(), IntMapFactory.count.get(), IntMapEntryFactory.count.get())); */
+		// System.out.println(String.format("[DBG] %15s process data per window with group-by: task id %05d %6d int maps %6d int map entries %6d malloc %6d free", 
+		// 		Thread.currentThread(), windowBatch.getTaskId(), IntMapFactory.count.get(), IntMapEntryFactory.count.get(), IntByteArrayFactory.mallocs.get(), IntByteArrayFactory.frees.get()));
 		
 		windowBatch.initWindowPointers();
 		
@@ -285,6 +288,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		IntMap keyOffsets;
 		IntMap windowTupleCount = null;
+		
+		byte [] i_bytes = new byte [4];
+		// byte [] l_bytes = new byte [8];
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
@@ -308,7 +314,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				while (inWindowStartOffset < inWindowEndOffset) {
 					
 					// get the key
-					int key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset);
+					int key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset, i_bytes);
 					
 					// check whether there is already an entry in the window
 					// buffer for this key
@@ -683,7 +689,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			IntMap keyOffsets,
 			IntMap windowTupleCount) {
 
-		int key = getGroupByKey(inBuffer, inSchema, enterOffset);
+		int key = getGroupByKey(inBuffer, inSchema, enterOffset, null);
 
 		if (keyOffsets.containsKey(key)) {
 			int currentValuePositionInWindowBuffer = keyOffsets.get(key)
@@ -735,7 +741,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			IntMap keyOffsets,
 			IntMap windowTupleCount) {
 
-		int key = getGroupByKey(inBuffer, inSchema, removeOffset);
+		int key = getGroupByKey(inBuffer, inSchema, removeOffset, null);
 
 		if (keyOffsets.containsKey(key)) {
 			int currentValuePositionInWindowBuffer = keyOffsets.get(key)

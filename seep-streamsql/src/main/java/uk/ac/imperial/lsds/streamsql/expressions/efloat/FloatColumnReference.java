@@ -43,10 +43,15 @@ public class FloatColumnReference implements FloatExpression {
 	}
 
 	@Override
-	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+	public byte [] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+		
 		return ExpressionsUtil.floatToByteArray(eval(buffer, schema, offset));
 	}
-	
-	
 
+	@Override
+	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes) {
+		
+		ExpressionsUtil.floatToByteArray(eval(buffer, schema, offset), bytes);
+	}
 }

@@ -44,7 +44,15 @@ public class LongColumnReference implements LongExpression {
 	}
 
 	@Override
-	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+	public byte [] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+		
 		return ExpressionsUtil.longToByteArray(eval(buffer, schema, offset));
+	}
+	
+	@Override
+	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes) {
+		ExpressionsUtil.longToByteArray(eval(buffer, schema, offset), bytes);
+		
 	}
 }

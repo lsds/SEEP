@@ -8,6 +8,8 @@ import uk.ac.imperial.lsds.streamsql.visitors.ValueExpressionVisitor;
 public class IntDivision implements IntExpression {
 
 	private IntExpression[]	expressions	= null;
+	
+	
 
 	public IntDivision(IntExpression... expressions) {
 		this.expressions = expressions;
@@ -51,16 +53,23 @@ public class IntDivision implements IntExpression {
 	}
 
 	@Override
-	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,
-			int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
-		System.arraycopy(fromBuffer.array(), fromBuffer.normalise(fromBufferOffset), ExpressionsUtil
-				.intToByteArray(eval(fromBuffer, schema, fromBufferOffset)), 0,
-				4);
+	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema, int fromBufferOffset, IQueryBuffer toBuffer, int toBufferOffset) {
+		
+		byte [] bytes = ExpressionsUtil.intToByteArray(eval(fromBuffer, schema, fromBufferOffset));
+		System.arraycopy (fromBuffer.array(), fromBuffer.normalise(fromBufferOffset), bytes, 0, 4);
 	}
-
+	
 	@Override
-	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
-			int offset) {
+	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
+		
 		return ExpressionsUtil.intToByteArray(eval(buffer, schema, offset));
 	}
+	
+	@Override
+	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes) {
+		ExpressionsUtil.intToByteArray(eval(buffer, schema, offset), bytes);
+		
+	}
+	
 }

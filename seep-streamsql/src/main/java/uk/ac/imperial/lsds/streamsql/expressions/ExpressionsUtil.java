@@ -8,23 +8,55 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 
 public class ExpressionsUtil {
 
-	public static final byte[] intToByteArray(int value) {
+	public static final byte [] intToByteArray(int value) {
+		
 		return new byte[] { (byte) (value >>> 24), (byte) (value >>> 16),
 				(byte) (value >>> 8), (byte) value };
 	}
 
-	public static final byte[] floatToByteArray(float value) {
-		int bits = Float.floatToIntBits(value);
-		return new byte[] { (byte) (bits & 0xff), (byte) ((bits >> 8) & 0xff),
-				(byte) ((bits >> 16) & 0xff), (byte) ((bits >> 24) & 0xff) };
+	public static void intToByteArray(int value, byte[] bytes) {
+		
+		bytes[0] = (byte) (value >>> 24);
+		bytes[1] = (byte) (value >>> 16);
+		bytes[2] = (byte) (value >>>  8);
+		bytes[3] = (byte) (value);	
 	}
 
-	public static final byte[] longToByteArray(long value) {
-		byte[] b = new byte[8];
+	public static final byte [] floatToByteArray (float value) {
+		
+		int bits = Float.floatToIntBits(value);
+		
+		return new byte [] { (byte) (bits & 0xff), (byte) ((bits >> 8) & 0xff),
+				(byte) ((bits >> 16) & 0xff), (byte) ((bits >> 24) & 0xff) };
+	}
+	
+	public static void floatToByteArray(float value, byte[] bytes) {
+		
+		int bits = Float.floatToIntBits(value);
+		
+		bytes[0] = (byte) ((bits)       & 0xff);
+		bytes[0] = (byte) ((bits >>  8) & 0xff);
+		bytes[0] = (byte) ((bits >> 16) & 0xff);
+		bytes[0] = (byte) ((bits >> 24) & 0xff);
+	}
+	
+	public static final byte [] longToByteArray(long value) {
+		
+		byte [] b = new byte[8];
+		
 		for (int i = 0; i < 8; ++i) {
 			b[i] = (byte) (value >> (8 - i - 1 << 3));
 		}
+		
 		return b;
+	}
+	
+	public static void longToByteArray(long value, byte[] bytes) {
+		
+		for (int i = 0; i < 8; ++i) {
+			
+			bytes[i] = (byte) (value >> (8 - i - 1 << 3));
+		}
 	}
 
 	public static final ITupleSchema getTupleSchemaForExpressions(
@@ -62,4 +94,6 @@ public class ExpressionsUtil {
 		return new TupleSchema(offsets, first.getByteSizeOfTuple() - first.getDummyContent().length
 				+ second.getByteSizeOfTuple() - second.getDummyContent().length);
 	}
+
+	
 }

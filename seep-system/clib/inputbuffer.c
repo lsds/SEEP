@@ -13,7 +13,7 @@
 static int IS_ZERO_COPY (void *ptr, int len) {
 
 	dbg("p is %lu\n", (uintptr_t) ptr);
-	if ((uintptr_t) ptr % (16) != 0) /* Page alignment */
+	if ((uintptr_t) ptr % (256) != 0) /* 256=byte alignment */
 		return 0;
 	if (len % 64 != 0) /* Cache alignment */
 		return 0;

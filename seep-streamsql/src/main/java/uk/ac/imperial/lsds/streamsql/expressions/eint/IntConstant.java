@@ -9,7 +9,7 @@ public class IntConstant implements IntExpression {
 
 	private int _constant;
 
-	private byte[] _constantBytes;
+	private byte [] _constantBytes;
 
 	public IntConstant(int constant) {
 		_constant = constant;
@@ -48,5 +48,11 @@ public class IntConstant implements IntExpression {
 	@Override
 	public byte[] evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset) {
 		return _constantBytes;
+	}
+	
+	@Override
+	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes) {
+		System.arraycopy(_constantBytes, 0, bytes, 0, _constantBytes.length);
 	}
 }

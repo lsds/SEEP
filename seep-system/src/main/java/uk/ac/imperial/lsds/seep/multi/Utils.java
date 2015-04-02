@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class Utils {
 	
-	public static int BATCH = 64;
+	public static int BATCH = 32;
 
 	public static int BUNDLE = 1048576;
 	
