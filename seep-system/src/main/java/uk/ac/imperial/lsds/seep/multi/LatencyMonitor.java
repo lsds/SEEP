@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,9 +42,6 @@ public class LatencyMonitor {
 			return null;
 		
 		avg = latency / count;
-//		std = Math.sqrt(
-//			(latencySquared - (latency * latency)) / count / (count - 1)
-//		);
 		
 		return String.format("~= %10.3f += %10.3f >= %10.3f <= %10.3f",
 			avg,
@@ -60,8 +56,6 @@ public class LatencyMonitor {
 		if (! this.active.get())
 			return ;
 		
-		// System.out.println("[DBG] In latency monitor: task " + taskid);
-		
 		double dt = 0;
 		/* Check buffer */
 		
@@ -70,12 +64,9 @@ public class LatencyMonitor {
 		long t2 = System.nanoTime();
 		dt = (t2 - t1) / 1000000.0; /* In milliseconds */
 
-		// System.out.println("[DBG] Timestamp in latency monitor is " + t1 + "; dt is " + dt);
-		
 		measurements.add(dt);
 		
 		latency += dt;
-		// System.out.println("[DBG] cummulative latency in latency monitor is " + latency);
 		latencySquared += (dt * dt);
 		count += 1;
 		
@@ -101,12 +92,12 @@ public class LatencyMonitor {
 			array[i++] = d.doubleValue();
 		Arrays.sort(array);
 		
-		System.out.println(String.format("[DBG] [LatencyMonitor] 5th %10.3f 25th %10.3f 50th %10.3f 75th %10.3f 95th %10.3f", 
+		System.out.println(String.format("[DBG] [LatencyMonitor] 5th %10.3f 25th %10.3f 50th %10.3f 75th %10.3f 99th %10.3f", 
 			evaluateSorted(array,  5D),
 			evaluateSorted(array, 25D),
 			evaluateSorted(array, 50D),
 			evaluateSorted(array, 75D),
-			evaluateSorted(array, 95D)
+			evaluateSorted(array, 99D)
 			));
 	}
 	

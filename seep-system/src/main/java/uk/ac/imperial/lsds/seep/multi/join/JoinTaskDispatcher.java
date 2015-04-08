@@ -1,11 +1,8 @@
 package uk.ac.imperial.lsds.seep.multi.join;
 
-//import java.util.concurrent.ConcurrentLinkedQueue;
 import uk.ac.imperial.lsds.seep.multi.TaskQueue;
-
 import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
-import uk.ac.imperial.lsds.seep.multi.ITask;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
@@ -29,7 +26,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	
 	private int batch;
 	
-	private int nextTask = 0;
+	private int nextTask = 1;
 	
 	private int firstStartIndex      = 0;
 	private int firstNextIndex       = 0;
@@ -76,8 +73,6 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	public void setup () {
 		/* The default task queue for either CPU or GPU executor */
 		this.workerQueue = this.parent.getExecutorQueue();
-		// if (Utils.HYBRID)
-		//	this._workerQueue = this.parent.getGPUExecutorQueue();
 	}
 	
 	@Override
@@ -103,10 +98,6 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 * the data to create a task, the start-pointer will be set to this next-pointer
 			 */
 			if (firstWindow.isRowBased()) {
-				
-				// the following is not needed
-//				if (firstEndIndex < firstNextIndex)
-//					firstEndIndex += firstBuffer.capacity();
 				
 				while ((firstNextIndex + firstWindow.getSize() * firstTupleSize) < firstEndIndex)
 					firstNextIndex += firstTupleSize * firstWindow.getSlide();
@@ -155,10 +146,6 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 */
 			if (secondWindow.isRowBased()) {
 				
-				// the following is not needed
-//				if (secondEndIndex < secondNextIndex)
-//					secondEndIndex += secondBuffer.capacity();
-				
 				while ((secondNextIndex + secondWindow.getSize() * secondTupleSize) < secondEndIndex)
 					secondNextIndex += secondTupleSize * secondWindow.getSlide();
 			
@@ -202,27 +189,13 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);
 
-//		System.out.println(String.format("[DBG] FIRST  window batch starts at %10d ends at %10d free at %10d", firstStartIndex, firstEndIndex, firstFree));
-//		System.out.println(String.format("[DBG] SECOND window batch starts at %10d ends at %10d free at %10d", secondStartIndex, secondEndIndex, secondFree));
-
-		// if (Utils.HYBRID) {
-			/* Round-robin submission to CPU and GPU executors */
-			/* if (taskid % 3 == 0) {
-				task.setGPU(true);
-				_workerQueue.add(task);
-			} else {
-				workerQueue.add(task);
-			}
-			*/
-		//	if (workerQueue.size() < _workerQueue.size())
-		//		workerQueue.add(task);
-		//	else {
-		//		task.setGPU(true);
-		//		_workerQueue.add(task);
-		//	}
-		//} else {
-		// workerQueue.add(task);
-		// }
+		/* System.out.println(String.format("[DBG] 1st window batch starts at %10d ends at %10d free at %10d", 
+		firstStartIndex, firstEndIndex, firstFree)); */
+		
+		/* System.out.println(String.format("[DBG] 2nd window batch starts at %10d ends at %10d free at %10d", 
+		secondStartIndex, secondEndIndex, secondFree)); */
+		
+		workerQueue.add(task);
 		
 		/*
 		 * First, reduce the number of tuples that are ready for processing by the 
@@ -248,7 +221,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private int getTaskNumber () {
 		int id = nextTask ++;
 		if (nextTask == Integer.MAX_VALUE)
-			nextTask = 0;
+			nextTask = 1;
 		return id;
 	}
 
@@ -264,9 +237,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 
 	@Override
 	public boolean tryDispatch (byte[] data, int length) {
-		// TODO Auto-generated method stub
+		
 		return false;
 	}
-
 }
 

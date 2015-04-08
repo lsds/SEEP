@@ -15,6 +15,14 @@ public class TaskProcessor implements Runnable {
 	/* Measurements */
 	private AtomicLong [] tasksProcessed;
 	
+	/* Latency measurements */
+	boolean monitor = false;
+	
+	private long count = 0L;
+	private long start,  dt;
+	double _m, m, _s, s;
+	double avg = 0D, std = 0D;
+	
 	public TaskProcessor (int pid, TaskQueue queue, int [][] policy, boolean GPU) {
 		
 		this.pid = pid;
@@ -32,21 +40,45 @@ public class TaskProcessor implements Runnable {
 		for (int i = 0; i < nqueries; i++)
 			this.tasksProcessed[i] = new AtomicLong (0L);
 	}
+	
+	public void enableMonitoring () {
+		this.monitor = true;
+	}
 
 	@Override
 	public void run() {
-		Task task = null;
+		ITask task = null;
 		if (GPU) {
 			System.out.println ("[DBG] GPU thread is " + Thread.currentThread());
 			/* TheGPU.getInstance().bind(1); */
 		} else {
-			/* TheGPU.getInstance().bind(pid + 1); */
+			TheGPU.getInstance().bind(pid + 1);
 		}
 		
 		while (true) {
 			try {
+				
+				if (monitor) {
+					/* Introduce latency measurements */
+					start = System.nanoTime();
+				}
+				
 				while ((task = queue.poll(policy, cid, 0)) == null) {
 					LockSupport.parkNanos(1L);
+				}
+				
+				if (monitor) {
+					dt = System.nanoTime() - start;
+					count += 1;
+					if (count == 1) {
+						_m = m = (double) dt;
+						_s = 0.0;
+					} else {
+						m = _m + ((double) dt - _m) / count;
+						s = _s + ((double) dt - _m) * ((double) dt - m);
+						_m = m; 
+						_s = s;
+					}
 				}
 				
 				/* Testing Java pass-by-value policy table
@@ -84,5 +116,19 @@ public class TaskProcessor implements Runnable {
 	
 	public long getProcessedTasks(int qid) {
 		return tasksProcessed[qid].get();
+	}
+	
+	public double mean () {
+		if (! monitor)
+			return 0D;
+		avg = (count > 0) ? m : 0D;
+		return avg;
+	}
+	
+	public double stdv () {
+		if (! monitor)
+			return 0D;
+		std = (count > 1) ? s / (double) (count - 1) : 0D;
+		return std;
 	}
 }

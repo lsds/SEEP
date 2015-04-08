@@ -1,13 +1,11 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
-import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class ResultHandler {
 
-	public final int SLOTS = Utils.TASKS * 4; // + 1;
+	public final int SLOTS = Utils.TASKS * 4;
 
 	public IQueryBuffer freeBuffer;
 	
@@ -30,8 +28,6 @@ public class ResultHandler {
 	int next;
 
 	public int wraps = 0;
-	
-	Pusher pusher;
 
 	public ResultHandler (IQueryBuffer freeBuffer, SubQuery query) {
 		
@@ -46,15 +42,5 @@ public class ResultHandler {
 		
 		next = 0;
 		semaphore = new Semaphore(1, false);
-		
-//		pusher = new Pusher(this, query);
-//		
-//		Thread pusherThr = new Thread(pusher);
-//		pusherThr.setName("Pusher-" + query.getId());
-//		pusherThr.start();
-	}
-
-	public void stopPushing() {
-		((Pusher) pusher).stopWorking();
 	}
 }

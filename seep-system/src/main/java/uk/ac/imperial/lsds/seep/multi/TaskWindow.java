@@ -2,17 +2,17 @@ package uk.ac.imperial.lsds.seep.multi;
 
 class TaskWindow {
 	
-	public Task pred, curr;
+	public ITask pred, curr;
 	
-	public TaskWindow (Task pred, Task curr) {
+	public TaskWindow (ITask pred, ITask curr) {
 		this.pred = pred;
 		this.curr = curr;
 	}
 	
-	public static TaskWindow find (Task head, int taskid) {
-		Task pred = null;
-		Task curr = null;
-		Task succ = null;
+	public static TaskWindow find (ITask head, int taskid) {
+		ITask pred = null;
+		ITask curr = null;
+		ITask succ = null;
 		boolean [] marked = { false };
 		boolean snip;
 		retry: while (true) {
@@ -35,10 +35,10 @@ class TaskWindow {
 		}
 	}
 
-	public static TaskWindow findTail (Task head) {
-		Task pred = null;
-		Task curr = null;
-		Task succ = null;
+	public static TaskWindow findTail (ITask head) {
+		ITask pred = null;
+		ITask curr = null;
+		ITask succ = null;
 		boolean [] marked = { false };
 		boolean snip;
 		retry: while (true) {
@@ -61,10 +61,10 @@ class TaskWindow {
 		}
 	}
 
-	public static TaskWindow findHead(Task head) {
-		Task pred = null;
-		Task curr = null;
-		Task succ = null;
+	public static TaskWindow findHead(ITask head) {
+		ITask pred = null;
+		ITask curr = null;
+		ITask succ = null;
 		boolean [] marked = { false };
 		boolean snip;
 		retry: while (true) {
@@ -84,10 +84,10 @@ class TaskWindow {
 		}
 	}
 
-	public static TaskWindow findNext(Task head, int taskid1, int taskid2) {
-		Task pred = null;
-		Task curr = null;
-		Task succ = null;
+	public static TaskWindow findNext(ITask head, int taskid1, int taskid2) {
+		ITask pred = null;
+		ITask curr = null;
+		ITask succ = null;
 		boolean [] marked = { false };
 		boolean snip;
 		retry: while (true) {
@@ -113,10 +113,10 @@ class TaskWindow {
 	}
 	
 	
-	public static TaskWindow findNextSkipCost(Task head, int[][] policy, int p) {
-		Task pred = null;
-		Task curr = null;
-		Task succ = null;
+	public static TaskWindow findNextSkipCost(ITask head, int[][] policy, int p) {
+		ITask pred = null;
+		ITask curr = null;
+		ITask succ = null;
 		boolean [] marked = { false };
 		boolean snip;
 		int _p = (p + 1) % 2; /* The other processor */

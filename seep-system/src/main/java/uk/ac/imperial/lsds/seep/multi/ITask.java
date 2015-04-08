@@ -1,13 +1,20 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-public interface ITask extends IWindowAPI {
+import java.util.concurrent.atomic.AtomicMarkableReference;
 
-	public int run();
-
-	public void free();
+public abstract class ITask implements IWindowAPI {
 	
-	public void setGPU (boolean GPU);
+	public int taskid;
+	public int queryid;
+	public AtomicMarkableReference<ITask> next;
 	
-	// public void setBufferFactory(LocalUnboundedQueryBufferFactory bufferFactory);
+	protected boolean GPU = false;
 	
+	public abstract int run();
+	
+	public abstract void free();
+	
+	public void setGPU (boolean GPU) {
+		this.GPU = GPU;
+	}
 }

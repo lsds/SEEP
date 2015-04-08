@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi.join;
 
+import java.util.concurrent.atomic.AtomicMarkableReference;
+
 import uk.ac.imperial.lsds.seep.multi.ITask;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.ResultCollector;
@@ -7,49 +9,57 @@ import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowBatchFactory;
 
-public class JoinTask implements ITask {
+public class JoinTask extends ITask {
 
-	private WindowBatch		    firstBatch;
-	private WindowBatch		    secondBatch;
-	private JoinResultHandler	handler;
-	private int				    taskid;
-	private int				    firstFreeUpTo;
-	private int				    secondFreeUpTo;
-	private SubQuery		    query;
-
-	private boolean			GPU	= false;
-
-	@Override
-	public void setGPU(boolean GPU) {
-		this.GPU = GPU;
-	}
-
+	private WindowBatch batch1;
+	private WindowBatch batch2;
+	
+	private JoinResultHandler handler;
+	
+	private int freeIndex1;
+	private int freeIndex2;
+	
+	private SubQuery query;
+	
 	public JoinTask() {
-		this(null, null, null, null, 0, 0, 0);
+		
+		this(null, null, null, null, 0, 0, 0, 0);
 	}
 
-	public JoinTask(SubQuery query, WindowBatch firstBatch,
-			WindowBatch secondBatch, JoinResultHandler handler, int taskid,
-			int firstFreeUpTo, int secondFreeUpTo) {
+	public JoinTask (SubQuery query, WindowBatch batch1, WindowBatch batch2, JoinResultHandler handler, 
+		int taskid, int freeIndex1, int freeIndex2, int queryid) {
+		
 		this.query = query;
-		this.firstBatch = firstBatch;
-		this.secondBatch = secondBatch;
+		
+		this.batch1 = batch1;
+		this.batch2 = batch2;
+		
 		this.handler = handler;
+		
+		this.freeIndex1 = freeIndex1;
+		this.freeIndex2 = freeIndex2;
+		
 		this.taskid = taskid;
-		this.firstFreeUpTo = firstFreeUpTo;
-		this.secondFreeUpTo = secondFreeUpTo;
+		this.queryid = queryid;
+		this.next = new AtomicMarkableReference<ITask>(null, false);
 	}
 
-	public void set(SubQuery query, WindowBatch firstBatch,
-			WindowBatch secondBatch, JoinResultHandler handler, int taskid,
-			int firstFreeUpTo, int secondFreeUpTo) {
+	public void set(SubQuery query, WindowBatch batch1, WindowBatch batch2, JoinResultHandler handler, 
+		int taskid, int freeIndex1, int freeIndex2) {
+		
 		this.query = query;
-		this.firstBatch = firstBatch;
-		this.secondBatch = secondBatch;
+		
+		this.batch1 = batch1;
+		this.batch2 = batch2;
+		
 		this.handler = handler;
+		
+		this.freeIndex1 = freeIndex1;
+		this.freeIndex2 = freeIndex2;
+		
 		this.taskid = taskid;
-		this.firstFreeUpTo = firstFreeUpTo;
-		this.secondFreeUpTo = secondFreeUpTo;
+		this.queryid = query.getId();
+		this.next.set(null, false);
 	}
 
 	@Override
@@ -60,33 +70,29 @@ public class JoinTask implements ITask {
 		/*
 		 * First micro operator must be a join style operator
 		 */
-		next.process(this.firstBatch, this.secondBatch, this, GPU);
+		next.process(this.batch1, this.batch2, this, GPU);
 		next = next.getLocalDownstream();
 		
 		/*
 		 * All micro operators that follow the first one must be single-input operators
 		 */
 		while (next != null) {
-			next.process(this.firstBatch, this, GPU);
+			next.process(this.batch1, this, GPU);
 			next = next.getLocalDownstream();
 		}
 
-		ResultCollector.forwardAndFree(handler, query, this.firstBatch.getBuffer(),
-				taskid, firstFreeUpTo, secondFreeUpTo);
-
-		// this.firstBatch.getBuffer().release();
-		// this.secondBatch.getBuffer().release();
+		ResultCollector.forwardAndFree(handler, query, this.batch1.getBuffer(),
+				taskid, freeIndex1, freeIndex2);
 		
-		WindowBatchFactory.free(this.firstBatch);
-		WindowBatchFactory.free(this.secondBatch);
-
+		WindowBatchFactory.free(this.batch1);
+		WindowBatchFactory.free(this.batch2);
 		return 0;
 	}
 
 	@Override
-	public void outputWindowBatchResult(int streamID,
-			WindowBatch windowBatchResult) {
-		this.firstBatch = windowBatchResult;
+	public void outputWindowBatchResult(int streamID, WindowBatch windowBatchResult) {
+		
+		this.batch1 = windowBatchResult;
 		/* Control returns to run() method */
 	}
 
