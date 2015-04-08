@@ -81,16 +81,17 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		/*
 		 * write the data to the buffer
 		 */
-		while ((this.firstEndIndex = firstBuffer.put(data, length)) < 0) 
+		int idx;
+		while ((idx = firstBuffer.put(data, length)) < 0) 
 			Thread.yield();
 
-		this.firstEndIndex += length - firstTupleSize;
+		this.firstEndIndex = idx + length - firstTupleSize;
 		
 		synchronized (lock) {
 			if (firstEndIndex < firstStartIndex)
 				firstEndIndex += firstBuffer.capacity();
 			
-			firstToProcessCount += (firstEndIndex - firstStartIndex + this.firstTupleSize) / this.firstTupleSize;
+			firstToProcessCount = (firstEndIndex - firstStartIndex + this.firstTupleSize) / this.firstTupleSize;
 					
 			/*
 			 * check whether we have to move the pointer that indicates the oldest
@@ -128,16 +129,17 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		/*
 		 * write the data to the buffer
 		 */
-		while ((this.secondEndIndex = secondBuffer.put(data, length)) < 0) 
+		int idx;
+		while ((idx = secondBuffer.put(data, length)) < 0) 
 			Thread.yield();
 
-		this.secondEndIndex += length - secondTupleSize;
+		this.secondEndIndex = idx + length - secondTupleSize;
 
 		synchronized (lock) {
 			if (secondEndIndex < secondStartIndex)
 				secondEndIndex += secondBuffer.capacity();
 			
-			secondToProcessCount += (secondEndIndex - secondStartIndex + this.secondTupleSize) / this.secondTupleSize;
+			secondToProcessCount = (secondEndIndex - secondStartIndex + this.secondTupleSize) / this.secondTupleSize;
 					
 			/*
 			 * check whether we have to move the pointer that indicates the oldest
@@ -189,11 +191,11 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);
 
-		/* System.out.println(String.format("[DBG] 1st window batch starts at %10d ends at %10d free at %10d", 
-		firstStartIndex, firstEndIndex, firstFree)); */
+		System.out.println(String.format("[DBG] 1st window batch starts at %10d ends at %10d free at %10d", 
+		firstStartIndex, firstEndIndex, firstFree)); 
 		
-		/* System.out.println(String.format("[DBG] 2nd window batch starts at %10d ends at %10d free at %10d", 
-		secondStartIndex, secondEndIndex, secondFree)); */
+		System.out.println(String.format("[DBG] 2nd window batch starts at %10d ends at %10d free at %10d", 
+		secondStartIndex, secondEndIndex, secondFree)); 
 		
 		workerQueue.add(task);
 		
