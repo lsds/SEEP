@@ -1,7 +1,5 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
-import java.util.Arrays;
-
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -289,8 +287,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		IntMap keyOffsets;
 		IntMap windowTupleCount = null;
 		
-		byte [] i_bytes = new byte [4];
-		// byte [] l_bytes = new byte [8];
+		//byte [] i_bytes = new byte [4];
+		byte [] l_bytes = new byte [8];
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
@@ -314,7 +312,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				while (inWindowStartOffset < inWindowEndOffset) {
 					
 					// get the key
-					int key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset, i_bytes);
+					int key = getGroupByKey(inBuffer, inSchema, inWindowStartOffset, l_bytes);
 					
 					// check whether there is already an entry in the window
 					// buffer for this key
@@ -497,6 +495,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		IntMap keyOffsets = IntMapFactory.newInstance();
 		IntMap windowTupleCount = null;
+		
+		byte[] l_bytes = new byte[8];
 
 		if (this.aggregationType == AggregationType.AVG) 
 			windowTupleCount = IntMapFactory.newInstance();
@@ -510,7 +510,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
 						exitedWindow(inBuffer, inSchema, i, windowBuffer,
-								keyOffsets, windowTupleCount);
+								keyOffsets, windowTupleCount, l_bytes);
 					}
 				}
 				
@@ -525,12 +525,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowEnd; i < inWindowEndOffset; i += byteSizeOfInTuple) {
 						enteredWindow(inBuffer, inSchema, i, windowBuffer,
-								keyOffsets, windowTupleCount);
+								keyOffsets, windowTupleCount, l_bytes);
 					}
 				} else {
 					for (int i = inWindowStartOffset; i < inWindowEndOffset; i += byteSizeOfInTuple) {
 						enteredWindow(inBuffer, inSchema, i, windowBuffer,
-								keyOffsets, windowTupleCount);
+								keyOffsets, windowTupleCount, l_bytes);
 					}
 				}
 
@@ -540,7 +540,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
 						exitedWindow(inBuffer, inSchema, i, windowBuffer,
-								keyOffsets, windowTupleCount);
+								keyOffsets, windowTupleCount, l_bytes);
 					}
 				}
 
@@ -687,9 +687,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	private void enteredWindow(IQueryBuffer inBuffer, ITupleSchema inSchema,
 			int enterOffset, IQueryBuffer windowBuffer,
 			IntMap keyOffsets,
-			IntMap windowTupleCount) {
+			IntMap windowTupleCount, byte[] l_byte) {
 
-		int key = getGroupByKey(inBuffer, inSchema, enterOffset, null);
+		int key = getGroupByKey(inBuffer, inSchema, enterOffset, l_byte);
 
 		if (keyOffsets.containsKey(key)) {
 			int currentValuePositionInWindowBuffer = keyOffsets.get(key)
@@ -739,9 +739,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	private void exitedWindow(IQueryBuffer inBuffer, ITupleSchema inSchema,
 			int removeOffset, IQueryBuffer windowBuffer,
 			IntMap keyOffsets,
-			IntMap windowTupleCount) {
+			IntMap windowTupleCount, byte[] l_byte) {
 
-		int key = getGroupByKey(inBuffer, inSchema, removeOffset, null);
+		int key = getGroupByKey(inBuffer, inSchema, removeOffset, l_byte);
 
 		if (keyOffsets.containsKey(key)) {
 			int currentValuePositionInWindowBuffer = keyOffsets.get(key)
