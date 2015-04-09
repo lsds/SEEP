@@ -134,7 +134,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			Thread.yield();
 
 		this.secondEndIndex = idx + length - secondTupleSize;
-
+		
 		synchronized (lock) {
 			if (secondEndIndex < secondStartIndex)
 				secondEndIndex += secondBuffer.capacity();
@@ -191,11 +191,11 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);
 
-		System.out.println(String.format("[DBG] 1st window batch starts at %10d ends at %10d free at %10d", 
-		firstStartIndex, firstEndIndex, firstFree)); 
-		
-		System.out.println(String.format("[DBG] 2nd window batch starts at %10d ends at %10d free at %10d", 
-		secondStartIndex, secondEndIndex, secondFree)); 
+//		System.out.println(String.format("[DBG] 1st window batch starts at %10d ends at %10d free at %10d", 
+//		firstStartIndex, firstEndIndex, firstFree)); 
+//		
+//		System.out.println(String.format("[DBG] 2nd window batch starts at %10d ends at %10d free at %10d", 
+//		secondStartIndex, secondEndIndex, secondFree)); 
 		
 		workerQueue.add(task);
 		

@@ -28,6 +28,10 @@ public class TaskProcessorPool {
 			for (int i = 0; i < workers; i++)
 				this.processor[i] = new TaskProcessor(i, queue, policy, false);
 		}
+		
+		/* Enable monitoring */
+		for (int i = 0; i < workers; i++)
+			this.processor[i].enableMonitoring();
 	}
 	
 	public TaskQueue start(Executor executor) {
@@ -38,5 +42,13 @@ public class TaskProcessorPool {
 	
 	public long getProcessedTasks (int pid, int qid) {
 		return processor[pid].getProcessedTasks(qid);
+	}
+	
+	public double mean (int pid) {
+		return processor[pid].mean();
+	}
+	
+	public double stdv (int pid) {
+		return processor[pid].stdv();
 	}
 }

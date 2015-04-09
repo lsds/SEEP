@@ -81,6 +81,15 @@ public class PerformanceMonitor implements Runnable {
 			
 			/* Iterate over worker threads */
 			for (int i = 0; i < _tasksProcessed.length; i++) {
+				
+				/*
+				b.append(String.format(" p%02d avg %10.1fns std %10.1fns", 
+						i,
+						operator.getTaskProcessorPool().mean(i),
+						operator.getTaskProcessorPool().stdv(i)
+				));
+				*/
+				
 				/* Iterate over queries */
 				for (int j = 0; j < size; j++) {
 					long tasksProcessed_ = operator.getTaskProcessorPool().getProcessedTasks(i, j);
@@ -103,8 +112,6 @@ public class PerformanceMonitor implements Runnable {
 			b.append(String.format(" w %6d", WindowBatchFactory.count.get()));
 			b.append(String.format(" b %6d", UnboundedQueryBufferFactory.count.get()));
 						
-			/* if (Utils.HYBRID)
-			 *	b.append(String.format(" _q %6d", operator.getSecondExecutorQueueSize())); */
 			System.out.println(b);
 			
 			_time = time;

@@ -19,7 +19,8 @@ public class TaskProcessor implements Runnable {
 	boolean monitor = false;
 	
 	private long count = 0L;
-	private long start,  dt;
+	private long start;
+	private double  dt;
 	double _m, m, _s, s;
 	double avg = 0D, std = 0D;
 	
@@ -68,16 +69,18 @@ public class TaskProcessor implements Runnable {
 				}
 				
 				if (monitor) {
-					dt = System.nanoTime() - start;
+					dt = (double) (System.nanoTime() - start);
 					count += 1;
-					if (count == 1) {
-						_m = m = (double) dt;
-						_s = 0.0;
-					} else {
-						m = _m + ((double) dt - _m) / count;
-						s = _s + ((double) dt - _m) * ((double) dt - m);
-						_m = m; 
-						_s = s;
+					if (count > 1) {
+						if (count == 2) {
+							_m = m = dt;
+							_s = s = 0D;
+						} else {
+							m = _m + (dt - _m) / (count - 1);
+							s = _s + (dt - _m) * (dt - m);
+							_m = m;
+							_s = s;
+						}
 					}
 				}
 				
@@ -128,7 +131,7 @@ public class TaskProcessor implements Runnable {
 	public double stdv () {
 		if (! monitor)
 			return 0D;
-		std = (count > 1) ? s / (double) (count - 1) : 0D;
+		std = (count > 2) ? Math.sqrt(s / (double) (count - 1 - 1)) : 0D;
 		return std;
 	}
 }

@@ -35,9 +35,9 @@ public class ExpressionsUtil {
 		int bits = Float.floatToIntBits(value);
 		
 		bytes[0] = (byte) ((bits)       & 0xff);
-		bytes[0] = (byte) ((bits >>  8) & 0xff);
-		bytes[0] = (byte) ((bits >> 16) & 0xff);
-		bytes[0] = (byte) ((bits >> 24) & 0xff);
+		bytes[1] = (byte) ((bits >>  8) & 0xff);
+		bytes[2] = (byte) ((bits >> 16) & 0xff);
+		bytes[3] = (byte) ((bits >> 24) & 0xff);
 	}
 	
 	public static final byte [] longToByteArray(long value) {
