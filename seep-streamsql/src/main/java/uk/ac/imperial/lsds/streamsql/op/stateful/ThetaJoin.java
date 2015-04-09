@@ -177,7 +177,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 					 * Override end pointers for range in second window batch for all tuples that 
 					 * are in the current window of the first batch. 
 					 */
-					for (int i = firstCurrentWindowStart; i <= firstCurrentWindowEnd; i += firstByteSizeOfInTuple) {
+					for (int i = firstCurrentWindowStart; i <= (firstCurrentWindowEnd - firstByteSizeOfInTuple); i += firstByteSizeOfInTuple) {
 						int __tmpIndex = (i - firstWindowBatch.getBatchStartPointer()) / firstByteSizeOfInTuple;
 						__endPointersInSecond[__tmpIndex] = secondCurrentIndex;
 					}
@@ -236,6 +236,10 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 					secondCurrentIndex += secondByteSizeOfInTuple;
 				}
 			}
+			
+//			System.out.println(Arrays.toString(__startPointersInSecond));
+//			System.out.println(Arrays.toString(__endPointersInSecond));
+
 		}
 		
 		// release old buffers (will return Unbounded Buffers to the pool)
@@ -358,8 +362,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				
 			} else { /* Move in second batch! */
 				
-				for (int i = currentWindowStart1; i <= currentWindowEnd1; i += tupleSize1) {
-					
+				for (int i = currentWindowStart1; i <= (currentWindowEnd1-tupleSize1); i += tupleSize1) {
 					int __tmpIndex = (i - batch1.getBatchStartPointer()) / tupleSize1;
 					__endPointers[__tmpIndex] = currentIndex2;
 				}
