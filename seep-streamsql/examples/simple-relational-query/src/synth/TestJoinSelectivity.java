@@ -107,6 +107,8 @@ public class TestJoinSelectivity {
 		//TODO: use code for GPU computation
 		IMicroOperatorCode gpuJoinCode = new ThetaJoin(predicate);
 		
+		Utils._UNBOUNDED_BUFFER_ = 64 * 1024 * 1024;
+		
 		/*
 		 * Build and set up the query
 		 */
