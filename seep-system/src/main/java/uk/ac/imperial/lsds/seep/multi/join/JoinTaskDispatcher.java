@@ -1,11 +1,11 @@
 package uk.ac.imperial.lsds.seep.multi.join;
 
-import uk.ac.imperial.lsds.seep.multi.TaskQueue;
 import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TaskQueue;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowBatchFactory;
@@ -31,6 +31,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private int firstStartIndex      = 0;
 	private int firstNextIndex       = 0;
 	private int firstEndIndex        = 0;
+	private int firstLastEndIndex    = 0;
 	private int firstToProcessCount  = 0;
 	private int firstTupleSize;
 	private long firstNextTime;
@@ -42,6 +43,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private int secondTupleSize;
 	private int secondStartIndex     = 0;
 	private int secondNextIndex      = 0;
+	private int secondLastEndIndex   = 0;
 	private int secondEndIndex       = 0;
 	private int secondToProcessCount = 0;
 	private int secondMask;
@@ -119,7 +121,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 * check whether we have enough data to create a task
 			 */
 			if (firstToProcessCount >= this.batch || secondToProcessCount >= this.batch)
-				createTask();
+				createTask(true);
 		}
 	}
 	
@@ -167,11 +169,11 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			 * check whether we have enough data to create a task
 			 */
 			if (firstToProcessCount >= this.batch || secondToProcessCount >= this.batch)
-				createTask();
+				createTask(false);
 		}
 	}
 	
-	private void createTask() {
+	private void createTask(boolean dispatchedInFirst) {
 		
 		int taskid = this.getTaskNumber();
 		
@@ -186,16 +188,26 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		WindowBatch firstBatch = WindowBatchFactory.newInstance(this.batch, taskid, firstFree, firstBuffer, firstWindow, firstSchema);
 		WindowBatch secondBatch = WindowBatchFactory.newInstance(this.batch, taskid, secondFree, secondBuffer, secondWindow, secondSchema);
 	
-		firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
-		secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
+		if (dispatchedInFirst) {
+			firstBatch.setBatchPointers(firstLastEndIndex, firstEndIndex);
+			secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
+			this.firstLastEndIndex = this.firstEndIndex;
+			this.secondLastEndIndex = this.secondEndIndex;
+		}
+		else {
+			firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
+			secondBatch.setBatchPointers(secondLastEndIndex, secondEndIndex);
+			this.firstLastEndIndex = this.firstEndIndex;
+			this.secondLastEndIndex = this.secondEndIndex;
+		}
 		
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);
 
 //		System.out.println(String.format("[DBG] 1st window batch starts at %10d ends at %10d free at %10d", 
-//		firstStartIndex, firstEndIndex, firstFree)); 
+//		firstBatch.getBatchStartPointer()/firstTupleSize, firstBatch.getBatchEndPointer()/firstTupleSize, firstFree/firstTupleSize)); 
 //		
 //		System.out.println(String.format("[DBG] 2nd window batch starts at %10d ends at %10d free at %10d", 
-//		secondStartIndex, secondEndIndex, secondFree)); 
+//		secondBatch.getBatchStartPointer()/secondTupleSize, secondBatch.getBatchEndPointer()/secondTupleSize, secondFree/secondTupleSize)); 
 		
 		workerQueue.add(task);
 		
