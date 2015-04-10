@@ -10,7 +10,11 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
@@ -78,16 +82,33 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);		
 		}
-
-		Expression[] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
+		/*
+		Expression [] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
 		tmpAllOutAttributes[0] = this.timestampReference;
 		for (int i = 0; i < this.groupByAttributes.length; i++)
 			tmpAllOutAttributes[i + 1] = this.groupByAttributes[i];
-
+		
 		tmpAllOutAttributes[this.groupByAttributes.length + 1] = this.aggregationAttribute;
-
-		this.outSchema = ExpressionsUtil
-				.getTupleSchemaForExpressions(tmpAllOutAttributes);
+		*/
+		
+		Expression [] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
+		tmpAllOutAttributes[0] = new LongColumnReference(0);
+		for (int i = 1; i <= this.groupByAttributes.length; i++) {
+			Expression e = this.groupByAttributes[i - 1];
+			if (e instanceof IntExpression) {
+				tmpAllOutAttributes[i] = new IntColumnReference(i);
+			} else if (e instanceof LongExpression) {
+				tmpAllOutAttributes[i] = new LongColumnReference(i);
+			} else if (e instanceof FloatExpression) {
+				tmpAllOutAttributes[i] = new FloatColumnReference(i);
+			} else {
+				throw new IllegalArgumentException("unknown expression type");
+			}
+		}
+		tmpAllOutAttributes[this.groupByAttributes.length + 1] = 
+				new FloatColumnReference(this.groupByAttributes.length + 1);
+		
+		this.outSchema = ExpressionsUtil.getTupleSchemaForExpressions(tmpAllOutAttributes);
 		this.byteSizeOfOutTuple = outSchema.getByteSizeOfTuple();
 	}
 
@@ -279,6 +300,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		ITupleSchema inSchema = windowBatch.getSchema();
+		
 		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
 		int offsetOutAggAttribute = outSchema.getByteSizeOfTuple() - outSchema.getDummyContent().length - 4;
 		int inWindowStartOffset;
@@ -358,8 +380,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 						// check whether new value for aggregation attribute
 						// shall be written
-						oldValue = this.aggregationAttribute.eval(windowBuffer, outSchema, keyOffset);
-
+						//oldValue = this.aggregationAttribute.eval(windowBuffer, outSchema, keyOffset);
+						int oldValuePositionInWindowBuffer = keyOffset
+								+ this.byteSizeOfOutTuple
+								- this.aggregationAttributeByteLength;
+						oldValue = windowBuffer
+								.getFloat(oldValuePositionInWindowBuffer);
+						
 						if (this.aggregationType == AggregationType.SUM) {
 							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
 						}

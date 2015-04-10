@@ -55,6 +55,11 @@ public class TupleSchema implements ITupleSchema {
 		return this.dummyContent;
 	}
 
+	@Override
+	public int[] getOffsets() {
+		return offsets;
+	}
+
 
 
 }

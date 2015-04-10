@@ -1,8 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.LockSupport;
-
 public class TaskDispatcher implements ITaskDispatcher {
 	
 	private static final int _undefined = -1;
@@ -34,6 +31,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	long offset;
 	long mask;
 	
+	boolean first = true;
+	
 	/* First and last timestamp of a bulk insert */
 	long start, end;
 	
@@ -54,6 +53,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	/* The last tuple that we have found in search of opening a window batch */
 	int current;
+	
+	int remainder = 0;
 	
 	public TaskDispatcher (SubQuery parent) {
 		
@@ -81,8 +82,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		// System.out.println("[DBG] offset is " + offset);
 		
-		p = q =  0L;
-		next_ =  0L;
+		p = q = 0L;
+		next_ = 0L;
 		_next = tpb - 1;
 		
 		mask = buffer.capacity() - 1;
@@ -102,21 +103,13 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public void setup () {
 		/* The default task queue for either CPU or GPU executor */
 		this.workerQueue = this.parent.getExecutorQueue();
-		// if (Utils.HYBRID)
-		//	this._workerQueue = this.parent.getGPUExecutorQueue();
-		
-//		if (! parent.isMostUpstream())
-//			this.handler.stopPushing();
 	}
 	
 	@Override
 	public void dispatch (byte [] data, int length) {
 		int idx;
 		while ((idx = buffer.put(data, length)) < 0) {
-			// System.err.println(String.format("warning: dispatcher blocked at %s q %d", Thread.currentThread(), parent.getId())); 
 			Thread.yield();
-			//;
-			// LockSupport.parkNanos(1L);
 		}
 		assemble (idx, length);
 	}
@@ -140,9 +133,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 		
-//		System.out.println(
-//			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%3d, %3d] size %10d", 
-//					parent.getId(), taskid, p, q, free, t_, _t, size));
+		/* System.out.println(
+			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
+					parent.getId(), taskid, p, q, free, t_, _t, size)); */
 		 
 		if (q <= p)
 			q += buffer.capacity();
@@ -157,43 +150,26 @@ public class TaskDispatcher implements ITaskDispatcher {
 		} else
 			batch.setBatchPointers((int) p, (int) q);
 		
-		
-		// batch.initWindowPointers();
-		// batch.debug();
-		
+		/*
+		batch.initWindowPointers();
+		batch.debug();
+		*/
 		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
-		
-		// if (Utils.HYBRID) {
-		// 
-		// Weighted round-robin submission to CPU and GPU executors
-		//	
-		// if ((taskid * 10) % 21 == 0) {
-		//	workerQueue.add(task);
-		// } else {
-		//	task.setGPU(true);
-		//	_workerQueue.add(task);
-		// }
-		//	
-		// Shortest-queue-first strategy 
-		//
-		// if (workerQueue.size() < _workerQueue.size())
-		// 	workerQueue.add(task);
-		// else {
-		//	task.setGPU(true);
-		//	_workerQueue.add(task);
-		// }
-		//} else {
-		// workerQueue.add(task);
-		// }
-		
 		workerQueue.add(task);
 	}
 	
 	private void assemble (int index, int length) {
 		/* Number of rows added */
 		int rows = length / tupleSize;
+		
+		int index_ = index - remainder;
+		
+		/* Consider length from index_, +length bytes */
+		int _length = (int) Math.floor((double) (length + remainder) / (double) tupleSize) * tupleSize;
+		remainder = (length + remainder) - _length;
+		
 		/* Index of the last tuple inserted in the circular buffer */
-		int _index = (int) ((index + length - tupleSize) & mask);
+		int _index = (int) ((index_ + _length - tupleSize) & mask);
 		
 		if (window.isRowBased()) {
 			while ((rowCount + rows) >= _next + 1) {
@@ -202,11 +178,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 				q = ((_next + 1) * tupleSize) & mask;
 				q = (q == 0) ? buffer.capacity() : q;
 				/* Set free pointer */
-				// if (window.isTumbling())
 				f = (p + (offset * tupleSize)) & mask;
-				// else
-				//	f = (p + (offset * tupleSize)) & mask;
-					// f = (p + ((offset - 1) * tupleSize)) & mask;
 				f = (f == 0) ? buffer.capacity() : f;
 				f--;
 				/* Dispatch task */
@@ -223,8 +195,18 @@ public class TaskDispatcher implements ITaskDispatcher {
 		} else
 		if (window.isRangeBased()) {
 			/* Get the timestamp of the first and last tuple inserted */
-			start = buffer.getLong( index);
+			start = buffer.getLong(index_);
 			end   = buffer.getLong(_index);
+			
+			if (first) {
+				next_  = start;
+				_next += next_;
+				first = false;
+			}
+			
+			/* System.out.println(String.format("[DBG] range-based window: start %16d end %16d index %10d _index %10d length %10d next_ %16d", 
+					start, end, index_, _index, length, next_)); */
+			
 			/* Open one or more window batches */
 			current = 0;
 			while (end >= next_) {
@@ -251,7 +233,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 				 *       3                 9
 				 */
 				tmp = next_;
-				while ((position = firstOccurenceOf (tmp, current, rows, index)) < 0)
+				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
 					tmp ++;
 				
 				/* Set the start pointer for this window batch */
@@ -280,7 +262,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 			while (end >= (_next + 1)) {
 				
 				tmp = _next + 1;
-				while ((position = firstOccurenceOf (tmp, current, rows, index)) < 0)
+				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
 					tmp ++;
 				
 				/* Set the end pointer for this window batch */

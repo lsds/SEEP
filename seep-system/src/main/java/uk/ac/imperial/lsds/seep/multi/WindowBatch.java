@@ -176,8 +176,8 @@ public class WindowBatch {
 		windowStartPointers = new int [batchSize];
 		windowEndPointers   = new int [batchSize];
 		
-		// Arrays.fill(windowStartPointers, -1);
-		// Arrays.fill(windowEndPointers,   -1);
+		Arrays.fill(windowStartPointers, -1);
+		Arrays.fill(windowEndPointers,   -1);
 		
 		if (batchStartPointer < 0 && batchEndPointer < 0)
 			return ;
@@ -217,17 +217,18 @@ public class WindowBatch {
 				 * Should we open new windows? 
 				 */
 				boolean open = false;
-				while (t - slide_ >= this.batchStartTime + p * slide_) {
+				while (t - slide_ >= this.batchStartTime + ((long) p) * windowDefinition.getSlide()) {
 					p ++;
 					open |= true;
 				}
 				if (open && p < this.batchSize)
 					this.windowStartPointers[p] = i;
 				/* 
-				 * Should be close old windows? 
+				 * Should we close old windows? 
 				 */
 				boolean close = true;
-				while (t > this.batchStartTime + q * slide_ + window_ - 1) {
+				
+				while (t > this.batchStartTime + q * windowDefinition.getSlide() + windowDefinition.getSize() - 1) {
 					if (close)
 						this.windowEndPointers[q] = i;
 					close = false;

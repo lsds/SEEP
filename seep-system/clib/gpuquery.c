@@ -203,78 +203,78 @@ gpuContextP gpu_context_switch (gpuQueryP p) {
 	return p->contexts[next];
 }
 
-//int gpu_query_exec (gpuQueryP q, size_t threads, size_t threadsPerGroup,
-//		queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
-//	if (! q)
-//		return -1;
-//	gpuContextP p = gpu_context_switch (q);
+int gpu_query_exec (gpuQueryP q, size_t threads, size_t threadsPerGroup,
+		queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
+	if (! q)
+		return -1;
+	gpuContextP p = gpu_context_switch (q);
+
+	// printf("[DBG] gpu_query_exec\n");
+
+
+	gpu_context_waitForReadEvent (p);
+	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
+
+//	pthread_mutex_lock(&lock);
 //
-//	// printf("[DBG] gpu_query_exec\n");
+//	/* Set static variables */
 //
-//
-//	gpu_context_waitForReadEvent (p);
-//	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
-//
-////	pthread_mutex_lock(&lock);
-////
-////	/* Set static variables */
-////
-////	__cop = operator;
-////	__ctx = p;
-////	__obj = obj;
-////	if (count == 0)
-////		pthread_cond_signal(&cond);
-////	count += 1;
-////	pthread_mutex_unlock(&lock);
-//
-//	/* Wait for write event */
-//	gpu_context_waitForWriteEvent (p);
-//
-//	/* Write input */
-//	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
-//
-//	// gpu_context_flush (p);
-//
-////	 while (count == 1)
-////	 	;
-//
-//
-//	// gpu_context_flush (p);
-//
-//	/* Wait for read event */
-//
-//	/* Wait for execute event */
-//	/* gpu_context_waitForExecEvent (p); */
-//
-//
-//	// gpu_context_flush (p);
-//
-//	gpu_context_moveInputBuffers (p);
-//
-//	gpu_context_submitKernel (p, threads, threadsPerGroup);
-//
-//	// gpu_context_moveOutputBuffers (p);
-//
-////	gpu_context_flush (p);
-//
-//
-////	pthread_mutex_lock(&lock);
-////	while (count == 1)
-////		pthread_cond_wait(&cond, &lock);
-////	pthread_mutex_unlock(&lock);
-//
-//	// pthread_join (q->thr, NULL);
-//
-//	/* Read output */
-//	// gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
-//
-//	/* Submit task */
-//	gpu_context_moveOutputBuffers (p);
-//
+//	__cop = operator;
+//	__ctx = p;
+//	__obj = obj;
+//	if (count == 0)
+//		pthread_cond_signal(&cond);
+//	count += 1;
+//	pthread_mutex_unlock(&lock);
+
+	/* Wait for write event */
+	gpu_context_waitForWriteEvent (p);
+
+	/* Write input */
+	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
+
+	// gpu_context_flush (p);
+
+//	 while (count == 1)
+//	 	;
+
+
+	// gpu_context_flush (p);
+
+	/* Wait for read event */
+
+	/* Wait for execute event */
+	/* gpu_context_waitForExecEvent (p); */
+
+
+	// gpu_context_flush (p);
+
+	gpu_context_moveInputBuffers (p);
+
+	gpu_context_submitKernel (p, threads, threadsPerGroup);
+
+	// gpu_context_moveOutputBuffers (p);
+
 //	gpu_context_flush (p);
-//
-//	return 0;
-//}
+
+
+//	pthread_mutex_lock(&lock);
+//	while (count == 1)
+//		pthread_cond_wait(&cond, &lock);
+//	pthread_mutex_unlock(&lock);
+
+	// pthread_join (q->thr, NULL);
+
+	/* Read output */
+	// gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
+
+	/* Submit task */
+	gpu_context_moveOutputBuffers (p);
+
+	gpu_context_flush (p);
+
+	return 0;
+}
 
 int gpu_query_exec (gpuQueryP q, size_t threads, size_t threadsPerGroup,
 		queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {

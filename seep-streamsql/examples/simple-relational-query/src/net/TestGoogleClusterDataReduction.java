@@ -24,11 +24,13 @@ import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 
-public class TestLinearRoadBenchmarkData {
+public class TestGoogleClusterDataReduction {
 	
-	private static final String usage = "usage: java TestLinearRoadBenchmarkData";
+	private static final String usage = "usage: java TestGoogleClusterDataReduction";
 	
 	public static void main (String [] args) {
 		
@@ -36,7 +38,7 @@ public class TestLinearRoadBenchmarkData {
 		int port = 6667;
 		
 		int bundle = 512;
-		int tupleSize = 32;
+		int tupleSize = 64;
 		
 		/* Parse command line arguments */
 		int i, j;
@@ -71,16 +73,17 @@ public class TestLinearRoadBenchmarkData {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 4;
-		QueryConf queryConf = new QueryConf(10, 1024);
+		Utils.THREADS = 8;
+		QueryConf queryConf = new QueryConf(60, 1024);
 		/*
 		 * Set up configuration of query
 		 */
 		WindowType windowType = WindowType.fromString("range");
-		long windowRange = 1;
-		long windowSlide = 1;
-		int numberOfAttributesInSchema = 7;
-		int numberOfProjectedAttributes = 3; // numberOfAttributesInSchema;
+		long windowRange = 10;
+		long windowSlide = 10;
+		int numberOfAttributesInSchema = 12;
+		
+		AggregationType aggregationType = AggregationType.fromString("min");
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -89,34 +92,57 @@ public class TestLinearRoadBenchmarkData {
 		/* First attribute is timestamp */
 		offsets[ 0] =  0;
 		offsets[ 1] =  8;
-		offsets[ 2] = 12;
-		offsets[ 3] = 16;
-		offsets[ 4] = 20;
-		offsets[ 5] = 24;
-		offsets[ 6] = 28;
+		offsets[ 2] = 16;
+		offsets[ 3] = 24;
+		offsets[ 4] = 32;
+		offsets[ 5] = 36;
+		offsets[ 6] = 40;
+		offsets[ 7] = 44;
+		offsets[ 8] = 48;
+		offsets[ 9] = 52;
+		offsets[10] = 56;
+		offsets[11] = 60;
 		
-		int byteSize = 32;
+		int byteSize = 64;
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 		
+		/*
 		Expression [] expression = new Expression [numberOfProjectedAttributes];
 		
 		expression[ 0] = new  LongColumnReference( 0);
-		expression[ 1] = new FloatColumnReference( 1);
-		expression[ 2] = new   IntColumnReference( 2);
-		expression[ 3] = new   IntColumnReference( 3);
+		expression[ 1] = new  LongColumnReference( 1);
+		expression[ 2] = new  LongColumnReference( 2);
+		expression[ 3] = new  LongColumnReference( 3);
 		expression[ 4] = new   IntColumnReference( 4);
 		expression[ 5] = new   IntColumnReference( 5);
 		expression[ 6] = new   IntColumnReference( 6);
+		expression[ 7] = new   IntColumnReference( 7);
+		expression[ 8] = new FloatColumnReference( 8);
+		expression[ 9] = new FloatColumnReference( 9);
+		expression[10] = new FloatColumnReference(10);
+		expression[11] = new   IntColumnReference(11);
 		
 		IMicroOperatorCode projectionCode = new Projection (expression);
 		System.out.println(String.format("[DBG] %s", projectionCode));
+		*/
+		
+		Expression [] groupBy = new Expression [] {
+			new LongColumnReference(1)
+		};
+		
+		IMicroOperatorCode reductionCode = new MicroAggregation(
+				window,
+				aggregationType,
+				new FloatColumnReference(8),
+				groupBy
+				);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 256 * 1048576; /* 1MB */
+		Utils._UNBOUNDED_BUFFER_ = 128 * 1048576; /* 1MB */
 		
 		MicroOperator uoperator;
-		uoperator = new MicroOperator (projectionCode, null, 1);
+		uoperator = new MicroOperator (reductionCode, null, 1);
 		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
@@ -188,6 +214,8 @@ public class TestLinearRoadBenchmarkData {
 							buffer.rewind();
 							operator.processData (buffer.array(), bytes);
 							
+							buffer.clear();
+							
 							/* Measurements */
 							Bytes += bytes;
 							/*
@@ -205,7 +233,6 @@ public class TestLinearRoadBenchmarkData {
 								previous = Bytes;
 							}
 							*/
-							buffer.clear();
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");

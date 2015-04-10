@@ -107,6 +107,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
+		// System.out.println(String.format("[DBG] projection %06d", windowBatch.getTaskId()));
 		/*
 		 * Make sure the batch is initialised
 		 */

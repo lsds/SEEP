@@ -59,12 +59,17 @@ public class ExpressionsUtil {
 		}
 	}
 
-	public static final ITupleSchema getTupleSchemaForExpressions(
-			final Expression[] expressions) {
-		int[] offsets = new int[expressions.length];
+	public static final ITupleSchema getTupleSchemaForExpressions
+		(final Expression[] expressions) {
+		
+		int [] offsets = new int[expressions.length];
+		
 		int currentOffset = 0;
+		
 		for (int i = 0; i < expressions.length; i++) {
+			
 			Expression e = expressions[i];
+			
 			offsets[i] = currentOffset;
 			if (e instanceof IntExpression) {
 				currentOffset += 4;
