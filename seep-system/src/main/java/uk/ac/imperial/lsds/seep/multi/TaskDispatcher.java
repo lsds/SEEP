@@ -361,5 +361,17 @@ public class TaskDispatcher implements ITaskDispatcher {
 		/* throw new UnsupportedOperationException("Cannot get second buffer since this is a single-input dispatcher"); */
 		return null;
 	}
+
+	@Override
+	public boolean tryDispatchFirst(byte[] data, int length) {
+		
+		return tryDispatch (data, length);
+	}
+
+	@Override
+	public boolean tryDispatchSecond(byte[] data, int length) {
+		
+		return tryDispatch (data, length);
+	}
 }
 

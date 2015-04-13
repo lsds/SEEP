@@ -142,7 +142,7 @@ public class ThreeIdenticalQueries {
 		SubQuery query3 = new SubQuery (2, operators3, schema3, window3, queryConf3);
 
 		query1.connectTo(10000, query2);
-		query2.connectTo(10001, query3);
+		query1.connectTo(10001, query3);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		queries.add(query1);

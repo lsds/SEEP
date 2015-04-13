@@ -86,7 +86,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		int idx;
 		while ((idx = firstBuffer.put(data, length)) < 0) 
 			Thread.yield();
-
+		
+		assembleFirst (idx, length);
+	}
+	
+	private void assembleFirst (int idx, int length) {
+		
 		this.firstEndIndex = idx + length - firstTupleSize;
 		
 		synchronized (lock) {
@@ -125,7 +130,6 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		}
 	}
 	
-	
 	@Override
 	public void dispatchSecond (byte [] data, int length) {
 		/*
@@ -134,7 +138,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		int idx;
 		while ((idx = secondBuffer.put(data, length)) < 0) 
 			Thread.yield();
-
+		
+		assembleSecond (idx, length);
+	}
+	
+	private void assembleSecond (int idx, int length) {
+		
 		this.secondEndIndex = idx + length - secondTupleSize;
 		
 		synchronized (lock) {
@@ -252,7 +261,32 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	@Override
 	public boolean tryDispatch (byte[] data, int length) {
 		
-		return false;
+		/*
+		 * write the data to the buffer
+		 */
+		int idx;
+		if ((idx = firstBuffer.put(data, length)) < 0) 
+			return false;
+		
+		assembleFirst (idx, length);
+		return true;
+	}
+
+	@Override
+	public boolean tryDispatchFirst(byte[] data, int length) {
+		
+		return tryDispatch (data, length);
+	}
+	
+	@Override
+	public boolean tryDispatchSecond(byte[] data, int length) {
+		
+		int idx;
+		if ((idx = secondBuffer.put(data, length)) < 0) 
+			return false;
+		
+		assembleSecond (idx, length);
+		return true;
 	}
 }
 

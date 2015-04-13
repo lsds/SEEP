@@ -21,8 +21,8 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 
-		int[] startPointers = windowBatch.getWindowStartPointers();
-		int[] endPointers = windowBatch.getWindowEndPointers();
+		int [] startPointers = windowBatch.getWindowStartPointers();
+		int [] endPointers = windowBatch.getWindowEndPointers();
 
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
 		ITupleSchema inSchema = windowBatch.getSchema();

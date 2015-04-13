@@ -30,6 +30,9 @@ public class JoinResultHandler {
 	public int []  firstOffsets = new int[SLOTS];
 	public int [] secondOffsets = new int[SLOTS];
 	
+	/* A query can have more than one downstream sub-queries. */
+	public int [] latch = new int [SLOTS];
+	
 	public Semaphore semaphore; /* Protects next */
 	public int next;
 
@@ -46,6 +49,8 @@ public class JoinResultHandler {
 			slots.set(i, -1);
 			 firstOffsets[i] = Integer.MIN_VALUE;
 			secondOffsets[i] = Integer.MIN_VALUE;
+			
+			latch[i] = 0;
 		}
 		
 		next = 0;

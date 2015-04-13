@@ -26,6 +26,8 @@ public class ResultCollector {
 			handler.offsets[idx] = freeOffset;
 			handler.results[idx] = buffer;
 			
+			handler.latch [idx] = 0; 
+			
 			/* No other thread can modify this slot. */
 			handler.slots.set(idx, 1);
 			
@@ -53,10 +55,22 @@ public class ResultCollector {
 				/*
 				 * Do the actual result forwarding
 				 */
-				if (query.getDownstreamSubQuery() != null) {
-					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr, arr.length)) {
-						handler.slots.set(handler.next, 1);
-						break;
+				if (query.getNumberOfDownstreamSubQueries() > 0) {
+					int pos = handler.latch[handler.next];
+					for (int i = pos; i < query.getNumberOfDownstreamSubQueries(); i++) {
+						if (query.getDownstreamSubQuery(i) != null) {
+							boolean result = false;
+							if (query.isLeft()) {
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, arr.length);
+							} else {
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, arr.length);
+							}
+							if (! result) {
+								handler.latch[handler.next] = i;
+								handler.slots.set(handler.next, 1);
+								break;
+							}
+						}
 					}
 				}
 				
@@ -156,10 +170,25 @@ public class ResultCollector {
 				/*
 				 * Do the actual result forwarding
 				 */
-				if (query.getDownstreamSubQuery() != null) {
-					if (! query.getDownstreamSubQuery().getTaskDispatcher().tryDispatch(arr, arr.length)) {
-						handler.slots.set(handler.next, 1);
-						break;
+				/*
+				 * Do the actual result forwarding
+				 */
+				if (query.getNumberOfDownstreamSubQueries() > 0) {
+					int pos = handler.latch[handler.next];
+					for (int i = pos; i < query.getNumberOfDownstreamSubQueries(); i++) {
+						if (query.getDownstreamSubQuery(i) != null) {
+							boolean result = false;
+							if (query.isLeft()) {
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, arr.length);
+							} else {
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, arr.length);
+							}
+							if (! result) {
+								handler.latch[handler.next] = i;
+								handler.slots.set(handler.next, 1);
+								break;
+							}
+						}
 					}
 				}
 				

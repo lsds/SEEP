@@ -22,7 +22,10 @@ public class ResultHandler {
 	 * Structures to hold the actual data
 	 */
 	public IQueryBuffer [] results = new IQueryBuffer [SLOTS];
-	public int [] offsets = new int[SLOTS];
+	public int [] offsets = new int [SLOTS];
+	
+	/* A query can have more than one downstream sub-queries. */
+	public int [] latch = new int [SLOTS];
 	
 	Semaphore semaphore; /* Protects next */
 	int next;
@@ -38,6 +41,8 @@ public class ResultHandler {
 		for (int i = 0; i < SLOTS; i++) {
 			slots.set(i, -1);
 			offsets[i] = Integer.MIN_VALUE;
+			
+			latch[i] = 0;
 		}
 		
 		next = 0;
