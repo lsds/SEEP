@@ -10,6 +10,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
@@ -128,7 +129,7 @@ public class TestAggregationType {
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
 		
-		TheGPU.getInstance().bind(0);
+		TheCPU.getInstance().bind(0);
 
 		/*
 		 * Set up the stream

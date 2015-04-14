@@ -43,7 +43,7 @@ typedef struct gpu_context {
 	cl_command_queue queue [2];
 	int scheduled;
 	cl_event read_event;
-	cl_event exec_event;
+	cl_event exec_event[MAX_KERNELS];
 	cl_event write_event;
 	long long readCount;
 	long long writeCount;
@@ -56,7 +56,7 @@ void gpu_context_free (gpuContextP);
 
 void gpu_context_setInput (gpuContextP, int, void *, int);
 
-void gpu_context_setOutput (gpuContextP, int, void *, int, int);
+void gpu_context_setOutput (gpuContextP, int, void *, int, int, int, int, int);
 
 void gpu_context_setKernel (gpuContextP, int,
 		const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
@@ -67,17 +67,15 @@ void gpu_context_waitForWriteEvent (gpuContextP);
 
 void gpu_context_waitForExecEvent (gpuContextP);
 
+void gpu_context_profileQuery (gpuContextP);
+
 void gpu_context_flush (gpuContextP);
 
 void gpu_context_finish (gpuContextP);
 
-void gpu_context_submitTask (gpuContextP, size_t, size_t);
+void gpu_context_submitTask (gpuContextP, size_t *, size_t *);
 
-void gpu_context_submitKernel (gpuContextP, size_t, size_t);
-
-void gpu_context_custom_submitKernel (gpuContextP, size_t, size_t, size_t, size_t);
-
-void gpu_context_submitOverlappingTask (gpuContextP, size_t, size_t);
+void gpu_context_submitKernel (gpuContextP, size_t *, size_t *);
 
 void gpu_context_writeInput (gpuContextP,
 		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),

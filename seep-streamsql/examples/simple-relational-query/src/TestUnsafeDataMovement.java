@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.DummyKernel;
@@ -137,7 +138,7 @@ public class TestUnsafeDataMovement {
 		
 		System.out.println(String.format("[DBG] %10d bytes", inputSize));
 		
-		TheGPU.getInstance().bind(1);
+		TheCPU.getInstance().bind(1);
 		
 		Thread monitor = new Thread(test.new MyMonitor());
 		monitor.setName("MyMonitor");
@@ -156,7 +157,7 @@ public class TestUnsafeDataMovement {
 		
 		/* Copy input */
 		for (int i = 0; i < _nq_; i++) {
-			TheGPU.getInstance().copyInputBuffers(qids[i]);
+			// TheGPU.getInstance().copyInputBuffers(qids[i]);
 		}
 		
 		while (count < iterations) {
@@ -170,7 +171,7 @@ public class TestUnsafeDataMovement {
 			for (int i = 0; i < _nq_; i++) {
 				
 				// TheGPU.getInstance().moveInputAndOutputBuffers(qids[i]);
-				TheGPU.getInstance().execute(qids[i], threads, threadsPerGroup);
+				// TheGPU.getInstance().execute(qids[i], threads, threadsPerGroup);
 			}
 			
 			count += 1;

@@ -1,223 +1,231 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
 
-#define T int
-#define identity 0
-#define indexof(x) x
-#define apply(a,b) (a + b)
+#include "byteorder.h"
+
+#define  INPUT_VECTOR_SIZE 2
+#define OUTPUT_VECTOR_SIZE 2
+
+typedef struct {
+    long t;
+    int _1;
+    int _2;
+    float _3;
+    int _4;
+    long _5;
+} input_tuple_t __attribute__((aligned(1)));
+
+typedef union {
+    input_tuple_t tuple;
+    uchar16 vectors [INPUT_VECTOR_SIZE];
+} input_t;
 
 typedef struct {
 	long t;
 	int _1;
 	int _2;
-	int _3;
+	float _3;
 	int _4;
-	int _5;
-	int _6;
-} input_tuple_t __attribute__((aligned(1)));
+	long _5;
+} output_tuple_t  __attribute__((aligned(1)));
 
 typedef union {
-	input_tuple_t tuple;
-	uchar16 vectors[2];
-} input_t;
+	output_tuple_t tuple;
+	uchar16 vectors [OUTPUT_VECTOR_SIZE];
+} output_t;
 
-/* Since this is a selection, the output type is the same as the input */
-#define output_t input_t
-
-inline int selectf (__global input_t *p) {
-	return 1;
+inline int selectf(__global input_t *p) {
+	int value  = __bswap32(p->tuple._1);
+	int result = 0;
+	if ((value > 10) && (value < 20))
+		result = 1;
+	return result;
 }
 
-inline T scan_exclusive
-(
-	__local T *input,
-	size_t idx,
-	const uint lane
-)
-{
-	if (lane > 0) input[idx] = apply(input[indexof(idx - 1)], input[indexof(idx)]);
-	if (lane > 1) input[idx] = apply(input[indexof(idx - 2)], input[indexof(idx)]);
-	if (lane > 3) input[idx] = apply(input[indexof(idx - 4)], input[indexof(idx)]);
-	if (lane > 7) input[idx] = apply(input[indexof(idx - 8)], input[indexof(idx)]);
-	if (lane >15) input[idx] = apply(input[indexof(idx -16)], input[indexof(idx)]);
-	if (lane >31) input[idx] = apply(input[indexof(idx -32)], input[indexof(idx)]);
-	return (lane > 0) ? input[idx - 1] : identity;
-}
+/* Scan based on the implementation of [...] */
 
-inline T scan_inclusive
-(
-	__local T *input,
-	size_t idx,
-	const uint lane
-)
-{
-	if (lane > 0) input[idx] = apply(input[indexof(idx - 1)], input[indexof(idx)]);
-	if (lane > 1) input[idx] = apply(input[indexof(idx - 2)], input[indexof(idx)]);
-	if (lane > 3) input[idx] = apply(input[indexof(idx - 4)], input[indexof(idx)]);
-	if (lane > 7) input[idx] = apply(input[indexof(idx - 8)], input[indexof(idx)]);
-	if (lane >15) input[idx] = apply(input[indexof(idx -16)], input[indexof(idx)]);
-	if (lane >31) input[idx] = apply(input[indexof(idx -32)], input[indexof(idx)]);
-	return input[idx];
-}
-
-inline T scan
-(
-	__local T *buffer,
-	const uint idx,
-	const uint lane,
-	const uint wid /* wrap id */
-)
-{
-	T value = 0;
-
-	/* Step 1: perform warp scan */
-	value = scan_exclusive (buffer, idx, lane);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 2: collect per-warp partial results */
-	// if (lane > 15)
-	if (lane == 63)
-		buffer[wid] = buffer[idx];
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 3: use 1st warp to scan per-warp results */
-	if (wid < 1)
-		scan_exclusive(buffer, idx, lane);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 4: accumulate results from step 1 and step 3 */
-	if (wid > 0)
-		value = apply(buffer[wid - 1], value);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 5: write and return the final result */
-	buffer[idx] = value;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	return value;
-}
-
-__kernel void selectKernel
-(
-	const int size,
-	const int tuples,
-	const int _bundle, /* bundle size */
-	const int bundles, /* # bundles */
-	__global const uchar *input,
-	__global int *flags,
-	__global int *offsets,
-	__global int *groupOffsets,
-	__global uchar *output,
-	__local int *buffer
-)
-{
-	/* Populate indices */
-	const size_t lid = get_local_id(0);
-	const size_t gid = get_group_id(0);
-	const size_t tpb  = get_local_size(0); /* #threads/block */
-	// const uint lane = lid & 31;
-	const uint lane = lid & 63;
-	// const uint wid  = lid >> 5; /* Warp id, assuming 32 lanes */
-	const uint wid  = lid >> 6; 
-
- 	T value = identity;
-	for (int i = 0; i < bundles; i++) {
-
-		const int offset = i * tpb + (gid * _bundle);
-		const int pos = offset + lid;
-		if (pos > tuples - 1)
-			return;
+/*
+ * Up-sweep (reduce) on a local array `data` of length `length`.
+ * `length` must be a power of two.
+ */
+inline void upsweep (__local int *data, int length) {
+	
+	int lid  = get_local_id (0);
+	int b = (lid * 2) + 1;
+	int depth = 1 + (int) log2 ((float) length);
+	
+	for (int d = 0; d < depth; d++) {
 		
-		/* Step 0: apply the selection filter */
-		const int idx = pos * sizeof(input_t);
-		__global input_t *p = (__global input_t *) &input[idx];
-		int result = selectf (p);
-		flags[pos] = result;
-
-		/* Step 1: read `tpb` elements from global to local memory */
-		T _input = buffer[lid] = flags[pos];
-
 		barrier(CLK_LOCAL_MEM_FENCE);
-
-		/* Step 2: scan `tpb` elements */
-		T v = scan (buffer, lid, lane, wid);
-
-		/* Step 3: propagate result from previous block */
-		v = apply (v, value);
-
-		/* Step 4: write result to global memory */
-		offsets[pos] = v;
-		// offsets[pos] = lane;
-		
-		/* Step 5: choose next reduce value */
-		if (lid == (tpb - 1))
-			buffer[lid] = apply (_input, v);
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-
-		value = buffer[tpb - 1];
-
-		barrier(CLK_LOCAL_MEM_FENCE);
+		int mask = (0x1 << d) - 1;
+		if ((lid & mask) == mask) {
+			
+			int offset = (0x1 << d);
+			int a = b - offset;
+			data[b] += data[a];
+		}
 	}
+}
+
+/*
+ * Down-sweep on a local array `data` of length `length`.
+ * `length` must be a power of two.
+ */
+inline void downsweep (__local int *data, int length) {
+
+	int lid = get_local_id (0);
+	int b = (lid * 2) + 1;
+	int depth = (int) log2 ((float) length);
+	for (int d = depth; d >= 0; d--) {
+		
+		barrier(CLK_LOCAL_MEM_FENCE);
+		int mask = (0x1 << d) - 1;
+		if ((lid & mask) == mask) {
+			
+			int offset = (0x1 << d);
+			int a = b - offset;
+			int t = data[a];
+			data[a] = data[b];
+			data[b] += t;
+		}
+	}
+}
+
+/* Scan */
+inline void scan (__local int *data, int length) {
+	
+	int lid = get_local_id (0);
+	int lane = (lid * 2) + 1;
+	
+	upsweep (data, length);
+	
+	if (lane == (length - 1))
+		data[lane] = 0;
+	
+	downsweep (data, length);
 	return ;
 }
 
-__kernel void compactKernel
-(
+/* 
+ * Assumes:
+ * 
+ * - N tuples
+ * - Every thread handles two tuples, so #threads = N / 2
+ * - L threads/group
+ * - Every thread group handles (2 * L) tuples
+ * - Let, W be the number of groups
+ * - N = 2L * W => W = N / 2L
+ * 
+ */
+
+__kernel void selectKernel (
 	const int size,
 	const int tuples,
-	const int _bundle, /* bundle size */
-	const int bundles, /* # bundles */
+	__global const uchar *input,
+	__global int *flags, /* The output of select (0 or 1) */
+	__global int *offsets,
+	__global int *partitions,
+	__global uchar *output,
+	__local  int *x
+)
+{
+	int lgs = get_local_size (0);
+	int tid = get_global_id (0);
+	
+	int  left = (2 * tid);
+	int right = (2 * tid) + 1;
+	
+	int lid = get_local_id(0);
+	
+	/* Local memory indices */
+	int  _left = (2 * lid);
+	int _right = (2 * lid) + 1;
+	
+	int gid = get_group_id (0);
+	/* A thread group processes twice as many tuples */
+	int L = 2 * lgs;
+	
+	/* Fetch tuple and apply selection filter */
+	const int lidx =  left * sizeof(input_t);
+	const int ridx = right * sizeof(input_t);
+	
+	__global input_t *lp = (__global input_t *) &input[lidx];
+	__global input_t *rp = (__global input_t *) &input[ridx];
+	
+	flags[ left] = selectf (lp);
+	flags[right] = selectf (rp);
+	
+	/* Copy flag to local memory */
+	x[ _left] = (left  < tuples) ? flags[ left] : 0;
+	x[_right] = (right < tuples) ? flags[right] : 0;
+	
+	upsweep(x, L);
+	
+	if (lid == (lgs - 1)) {
+		partitions[gid] = x[_right];
+		x[_right] = 0;
+	}
+	
+	downsweep(x, L);
+	
+	/* Write results to global memory */
+	offsets[ left] = ( left < tuples) ? x[ _left] : -1;
+	offsets[right] = (right < tuples) ? x[_right] : -1;
+}
+
+__kernel void compactKernel (
+	const int size,
+	const int tuples,
 	__global const uchar *input,
 	__global int *flags,
 	__global int *offsets,
+	__global int *partitions,
 	__global uchar *output,
-	__local int *buffer
-)
-{
-	/* Populate indices */
-	const size_t lid = get_local_id(0);
-	const size_t gid = get_group_id(0);
-	const size_t tpb = get_local_size(0); /* # threads/block */
+	__local  int *x
+) {
+	
+	int tid = get_global_id (0);
+	
+	int  left = (2 * tid);
+	int right = (2 * tid) + 1;
+	
+	int lid = get_local_id (0);
+	
+	int gid = get_group_id (0);
 
 	/* Compute pivot value */
 	__local int pivot;
 	if (lid == 0) {
 		pivot = 0;
 		if (gid > 0) {
-			for (int i = 1; i <= gid; i++) {
-				int idx = i * _bundle - 1;
-				pivot += (offsets[idx] + 1);
+			for (int i = 0; i < gid; i++) {
+				pivot += (partitions[i]);
 			}
 		}
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/*
-	 * First, for each offset, uniformly add pivot value to offset. Then,
-	 * copy each tuple whose flag is not zero at the specific offset.
-	 */
-
-	for (int i = 0; i < bundles; i++) {
-		const int offset = i * tpb + (gid * _bundle);
-		const int pos = offset + lid; /* tuple index */
-		if (pos >= tuples)
-			return;
-		/* Copy tuple `pos` into position `j` if flag is set */
-		if (flags[pos] == 1) {
-			const int q = (offsets[pos] + pivot) * sizeof(output_t);
-			flags[pos] = pivot;
-			const int p = pos * sizeof(input_t);
-			__global  input_t *x = (__global  input_t *) &  input[p];
-			__global output_t *y = (__global output_t *) & output[q];
-			y->vectors[0] = x->vectors[0];
-			y->vectors[1] = x->vectors[1];
-		}
+	
+	/* Compact left and right */
+	if (flags[left] == 1) {
+		
+		const int lq = (offsets[left] + pivot) * sizeof(output_t);
+		const int lp = left * sizeof(input_t);
+		flags[left] = lq + sizeof(output_t);
+		__global  input_t *lx = (__global  input_t *) &  input[lp];
+		__global output_t *ly = (__global output_t *) & output[lq];
+		ly->vectors[0] = lx->vectors[0];
+		ly->vectors[1] = lx->vectors[1];
 	}
-	return ;
+	
+	if (flags[right] == 1) {
+		
+		const int rq = (offsets[right] + pivot) * sizeof(output_t);
+		const int rp = right * sizeof(input_t);
+		flags[right] = rq + sizeof(output_t);
+		__global  input_t *rx = (__global  input_t *) &  input[rp];
+		__global output_t *ry = (__global output_t *) & output[rq];
+		ry->vectors[0] = rx->vectors[0];
+		ry->vectors[1] = rx->vectors[1];
+	}
 }
+

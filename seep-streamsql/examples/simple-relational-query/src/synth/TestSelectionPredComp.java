@@ -11,6 +11,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
@@ -157,9 +158,9 @@ public class TestSelectionPredComp {
 //			System.exit(1);
 //		}
 		
-		int ncores = TheGPU.getInstance().getNumCores();
+		int ncores = TheCPU.getInstance().getNumCores();
 		System.out.println("[DBG] #cores = " + ncores);
-		TheGPU.getInstance().bind(0);
+		TheCPU.getInstance().bind(0);
 		
 		int tuplesPerInsert = 32768;
 		int actualByteSize = schema.getByteSizeOfTuple();

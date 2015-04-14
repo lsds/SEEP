@@ -42,7 +42,7 @@ public class TestGPUDataMovement {
 		
 		System.out.println(String.format("[DBG] %10d bytes", inputSize));
 		
-		TheGPU.getInstance().copyInputBuffers(qid);
+		// TheGPU.getInstance().copyInputBuffers(qid);
 		
 		int iterations = 1000000;
 		double dt, rate = 0.;

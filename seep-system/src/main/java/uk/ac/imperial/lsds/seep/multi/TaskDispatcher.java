@@ -56,6 +56,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	int remainder = 0;
 	
+	
 	public TaskDispatcher (SubQuery parent) {
 		
 		this.parent = parent;

@@ -3,12 +3,8 @@
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
 
-#define T int
-#define identity 0
-#define indexof(x) x
-#define apply(a,b) (a + b)
+#include "byteorder.h"
 
-#define _MAX_ITERATIONS_  20
 #define _HASH_FUNCTIONS_  5
 
 #define _stash_ 100
@@ -24,14 +20,25 @@ typedef struct {
 	int _2;   /* The key */
 	int _3;
 	int _4;
-	int _5;
-	int _6;
+	long _5;
 } input_tuple_t  __attribute__((aligned(1)));
 
 typedef union {
 	input_tuple_t tuple;
 	uchar16 vectors [INPUT_VECTOR_SIZE];
 } input_t;
+
+typedef struct {
+	int key;
+	int val;
+	int cnt;
+	int pad;
+} intermediate_tuple_t __attribute__((aligned(1)));
+
+typedef union {
+	intermediate_tuple_t tuple;
+	uchar16 vectors[1];
+} intermediate_t;
 
 typedef struct {
 	long t;
@@ -45,7 +52,8 @@ typedef union {
 } output_t;
 
 inline int pack_key (__global input_t *p) {
-	return p->tuple._2;
+	int key = __bswap32(p->tuple._2);
+	return key;
 }
 
 inline int __s_major_hash (int x, int y, int k) {
@@ -88,79 +96,10 @@ inline int getNextLocation(int size,
 	return next;
 }
 
-inline T scan_exclusive
-(
-	__local T *input,
-	size_t idx,
-	const uint lane
-)
-{
-	if (lane > 0) input[idx] = apply(input[indexof(idx - 1)], input[indexof(idx)]);
-	if (lane > 1) input[idx] = apply(input[indexof(idx - 2)], input[indexof(idx)]);
-	if (lane > 3) input[idx] = apply(input[indexof(idx - 4)], input[indexof(idx)]);
-	if (lane > 7) input[idx] = apply(input[indexof(idx - 8)], input[indexof(idx)]);
-	if (lane >15) input[idx] = apply(input[indexof(idx -16)], input[indexof(idx)]);
-	return (lane > 0) ? input[idx - 1] : identity;
-}
-
-inline T scan_inclusive
-(
-	__local T *input,
-	size_t idx,
-	const uint lane
-)
-{
-	if (lane > 0) input[idx] = apply(input[indexof(idx - 1)], input[indexof(idx)]);
-	if (lane > 1) input[idx] = apply(input[indexof(idx - 2)], input[indexof(idx)]);
-	if (lane > 3) input[idx] = apply(input[indexof(idx - 4)], input[indexof(idx)]);
-	if (lane > 7) input[idx] = apply(input[indexof(idx - 8)], input[indexof(idx)]);
-	if (lane >15) input[idx] = apply(input[indexof(idx -16)], input[indexof(idx)]);
-	return input[idx];
-}
-
-inline T scan
-(
-	__local T *buffer,
-	const uint idx,
-	const uint lane,
-	const uint wid /* wrap id */
-)
-{
-	T value;
-
-	/* Step 1: perform warp scan */
-	value = scan_exclusive (buffer, idx, lane);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 2: collect per-warp partial results */
-	if (lane > 30)
-		buffer[wid] = buffer[idx];
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 3: use 1st warp to scan per-warp results */
-	if (wid < 1)
-		scan_exclusive(buffer, idx, lane);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 4: accumulate results from step 1 and step 3 */
-	if (wid > 0)
-		value = apply(buffer[wid - 1], value);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	/* Step 5: write and return the final result */
-	buffer[idx] = value;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	return value;
-}
-
 __kernel void aggregateKernel (
 	const int tuples,
+	const int _bundle,
+	const int bundles,
 	const int _table_,
 	const int __stash_x,
 	const int __stash_y,
@@ -176,10 +115,11 @@ __kernel void aggregateKernel (
 	__global int* attempts,
 	__global int* indices,
 	__global int* offsets,
+	__global int* partitions,
 	__global uchar* output,
 	__local int* buffer
 	) {
-
+	
 	int lid = (int) get_local_id   (0);
 	int gid = (int) get_group_id   (0);
 	int lgs = (int) get_local_size (0); /* Local group size */
@@ -195,6 +135,13 @@ __kernel void aggregateKernel (
 	int idx =  lid * sizeof(input_t) + offset_;
 	int bundle = 0;
 	int tuple_id = 0;
+	
+	if (lid == 0) {
+		failed [gid] = 0;
+		stashed[gid] = 0;
+	} 
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
 	while (idx < _offset) {
 
 		/* For debugging purposes only */ /* Tuple id */
@@ -225,7 +172,7 @@ __kernel void aggregateKernel (
 			if (_k != EMPTY_KEY)
 				success = false;
 			else
-				atomic_inc(&stashed[0]);
+				atomic_inc(&stashed[gid]);
 		}
 		if (success == false)
 			atomic_inc(&failed[gid]);
@@ -245,9 +192,11 @@ __kernel void aggregateKernel (
 	/* 
 	 * For each hash table:
 	 * - lookup the position of each tuple;
-	 * - write to contents[pos + table_offset] (values are added or incremented atomically);
+	 * - write to contents[pos + table_offset] 
+	 *   (values are added or incremented atomically);
+	 *
 	 * - Prefix sum
-	 * - [TBD: propagate sum across work groups]
+	 * - Propagate sum across work groups
 	 * - Compress
 	 */
 	
@@ -278,117 +227,262 @@ __kernel void aggregateKernel (
 		}
 		/* Assume position found; worst case, the key was stashed */
 		int output_idx = (table_offset + pos) * sizeof(output_t);
-		__global output_t *out = (__global output_t *) &contents[output_idx];
-		out->tuple.t = p->tuple.t;
-		out->tuple._1 = key;
-		atomic_inc((__global int *) (&contents[output_idx + 8 + 4]));
-		
+		__global intermediate_t *out = (__global intermediate_t *) &contents[output_idx];
+		/* We ignore the timestamp; this is a relation */
+		out->tuple.key = q;
+		/* atomic_inc ((global int *) &(out->tuple.val)); */
+		atomic_add ((global int *) &(out->tuple.val), 
+			convert_int(__bswapfp(p->tuple._1)));
+		/* TODO automate sum, min, max */
+		atomic_inc ((global int *) &(out->tuple.cnt));
+		out->tuple.pad = 0;
 		idx += group_offset;
 	}
+}
+
+/* Scan based on the implementation of [...] */
+
+/*
+ * Up-sweep (reduce) on a local array `data` of length `length`.
+ * `length` must be a power of two.
+ */
+inline void upsweep (__local int *data, int length) {
 	
-	barrier (CLK_LOCAL_MEM_FENCE);
-
-	/* Next step: prefix sum */
-
-	const uint lane = lid & 31;
-	const uint wid  = lid >> 5; /* Wrap id, assuming 32 wraps */
+	int lid  = get_local_id (0);
+	int b = (lid * 2) + 1;
+	int depth = 1 + (int) log2 ((float) length);
 	
-	int ngroups = (int) get_num_groups(0);
-	
-	int _bundle = _table_ + _stash_;
-	int bundles = _bundle / lgs;
-	int items = _bundle * ngroups;
-
-	T value = identity;
-	for (int i = 0; i < bundles; i++) {
-		const int offset = i * lgs + (gid * _bundle);
-		const int pos = offset + lid;
-		if (pos > items - 1)
-			return;
-		/* Step 0: apply filter */
-		indices[pos] = (indices[pos] == EMPTY_KEY) ? 0 : 1;
-
-		/* Step 1: read `tpb` elements from global to local memory */
-		T _input = buffer[lid] = indices[pos];
-
+	for (int d = 0; d < depth; d++) {
+		
 		barrier(CLK_LOCAL_MEM_FENCE);
-
-		/* Step 2: scan `lgs` elements */
-		T v = scan (buffer, lid, lane, wid);
-
-		/* Step 3: propagate result from previous block */
-		v = apply (v, value);
-
-		/* Step 4: write result to global memory */
-		offsets[pos] = v;
-
-		/* Step 5: choose next reduce value */
-		if (lid == (lgs - 1))
-			buffer[lid] = apply (_input, v);
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-
-		value = buffer[lgs - 1];
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-	}
-	
-	/* Compute pivot value */
-	int pivot = 0;
-	if (lid == 0 && gid > 0) {
-		for (int i = 0; i < gid; i++) {
-			idx = i * _bundle - 1;
-			pivot += (offsets[idx] + 1);
+		int mask = (0x1 << d) - 1;
+		if ((lid & mask) == mask) {
+			
+			int offset = (0x1 << d);
+			int a = b - offset;
+			data[b] += data[a];
 		}
 	}
 }
 
-__kernel void compactKernel
-(
+/*
+ * Down-sweep on a local array `data` of length `length`.
+ * `length` must be a power of two.
+ */
+inline void downsweep (__local int *data, int length) {
+
+	int lid = get_local_id (0);
+	int b = (lid * 2) + 1;
+	int depth = (int) log2 ((float) length);
+	for (int d = depth; d >= 0; d--) {
+		
+		barrier(CLK_LOCAL_MEM_FENCE);
+		int mask = (0x1 << d) - 1;
+		if ((lid & mask) == mask) {
+			
+			int offset = (0x1 << d);
+			int a = b - offset;
+			int t = data[a];
+			data[a] = data[b];
+			data[b] += t;
+		}
+	}
+}
+
+/* Scan */
+inline void scan (__local int *data, int length) {
+	
+	int lid = get_local_id (0);
+	int lane = (lid * 2) + 1;
+	
+	upsweep (data, length);
+	
+	if (lane == (length - 1))
+		data[lane] = 0;
+	
+	downsweep (data, length);
+	return ;
+}
+
+/* 
+ * Assumes:
+ * 
+ * - N tuples
+ * - Every thread handles two tuples, so #threads = N / 2
+ * - L threads/group
+ * - Every thread group handles (2 * L) tuples
+ * - Let, W be the number of groups
+ * - N = 2L * W => W = N / 2L
+ * 
+ */
+
+__kernel void scanKernel (
+	const int tuples,
+	const int bundle_,
+	const int bundles,
 	const int _table_,
+	const int __stash_x,
+	const int __stash_y,
+	const int max_iterations,
+	__global const uchar* input,
+	__global const int* window_ptrs_,
+	__global const int* _window_ptrs,
+	__global const int* x,
+	__global const int* y,
 	__global uchar* contents,
-	__global int* indices,
+	__global int* stashed,
+	__global int* failed,
+	__global int* attempts,
+	__global int* indices, /* Flags */
 	__global int* offsets,
-	__global uchar* output
-	) {
-	/* Populate indices */
-	const size_t lid = get_local_id(0);
-	const size_t gid = get_group_id(0);
-	const size_t lgs = get_local_size(0); /* # threads/block */
+	__global int* partitions,
+	__global uchar* output,
+	__local int* buffer
+)
+{
+	int lgs = get_local_size (0);
+	int tid = get_global_id (0);
 	
-	int ngroups = (int) get_num_groups(0);
+	int  left = (2 * tid);
+	int right = (2 * tid) + 1;
 	
-	int _bundle = _table_ + _stash_;
-	int bundles = _bundle / lgs;
-	int items = _bundle * ngroups;
+	int lid = get_local_id(0);
+	
+	/* Local memory indices */
+	int  _left = (2 * lid);
+	int _right = (2 * lid) + 1;
+	
+	int gid = get_group_id (0);
+	/* A thread group processes twice as many tuples */
+	int L = 2 * lgs;
+	
+	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : 1;
+	indices[right] = (indices[right] == EMPTY_KEY) ? 0 : 1;
+	
+	/* Copy flag to local memory */
+		
+	/* Checking left and right: 
+	 *
+	 * There is no need to check `left` and `right` indices
+	 * since the boundaries have been checked by the host.
+	 */
+	buffer[ _left] = indices[ left];
+	buffer[_right] = indices[right];
+	
+	upsweep(buffer, L);
+	
+	if (lid == (lgs - 1)) {
+		partitions[gid] = buffer[_right];
+		buffer[_right] = 0;
+	}
+	
+	downsweep(buffer, L);
+	
+	/* Write results to global memory */
+	offsets[ left] = buffer[ _left];
+	offsets[right] = buffer[_right];
+}
+
+__kernel void compactKernel (
+	const int tuples,
+	const int bundle_,
+	const int bundles,
+	const int _table_,
+	const int __stash_x,
+	const int __stash_y,
+	const int max_iterations,
+	__global const uchar* input,
+	__global const int* window_ptrs_,
+	__global const int* _window_ptrs,
+	__global const int* x,
+	__global const int* y,
+	__global uchar* contents,
+	__global int* stashed,
+	__global int* failed,
+	__global int* attempts,
+	__global int* indices, /* Flags */
+	__global int* offsets,
+	__global int* partitions,
+	__global uchar* output,
+	__local int* buffer
+) {
+	
+	int tid = get_global_id (0);
+	
+	int  left = (2 * tid);
+	int right = (2 * tid) + 1;
+	
+	int lid = get_local_id (0);
+	
+	int gid = get_group_id (0);
 
 	/* Compute pivot value */
 	__local int pivot;
 	if (lid == 0) {
 		pivot = 0;
 		if (gid > 0) {
-			for (int i = 1; i <= gid; i++) {
-				int idx = i * _bundle - 1;
-				pivot += (offsets[idx] + 1);
+			for (int i = 0; i < gid; i++) {
+				pivot += (partitions[i]);
 			}
 		}
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
-
-	for (int i = 0; i < bundles; i++) {
-		const int offset = i * lgs + (gid * _bundle);
-		const int pos = offset + lid; /* tuple index */
-		if (pos >= items)
-			return;
-		/* Copy tuple `pos` into position `j` if index is positive */
-		if (indices[pos] == 1) {
-			const int q = (offsets[pos] + pivot) * sizeof(output_t);
-			const int p = pos * sizeof(input_t);
-			__global output_t *x = (__global output_t *) &contents[p];
-			__global output_t *y = (__global output_t *)   &output[q];
-			y->vectors[0] = x->vectors[0];
-		}
+	
+	/* Compact left and right */
+	if (indices[left] != EMPTY_KEY) {
+		
+		const int lq = (offsets[left] + pivot) * sizeof(output_t);
+		const int lp = left * sizeof(output_t);
+		indices[left] = lq + sizeof(output_t);
+		__global intermediate_t *lx = (__global intermediate_t *) &contents[lp];
+		__global output_t *ly = (__global output_t *) &output[lq];
+		/* ly->vectors[0] = lx->vectors[0]; */
+		ly->tuple.t  = 0L;
+		ly->tuple._1 = __bswap32(lx->tuple.key);
+		ly->tuple._2 = __bswapfp(convert_float(lx->tuple.val));
 	}
-	return ;
+	
+	if (indices[right] != EMPTY_KEY) {
+		
+		const int rq = (offsets[right] + pivot) * sizeof(output_t);
+		const int rp = right * sizeof(output_t);
+		indices[right] = rq + sizeof(output_t);
+		__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
+		__global output_t *ry = (__global output_t *) &output[rq];
+		/* ry->vectors[0] = rx->vectors[0]; */
+		ry->tuple.t  = 0L;
+		ry->tuple._1 = __bswap32(rx->tuple.key);
+		ry->tuple._2 = __bswapfp(convert_float(rx->tuple.val));
+	}
+}
+
+__kernel void clearKernel (
+	const int tuples,
+	const int bundle_,
+	const int bundles,
+	const int _table_,
+	const int __stash_x,
+	const int __stash_y,
+	const int max_iterations,
+	__global const uchar* input,
+	__global const int* window_ptrs_,
+	__global const int* _window_ptrs,
+	__global const int* x,
+	__global const int* y,
+	__global uchar* contents,
+	__global int* stashed,
+	__global int* failed,
+	__global int* attempts,
+	__global int* indices, /* Flags */
+	__global int* offsets,
+	__global int* partitions,
+	__global uchar* output,
+	__local int* buffer
+) {
+	int tid = get_global_id (0);
+	indices[tid] = EMPTY_KEY;
+	offsets[tid] = -1;
+	__global output_t *c = (__global output_t *) &contents[tid * sizeof(output_t)];
+	c->vectors[0] = 0;
 }
 

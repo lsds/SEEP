@@ -12,16 +12,15 @@
 
 static int IS_ZERO_COPY (void *ptr, int len) {
 
-	dbg("p is %lu\n", (uintptr_t) ptr);
 	if ((uintptr_t) ptr % (256) != 0) /* 256=byte alignment */
 		return 0;
-	/* Cache alignment */
-	/* if (len % 64 != 0)
-		return 0; */
+	if (len % 64 != 0) /* Cache alignment */
+		return 0;
 	return 1;
 }
 
-inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *buffer, int size) {
+inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *buffer, 
+	int size) {
 	
 	inputBufferP p = malloc(sizeof(input_buffer_t));
 	if (! p) {
@@ -51,7 +50,8 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *b
 		&error);
 	} else {
 		if (! IS_ZERO_COPY (buffer, size)) {
-			fprintf(stderr, "warning: buffer is not a zero-copy buffer (%s)\n", __FUNCTION__);
+			fprintf(stderr, "warning: buffer is not a zero-copy buffer (%s)\n", 
+				__FUNCTION__);
 		}
 		p->pinned_buffer = clCreateBuffer (
 		context, 
@@ -64,9 +64,14 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *b
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	
+	/*
 	if (! IS_ZERO_COPY (p->pinned_buffer, size)) {
-		fprintf(stderr, "opencl warning: buffer is not a zero-copy buffer (%s)\n", __FUNCTION__);
+		fprintf(stderr, "opencl warning: buffer is not a zero-copy buffer (%s)\n", 
+			__FUNCTION__);
 	}
+	*/
+	
 	/* Set p->mapped_memory */
 	p->mapped_buffer = (void *) clEnqueueMapBuffer (
 		queue, 
@@ -81,33 +86,6 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *b
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	return p;
-}
-
-inputBufferP pinInputBuffer (cl_context context, int size) {
-
-	inputBufferP p = malloc(sizeof(input_buffer_t));
-	if (! p) {
-		fprintf(stderr, "fatal error: out of memory\n");
-		exit(1);
-	}
-	p->size = size;
-	int error;
-	/* Set p->device_buffer */
-	p->device_buffer = NULL;
-	/* Set p->pinned_memory */
-	p->pinned_buffer = clCreateBuffer (
-		context,
-		CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
-		p->size,
-		NULL,
-		&error);
-	if (! p->pinned_buffer) {
-		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
-		exit (1);
-	}
-	/* Set p->mapped_memory */
-	p->mapped_buffer = NULL;
 	return p;
 }
 
