@@ -170,9 +170,6 @@ public class ResultCollector {
 				/*
 				 * Do the actual result forwarding
 				 */
-				/*
-				 * Do the actual result forwarding
-				 */
 				if (query.getNumberOfDownstreamSubQueries() > 0) {
 					int pos = handler.latch[handler.next];
 					for (int i = pos; i < query.getNumberOfDownstreamSubQueries(); i++) {

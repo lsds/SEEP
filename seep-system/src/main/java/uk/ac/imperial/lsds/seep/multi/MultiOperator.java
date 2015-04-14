@@ -6,12 +6,15 @@ import java.util.concurrent.Executors;
 
 public class MultiOperator {
 
-	private static int		threads	= Utils.THREADS;
+	private static int threads = Utils.THREADS;
+	
+	private static final int _max_upstream_subqueries = 2;
 
-	private Set<SubQuery>	subQueries;
-	private int				id;
+	private Set<SubQuery> subQueries;
+	private int id;
 
-	private ITaskDispatcher	dispatcher;
+	private ITaskDispatcher	[] dispatcher;
+	private int freeIndex = 0;
 	
 	private TaskQueue queue;
 	private TaskProcessorPool workerPool;
@@ -26,29 +29,33 @@ public class MultiOperator {
 		this.subQueries = subQueries;
 		this.id = id;
 		
+		dispatcher = new ITaskDispatcher [_max_upstream_subqueries];
+		freeIndex = 0;
+		
 		this.nqueries = this.subQueries.size();
 	}
 
 	public void processData (byte[] values) {
-
-		this.dispatcher.dispatch (values, values.length);
+		
+		for (int i = 0; i < freeIndex; i++)
+			this.dispatcher[i].dispatch (values, values.length);
 	}
 	
 	public void processData (byte[] values, int length) {
-
-		this.dispatcher.dispatch (values, length);
+		for (int i = 0; i < freeIndex; i++)
+			this.dispatcher[i].dispatch (values, length);
 	}
 
 	public void processDataSecond (byte [] values) {
-
-		this.dispatcher.dispatchSecond(values,  values.length);
+		for (int i = 0; i < freeIndex; i++)
+			this.dispatcher[i].dispatchSecond(values,  values.length);
 	}
 	
 	public void processDataSecond (byte [] values, int length) {
-
-		this.dispatcher.dispatchSecond(values,  length);
+		for (int i = 0; i < freeIndex; i++)
+			this.dispatcher[i].dispatchSecond(values,  length);
 	}
-
+	
 	public void setup() {
 		
 		this.policy = new int [nclasses][nqueries];
@@ -67,7 +74,7 @@ public class MultiOperator {
 			q.setParent(this);
 			q.setup();
 			if (q.isMostUpstream())
-				this.dispatcher = q.getTaskDispatcher();
+				this.dispatcher[freeIndex++] = q.getTaskDispatcher();
 		}
 		
 		Thread monitor = new Thread(new PerformanceMonitor(this));

@@ -24,7 +24,14 @@ import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
 public class TestSmartGridData {
 	
@@ -72,57 +79,174 @@ public class TestSmartGridData {
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = 16;
-		QueryConf queryConf = new QueryConf(32, 1024);
+		
+		/*
+		 * Query 1
+		 * 
+		 * select avg (load)
+		 * from <input stream> [range 3600 seconds slide 1 second]
+		 */
+		QueryConf queryConf1 = new QueryConf(10, 1024);
 		/*
 		 * Set up configuration of query
 		 */
-		WindowType windowType = WindowType.fromString("row");
-		long windowRange = 1024;
-		long windowSlide = 1024;
-		int numberOfAttributesInSchema = 7;
-		int numberOfProjectedAttributes = numberOfAttributesInSchema;
+		WindowType windowType1 = WindowType.fromString("range");
+		long windowRange1 = 3600;
+		long windowSlide1 = 1;
+		int numberOfAttributesInSchema1 = 7;
 		
-		WindowDefinition window = 
-			new WindowDefinition (windowType, windowRange, windowSlide);
+		WindowDefinition window1 = 
+			new WindowDefinition (windowType1, windowRange1, windowSlide1);
 		
-		int [] offsets = new int [numberOfAttributesInSchema];
+		int [] offsets1 = new int [numberOfAttributesInSchema1];
 		/* First attribute is timestamp */
-		offsets[ 0] =  0;
-		offsets[ 1] =  8;
-		offsets[ 2] = 12;
-		offsets[ 3] = 16;
-		offsets[ 4] = 20;
-		offsets[ 5] = 24;
-		offsets[ 6] = 28;
+		offsets1[ 0] =  0;
+		offsets1[ 1] =  8; /*     value */
+		offsets1[ 2] = 12; /*  property */
+		offsets1[ 3] = 16; /*      plug */
+		offsets1[ 4] = 20; /* household */
+		offsets1[ 5] = 24; /*     house */
+		offsets1[ 6] = 28; /*   padding */
 		
-		int byteSize = 32;
+		int byteSize1 = 32;
 		
-		ITupleSchema schema = new TupleSchema (offsets, byteSize);
+		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize1);
 		
-		Expression [] expression = new Expression [numberOfProjectedAttributes];
+		IMicroOperatorCode q1code = new MicroAggregation (
+			window1,
+			AggregationType.fromString("avg"),
+			new FloatColumnReference(1) /* value */
+		);
+		System.out.println(String.format("[DBG] %s", q1code));
 		
-		expression[ 0] = new  LongColumnReference( 0);
-		expression[ 1] = new FloatColumnReference( 1);
-		expression[ 2] = new   IntColumnReference( 2);
-		expression[ 3] = new   IntColumnReference( 3);
-		expression[ 4] = new   IntColumnReference( 4);
-		expression[ 5] = new   IntColumnReference( 5);
-		expression[ 6] = new   IntColumnReference( 6);
+		MicroOperator q1op;
+		q1op = new MicroOperator (q1code, null, 1);
 		
-		IMicroOperatorCode projectionCode = new Projection (expression);
-		System.out.println(String.format("[DBG] %s", projectionCode));
+		Set<MicroOperator> q1operators = new HashSet<MicroOperator>();
+		q1operators.add(q1op);
+		SubQuery q1 = new SubQuery (0, q1operators, schema1, window1, queryConf1);
+		
+		/*
+		 * Query 2
+		 * 
+		 * select avg (load)
+		 * from <input stream> [range 3600 seconds slide 1 second]
+		 * group by house, plug
+		 */
+		QueryConf queryConf2 = new QueryConf(10, 1024);
+		/*
+		 * Set up configuration of query
+		 */
+		WindowType windowType2 = WindowType.fromString("range");
+		long windowRange2 = 3600;
+		long windowSlide2 = 1;
+		int numberOfAttributesInSchema2 = 7;
+		
+		WindowDefinition window2 = 
+			new WindowDefinition (windowType2, windowRange2, windowSlide2);
+		
+		int [] offsets2 = new int [numberOfAttributesInSchema2];
+		/* First attribute is timestamp */
+		offsets2[ 0] =  0;
+		offsets2[ 1] =  8; /*     value */
+		offsets2[ 2] = 12; /*  property */
+		offsets2[ 3] = 16; /*      plug */
+		offsets2[ 4] = 20; /* household */
+		offsets2[ 5] = 24; /*     house */
+		offsets2[ 6] = 28; /*   padding */
+		
+		int byteSize2 = 32;
+		
+		ITupleSchema schema2 = new TupleSchema (offsets2, byteSize2);
+		
+		Expression[] groupByAttributes2 = new Expression [] {
+			new IntColumnReference(3),
+			new IntColumnReference(4),
+			new IntColumnReference(5)
+		};
+		
+		IMicroOperatorCode q2code = new MicroAggregation (
+			window2,
+			AggregationType.fromString("avg"),
+			new FloatColumnReference(1), /* value */
+			groupByAttributes2
+		);
+		System.out.println(String.format("[DBG] %s", q1code));
+		
+		MicroOperator q2op;
+		q2op = new MicroOperator (q2code, null, 1);
+		
+		Set<MicroOperator> q2operators = new HashSet<MicroOperator>();
+		q2operators.add(q2op);
+		SubQuery q2 = new SubQuery (1, q2operators, schema2, window2, queryConf2);
+		
+		/*
+		 * Query 3
+		 * 
+		 * select house, count(*)
+		 * from <query 1 output stream> as S1, <query 2 output stream> as S2
+		 * where S1.timestamp = S2.timestamp and
+		 * S2.load > S1.load
+		 */
+		
+		QueryConf queryConf3 = new QueryConf(1024, 1024); /* #tuples in either stream */
+		
+		WindowType __1st_windowType = WindowType.fromString("row");
+		long __1st_windowRange = 1;
+		long __1st_windowSlide = 1;
+		int __1st_numberOfAttributesInSchema  = 1;
+		
+		WindowType __2nd_windowType = WindowType.fromString("row");
+		long __2nd_windowRange = 1;
+		long __2nd_windowSlide = 1;
+		int __2nd_numberOfAttributesInSchema = 1;
+		
+		WindowDefinition __1st_window = new WindowDefinition (__1st_windowType, __1st_windowRange, __1st_windowSlide);
+		WindowDefinition __2nd_window = new WindowDefinition (__2nd_windowType, __2nd_windowRange, __2nd_windowSlide);
+		
+		int [] __1st_offsets = new int[__1st_numberOfAttributesInSchema + 1];
+		__1st_offsets[0] = 0;
+		
+		int __1st_byteSize = 8;
+		
+		ITupleSchema __1st_schema = new TupleSchema (__1st_offsets, __1st_byteSize);
+		
+		int [] __2nd_offsets = new int[__2nd_numberOfAttributesInSchema + 1];
+		__2nd_offsets[0] = 0;
+
+		int __2nd_byteSize = 8;
+		
+		ITupleSchema __2nd_schema = new TupleSchema (__2nd_offsets, __2nd_byteSize);
+
+		IPredicate joinPredicate = new FloatComparisonPredicate
+			(
+			FloatComparisonPredicate.GREATER_OP, 
+			new FloatColumnReference(1),
+			new FloatColumnReference(1)
+			);
+		
+		IMicroOperatorCode q3code = new ThetaJoin(joinPredicate);
+		System.out.println(String.format("[DBG] %s", q3code));
+		
+		MicroOperator q3op = new MicroOperator(q3code, null, 1);
+
+		Set<MicroOperator> q3operators = new HashSet<>();
+		q3operators.add(q3op);
+		
+		SubQuery q3 = new SubQuery (2, q3operators, __1st_schema, __1st_window, queryConf3, __2nd_schema, __2nd_window);
 		
 		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = 1048576; /* 1MB */
 		
-		MicroOperator uoperator;
-		uoperator = new MicroOperator (projectionCode, null, 1);
+		/* Connect queries */
+		q1.connectTo(1001, q3);
+		q2.connectTo(1002, q3);
 		
-		Set<MicroOperator> operators = new HashSet<MicroOperator>();
-		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
-		queries.add(query);
+		queries.add(q1);
+		queries.add(q2);
+		queries.add(q3);
+		
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
 		
