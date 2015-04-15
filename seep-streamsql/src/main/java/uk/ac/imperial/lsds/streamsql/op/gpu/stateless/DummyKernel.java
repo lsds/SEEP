@@ -36,7 +36,7 @@ public class DummyKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		this.inputSize = inputSize;
 	}
 	
-	public void setup(ByteBuffer inputBuffer, ByteBuffer outputBuffer) {
+	public void setup() {
 		
 		this.tuples = inputSize / schema.getByteSizeOfTuple();
 		
@@ -46,14 +46,10 @@ public class DummyKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		String source = KernelCodeGenerator.load(filename);
 		
 		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
-		if (inputBuffer != null)
-			TheGPU.getInstance().setInput (qid, 0, inputBuffer, inputSize);
-		else
-			TheGPU.getInstance().setInput (qid, 0, inputSize);
-		if (outputBuffer != null)
-			TheGPU.getInstance().setOutput(qid, 0, outputBuffer, inputSize, 1);
-		else
-			TheGPU.getInstance().setOutput(qid, 0, inputSize, 1);
+		TheGPU.getInstance().setInput (qid, 0, inputSize);
+		
+		TheGPU.getInstance().setOutput(qid, 0, inputSize, 1, 0, 0, 1);
+		
 		TheGPU.getInstance().setKernelDummy (qid, null);
 	}
 	

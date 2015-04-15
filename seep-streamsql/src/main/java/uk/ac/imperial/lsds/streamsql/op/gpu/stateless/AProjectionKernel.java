@@ -16,92 +16,44 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	/*
-	 * This size must be greater or equal to the size of the byte array backing
+	 * This input size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_input_size  = Utils._GPU_INPUT_;
 	
 	private static final int THREADS_PER_GROUP = 128;
 	
 	private static final int PIPELINES = 2;
-
-	private boolean pinned = false;
 	
-	private Expression[] expressions;
+	private int [] taskIdx;
+	private int [] freeIdx;
+	
+	private Expression [] expressions;
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private String filename = null;
+	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Projection.cl";
 	
 	private int qid;
 	
 	private int [] args;
 	
 	private int tuples;
-	private int threads;
-	private int tgs; /* Threads/group */
 	
-	/* Local memory sizes */
-	private int  _input_size,  _local_input_size;
-	private int _output_size, _local_output_size;
+	private int [] threads;
+	private int [] tgs; /* Threads/group */
 	
-	private int [] taskIdx;
-	private int [] freeIdx;
+	/* GPU global and local memory sizes */
+	private int  inputSize = -1,  localInputSize;
+	private int outputSize = -1, localOutputSize;
 	
-	public AProjectionKernel(Expression[] expressions, ITupleSchema inputSchema,
-			String filename) {
+	public AProjectionKernel(Expression[] expressions, ITupleSchema inputSchema) {
+		
 		this.expressions = expressions;
 		this.inputSchema = inputSchema;
-		this.outputSchema = ExpressionsUtil
-				.getTupleSchemaForExpressions(expressions);
 		
-		this.filename = filename;
+		this.outputSchema = 
+				ExpressionsUtil.getTupleSchemaForExpressions(expressions);
 		
-		// setup();
-	}
-	
-	public AProjectionKernel (Expression[] expressions) {
-		this(expressions, null, null);
-	}
-	
-	public AProjectionKernel (Expression expression) {
-		this(new Expression[] { expression }, null, null);
-	}
-	
-	public void setInputSize (int inputSize) {
-		this._input_size = inputSize;
-	}
-	
-	public void setup() {
-		
-		/* Configure kernel arguments */
-		// this._input_size = _default_input_size;
-		
-		System.out.println("In projection kernel, the input size is " + _input_size);
-		this.tuples = _input_size / inputSchema.getByteSizeOfTuple();
-		
-		this.threads = tuples;
-		this.tgs = THREADS_PER_GROUP;
-		
-		this._output_size = tuples * outputSchema.getByteSizeOfTuple();
-		
-		this._local_input_size  = tgs *  inputSchema.getByteSizeOfTuple();
-		this._local_output_size = tgs * outputSchema.getByteSizeOfTuple();
-		
-		/* Arguments are: tuples, bytes, _local_input_size, _local_output_size */
-		args = new int [4];
-		args[0] = tuples;
-		args[1] = _input_size;
-		args[2] =  _local_input_size;
-		args[3] = _local_output_size;
-		
-		String source = KernelCodeGenerator.getProjection(inputSchema, outputSchema, filename);
-		// System.out.println(source);
-		
-		// TheGPU.getInstance().init(1);
-		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
-		TheGPU.getInstance().setInput (qid, 0,  _input_size);
-		TheGPU.getInstance().setOutput(qid, 0, _output_size, 1);
-		TheGPU.getInstance().setKernelProject (qid, args);
+		/* Task pipelining internal state */
 		
 		taskIdx = new int [PIPELINES];
 		freeIdx = new int [PIPELINES];
@@ -109,6 +61,47 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
 		}
+	}
+	
+	public void setInputSize (int inputSize) {
+		this.inputSize = inputSize;
+	}
+	
+	public void setup() {
+		
+		/* Configure kernel arguments */
+		
+		if (inputSize < 0) {
+			System.err.println("error: invalid input size");
+			System.exit(1);
+		}
+		this.tuples = inputSize / inputSchema.getByteSizeOfTuple();
+		
+		this.threads = new int [1];
+		threads[0] = tuples;
+		
+		this.tgs = new int [1];
+		tgs[0] = THREADS_PER_GROUP;
+		
+		this.outputSize = tuples * outputSchema.getByteSizeOfTuple();
+		
+		this.localInputSize  = tgs[0] *  inputSchema.getByteSizeOfTuple();
+		this.localOutputSize = tgs[0] * outputSchema.getByteSizeOfTuple();
+		
+		args = new int [4];
+		args[0] = tuples;
+		args[1] = inputSize;
+		args[2] = localInputSize;
+		args[3] = localOutputSize;
+		
+		String source = KernelCodeGenerator.getProjection(inputSchema, outputSchema, filename);
+		
+		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
+		
+		TheGPU.getInstance().setInput (qid, 0,  inputSize);
+		TheGPU.getInstance().setOutput(qid, 0, outputSize, 1, 0, 0, 1);
+		
+		TheGPU.getInstance().setKernelProject (qid, args);
 	}
 	
 	@Override
@@ -124,37 +117,27 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
-		if (! pinned) {
-			TheGPU.getInstance().bind(1);
-			pinned = true;
-		}
-		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
 		
-		/* Set input and output */
+		/* Set input */
 		byte [] inputArray = windowBatch.getBuffer().array();
 		int start = windowBatch.getBatchStartPointer();
 		int end   = windowBatch.getBatchEndPointer();
 		
-		// System.out.println("[DBG] First timestamp in operator is " + windowBatch.getBuffer().getByteBuffer().getLong(start));
-		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
+		
+		/* Set output */
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		
-		// System.out.println("[DBG] output buffer capacity is " + outputBuffer.capacity());
-		
 		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
-		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		// System.out.println("[DBG] Returned first timestamp is " + outputBuffer.getByteBuffer().getLong(0));
+		/* Execute */
+		TheGPU.getInstance().execute(qid, threads, tgs);
 		
 		windowBatch.setBuffer(outputBuffer);
 		
 		windowBatch.setTaskId     (taskIdx[0]);
 		windowBatch.setFreeOffset (freeIdx[0]);
-		
-		// System.out.println("Running " + currentTaskIdx);
 		
 		for (int i = 0; i < taskIdx.length - 1; i++) {
 			taskIdx[i] = taskIdx [i + 1];

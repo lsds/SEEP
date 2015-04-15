@@ -24,18 +24,15 @@ import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	/*
-	 * This size must be greater or equal to the size of the byte array backing
+	 * The input size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_input_size = Utils._GPU_INPUT_;
-	private static final int SIZEOF_INT = 4;
-	/*
-	 * Operator configuration parameters
-	 */
-	private static final int THREADS_PER_GROUP = 256 ;
+	
+	private static final int THREADS_PER_GROUP = 256;
 	
 	private static final int PIPELINES = 2;
-	private boolean pinned = false;
+	private int [] taskIdx;
+	private int [] freeIdx;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
@@ -53,17 +50,20 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private int [] args;
 	
 	private int tuples;
-	private int threads, groups;
+	
+	private int [] threads;
+	private int [] tgs;
+	
+	private int ngroups;
 
 	/* Local memory sizes */
-	private int  _input_size, _window_ptrs_size;
-	private int _output_size, _local_input_size;
+	private int  inputSize = -1, outputSize;
+	
+	private int windowPtrsSize;
+	private int localInputSize;
 	
 	private byte [] startPtrs;
 	private byte [] endPtrs;
-	
-	private int [] taskIdx;
-	private int [] freeIdx;
 	
 	public ReductionKernel (AggregationType type, FloatColumnReference _the_aggregate) {
 		this (type, _the_aggregate, null);
