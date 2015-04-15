@@ -1,4 +1,4 @@
-CLASS_PATH = .
+CLASS_PATH = ../target/classes
 vpath %.class $(CLASS_PATH)
 
 CC = gcc
@@ -21,16 +21,25 @@ CLIB = -L/home/akolious/tests/saber-jni -lGPU
 
 OBJS = GPU.o timer.o openclerrorcode.o inputbuffer.o outputbuffer.o gpucontext.o gpuquery.o
 
-all: libGPU.so
+all: libGPU.so libCPU.so
 
 libGPU.so: $(OBJS)
 	$(CC) -shared -o libGPU.so $(OBJS) $(LIBS)
 
-GPU.o: GPU.c GPU.h TheGPU.h timer.h openclerrorcode.h 
+libCPU.so: CPU.o
+	$(CC) -shared -o libCPU.so CPU.o
+
+GPU.o: GPU.c GPU.h uk_ac_imperial_lsds_seep_multi_TheGPU.h timer.h openclerrorcode.h 
 	$(CC) $(CFLAGS) -c $< -o $@
 
-TheGPU.h:
-	javah -classpath $(CLASS_PATH) TheGPU
+CPU.o: CPU.c uk_ac_imperial_lsds_seep_multi_TheCPU.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+uk_ac_imperial_lsds_seep_multi_TheGPU.h:
+	javah -classpath $(CLASS_PATH) uk.ac.imperial.lsds.seep.multi.TheGPU
+
+uk_ac_imperial_lsds_seep_multi_TheCPU.h:
+	javah -classpath $(CLASS_PATH) uk.ac.imperial.lsds.seep.multi.TheCPU
 
 timer.o: timer.c timer.h
 openclerrorcode.o: openclerrorcode.c openclerrorcode.h

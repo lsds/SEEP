@@ -1,6 +1,6 @@
 #include "GPU.h"
 
-#include "TheGPU.h"
+#include "uk_ac_imperial_lsds_seep_multi_TheGPU.h"
 #include <jni.h>
 
 #include "utils.h"
@@ -155,7 +155,7 @@ int gpu_exec (int qid, size_t *threads, size_t *threadsPerGroup,
 	return gpu_query_exec (p, threads, threadsPerGroup, operator, env, obj, qid);
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_init
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_init
 (JNIEnv *env, jobject obj, jint N) {
 
 	(void) env;
@@ -166,7 +166,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_init
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_getQuery
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getQuery
 (JNIEnv *env, jobject obj, jstring source, jint _kernels, jint _inputs, jint _outputs) {
 
 	(void) obj;
@@ -178,7 +178,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_getQuery
 	return qid;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setInput
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setInput
 (JNIEnv *env, jobject obj, jint qid, jint ndx, jint size) {
 
 	(void) env;
@@ -187,7 +187,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setInput
 	return gpu_setInput (qid, ndx, NULL, size);
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setOutput
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput
 (JNIEnv *env, jobject obj, jint qid, jint ndx, jint size, 
 	jint writeOnly, jint doNotMove, jint bearsMark, jint readEvent) {
 
@@ -198,7 +198,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setOutput
 		writeOnly, doNotMove, bearsMark, readEvent);
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_free
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_free
 (JNIEnv *env, jobject obj) {
 
 	(void) env;
@@ -209,7 +209,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_free
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_execute
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_execute
 (JNIEnv *env, jobject obj, jint qid, jintArray _threads, jintArray _threadsPerGroup) {
 
 	/* Create operator */
@@ -252,7 +252,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_execute
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setKernelDummy
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelDummy
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) env;
@@ -265,7 +265,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setKernelDummy
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setKernelProject
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelProject
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) obj;
@@ -281,7 +281,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setKernelProject
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setKernelSelect
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelSelect
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) obj;
@@ -298,7 +298,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setKernelSelect
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setKernelAggregate
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggregate
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) obj;
@@ -319,7 +319,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setKernelAggregate
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setKernelReduce
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelReduce
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) obj;
@@ -335,7 +335,7 @@ JNIEXPORT jint JNICALL Java_TheGPU_setKernelReduce
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Java_TheGPU_setKernelThetaJoin
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelThetaJoin
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
 	(void) obj;

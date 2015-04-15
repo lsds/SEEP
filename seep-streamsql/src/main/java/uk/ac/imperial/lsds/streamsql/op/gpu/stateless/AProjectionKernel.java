@@ -128,7 +128,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 			TheGPU.getInstance().bind(1);
 			pinned = true;
 		}
-				
+		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
 		

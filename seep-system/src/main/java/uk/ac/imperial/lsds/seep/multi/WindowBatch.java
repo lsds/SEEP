@@ -52,9 +52,6 @@ public class WindowBatch {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
-		// this.windowStartPointers = new int [batchSize]; // null;
-		// this.windowEndPointers = new int [batchSize]; // null;
-		
 		this.windowStartPointers = null;
 		this.windowEndPointers = null;
 		
@@ -80,11 +77,6 @@ public class WindowBatch {
 		
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
-		
-		// this.windowEndPointers = null;
-		
-		// Arrays.fill(windowStartPointers, -1);
-		// Arrays.fill(windowEndPointers,   -1);
 		
 		this.initialised = false;
 		
@@ -154,16 +146,12 @@ public class WindowBatch {
 			else
 				offset *= slide_;
 			
-			// windowStartPointers [0] = batchStartPointer;
-			// windowEndPointers   [0] = windowStartPointers[0] + bpw;
 			b.putInt(batchStartPointer - batchStartPointer);
 			d.putInt(batchStartPointer + bpw - batchStartPointer);
 			
 			for (int i = 1; i < batchSize; i++) {
 				b.putInt(b.getInt((i-1) * 4) + offset);
 				d.putInt(d.getInt((i-1) * 4) + offset);
-				// windowStartPointers [i] = windowStartPointers [i - 1] + offset;
-				// windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
 			}
 		} else { /* Fill-in range-based windows */
 			System.err.println("Unsupported operation...");
@@ -236,6 +224,66 @@ public class WindowBatch {
 				}
 			} /* End of batch */
 		}
+	}
+	
+	public void customInitWindowPointers () {
+		
+		/* Find start and end pointer of the last window
+		 * from the previous batch.
+		 */
+		
+		int previousStartPointer;
+		int   previousEndPointer;
+		
+		if (batchStartPointer < 0 && batchEndPointer < 0)
+			return ;
+		
+		int tuple_ = schema.getByteSizeOfTuple ();
+		int window_ = (int) windowDefinition.getSize();
+		int slide_ = (int) windowDefinition.getSlide();
+		
+		int idx;
+		
+		if (windowDefinition.isRowBased()) {
+			
+			/* Bytes/window */
+			int bpw = tuple_ * window_;
+			
+			int offset  = schema.getByteSizeOfTuple (); /* In bytes */
+			if (windowDefinition.isTumbling())
+				offset *= window_;
+			else
+				offset *= slide_;
+			
+			previousStartPointer = batchStartPointer - offset;
+			previousEndPointer   = previousStartPointer + bpw;
+			
+		} else { /* Find last range-based window */
+			
+			long previousStartTime = this.batchStartTime - windowDefinition.getSlide();
+			/* We work our way backwards until we find the first tuple
+			 * whose timestamp is less than `previousStartTime` 
+			 */
+			for (idx = batchStartPointer - tuple_; idx >= 0; idx -= tuple_) {
+				long t = buffer.getLong(idx);
+				if (t < previousStartTime)
+					break;
+			}
+			previousStartPointer = idx + tuple_;
+			
+			long previousEndTime = previousStartTime + windowDefinition.getSize();
+			/* We work our way forward until we find the first tuple
+			 * whose timestamp is greater than `previousEndTime` 
+			 */
+			for (idx = batchStartPointer; idx < batchEndPointer; idx += tuple_) {
+				long t = buffer.getLong(idx);
+				if (t >= previousEndTime)
+					break;
+			}
+			previousEndPointer = idx;
+		}
+		System.out.println(String.format("[DBG] last window of previous batch starts %10d ends %10d",
+				previousStartPointer, previousEndPointer));
 	}
 	
 	public void clear () {
@@ -320,6 +368,7 @@ public class WindowBatch {
 	 * Print statistics for every window in batch 
 	 */
 	public void debug () {
+		
 		for (int i = 0; i < this.batchSize; i++) {
 			
 			int start = this.windowStartPointers[i];
@@ -327,20 +376,22 @@ public class WindowBatch {
 			int bytes = end - start;
 			int tuples = bytes / schema.getByteSizeOfTuple();
 			
-			System.out.println(String.format("[DBG] window %3d starts at %10d ends at %10d %10d bytes %10d tuples", i, start, end, bytes, tuples));
+			System.out.println(String.format("[DBG] window %3d starts at %10d ends at %10d %10d bytes %10d tuples", 
+					i, start, end, bytes, tuples));
 		}
 	}
 
-	public void setWindowStartPointers(int[] windowStartPointers) {
+	public void setWindowStartPointers (int [] windowStartPointers) {
 		this.windowStartPointers = windowStartPointers;
 	}
 
-	public void setWindowEndPointers(int[] windowEndPointers) {
+	public void setWindowEndPointers (int [] windowEndPointers) {
 		this.windowEndPointers = windowEndPointers;
 	}
 
-	public void normalizeWindowPointers() {
+	public void normalizeWindowPointers () {
 		for (int i = 0; i < batchSize; i++) {
+			
 			windowStartPointers[i] -= batchStartPointer;
 			windowEndPointers  [i] -= batchStartPointer;
 		}

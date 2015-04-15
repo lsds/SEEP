@@ -295,7 +295,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		 */
 		if (check)
 			if (batches[value][_START] >= 0)
-				throw new IllegalStateException(String.format("error: batch %d is current open", value));
+				throw new IllegalStateException(String.format("error: batch %d is currently open", value));
 		return value;
 	}
 	
