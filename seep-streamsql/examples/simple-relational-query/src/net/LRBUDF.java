@@ -10,7 +10,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 
 public class LRBUDF implements IMicroOperatorCode {
 
-	public LRBUDF (WindowDefinition window, FloatColumnReference floatColumnReference, Expression [] expressions) {
+	public LRBUDF () {
 	}
 
 	@Override

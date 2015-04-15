@@ -35,7 +35,7 @@ public class TestNoop {
 		operators.add(uoperator);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(32, 1024));
+		SubQuery query = new SubQuery (0, operators, schema, window, new QueryConf(32, 2048));
 		queries.add(query);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
@@ -53,7 +53,7 @@ public class TestNoop {
 			for (int i = 8; i < TestUtils._TUPLE_; i += 4)
 				b.putInt(1);
 			count++;
-			if (count % 10 == 0)
+			if (count % 1 == 0)
 				ts ++;
 		}
 		

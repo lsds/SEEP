@@ -239,6 +239,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 				
 				/* Set the start pointer for this window batch */
 				batches[b][_START] = position;
+				
 				/* 
 				 * Set the free pointer for the previous window batch, if any. 
 				 * If position is 0, then the free pointer should point at the 
@@ -268,6 +269,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 				
 				/* Set the end pointer for this window batch */
 				batches[d][_END] = position;
+				
 				/* Dispatch a task */
 				this.newTaskFor (
 						batches[d][_START], 

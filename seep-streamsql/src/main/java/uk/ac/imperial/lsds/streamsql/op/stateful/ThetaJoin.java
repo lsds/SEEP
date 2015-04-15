@@ -17,16 +17,15 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 
-	private static Logger	LOG			= LoggerFactory
-												.getLogger(ThetaJoin.class);
-	private IPredicate		predicate;
+	private static Logger LOG = LoggerFactory.getLogger(ThetaJoin.class);
+	private IPredicate predicate;
 
-	private ITupleSchema	outSchema	= null;
-
+	private ITupleSchema outSchema = null;
+	
 	public ThetaJoin(IPredicate predicate) {
 		this.predicate = predicate;
 	}
-
+	
 	@Override
 	public void accept(OperatorVisitor ov) {
 		ov.visit(this);
@@ -119,13 +118,15 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 					 * Scan second window
 					 */
 					for (int i = secondCurrentWindowStart; i < secondCurrentWindowEnd; i += secondByteSizeOfInTuple) {
-						if (predicate.satisfied(firstInBuffer, firstInSchema,
-								firstCurrentIndex, secondInBuffer,
-								secondInSchema, i)) {
-							firstInBuffer.appendBytesTo(
-									firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
-							secondInBuffer.appendBytesTo(
-									i, secondByteSizeOfInTuple, outBuffer);
+						if (
+							predicate == null || 
+							predicate.satisfied (
+								firstInBuffer, firstInSchema, firstCurrentIndex, 
+								secondInBuffer, secondInSchema, i
+							)
+						) {
+							firstInBuffer.appendBytesTo(firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
+							secondInBuffer.appendBytesTo(i, secondByteSizeOfInTuple, outBuffer);
 							
 							// write dummy content if needed
 							outBuffer.put(outSchema.getDummyContent());
@@ -186,17 +187,18 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 					 * Scan first window
 					 */
 					for (int i = firstCurrentWindowStart; i < firstCurrentWindowEnd; i += firstByteSizeOfInTuple) {
-						if (predicate.satisfied(firstInBuffer, firstInSchema,
-								i, secondInBuffer,
-								secondInSchema, secondCurrentIndex)) {
-							firstInBuffer.appendBytesTo(
-									i, firstByteSizeOfInTuple, outBuffer);
-							secondInBuffer.appendBytesTo(
-									secondCurrentIndex, secondByteSizeOfInTuple, outBuffer);
+						if (
+							predicate == null || 
+							predicate.satisfied (
+								firstInBuffer, firstInSchema, i, 
+								secondInBuffer, secondInSchema, secondCurrentIndex
+							)
+						) {
+							firstInBuffer.appendBytesTo(i, firstByteSizeOfInTuple, outBuffer);
+							secondInBuffer.appendBytesTo(secondCurrentIndex, secondByteSizeOfInTuple, outBuffer);
 							
 							// write dummy content if needed
 							outBuffer.put(outSchema.getDummyContent());
-	
 						}
 					}
 					

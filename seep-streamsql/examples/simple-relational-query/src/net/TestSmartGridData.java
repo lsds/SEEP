@@ -22,12 +22,14 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
@@ -185,18 +187,17 @@ public class TestSmartGridData {
 		 * 
 		 * select house, count(*)
 		 * from <query 1 output stream> as S1, <query 2 output stream> as S2
-		 * where S1.timestamp = S2.timestamp and
-		 * S2.load > S1.load
+		 * where S2.load > S1.load
 		 */
 		
 		QueryConf queryConf3 = new QueryConf(1024, 1024); /* #tuples in either stream */
 		
-		WindowType __1st_windowType = WindowType.fromString("row");
+		WindowType __1st_windowType = WindowType.fromString("range");
 		long __1st_windowRange = 1;
 		long __1st_windowSlide = 1;
 		int __1st_numberOfAttributesInSchema  = 1;
 		
-		WindowType __2nd_windowType = WindowType.fromString("row");
+		WindowType __2nd_windowType = WindowType.fromString("range");
 		long __2nd_windowRange = 1;
 		long __2nd_windowSlide = 1;
 		int __2nd_numberOfAttributesInSchema = 1;
@@ -204,34 +205,54 @@ public class TestSmartGridData {
 		WindowDefinition __1st_window = new WindowDefinition (__1st_windowType, __1st_windowRange, __1st_windowSlide);
 		WindowDefinition __2nd_window = new WindowDefinition (__2nd_windowType, __2nd_windowRange, __2nd_windowSlide);
 		
-		int [] __1st_offsets = new int[__1st_numberOfAttributesInSchema + 1];
+		int [] __1st_offsets = new int[__1st_numberOfAttributesInSchema];
 		__1st_offsets[0] = 0;
 		
 		int __1st_byteSize = 8;
 		
 		ITupleSchema __1st_schema = new TupleSchema (__1st_offsets, __1st_byteSize);
 		
-		int [] __2nd_offsets = new int[__2nd_numberOfAttributesInSchema + 1];
+		int [] __2nd_offsets = new int[__2nd_numberOfAttributesInSchema];
 		__2nd_offsets[0] = 0;
 
 		int __2nd_byteSize = 8;
 		
 		ITupleSchema __2nd_schema = new TupleSchema (__2nd_offsets, __2nd_byteSize);
 
-		IPredicate joinPredicate = new FloatComparisonPredicate
-			(
-			FloatComparisonPredicate.GREATER_OP, 
-			new FloatColumnReference(1),
-			new FloatColumnReference(1)
+		IPredicate joinPredicate = null;
+		
+		IMicroOperatorCode q3code1 = new ThetaJoin(joinPredicate);
+		System.out.println(String.format("[DBG] %s", q3code1));
+		
+		MicroOperator q3op1 = new MicroOperator(q3code1, null, 1);
+		
+		/* The second micro-operator is an aggregation over the joined stream */
+		
+		Selection having = new Selection (
+			new FloatComparisonPredicate(
+				FloatComparisonPredicate.GREATER_OP, 
+				new FloatColumnReference(3), 
+				new FloatColumnReference(4)
+				)
 			);
 		
-		IMicroOperatorCode q3code = new ThetaJoin(joinPredicate);
-		System.out.println(String.format("[DBG] %s", q3code));
+		IMicroOperatorCode q3code2 = new MicroAggregation (
+			__1st_window,
+			AggregationType.COUNT, 
+			new FloatColumnReference(1), /* value */
+			new Expression [] {
+				new IntColumnReference(1)
+			},
+			having
+		);
 		
-		MicroOperator q3op = new MicroOperator(q3code, null, 1);
-
+		MicroOperator q3op2 = new MicroOperator(q3code2, null, 1);
+		
+		/* Connect micro-operators */
+		q3op1.connectTo(6001, q3op2);
 		Set<MicroOperator> q3operators = new HashSet<>();
-		q3operators.add(q3op);
+		q3operators.add(q3op1);
+		q3operators.add(q3op2);
 		
 		SubQuery q3 = new SubQuery (2, q3operators, __1st_schema, __1st_window, queryConf3, __2nd_schema, __2nd_window);
 		

@@ -23,12 +23,17 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
+import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
-public class TestGoogleClusterDataReduction {
+public class TestGoogleClusterDataQuery1 {
 	
 	private static final String usage = "usage: java TestGoogleClusterDataReduction";
 	
@@ -78,12 +83,10 @@ public class TestGoogleClusterDataReduction {
 		/*
 		 * Set up configuration of query
 		 */
-		WindowType windowType = WindowType.fromString("range");
-		long windowRange = 10;
-		long windowSlide = 10;
+		WindowType windowType = WindowType.fromString("row");
+		long windowRange = 100;
+		long windowSlide =  10;
 		int numberOfAttributesInSchema = 12;
-		
-		AggregationType aggregationType = AggregationType.fromString("min");
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -91,61 +94,57 @@ public class TestGoogleClusterDataReduction {
 		int [] offsets = new int [numberOfAttributesInSchema];
 		/* First attribute is timestamp */
 		offsets[ 0] =  0;
-		offsets[ 1] =  8;
-		offsets[ 2] = 16;
-		offsets[ 3] = 24;
-		offsets[ 4] = 32;
-		offsets[ 5] = 36;
-		offsets[ 6] = 40;
-		offsets[ 7] = 44;
-		offsets[ 8] = 48;
-		offsets[ 9] = 52;
-		offsets[10] = 56;
-		offsets[11] = 60;
+		offsets[ 1] =  8; /*       jobId */
+		offsets[ 2] = 16; /*      taskId */
+		offsets[ 3] = 24; /*   machineId */
+		offsets[ 4] = 32; /*   eventType */
+		offsets[ 5] = 36; /*      userId */
+		offsets[ 6] = 40; /*    category */
+		offsets[ 7] = 44; /*    priority */
+		offsets[ 8] = 48; /*         cpu */
+		offsets[ 9] = 52; /*         ram */
+		offsets[10] = 56; /*        disk */
+		offsets[11] = 60; /* constraints */
 		
 		int byteSize = 64;
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 		
-		/*
-		Expression [] expression = new Expression [numberOfProjectedAttributes];
+		IPredicate predicate =  new IntComparisonPredicate(
+			IntComparisonPredicate.EQUAL_OP, 
+			new IntColumnReference(4),
+			new IntConstant(3)); /* FAIL == 3 */
 		
-		expression[ 0] = new  LongColumnReference( 0);
-		expression[ 1] = new  LongColumnReference( 1);
-		expression[ 2] = new  LongColumnReference( 2);
-		expression[ 3] = new  LongColumnReference( 3);
-		expression[ 4] = new   IntColumnReference( 4);
-		expression[ 5] = new   IntColumnReference( 5);
-		expression[ 6] = new   IntColumnReference( 6);
-		expression[ 7] = new   IntColumnReference( 7);
-		expression[ 8] = new FloatColumnReference( 8);
-		expression[ 9] = new FloatColumnReference( 9);
-		expression[10] = new FloatColumnReference(10);
-		expression[11] = new   IntColumnReference(11);
+		IMicroOperatorCode selectionCode = new Selection(predicate);
+		MicroOperator uoperator1;
+		uoperator1 = new MicroOperator (selectionCode, null, 1);
 		
-		IMicroOperatorCode projectionCode = new Projection (expression);
-		System.out.println(String.format("[DBG] %s", projectionCode));
-		*/
+		/* After selection, apply aggregation */
+		
+		AggregationType aggregationType = AggregationType.fromString("count");
 		
 		Expression [] groupBy = new Expression [] {
-			new LongColumnReference(1)
+			new IntColumnReference(6)
 		};
 		
-		IMicroOperatorCode reductionCode = new MicroAggregation(
-				window,
-				aggregationType,
-				new FloatColumnReference(8),
-				groupBy
-				);
+		IMicroOperatorCode aggregationCode = new MicroAggregation (
+			window,
+			aggregationType,
+			new FloatColumnReference(8), /* count(*), does not really matter */
+			groupBy
+			);
+		
+		MicroOperator uoperator2;
+		uoperator2 = new MicroOperator (aggregationCode, null, 1);
+		
+		uoperator1.connectTo(6001, uoperator2);
+		Set<MicroOperator> operators = new HashSet<MicroOperator>();
+		operators.add(uoperator1);
+		operators.add(uoperator2);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = 128 * 1048576; /* 1MB */
 		
-		MicroOperator uoperator;
-		uoperator = new MicroOperator (reductionCode, null, 1);
-		
-		Set<MicroOperator> operators = new HashSet<MicroOperator>();
-		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
 		queries.add(query);

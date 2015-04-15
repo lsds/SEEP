@@ -16,7 +16,8 @@ public class Noop implements IMicroOperatorCode {
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
 		windowBatch.initWindowPointers();
-		windowBatch.customInitWindowPointers();
+		windowBatch.customInitWindowPointers(); /* int, int */
+		
 		windowBatch.debug();
 		
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
@@ -25,7 +26,7 @@ public class Noop implements IMicroOperatorCode {
 		windowBatch.setBuffer(outputBuffer);
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
-
+	
 	@Override
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {
