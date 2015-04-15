@@ -376,30 +376,32 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						// key exists already
 						keyOffset = keyOffsets.get(key);
 						
-						newValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
-
-						// check whether new value for aggregation attribute
-						// shall be written
-						//oldValue = this.aggregationAttribute.eval(windowBuffer, outSchema, keyOffset);
-						int oldValuePositionInWindowBuffer = keyOffset
-								+ this.byteSizeOfOutTuple
-								- this.aggregationAttributeByteLength;
-						oldValue = windowBuffer
-								.getFloat(oldValuePositionInWindowBuffer);
-						
-						if (this.aggregationType == AggregationType.SUM) {
-							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
-						}
-						else if (this.aggregationType == AggregationType.AVG) {
-							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
-							windowTupleCount.put(key, windowTupleCount.get(key) + 1);
-						}
-						else if (this.aggregationType == AggregationType.COUNT) {
+						if (this.aggregationType == AggregationType.COUNT) {
 							windowBuffer.putInt(1);
 						}
-						else if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
-								|| (newValue < oldValue && this.aggregationType == AggregationType.MIN)) {
-							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, newValue);
+						else {
+							newValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
+	
+							// check whether new value for aggregation attribute
+							// shall be written
+							//oldValue = this.aggregationAttribute.eval(windowBuffer, outSchema, keyOffset);
+							int oldValuePositionInWindowBuffer = keyOffset
+									+ this.byteSizeOfOutTuple
+									- this.aggregationAttributeByteLength;
+							oldValue = windowBuffer
+									.getFloat(oldValuePositionInWindowBuffer);
+							
+							if (this.aggregationType == AggregationType.SUM) {
+								windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
+							}
+							else if (this.aggregationType == AggregationType.AVG) {
+								windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + newValue);
+								windowTupleCount.put(key, windowTupleCount.get(key) + 1);
+							}
+							else if ((newValue > oldValue && this.aggregationType == AggregationType.MAX)
+									|| (newValue < oldValue && this.aggregationType == AggregationType.MIN)) {
+								windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, newValue);
+							}
 						}
 					}
 
