@@ -1,5 +1,6 @@
 package lrb;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,6 +23,10 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 
+		windowBatch.initWindowPointers();
+		windowBatch.initPrevWindowPointers();
+		windowBatch.moveFreePointerToNotFreeLastWindow();
+		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers = windowBatch.getWindowEndPointers();
 
@@ -32,10 +37,22 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		Map<Integer, Integer> lastPerVehicleInLast30Sec = new HashMap<>();
-		Set<Integer> previous = null;
 
-		int prevWindowStart = -1;
-		int prevWindowEnd = -1;
+		/*
+		 * Create state
+		 */
+		int windowBeforeBatchStart = windowBatch.getPrevStartPointer();
+		int windowBeforeBatchEnd   = windowBatch.getPrevEndPointer();
+		for (int i = windowBeforeBatchStart; i < windowBeforeBatchEnd; i += byteSizeOfInTuple) {
+			int vehicleValue = vehicleAttribute.eval(inBuffer,
+					inSchema, i);
+			lastPerVehicleInLast30Sec.put(vehicleValue, i);
+		}
+		Set<Integer> previous = new HashSet<>();
+		copyToSet(lastPerVehicleInLast30Sec.keySet(), previous);
+		
+		int prevWindowStart = windowBeforeBatchStart;
+		int prevWindowEnd = windowBeforeBatchEnd;
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			int inWindowStartOffset = startPointers[currentWindow];
@@ -44,18 +61,24 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 			// empty window?
 			if (inWindowStartOffset == -1) {
 				if (prevWindowStart != -1) {
-					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
-
-						int vehicleValue = vehicleAttribute.eval(inBuffer,
-								inSchema, i);
-						lastPerVehicleInLast30Sec.remove(vehicleValue);
-					}
+//					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
+//						int vehicleValue = vehicleAttribute.eval(inBuffer,
+//								inSchema, i);
+//						int lastSeen = lastPerVehicleInLast30Sec.get(vehicleValue);
+//						if (lastSeen == i)
+//							lastPerVehicleInLast30Sec.remove(vehicleValue);
+//					}
+					
+					/*
+					 * The current window is empty, the previous window was not empty.
+					 * Thus, we clear the current state.
+					 */
+					lastPerVehicleInLast30Sec.clear();
 				}
 
-				if (currentWindow > 0)
-					evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec, previous,
-							outBuffer, startPointers, endPointers, currentWindow,
-							byteSizeOfInTuple);
+				evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec, previous,
+						outBuffer, startPointers, endPointers, currentWindow,
+						byteSizeOfInTuple);
 
 			} else {
 
@@ -96,10 +119,9 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 					}
 				}
 
-				if (currentWindow > 0)
-					evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec, previous,
-							outBuffer, startPointers, endPointers, currentWindow,
-							byteSizeOfInTuple);
+				evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec, previous,
+						outBuffer, startPointers, endPointers, currentWindow,
+						byteSizeOfInTuple);
 
 				prevWindowStart = inWindowStartOffset;
 				prevWindowEnd = inWindowEndOffset;
@@ -141,7 +163,7 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 		if (lastPerVehicleInLast30Sec.keySet().isEmpty()) {
 			startPointers[currentWindow] = -1;
 			endPointers[currentWindow] = -1;
-			previous = null;
+			previous.clear();
 		} else {
 			int oldOutBufferPos = outBuffer.position();
 			startPointers[currentWindow] = oldOutBufferPos;
@@ -149,9 +171,8 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 			 *  Iterate over all vehicle keys that did not occur in the previous window
 			 */
 			for (Integer key : lastPerVehicleInLast30Sec.keySet()) {
-				if (previous != null)
-					if (previous.contains(key))
-						continue;
+				if (previous.contains(key))
+					continue;
 				
 				int partitionOffset = lastPerVehicleInLast30Sec.get(key);
 				outBuffer.put(inBuffer, partitionOffset, byteSizeOfTuple);
@@ -160,18 +181,18 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 			if (oldOutBufferPos == outBuffer.position()) {
 				startPointers[currentWindow] = -1;
 				endPointers[currentWindow] = -1;
-				previous = null;
+				previous.clear();
 			}
 			else {
-				previous = deepcopy(lastPerVehicleInLast30Sec.keySet());
+				copyToSet(lastPerVehicleInLast30Sec.keySet(), previous);
 				endPointers[currentWindow] = outBuffer.position() - 1;
 			}
 		}
 	}
 
-	private Set<Integer> deepcopy(Set<Integer> keySet) {
-		// TODO Auto-generated method stub
-		return keySet;
+	private void copyToSet(Set<Integer> srcSet, Set<Integer> tarSet) {
+		tarSet.clear();
+		tarSet.addAll(srcSet);
 	}
 	
 	@Override

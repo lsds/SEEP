@@ -31,6 +31,9 @@ public class WindowBatch {
 	private long batchStartTime;
 	private long batchEndTime;
 	
+	private int prevStartPointer;
+	private int prevEndPointer;
+	
 	public WindowBatch () {
 		this(Utils.BATCH, 0, 0, null, null, null);
 	}
@@ -59,6 +62,9 @@ public class WindowBatch {
 		
 		this.batchStartTime = -1;
 		this.batchEndTime = -1;
+		
+		this.prevStartPointer = -1;
+		this.prevEndPointer = -1;
 	}
 	
 	public void set (int batchSize, 
@@ -226,16 +232,15 @@ public class WindowBatch {
 		}
 	}
 	
-	public void customInitWindowPointers () {
+	public void initPrevWindowPointers () {
 		
 		/* Find start and end pointer of the last window
 		 * from the previous batch.
 		 */
-		
-		int previousStartPointer;
-		int   previousEndPointer;
-		
 		if (batchStartPointer < 0 && batchEndPointer < 0)
+			return ;
+		
+		if (taskId == 0)
 			return ;
 		
 		int tuple_ = schema.getByteSizeOfTuple ();
@@ -255,8 +260,12 @@ public class WindowBatch {
 			else
 				offset *= slide_;
 			
-			previousStartPointer = batchStartPointer - offset;
-			previousEndPointer   = previousStartPointer + bpw;
+			this.prevStartPointer = this.batchStartPointer - offset;
+			// check whether we crossed the buffer boundary
+			if (this.prevStartPointer < 0)
+				this.prevStartPointer += buffer.capacity();
+			
+			this.prevEndPointer   = this.prevStartPointer + bpw; 
 			
 		} else { /* Find last range-based window */
 			
@@ -264,33 +273,60 @@ public class WindowBatch {
 			/* We work our way backwards until we find the first tuple
 			 * whose timestamp is less than `previousStartTime` 
 			 */
-			for (idx = batchStartPointer - tuple_; idx >= 0; idx -= tuple_) {
-				long t = buffer.getLong(idx);
-				if (t < previousStartTime)
-					break;
-			}
-			previousStartPointer = idx + tuple_;
+			idx = batchStartPointer;
+			long t = buffer.getLong(idx);
+			while (t >= previousStartTime) {
+				idx -= tuple_;
+				if (idx < 0)
+					idx += buffer.capacity();
+				t = buffer.getLong(idx);
+			}		
+//			for (idx = batchStartPointer - tuple_; idx >= 0; idx -= tuple_) {
+//				long t = buffer.getLong(idx);
+//				if (t < previousStartTime)
+//					break;
+//			}
+			this.prevStartPointer = idx + tuple_;
 			
 			long previousEndTime = previousStartTime + windowDefinition.getSize();
 			/* We work our way forward until we find the first tuple
 			 * whose timestamp is greater than `previousEndTime` 
 			 */
-			for (idx = batchStartPointer; idx < batchEndPointer; idx += tuple_) {
-				long t = buffer.getLong(idx);
-				if (t >= previousEndTime)
-					break;
-			}
-			previousEndPointer = idx;
+			idx = prevStartPointer;
+			t = buffer.getLong(idx);
+			while (t < previousEndTime) {
+				idx += tuple_;
+				t = buffer.getLong(idx);
+			}		
+//			for (idx = batchStartPointer; idx < batchEndPointer; idx += tuple_) {
+//				long t = buffer.getLong(idx);
+//				if (t >= previousEndTime)
+//					break;
+//			}
+			this.prevEndPointer = idx;
 		}
 		System.out.println(String.format("[DBG] last window of previous batch starts %10d ends %10d",
-				previousStartPointer, previousEndPointer));
+				this.prevStartPointer, this.prevEndPointer));
 	}
+	
+	public void moveFreePointerToNotFreeLastWindow() {
+		/*
+		 * Set new free pointer to the byte before the start of the last 
+		 * window of this window batch
+		 */
+		this.freeOffset = this.windowStartPointers[this.windowStartPointers.length - 1] - 1;
+		// check whether we need to wrap
+		this.freeOffset = (this.freeOffset < 0) ? this.freeOffset + buffer.capacity() : this.freeOffset;
+		
+	}
+
 	
 	public void clear () {
 		initialised = false;
 		windowStartPointers = windowEndPointers = null;
 		batchStartTime = batchEndTime = -1;
 		this.buffer = null;
+		this.prevStartPointer = this.prevEndPointer = -1;
 	}
 	
 	public int getInt (int offset, int attribute) {
@@ -402,6 +438,14 @@ public class WindowBatch {
 			startPtrs[i] -= batchStartPointer;
 			endPtrs  [i] -= batchStartPointer;
 		}
+	}
+
+	public int getPrevStartPointer() {
+		return prevStartPointer;
+	}
+
+	public int getPrevEndPointer() {
+		return prevEndPointer;
 	}
 }
 
