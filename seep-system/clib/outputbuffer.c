@@ -11,17 +11,15 @@
 #include <stdint.h>
 
 static int IS_ZERO_COPY (void *ptr, int len) {
-	dbg("p is %lu\n", (uintptr_t) ptr);
 	if ((uintptr_t) ptr % 256 != 0) /* 256-byte alignment*/
 		return 0;
-	/* Cache alignment */
-	/* if (len % 64 != 0)
-		return 0; */
+	if (len % 64 != 0) /* Cache alignment */
+		return 0;
 	return 1;
 }
 
-outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
-		void *buffer, int size, int writeOnly) {
+outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue, void *buffer, 
+	int size, int writeOnly, int doNotMove, int bearsMark, int readEvent) {
 	
 	outputBufferP p = malloc(sizeof(output_buffer_t));
 	if (! p) {
@@ -30,6 +28,10 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
 	}
 	p->size = size;
 	p->writeOnly = (unsigned char) writeOnly;
+	p->doNotMove = (unsigned char) doNotMove;
+	p->bearsMark = (unsigned char) bearsMark;
+	p->readEvent = (unsigned char) readEvent;
+	
 	int error;
 	cl_mem_flags flags;
 	if (writeOnly)
@@ -56,7 +58,8 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
 		&error);
 	} else {
 		if (! IS_ZERO_COPY (buffer, size)) {
-			fprintf(stderr, "warning: buffer is not a zero-copy buffer (%s)\n", __FUNCTION__);
+			fprintf(stderr, "warning: buffer is not a zero-copy buffer (%s)\n", 
+				__FUNCTION__);
 		}
 		p->pinned_buffer = clCreateBuffer (
 		context,
@@ -69,9 +72,14 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	
+	/*
 	if (! IS_ZERO_COPY (p->pinned_buffer, size)) {
-		fprintf(stderr, "opencl warning: buffer is not a zero-copy buffer (%s)\n", __FUNCTION__);
+		fprintf(stderr, "opencl warning: buffer is not a zero-copy buffer (%s)\n", 
+			__FUNCTION__);
 	}
+	*/
+	
 	p->mapped_buffer = (void *) clEnqueueMapBuffer (
 		queue, 
 		p->pinned_buffer,
@@ -85,32 +93,6 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue,
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	return p;
-}
-
-outputBufferP pinOutputBuffer (cl_context context, int size) {
-
-	outputBufferP p = malloc(sizeof(output_buffer_t));
-	if (! p) {
-		fprintf(stderr, "fatal error: out of memory\n");
-		exit (1);
-	}
-	p->size = size;
-	p->writeOnly = 1;
-	int error;
-	/* Set p->device_buffer */
-	p->device_buffer = NULL;
-	p->pinned_buffer = clCreateBuffer (
-		context,
-		CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
-		p->size,
-		NULL,
-		&error);
-	if (! p->pinned_buffer) {
-		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
-		exit (1);
-	}
-	p->mapped_buffer = NULL;
 	return p;
 }
 

@@ -1,6 +1,7 @@
 package lrb;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
@@ -10,11 +11,11 @@ import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 
-public class LRBQ2MicroOpCode implements IMicroOperatorCode {
+public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 
 	private IntColumnReference vehicleAttribute;
 
-	public LRBQ2MicroOpCode() {
+	public LRBQ2IStreamMicroOpCode() {
 		this.vehicleAttribute = new IntColumnReference(3);
 	}
 
@@ -31,6 +32,7 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 
 		Map<Integer, Integer> lastPerVehicleInLast30Sec = new HashMap<>();
+		Set<Integer> previous = null;
 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
@@ -50,9 +52,10 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 					}
 				}
 
-				evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec,
-						outBuffer, startPointers, endPointers, currentWindow,
-						byteSizeOfInTuple);
+				if (currentWindow > 0)
+					evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec, previous,
+							outBuffer, startPointers, endPointers, currentWindow,
+							byteSizeOfInTuple);
 
 			} else {
 
@@ -63,7 +66,13 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
 						int vehicleValue = vehicleAttribute.eval(inBuffer,
 								inSchema, i);
-						lastPerVehicleInLast30Sec.remove(vehicleValue);
+						
+						if (lastPerVehicleInLast30Sec.containsKey(vehicleValue)) {
+							int lastSeen = lastPerVehicleInLast30Sec.get(vehicleValue);
+							if (lastSeen == i)
+								lastPerVehicleInLast30Sec.remove(vehicleValue);
+							
+						}
 					}
 				}
 
@@ -87,9 +96,10 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 					}
 				}
 
-				evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec,
-						outBuffer, startPointers, endPointers, currentWindow,
-						byteSizeOfInTuple);
+				if (currentWindow > 0)
+					evaluateWindow(api, inBuffer, lastPerVehicleInLast30Sec, previous,
+							outBuffer, startPointers, endPointers, currentWindow,
+							byteSizeOfInTuple);
 
 				prevWindowStart = inWindowStartOffset;
 				prevWindowEnd = inWindowEndOffset;
@@ -124,24 +134,46 @@ public class LRBQ2MicroOpCode implements IMicroOperatorCode {
 	// }
 
 	private void evaluateWindow(IWindowAPI api, IQueryBuffer inBuffer,
-			Map<Integer, Integer> lastPerVehicleInLast30Sec,
+			Map<Integer, Integer> lastPerVehicleInLast30Sec, Set<Integer> previous,
 			IQueryBuffer outBuffer, int[] startPointers, int[] endPointers,
 			int currentWindow, int byteSizeOfTuple) {
 
 		if (lastPerVehicleInLast30Sec.keySet().isEmpty()) {
 			startPointers[currentWindow] = -1;
 			endPointers[currentWindow] = -1;
+			previous = null;
 		} else {
-			startPointers[currentWindow] = outBuffer.position();
+			int oldOutBufferPos = outBuffer.position();
+			startPointers[currentWindow] = oldOutBufferPos;
+			/*
+			 *  Iterate over all vehicle keys that did not occur in the previous window
+			 */
 			for (Integer key : lastPerVehicleInLast30Sec.keySet()) {
+				if (previous != null)
+					if (previous.contains(key))
+						continue;
+				
 				int partitionOffset = lastPerVehicleInLast30Sec.get(key);
 				outBuffer.put(inBuffer, partitionOffset, byteSizeOfTuple);
 			}
-
-			endPointers[currentWindow] = outBuffer.position() - 1;
+			
+			if (oldOutBufferPos == outBuffer.position()) {
+				startPointers[currentWindow] = -1;
+				endPointers[currentWindow] = -1;
+				previous = null;
+			}
+			else {
+				previous = deepcopy(lastPerVehicleInLast30Sec.keySet());
+				endPointers[currentWindow] = outBuffer.position() - 1;
+			}
 		}
 	}
 
+	private Set<Integer> deepcopy(Set<Integer> keySet) {
+		// TODO Auto-generated method stub
+		return keySet;
+	}
+	
 	@Override
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {

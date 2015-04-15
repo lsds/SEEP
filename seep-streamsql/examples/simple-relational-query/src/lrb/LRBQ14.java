@@ -69,7 +69,7 @@ public class LRBQ14 {
 		 *      SegSpeedStr [Partition by vehicleId Rows 1] As L
 		 * Where A.vehicleId = L.vehicleId
 		 */
-		MicroOperator q2m = new MicroOperator(new LRBQ2MicroOpCode(), 2);
+		MicroOperator q2m = new MicroOperator(new LRBQ2RStreamMicroOpCode(), 2);
 		Set<MicroOperator> q2MicroOps = new HashSet<>();
 		q2MicroOps.add(q2m);
 		SubQuery sq2 = new SubQuery(20, q2MicroOps, inputSchema,

@@ -15,8 +15,6 @@ typedef struct input_buffer {
 
 inputBufferP getInputBuffer (cl_context, cl_command_queue, void *, int);
 
-inputBufferP pinInputBuffer (cl_context, int);
-
 void freeInputBuffer (inputBufferP, cl_command_queue);
 
 int getInputBufferSize (inputBufferP);

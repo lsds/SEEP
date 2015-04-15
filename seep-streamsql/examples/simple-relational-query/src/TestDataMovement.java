@@ -54,7 +54,7 @@ public class TestDataMovement {
 		_t = System.nanoTime();
 		for (int i = 0; i < iterations; i++) {
 		
-			TheGPU.getInstance().testDataMovement(qid);
+			// TheGPU.getInstance().testDataMovement(qid);
 			
 			// TheGPU.getInstance().testOverlap(qid, kernel.getThreads(), kernel.getThreadsPerGroup());
 			

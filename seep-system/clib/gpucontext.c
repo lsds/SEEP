@@ -37,7 +37,8 @@ gpuContextP gpu_context (
 		CL_QUEUE_PROFILING_ENABLE, 
 		&error);
 	if (! q->queue[0]) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	q->queue[1] = clCreateCommandQueue (
@@ -46,7 +47,8 @@ gpuContextP gpu_context (
 		CL_QUEUE_PROFILING_ENABLE, 
 		&error);
 	if (! q->queue[1]) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	q->scheduled = 0; /* No read or write events scheduled */
@@ -88,7 +90,8 @@ void gpu_context_setKernel (gpuContextP q, int ndx,
 	for (i = 0; i < 2; i++) {
 		q->kernel.kernels[ndx]->kernel[i] = clCreateKernel (q->program, name, &error);
 		if (! q->kernel.kernels[ndx]->kernel[i]) {
-			fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+			fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+				error, getErrorMessage(error), __FUNCTION__);
 			exit (1);
 		} else {
 			(*callback) (q->kernel.kernels[ndx]->kernel[i], q, args);
@@ -104,12 +107,55 @@ void gpu_context_setInput (gpuContextP q, int ndx, void *buffer, int size) {
 		buffer, size);
 }
 
-void gpu_context_setOutput (gpuContextP q, int ndx, void *buffer, int size, int writeOnly) {
+void gpu_context_setOutput (gpuContextP q, int ndx, void *buffer, int size, 
+	int writeOnly, int doNotMove, int bearsMark, int readEvent) {
+	
 	if (ndx < 0 || ndx >= q->kernelOutput.count)
 		return;
 	q->kernelOutput.outputs[ndx] = getOutputBuffer (q->context, q->queue[0],
-		buffer, size, writeOnly);
+		buffer, size, writeOnly, doNotMove, bearsMark, readEvent);
 }
+
+#ifdef GPU_PROFILE
+static float normalise (cl_ulong p, cl_ulong q) {
+	float result = ((float) (p - q) / 1000.);
+	return result;
+}
+
+static void printEventProfilingInfo (cl_event event, const char *acronym) {
+	cl_ulong q, s, x, f; /* queued, submitted, start, and end timestamps */
+	float _s,_x,_f;
+	int error = 0;
+	error |= clGetEventProfilingInfo(
+		event, 
+		CL_PROFILING_COMMAND_QUEUED, 
+		sizeof(cl_ulong),
+		&q, 
+		NULL);
+	error |= clGetEventProfilingInfo(
+		event, 
+		CL_PROFILING_COMMAND_SUBMIT, 
+		sizeof(cl_ulong), 
+		&s, 
+		NULL);
+	error |= clGetEventProfilingInfo(
+		event, 
+		CL_PROFILING_COMMAND_START, 
+		sizeof(cl_ulong), 
+		&x, 
+		NULL);
+	error |= clGetEventProfilingInfo(
+		event, 
+		CL_PROFILING_COMMAND_END, 
+		sizeof(cl_ulong), 
+		&f, 
+		NULL);
+	_s = normalise(s, q);
+	_x = normalise(x, q);
+	_f = normalise(f, q);
+	dbg("[PRF] %5s\t s %10.1f\t x %10.1f\t f %10.1f\n", acronym, _s, _x, _f);
+}
+#endif
 
 #ifdef GPU_VERBOSE
 static int getEventReferenceCount (cl_event event) {
@@ -122,7 +168,8 @@ static int getEventReferenceCount (cl_event event) {
 		(void *) &count,
 		NULL);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		return -1;
 	} else
 		return (int) count;
@@ -138,7 +185,8 @@ static char *getEventCommandStatus (cl_event event) {
 		(void *) &status,
 		NULL);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		return getCommandExecutionStatus(-1);
 	} else
 		return getCommandExecutionStatus(status);
@@ -154,12 +202,32 @@ static char *getEventCommandType (cl_event event) {
 		(void *) &type,
 		NULL);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		return getCommandType(-1);
 	} else
 		return getCommandType(type);
 }
 #endif
+
+void gpu_context_profileQuery (gpuContextP q) {
+	/*
+	 * This method should be called after we wait for the
+	 * the read event. 
+	 *
+	 * If the latter returns with no errors (CL_SUCCESS), 
+	 * then the query kernels have been executed success-
+	 * fully as well.
+	 */
+	char msg[64];
+	int i;
+	for (i = 0; i < q->kernel.count; i++) {
+		memset(msg, 0, 64);
+		sprintf(msg, "K%02d", i);
+		printEventProfilingInfo(q->exec_event[i], msg);
+		clReleaseEvent(q->exec_event[i]);
+	}
+}
 
 void gpu_context_waitForReadEvent (gpuContextP q) {
 	if (q->scheduled < 1 || q->readCount < 1)
@@ -172,7 +240,8 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 	/* Wait for read event */
 	int error = clWaitForEvents(1, &(q->read_event));
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	q->readCount -= 1;
@@ -180,18 +249,20 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 	return ;
 }
 
+/*
 void gpu_context_waitForExecEvent (gpuContextP q) {
 	if (q->scheduled < 1)
 		return;
-	/* Wait for execute event */
 	int error = clWaitForEvents(1, &(q->exec_event));
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	clReleaseEvent(q->exec_event);
 	return ;
 }
+*/
 
 void gpu_context_waitForWriteEvent (gpuContextP q) {
 	if (q->scheduled < 1  || q->writeCount < 1)
@@ -204,7 +275,8 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 	/* Wait for write event */
 	int error = clWaitForEvents(1, &(q->write_event));
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	q->writeCount -= 1;
@@ -217,7 +289,8 @@ void gpu_context_flush (gpuContextP q) {
 	error |= clFlush (q->queue[0]);
 	error |= clFlush (q->queue[1]);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 }
@@ -230,12 +303,13 @@ void gpu_context_finish (gpuContextP q) {
 	error |= clFinish (q->queue[0]);
 	error |= clFinish (q->queue[1]);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 }
 
-void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGroup) {
+void gpu_context_submitTask (gpuContextP q, size_t *threads, size_t *threadsPerGroup) {
 	int i;
 	int error = 0;
 	/* Write */
@@ -260,7 +334,8 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 				0, NULL, NULL);
 		}
 		if (error != CL_SUCCESS) {
-			fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+			fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+				error, getErrorMessage(error), __FUNCTION__);
 			exit (1);
 		}
 	}
@@ -273,8 +348,8 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 			q->kernel.kernels[i]->kernel[0],
 			1,
 			NULL,
-			&threads,
-			&threadsPerGroup,
+			&(threads[i]),
+			&(threadsPerGroup[i]),
 			0, NULL, NULL);
 	}
 	
@@ -291,7 +366,8 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 	*/
 
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 
@@ -318,7 +394,8 @@ void gpu_context_submitTask (gpuContextP q, size_t threads, size_t threadsPerGro
 		}
 	}
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	q->readCount += 1;
@@ -343,8 +420,26 @@ void gpu_context_readOutput (gpuContextP q,
 		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
 		JNIEnv *env, jobject obj, int qid) {
 	int idx;
+	/* Find mark */
+	int mark = 0;
+	for (idx = 0; idx < q->kernelOutput.count; idx++) {
+		if (q->kernelOutput.outputs[idx]->bearsMark) {
+			dbg("[DBG] output %d bears mark\n", idx);
+			int N = q->kernelOutput.outputs[idx]->size / sizeof(int);
+			int *values = (int *) (q->kernelOutput.outputs[idx]->mapped_buffer);
+			int j;
+			for (j = N - 1; j >= 0; j--) {
+				if (values[j] != 0) {
+					mark = values[j];
+					break;
+				}
+			}
+			dbg("[DBG] mark is %d\n", mark);
+		}
+	}
+	/* mark = 0; */
 	for (idx = 0; idx < q->kernelOutput.count; idx++)
-		(*callback) (q, env, obj, qid, idx, 0);
+		(*callback) (q, env, obj, qid, idx, mark);
 	return;
 }
 
@@ -373,7 +468,8 @@ void gpu_context_moveInputBuffers (gpuContextP q) {
 				0, NULL, NULL);
 		}
 		if (error != CL_SUCCESS) {
-			fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+			fprintf(stderr, "opencl error (%d): %s (%s)\n",
+				error, getErrorMessage(error), __FUNCTION__);
 			exit (1);
 		}
 	}
@@ -388,7 +484,11 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 	int error = 0;
 	/* Read */
 	for (i = 0; i < q->kernelOutput.count; i++) {
-		if (i == q->kernelOutput.count - 1) {
+		
+		if (q->kernelOutput.outputs[i]->doNotMove)
+			continue;
+		
+		if (q->kernelOutput.outputs[i]->readEvent) {
 			error |= clEnqueueReadBuffer (
 				q->queue[0],
 				q->kernelOutput.outputs[i]->device_buffer,
@@ -409,7 +509,8 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 		}
 	}
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 	q->readCount += 1;
@@ -418,21 +519,34 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 	return;
 }
 
-void gpu_context_submitKernel (gpuContextP q, size_t threads, size_t threadsPerGroup) {
+void gpu_context_submitKernel (gpuContextP q, size_t *threads, size_t *threadsPerGroup) {
 	int i;
 	int error = 0;
 
 	/* Execute */
 	for (i = 0; i < q->kernel.count; i++) {
-		/* i = 0; */
+		dbg("[DBG] submit kernel %d: %6zu threads %6zu threads/group\n", 
+			i, threads[i], threadsPerGroup[i]);
+#ifdef GPU_PROFILE
 		error |= clEnqueueNDRangeKernel (
 			q->queue[0],
 			q->kernel.kernels[i]->kernel[0],
 			1,
 			NULL,
-			&threads,
-			&threadsPerGroup,
+			&(threads[i]),
+			&(threadsPerGroup[i]),
+			0, NULL, &(q->exec_event[i]));
+#else
+		error |= clEnqueueNDRangeKernel (
+			q->queue[0],
+			q->kernel.kernels[i]->kernel[0],
+			1,
+			NULL,
+			&(threads[i]),
+			&(threadsPerGroup[i]),
 			0, NULL, NULL);
+#endif
+
 	}
 
 	/* Execute and get event notification */
@@ -448,185 +562,11 @@ void gpu_context_submitKernel (gpuContextP q, size_t threads, size_t threadsPerG
 	*/
 
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
+			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
 
 	return;
 }
 
-void gpu_context_custom_submitKernel (gpuContextP q, size_t threads, size_t threadsPerGroup, size_t _threads, size_t _threadsPerGroup) {
-	int i;
-	int error = 0;
-
-	/* Execute */
-//	printf("[DBG] %d kernels\n", q->kernel.count);
-	for (i = 0; i < q->kernel.count; i++) {
-//		printf("[DBG] K%d\n", i);
-		if (i == 0) {
-			error |= clEnqueueNDRangeKernel (
-			q->queue[0],
-			q->kernel.kernels[i]->kernel[0],
-			1,
-			NULL,
-			&threads,
-			&threadsPerGroup,
-			0, NULL, NULL);
-		} else {
-			error |= clEnqueueNDRangeKernel (
-			q->queue[0],
-			q->kernel.kernels[i]->kernel[0],
-			1,
-			NULL,
-			&_threads,
-			&_threadsPerGroup,
-			0, NULL, NULL);
-		}
-	}
-
-	/* Execute and get event notification */
-	/*
-	error = clEnqueueNDRangeKernel (
-		q->queue[0],
-		q->kernel.kernels[0]->kernel[0],
-		1,
-		NULL,
-		&threads,
-		&threadsPerGroup,
-		0, NULL, &q->exec_event);
-	*/
-
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-
-	return;
-}
-
-void gpu_context_submitOverlappingTask (gpuContextP q, size_t threads, size_t threadsPerGroup) {
-
-	int i;
-	int error = 0;
-
-	if (threads % 2 != 0) {
-		fprintf(stderr, "error: invalid number of threads (%zu)\n", threads);
-		exit (1);
-	}
-	size_t __threads = threads / 2;
-
-	/*
-	 * Phase 0, Part I
-	 */
-	for (i = 0; i < q->kernelInput.count; i++) {
-
-		error |= clEnqueueWriteBuffer (
-			q->queue[0],
-			q->kernelInput.inputs[i]->device_buffer,
-			CL_FALSE,
-			0,
-			q->kernelInput.inputs[i]->size / 2,
-			&((unsigned char *) (q->kernelInput.inputs[i]->mapped_buffer))[0],
-			0, NULL, NULL);
-	}
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-	gpu_context_flush (q);
-
-	/*
-	 * Phase 1
-	 */
-	for (i = 0; i < q->kernel.count; i++) {
-
-		error |= clEnqueueNDRangeKernel (
-			q->queue[0],
-			q->kernel.kernels[i]->kernel[0],
-			1,
-			NULL,
-			&__threads,
-			&threadsPerGroup,
-			0, NULL, NULL);
-	}
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-	for (i = 0; i < q->kernelInput.count; i++) {
-
-		int __size = q->kernelInput.inputs[i]->size / 2;
-		error |= clEnqueueWriteBuffer (
-			q->queue[1],
-			q->kernelInput.inputs[i]->device_buffer,
-			CL_FALSE,
-			__size,
-			__size,
-			&((unsigned char *) (q->kernelInput.inputs[i]->mapped_buffer))[__size],
-			0, NULL, &q->write_event);
-	}
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-	q->writeCount += 1;
-	gpu_context_flush (q);
-
-	/*
-	 * Phase 2
-	 */
-	for (i = 0; i < q->kernel.count; i++) {
-		error |= clEnqueueNDRangeKernel (
-			q->queue[1],
-			q->kernel.kernels[i]->kernel[1],
-			1,
-			NULL,
-			&__threads,
-			&threadsPerGroup,
-			0, NULL, NULL);
-	}
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-	for (i = 0; i < q->kernelOutput.count; i++) {
-
-		error |= clEnqueueReadBuffer (
-			q->queue[0],
-			q->kernelOutput.outputs[i]->device_buffer,
-			CL_FALSE,
-			0,
-			q->kernelOutput.outputs[i]->size / 2,
-			&((unsigned char *) (q->kernelOutput.outputs[i]->mapped_buffer))[0],
-			0, NULL, NULL);
-	}
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-	gpu_context_flush (q);
-
-	/*
-	 * Phase 0, part II
-	 */
-	for (i = 0; i < q->kernelOutput.count; i++) {
-
-		int __size = q->kernelOutput.outputs[i]->size / 2;
-		error |= clEnqueueReadBuffer (
-			q->queue[1],
-			q->kernelOutput.outputs[i]->device_buffer,
-			CL_FALSE,
-			__size,
-			__size,
-			&((unsigned char *) (q->kernelOutput.outputs[i]->mapped_buffer))[__size],
-			0, NULL, &q->read_event);
-	}
-	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", error, getErrorMessage(error), __FUNCTION__);
-		exit (1);
-	}
-	q->readCount += 1;
-	q->scheduled = 1;
-
-	return;
-}

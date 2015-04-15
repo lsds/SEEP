@@ -41,43 +41,13 @@ gpuContextP gpu_context_switch (gpuQueryP);
 
 int gpu_query_setInput (gpuQueryP, int, void *, int);
 
-int gpu_query_setOutput (gpuQueryP, int, void *, int, int);
+int gpu_query_setOutput (gpuQueryP, int, void *, int, int, int, int, int);
 
 int gpu_query_setKernel (gpuQueryP, int,
 		const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
 
 /* Execute task */
-int gpu_query_exec (gpuQueryP, size_t, size_t, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_custom_exec (gpuQueryP, size_t, size_t, queryOperatorP,
-		JNIEnv *, jobject, int, size_t, size_t);
-
-int gpu_query_testJNIDataMovement (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_copyInputBuffers (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_copyOutputBuffers (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_moveInputBuffers (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_moveOutputBuffers (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_moveInputAndOutputBuffers (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_testDataMovement (gpuQueryP, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_testOverlap (gpuQueryP, size_t, size_t, queryOperatorP,
-		JNIEnv *, jobject, int);
-
-int gpu_query_interTaskOverlap (gpuQueryP, size_t, size_t, queryOperatorP,
+int gpu_query_exec (gpuQueryP, size_t *, size_t *, queryOperatorP,
 		JNIEnv *, jobject, int);
 
 #endif /* __GPU_QUERY_H_ */

@@ -7,10 +7,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#undef uk_ac_imperial_lsds_seep_multi_TheGPU_MAX_QUERIES
-#define uk_ac_imperial_lsds_seep_multi_TheGPU_MAX_QUERIES 16L
-#undef uk_ac_imperial_lsds_seep_multi_TheGPU_MAX_BUFFERS
-#define uk_ac_imperial_lsds_seep_multi_TheGPU_MAX_BUFFERS 30L
+#undef uk_ac_imperial_lsds_seep_multi_TheGPU_maxQueries
+#define uk_ac_imperial_lsds_seep_multi_TheGPU_maxQueries 5L
+#undef uk_ac_imperial_lsds_seep_multi_TheGPU_maxBuffers
+#define uk_ac_imperial_lsds_seep_multi_TheGPU_maxBuffers 10L
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    init
@@ -32,48 +32,24 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getQuery
  * Method:    setInput
  * Signature: (III)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setInput__III
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setInput
   (JNIEnv *, jobject, jint, jint, jint);
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    setInput
- * Signature: (IILjava/nio/ByteBuffer;I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setInput__IILjava_nio_ByteBuffer_2I
-  (JNIEnv *, jobject, jint, jint, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    setOutput
- * Signature: (IIII)I
+ * Signature: (IIIIIII)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput__IIII
-  (JNIEnv *, jobject, jint, jint, jint, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    setOutput
- * Signature: (IILjava/nio/ByteBuffer;II)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput__IILjava_nio_ByteBuffer_2II
-  (JNIEnv *, jobject, jint, jint, jobject, jint, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput
+  (JNIEnv *, jobject, jint, jint, jint, jint, jint, jint, jint);
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    execute
- * Signature: (III)I
+ * Signature: (I[I[I)I
  */
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_execute
-  (JNIEnv *, jobject, jint, jint, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    executeCustom
- * Signature: (IIIII)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executeCustom
-  (JNIEnv *, jobject, jint, jint, jint, jint, jint);
+  (JNIEnv *, jobject, jint, jintArray, jintArray);
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
@@ -125,115 +101,11 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggre
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    getNumCores
- * Signature: ()I
+ * Method:    setKernelThetaJoin
+ * Signature: (I[I)I
  */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getNumCores
-  (JNIEnv *, jobject);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    bind
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_bind
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    unbind
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_unbind
-  (JNIEnv *, jobject);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    getCpuId
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getCpuId
-  (JNIEnv *, jobject);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    testJNIDataMovement
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_testJNIDataMovement
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    copyInputBuffers
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_copyInputBuffers
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    copyOutputBuffers
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_copyOutputBuffers
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    moveInputBuffers
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_moveInputBuffers
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    moveOutputBuffers
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_moveOutputBuffers
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    moveInputAndOutputBuffers
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_moveInputAndOutputBuffers
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    testDataMovement
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_testDataMovement
-  (JNIEnv *, jobject, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    testOverlap
- * Signature: (III)I
- */
-JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_testOverlap
-  (JNIEnv *, jobject, jint, jint, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    getBufferAddress
- * Signature: (II)J
- */
-JNIEXPORT jlong JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getBufferAddress__II
-  (JNIEnv *, jobject, jint, jint);
-
-/*
- * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    getBufferAddress
- * Signature: (III)J
- */
-JNIEXPORT jlong JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getBufferAddress__III
-  (JNIEnv *, jobject, jint, jint, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelThetaJoin
+  (JNIEnv *, jobject, jint, jintArray);
 
 #ifdef __cplusplus
 }
