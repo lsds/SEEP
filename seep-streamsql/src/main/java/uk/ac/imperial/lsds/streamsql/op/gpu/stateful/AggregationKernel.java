@@ -24,23 +24,17 @@ import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	/*
-	 * This size must be greater or equal to the size of the byte array backing
-	 * an input window batch.
-	 */
-	private static final int _default_input_size = Utils._GPU_INPUT_;
-	private static final int _INT_ = 4;
-	/*
-	 * Operator configuration parameters
-	 */
 	private static final int THREADS_PER_GROUP = 256;
+	private static final int TUPLES_PER_THREAD = 2;
 	
 	private static final int PIPELINES = 2;
+	private int [] taskIdx;
+	private int [] freeIdx;
 	
 	private static final int _hash_functions = 5;
-
+	
 	private static final float _scale_factor = 1.25F;
-
+	
 	private static final float _min_space_requirements [] = {
 		Float.MAX_VALUE,
 		Float.MAX_VALUE,
@@ -49,54 +43,54 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		1.03F,
 		1.02F
 	};
-
+	
 	/* Default stash table size (# tuples) */
-	static int _stash = 100;
+	private static int _stash = 100;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
 	
-	boolean pinned = false;
-	
 	private LongColumnReference timestampReference;
-	
-	private int batchSize, windowSize;
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private String filename = null;
+	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Aggregation.cl";
 	
 	private int qid;
 	
 	private int [] args;
 	
 	private int tuples;
-	private int threads, groups;
 	
-	private int __compact_threads, __compact_threadsPerGroup;
+	private int [] threads;
+	private int [] tgs;
+	
+	private int ngroups;
+	
+	private int batchSize = -1, windowSize = -1;
 
-	/* Local memory sizes */
-	private int  _input_size, _window_ptrs_size;
-	private int _output_size, _local_input_size;
+	/* Global and local memory sizes */
+	private int inputSize = -1, outputSize;
+	private int windowPtrsSize;
+	private int localInputSize;
 	
 	private int __stash_x, __stash_y;
-	private int [] x;
-	private int [] y;
+	private int [] _x;
+	private int [] _y;
 	
-	private ByteBuffer _int_x;
-	private ByteBuffer _int_y;
+	private ByteBuffer x;
+	private ByteBuffer y;
 	
 	private int iterations;
 	
-	private int _table_size, _table_slots;
+	private int tableSize, tableSlots;
 	
 	private byte [] startPtrs;
 	private byte [] endPtrs;
 	
-	private int [] taskIdx;
-	private int [] freeIdx;
+	private byte [] contents, stashed, failed, attempts, indices, offsets, partitions;
 	
-	private boolean isPowerOfTwo (int n) {
+	private static boolean isPowerOfTwo (int n) {
 		if (n == 0)
 			return false;
 		while (n != 1) {
@@ -107,13 +101,13 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		return true;
 	}
 	
-	private int computeIterations (int n) {
+	private static int computeIterations (int n) {
 		int result = 7;
 		float logn = (float) (Math.log(n) / Math.log(2.0));
 		return (int) (result * logn);
 	}
 	
-	private void constants (int [] x, int [] y, int [] stash) {
+	private static void constants (int [] x, int [] y, int [] stash) {
 		Random r = new Random();
 		int prime = 2147483647;
 		assert (x.length == y.length);
@@ -129,8 +123,16 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		stash[1] = r.nextInt(prime) % prime;
 	}
 	
-	public AggregationKernel (AggregationType type, FloatColumnReference _the_aggregate) {
-		this (type, _the_aggregate, null);
+	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs) {
+		
+		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		int wid = 0;
+		while (b.hasRemaining() && d.hasRemaining()) {
+			System.out.println(String.format("w %02d: starts %10d ends %10d", 
+				wid, b.getInt(), d.getInt()));
+				wid ++;
+		}
 	}
 	
 	public AggregationKernel (AggregationType type, FloatColumnReference _the_aggregate, ITupleSchema inputSchema) {
@@ -150,19 +152,16 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		this.outputSchema = ExpressionsUtil.getTupleSchemaForExpressions(outputAttributes);
 		
-		this._input_size = _default_input_size;
+		taskIdx = new int [PIPELINES];
+		freeIdx = new int [PIPELINES];
+		for (int i = 0; i < PIPELINES; i++) {
+			taskIdx[i] = -1;
+			freeIdx[i] = -1;
+		}
 	}
 	
-	public void setSource (String filename) {
-		this.filename = filename;
-	}
-	
-	public void setInputSize (int size) {
-		this._input_size = size;
-	}
-	
-	public void setInputSchema (ITupleSchema inputSchema) {
-		this.inputSchema = inputSchema;
+	public void setInputSize (int inputSize) {
+		this.inputSize = inputSize;
 	}
 	
 	public void setBatchSize (int batchSize) {
@@ -175,114 +174,121 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	public void setup () {
 		
-		/* Configure kernel arguments */
-		
-		this.tuples = _input_size / inputSchema.getByteSizeOfTuple();
-		
-		/* We assign 1 group per window */
-		this.groups = this.batchSize;
-		this.threads = groups * THREADS_PER_GROUP;
-		/*
-		*/
-		
-		this._output_size = tuples * outputSchema.getByteSizeOfTuple();
-		
-		this._window_ptrs_size = _INT_ * groups;
-		
-		this.x = new int [_hash_functions];
-		this.y = new int [_hash_functions];
-		
-		this._int_x = ByteBuffer.allocate(_hash_functions * _INT_).order(ByteOrder.LITTLE_ENDIAN);
-		this._int_y = ByteBuffer.allocate(_hash_functions * _INT_).order(ByteOrder.LITTLE_ENDIAN);
-		
-		int [] stash = new int [2];
-		constants(x, y, stash);
-		this.__stash_x = stash[0];
-		this.__stash_y = stash[1];
-		
-		/* Convert int to bytes */
-		for (int i = 0; i < _hash_functions; i++) {
-			_int_x.putInt(x[i]);
-			_int_y.putInt(y[i]);
+		if (windowSize < 0) {
+			System.err.println("error: invalid window size");
+			System.exit(1);
 		}
+		if (batchSize < 0) {
+			System.err.println("error: invalid batch size");
+			System.exit(1);
+		}
+		if (inputSize < 0) {
+			System.err.println("error: invalid input size");
+			System.exit(1);
+		}
+		tuples = inputSize / inputSchema.getByteSizeOfTuple();
 		
+		windowPtrsSize = batchSize * 4;
+		startPtrs = new byte [windowPtrsSize];
+		  endPtrs = new byte [windowPtrsSize];
+		
+		/* Configure hash table constants */
+		_x = new int [_hash_functions];
+		_y = new int [_hash_functions];
+		 x = ByteBuffer.allocate(4 * _hash_functions).order
+			(ByteOrder.LITTLE_ENDIAN);
+		 y = ByteBuffer.allocate(4 * _hash_functions).order
+			(ByteOrder.LITTLE_ENDIAN);
+		int [] stash = new int[2];
+		constants (_x, _y, stash);
+		__stash_x = stash[0];
+		__stash_y = stash[1];
+		for (int i = 0; i < _hash_functions; i++) {
+			x.putInt(_x[i]);
+			y.putInt(_y[i]);
+		}
 		iterations = computeIterations (windowSize);
-		
 		/* Determine an upper bound on # slots/table,
 		 * such that we avoid collisions */
+		System.out.println(String.format("[DBG] %d iterations\n", iterations));
 		float alpha = _scale_factor;
 		if (alpha < _min_space_requirements[_hash_functions])
 		{
-			throw new IllegalArgumentException("error: invalid hash table size");
+			throw new IllegalArgumentException("error: invalid scale factor");
 		}
-		this._table_size  = (int) Math.ceil(this.windowSize * alpha);
-		while (((_table_size + _stash) % THREADS_PER_GROUP) != 0)
-			_table_size += 1;
-		this._table_slots = this._table_size + _stash;
-		
-		System.out.println(String.format("[DBG] # slots (~2) is %4d\n", _table_slots));
-		while (! isPowerOfTwo(_table_slots)) {
-			_table_slots += 1;
+		tableSize  = (int) Math.ceil(windowSize * alpha);
+		tableSlots = tableSize + _stash;
+		System.out.println(String.format("[DBG] # slots (~2) is %4d", tableSlots));
+		while (! isPowerOfTwo(tableSlots)) {
+			tableSlots += 1;
 		}
-		System.out.println(String.format("[DBG] # slots (^2) is %4d\n", _table_slots));
+		System.out.println(String.format("[DBG] # slots (^2) is %4d", tableSlots));
+		tableSize = tableSlots - _stash;
 		
-		__compact_threads = _table_slots / 2;
-		__compact_threadsPerGroup = __compact_threads / groups;
+		/* Determine #threads */
+		tgs = new int [4];
+		tgs[0] = THREADS_PER_GROUP; /* This is a constant; it must be a power of 2 */
+		tgs[1] = THREADS_PER_GROUP;
+		tgs[2] = THREADS_PER_GROUP;
+		tgs[3] = THREADS_PER_GROUP;
 		
-		this._local_input_size = _INT_ * __compact_threadsPerGroup * 2; /* local buffer size */
+		threads = new int [4];
+		threads[0] = (batchSize * tableSlots); /* Clear `indices` and `offsets` */
+		threads[1] = batchSize * tgs[0];
+		/* Configure scan & compact kernels */
+		threads[2] = (batchSize * tableSlots) / TUPLES_PER_THREAD;
+		threads[3] = (batchSize * tableSlots) / TUPLES_PER_THREAD;
+		ngroups    = (batchSize * tableSlots) / TUPLES_PER_THREAD / tgs[0];
 		
-		System.out.println(String.format("[DBG] %6d tuples", tuples));
-		System.out.println(String.format("[DBG] %6d threads", threads));
-		System.out.println(String.format("[DBG] %6d groups", groups));
-		System.out.println(String.format("[DBG] %6d threads for compaction", __compact_threads));
-		System.out.println(String.format("[DBG] %6d threads/group for compaction", __compact_threadsPerGroup));
-		System.out.println(String.format("[DBG] %6d bytes local memory", _local_input_size));
-		System.out.println(String.format("[DBG] %6d bytes output", _output_size));
+		int outputTupleSize = outputSchema.getByteSizeOfTuple();
+		/* The output is simply a function of the number of windows 
+ 		 * 
+ 		 * Assume output tuple schema is <long, int key, float value> (16 bytes) 
+ 		 */
+		outputSize = tuples * outputTupleSize;
+		/* Intermediate state */
+		contents   = new byte [outputTupleSize * tableSlots * batchSize];
+		stashed    = new byte [4 * batchSize];
+		failed     = new byte [4 * batchSize];
+		attempts   = new byte [4 * batchSize];
+		indices    = new byte [4 * tableSlots * batchSize];
+		offsets    = new byte [4 * tableSlots * batchSize];
+		partitions = new byte [4 *   ngroups];
 		
+		String source = KernelCodeGenerator.load(filename);
 		
-		System.out.println(String.format("[DBG] %6d iterations\n", iterations));
-		System.out.println(String.format("[DBG] |t| = %d\n", _table_size));
+		qid = TheGPU.getInstance().getQuery(source, 4, 5, 8);
 		
-		startPtrs = new byte [_window_ptrs_size];
-		endPtrs   = new byte [_window_ptrs_size];
+		TheGPU.getInstance().setInput(qid, 0, inputSize);
+		/* Start and end pointers */
+		TheGPU.getInstance().setInput(qid, 1, startPtrs.length);
+		TheGPU.getInstance().setInput(qid, 2,   endPtrs.length);
+		/* Hash function constants, x & y */
+		TheGPU.getInstance().setInput(qid, 3, x.array().length);
+		TheGPU.getInstance().setInput(qid, 4, y.array().length);
 		
-		String source = KernelCodeGenerator.getAggregation (inputSchema, outputSchema, filename, type);
+		TheGPU.getInstance().setOutput(qid, 0,   contents.length, 0, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 1,    stashed.length, 0, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 2,     failed.length, 0, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 3,   attempts.length, 0, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 4,    indices.length, 0, 0, 1, 0);
+		TheGPU.getInstance().setOutput(qid, 5,    offsets.length, 0, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 6, partitions.length, 0, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 7,        outputSize, 1, 0, 0, 1);
 		
-		// TheGPU.getInstance().init(1);
-		qid = TheGPU.getInstance().getQuery(source, 3, 5, 8);
+		localInputSize = 4 * tgs[0] * TUPLES_PER_THREAD; 
 		
-		TheGPU.getInstance().setInput (qid, 0,  _input_size);
-		TheGPU.getInstance().setInput (qid, 1,  _window_ptrs_size);
-		TheGPU.getInstance().setInput (qid, 2,  _window_ptrs_size);
-		TheGPU.getInstance().setInput (qid, 3, _INT_ * _hash_functions);
-		TheGPU.getInstance().setInput (qid, 4, _INT_ * _hash_functions);
+		args = new int [8];
+		args[0] = tuples;
+		args[1] = 0; /* bundle_; */
+		args[2] = 0; /* bundles; */
+		args[3] = tableSize;
+		args[4] = __stash_x;
+		args[5] = __stash_y;
+		args[6] = iterations;
+		args[7] = localInputSize;
 		
-	
-		TheGPU.getInstance().setOutput (qid, 0, outputSchema.getByteSizeOfTuple() * _table_slots * groups, 0);
-		TheGPU.getInstance().setOutput (qid, 1, _INT_ * groups, 0);
-		TheGPU.getInstance().setOutput (qid, 2, _INT_ * groups, 0);
-		TheGPU.getInstance().setOutput (qid, 3, _INT_ * tuples, 0);
-		TheGPU.getInstance().setOutput (qid, 4, _INT_ * _table_slots * groups, 0);
-		TheGPU.getInstance().setOutput (qid, 5, _INT_ * _table_slots * groups, 0);
-		TheGPU.getInstance().setOutput (qid, 6, _INT_ * groups, 0); /* parts */
-		TheGPU.getInstance().setOutput (qid, 7, _output_size, 1);
-		
-		args = new int [6];
-		args[0] = _table_slots * groups; // tuples;
-		args[1] = _table_size;
-		args[2] = __stash_x;
-		args[3] = __stash_y;
-		args[4] = iterations;
-		args[5] = _local_input_size;
-		
-		TheGPU.getInstance().setKernelAggregate (qid, args);
-		
-		taskIdx = new int [PIPELINES];
-		freeIdx = new int [PIPELINES];
-		for (int i = 0; i < PIPELINES; i++) {
-			taskIdx[i] = -1;
-			freeIdx[i] = -1;
-		}
+		TheGPU.getInstance().setKernelAggregate(qid, args);
 	}
 	
 	@Override
@@ -295,37 +301,45 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
-		if (! pinned) {
-			TheGPU.getInstance().bind(1);
-			pinned = true;
-		}
-		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
 		
-		windowBatch.initWindowPointers(startPtrs, endPtrs);
-		
-		/* Set input and output */
+		/* Set input */
 		byte [] inputArray = windowBatch.getBuffer().array();
 		int start = windowBatch.getBatchStartPointer();
 		int end   = windowBatch.getBatchEndPointer();
+		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
+		
+		windowBatch.initWindowPointers(startPtrs, endPtrs);
+		printWindowPointers (startPtrs, endPtrs);
+		
+		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
+		TheGPU.getInstance().setInputBuffer(qid, 2,   endPtrs);
+		
+		/* Hash table constants */
+		TheGPU.getInstance().setInputBuffer(qid, 3, x.array());
+		TheGPU.getInstance().setInputBuffer(qid, 4, y.array());
+		
+		/* Set output */
+		TheGPU.getInstance().setOutputBuffer(qid, 0,   contents);
+		TheGPU.getInstance().setOutputBuffer(qid, 1,    stashed);
+		TheGPU.getInstance().setOutputBuffer(qid, 2,     failed);
+		TheGPU.getInstance().setOutputBuffer(qid, 3,   attempts);
+		TheGPU.getInstance().setOutputBuffer(qid, 4,    indices);
+		TheGPU.getInstance().setOutputBuffer(qid, 5,    offsets);
+		TheGPU.getInstance().setOutputBuffer(qid, 6, partitions);
 		
 		/* The output */
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
 		TheGPU.getInstance().setOutputBuffer(qid, 7, outputBuffer.array());
 		
-		/* Create the other two input buffers */
-		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
-		TheGPU.getInstance().setInputBuffer(qid, 2, endPtrs);
-		TheGPU.getInstance().setInputBuffer(qid, 3, _int_x.array());
-		TheGPU.getInstance().setInputBuffer(qid, 4, _int_y.array());
+		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		/* TheGPU.getInstance().execute(qid, threads, THREADS_PER_GROUP); */
-		
-		TheGPU.getInstance().executeCustom(qid, threads, THREADS_PER_GROUP, __compact_threads, __compact_threadsPerGroup);
-		
-		outputBuffer.position(_output_size);
+		/* TODO
+		 * 
+		 * Set position based on the data size returned from the GPU engine
+		 */
 		
 		windowBatch.setBuffer(outputBuffer);
 		

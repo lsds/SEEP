@@ -138,8 +138,8 @@ public class TestThetaJoin {
 		threads[2] = product / tuplesPerThread;
 		
 		System.out.println(String.format("[DBG] %10d threads[0]", threads[0]));
-		System.out.println(String.format("[DBG] %10d threads[0]", threads[1]));
-		System.out.println(String.format("[DBG] %10d threads[0]", threads[2]));
+		System.out.println(String.format("[DBG] %10d threads[1]", threads[1]));
+		System.out.println(String.format("[DBG] %10d threads[2]", threads[2]));
 		
 		int ngroups = threads[1] / threadsPerGroup[1];
 		System.out.println(String.format("[DBG] %10d groups", ngroups));
