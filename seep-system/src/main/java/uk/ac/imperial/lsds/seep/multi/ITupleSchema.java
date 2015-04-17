@@ -10,6 +10,10 @@ public interface ITupleSchema {
 
 	public int getByteSizeOfTuple();
 
-	public byte[] getDummyContent();
+	public byte [] getDummyContent();
+	
+	public void setType (int idx, int type);
+	
+	public int getType (int idx);
 
 }

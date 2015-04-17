@@ -13,6 +13,10 @@ public class IntColumnReference implements IntExpression {
 		_column = column;
 	}
 	
+	public int getColumn () {
+		return _column;
+	}
+	
 	@Override
 	public void accept(ValueExpressionVisitor vev) {
 		vev.visit(this);

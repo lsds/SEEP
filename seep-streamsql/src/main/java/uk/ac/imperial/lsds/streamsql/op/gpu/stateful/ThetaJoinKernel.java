@@ -22,7 +22,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private static final int threadsPerGroup = 256;
 	private static final int tuplesPerThread = 2;
 	
-	private static final int PIPELINES = 2;
+	private static final int pipelines = 2;
 	private int [] taskIdx; /* Control output based on depth of pipeline */
 	private int [] freeIdx;
 	
@@ -56,7 +56,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	byte [] startPtrs, endPtrs;
 	
-	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs) {
+	private void printWindowPointers (byte [] startPtrs, byte [] endPtrs) {
 		
 		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
@@ -89,9 +89,9 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		/* Task pipelining internal state */
 		
-		taskIdx = new int [PIPELINES];
-		freeIdx = new int [PIPELINES];
-		for (int i = 0; i < PIPELINES; i++) {
+		taskIdx = new int [pipelines];
+		freeIdx = new int [pipelines];
+		for (int i = 0; i < pipelines; i++) {
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
 		}

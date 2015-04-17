@@ -48,8 +48,13 @@ public class Task extends ITask {
 			next = next.getLocalDownstream();
 		}
 		
-		ResultCollector.forwardAndFree (handler, query, this.batch.getBuffer(),
-			this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
+		if (GPU) {
+			ResultCollector.forwardAndFree (handler, _query, this.batch.getBuffer(),
+					this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
+		} else {
+			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
+					this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
+		}
 		
 		WindowBatchFactory.free(this.batch);
 		return 0;
@@ -73,5 +78,10 @@ public class Task extends ITask {
 
 	public void setFreeIndex(int freeIndex) {
 		this.freeIndex = freeIndex;
+	}
+
+	@Override
+	public SubQuery getQuery() {
+		return query;
 	}
 }

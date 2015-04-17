@@ -24,6 +24,8 @@ public class TaskProcessor implements Runnable {
 	double _m, m, _s, s;
 	double avg = 0D, std = 0D;
 	
+	private SubQuery _query = null;
+	
 	public TaskProcessor (int pid, TaskQueue queue, int [][] policy, boolean GPU) {
 		
 		this.pid = pid;
@@ -51,7 +53,7 @@ public class TaskProcessor implements Runnable {
 		ITask task = null;
 		if (GPU) {
 			System.out.println ("[DBG] GPU thread is " + Thread.currentThread());
-			/* TheGPU.getInstance().bind(1); */
+			TheCPU.getInstance().bind(1);
 		} else {
 			TheCPU.getInstance().bind(pid + 1);
 		}
@@ -101,6 +103,10 @@ public class TaskProcessor implements Runnable {
 				} */
 				
 				task.setGPU(GPU);
+				if (GPU) {
+					task.setPreviousQuery(_query);
+					_query = task.getQuery();
+				}
 				tasksProcessed[task.queryid].incrementAndGet();
 				task.run();
 

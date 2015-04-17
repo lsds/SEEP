@@ -9,25 +9,30 @@ import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
-import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
 public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	private static final int THREADS_PER_GROUP = 256;
-	private static final int TUPLES_PER_THREAD = 2;
+	private static final int threadsPerGroup = 256;
+	private static final int tuplesPerThread = 2;
 	
-	private static final int PIPELINES = 2;
+	private static int dbg = 0;
+	
+	private static final int pipelines = 2;
 	private int [] taskIdx;
 	private int [] freeIdx;
 	
@@ -49,6 +54,9 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
+	
+	private Expression [] groupBy;
+	private String havingClause;
 	
 	private LongColumnReference timestampReference;
 	
@@ -88,7 +96,16 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	private byte [] startPtrs;
 	private byte [] endPtrs;
 	
+	private int outputTupleSize;
+	
 	private byte [] contents, stashed, failed, attempts, indices, offsets, partitions;
+	private int contentsLength,
+	             stashedLength, 
+	              failedLength, 
+	            attemptsLength, 
+	             indicesLength, 
+	             offsetsLength, 
+	          partitionsLength;
 	
 	private static boolean isPowerOfTwo (int n) {
 		if (n == 0)
@@ -135,26 +152,53 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		}
 	}
 	
-	public AggregationKernel (AggregationType type, FloatColumnReference _the_aggregate, ITupleSchema inputSchema) {
+	public AggregationKernel (
+			AggregationType type, 
+			FloatColumnReference _the_aggregate,
+			Expression [] groupBy,
+			String havingClause,
+			ITupleSchema inputSchema) {
 		
 		this.type = type;
 		this._the_aggregate = _the_aggregate;
+		
+		this.groupBy = groupBy;
+		this.havingClause = havingClause;
 		
 		this.inputSchema = inputSchema;
 		
 		/* Create output schema */
 		this.timestampReference = new LongColumnReference(0);
 		
-		Expression[] outputAttributes = new Expression[3];
+		Expression [] outputAttributes = new Expression [this.groupBy.length + 2];
+		/* First attribute is the timestamp */
 		outputAttributes[0] = this.timestampReference;
-		outputAttributes[1] = this._the_aggregate;
-		outputAttributes[2] = new IntColumnReference(2);
+		
+		/* Followed by the group-by (composite) key */
+		for (int i = 1; i <= this.groupBy.length; i++) {
+			
+			Expression e = this.groupBy[i - 1];
+			
+			if (e instanceof   IntExpression) { outputAttributes[i] = new   IntColumnReference(i);
+			} else 
+			if (e instanceof  LongExpression) { outputAttributes[i] = new  LongColumnReference(i);
+			} else 
+			if (e instanceof FloatExpression) { outputAttributes[i] = new FloatColumnReference(i);
+			} else {
+				throw new IllegalArgumentException("error: unknown group by expression type");
+			}
+		}
+		/* Last attribute is the aggregate */
+		outputAttributes[this.groupBy.length + 1] = new FloatColumnReference(this.groupBy.length + 1);
 		
 		this.outputSchema = ExpressionsUtil.getTupleSchemaForExpressions(outputAttributes);
 		
-		taskIdx = new int [PIPELINES];
-		freeIdx = new int [PIPELINES];
-		for (int i = 0; i < PIPELINES; i++) {
+		this.outputTupleSize = outputSchema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] output tuple size is %d bytes", this.outputTupleSize));
+		
+		taskIdx = new int [pipelines];
+		freeIdx = new int [pipelines];
+		for (int i = 0; i < pipelines; i++) {
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
 		}
@@ -227,35 +271,46 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		/* Determine #threads */
 		tgs = new int [4];
-		tgs[0] = THREADS_PER_GROUP; /* This is a constant; it must be a power of 2 */
-		tgs[1] = THREADS_PER_GROUP;
-		tgs[2] = THREADS_PER_GROUP;
-		tgs[3] = THREADS_PER_GROUP;
+		tgs[0] = threadsPerGroup; /* This is a constant; it must be a power of 2 */
+		tgs[1] = threadsPerGroup;
+		tgs[2] = threadsPerGroup;
+		tgs[3] = threadsPerGroup;
 		
 		threads = new int [4];
 		threads[0] = (batchSize * tableSlots); /* Clear `indices` and `offsets` */
 		threads[1] = batchSize * tgs[0];
 		/* Configure scan & compact kernels */
-		threads[2] = (batchSize * tableSlots) / TUPLES_PER_THREAD;
-		threads[3] = (batchSize * tableSlots) / TUPLES_PER_THREAD;
-		ngroups    = (batchSize * tableSlots) / TUPLES_PER_THREAD / tgs[0];
+		threads[2] = (batchSize * tableSlots) / tuplesPerThread;
+		threads[3] = (batchSize * tableSlots) / tuplesPerThread;
+		ngroups    = (batchSize * tableSlots) / tuplesPerThread / tgs[0];
 		
-		int outputTupleSize = outputSchema.getByteSizeOfTuple();
 		/* The output is simply a function of the number of windows 
  		 * 
  		 * Assume output tuple schema is <long, int key, float value> (16 bytes) 
  		 */
 		outputSize = tuples * outputTupleSize;
 		/* Intermediate state */
-		contents   = new byte [outputTupleSize * tableSlots * batchSize];
-		stashed    = new byte [4 * batchSize];
-		failed     = new byte [4 * batchSize];
-		attempts   = new byte [4 * batchSize];
-		indices    = new byte [4 * tableSlots * batchSize];
-		offsets    = new byte [4 * tableSlots * batchSize];
-		partitions = new byte [4 *   ngroups];
 		
-		String source = KernelCodeGenerator.load(filename);
+		  contentsLength = outputTupleSize * batchSize * tableSlots;
+		   stashedLength = 4 * batchSize;
+		    failedLength = 4 * batchSize;
+		  attemptsLength = 4 * batchSize;
+		   indicesLength = 4 * batchSize * tableSlots;
+		   offsetsLength = 4 * batchSize * tableSlots;
+		partitionsLength = 4 *   ngroups;
+		
+		if (dbg > 0) {
+		contents   = new byte [  contentsLength];
+		stashed    = new byte [   stashedLength];
+		failed     = new byte [    failedLength];
+		attempts   = new byte [  attemptsLength];
+		indices    = new byte [   indicesLength];
+		offsets    = new byte [   offsetsLength];
+		partitions = new byte [partitionsLength];
+		}
+		
+		String source = 
+			KernelCodeGenerator.getAggregation(inputSchema, outputSchema, filename, type, _the_aggregate, groupBy, havingClause);
 		
 		qid = TheGPU.getInstance().getQuery(source, 4, 5, 8);
 		
@@ -267,16 +322,18 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().setInput(qid, 3, x.array().length);
 		TheGPU.getInstance().setInput(qid, 4, y.array().length);
 		
-		TheGPU.getInstance().setOutput(qid, 0,   contents.length, 0, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 1,    stashed.length, 0, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 2,     failed.length, 0, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 3,   attempts.length, 0, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 4,    indices.length, 0, 0, 1, 0);
-		TheGPU.getInstance().setOutput(qid, 5,    offsets.length, 0, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 6, partitions.length, 0, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 7,        outputSize, 1, 0, 0, 1);
+		int move = (dbg > 0) ? 0 : 1;
 		
-		localInputSize = 4 * tgs[0] * TUPLES_PER_THREAD; 
+		TheGPU.getInstance().setOutput(qid, 0,   contentsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 1,    stashedLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 2,     failedLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 3,   attemptsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 4,    indicesLength, 0, move, 1, 0);
+		TheGPU.getInstance().setOutput(qid, 5,    offsetsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 6, partitionsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 7,       outputSize, 1,    0, 0, 1);
+		
+		localInputSize = 4 * tgs[0] * tuplesPerThread; 
 		
 		args = new int [8];
 		args[0] = tuples;
@@ -322,6 +379,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().setInputBuffer(qid, 4, y.array());
 		
 		/* Set output */
+		if (dbg > 0) {
 		TheGPU.getInstance().setOutputBuffer(qid, 0,   contents);
 		TheGPU.getInstance().setOutputBuffer(qid, 1,    stashed);
 		TheGPU.getInstance().setOutputBuffer(qid, 2,     failed);
@@ -329,6 +387,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().setOutputBuffer(qid, 4,    indices);
 		TheGPU.getInstance().setOutputBuffer(qid, 5,    offsets);
 		TheGPU.getInstance().setOutputBuffer(qid, 6, partitions);
+		}
 		
 		/* The output */
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();

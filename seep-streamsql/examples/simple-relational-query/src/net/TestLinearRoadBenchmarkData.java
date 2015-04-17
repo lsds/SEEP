@@ -292,7 +292,7 @@ public class TestLinearRoadBenchmarkData {
 		IMicroOperatorCode q4code1 = new MicroAggregation (
 			window4,
 			AggregationType.COUNT, 
-			new FloatColumnReference(1), /* Does it matter, since this is a count? */
+			new FloatColumnReference(1), /* Does it matter, since this is a count? No */
 			new Expression [] { 
 				new IntColumnReference(1),  /*  vehicle */
 				new IntColumnReference(3), /*   highway */

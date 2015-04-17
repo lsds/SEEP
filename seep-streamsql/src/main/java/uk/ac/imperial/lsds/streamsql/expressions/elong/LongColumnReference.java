@@ -12,6 +12,10 @@ public class LongColumnReference implements LongExpression {
 	public LongColumnReference(int column) {
 		_column = column;
 	}
+	
+	public int getColumn () {
+		return _column;
+	}
 
 	@Override
 	public void accept (ValueExpressionVisitor vev) {

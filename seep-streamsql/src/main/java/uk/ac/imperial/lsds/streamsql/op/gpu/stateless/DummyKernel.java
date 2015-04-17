@@ -1,17 +1,13 @@
 package uk.ac.imperial.lsds.streamsql.op.gpu.stateless;
 
-import java.nio.ByteBuffer;
-
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
-import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
-import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
-import uk.ac.imperial.lsds.seep.multi.Utils;
+
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
-import uk.ac.imperial.lsds.streamsql.expressions.Expression;
-import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
+
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;

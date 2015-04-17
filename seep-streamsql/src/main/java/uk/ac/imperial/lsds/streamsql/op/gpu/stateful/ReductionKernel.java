@@ -13,7 +13,6 @@ import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
@@ -21,15 +20,10 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
+
+	private static final int threadsPerGroup = 128;
 	
-	/*
-	 * The input size must be greater or equal to the size of the byte array backing
-	 * an input window batch.
-	 */
-	
-	private static final int THREADS_PER_GROUP = 128;
-	
-	private static final int PIPELINES = 2;
+	private static final int pipelines = 2;
 	private int [] taskIdx;
 	private int [] freeIdx;
 	
@@ -64,6 +58,8 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private byte [] startPtrs;
 	private byte [] endPtrs;
 	
+	private int outputTupleSize;
+	
 	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs) {
 		
 		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
@@ -85,17 +81,20 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		/* Create output schema */
 		this.timestampReference = new LongColumnReference(0);
-		Expression[] outputAttributes = new Expression[3];
+		Expression[] outputAttributes = new Expression[2];
 		outputAttributes[0] = this.timestampReference;
 		outputAttributes[1] = this._the_aggregate;
-		outputAttributes[2] = new IntColumnReference(2);
-		this.outputSchema = ExpressionsUtil.getTupleSchemaForExpressions(outputAttributes);
+		this.outputSchema = 
+				ExpressionsUtil.getTupleSchemaForExpressions(outputAttributes);
+		
+		this.outputTupleSize = outputSchema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] output tuple size is %d bytes", this.outputTupleSize));
 		
 		/* Task pipelining internal state */
 		
-		taskIdx = new int [PIPELINES];
-		freeIdx = new int [PIPELINES];
-		for (int i = 0; i < PIPELINES; i++) {
+		taskIdx = new int [pipelines];
+		freeIdx = new int [pipelines];
+		for (int i = 0; i < pipelines; i++) {
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
 		}
@@ -125,7 +124,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		this.ngroups = this.batchSize;
 		
 		tgs = new int [1];
-		tgs[0] = THREADS_PER_GROUP; /* This is a constant */
+		tgs[0] = threadsPerGroup; /* This is a constant */
 		
 		int [] threads = new int [1];
 		threads[0] = ngroups * tgs[0];
@@ -143,7 +142,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		startPtrs = new byte [windowPtrsSize];
 		endPtrs   = new byte [windowPtrsSize];
 		
-		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type);
+		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type, _the_aggregate);
 		
 		qid = TheGPU.getInstance().getQuery(source, 1, 3, 1);
 		

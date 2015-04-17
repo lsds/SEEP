@@ -46,12 +46,16 @@ public class TheGPU {
 	private int  [][]   end;
 	private byte [][][] outputs;
 	
+	private int  [][] outputPositions;
+	
 	public TheGPU () {
 		
 		inputs  = new byte [maxQueries][maxBuffers][];
 		start   = new int  [maxQueries][maxBuffers];
 		end     = new int  [maxQueries][maxBuffers];
 		outputs = new byte [maxQueries][maxBuffers][];
+		
+		outputPositions = new int [maxQueries][maxBuffers];
 	}
 	
 	public void setInputBuffer (int qid, int ndx, byte [] input) {
@@ -125,6 +129,8 @@ public class TheGPU {
 			Unsafe.ARRAY_BYTE_BASE_OFFSET + offset, 
 			size
 		);
+		/* This is used to set the position of the output buffer */
+		outputPositions[qid][ndx] = size;
 	}
 	
 	public native int init (int N);

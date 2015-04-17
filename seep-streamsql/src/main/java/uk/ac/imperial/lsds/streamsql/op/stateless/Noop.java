@@ -16,7 +16,7 @@ public class Noop implements IMicroOperatorCode {
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
 		windowBatch.initWindowPointers();
-		windowBatch.customInitWindowPointers(); /* int, int */
+		windowBatch.initPrevWindowPointers(); /* int, int */
 		
 		windowBatch.debug();
 		

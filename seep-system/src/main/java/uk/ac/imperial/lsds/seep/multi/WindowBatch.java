@@ -129,13 +129,15 @@ public class WindowBatch {
 		this.batchEndTime = batchEndTime;
 	}
 	
+	private static int __indexOf (int idx) { return 4 * idx; }
+	
 	public void initWindowPointers (byte [] startPtrs, byte [] endPtrs) {
-		
-		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
-		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		
 		if (batchStartPointer < 0 && batchEndPointer < 0)
 			return ;
+		
+		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		
 		int tuple_ = schema.getByteSizeOfTuple ();
 		int window_ = (int) windowDefinition.getSize();
@@ -160,8 +162,35 @@ public class WindowBatch {
 				d.putInt(d.getInt((i-1) * 4) + offset);
 			}
 		} else { /* Fill-in range-based windows */
-			System.err.println("Unsupported operation...");
-			System.exit(1);
+			int p = 0; /* Current opened window */ 
+			int q = 0; /* Current closed window */
+			
+			b.putInt(__indexOf(p), 0);
+			
+			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
+				long t = buffer.getLong(i);
+				/* 
+				 * Should we open new windows? 
+				 */
+				boolean open = false;
+				while (t - slide_ >= this.batchStartTime + ((long) p) * windowDefinition.getSlide()) {
+					p ++;
+					open |= true;
+				}
+				if (open && p < this.batchSize)
+					b.putInt(__indexOf(p), i - this.batchStartPointer);
+				/* 
+				 * Should we close old windows? 
+				 */
+				boolean close = true;
+				
+				while (t > this.batchStartTime + q * windowDefinition.getSlide() + windowDefinition.getSize() - 1) {
+					if (close)
+						d.putInt(__indexOf(q), i - this.batchStartPointer);
+					close = false;
+					q ++;
+				}
+			} /* End of batch */
 		}
 	}
 	
@@ -265,7 +294,7 @@ public class WindowBatch {
 			if (this.prevStartPointer < 0)
 				this.prevStartPointer += buffer.capacity();
 			
-			this.prevEndPointer   = this.prevStartPointer + bpw; 
+			this.prevEndPointer = this.prevStartPointer + bpw; 
 			
 		} else { /* Find last range-based window */
 			
@@ -280,12 +309,7 @@ public class WindowBatch {
 				if (idx < 0)
 					idx += buffer.capacity();
 				t = buffer.getLong(idx);
-			}		
-//			for (idx = batchStartPointer - tuple_; idx >= 0; idx -= tuple_) {
-//				long t = buffer.getLong(idx);
-//				if (t < previousStartTime)
-//					break;
-//			}
+			}
 			this.prevStartPointer = idx + tuple_;
 			
 			long previousEndTime = previousStartTime + windowDefinition.getSize();
@@ -297,12 +321,7 @@ public class WindowBatch {
 			while (t < previousEndTime) {
 				idx += tuple_;
 				t = buffer.getLong(idx);
-			}		
-//			for (idx = batchStartPointer; idx < batchEndPointer; idx += tuple_) {
-//				long t = buffer.getLong(idx);
-//				if (t >= previousEndTime)
-//					break;
-//			}
+			}
 			this.prevEndPointer = idx;
 		}
 		System.out.println(String.format("[DBG] last window of previous batch starts %10d ends %10d",
@@ -319,7 +338,6 @@ public class WindowBatch {
 		this.freeOffset = (this.freeOffset < 0) ? this.freeOffset + buffer.capacity() : this.freeOffset;
 		
 	}
-
 	
 	public void clear () {
 		initialised = false;

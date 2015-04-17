@@ -14,7 +14,7 @@ public class ExpressionsUtil {
 				(byte) (value >>> 8), (byte) value };
 	}
 
-	public static void intToByteArray(int value, byte[] bytes) {
+	public static void intToByteArray(int value, byte [] bytes) {
 		
 		bytes[0] = (byte) (value >>> 24);
 		bytes[1] = (byte) (value >>> 16);

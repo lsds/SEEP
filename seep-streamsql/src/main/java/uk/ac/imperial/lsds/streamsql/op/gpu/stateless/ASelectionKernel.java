@@ -14,10 +14,10 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	private static final int THREADS_PER_GROUP = 256;
-	private static final int TUPLES_PER_THREAD = 2;
+	private static final int threadsPerGroup = 256;
+	private static final int tuplesPerThread = 2;
 	
-	private static final int PIPELINES = 2;
+	private static final int pipelines = 2;
 	private int [] taskIdx; /* Control output based on depth of pipeline */
 	private int [] freeIdx;
 	
@@ -25,6 +25,8 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	private ITupleSchema schema;
 	
 	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Selection.cl";
+	
+	private String customFunctor = null;
 	
 	int qid; /* Query id */
 	
@@ -57,9 +59,9 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		/* Task pipelining internal state */
 		
-		taskIdx = new int [PIPELINES];
-		freeIdx = new int [PIPELINES];
-		for (int i = 0; i < PIPELINES; i++) {
+		taskIdx = new int [pipelines];
+		freeIdx = new int [pipelines];
+		for (int i = 0; i < pipelines; i++) {
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
 		}
@@ -71,6 +73,10 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	
 	public void setInputSize (int inputSize) {
 		this.inputSize = inputSize;
+	}
+	
+	public void setCustomFunctor (String customFunctor) {
+		this.customFunctor = customFunctor;
 	}
 	
 	public void setup () {
@@ -87,21 +93,21 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		System.out.println(String.format("[DBG] #tuples (^2) = %6d", tuples_));
 		
 		threads = new int [2];
-		threads[0] = tuples_ / TUPLES_PER_THREAD;
-		threads[1] = tuples_ / TUPLES_PER_THREAD;
+		threads[0] = tuples_ / tuplesPerThread;
+		threads[1] = tuples_ / tuplesPerThread;
 		
 		tgs = new int [2];
-		tgs[0] = THREADS_PER_GROUP;
-		tgs[1] = THREADS_PER_GROUP;
+		tgs[0] = threadsPerGroup;
+		tgs[1] = threadsPerGroup;
 		
 		ngroups = threads[0] / tgs[0];
 		
 		args = new int[3];
 		args[0] = inputSize;
 		args[1] = tuples;
-		args[2] = 4 * tgs[0] * TUPLES_PER_THREAD;
+		args[2] = 4 * tgs[0] * tuplesPerThread;
 		
-		String source = KernelCodeGenerator.getSelection (schema, schema, predicate, filename);
+		String source = KernelCodeGenerator.getSelection (schema, schema, predicate, filename, customFunctor);
 		
 		qid = TheGPU.getInstance().getQuery(source, 2, 1, 4);
 		

@@ -6,7 +6,6 @@ import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
-import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
@@ -15,20 +14,21 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
-	/*
-	 * This input size must be greater or equal to the size of the byte array backing
-	 * an input window batch.
-	 */
 	
-	private static final int THREADS_PER_GROUP = 128;
+	private static final int threadsPerGroup = 128;
 	
-	private static final int PIPELINES = 2;
-	
+	private static final int pipelines = 2;
 	private int [] taskIdx;
 	private int [] freeIdx;
 	
+	private static int dbg = 0;
+	
 	private Expression [] expressions;
 	private ITupleSchema inputSchema, outputSchema;
+	
+	/* Floating point expression depth. This is tightly coupled with our synthetic benchmark */
+	private int depth = -1;
+	
 	
 	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Projection.cl";
 	
@@ -55,9 +55,9 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		/* Task pipelining internal state */
 		
-		taskIdx = new int [PIPELINES];
-		freeIdx = new int [PIPELINES];
-		for (int i = 0; i < PIPELINES; i++) {
+		taskIdx = new int [pipelines];
+		freeIdx = new int [pipelines];
+		for (int i = 0; i < pipelines; i++) {
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
 		}
@@ -67,10 +67,17 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		this.inputSize = inputSize;
 	}
 	
+	public void setDepth (int depth) {
+		this.depth = depth;
+	}
+	
 	public void setup() {
 		
 		/* Configure kernel arguments */
-		
+		if (depth < 0) {
+			System.err.println("error: invalid projection expression");
+			System.exit(1);
+		}
 		if (inputSize < 0) {
 			System.err.println("error: invalid input size");
 			System.exit(1);
@@ -81,7 +88,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		threads[0] = tuples;
 		
 		this.tgs = new int [1];
-		tgs[0] = THREADS_PER_GROUP;
+		tgs[0] = threadsPerGroup;
 		
 		this.outputSize = tuples * outputSchema.getByteSizeOfTuple();
 		
@@ -94,7 +101,10 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		args[2] = localInputSize;
 		args[3] = localOutputSize;
 		
-		String source = KernelCodeGenerator.getProjection(inputSchema, outputSchema, filename);
+		String source = KernelCodeGenerator.getProjection(inputSchema, outputSchema, filename, depth);
+		if (dbg > 0) {
+		System.out.println(source);
+		}
 		
 		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
 		

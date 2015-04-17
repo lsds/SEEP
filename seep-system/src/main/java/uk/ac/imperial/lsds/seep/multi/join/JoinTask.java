@@ -80,9 +80,17 @@ public class JoinTask extends ITask {
 			next.process(this.batch1, this, GPU);
 			next = next.getLocalDownstream();
 		}
-
-		ResultCollector.forwardAndFree(handler, query, this.batch1.getBuffer(),
-				taskid, freeIndex1, freeIndex2);
+		
+		/* ResultCollector.forwardAndFree(handler, query, this.batch1.getBuffer(),
+				taskid, freeIndex1, freeIndex2); */
+		
+		if (GPU) {
+			ResultCollector.forwardAndFree (handler, _query, this.batch1.getBuffer(),
+					this.batch1.getTaskId(), this.batch1.getFreeOffset(), this.batch2.getFreeOffset());
+		} else {
+			ResultCollector.forwardAndFree (handler,  query, this.batch1.getBuffer(),
+					this.batch1.getTaskId(), this.batch1.getFreeOffset(), this.batch2.getFreeOffset());
+		}
 		
 		WindowBatchFactory.free(this.batch1);
 		WindowBatchFactory.free(this.batch2);
@@ -99,5 +107,10 @@ public class JoinTask extends ITask {
 	@Override
 	public void free() {
 		JoinTaskFactory.free(this);
+	}
+
+	@Override
+	public SubQuery getQuery() {
+		return query;
 	}
 }
