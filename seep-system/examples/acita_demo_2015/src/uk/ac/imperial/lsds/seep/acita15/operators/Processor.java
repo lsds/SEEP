@@ -37,6 +37,10 @@ public class Processor implements StatelessOperator{
 		else
 		{
 			logger.debug("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+			if (logger.isDebugEnabled())
+			{
+				recordTuple(outputTuple);
+			}
 		}
 		api.send_highestWeight(outputTuple);
 	}
@@ -57,11 +61,24 @@ public class Processor implements StatelessOperator{
 			else
 			{
 				logger.debug("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
+				if (logger.isDebugEnabled())
+				{
+					recordTuple(outputTuple);
+				}
 			}
 		}
 		throw new RuntimeException("TODO"); 
 	}
 
+	private void recordTuple(DataTuple dt)
+	{
+		long rxts = System.currentTimeMillis();
+		System.out.println("OP: "+api.getOperatorId()+" received tuple with id="+dt.getLong("tupleId")
+				+",ts="+dt.getPayload().timestamp
+				+",txts="+dt.getPayload().instrumentation_ts
+				+",rxts="+rxts
+				+",latency="+ (rxts - dt.getPayload().instrumentation_ts));
+	}
 	
 	public void setUp() {
 		System.out.println("Setting up PROCESSOR operator with id="+api.getOperatorId());

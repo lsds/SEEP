@@ -32,7 +32,7 @@
   <logger name="uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue" level="INFO"/>
   <logger name="uk.ac.imperial.lsds.seep.processingunit.Dispatcher" level="INFO"/>
   <logger name="uk.ac.imperial.lsds.seep.acita15.operators.Source" level="INFO"/>
-  <logger name="uk.ac.imperial.lsds.seep.acita15.operators.Processor" level="INFO"/>
+  <logger name="uk.ac.imperial.lsds.seep.acita15.operators.Processor" level="DEBUG"/>
   <logger name="uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel" level="INFO"/>
   
 </configuration>

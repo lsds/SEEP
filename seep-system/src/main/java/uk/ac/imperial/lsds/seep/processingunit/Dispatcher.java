@@ -66,7 +66,8 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		else
 		{
-			MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+			//MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+			MAX_TOTAL_QUEUE_SIZE = 1;
 		}
 		//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
 		opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
