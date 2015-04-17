@@ -13,21 +13,25 @@ package uk.ac.imperial.lsds.seep.acita15.operators;
 import java.util.List;
 import java.io.Serializable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 public class Sink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
+	private static final Logger logger = LoggerFactory.getLogger(Sink.class);
 	private long numTuples;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
 	private final Stats stats = new Stats();
 	
 	public void setUp() {
-		System.out.println("Setting up SINK operator with id="+api.getOperatorId());
+		logger.info("Setting up SINK operator with id="+api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
-		System.out.println("SINK expecting "+numTuples+" tuples.");
+		logger.info("SINK expecting "+numTuples+" tuples.");
 	}
 	
 	public void processData(DataTuple dt) {
@@ -48,12 +52,12 @@ public class Sink implements StatelessOperator {
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
 		{
-			System.out.println("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
+			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}
 		
 		if (tuplesReceived >= numTuples)
 		{
-			System.out.println("SNK: FINISHED with total tuples="+tuplesReceived+",total bytes="+totalBytes+",t="+System.currentTimeMillis());
+			logger.info("SNK: FINISHED with total tuples="+tuplesReceived+",total bytes="+totalBytes+",t="+System.currentTimeMillis());
 			System.exit(0);
 		}
 		stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
@@ -63,7 +67,7 @@ public class Sink implements StatelessOperator {
 	private void recordTuple(DataTuple dt)
 	{
 		long rxts = System.currentTimeMillis();
-		System.out.println("SNK: Received tuple with cnt="+tuplesReceived 
+		logger.info("SNK: Received tuple with cnt="+tuplesReceived 
 				+",id="+dt.getLong("tupleId")
 				+",ts="+dt.getPayload().timestamp
 				+",txts="+dt.getPayload().instrumentation_ts
@@ -94,7 +98,7 @@ public class Sink implements StatelessOperator {
 			byteCount+=bytes;
 			if (t - tStart > MIN_INTERVAL)
 			{
-				System.out.println(reset(t));
+				logger.info(reset(t));
 			}
 		}
 

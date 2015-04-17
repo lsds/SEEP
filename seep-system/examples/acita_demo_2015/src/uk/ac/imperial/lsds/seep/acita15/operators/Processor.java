@@ -61,10 +61,7 @@ public class Processor implements StatelessOperator{
 			else
 			{
 				logger.debug("Operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-				if (logger.isDebugEnabled())
-				{
-					recordTuple(outputTuple);
-				}
+				recordTuple(outputTuple);
 			}
 		}
 		throw new RuntimeException("TODO"); 
@@ -73,7 +70,7 @@ public class Processor implements StatelessOperator{
 	private void recordTuple(DataTuple dt)
 	{
 		long rxts = System.currentTimeMillis();
-		System.out.println("OP: "+api.getOperatorId()+" received tuple with id="+dt.getLong("tupleId")
+		logger.debug("OP: "+api.getOperatorId()+" received tuple with id="+dt.getLong("tupleId")
 				+",ts="+dt.getPayload().timestamp
 				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
