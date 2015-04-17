@@ -59,7 +59,15 @@ public class Dispatcher implements IRoutingObserver {
 	{
 		this.owner = owner;
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
-		MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+		
+		if (owner.getOperator().getOpContext().isSource())
+		{
+			MAX_TOTAL_QUEUE_SIZE = 1;
+		}
+		else
+		{
+			MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+		}
 		//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
 		opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
 	}

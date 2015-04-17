@@ -2,7 +2,7 @@ set terminal pdf
 set output sprintf("%s/%s/median_tput_vs_mobility.pdf",outputdir,timestr)
 
 set title "Median throughput vs mobility for different replication factors (k)"
-set xlabel "Random waypoint pause time (s) or speed (m/s)"
+set xlabel "Node speed (m/s)"
 set ylabel "Median throughput (Kb/s)"
 #set yrange [0:100]
 

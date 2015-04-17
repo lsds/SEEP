@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import re
+import re, pandas as pd
 
 def is_src_log(f):
     return log_type(f) == 'SOURCE'
@@ -57,14 +57,15 @@ def sink_rx_latencies(f):
     returns a list of (tsrx, latency)
     """
     tuple_records = sink_rx_tuples(f)
-    return map(lambda tuple_record: (tuple_record[3], tuple_record[4]), tuple_records)
+    latencies = map(lambda tuple_record: int(tuple_record[5]), tuple_records)
+    return pd.Series(latencies)
 
 def sink_rx_tuples(f):
     results = []
-    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+)$')
+    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+)$')
     for line in f:
         match = re.search(regex, line)
-	if match:
-            return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+        if match:
+            results.append(match.groups())
 
-    return None
+    return results

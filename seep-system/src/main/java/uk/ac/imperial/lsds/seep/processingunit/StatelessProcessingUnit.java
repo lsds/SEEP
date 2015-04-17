@@ -76,10 +76,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		this.owner = owner;
 		ctx = new PUContext(owner.getNodeDescr(), owner.getInitialStarTopology());
 		this.multiCoreEnabled = multiCoreEnabled;
-		if (GLOBALS.valueFor("netAwareDispatcher").equals("true"))
-		{
-			dispatcher = new Dispatcher(this);
-		}
 	}
 
     public PUContext getPUContext() {
@@ -226,6 +222,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		}
 		o.setProcessingUnit(this);
         
+		if (GLOBALS.valueFor("netAwareDispatcher").equals("true"))
+		{
+			dispatcher = new Dispatcher(this);
+		}
+		
 		// To identify the monitor with the op id instead of the node id
 		NodeManager.monitorSlave.setOperatorId(o.getOperatorId());
 		LOG.debug("Operator: {}", o);

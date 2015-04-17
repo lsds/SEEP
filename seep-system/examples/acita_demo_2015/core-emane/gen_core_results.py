@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import subprocess,os,time,re,argparse,glob
+import subprocess,os,time,re,argparse,glob, pandas
 
 from extract_results import *
 
@@ -30,8 +30,9 @@ def main(exp_dir):
     with open(sink_log, 'r') as sink:
         (tuples, total_bytes, t_sink_end) = sink_rx_end(sink)
         if not t_sink_end: raise Exception("Could not find t_sink_end.")
-        #rx_latencies = sink_rx_latencies(lines)
-
+    with open(sink_log, 'r') as sink:
+        rx_latencies = sink_rx_latencies(sink)
+        #if not rx_latencies: raise Exception("Could not find any latencies.")
 
     # Record the tput, k, w, query name etc.
     # Compute the mean tput
@@ -41,6 +42,9 @@ def main(exp_dir):
 
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
+
+    lstats = latency_stats(rx_latencies)
+    record_stat('%s/latency.txt'%exp_dir, lstats)
 
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
@@ -59,6 +63,12 @@ def mean_tput(t_start, t_end, bites):
     duration_s = float(t_end - t_start) / 1000.0
     kb = (8.0 * float(bites)) / 1024.0 
     return kb / duration_s 
+
+def latency_stats(latencies):
+    result = {}
+    for k,v in dict(latencies.describe()).iteritems():
+        result['%s_lat'%k] = v
+    return result
 
 def record_stat(stat_file, stats, mode='w'):
     with open(stat_file, mode) as sf:

@@ -24,8 +24,14 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
 
     record_statistics(ks, mobilities, session_ids, time_str, data_dir)
 
-    plot_tput_vs_mobility(time_str, script_dir, data_dir)
-    plot_median_tput_vs_mobility(time_str, script_dir, data_dir)
+
+    #for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 'latency_vs_mobility', 'median_latency_vs_mobility']:
+    for p in ['tput_vs_mobility', 'median_tput_vs_mobility']:
+        plot(p, time_str, script_dir, data_dir)
+    #plot_tput_vs_mobility(time_str, script_dir, data_dir)
+    #plot_median_tput_vs_mobility(time_str, script_dir, data_dir)
+    #plot_latency_vs_mobility(time_str, script_dir, data_dir)
+    #plot_median_latency_vs_mobility(time_str, script_dir, data_dir)
 
 def get_session_dir(k, mob, session, time_str, data_dir):
     return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
@@ -118,6 +124,15 @@ def get_tput(logfilename):
             
     raise Exception("Could not find tput in %s"%logfilename)
 
+def plot(p, time_str, script_dir, data_dir):
+    exp_dir = '%s/%s'%(data_dir,time_str)
+    print exp_dir
+    plot_proc = subprocess.Popen(['gnuplot', '-e',
+'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
+script_dir+'/vldb/config/%s.plt'%p], cwd=exp_dir)
+    plot_proc.wait()
+
+"""
 def plot_tput_vs_mobility(time_str, script_dir, data_dir):
     exp_dir = '%s/%s'%(data_dir,time_str)
     print exp_dir
@@ -133,7 +148,7 @@ def plot_median_tput_vs_mobility(time_str, script_dir, data_dir):
 'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
 script_dir+'/vldb/config/median_tput_vs_mobility.plt'], cwd=exp_dir)
     plot_proc.wait()
-
+"""
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
