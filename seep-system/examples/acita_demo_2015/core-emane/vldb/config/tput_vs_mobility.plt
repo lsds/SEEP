@@ -11,8 +11,8 @@ set style line 1 linewidth 2.5 linecolor rgb "red"
 set style line 2 linewidth 2.5 linecolor rgb "blue"
 set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
-set boxwidth 0.02
-set style fill pattern
+set boxwidth 0.1
+set style fill empty 
 
 plot sprintf("%s/%s/1k.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 	sprintf("%s/%s/2k.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \
