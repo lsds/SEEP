@@ -122,6 +122,7 @@ def run_session(time_str, k, mob, exp_session, params):
             values[ names.index('multicastrate') ] = '4'
             values[ names.index('unicastrate') ] = '4'
             values[ names.index('txpower') ] = '-10.0'
+            values[ names.index('flowcontrolenable') ] = 'on'
             print 'Emane Model overridden values: %s'%(str(list(values)))
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
         else:
