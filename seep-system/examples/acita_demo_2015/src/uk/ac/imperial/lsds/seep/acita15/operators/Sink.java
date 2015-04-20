@@ -24,6 +24,7 @@ public class Sink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Sink.class);
 	private long numTuples;
+	private long tupleSize;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
 	private final Stats stats = new Stats();
@@ -31,6 +32,7 @@ public class Sink implements StatelessOperator {
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
 	}
 	
@@ -57,7 +59,10 @@ public class Sink implements StatelessOperator {
 		
 		if (tuplesReceived >= numTuples)
 		{
-			logger.info("SNK: FINISHED with total tuples="+tuplesReceived+",total bytes="+totalBytes+",t="+System.currentTimeMillis());
+			logger.info("SNK: FINISHED with total tuples="+tuplesReceived
+					+",total bytes="+totalBytes
+					+",t="+System.currentTimeMillis()
+					+",tuple size bytes="+tupleSize);
 			System.exit(0);
 		}
 		stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
