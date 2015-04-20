@@ -39,9 +39,13 @@ def main(exp_dir):
     if t_src_begin: 
         src_sink_mean_tput = mean_tput(t_src_begin, t_sink_end, total_bytes)
         record_stat('%s/tput.txt'%exp_dir, {'src_sink_mean_tput':src_sink_mean_tput})
+        src_sink_frame_rate = frame_rate(t_src_begin, t_sink_end, tuples) 
+        record_stat('%s/tput.txt'%exp_dir, {'src_sink_frame_rate':src_sink_frame_rate}, 'a')
 
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
+    sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
+    record_stat('%s/tput.txt'%exp_dir, {'sink_sink_frame_rate':sink_sink_frame_rate}, 'a')
 
     lstats = latency_stats(rx_latencies)
     record_stat('%s/latency.txt'%exp_dir, lstats)
@@ -63,6 +67,10 @@ def mean_tput(t_start, t_end, bites):
     duration_s = float(t_end - t_start) / 1000.0
     kb = (8.0 * float(bites)) / 1024.0 
     return kb / duration_s 
+
+def frame_rate(t_start, t_end, tuples):
+    duration_s = float(t_end - t_start) / 1000.0
+    return float(tuples) / duration_s 
 
 def latency_stats(latencies):
     result = {}
