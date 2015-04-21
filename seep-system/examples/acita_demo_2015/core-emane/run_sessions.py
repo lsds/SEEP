@@ -106,7 +106,7 @@ def run_session(time_str, k, mob, exp_session, params):
             session.master = True
             session.location.setrefgeo(47.5791667,-122.132322,2.00000)
             session.location.refscale = 100.0
-            session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass, AtdlOmni"
+            session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
             session.emane.loadmodels()
 
             #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
@@ -118,10 +118,11 @@ def run_session(time_str, k, mob, exp_session, params):
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
             print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
             # TODO: change any of the EMANE 802.11 parameter values here
-            values[ names.index('pathlossmode') ] = 'freespace'
+            values[ names.index('propagationmodel') ] = '2ray'
             values[ names.index('multicastrate') ] = '4'
             values[ names.index('unicastrate') ] = '4'
             values[ names.index('txpower') ] = '-10.0'
+            print 'Emane Model overridden values: %s'%(str(list(values)))
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
         else:
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
