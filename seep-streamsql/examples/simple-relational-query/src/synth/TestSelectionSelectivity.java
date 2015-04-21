@@ -16,7 +16,6 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.SelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
@@ -26,7 +25,7 @@ public class TestSelectionSelectivity {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 9) {
+		if (args.length != 8) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -36,7 +35,6 @@ public class TestSelectionSelectivity {
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- selectivity in percent (0 <= x <= 100)");
-			System.err.println("\t- kernel filename");
 			System.exit(-1);
 		}
 		
@@ -64,8 +62,6 @@ public class TestSelectionSelectivity {
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		int selectivity                 = Integer.parseInt(args[7]);
 		
-		String filename = args[8];
-		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
 		
@@ -91,7 +87,7 @@ public class TestSelectionSelectivity {
 				
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
-		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema, filename);
+		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema);
 		
 		/*
 		 * Build and set up the query

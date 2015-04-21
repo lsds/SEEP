@@ -21,8 +21,6 @@ public class TestHybridReduction {
 
 	public static void main(String [] args) {
 		
-		String filename = args[0];
-		
 		WindowDefinition window = 
 			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
 		
@@ -33,7 +31,6 @@ public class TestHybridReduction {
 			new FloatColumnReference(1),
 			schema
 		);
-		gpuReductionCode.setSource(filename);
 		gpuReductionCode.setBatchSize(200);
 		gpuReductionCode.setup();
 		

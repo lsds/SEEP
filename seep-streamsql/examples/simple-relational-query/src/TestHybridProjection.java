@@ -21,8 +21,6 @@ public class TestHybridProjection {
 
 	public static void main(String [] args) {
 		
-		String filename = args[0];
-		
 		WindowDefinition window = 
 			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
 		
@@ -50,8 +48,7 @@ public class TestHybridProjection {
 				// new IntColumnReference(5),
 				// new IntColumnReference(6)
 			},
-			schema,
-			filename
+			schema
 		);
 		
 		MicroOperator uoperator = new MicroOperator (projectionCPUCode, projectionGPUCode, 1);

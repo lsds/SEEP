@@ -20,8 +20,6 @@ public class TestReductionKernel {
 
 	public static void main(String [] args) {
 		
-		String filename = args[0];
-		
 		WindowDefinition window = 
 			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
 		
@@ -32,7 +30,6 @@ public class TestReductionKernel {
 			new FloatColumnReference(1),
 			schema
 		);
-		reductionCode.setSource(filename);
 		reductionCode.setBatchSize(200);
 		reductionCode.setInputSize(Utils._GPU_INPUT_);
 		reductionCode.setup();

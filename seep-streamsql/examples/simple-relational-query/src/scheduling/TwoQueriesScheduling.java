@@ -1,7 +1,7 @@
 package scheduling;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
-import java.util.Random;
+// import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -24,13 +24,10 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
+
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.AProjectionKernel;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
-import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
-import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 
 public class TwoQueriesScheduling {
 
@@ -120,7 +117,7 @@ public class TwoQueriesScheduling {
 			expression1
 		);
 		
-		IMicroOperatorCode gpuProjectionCode1 = new AProjectionKernel(expression1, schema1, "/home/akolious/seep/seep-streamsql/examples/simple-relational-query/src/kernels/Projection.cl");
+		IMicroOperatorCode gpuProjectionCode1 = new AProjectionKernel(expression1, schema1);
 		((AProjectionKernel) gpuProjectionCode1).setInputSize(inputSize);
 		((AProjectionKernel) gpuProjectionCode1).setup();
 		
@@ -164,7 +161,7 @@ public class TwoQueriesScheduling {
 			expression2
 		);
 		
-		IMicroOperatorCode gpuProjectionCode2 = new AProjectionKernel(expression2, schema2, "/home/akolious/seep/seep-streamsql/examples/simple-relational-query/src/kernels/Projection.cl");
+		IMicroOperatorCode gpuProjectionCode2 = new AProjectionKernel(expression2, schema2);
 		((AProjectionKernel) gpuProjectionCode2).setInputSize(inputSize);
 		((AProjectionKernel) gpuProjectionCode2).setup();
 		
@@ -201,7 +198,7 @@ public class TwoQueriesScheduling {
 		ByteBuffer b = ByteBuffer.wrap(data); // .order(ByteOrder.LITTLE_ENDIAN);
 		
 		// fill the buffer
-		Random r = new Random();
+		// Random r = new Random();
 		while (b.hasRemaining()) {
 			b.putLong(0);
 			// b.putFloat(r.nextFloat());

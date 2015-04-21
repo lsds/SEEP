@@ -3,7 +3,7 @@ import java.util.zip.GZIPOutputStream;
 
 import java.io.IOException;
 
-public class Utils {
+public class SmartGridUtils {
 	
 	public static byte [] compress (byte [] data) throws IOException {
 		

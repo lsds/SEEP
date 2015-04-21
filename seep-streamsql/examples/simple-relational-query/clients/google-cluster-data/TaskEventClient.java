@@ -154,7 +154,7 @@ public class TaskEventClient {
 							System.exit(1);
 						}
 						/* Compress the data */
-						compressed = Utils.compress(data.array());
+						compressed = SmartGridUtils.compress(data.array());
 						compressedBytes += compressed.length;
 						ByteBuffer buffer = ByteBuffer.wrap(compressed);
 						bundles.add(buffer);
@@ -195,13 +195,13 @@ public class TaskEventClient {
 			
 			int _bundle = tupleSize * bundle;
 			/* Launch worker threads */
-			Worker [] workers = new Worker [NTHREADS];
+			TaskEventWorker [] workers = new TaskEventWorker [NTHREADS];
 			ExecutorService executor = Executors.newFixedThreadPool(NTHREADS);
 			
 			int iterations = 1;
 			
 			for (int idx = 0; idx < workers.length; idx++) {
-				workers[idx] = new Worker (bundles, idx, workers.length, _bundle, iterations, 2505600);
+				workers[idx] = new TaskEventWorker (bundles, idx, workers.length, _bundle, iterations, 2505600);
 				executor.execute(workers[idx]);
 			}
 			

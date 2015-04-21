@@ -28,7 +28,7 @@ public class SmartGridTuple {
 		String [] s = line.split(",");
 		
 		t.counter   = Long.parseLong  (s[ 0]); 
-		t.timestamp = Long.parseLong  (s[ 1]) - ; 
+		t.timestamp = Long.parseLong  (s[ 1]); 
 		t.value     = Float.parseFloat(s[ 2]);
 		t.property  = Integer.parseInt(s[ 3]);
 		t.plug      = Integer.parseInt(s[ 4]);

@@ -20,8 +20,6 @@ public class TestMicroAggregationKernel {
 
 	public static void main(String [] args) {
 		
-		String filename = args[0];
-		
 		int batchSize = 100;
 		
 		WindowDefinition window = 

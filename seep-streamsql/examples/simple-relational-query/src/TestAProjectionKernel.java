@@ -19,8 +19,6 @@ public class TestAProjectionKernel {
 
 	public static void main(String [] args) {
 		
-		String filename = args[0];
-		
 		WindowDefinition window = 
 			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
 		
@@ -36,8 +34,7 @@ public class TestAProjectionKernel {
 				new IntColumnReference (5),
 				new IntColumnReference (6)
 			},
-			schema,
-			filename
+			schema
 		);
 		
 		System.out.println(String.format("[DBG] %s", projectionCode));

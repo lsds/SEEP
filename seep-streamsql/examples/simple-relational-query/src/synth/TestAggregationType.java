@@ -25,7 +25,7 @@ public class TestAggregationType {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 9) {
+		if (args.length != 8) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -35,7 +35,6 @@ public class TestAggregationType {
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- aggregation type ('avg', 'sum', 'count', 'max', 'min')");
-			System.err.println("\t- GPU kernel filename");
 			System.exit(-1);
 		}
 		
@@ -63,8 +62,6 @@ public class TestAggregationType {
 		long windowSlide      = Long.parseLong(args[5]);
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		AggregationType aggregationType = AggregationType.fromString(args[7]);
-		
-		String filename = args[8];
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -106,7 +103,6 @@ public class TestAggregationType {
 		
 		TheGPU.getInstance().init(1);
 		
-		gpuAggCode.setSource (filename);
 		gpuAggCode.setBatchSize(queryConf.BATCH);
 		/* Configure... */
 		gpuAggCode.setInputSize (inputSize);

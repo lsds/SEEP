@@ -119,11 +119,11 @@ public class SmartGridReader {
 			
 			int _bundle = tupleSize * bundle;
 			/* Launch worker threads */
-			Worker [] workers = new Worker [NTHREADS];
+			SmartGridWorker [] workers = new SmartGridWorker [NTHREADS];
 			ExecutorService executor = Executors.newFixedThreadPool(NTHREADS);
 			
 			for (int idx = 0; idx < workers.length; idx++) {
-				workers[idx] = new Worker (bundles, idx, workers.length, _bundle);
+				workers[idx] = new SmartGridWorker (bundles, idx, workers.length, _bundle);
 				executor.execute(workers[idx]);
 			}
 			

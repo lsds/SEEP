@@ -18,7 +18,6 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.AggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
@@ -27,7 +26,7 @@ public class TestAggregationGroupBy {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 10) {
+		if (args.length != 9) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -38,7 +37,6 @@ public class TestAggregationGroupBy {
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- aggregation type ('avg', 'sum', 'count', 'max', 'min')");
 			System.err.println("\t- number of groups");
-			System.err.println("\t- filename");
 			System.exit(-1);
 		}
 		
@@ -65,8 +63,6 @@ public class TestAggregationGroupBy {
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		AggregationType aggregationType = AggregationType.fromString(args[7]);
 		int numberOfGroups              = Integer.parseInt(args[8]);
-		
-		String filename = args[9];
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -105,11 +101,12 @@ public class TestAggregationGroupBy {
 		System.out.println(String.format("[DBG] %s", aggCode));
 		IMicroOperatorCode gpuAggCode = new AggregationKernel(
 				aggregationType,
-				new FloatColumnReference(1), schema //,
-				// groupBy
+				new FloatColumnReference(1), 
+				groupBy, 
+				null, 
+				schema
 				);
 		
-		((AggregationKernel) gpuAggCode).setSource(filename);
 		((AggregationKernel) gpuAggCode).setInputSize(inputSize);
 		((AggregationKernel) gpuAggCode).setBatchSize(queryConf.BATCH);
 		((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());

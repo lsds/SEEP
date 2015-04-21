@@ -34,7 +34,7 @@ public class TestGPUDataMovement {
 		TheGPU.getInstance().init(1);
 		
 		DummyKernel kernel = new DummyKernel (schema, filename, inputSize);
-		kernel.setup(null, null);
+		kernel.setup();
 		int qid = kernel.getQueryId();
 		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, 0, inputSize);

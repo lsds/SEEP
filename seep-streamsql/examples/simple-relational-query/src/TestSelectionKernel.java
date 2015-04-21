@@ -20,8 +20,6 @@ public class TestSelectionKernel {
 
 	public static void main(String [] args) {
 		
-		String filename = args[0];
-		
 		WindowDefinition window = 
 			new WindowDefinition (TestUtils.TYPE, TestUtils.RANGE, TestUtils.SLIDE);
 		
@@ -29,8 +27,7 @@ public class TestSelectionKernel {
 		
 		ASelectionKernel selectionCode = new ASelectionKernel (
 			new IntComparisonPredicate (IntComparisonPredicate.LESS_OP, new IntColumnReference(1), new IntConstant(40)),
-			schema,
-			filename
+			schema
 		);
 		/* System.out.println(String.format("[DBG] %s", selectionCode)); */
 		

@@ -1,8 +1,6 @@
 package synth;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -19,7 +17,7 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateless.SelectionKernel;
+
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
@@ -30,7 +28,7 @@ public class TestSelectionPredComp {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 9) {
+		if (args.length != 8) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of CPU threads");
@@ -40,7 +38,6 @@ public class TestSelectionPredComp {
 			System.err.println("\t- window slide");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
 			System.err.println("\t- number of comparisons in predicate");
-			System.err.println("\t- kernel filename");
 			System.exit(-1);
 		}
 		
@@ -66,8 +63,6 @@ public class TestSelectionPredComp {
 		long windowSlide      = Long.parseLong(args[5]);
 		int numberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		int numberOfComparisons         = Integer.parseInt(args[7]);
-		
-		String filename = args[8];
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -108,7 +103,7 @@ public class TestSelectionPredComp {
 		
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
-		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema, filename);
+		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema);
 		((ASelectionKernel) gpuSelectionCode).setInputSize(inputSize);
 		((ASelectionKernel) gpuSelectionCode).setup();
 		
@@ -169,7 +164,7 @@ public class TestSelectionPredComp {
 		ByteBuffer b = ByteBuffer.wrap(data); // .order(ByteOrder.LITTLE_ENDIAN);
 		
 		// fill the buffer
-		Random r = new Random();
+		// Random r = new Random();
 		while (b.hasRemaining()) {
 			b.putLong(0);
 			// b.putFloat(r.nextFloat());

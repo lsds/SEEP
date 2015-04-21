@@ -16,31 +16,27 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
-import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
+
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
-import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
 public class TwoQuerySelectAggregate {
 
 	public static void main(String [] args) {
 		
-		if (args.length != 7) {
+		if (args.length != 5) {
 			System.err.println("Incorrect number of parameters, we need:");
 			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
 			System.err.println("\t- number of threads");
 			System.err.println("\t- numbers of windows in window batch for first query");
 			System.err.println("\t- numbers of windows in window batch for second query");
 			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
-			System.err.println("\t- kernel filename 1");
-			System.err.println("\t- kernel filename 2");
+			// System.err.println("\t- kernel filename 1");
+			// System.err.println("\t- kernel filename 2");
 			System.exit(-1);
 		}
 		
@@ -62,9 +58,9 @@ public class TwoQuerySelectAggregate {
 
 		int numberOfAttributesInSchema  = Integer.parseInt(args[4]);
 		
-		String filename1 = args[5];
+		// String filename1 = args[5];
 		
-		String filename2 = args[6];
+		// String filename2 = args[6];
 		
 		TheGPU.getInstance().init(2);
 		
@@ -76,7 +72,7 @@ public class TwoQuerySelectAggregate {
 		WindowType windowType1 = WindowType.ROW_BASED;
 		long windowRange1      = 1024;
 		long windowSlide1      = 1024;
-		AggregationType aggregationType = AggregationType.MIN;
+		// AggregationType aggregationType = AggregationType.MIN;
 		
 		WindowDefinition window1 = 
 			new WindowDefinition (windowType1, windowRange1, windowSlide1);
@@ -93,7 +89,7 @@ public class TwoQuerySelectAggregate {
 		
 		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize1);
 		
-		float selectivity = 100;
+		// float selectivity = 100;
 //		IPredicate predicate =  new FloatComparisonPredicate(
 //				IntComparisonPredicate.LESS_OP, 
 //				new FloatColumnReference(1),
@@ -114,7 +110,7 @@ public class TwoQuerySelectAggregate {
 		
 		IMicroOperatorCode selectionCode = new Selection(predicate);
 		System.out.println(String.format("[DBG] %s", selectionCode));
-		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema1, filename1);
+		IMicroOperatorCode gpuSelectionCode = new ASelectionKernel(predicate, schema1);
 				
 		MicroOperator operator1;
 		if (Utils.GPU && ! Utils.HYBRID)
@@ -141,7 +137,7 @@ public class TwoQuerySelectAggregate {
 		ITupleSchema schema2 = new TupleSchema (offsets2, schema1.getByteSizeOfTuple());
 		
 		IMicroOperatorCode aggCode = new Selection(predicate);
-		IMicroOperatorCode gpuAggCode = new ASelectionKernel(predicate, schema1, filename1);
+		IMicroOperatorCode gpuAggCode = new ASelectionKernel(predicate, schema1);
 		
 //		long ppb = window2.panesPerSlide() * (queryConf2.BATCH - 1) + window2.numberOfPanes();
 //		long tpb = ppb * window2.getPaneSize();
@@ -214,7 +210,7 @@ public class TwoQuerySelectAggregate {
 		ByteBuffer b = ByteBuffer.wrap(data);
 		
 		// fill the buffer
-		float value = 0;
+		// float value = 0;
 		while (b.hasRemaining()) {
 			b.putLong(1);
 //			b.putFloat(value);

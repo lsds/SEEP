@@ -16,14 +16,12 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
+
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
-import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
-import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 
 public class TwoQuerySetup {
 
@@ -103,13 +101,13 @@ public class TwoQuerySetup {
 			new IntColumnReference(3)
 		};
 
-		Selection having = new Selection(
-				new FloatComparisonPredicate(
-						FloatComparisonPredicate.LESS_OP, 
-						new FloatColumnReference(1), 
-						new FloatConstant(0.5f)
-						)
-				);
+//		Selection having = new Selection(
+//				new FloatComparisonPredicate(
+//						FloatComparisonPredicate.LESS_OP, 
+//						new FloatColumnReference(1), 
+//						new FloatConstant(0.5f)
+//						)
+//				);
 
 		
 		IMicroOperatorCode aggCode = new MicroAggregation(
@@ -121,12 +119,12 @@ public class TwoQuerySetup {
 
 
 		System.out.println(String.format("[DBG] %s", aggCode));
-		IMicroOperatorCode gpuAggCode = new MicroAggregationKernel(
-				aggregationType,
-				new FloatColumnReference(1),
-				groupBy,
-				having
-				);
+//		IMicroOperatorCode gpuAggCode = new MicroAggregationKernel(
+//				aggregationType,
+//				new FloatColumnReference(1),
+//				groupBy,
+//				having
+//				);
 
 		IMicroOperatorCode tmpProjCode = new Projection(
 			new FloatColumnReference(1)

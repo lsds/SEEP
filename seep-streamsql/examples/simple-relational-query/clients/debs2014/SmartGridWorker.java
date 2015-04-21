@@ -6,7 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.zip.GZIPInputStream;
 
-public class Worker implements Runnable {
+public class SmartGridWorker implements Runnable {
 	
 	/*
 	 * The byte array (`buf`) where the data is stored for the output stream
@@ -60,7 +60,7 @@ public class Worker implements Runnable {
 	
 	private byte [] buffer;
 	
-	public Worker (ArrayList<ByteBuffer> list, int idx, int max, int _bundle) {
+	public SmartGridWorker (ArrayList<ByteBuffer> list, int idx, int max, int _bundle) {
 		
 		this.list = list;
 		

@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream;
 
 import java.util.zip.GZIPInputStream;
 
-public class Worker implements Runnable {
+public class TaskEventWorker implements Runnable {
 	
 	/*
 	 * The byte array (`buf`) where the data is stored for the output stream
@@ -48,7 +48,7 @@ public class Worker implements Runnable {
 	private int _wraps;
 	private long offset = 0;
 	
-	public Worker (ArrayList<ByteBuffer> list, int idx, int max, int _bundle, int _wraps, long offset) {
+	public TaskEventWorker (ArrayList<ByteBuffer> list, int idx, int max, int _bundle, int _wraps, long offset) {
 		
 		this.list = list;
 		

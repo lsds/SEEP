@@ -34,7 +34,7 @@ public class TestDataMovement {
 		TheGPU.getInstance().init(1);
 		
 		DummyKernel kernel = new DummyKernel (schema, filename, inputSize);
-		kernel.setup(null, null);
+		kernel.setup();
 		int qid = kernel.getQueryId();
 		
 		System.out.println(String.format("[DBG] %d threads", kernel.getThreads()));

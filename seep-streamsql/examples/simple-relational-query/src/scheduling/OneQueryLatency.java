@@ -1,7 +1,7 @@
 package scheduling;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
-import java.util.Random;
+// import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
@@ -15,17 +15,12 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
-import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
+
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+
 import uk.ac.imperial.lsds.streamsql.op.stateless.LatencyOp;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
-import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
-import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
 
 public class OneQueryLatency {
 
@@ -145,10 +140,10 @@ public class OneQueryLatency {
 		b.putLong(bufferBundle/2, System.nanoTime());
 		
 		try {
-			int count = 0;
+			// int count = 0;
 			while (true) {
 				operator.processData (data);
-				count += 1;
+				// count += 1;
 				b.clear();
 				// while (b.hasRemaining()) {
 				// b.putLong(0, 6667 + count);
