@@ -50,10 +50,10 @@ public class Task extends ITask {
 		
 		if (GPU) {
 			ResultCollector.forwardAndFree (handler, _query, this.batch.getBuffer(),
-					this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
+					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
 		} else {
 			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
-					this.batch.getTaskId(), this.batch.getFreeOffset(), GPU);
+					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
 		}
 		
 		WindowBatchFactory.free(this.batch);

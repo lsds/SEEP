@@ -7,7 +7,7 @@ import uk.ac.imperial.lsds.seep.multi.join.JoinResultHandler;
 public class ResultCollector {
 
 	public static void forwardAndFree (ResultHandler handler, SubQuery query, IQueryBuffer buffer, 
-			int taskid, int freeOffset, boolean GPU) {
+			int taskid, int freeOffset, int latencyMark, boolean GPU) {
 		
 		if (taskid < 0) { /* Invalid task id */
 			return ;
@@ -26,7 +26,8 @@ public class ResultCollector {
 			handler.offsets[idx] = freeOffset;
 			handler.results[idx] = buffer;
 			
-			handler.latch [idx] = 0; 
+			handler.latch [idx] = 0;
+			handler.mark  [idx] = latencyMark;
 			
 			/* No other thread can modify this slot. */
 			handler.slots.set(idx, 1);
@@ -77,7 +78,8 @@ public class ResultCollector {
 				/* Forward to the distributed API */
 
 				/* Measure latency */
-				query.getLatencyMonitor().monitor(buf, handler.next);
+				if (handler.mark[handler.next] != -1)
+					query.getLatencyMonitor().monitor(handler.freeBuffer, handler.mark[handler.next]);
 				
 				buf.release();
 
@@ -120,7 +122,8 @@ public class ResultCollector {
 		IQueryBuffer buffer, 
 		int taskid, 
 		int freeOffset1, 
-		int freeOffset2
+		int freeOffset2,
+		int latencyMark
 	) {
 		
 		if (taskid < 0) { /* Invalid task id */
@@ -142,6 +145,9 @@ public class ResultCollector {
 			handler.secondOffsets[idx] = freeOffset2;
 			
 			handler.results[idx] = buffer;
+			
+			handler.latch [idx] = 0; 
+			handler.mark  [idx] = latencyMark;
 			
 			/* No other thread can modify this slot. */
 			handler.slots.set(idx, 1);
@@ -192,7 +198,8 @@ public class ResultCollector {
 				/* Forward to the distributed API */
 
 				/* Measure latency */
-				query.getLatencyMonitor().monitor(buf, handler.next);
+				if (handler.mark[handler.next] != -1)
+					query.getLatencyMonitor().monitor(handler.firstFreeBuffer, handler.mark[handler.next]);
 				
 				buf.release();
 

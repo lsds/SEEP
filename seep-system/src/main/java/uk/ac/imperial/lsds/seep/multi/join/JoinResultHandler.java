@@ -33,6 +33,9 @@ public class JoinResultHandler {
 	/* A query can have more than one downstream sub-queries. */
 	public int [] latch = new int [SLOTS];
 	
+	/* Set latency mark */
+	public int [] mark = new int [SLOTS];
+	
 	public Semaphore semaphore; /* Protects next */
 	public int next;
 
@@ -51,6 +54,7 @@ public class JoinResultHandler {
 			secondOffsets[i] = Integer.MIN_VALUE;
 			
 			latch[i] = 0;
+			mark [i] =-1;
 		}
 		
 		next = 0;

@@ -86,10 +86,12 @@ public class JoinTask extends ITask {
 		
 		if (GPU) {
 			ResultCollector.forwardAndFree (handler, _query, this.batch1.getBuffer(),
-					this.batch1.getTaskId(), this.batch1.getFreeOffset(), this.batch2.getFreeOffset());
+					this.batch1.getTaskId(), this.batch1.getFreeOffset(), this.batch2.getFreeOffset(), 
+					this.batch1.getLatencyMark());
 		} else {
 			ResultCollector.forwardAndFree (handler,  query, this.batch1.getBuffer(),
-					this.batch1.getTaskId(), this.batch1.getFreeOffset(), this.batch2.getFreeOffset());
+					this.batch1.getTaskId(), this.batch1.getFreeOffset(), this.batch2.getFreeOffset(),
+					this.batch1.getLatencyMark());
 		}
 		
 		WindowBatchFactory.free(this.batch1);

@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.ArrayList;
+
 public class TaskDispatcher implements ITaskDispatcher {
 	
 	private static final int _undefined = -1;
@@ -56,6 +58,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	int remainder = 0;
 	
+	private ArrayList<Integer> marks;
 	
 	public TaskDispatcher (SubQuery parent) {
 		
@@ -98,6 +101,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 		b = d = 0;
 		
 		previous = -1;
+		
+		marks = new ArrayList<Integer>();
 	}
 	
 	@Override
@@ -132,16 +137,26 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		taskid = this.getTaskNumber();
 		
-		long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
-		
-		/* System.out.println(
+		/* 
+		 * long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+		 * 
+		 * System.out.println(
 			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
 					parent.getId(), taskid, p, q, free, t_, _t, size)); */
 		 
 		if (q <= p)
 			q += buffer.capacity();
 		
-		batch = WindowBatchFactory.newInstance(this.batch, taskid, (int) free, buffer, window, schema);
+		/* Find latency mark */
+		int mark = -1;
+		for (int i = 0; i < marks.size(); i++) {
+			if (marks.get(i) >= ((int) p) && marks.get(i) < ((int) free)) {
+				mark = marks.remove(i);
+				break;
+			}
+		}
+		
+		batch = WindowBatchFactory.newInstance(this.batch, taskid, (int) free, buffer, window, schema, mark);
 		if (window.isRangeBased()) {
 			if (buffer.getLong((int) p) > _t)
 				batch.cancel();
@@ -160,6 +175,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 	}
 	
 	private void assemble (int index, int length) {
+		
+		marks.add(index);
+		
 		/* Number of rows added */
 		int rows = length / tupleSize;
 		

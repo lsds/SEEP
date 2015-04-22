@@ -62,6 +62,8 @@ public class ExpressionsUtil {
 	public static final ITupleSchema getTupleSchemaForExpressions
 		(final Expression[] expressions) {
 		
+		ITupleSchema outputSchema;
+		
 		int [] offsets = new int[expressions.length];
 		
 		int currentOffset = 0;
@@ -79,8 +81,17 @@ public class ExpressionsUtil {
 				currentOffset += 4;
 			}
 		}
+		
+		outputSchema = new TupleSchema(offsets, currentOffset);
+		/* Set types */
+		for (int i = 0; i < expressions.length; i++) {
+			Expression e = expressions[i];
+			     if (e instanceof   IntExpression) outputSchema.setType(i, 1);
+			else if (e instanceof  LongExpression) outputSchema.setType(i, 3);
+			else if (e instanceof FloatExpression) outputSchema.setType(i, 2);
+		}
 
-		return new TupleSchema(offsets, currentOffset);
+		return outputSchema;
 	}
 
 	public static final ITupleSchema mergeTupleSchemas(

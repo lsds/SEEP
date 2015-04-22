@@ -1,7 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.LockSupport;
 
 public class WindowBatchFactory {
 	
@@ -19,22 +18,15 @@ public class WindowBatchFactory {
 		count = new AtomicLong(_pool_size);
 	}
 	
-	public static WindowBatch newInstance (int size, int task, int freeOffset, IQueryBuffer buffer, WindowDefinition window, ITupleSchema schema) {
+	public static WindowBatch newInstance (int size, int task, int freeOffset, IQueryBuffer buffer, 
+			WindowDefinition window, ITupleSchema schema, int latencyMark) {
 		WindowBatch batch;
-		
-//		while ((batch = pool.poll()) == null) {
-////			  System.err.println(String.format("warning: thread %20s blocked at task %d waiting for a batch to become available in the pool", 
-////			 		 Thread.currentThread(), task));
-//			// LockSupport.parkNanos(1L);
-//			LockSupport.parkNanos(1L);
-//		}
-		
 		batch = pool.poll();
 		if (batch == null) {
 			count.incrementAndGet();
-			return new WindowBatch(size, task, freeOffset, buffer, window, schema);
+			return new WindowBatch(size, task, freeOffset, buffer, window, schema, latencyMark);
 		}
-		batch.set(size, task, freeOffset, buffer, window, schema);
+		batch.set(size, task, freeOffset, buffer, window, schema, latencyMark);
 		return batch;
 	}
 	

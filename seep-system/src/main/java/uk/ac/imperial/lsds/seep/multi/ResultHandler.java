@@ -27,6 +27,8 @@ public class ResultHandler {
 	/* A query can have more than one downstream sub-queries. */
 	public int [] latch = new int [SLOTS];
 	
+	public int [] mark  = new int [SLOTS];
+	
 	Semaphore semaphore; /* Protects next */
 	int next;
 
@@ -43,6 +45,7 @@ public class ResultHandler {
 			offsets[i] = Integer.MIN_VALUE;
 			
 			latch[i] = 0;
+			mark [i] =-1;
 		}
 		
 		next = 0;

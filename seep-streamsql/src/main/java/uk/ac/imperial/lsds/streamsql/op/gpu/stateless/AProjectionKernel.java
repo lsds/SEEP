@@ -21,7 +21,7 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 	private int [] taskIdx;
 	private int [] freeIdx;
 	
-	private static int dbg = 0;
+	private static int dbg = 1;
 	
 	private Expression [] expressions;
 	private ITupleSchema inputSchema, outputSchema;

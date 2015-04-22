@@ -63,7 +63,7 @@ public class TestMicroAggregationKernel {
 		while (buffer.getByteBuffer().hasRemaining())
 			buffer.getByteBuffer().putInt(1);
 		buffer.close();
-		WindowBatch batch = new WindowBatch(batchSize, 0, 0, buffer, window, schema);
+		WindowBatch batch = new WindowBatch(batchSize, 0, 0, buffer, window, schema, -1);
 		batch.setBatchPointers(0, buffer.capacity());
 		
 		aggregation.processData(batch, null);

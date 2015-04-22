@@ -95,7 +95,7 @@ public class PerformanceMonitor implements Runnable {
 					long tasksProcessed_ = operator.getTaskProcessorPool().getProcessedTasks(i, j);
 					long delta = tasksProcessed_ - _tasksProcessed[i][j];
 					double tps = (double) delta / (dt / 1000.);
-					b.append(String.format(" p%02d q%d %5.1f", i, j, tps));
+					/* b.append(String.format(" p%02d q%d %5.1f", i, j, tps)); */
 					if (Utils.HYBRID && i == 0) {
 						policy_[0][j] = (int) Math.floor(tps);
 					} else {

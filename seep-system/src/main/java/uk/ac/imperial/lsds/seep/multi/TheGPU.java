@@ -11,7 +11,7 @@ public class TheGPU {
 	private static final int maxBuffers = 10;
 	
 	private static final String gpuLibrary = 
-		"/home/akolious/tests/saber-jni/libGPU.so";
+		"/home/akolious/seep/seep-system/clib/libGPU.so";
 	
 	private static final TheGPU gpuInstance = new TheGPU ();
 	

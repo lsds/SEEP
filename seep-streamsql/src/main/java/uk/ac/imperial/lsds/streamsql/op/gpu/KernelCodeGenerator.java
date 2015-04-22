@@ -189,7 +189,7 @@ public class KernelCodeGenerator {
 				b.append(String.format("\tlong _%d;\n", i));
 				break;
 			case 0:
-				System.err.println("error: failed to auto-generate tuple struct");
+				System.err.println("error: failed to auto-generate tuple struct (attribute " + i + " is undefined)");
 				System.exit(1);
 			}
 		}
@@ -290,11 +290,11 @@ public class KernelCodeGenerator {
 				/* Depth */
 				for (int k = 0; k < depth - 1; k++)
 					expr.append("3. * ");
-				expr.append(String.format("(3. * _bswapfp(p->tuple._%d) / 2.)", idx));
+				expr.append(String.format("(3. * __bswapfp(p->tuple._%d) / 2.)", idx));
 				for (int k = 0; k < depth - 1; k++)
 					expr.append(" / 2.");
 				expr.append(");\n");
-				b.append(String.format("\t%s;\n", expr.toString()));
+				b.append(String.format("\t%s", expr.toString()));
 			} else {
 				b.append(String.format("\tq->tuple._%d = p->tuple._%d;\n", i, idx));
 			}

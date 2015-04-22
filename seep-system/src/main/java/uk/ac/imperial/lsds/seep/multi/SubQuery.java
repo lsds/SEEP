@@ -13,6 +13,8 @@ public class SubQuery {
 	
 	private static final int _max_downstream_subqueries = 2;
 	
+	private long timestampReference = 0L;
+	
 	private int   freeUpstreamIdx = 0;
 	private int freeDownstreamIdx = 0;
 	
@@ -41,13 +43,24 @@ public class SubQuery {
 	private LatencyMonitor latencyMonitor;
 
 	private boolean isLeft = false;
-
+	
 	public SubQuery (
 			int id, 
 			Set<MicroOperator> microOperators, 
 			ITupleSchema schema, 
 			WindowDefinition window, 
 			QueryConf queryConf) {
+		
+		this(id, microOperators, schema, window, queryConf, 0L);
+	}
+	
+	public SubQuery (
+			int id, 
+			Set<MicroOperator> microOperators, 
+			ITupleSchema schema, 
+			WindowDefinition window, 
+			QueryConf queryConf,
+			long timestampReference) {
 		
 		this.id = id;
 		
@@ -74,12 +87,13 @@ public class SubQuery {
 		for (int i = 0; i < _max_downstream_subqueries; i++)
 			this.downstreamSubQuery[i] = null;
 		
-		this.latencyMonitor = new LatencyMonitor();
-		this.latencyMonitor.disable();
+		this.timestampReference = timestampReference;
+		this.latencyMonitor = new LatencyMonitor(this.timestampReference);
+		// this.latencyMonitor.disable();
 		
 		this.dispatcher = new TaskDispatcher(this);
 	}
-
+	
 	public SubQuery(
 			int id, 
 			Set<MicroOperator> microOperators,
@@ -88,6 +102,19 @@ public class SubQuery {
 			QueryConf queryConf,
 			ITupleSchema secondSchema, 
 			WindowDefinition secondWindow) {
+		
+		this(id, microOperators, firstSchema, firstWindow, queryConf, secondSchema, secondWindow, 0L);
+	}
+	
+	public SubQuery(
+			int id, 
+			Set<MicroOperator> microOperators,
+			ITupleSchema firstSchema, 
+			WindowDefinition firstWindow, 
+			QueryConf queryConf,
+			ITupleSchema secondSchema, 
+			WindowDefinition secondWindow,
+			long timestampReference) {
 		
 		this.id = id;
 		
@@ -117,8 +144,9 @@ public class SubQuery {
 		this.secondWindow = secondWindow;
 		this.secondSchema = secondSchema;
 		
-		this.latencyMonitor = new LatencyMonitor();
-		this.latencyMonitor.disable();
+		this.timestampReference = timestampReference;
+		this.latencyMonitor = new LatencyMonitor(this.timestampReference);
+		// this.latencyMonitor.disable();
 		
 		this.dispatcher = new JoinTaskDispatcher(this);
 	}

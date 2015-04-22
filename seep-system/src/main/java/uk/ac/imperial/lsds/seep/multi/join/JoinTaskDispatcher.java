@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi.join;
 
+import java.util.ArrayList;
+
 import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
@@ -48,6 +50,9 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private int secondToProcessCount = 0;
 	private int secondMask;
 	
+	/* Latency marks */
+	private ArrayList<Integer> marks;
+	
 	private Object lock = new Object();
 
 	public JoinTaskDispatcher (SubQuery parent) {
@@ -68,7 +73,9 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		this.firstMask = this.firstBuffer.capacity() - 1;
 		this.secondMask = this.secondBuffer.capacity() - 1;
 		
-		this.batch     = this.parent.getQueryConf().BATCH;
+		this.batch = this.parent.getQueryConf().BATCH;
+		
+		this.marks = new ArrayList<Integer>();
 	}
 	
 	@Override
@@ -91,6 +98,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	}
 	
 	private void assembleFirst (int idx, int length) {
+		
+		marks.add(idx);
 		
 		this.firstEndIndex = idx + length - firstTupleSize;
 		
@@ -194,8 +203,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		if (secondNextIndex != secondStartIndex)
 			secondFree = (secondNextIndex - secondTupleSize) & secondMask;
 		
-		WindowBatch firstBatch = WindowBatchFactory.newInstance(this.batch, taskid, firstFree, firstBuffer, firstWindow, firstSchema);
-		WindowBatch secondBatch = WindowBatchFactory.newInstance(this.batch, taskid, secondFree, secondBuffer, secondWindow, secondSchema);
+		WindowBatch firstBatch  = WindowBatchFactory.newInstance(this.batch, taskid, firstFree, firstBuffer, firstWindow, firstSchema, -1);
+		WindowBatch secondBatch = WindowBatchFactory.newInstance(this.batch, taskid, secondFree, secondBuffer, secondWindow, secondSchema, -1);
 	
 		if (dispatchedInFirst) {
 			firstBatch.setBatchPointers(firstLastEndIndex, firstEndIndex);
@@ -208,6 +217,18 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			secondBatch.setBatchPointers(secondLastEndIndex, secondEndIndex);
 			this.firstLastEndIndex = this.firstEndIndex;
 			this.secondLastEndIndex = this.secondEndIndex;
+		}
+		
+		if (dispatchedInFirst) {
+			/* Find and set latency mark in first batch */
+			int mark = -1;
+			for (int i = 0; i < marks.size(); i++) {
+				if (marks.get(i) >= firstBatch.getBatchStartPointer() && marks.get(i) < firstBatch.getFreeOffset()) {
+					mark = marks.remove(i);
+					break;
+				}
+			}
+			firstBatch.setLatencyMark(mark);
 		}
 		
 		JoinTask task = JoinTaskFactory.newInstance(parent, firstBatch, secondBatch, handler, taskid, firstFree, secondFree);

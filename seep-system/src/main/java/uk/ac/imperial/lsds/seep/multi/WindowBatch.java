@@ -33,9 +33,11 @@ public class WindowBatch {
 	
 	private int prevStartPointer;
 	private int prevEndPointer;
+
+	private int latencyMark = 0;
 	
 	public WindowBatch () {
-		this(Utils.BATCH, 0, 0, null, null, null);
+		this(Utils.BATCH, 0, 0, null, null, null, 0);
 	}
 	
 	public WindowBatch (int batchSize, 
@@ -43,7 +45,8 @@ public class WindowBatch {
                         int freeOffset,
                         IQueryBuffer buffer, 
                         WindowDefinition windowDefinition, 
-                        ITupleSchema schema) {
+                        ITupleSchema schema,
+                        int latencyMark) {
 		
 		this.batchSize = batchSize;
 		this.taskId = taskId;
@@ -51,6 +54,8 @@ public class WindowBatch {
 		this.buffer = buffer;
 		this.windowDefinition = windowDefinition;
 		this.schema = schema;
+		
+		this.latencyMark = latencyMark;
 		
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
@@ -72,7 +77,8 @@ public class WindowBatch {
                      int freeOffset,
                      IQueryBuffer buffer, 
                      WindowDefinition windowDefinition, 
-                     ITupleSchema schema) {
+                     ITupleSchema schema,
+                     int latencyMark) {
 		
 		this.batchSize = batchSize;
 		this.taskId = taskId;
@@ -88,6 +94,8 @@ public class WindowBatch {
 		
 		this.batchStartTime = -1;
 		this.batchEndTime = -1;
+		
+		this.latencyMark = latencyMark;
 	}
 	
 	public void setTaskId (int taskId) {
@@ -464,6 +472,14 @@ public class WindowBatch {
 
 	public int getPrevEndPointer() {
 		return prevEndPointer;
+	}
+
+	public int getLatencyMark() {
+		return this.latencyMark;
+	}
+	
+	public void setLatencyMark(int latencyMark) {
+		this.latencyMark  = latencyMark;
 	}
 }
 
