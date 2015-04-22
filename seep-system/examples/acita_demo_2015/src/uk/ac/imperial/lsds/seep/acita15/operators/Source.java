@@ -47,10 +47,10 @@ public class Source implements StatelessOperator {
 		long interFrameDelay = 1000 / frameRate;
 		
 		final String value = generateFrame(tupleSizeChars);
-		
-		logger.info("Source sending started at t="+System.currentTimeMillis());
-		logger.info("Source sending started at t="+System.currentTimeMillis());
-		logger.info("Source sending started at t="+System.currentTimeMillis());
+		final long tStart = System.currentTimeMillis();
+		logger.info("Source sending started at t="+tStart);
+		logger.info("Source sending started at t="+tStart);
+		logger.info("Source sending started at t="+tStart);
 		while(sendIndefinitely || tupleId < numTuples){
 			
 			DataTuple output = data.newTuple(tupleId, value);
@@ -65,17 +65,19 @@ public class Source implements StatelessOperator {
 			}
 			api.send_highestWeight(output);
 			
-			
-			/*
-			try {
-				Thread.sleep(interFrameDelay);
-			} 
-			catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			*/
 			tupleId++;
+			
+			long tNext = tStart + (tupleId * interFrameDelay);
+			long tNow = System.currentTimeMillis();
+			if (tNext < tNow)
+			{
+				try {
+					Thread.sleep(tNow - tNext);
+				} 
+				catch (InterruptedException e) {
+					e.printStackTrace();
+				}				
+			}
 		}
 		System.exit(0);
 	}
