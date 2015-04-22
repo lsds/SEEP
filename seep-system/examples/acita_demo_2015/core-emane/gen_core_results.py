@@ -74,7 +74,8 @@ def frame_rate(t_start, t_end, tuples):
 
 def latency_stats(latencies):
     result = {}
-    for k,v in dict(latencies.describe()).iteritems():
+    percentiles=[.25,.5,.75,.9,.95,.99]
+    for k,v in dict(latencies.describe(percentiles=percentiles)).iteritems():
         result['%s_lat'%k] = v
     return result
 
