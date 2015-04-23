@@ -9,75 +9,83 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ThetaJoinKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
 public class TestJoinPredComp {
+	
+	private static long pack (long left, long right) {
+		return (left << 32) | right;
+	}
+	
+	public static int unpack (int idx, long value) {
+        if (idx == 0) { /* left */
+            return (int) (value >> 32);
+        } else
+        if (idx == 1) { /* right value */
+            return (int) value;
+        } else {
+            return -1;
+        }
+    }
 
 	public static void main(String [] args) {
 		
 		if (args.length != 12) {
-			System.err.println("Incorrect number of parameters, we need:");
-			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
-			System.err.println("\t- number of CPU threads");
-			System.err.println("\t- number of tuples in either stream for join");
-			System.err.println("\t- first window type ('row', 'range')");
-			System.err.println("\t- first window size ");
-			System.err.println("\t- first window slide");
-			System.err.println("\t- number of attributes in first tuple schema (excl. timestamp)");
-			System.err.println("\t- second window type ('row', 'range')");
-			System.err.println("\t- second window size ");
-			System.err.println("\t- second window slide");
-			System.err.println("\t- number of attributes in second tuple schema (excl. timestamp)");
-			System.err.println("\t- number of comparisons in predicate");
+			
+			System.err.println("Invalid parameters:");
+			
+			System.err.println("\t- 1. Execution mode ['cpu','gpu','hybrid']");
+			System.err.println("\t- 2. # CPU threads");
+			System.err.println("\t- 3. # tuples in either stream for join task");
+			System.err.println("\t- 4. 1st window type ['row','range']");
+			System.err.println("\t- 5. 1st window range");
+			System.err.println("\t- 6. 1st window slide");
+			System.err.println("\t- 7. # attributes/tuple in 1st stream (excl. timestamp)");
+			System.err.println("\t- 8. 2nd window type ['row','range']");
+			System.err.println("\t- 9. 2nd window range");
+			System.err.println("\t-10. 2nd window slide");
+			System.err.println("\t-11. # attributes/tuple in 2nd stream (excl. timestamp)");
+			System.err.println("\t-12. # comparisons");
+			
 			System.exit(-1);
 		}
 		
-		/*
-		 * Set up configuration of system
-		 */
 		Utils.CPU = false;
 		Utils.GPU = false;
 		if (args[0].toLowerCase().contains("cpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.CPU = true;
 		if (args[0].toLowerCase().contains("gpu") || args[0].toLowerCase().contains("hybrid"))
 			Utils.GPU = true;
+		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = Integer.parseInt(args[1]);
-		QueryConf queryConf = new QueryConf(Integer.parseInt(args[2]), 1024);
 		
-		/*
-		 * Set up configuration of query
-		 */
+		int batchSize = Integer.parseInt(args[2]);
+		QueryConf queryConf = new QueryConf (batchSize, 1024);
+		
 		WindowType firstWindowType = WindowType.fromString(args[3]);
-		long firstWindowRange      = Long.parseLong(args[4]);
-		long firstWindowSlide      = Long.parseLong(args[5]);
-		int firstNumberOfAttributesInSchema  = Integer.parseInt(args[6]);
 		
-		WindowType secondWindowType = WindowType.fromString(args[7]);
-		long secondWindowRange      = Long.parseLong(args[8]);
-		long secondWindowSlide      = Long.parseLong(args[9]);
-		int secondNumberOfAttributesInSchema  = Integer.parseInt(args[10]);
-
-		int numberOfComparisons         = Integer.parseInt(args[11]);
+		long firstWindowRange = Long.parseLong(args[4]);
+		long firstWindowSlide = Long.parseLong(args[5]);
 		
 		WindowDefinition firstWindow = 
 			new WindowDefinition (firstWindowType, firstWindowRange, firstWindowSlide);
 		
-		WindowDefinition secondWindow = 
-				new WindowDefinition (secondWindowType, secondWindowRange, secondWindowSlide);
+		int firstNumberOfAttributesInSchema = Integer.parseInt(args[6]);
 		
 		int[] firstOffsets = new int[firstNumberOfAttributesInSchema + 1];
-		// first attribute is timestamp
 		firstOffsets[0] = 0;
-
 		int firstByteSize = 8;
 		for (int i = 1; i < firstNumberOfAttributesInSchema + 1; i++) {
 			firstOffsets[i] = firstByteSize;
@@ -85,11 +93,24 @@ public class TestJoinPredComp {
 		}
 		
 		ITupleSchema firstSchema = new TupleSchema (firstOffsets, firstByteSize);
+		/* 0:undefined 1:int, 2:float, 3:long */
+		firstSchema.setType(0, 3);
+		for (int i = 1; i < firstNumberOfAttributesInSchema + 1; i++) {
+			firstSchema.setType(i, 1);
+		}
+		
+		WindowType secondWindowType = WindowType.fromString(args[7]);
+		
+		long secondWindowRange = Long.parseLong(args[8]);
+		long secondWindowSlide = Long.parseLong(args[9]);
+		
+		WindowDefinition secondWindow = 
+			new WindowDefinition (secondWindowType, secondWindowRange, secondWindowSlide);
+		
+		int secondNumberOfAttributesInSchema = Integer.parseInt(args[10]);
 		
 		int[] secondOffsets = new int[secondNumberOfAttributesInSchema + 1];
-		// first attribute is timestamp
 		secondOffsets[0] = 0;
-
 		int secondByteSize = 8;
 		for (int i = 1; i < secondNumberOfAttributesInSchema + 1; i++) {
 			secondOffsets[i] = secondByteSize;
@@ -97,70 +118,99 @@ public class TestJoinPredComp {
 		}
 		
 		ITupleSchema secondSchema = new TupleSchema (secondOffsets, secondByteSize);
+		/* 0:undefined 1:int, 2:float, 3:long */
+		secondSchema.setType(0, 3);
+		for (int i = 1; i < secondNumberOfAttributesInSchema + 1; i++) {
+			secondSchema.setType(i, 1);
+		}
 		
-		IPredicate[] predicates = new IPredicate[numberOfComparisons];
+		int numberOfComparisons = Integer.parseInt(args[11]);
 		
+		IPredicate [] predicates = new IPredicate[numberOfComparisons];
 		for (int i = 0; i < numberOfComparisons; i++) {
-			predicates[i] = new IntComparisonPredicate(
+			predicates[i] = new IntComparisonPredicate
+				(
 					IntComparisonPredicate.EQUAL_OP, 
 					new IntColumnReference(1),
 					new IntColumnReference(1)
-					);
+				);
 		}
+		IPredicate predicate = new ANDPredicate(predicates);
 		
-		IPredicate predicate =  new ANDPredicate(predicates);
+		/* Calculate batch-related statistics */
+		/* ... */
 		
+		TheGPU.getInstance().init(1);
 		
-		IMicroOperatorCode joinCode = new ThetaJoin(predicate);
-		System.out.println(String.format("[DBG] %s", joinCode));
-		//TODO: use code for GPU computation
-		IMicroOperatorCode gpuJoinCode = new ThetaJoin(predicate);
+		IMicroOperatorCode cpuJoinCode = new ThetaJoin (predicate);
+		System.out.println(String.format("[DBG] %s", cpuJoinCode));
 		
-		/*
-		 * Build and set up the query
-		 */
-		MicroOperator uoperator = new MicroOperator (joinCode, gpuJoinCode, 1);
+		IMicroOperatorCode gpuJoinCode = new ThetaJoinKernel(predicate, firstSchema, secondSchema);
+		
+		MicroOperator uoperator;
+		if (Utils.GPU && ! Utils.HYBRID)
+			uoperator = new MicroOperator (gpuJoinCode, cpuJoinCode, 1);
+		else
+			uoperator = new MicroOperator (cpuJoinCode, gpuJoinCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
+		
+		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 1024 * 1024;
+		
+		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, firstSchema, firstWindow, queryConf, secondSchema, secondWindow);
+		SubQuery query = new SubQuery (0, operators, firstSchema, firstWindow, queryConf, 
+				secondSchema, secondWindow, timestampReference);
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
+		
 		operator.setup();
+		
+		TheCPU.getInstance().bind(0);
 
 		/*
 		 * Set up the stream
 		 */
-		int firstActualByteSize  = firstSchema.getByteSizeOfTuple();
-		int secondActualByteSize = secondSchema.getByteSizeOfTuple();
-		// 32768 yields 1MB for byteSize = 32 
-		// 16384 yields 1MB for byteSize = 16 
-		int firstBufferBundle = firstActualByteSize * 200;
-		int secondBufferBundle = secondActualByteSize * 200;
-		byte [] firstData = new byte [firstBufferBundle];
+		int firstTuplesPerInsert  = 200;
+		int secondTuplesPerInsert = 200;
+		
+		int firstTupleSize  =  firstSchema.getByteSizeOfTuple();
+		int secondTupleSize = secondSchema.getByteSizeOfTuple();
+		
+		int firstBufferBundle  =  firstTupleSize *  firstTuplesPerInsert;
+		int secondBufferBundle = secondTupleSize * secondTuplesPerInsert;
+		
+		byte [] firstData  = new byte [ firstBufferBundle];
 		byte [] secondData = new byte [secondBufferBundle];
-		ByteBuffer firstB = ByteBuffer.wrap(firstData);
-		ByteBuffer secondB = ByteBuffer.wrap(secondData);
 		
-		// fill the first buffer
-		while (firstB.hasRemaining()) {
-			firstB.putLong(1);
-			for (int i = 8; i < firstActualByteSize; i += 4)
-				firstB.putInt(1);
+		ByteBuffer  firstBuffer = ByteBuffer.wrap( firstData);
+		ByteBuffer secondBuffer = ByteBuffer.wrap(secondData);
+		
+		/* Fill the first buffer */
+		while (firstBuffer.hasRemaining()) {
+			firstBuffer.putLong(1);
+			for (int i = 8; i < firstTupleSize; i += 4)
+				firstBuffer.putInt(1);
 		}
-		// fill the second buffer
-		while (secondB.hasRemaining()) {
-			secondB.putLong(1);
-			for (int i = 8; i < secondActualByteSize; i += 4)
-				secondB.putInt(1);
+		/* Fill the second buffer */
+		while (secondBuffer.hasRemaining()) {
+			secondBuffer.putLong(1);
+			for (int i = 8; i < secondTupleSize; i += 4)
+				secondBuffer.putInt(1);
 		}
 		
+		/* Populate time stamps */
+		long ts = (System.nanoTime() - timestampReference) / 1000L;
+		long packed = pack(ts, firstBuffer.getLong(0));
+		firstBuffer.putLong(0, packed);
 		try {
 			while (true) {
 				operator.processData (firstData);
 				operator.processDataSecond (secondData);
+				firstBuffer.putLong(0, pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1));
 			}
-		} catch (Exception e) { 
+		} catch (Exception e) {
 			e.printStackTrace(); 
 			System.exit(1);
 		}

@@ -24,7 +24,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	private IPredicate predicate;
 	private ITupleSchema schema;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Selection.cl";
+	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Selection.cl";
 	
 	private String customFunctor = null;
 	
@@ -85,7 +85,10 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 			System.err.println("error: invalid input size");
 			System.exit(1);
 		}
-		this.tuples  = this.inputSize / schema.getByteSizeOfTuple();
+		this.outputSize = inputSize;
+		
+		this.tuples = this.inputSize / schema.getByteSizeOfTuple();
+		this.tuples_= this.tuples;
 		while (! isPowerOfTwo(tuples_))
 			tuples_ += 1;
 		
@@ -107,7 +110,9 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		args[1] = tuples;
 		args[2] = 4 * tgs[0] * tuplesPerThread;
 		
-		String source = KernelCodeGenerator.getSelection (schema, schema, predicate, filename, customFunctor);
+		String source = 
+			KernelCodeGenerator.getSelection (schema, schema, predicate, filename, customFunctor);
+		System.out.println(source);
 		
 		qid = TheGPU.getInstance().getQuery(source, 2, 1, 4);
 		
@@ -115,7 +120,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		TheGPU.getInstance().setOutput(qid, 0, 4 * tuples_, 0, 0, 1, 0); /* flags     */
 		TheGPU.getInstance().setOutput(qid, 1, 4 * tuples_, 0, 1, 0, 0); /* offsets   */
-		TheGPU.getInstance().setOutput(qid, 2, 4 * ngroups, 0, 1, 0, 0); /* paritions */
+		TheGPU.getInstance().setOutput(qid, 2, 4 * ngroups, 0, 1, 0, 0); /* partitions */
 		TheGPU.getInstance().setOutput(qid, 3,  outputSize, 1, 0, 0, 1);
 		
 		TheGPU.getInstance().setKernelSelect (qid, args);

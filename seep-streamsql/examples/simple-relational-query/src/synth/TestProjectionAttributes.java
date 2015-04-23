@@ -1,4 +1,5 @@
 package synth;
+
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
@@ -106,7 +107,7 @@ public class TestProjectionAttributes {
 		}
 		
 		Expression [] expression = new Expression [numberOfProjectedAttributes + 1];
-		/* Always project the timestamp */
+		/* Always project the time stamp */
 		expression[0] = new LongColumnReference(0);
 		
 		for (int i = 0; i < numberOfProjectedAttributes; i++) {
@@ -176,7 +177,7 @@ public class TestProjectionAttributes {
 				b.putInt(1);
 		}
 		
-		/* Populate timestamps */
+		/* Populate time stamps */
 		long ts = (System.nanoTime() - timestampReference) / 1000L;
 		long packed = pack(ts, b.getLong(0));
 		b.putLong(0, packed);

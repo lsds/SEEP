@@ -36,7 +36,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Reduction.cl";
+	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Reduction.cl";
 	
 	private int qid;
 	
@@ -142,7 +142,9 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		startPtrs = new byte [windowPtrsSize];
 		endPtrs   = new byte [windowPtrsSize];
 		
-		String source = KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type, _the_aggregate);
+		String source = 
+			KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type, _the_aggregate);
+		System.out.println(source);
 		
 		qid = TheGPU.getInstance().getQuery(source, 1, 3, 1);
 		

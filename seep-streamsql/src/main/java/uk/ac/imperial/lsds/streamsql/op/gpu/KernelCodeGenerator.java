@@ -15,6 +15,15 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
+/*
+ * TODO: 
+ * 
+ * 1. copyf () for aggregation
+ * 2. clearf() for join
+ * 3. copyf () for join
+ * 
+ */
+
 public class KernelCodeGenerator {
 	
 	public static String getProjection (ITupleSchema input, ITupleSchema output, 
@@ -130,6 +139,30 @@ public class KernelCodeGenerator {
 		return b.toString();
 	}
 	
+	public static int getIntermediateStructLength (Expression [] groupBy) {
+		
+		/* The first attribute is always a timestamp */
+		int byteSize_, byteSize = 8;
+		for (int i = 1; i <= groupBy.length; i++) {
+			if (groupBy[i-1] instanceof IntExpression) { 
+				byteSize += 4;
+			} else
+			if (groupBy[i-1] instanceof FloatExpression) { 
+				byteSize += 4;
+			} else
+			if (groupBy[i-1] instanceof LongExpression) { 
+				byteSize += 8;
+			}
+		}
+		byteSize += 8;
+		byteSize_ = byteSize;
+		/* Ensure output tuple size is a power of two */
+		while ((byteSize_ & (byteSize_ - 1)) != 0) {
+			byteSize_ ++;
+		}
+		return byteSize_;
+	}
+	
 	public static String getHeader (ITupleSchema input, ITupleSchema output) {
 		StringBuilder b = new StringBuilder ();
 		b.append("#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable\n");
@@ -137,7 +170,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
-		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
+		b.append("#include \"/Users/akolious/SEEP/seep-system/clib/byteorder.h\"");
 		b.append("\n");
 		int  _input_vector_size = getVectorSize ( input);
 		int _output_vector_size = getVectorSize (output);
@@ -372,7 +405,7 @@ public class KernelCodeGenerator {
 		b.append ("}\n");
 		b.append("\n");
 		b.append("inline float getAggregateAttribute (__global input_t *p) {\n");
-		b.append(String.format("\treturn __bswapfp(p->tuple.%d);\n", _the_aggregate.getColumn()));
+		b.append(String.format("\treturn __bswapfp(p->tuple._%d);\n", _the_aggregate.getColumn()));
 		b.append ("}\n");
 		b.append("\n");
 		return b.toString();
@@ -383,45 +416,45 @@ public class KernelCodeGenerator {
 	}
 	
 	private static Object getAggregationFunctors(ITupleSchema schema, AggregationType type,
-			FloatColumnReference _the_aggregate, Expression[] groupBy) {
+			FloatColumnReference _the_aggregate, Expression [] groupBy) {
 		
 		StringBuilder b = new StringBuilder ();
 		
 		b.append("inline int pack_key (__global input_t *p) {\n");
-		b.append("\tint key;\n");
+		b.append("\tint key = 1;\n");
 		for (int i = 1; i <= groupBy.length; i++) {
-			if (groupBy[i-1] instanceof IntExpression) { 
-				b.append(String.format(String.format("\tkey *= convert_int(__bswap32(p->tuple._%d));\n", 
-					i, ((IntColumnReference) groupBy[i-1]).getColumn())));
+			if (groupBy[i-1] instanceof IntExpression) {
+				b.append(String.format(String.format("\tkey *= __bswap32(p->tuple._%d);\n", 
+					((IntColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof FloatExpression) { 
 				b.append(String.format(String.format("\tkey *= convert_int(__bswapfp(p->tuple._%d));\n", 
-					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
+					((FloatColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
 				b.append(String.format(String.format("\tkey *= convert_int(__bswap64(p->tuple._%d));\n", 
-					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
+					((FloatColumnReference) groupBy[i-1]).getColumn())));
 			}
 			/* How to pack them? */
 			b.append("\treturn key;\n");
 		}
 		b.append ("}\n");
 		b.append("\n");
-		b.append("inline void storef (__global intermediate_t *out, __global input_t *p) {");
+		b.append("inline void storef (__global intermediate_t *out, __global input_t *p) {\n");
 		/* Store the timestamp */
-		b.append("\tout->tuple.t = p->tuple.t");
+		b.append("\tout->tuple.t = p->tuple.t;\n");
 		/* Store the (composite) key */
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d));\n", 
+				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
 					i, ((IntColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof FloatExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d));\n", 
+				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
 					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d));\n", 
+				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
 					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
 			}
 		}
@@ -439,7 +472,7 @@ public class KernelCodeGenerator {
 				_the_aggregate.getColumn()));
 			break;
 		case MIN:
-			b.append (String.format("\tatomic_max ((global int *) &(out->tuple.val), convert_int(__bswapfp(p->tuple._%d)));\n",
+			b.append (String.format("\tatomic_min ((global int *) &(out->tuple.val), convert_int(__bswapfp(p->tuple._%d)));\n",
 				_the_aggregate.getColumn()));
 			break;
 		default:
@@ -451,26 +484,26 @@ public class KernelCodeGenerator {
 		b.append ("}\n");
 		b.append("\n");
 		b.append("inline void clearf (__global intermediate_t *p) {\n");
-		int vectors = getVectorSize(schema);
+		int vectors = getVectorSize(getIntermediateStructLength(groupBy));
 		for (int i = 0; i < vectors; i++)
 			b.append(String.format("\tp->vectors[%d] = 0;\n", i));
 		switch (type) {
 		case COUNT:
 		case SUM:
 		case AVG:
-			b.append ("p->tuple.val = 0;\n");
+			b.append ("\tp->tuple.val = 0;\n");
 			break;
 		case MAX:
-			b.append ("p->tuple.val = FLT_MIN;\n");
+			b.append ("\tp->tuple.val = FLT_MIN;\n");
 			break;
 		case MIN:
-			b.append ("p->tuple.val = FLT_MAX;\n");
+			b.append ("\tp->tuple.val = FLT_MAX;\n");
 			break;
 		default:
 			b.append("\treturn -1;\n");
 			break;
 		}
-		b.append ("p->tuple.cnt = 0;\n");
+		b.append ("\tp->tuple.cnt = 0;\n");
 		b.append ("}\n");
 		b.append("\n");
 		

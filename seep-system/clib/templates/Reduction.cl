@@ -48,7 +48,7 @@ __kernel void reduceKernel (
 
 		result->tuple.t = 0L; // p->tuple.t;
 		result->tuple._1 = __bswapfp(scratch[lid]);
-		result->tuple.pad = 0;
+		/* result->tuple.pad = 0; */
 	}
 	return ;
 }

@@ -62,7 +62,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Aggregation.cl";
+	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Aggregation.cl";
 	
 	private int qid;
 	
@@ -171,7 +171,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		this.timestampReference = new LongColumnReference(0);
 		
 		Expression [] outputAttributes = new Expression [this.groupBy.length + 2];
-		/* First attribute is the timestamp */
+		/* First attribute is the time stamp */
 		outputAttributes[0] = this.timestampReference;
 		
 		/* Followed by the group-by (composite) key */
@@ -311,6 +311,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		String source = 
 			KernelCodeGenerator.getAggregation(inputSchema, outputSchema, filename, type, _the_aggregate, groupBy, havingClause);
+		System.out.println(source);
 		
 		qid = TheGPU.getInstance().getQuery(source, 4, 5, 8);
 		

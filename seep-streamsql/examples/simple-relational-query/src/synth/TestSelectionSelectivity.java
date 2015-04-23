@@ -1,4 +1,5 @@
 package synth;
+
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,15 +27,18 @@ public class TestSelectionSelectivity {
 	public static void main(String [] args) {
 		
 		if (args.length != 8) {
-			System.err.println("Incorrect number of parameters, we need:");
-			System.err.println("\t- mode ('cpu', 'gpu', 'hybrid')");
-			System.err.println("\t- number of CPU threads");
-			System.err.println("\t- numbers of windows in window batch");
-			System.err.println("\t- window type ('row', 'range')");
-			System.err.println("\t- window size ");
-			System.err.println("\t- window slide");
-			System.err.println("\t- number of attributes in tuple schema (excl. timestamp)");
-			System.err.println("\t- selectivity in percent (0 <= x <= 100)");
+			
+			System.err.println("Invalid parameters:");
+			
+			System.err.println("\t- 1. Execution mode ['cpu','gpu','hybrid']");
+			System.err.println("\t- 2. # CPU threads");
+			System.err.println("\t- 3. # windows/batch");
+			System.err.println("\t- 4. Window type ['row','range']");
+			System.err.println("\t- 5. Window range");
+			System.err.println("\t- 6. Window slide");
+			System.err.println("\t- 7. # attributes/tuple (excl. timestamp)");
+			System.err.println("\t- 8. Selectivity [0-100]");
+			
 			System.exit(-1);
 		}
 		
