@@ -15,15 +15,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
-/*
- * TODO: 
- * 
- * 1. copyf () for aggregation
- * 2. clearf() for join
- * 3. copyf () for join
- * 
- */
-
 public class KernelCodeGenerator {
 	
 	public static String getProjection (ITupleSchema input, ITupleSchema output, 
@@ -170,7 +161,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
-		b.append("#include \"/Users/akolious/SEEP/seep-system/clib/byteorder.h\"");
+		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
 		b.append("\n");
 		int  _input_vector_size = getVectorSize ( input);
 		int _output_vector_size = getVectorSize (output);
@@ -506,7 +497,39 @@ public class KernelCodeGenerator {
 		b.append ("\tp->tuple.cnt = 0;\n");
 		b.append ("}\n");
 		b.append("\n");
-		
+		b.append("inline void copyf (__global intermediate_t *p, __global output_t *q) {\n");
+		/* Store the timestamp */
+		b.append("\tq->tuple.t = p->tuple.t;\n");
+		/* Store the (composite) key; we assume that same id for attribute and key */
+		for (int i = 1; i <= groupBy.length; i++) {
+			if (groupBy[i-1] instanceof IntExpression) { 
+				b.append(String.format(String.format("\tq->tuple._%d = __bswap32(p->tuple.key_%d);\n", i, i)));
+			} else
+			if (groupBy[i-1] instanceof FloatExpression) { 
+				b.append(String.format(String.format("\tq->tuple._%d = __bswapfp(p->tuple.key_%d);\n", i, i)));
+			} else
+			if (groupBy[i-1] instanceof LongExpression) { 
+				b.append(String.format(String.format("\tq->tuple._%d = __bswap64(p->tuple.key_%d);\n", i, i)));
+			}
+		}
+		/* Store the value */
+		int valueIndex = groupBy.length + 1;
+		switch (type) {
+		case COUNT:
+		case SUM:
+		case MIN:
+		case MAX:
+			b.append(String.format(String.format("\tq->tuple._%d = __bswapfp(convert_float(p->tuple.val));\n", valueIndex)));
+			break;
+		case AVG:
+			b.append(String.format(String.format("\tq->tuple._%d = __bswapfp(convert_float(p->tuple.val) / convert_float(p->tuple.cnt));\n", valueIndex)));
+			break;
+		default:
+			b.append(String.format(String.format("\tq->tuple._%d = 0;\n", valueIndex)));
+			break;
+		}
+		b.append ("}\n");
+		b.append("\n");
 		return b.toString();
 	}
 	

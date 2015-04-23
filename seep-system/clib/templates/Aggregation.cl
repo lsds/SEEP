@@ -387,10 +387,7 @@ __kernel void compactKernel (
 		indices[left] = lq + sizeof(output_t);
 		__global intermediate_t *lx = (__global intermediate_t *) &contents[lp];
 		__global output_t *ly = (__global output_t *) &output[lq];
-		/* ly->vectors[0] = lx->vectors[0]; */
-		ly->tuple.t  = 0L;
-		ly->tuple._1 = __bswap32(lx->tuple.key);
-		ly->tuple._2 = __bswapfp(convert_float(lx->tuple.val));
+		copyf (lx, ly);
 	}
 
 	if (indices[right] != EMPTY_KEY) {
@@ -400,10 +397,7 @@ __kernel void compactKernel (
 		indices[right] = rq + sizeof(output_t);
 		__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
 		__global output_t *ry = (__global output_t *) &output[rq];
-		/* ry->vectors[0] = rx->vectors[0]; */
-		ry->tuple.t  = 0L;
-		ry->tuple._1 = __bswap32(rx->tuple.key);
-		ry->tuple._2 = __bswapfp(convert_float(rx->tuple.val));
+		copyf (rx, ry);
 	}
 }
 

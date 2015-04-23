@@ -62,7 +62,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Aggregation.cl";
+	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Aggregation.cl";
 	
 	private int qid;
 	
@@ -96,7 +96,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	private byte [] startPtrs;
 	private byte [] endPtrs;
 	
-	private int outputTupleSize;
+	private int intermediateTupleSize, outputTupleSize;
 	
 	private byte [] contents, stashed, failed, attempts, indices, offsets, partitions;
 	private int contentsLength,
@@ -196,6 +196,9 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		this.outputTupleSize = outputSchema.getByteSizeOfTuple();
 		System.out.println(String.format("[DBG] output tuple size is %d bytes", this.outputTupleSize));
 		
+		this.intermediateTupleSize = KernelCodeGenerator.getIntermediateStructLength(groupBy);
+		System.out.println(String.format("[DBG] intermediate tuple size is %d bytes", this.intermediateTupleSize));
+		
 		taskIdx = new int [pipelines];
 		freeIdx = new int [pipelines];
 		for (int i = 0; i < pipelines; i++) {
@@ -291,7 +294,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		outputSize = tuples * outputTupleSize;
 		/* Intermediate state */
 		
-		  contentsLength = outputTupleSize * batchSize * tableSlots;
+		  contentsLength = intermediateTupleSize * batchSize * tableSlots;
 		   stashedLength = 4 * batchSize;
 		    failedLength = 4 * batchSize;
 		  attemptsLength = 4 * batchSize;

@@ -18,6 +18,18 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private static Logger LOG = LoggerFactory.getLogger(ThetaJoin.class);
+	
+	public static int unpack (int idx, long value) {
+        if (idx == 0) { /* left */
+            return (int) (value >> 32);
+        } else
+        if (idx == 1) { /* right value */
+            return (int) value;
+        } else {
+            return -1;
+        }
+    }
+	
 	private IPredicate predicate;
 
 	private ITupleSchema outSchema = null;
@@ -41,10 +53,10 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		int firstEndIndex = firstWindowBatch.getBatchEndPointer();
 		int secondEndIndex = secondWindowBatch.getBatchEndPointer();
 		
-		System.out.println(String.format("[DBG] task %6d 1st window [%10d, %10d] 2nd window [%10d, %10d]", 
-				firstWindowBatch.getTaskId(), firstCurrentIndex, firstEndIndex, secondCurrentIndex, secondEndIndex));
+//		System.out.println(String.format("[DBG] task %6d 1st window [%10d, %10d] 2nd window [%10d, %10d]", 
+//				firstWindowBatch.getTaskId(), firstCurrentIndex, firstEndIndex, secondCurrentIndex, secondEndIndex));
 		
-		__computePointers(firstWindowBatch, secondWindowBatch);
+//		__computePointers(firstWindowBatch, secondWindowBatch);
 		
 		int firstCurrentWindowStart = firstCurrentIndex;
 		int firstCurrentWindowEnd = firstCurrentIndex;
@@ -92,8 +104,8 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				/*
 				 * Get timestamps of currently processed tuples in either batch
 				 */
-				firstCurrentIndexTime = firstWindowBatch.getLong(firstCurrentIndex, 0);
-				secondCurrentIndexTime = secondWindowBatch.getLong(secondCurrentIndex, 0);
+				firstCurrentIndexTime  = (long) unpack(1,  firstWindowBatch.getLong( firstCurrentIndex, 0));
+				secondCurrentIndexTime = (long) unpack(1, secondWindowBatch.getLong(secondCurrentIndex, 0));
 	
 				/*
 				 * Move in first batch?
@@ -293,6 +305,11 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		int ntuples1 = (endIndex1 - currentIndex1) / tupleSize1;
 		
+		if (ntuples1 < 1) {
+			System.err.println("error: no windows found in ThetaJoin");
+			System.exit(-1);
+		}
+		
 		int [] __startPointers = new int[ntuples1];
 		int []   __endPointers = new int[ntuples1];
 		
@@ -311,8 +328,11 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 			/*
 			 * Get timestamps of currently processed tuples in either batch
 			 */
-			currentIndexTime1 = batch1.getLong(currentIndex1, 0);
-			currentIndexTime2 = batch2.getLong(currentIndex2, 0);
+			// currentIndexTime1 = batch1.getLong(currentIndex1, 0);
+			// currentIndexTime2 = batch2.getLong(currentIndex2, 0);
+			
+			currentIndexTime1 = (long) unpack(1, batch1.getLong(currentIndex1, 0));
+			currentIndexTime2 = (long) unpack(1, batch2.getLong(currentIndex2, 0));
 	
 			/*
 			 * Move in first batch?
@@ -408,12 +428,14 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		}
 		
 		/* Print start and end pointers */
+		/*
 		for (int i = 0; i < ntuples1; i++) {
 			System.out.println(String.format("1st batch tuple %6d 2nd batch window [%10d, %10d]", 
 					i, __startPointers[i], __endPointers[i]));
 		}
+		*/
 	}
-
+	
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		throw new UnsupportedOperationException("ThetaJoin is multi input operator and does not operator on a single stream");

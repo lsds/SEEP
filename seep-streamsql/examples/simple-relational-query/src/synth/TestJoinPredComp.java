@@ -156,7 +156,7 @@ public class TestJoinPredComp {
 		operators.add(uoperator);
 		
 		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 128 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();
