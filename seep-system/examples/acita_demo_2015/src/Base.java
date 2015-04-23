@@ -133,13 +133,20 @@ public class Base implements QueryComposer{
 			}
 		}
 
-		//Connect src to first op
-		src.connectTo(ops.get(0).get(0), true, 0);
-
-		// Connect ops to sink
-		for (int j = 0; j < ops.get(CHAIN_LENGTH-1).size(); j++)
+		if (ops.isEmpty())
 		{
-			ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, CHAIN_LENGTH);
+			src.connectTo(snk, true, 0);
+		}
+		else
+		{
+			//Connect src to first op
+			src.connectTo(ops.get(0).get(0), true, 0);
+	
+			// Connect ops to sink
+			for (int j = 0; j < ops.get(CHAIN_LENGTH-1).size(); j++)
+			{
+				ops.get(CHAIN_LENGTH-1).get(j).connectTo(snk, true, CHAIN_LENGTH);
+			}
 		}
 	}
 	
