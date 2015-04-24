@@ -43,8 +43,10 @@ public class Source implements StatelessOperator {
 		boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
 		long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
 		int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
+		boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
 		long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
 		long interFrameDelay = 1000 / frameRate;
+		logger.info("Source inter-frame delay="+interFrameDelay);
 		
 		final String value = generateFrame(tupleSizeChars);
 		final long tStart = System.currentTimeMillis();
@@ -69,10 +71,11 @@ public class Source implements StatelessOperator {
 			
 			long tNext = tStart + (tupleId * interFrameDelay);
 			long tNow = System.currentTimeMillis();
-			if (tNext < tNow)
+			if (tNext > tNow && rateLimitSrc)
 			{
+				logger.debug("Source wait to send next frame="+(tNext-tNow));
 				try {
-					Thread.sleep(tNow - tNext);
+					Thread.sleep(tNext - tNow);
 				} 
 				catch (InterruptedException e) {
 					e.printStackTrace();

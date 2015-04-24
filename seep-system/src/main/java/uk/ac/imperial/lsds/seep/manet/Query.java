@@ -201,7 +201,8 @@ public class Query implements Serializable
 				result.addAll(getPhysicalNodeIds(logicalId));
 			}
 		}
-		if (result.isEmpty()) { throw new RuntimeException("Logic error."); }
+		//Could have just a source and sink, so ok to be empty.
+		//if (result.isEmpty()) { throw new RuntimeException("Logic error."); }
 		return result;
 	}
 

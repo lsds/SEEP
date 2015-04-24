@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 /**
 * IncomingDataHandler. This is in charge of managing incoming data connections and associate a thread to them
@@ -59,7 +60,9 @@ public class IncomingDataHandler implements Runnable{
 			//Establish listening port
 			incDataServerSocket = new ServerSocket(connPort);
 			incDataServerSocket.setReuseAddress(true);
+			incDataServerSocket.setReceiveBufferSize(Integer.parseInt(GLOBALS.valueFor("socketBufferSize")));
 			LOG.info("-> IncomingDataHandler listening in port: {}", connPort);
+			LOG.info("idh socket receiver buffer size = "+incDataServerSocket.getReceiveBufferSize());
 			//Upstream id
 			while(goOn){
 				Socket incomingConn = incDataServerSocket.accept();

@@ -76,7 +76,7 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
     try:
-        session_cfg = {'custom_services_dir':svc_dir} 
+        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1'} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         print 'params=',params
@@ -118,11 +118,16 @@ def run_session(time_str, k, mob, exp_session, params):
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
             print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
             # TODO: change any of the EMANE 802.11 parameter values here
+            values[ names.index('mode') ] = '3'
             values[ names.index('propagationmodel') ] = '2ray'
+            #values[ names.index('multicastrate') ] = '12'
             values[ names.index('multicastrate') ] = '4'
+            #values[ names.index('unicastrate') ] = '12'
+            #values[ names.index('distance') ] = '500'
             values[ names.index('unicastrate') ] = '4'
             values[ names.index('txpower') ] = '-10.0'
             values[ names.index('flowcontrolenable') ] = 'on'
+            #values[ names.index('flowcontroltokens') ] = '1'
             print 'Emane Model overridden values: %s'%(str(list(values)))
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
         else:

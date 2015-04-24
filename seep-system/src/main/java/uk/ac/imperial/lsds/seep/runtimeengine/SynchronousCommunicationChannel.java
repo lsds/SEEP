@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -209,6 +210,13 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			}
 		}
 		logger.info("Successfully connected data channel to "+downstreamDataSocket.getInetAddress());
+		try
+		{
+			logger.info("Socket send buffer size= "+downstreamDataSocket.getSendBufferSize());
+			downstreamDataSocket.setSendBufferSize(Integer.parseInt(GLOBALS.valueFor("socketBufferSize")));
+			logger.info("Socket set send buffer size= "+downstreamDataSocket.getSendBufferSize());
+		}
+		catch(SocketException e) {logger.error("Error reading buffer size:"+e); }
 		return downstreamDataSocket;
 	}
 	

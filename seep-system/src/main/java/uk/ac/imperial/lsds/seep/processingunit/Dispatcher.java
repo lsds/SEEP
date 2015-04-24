@@ -435,6 +435,8 @@ public class Dispatcher implements IRoutingObserver {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
 				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+
+				nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
 				outputQueue.sendToDownstream(nextTuple, dest);
 				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 			}
