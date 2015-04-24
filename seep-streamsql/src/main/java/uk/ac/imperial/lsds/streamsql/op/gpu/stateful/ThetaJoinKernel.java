@@ -31,7 +31,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private ITupleSchema leftInputSchema, rightInputSchema;
 	private ITupleSchema outputSchema = null;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/ThetaJoin.cl";
+	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/ThetaJoin.cl";
 	
 	private int leftInputSize = -1, rightInputSize = -1, outputSize;
 	

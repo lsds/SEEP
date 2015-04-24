@@ -193,13 +193,14 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		/* Forward timestamp (for latency measurements purposes) */
-		outputBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		/* Deprecated: Forward time stamp (for latency measurements purposes) */
+		/* outputBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer())); */
 		
-		/* TODO
-		 * 
+		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
+		outputBuffer.position(outputSize);
+		outputBuffer.close();
 		
 		windowBatch.setBuffer(outputBuffer);
 		

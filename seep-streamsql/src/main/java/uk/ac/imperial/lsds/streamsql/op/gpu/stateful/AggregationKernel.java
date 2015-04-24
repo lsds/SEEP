@@ -23,7 +23,6 @@ import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
 public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
@@ -62,7 +61,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Aggregation.cl";
+	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Aggregation.cl";
 	
 	private int qid;
 	
@@ -399,10 +398,11 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		/* TODO
-		 * 
+		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
+		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 7));
+		outputBuffer.close();
 		
 		windowBatch.setBuffer(outputBuffer);
 		

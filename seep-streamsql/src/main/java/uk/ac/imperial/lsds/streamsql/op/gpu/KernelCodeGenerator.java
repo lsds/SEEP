@@ -161,7 +161,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
-		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
+		b.append("#include \"/Users/akolious/SEEP/seep-system/clib/byteorder.h\"");
 		b.append("\n");
 		int  _input_vector_size = getVectorSize ( input);
 		int _output_vector_size = getVectorSize (output);
