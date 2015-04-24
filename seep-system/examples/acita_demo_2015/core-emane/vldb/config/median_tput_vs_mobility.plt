@@ -12,7 +12,7 @@ set style line 2 linewidth 2.5 linecolor rgb "blue"
 set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
 
-plot sprintf("%s/%s/1k.data",outputdir,timestr) using 1:7 title "k=1" w lines linestyle 1, \
-	sprintf("%s/%s/2k.data",outputdir,timestr) using 1:7 title "k=2" w lines linestyle 2, \
-	sprintf("%s/%s/3k.data",outputdir,timestr) using 1:7 title "k=3" w lines linestyle 3, \
-	sprintf("%s/%s/5k.data",outputdir,timestr) using 1:7 title "k=5" w lines linestyle 4
+plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 1:7 title "k=1" w lines linestyle 1, \
+	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 1:7 title "k=2" w lines linestyle 2, \
+	sprintf("%s/%s/3k-tput.data",outputdir,timestr) using 1:7 title "k=3" w lines linestyle 3, \
+	sprintf("%s/%s/5k-tput.data",outputdir,timestr) using 1:7 title "k=5" w lines linestyle 4

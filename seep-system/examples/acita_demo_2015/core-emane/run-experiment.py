@@ -18,20 +18,13 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         time_str = plot_time_str
     else:
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
-        # create exp dirs.
-        #create_exp_dirs(ks, mobilities, sessions, time_str, data_dir)
         run_experiment(ks, mobilities, session_ids, params, time_str, data_dir )
 
-    record_statistics(ks, mobilities, session_ids, time_str, data_dir)
+    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
+    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_99th_latency)
 
-
-    #for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 'latency_vs_mobility', 'median_latency_vs_mobility']:
-    for p in ['tput_vs_mobility', 'median_tput_vs_mobility']:
+    for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 'latency_vs_mobility']:
         plot(p, time_str, script_dir, data_dir)
-    #plot_tput_vs_mobility(time_str, script_dir, data_dir)
-    #plot_median_tput_vs_mobility(time_str, script_dir, data_dir)
-    #plot_latency_vs_mobility(time_str, script_dir, data_dir)
-    #plot_median_latency_vs_mobility(time_str, script_dir, data_dir)
 
 def get_session_dir(k, mob, session, time_str, data_dir):
     return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
@@ -53,76 +46,70 @@ def run_experiment(ks, mobilities, sessions, params, time_str, data_dir):
         for mob in mobilities:
             run_sessions(time_str, k,mob,sessions, params)
                     
-def record_statistics(ks, mobilities, sessions, time_str, data_dir):
-    vals = {}
-    aggregate_vals = {}
+
+def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffix, get_metric_fn):
     raw_vals = {}
     for k in ks:
-        vals[k] = {}
         raw_vals[k] = {}
-        aggregate_vals[k] = {}
         for (i_mob, mob) in enumerate(mobilities):
-            vals[k][mob] = {} 
-            aggregate_vals[k][mob] = {}
             writeHeader = i_mob == 0
-            tputs = get_tputs(k, mob, sessions, time_str, data_dir)
-            raw_vals[k][mob] = tputs
-            stats = {}
-            for session in sessions: 
-                stats[session] = {'MEAN-TPUT':tputs[session]}
-            vals[k][mob] = stats 
-            meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(tputs.values())  
+            metrics = get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn)
+            raw_vals[k][mob] = metrics 
+            meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
-            aggregate_vals[k][mob] = { "CONFIG-MEAN-TPUT":"%.1f"%meanVal,
-                                        "CONFIG-MEDIAN-TPUT":"%.1f"%medianVal,
-                                        "CONFIG-MAX-TPUT":"%.1f"%maxVal,
-                                        "CONFIG-MIN-TPUT":"%.1f"%minVal,
-                                        "CONFIG-STDDEV-TPUT":"%.1f"%stdDevVal}
             # record stats vs mobility 
-            with open('%s/%s/%dk.data'%(data_dir,time_str,k),'w' if writeHeader else 'a') as rx_vs_mob_plotdata:
+            with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_mob_plotdata:
                 if writeHeader: 
                     rx_vs_mob_plotdata.write('#k=%d\n'%k)
                     rx_vs_mob_plotdata.write('#mob mean ? stdDev max min med lq uq\n')
                 rx_vs_mob_plotdata.write('%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, 1, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal))
 	#TODO Do relative weights with raw_vals.
-#Fix up tabs!!!
     if 1 in ks:
         relative_raw_vals = compute_relative_raw_vals(raw_vals)
         for k in ks:
             for (i_mob, mob) in enumerate(mobilities):
                 writeHeader = i_mob == 0
-                tputs = relative_raw_vals[k][mob]
-                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(tputs.values())  
+                metrics = relative_raw_vals[k][mob]
+                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
                 #record relative stats vs mobility
-                with open('%s/%s/%dk-rel.data'%(data_dir,time_str,k), 'w' if writeHeader else 'a') as rel_tput_vs_mob_plotdata:	
+                with open('%s/%s/%dk-rel-%s.data'%(data_dir,time_str,k,metric_suffix), 'w' if writeHeader else 'a') as rel_rx_vs_mob_plotdata:	
                     if writeHeader:
-                        rel_tput_vs_mob_plotdata.write('#k=%d\n'%k)
-                        rel_tput_vs_mob_plotdata.write('#mob mean ? stdDev max min med lq uq\n')
-                    rel_tput_vs_mob_plotdata.write('%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, 1, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal))
+                        rel_rx_vs_mob_plotdata.write('#k=%d\n'%k)
+                        rel_rx_vs_mob_plotdata.write('#mob mean ? stdDev max min med lq uq\n')
+                    rel_rx_vs_mob_plotdata.write('%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, 1, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal))
 	
-	
-    return (vals,aggregate_vals)
 
-def get_tputs(k, mob, sessions, time_str, data_dir):
-    tputs = {} 
+def get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn):
+    metrics = {} 
     for session in sessions:
-        logfilename = '%s/tput.txt'%(get_session_dir(k,mob,session,time_str,data_dir))
-        tput = get_tput(logfilename)
-        tputs[session] = tput 
+        logdir = '%s'%(get_session_dir(k,mob,session,time_str,data_dir))
+        metric = get_metric_fn(logdir)
+        metrics[session] = metric 
 
-    return tputs
+    return metrics
 
-def get_tput(logfilename):
+def get_tput(logdir):
     #regex = re.compile('src_sink_mean_tput=(\d+)')
     regex = re.compile('sink_sink_mean_tput=(\d+)')
-    with open(logfilename, 'r') as tput_log:
+    with open('%s/tput.txt'%logdir, 'r') as tput_log:
         for line in tput_log:
             match = re.search(regex, line)
             if match:
                 return float(match.group(1))
             
     raise Exception("Could not find tput in %s"%logfilename)
+
+def get_99th_latency(logdir):
+    #TODO: Handle float for latency in regex!
+    regex = re.compile('99%_lat=(\d+)')
+    with open('%s/latency.txt'%logdir, 'r') as latency_log:
+        for line in latency_log:
+            match = re.search(regex, line)
+            if match:
+                return float(match.group(1))
+            
+    raise Exception("Could not find 99% latency in %s"%logfilename)
 
 def plot(p, time_str, script_dir, data_dir):
     exp_dir = '%s/%s'%(data_dir,time_str)
@@ -131,24 +118,6 @@ def plot(p, time_str, script_dir, data_dir):
 'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
 script_dir+'/vldb/config/%s.plt'%p], cwd=exp_dir)
     plot_proc.wait()
-
-"""
-def plot_tput_vs_mobility(time_str, script_dir, data_dir):
-    exp_dir = '%s/%s'%(data_dir,time_str)
-    print exp_dir
-    plot_proc = subprocess.Popen(['gnuplot', '-e',
-'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
-script_dir+'/vldb/config/tput_vs_mobility.plt'], cwd=exp_dir)
-    plot_proc.wait()
-
-def plot_median_tput_vs_mobility(time_str, script_dir, data_dir):
-    exp_dir = '%s/%s'%(data_dir,time_str)
-    print exp_dir
-    plot_proc = subprocess.Popen(['gnuplot', '-e',
-'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
-script_dir+'/vldb/config/median_tput_vs_mobility.plt'], cwd=exp_dir)
-    plot_proc.wait()
-"""
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
