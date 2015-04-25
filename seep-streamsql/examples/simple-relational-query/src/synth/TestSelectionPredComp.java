@@ -25,21 +25,6 @@ import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
 public class TestSelectionPredComp {
 	
-	private static long pack (long left, long right) {
-		return (left << 32) | right;
-	}
-	
-	public static int unpack (int idx, long value) {
-        if (idx == 0) { /* left */
-            return (int) (value >> 32);
-        } else
-        if (idx == 1) { /* right value */
-            return (int) value;
-        } else {
-            return -1;
-        }
-    }
-
 	public static void main(String [] args) {
 		
 		if (args.length != 8) {
@@ -164,14 +149,17 @@ public class TestSelectionPredComp {
 				b.putInt(1);
 		}
 		
-		/* Populate time stamps */
-		long ts = (System.nanoTime() - timestampReference) / 1000L;
-		long packed = pack(ts, b.getLong(0));
-		b.putLong(0, packed);
+		if (Utils.LATENCY_ON) {
+			/* Populate time stamps */
+			long ts = (System.nanoTime() - timestampReference) / 1000L;
+			long packed = Utils.pack(ts, b.getLong(0));
+			b.putLong(0, packed);
+		}
 		try {
 			while (true) {
 				operator.processData (data);
-				b.putLong(0, pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1));
+				if (Utils.LATENCY_ON)
+					b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1));
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

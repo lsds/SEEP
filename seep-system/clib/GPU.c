@@ -223,7 +223,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_execute
 	jint *threadsPerGroup = (*env)->GetIntArrayElements(env, _threadsPerGroup, 0);
 	int i;
 	for (i = 0; i < argc; i++) {
-		dbg("[DBG] kernel %d: %6d threads %6d threads/group\n", 
+		dbg("[DBG] kernel %d: %10d threads %10d threads/group\n", 
 			i, threads[i], threadsPerGroup[i]);
 	}
 	size_t *__threads = (size_t *) malloc (argc * sizeof(size_t));

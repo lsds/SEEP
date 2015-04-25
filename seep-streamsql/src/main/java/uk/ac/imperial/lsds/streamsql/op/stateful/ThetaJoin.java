@@ -8,6 +8,7 @@ import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
@@ -18,17 +19,6 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private static Logger LOG = LoggerFactory.getLogger(ThetaJoin.class);
-	
-	public static int unpack (int idx, long value) {
-        if (idx == 0) { /* left */
-            return (int) (value >> 32);
-        } else
-        if (idx == 1) { /* right value */
-            return (int) value;
-        } else {
-            return -1;
-        }
-    }
 	
 	private IPredicate predicate;
 
@@ -53,9 +43,6 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		int firstEndIndex = firstWindowBatch.getBatchEndPointer();
 		int secondEndIndex = secondWindowBatch.getBatchEndPointer();
 		
-//		System.out.println(String.format("[DBG] task %6d 1st window [%10d, %10d] 2nd window [%10d, %10d]", 
-//				firstWindowBatch.getTaskId(), firstCurrentIndex, firstEndIndex, secondCurrentIndex, secondEndIndex));
-		
 //		__computePointers(firstWindowBatch, secondWindowBatch);
 		
 		int firstCurrentWindowStart = firstCurrentIndex;
@@ -75,6 +62,18 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 
 		WindowDefinition firstWindowDefinition = firstWindowBatch.getWindowDefinition();
 		WindowDefinition secondWindowDefinition = secondWindowBatch.getWindowDefinition();
+		
+//		System.out.println(String.format("[DBG] task %6d 1st window [%10d, %10d] %10d tuples [free %10d] / 2nd window [%10d, %10d] %10d tuples [free %10d]", 
+//				firstWindowBatch.getTaskId(), 
+//				firstCurrentIndex, 
+//				firstEndIndex,
+//				(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple,
+//				firstWindowBatch.getFreeOffset(),
+//				secondCurrentIndex, 
+//				secondEndIndex,
+//				(secondEndIndex - secondCurrentIndex)/secondByteSizeOfInTuple,
+//				secondWindowBatch.getFreeOffset()
+//				));
 
 		long firstCurrentIndexTime;
 		long firstStartTime;
@@ -95,8 +94,16 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 			 * arrays that hold for each tuple in the first batch, the start and end indices of the range 
 			 * of tuples in the second batch, against which the join predicate should be evaluated 
 			 */
-			int[] __startPointersInSecond = new int[(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple];
-			int[] __endPointersInSecond = new int[(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple];
+			
+			int ntuples1 = (firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple;
+			if (ntuples1 <= 0) {
+				System.err.println("error: negative array size in ThetaJoin: " + ntuples1);
+				System.err.println(String.format("error: [%d, %d] %d bytes/tuple", firstCurrentIndex, firstEndIndex, firstByteSizeOfInTuple));
+				System.exit(1);
+			}
+			
+			int[] __startPointersInSecond = new int[ntuples1];
+			int[] __endPointersInSecond = new int[ntuples1];
 			int __firstTupleIndex = 0;
 	
 			while (firstCurrentIndex < firstEndIndex || secondCurrentIndex < secondEndIndex) {
@@ -104,8 +111,13 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				/*
 				 * Get timestamps of currently processed tuples in either batch
 				 */
-				firstCurrentIndexTime  = (long) unpack(1,  firstWindowBatch.getLong( firstCurrentIndex, 0));
-				secondCurrentIndexTime = (long) unpack(1, secondWindowBatch.getLong(secondCurrentIndex, 0));
+				if (Utils.LATENCY_ON) {
+					firstCurrentIndexTime  = (long) Utils.unpack(1,  firstWindowBatch.getLong( firstCurrentIndex, 0));
+					secondCurrentIndexTime = (long) Utils.unpack(1, secondWindowBatch.getLong(secondCurrentIndex, 0));
+				} else {
+					firstCurrentIndexTime  =  firstWindowBatch.getLong( firstCurrentIndex, 0);
+					secondCurrentIndexTime = secondWindowBatch.getLong(secondCurrentIndex, 0);
+				}
 	
 				/*
 				 * Move in first batch?
@@ -331,8 +343,13 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 			// currentIndexTime1 = batch1.getLong(currentIndex1, 0);
 			// currentIndexTime2 = batch2.getLong(currentIndex2, 0);
 			
-			currentIndexTime1 = (long) unpack(1, batch1.getLong(currentIndex1, 0));
-			currentIndexTime2 = (long) unpack(1, batch2.getLong(currentIndex2, 0));
+			if (Utils.LATENCY_ON) {
+				currentIndexTime1 = (long) Utils.unpack(1, batch1.getLong(currentIndex1, 0));
+				currentIndexTime2 = (long) Utils.unpack(1, batch2.getLong(currentIndex2, 0));
+			} else {
+				currentIndexTime1 = batch1.getLong(currentIndex1, 0);
+				currentIndexTime2 = batch2.getLong(currentIndex2, 0);
+			}
 	
 			/*
 			 * Move in first batch?

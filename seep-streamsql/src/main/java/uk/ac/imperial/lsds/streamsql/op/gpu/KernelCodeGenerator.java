@@ -81,11 +81,24 @@ public class KernelCodeGenerator {
 		return b.toString();
 	}
 	
-	public static String getThetaJoin(String filename) {
+	public static String getThetaJoin(
+			String filename, 
+			ITupleSchema left, 
+			ITupleSchema right, 
+			ITupleSchema output,
+			IPredicate predicate,
+			String customFunctor) {
 		
-		return load (filename);
+		StringBuilder b = new StringBuilder ();
+		b.append(getJoinHeader (left, right, output));
+		b.append("\n");
+		b.append(getJoinFunctor(predicate, customFunctor, left, right, output));
+		b.append("\n");
+		b.append(getJoinKernel(filename));
+		b.append("\n");
+		return b.toString();	
 	}
-	
+
 	private static String getIntermediateStruct (Expression [] groupBy) {
 		
 		StringBuilder b = new StringBuilder ();
@@ -161,7 +174,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
-		b.append("#include \"/Users/akolious/SEEP/seep-system/clib/byteorder.h\"");
+		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
 		b.append("\n");
 		int  _input_vector_size = getVectorSize ( input);
 		int _output_vector_size = getVectorSize (output);
@@ -171,6 +184,32 @@ public class KernelCodeGenerator {
 		b.append( getInputHeader( input,  _input_vector_size));
 		b.append("\n");
 		b.append(getOutputHeader(output, _output_vector_size));
+		b.append("\n");
+		return b.toString();
+	}
+	
+	private static Object getJoinHeader(ITupleSchema left, ITupleSchema right, ITupleSchema output) {
+		StringBuilder b = new StringBuilder ();
+		b.append("#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable\n");
+		b.append("#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable\n");
+		b.append("\n");
+		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
+		b.append("\n");
+		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
+		b.append("\n");
+		int _s1_input_vector_size = getVectorSize (  left);
+		int _s2_input_vector_size = getVectorSize ( right);
+		int _output_vector_size   = getVectorSize (output);
+		b.append(String.format("#define _S1_INPUT_VECTOR_SIZE %d\n",  _s1_input_vector_size));
+		b.append(String.format("#define _S2_INPUT_VECTOR_SIZE %d\n",  _s2_input_vector_size));
+		b.append(String.format("#define    OUTPUT_VECTOR_SIZE %d\n",    _output_vector_size));
+		b.append("\n");
+		b.append( getJoinInputHeader( left,  _s1_input_vector_size, "s1"));
+		b.append("\n");
+		b.append( getJoinInputHeader(right,  _s2_input_vector_size, "s2"));
+		b.append("\n");
+		b.append(getOutputHeader(output, _output_vector_size));
+		b.append("\n");
 		b.append("\n");
 		return b.toString();
 	}
@@ -228,6 +267,44 @@ public class KernelCodeGenerator {
 		b.append("\tinput_tuple_t tuple;\n");
 		b.append(String.format("\tuchar16 vectors[%d];\n", vectors));
 		b.append("} input_t;\n");
+		return b.toString();
+	}
+	
+private static String getJoinInputHeader (ITupleSchema schema, int vectors, String prefix) {
+		
+		StringBuilder b = new StringBuilder ();
+		
+		b.append("typedef struct {\n");
+		/* The first attribute is always a timestamp */
+		b.append("\tlong t;\n");
+		for (int i = 1; i < schema.getNumberOfAttributes(); i++) {
+			int type = schema.getType(i);
+			switch(type) {
+			case 1:
+				b.append(String.format("\tint _%d;\n", i));
+				break;
+			case 2:
+				b.append(String.format("\tfloat _%d;\n", i));
+				break;
+			case 3:
+				b.append(String.format("\tlong _%d;\n", i));
+				break;
+			case 0:
+				System.err.println("error: failed to auto-generate tuple struct (attribute " + i + " is undefined)");
+				System.exit(1);
+			}
+		}
+		if (schema.getDummyContent().length > 0)
+			b.append(String.format("\tuchar padding[%d];\n", 
+				schema.getDummyContent().length));
+		
+		b.append(String.format("} _%s_input_tuple_t __attribute__((aligned(1)));\n", prefix));
+		b.append("\n");
+		
+		b.append("typedef union {\n");
+		b.append(String.format("\t_%s_input_tuple_t tuple;\n", prefix));
+		b.append(String.format("\tuchar16 vectors[%d];\n", vectors));
+		b.append(String.format("} _%s_input_t;\n", prefix));
 		return b.toString();
 	}
 	
@@ -544,6 +621,44 @@ public class KernelCodeGenerator {
 	}
 	
 	private static String getAggregationKernel(String filename) {
+		return load (filename);
+	}
+	
+	private static String getJoinFunctor(IPredicate predicate, String customFunctor, 
+		ITupleSchema left, ITupleSchema right, ITupleSchema output) {
+		
+		StringBuilder b = new StringBuilder ();
+		b.append("inline int selectf(__global _s1_input_t *p1, __global _s2_input_t *p2) {\n");
+		if (customFunctor != null) {
+			b.append(String.format("\t%s\n", customFunctor));
+		} else {
+			/* Unsupported operation */
+			b.append("\treturn 1;\n");
+		}
+		b.append("}\n");
+		/* copyf function */
+		b.append("\n");
+		int l = getVectorSize(  left);
+		int r = getVectorSize( right);
+		int k = getVectorSize(output);
+		if (k != (l + r)) {
+			System.err.println("error: invalid tuple schemas in ThetaJoin");
+			System.exit(1);
+		}
+		b.append("inline void copyf (__global _s1_input_t *p1, __global _s2_input_t *p2, __global output_t *q) {\n");
+		int j = 0;
+		for (int i = 0; i < l; i++) {
+			b.append(String.format("\tq->vectors[%d] = p1->vectors[%d];\n", j++, i));
+		}
+		for (int i = 0; i < r; i++) {
+			b.append(String.format("\tq->vectors[%d] = p2->vectors[%d];\n", j++, i));
+		}
+		b.append("}\n");
+		b.append("\n");
+		return b.toString();
+	}
+	
+	private static String getJoinKernel (String filename) {
 		return load (filename);
 	}
 	

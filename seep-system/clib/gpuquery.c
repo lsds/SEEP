@@ -233,21 +233,22 @@ static int gpu_query_exec_1 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	(void) theOther;
 	
 	/* Wait for write event */
-	gpu_context_waitForWriteEvent (p);
+	// gpu_context_waitForWriteEvent (p);
 	
 	/* Write input */
-	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
+	// gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 
-	gpu_context_moveInputBuffers (p);
+	// gpu_context_moveInputBuffers (p);
 
-	gpu_context_submitKernel (p, threads, threadsPerGroup);
+	// gpu_context_submitKernel (p, threads, threadsPerGroup);
 
-	gpu_context_moveOutputBuffers (p);
+	// gpu_context_moveOutputBuffers (p);
 
-	gpu_context_flush (p);
+	// gpu_context_flush (p);
 	
-	gpu_context_waitForReadEvent (p);
-	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
+	// gpu_context_waitForReadEvent (p);
+	
+	// gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
 #ifdef GPU_PROFILE
 	gpu_context_profileQuery (p);

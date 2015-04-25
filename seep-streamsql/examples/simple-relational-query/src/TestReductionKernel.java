@@ -31,7 +31,7 @@ public class TestReductionKernel {
 			schema
 		);
 		reductionCode.setBatchSize(200);
-		reductionCode.setInputSize(Utils._GPU_INPUT_);
+		reductionCode.setInputSize(1024 * 1024);
 		reductionCode.setup();
 		
 		System.out.println(String.format("[DBG] %s",reductionCode));

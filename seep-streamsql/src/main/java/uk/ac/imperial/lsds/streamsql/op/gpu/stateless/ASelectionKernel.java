@@ -24,7 +24,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	private IPredicate predicate;
 	private ITupleSchema schema;
 	
-	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Selection.cl";
+	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Selection.cl";
 	
 	private String customFunctor = null;
 	

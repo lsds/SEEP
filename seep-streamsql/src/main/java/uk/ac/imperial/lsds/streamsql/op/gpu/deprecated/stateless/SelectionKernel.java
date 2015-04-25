@@ -32,7 +32,7 @@ public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	 * This size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_size = Utils._GPU_INPUT_;
+	private static final int _default_size = 1048576;
 	/*
 	 * Operator configuration parameters
 	 */

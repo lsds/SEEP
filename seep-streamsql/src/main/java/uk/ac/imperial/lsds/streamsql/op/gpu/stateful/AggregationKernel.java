@@ -61,7 +61,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = "/Users/akolious/SEEP/seep-system/clib/templates/Aggregation.cl";
+	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Aggregation.cl";
 	
 	private int qid;
 	

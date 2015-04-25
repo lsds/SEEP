@@ -437,7 +437,7 @@ void gpu_context_readOutput (gpuContextP q,
 			dbg("[DBG] mark is %d\n", mark);
 		}
 	}
-	/* mark = 0; */
+	mark = 0;
 	for (idx = 0; idx < q->kernelOutput.count; idx++)
 		(*callback) (q, env, obj, qid, idx, mark);
 	return;
@@ -525,7 +525,7 @@ void gpu_context_submitKernel (gpuContextP q, size_t *threads, size_t *threadsPe
 
 	/* Execute */
 	for (i = 0; i < q->kernel.count; i++) {
-		dbg("[DBG] submit kernel %d: %6zu threads %6zu threads/group\n", 
+		dbg("[DBG] submit kernel %d: %10zu threads %10zu threads/group\n", 
 			i, threads[i], threadsPerGroup[i]);
 #ifdef GPU_PROFILE
 		error |= clEnqueueNDRangeKernel (
