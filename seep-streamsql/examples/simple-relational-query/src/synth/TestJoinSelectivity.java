@@ -16,6 +16,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.SimpleThetaJoinKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ThetaJoinKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
@@ -115,6 +116,9 @@ public class TestJoinSelectivity {
 				new IntColumnReference(1),
 				new IntColumnReference(1));
 		
+		StringBuilder s = new StringBuilder();
+		s.append("return (__bswap32(p1->tuple._1) < __bswap32(p2->tuple._1)) ? 1 : 0;");
+		
 		/* Calculate batch-related statistics */
 		/* ... */
 		
@@ -125,11 +129,19 @@ public class TestJoinSelectivity {
 		
 		IMicroOperatorCode cpuJoinCode = new ThetaJoin (predicate);
 		System.out.println(String.format("[DBG] %s", cpuJoinCode));
-		
+		/*
 		IMicroOperatorCode gpuJoinCode = new ThetaJoinKernel(predicate, firstSchema, secondSchema);
 		
-//		((ThetaJoinKernel) gpuJoinCode).setBatchSize (batchSize);
-//		((ThetaJoinKernel) gpuJoinCode).setup();
+		((ThetaJoinKernel) gpuJoinCode).setBatchSize (batchSize);
+		((ThetaJoinKernel) gpuJoinCode).setCustomFunctor (s.toString());
+		((ThetaJoinKernel) gpuJoinCode).setup();
+		*/
+		IMicroOperatorCode gpuJoinCode = new SimpleThetaJoinKernel(predicate, firstSchema, secondSchema);
+		
+		((SimpleThetaJoinKernel) gpuJoinCode).setBatchSize (batchSize);
+		((SimpleThetaJoinKernel) gpuJoinCode).setCustomFunctor (s.toString());
+		((SimpleThetaJoinKernel) gpuJoinCode).setOutputSize (1024768);
+		((SimpleThetaJoinKernel) gpuJoinCode).setup();
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
@@ -153,8 +165,8 @@ public class TestJoinSelectivity {
 		/*
 		 * Set up the stream
 		 */
-		int firstTuplesPerInsert  = 32768;
-		int secondTuplesPerInsert = 32768;
+		int firstTuplesPerInsert  = 100;
+		int secondTuplesPerInsert = 100;
 		
 		int firstTupleSize  =  firstSchema.getByteSizeOfTuple();
 		int secondTupleSize = secondSchema.getByteSizeOfTuple();
@@ -170,19 +182,21 @@ public class TestJoinSelectivity {
 		
 		/* Fill the first buffer */
 		int value = 0;
+		int count = 0;
 		while (firstBuffer.hasRemaining()) {
 			firstBuffer.putLong(1);
 			firstBuffer.putInt(value);
-			value = (value + 1) % 100; 
+			value = (value + 1) % 100;
 			for (int i = 12; i < firstTupleSize; i += 4)
-				firstBuffer.putInt(1);
+				firstBuffer.putInt(count++);
 		}
 		/* Fill the second buffer */
+		count = 0;
 		while (secondBuffer.hasRemaining()) {
 			secondBuffer.putLong(1);
 			secondBuffer.putInt(selectivity);
 			for (int i = 12; i < secondTupleSize; i += 4)
-				secondBuffer.putInt(1);
+				secondBuffer.putInt(count++);
 		}
 		
 		/* Populate time stamps */

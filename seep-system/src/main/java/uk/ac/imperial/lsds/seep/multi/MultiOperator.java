@@ -113,9 +113,9 @@ public class MultiOperator {
 		for (int i = 0; i < nclasses; i++) {
 			for (int j = 0; j < nqueries; j++) {
 				if (i == nclasses && j == nqueries)
-					b.append(String.format("[%d][%d]=%4d",  i, j, policy[i][j]));
+					b.append(String.format("[%d][%d]=%5d",  i, j, policy[i][j]));
 				else
-					b.append(String.format("[%d][%d]=%4d ", i, j, policy[i][j]));
+					b.append(String.format("[%d][%d]=%5d ", i, j, policy[i][j]));
 			}
 		}
 		b.append("]");

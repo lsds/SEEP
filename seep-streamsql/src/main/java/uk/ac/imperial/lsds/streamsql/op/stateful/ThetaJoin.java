@@ -1,8 +1,5 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -17,9 +14,10 @@ import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
-
-	private static Logger LOG = LoggerFactory.getLogger(ThetaJoin.class);
 	
+	private static boolean computePointers = false;
+	private static boolean debug = false;
+
 	private IPredicate predicate;
 
 	private ITupleSchema outSchema = null;
@@ -37,52 +35,59 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {
 
-		int firstCurrentIndex = firstWindowBatch.getBatchStartPointer();
+		int firstCurrentIndex  =  firstWindowBatch.getBatchStartPointer();
 		int secondCurrentIndex = secondWindowBatch.getBatchStartPointer();
 
-		int firstEndIndex = firstWindowBatch.getBatchEndPointer();
+		int firstEndIndex  = firstWindowBatch.getBatchEndPointer();
 		int secondEndIndex = secondWindowBatch.getBatchEndPointer();
 		
-//		__computePointers(firstWindowBatch, secondWindowBatch);
-		
 		int firstCurrentWindowStart = firstCurrentIndex;
-		int firstCurrentWindowEnd = firstCurrentIndex;
-		int secondCurrentWindowStart = secondCurrentIndex;
-		int secondCurrentWindowEnd = secondCurrentIndex;
+		int firstCurrentWindowEnd   = firstCurrentIndex;
 		
-		IQueryBuffer firstInBuffer = firstWindowBatch.getBuffer();
+		int secondCurrentWindowStart = secondCurrentIndex;
+		int secondCurrentWindowEnd   = secondCurrentIndex;
+		
+		IQueryBuffer firstInBuffer  =  firstWindowBatch.getBuffer();
 		IQueryBuffer secondInBuffer = secondWindowBatch.getBuffer();
+		
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 
-		ITupleSchema firstInSchema = firstWindowBatch.getSchema();
+		ITupleSchema firstInSchema  =  firstWindowBatch.getSchema();
 		ITupleSchema secondInSchema = secondWindowBatch.getSchema();
 
-		int firstByteSizeOfInTuple = firstInSchema.getByteSizeOfTuple();
+		int firstByteSizeOfInTuple  =  firstInSchema.getByteSizeOfTuple();
 		int secondByteSizeOfInTuple = secondInSchema.getByteSizeOfTuple();
 
-		WindowDefinition firstWindowDefinition = firstWindowBatch.getWindowDefinition();
+		WindowDefinition firstWindowDefinition  =  firstWindowBatch.getWindowDefinition();
 		WindowDefinition secondWindowDefinition = secondWindowBatch.getWindowDefinition();
 		
-//		System.out.println(String.format("[DBG] task %6d 1st window [%10d, %10d] %10d tuples [free %10d] / 2nd window [%10d, %10d] %10d tuples [free %10d]", 
-//				firstWindowBatch.getTaskId(), 
-//				firstCurrentIndex, 
-//				firstEndIndex,
-//				(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple,
-//				firstWindowBatch.getFreeOffset(),
-//				secondCurrentIndex, 
-//				secondEndIndex,
-//				(secondEndIndex - secondCurrentIndex)/secondByteSizeOfInTuple,
-//				secondWindowBatch.getFreeOffset()
-//				));
-
+		if (debug) {
+			System.out.println(String.format("[DBG] task %6d 1st batch [%10d, %10d] %10d tuples [free %10d] / 2nd batch [%10d, %10d] %10d tuples [free %10d]", 
+				firstWindowBatch.getTaskId(), 
+				firstCurrentIndex, 
+				firstEndIndex,
+				(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple,
+				firstWindowBatch.getFreeOffset(),
+				secondCurrentIndex, 
+				secondEndIndex,
+				(secondEndIndex - secondCurrentIndex)/secondByteSizeOfInTuple,
+				secondWindowBatch.getFreeOffset()
+				));
+		}
+		
 		long firstCurrentIndexTime;
 		long firstStartTime;
+		
 		long secondCurrentIndexTime;
 		long secondStartTime;
 		
 		if (outSchema == null)
-			outSchema = ExpressionsUtil.mergeTupleSchemas(firstInSchema,
-					secondInSchema);
+			outSchema = ExpressionsUtil.mergeTupleSchemas(firstInSchema, secondInSchema);
+		
+		int ntuples1 = 0;
+		int [] __startPointersInSecond = new int[0];
+		int []   __endPointersInSecond = new int[0];
+		int __firstTupleIndex = 0;
 		
 		/*
 		 * Is one of the windows empty?
@@ -90,53 +95,49 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		if (firstCurrentIndex != firstEndIndex && secondCurrentIndex != secondEndIndex) {
 		
 			/*
-			 * TEMPORARY:
-			 * arrays that hold for each tuple in the first batch, the start and end indices of the range 
-			 * of tuples in the second batch, against which the join predicate should be evaluated 
+			 * Compute pointers:
+			 * 
+			 * arrays that hold for each tuple in the first batch, the start and end indices of 
+			 * the range of tuples in the second batch, against which the join predicate should 
+			 * be evaluated.
 			 */
-			
-			int ntuples1 = (firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple;
-			if (ntuples1 <= 0) {
-				System.err.println("error: negative array size in ThetaJoin: " + ntuples1);
-				System.err.println(String.format("error: [%d, %d] %d bytes/tuple", firstCurrentIndex, firstEndIndex, firstByteSizeOfInTuple));
-				System.exit(1);
+			if (computePointers) {
+				
+				ntuples1 = (firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple;
+				
+				__startPointersInSecond = new int[ntuples1];
+				  __endPointersInSecond = new int[ntuples1];
+				  
+				__firstTupleIndex = 0;
 			}
-			
-			int[] __startPointersInSecond = new int[ntuples1];
-			int[] __endPointersInSecond = new int[ntuples1];
-			int __firstTupleIndex = 0;
 	
 			while (firstCurrentIndex < firstEndIndex || secondCurrentIndex < secondEndIndex) {
-	
 				/*
 				 * Get timestamps of currently processed tuples in either batch
 				 */
-				if (Utils.LATENCY_ON) {
-					firstCurrentIndexTime  = (long) Utils.unpack(1,  firstWindowBatch.getLong( firstCurrentIndex, 0));
-					secondCurrentIndexTime = (long) Utils.unpack(1, secondWindowBatch.getLong(secondCurrentIndex, 0));
-				} else {
-					firstCurrentIndexTime  =  firstWindowBatch.getLong( firstCurrentIndex, 0);
-					secondCurrentIndexTime = secondWindowBatch.getLong(secondCurrentIndex, 0);
-				}
-	
+				firstCurrentIndexTime  = getTimestamp( firstWindowBatch,  firstCurrentIndex, 0);
+				secondCurrentIndexTime = getTimestamp(secondWindowBatch, secondCurrentIndex, 0);
 				/*
 				 * Move in first batch?
 				 */
 				if (firstCurrentIndexTime < secondCurrentIndexTime 
-						|| (firstCurrentIndexTime == secondCurrentIndexTime && secondCurrentIndex >= secondEndIndex)) {
+					|| (firstCurrentIndexTime == secondCurrentIndexTime && secondCurrentIndex >= secondEndIndex)) {
 					
 					/*
-					 * TEMPORARY:
-					 * set the start and end of the range in the second batch based on the 
-					 * current content of the window over the second batch (current meaning at 
-					 * the point in time the respective tuple of the first batch is processed). 
+					 * Compute pointers:
+					 * 
+					 * Set the start and end pointers based on the `current` content of the window 
+					 * of the second batch (`current` meaning at the point in time the  respective 
+					 * tuple of the first batch is processed). 
+					 * 
 					 * Note that the end of this range may later be overwritten when processing
 					 * further tuples of the second batch.
 					 */
-					__startPointersInSecond[__firstTupleIndex] = secondCurrentWindowStart;
-					__endPointersInSecond[__firstTupleIndex] = secondCurrentWindowEnd;
-					__firstTupleIndex++;
-					
+					if (computePointers) {
+						__startPointersInSecond[__firstTupleIndex] = secondCurrentWindowStart;
+						__endPointersInSecond  [__firstTupleIndex] = secondCurrentWindowEnd;
+						__firstTupleIndex++;
+					}
 					
 					/*
 					 * Scan second window
@@ -149,19 +150,16 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 								secondInBuffer, secondInSchema, i
 							)
 						) {
-							firstInBuffer.appendBytesTo(firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
+							 firstInBuffer.appendBytesTo(firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
 							secondInBuffer.appendBytesTo(i, secondByteSizeOfInTuple, outBuffer);
-							
-							// write dummy content if needed
+							// Write dummy content if needed
 							outBuffer.put(outSchema.getDummyContent());
 						}
 					}
-					
 					/*
 					 * Add current tuple to window over first batch
 					 */
 					firstCurrentWindowEnd = firstCurrentIndex;
-	
 					/*
 					 * Remove old tuples in window over first batch
 					 */
@@ -170,23 +168,22 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 							firstCurrentWindowStart += firstWindowDefinition.getSlide() * firstByteSizeOfInTuple;
 					}
 					else if (firstWindowDefinition.isRangeBased()) {
-						firstStartTime = firstWindowBatch.getLong(firstCurrentWindowStart, 0);
+						firstStartTime = getTimestamp(firstWindowBatch, firstCurrentWindowStart, 0); 
 						while (firstStartTime < firstCurrentIndexTime - firstWindowDefinition.getSize()) {
 							firstCurrentWindowStart += firstByteSizeOfInTuple;
-							firstStartTime = firstWindowBatch.getLong(firstCurrentWindowStart, 0);
+							firstStartTime = getTimestamp(firstWindowBatch, firstCurrentWindowStart, 0);
 						}
 					}
 					/*
 					 * Remove old tuples in window over second batch (only for range windows)
 					 */
 					if (secondWindowDefinition.isRangeBased()) {
-						secondStartTime = secondWindowBatch.getLong(secondCurrentWindowStart, 0);
+						secondStartTime = getTimestamp(secondWindowBatch, secondCurrentWindowStart, 0);
 						while (secondStartTime < firstCurrentIndexTime - secondWindowDefinition.getSize()) {
 							secondCurrentWindowStart += secondByteSizeOfInTuple;
-							secondStartTime = secondWindowBatch.getLong(secondCurrentWindowStart, 0);
+							secondStartTime = getTimestamp(secondWindowBatch, secondCurrentWindowStart, 0);
 						}
 					}
-					
 					/*
 					 * Do the actual move in first window batch
 					 */
@@ -196,17 +193,20 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				 * Move in second batch!
 				 */
 				else {
-					
 					/*
-					 * TEMPORARY:
+					 * Compute pointers:
+					 * 
 					 * Override end pointers for range in second window batch for all tuples that 
-					 * are in the current window of the first batch. 
+					 * are in the current window of the first batch.
 					 */
-					for (int i = firstCurrentWindowStart; i <= (firstCurrentWindowEnd - firstByteSizeOfInTuple); i += firstByteSizeOfInTuple) {
-						int __tmpIndex = (i - firstWindowBatch.getBatchStartPointer()) / firstByteSizeOfInTuple;
-						__endPointersInSecond[__tmpIndex] = secondCurrentIndex;
+					if (computePointers) {
+						for (int i = firstCurrentWindowStart; i <= (firstCurrentWindowEnd - firstByteSizeOfInTuple); 
+								i += firstByteSizeOfInTuple) {
+							
+							int __tmpIndex = (i - firstWindowBatch.getBatchStartPointer()) / firstByteSizeOfInTuple;
+							__endPointersInSecond[__tmpIndex] = secondCurrentIndex;
+						}
 					}
-	
 					/*
 					 * Scan first window
 					 */
@@ -220,8 +220,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 						) {
 							firstInBuffer.appendBytesTo(i, firstByteSizeOfInTuple, outBuffer);
 							secondInBuffer.appendBytesTo(secondCurrentIndex, secondByteSizeOfInTuple, outBuffer);
-							
-							// write dummy content if needed
+							// Write dummy content if needed
 							outBuffer.put(outSchema.getDummyContent());
 						}
 					}
@@ -239,23 +238,22 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 							secondCurrentWindowStart += secondWindowDefinition.getSlide() * secondByteSizeOfInTuple;
 					}
 					else if (secondWindowDefinition.isRangeBased()) {
-						secondStartTime = secondWindowBatch.getLong(secondCurrentWindowStart, 0);
+						secondStartTime = getTimestamp(secondWindowBatch, secondCurrentWindowStart, 0);
 						while (secondStartTime < secondCurrentIndexTime - secondWindowDefinition.getSize()) {
 							secondCurrentWindowStart += secondByteSizeOfInTuple;
-							secondStartTime = secondWindowBatch.getLong(secondCurrentWindowStart, 0);
+							secondStartTime = getTimestamp(secondWindowBatch, secondCurrentWindowStart, 0);
 						}
 					}
 					/*
 					 * Remove old tuples in window over first batch (only for range windows)
 					 */
 					if (firstWindowDefinition.isRangeBased()) {
-						firstStartTime = firstWindowBatch.getLong(firstCurrentWindowStart, 0);
+						firstStartTime = getTimestamp(firstWindowBatch, firstCurrentWindowStart, 0);
 						while (firstStartTime < secondCurrentIndexTime - firstWindowDefinition.getSize()) {
 							firstCurrentWindowStart += firstByteSizeOfInTuple;
-							firstStartTime = firstWindowBatch.getLong(firstCurrentWindowStart, 0);
+							firstStartTime = getTimestamp(firstWindowBatch, firstCurrentWindowStart, 0);
 						}
 					}
-					
 					/*
 					 * Do the actual move in second window batch
 					 */
@@ -263,194 +261,69 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				}
 			}
 			
-//			System.out.println(Arrays.toString(__startPointersInSecond));
-//			System.out.println(Arrays.toString(__endPointersInSecond));
-
+			/* Print start and end pointers */
+			if (debug && computePointers) {
+				for (int i = 0; i < ntuples1; i++) {
+					System.out.println(String.format("1st batch tuple %6d 2nd batch window [%10d, %10d]", 
+						i, __startPointersInSecond[i], __endPointersInSecond[i]));
+				}
+			}
 		}
-		
-		// release old buffers (will return Unbounded Buffers to the pool)
-		firstInBuffer.release();
+		/* Release old buffers (return UnboundedBuffer objects to the pool) */
+		 firstInBuffer.release();
 		secondInBuffer.release();
 
-		// reuse the first window batch by setting the new buffer and the new
-		// schema for the data in this buffer
+		/* reuse the first window batch by setting the new buffer
+		 * and the new schema for the data in this buffer
+		 */
 		firstWindowBatch.setBuffer(outBuffer);
 		firstWindowBatch.setSchema(outSchema);
 
-		// reset window pointers
-		firstWindowBatch.setWindowStartPointers(new int[] {0});
-		firstWindowBatch.setWindowEndPointers(new int[] {outBuffer.position()});
-
-		api.outputWindowBatchResult(-1, firstWindowBatch);
-
-	}
-
-	private void __computePointers(WindowBatch batch1,
-			WindowBatch batch2) {
+		/* Reset window pointers */
+		firstWindowBatch.setWindowStartPointers(new int[] { 0 });
+		firstWindowBatch.setWindowEndPointers(new int[] { outBuffer.position() });
 		
-		int currentIndex1 = batch1.getBatchStartPointer();
-		int currentIndex2 = batch2.getBatchStartPointer();
-
-		int endIndex1 = batch1.getBatchEndPointer();
-		int endIndex2 = batch2.getBatchEndPointer();
+		if (debug) 
+			System.out.println("[DBG] output buffer position is " + outBuffer.position());
 		
-		int currentWindowStart1 = currentIndex1;
-		int currentWindowStart2 = currentIndex2;
+		/* Print tuples
+		outBuffer.close();
+		int tid = 1;
+		while (outBuffer.hasRemaining()) {
 		
-		int currentWindowEnd1 = currentIndex1;
-		int currentWindowEnd2 = currentIndex2;
-
-		ITupleSchema schema1 = batch1.getSchema();
-		ITupleSchema schema2 = batch2.getSchema();
-
-		int tupleSize1 = schema1.getByteSizeOfTuple();
-		int tupleSize2 = schema2.getByteSizeOfTuple();
-
-		WindowDefinition windowDef1 = batch1.getWindowDefinition();
-		WindowDefinition windowDef2 = batch2.getWindowDefinition();
-
-		long currentIndexTime1;
-		long startTime1;
-		
-		long currentIndexTime2;
-		long startTime2;
-		
-		int ntuples1 = (endIndex1 - currentIndex1) / tupleSize1;
-		
-		if (ntuples1 < 1) {
-			System.err.println("error: no windows found in ThetaJoin");
-			System.exit(-1);
-		}
-		
-		int [] __startPointers = new int[ntuples1];
-		int []   __endPointers = new int[ntuples1];
-		
-		/*
-		 * Is one of the windows empty?
-		 */
-		if (currentIndex1 == endIndex1 || currentIndex2 == endIndex2) {
-			System.err.println("warning: empty window");
-			return;
-		}
-		
-		int __firstTupleIndex = 0;
-		
-		while (currentIndex1 < endIndex1 || currentIndex2 < endIndex2) {
-	
-			/*
-			 * Get timestamps of currently processed tuples in either batch
-			 */
-			// currentIndexTime1 = batch1.getLong(currentIndex1, 0);
-			// currentIndexTime2 = batch2.getLong(currentIndex2, 0);
-			
-			if (Utils.LATENCY_ON) {
-				currentIndexTime1 = (long) Utils.unpack(1, batch1.getLong(currentIndex1, 0));
-				currentIndexTime2 = (long) Utils.unpack(1, batch2.getLong(currentIndex2, 0));
-			} else {
-				currentIndexTime1 = batch1.getLong(currentIndex1, 0);
-				currentIndexTime2 = batch2.getLong(currentIndex2, 0);
-			}
-	
-			/*
-			 * Move in first batch?
-			 */
-			if (currentIndexTime1 < currentIndexTime2 
-					|| (currentIndexTime1 == currentIndexTime2 && currentIndex2 >= endIndex2)) {
-					
-				__startPointers[__firstTupleIndex] = currentWindowStart2;
-				  __endPointers[__firstTupleIndex] = currentWindowEnd2;
-				  
-				__firstTupleIndex++;
-					
-				
-				/* Add current tuple to window over first batch */
-				currentWindowEnd1 = currentIndex1;
-	
-				/* Remove old tuples in window over first batch */
-				if (windowDef1.isRowBased()) {
-					
-					if ((currentWindowEnd1 - currentWindowStart1)/tupleSize1 > windowDef1.getSize()) 
-						currentWindowStart1 += windowDef1.getSlide() * tupleSize1;
-					
-				} else 
-				if (windowDef1.isRangeBased()) {
-					
-					startTime1 = batch1.getLong(currentWindowStart1, 0);
-					
-					while (startTime1 < currentIndexTime1 - windowDef1.getSize()) {
-						
-						currentWindowStart1 += tupleSize1;
-						startTime1 = batch1.getLong(currentWindowStart1, 0);
-					}
-				}
-				
-				/* Remove old tuples in window over second batch (only for range windows) */
-				if (windowDef2.isRangeBased()) {
-					
-					startTime2 = batch2.getLong(currentWindowStart2, 0);
-					
-					while (startTime2 < currentIndexTime1 - windowDef2.getSize()) {
-						
-						currentWindowStart2 += tupleSize2;
-						startTime2 = batch2.getLong(currentWindowStart2, 0);
-					}
-				}
-					
-				/* Do the actual move in first window batch */
-				currentIndex1 += tupleSize1;
-				
-			} else { /* Move in second batch! */
-				
-				for (int i = currentWindowStart1; i <= (currentWindowEnd1-tupleSize1); i += tupleSize1) {
-					int __tmpIndex = (i - batch1.getBatchStartPointer()) / tupleSize1;
-					__endPointers[__tmpIndex] = currentIndex2;
-				}
-				
-				/* Add current tuple to window over second batch */
-				currentWindowEnd2 = currentIndex2;
-				
-				/* Remove old tuples in window over second batch */
-				if (windowDef2.isRowBased()) {
-					
-					if ((currentWindowEnd2 - currentWindowStart2)/tupleSize2 > windowDef2.getSize()) 
-						currentWindowStart2 += windowDef2.getSlide() * tupleSize2;
-					
-				} else 
-				if (windowDef2.isRangeBased()) {
-					
-					startTime2 = batch2.getLong(currentWindowStart2, 0);
-					
-					while (startTime2 < currentIndexTime2 - windowDef2.getSize()) {
-						
-						currentWindowStart2 += tupleSize2;
-						startTime2 = batch2.getLong(currentWindowStart2, 0);
-					}
-				}
-				
-				/* Remove old tuples in window over first batch (only for range windows) */
-				if (windowDef1.isRangeBased()) {
-					
-					startTime1 = batch1.getLong(currentWindowStart1, 0);
-					
-					while (startTime1 < currentIndexTime2 - windowDef1.getSize()) {
-						
-						currentWindowStart1 += tupleSize1;
-						startTime1 = batch1.getLong(currentWindowStart1, 0);
-					}
-				}
-					
-				/* Do the actual move in second window batch */
-				currentIndex2 += tupleSize2;
-			}
-		}
-		
-		/* Print start and end pointers */
-		/*
-		for (int i = 0; i < ntuples1; i++) {
-			System.out.println(String.format("1st batch tuple %6d 2nd batch window [%10d, %10d]", 
-					i, __startPointers[i], __endPointers[i]));
+			System.out.println(String.format("%03d: %2d,%2d,%2d,%2d,%2d,%2d,%2d | %2d,%2d,%2d,%2d,%2d,%2d,%2d", 
+			tid++,
+			outBuffer.getByteBuffer().getLong(),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getLong(),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt (),
+			outBuffer.getByteBuffer().getInt ()
+			));
 		}
 		*/
+		
+		api.outputWindowBatchResult(-1, firstWindowBatch);
+		/*
+		System.err.println("Disrupted");
+		System.exit(-1);
+		*/
+	}
+	
+	private long getTimestamp (WindowBatch batch, int index, int attribute) {
+		long value = batch.getLong(index, attribute);
+		if (Utils.LATENCY_ON)
+			return (long) Utils.unpack(0, value);
+		else 
+			return value;
 	}
 	
 	@Override

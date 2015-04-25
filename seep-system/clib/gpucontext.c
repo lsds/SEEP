@@ -7,7 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 gpuContextP gpu_context (
 	cl_device_id device, 
@@ -153,7 +157,7 @@ static void printEventProfilingInfo (cl_event event, const char *acronym) {
 	_s = normalise(s, q);
 	_x = normalise(x, q);
 	_f = normalise(f, q);
-	dbg("[PRF] %5s\t s %10.1f\t x %10.1f\t f %10.1f\n", acronym, _s, _x, _f);
+	fprintf(stdout, "[PRF] %5s\t s %10.1f\t x %10.1f\t f %10.1f t %10.1f\n", acronym, _s, _x, _f, ((float) (f - x)) / 1000.);
 }
 #endif
 
@@ -210,6 +214,7 @@ static char *getEventCommandType (cl_event event) {
 }
 #endif
 
+#ifdef GPU_PROFILE
 void gpu_context_profileQuery (gpuContextP q) {
 	/*
 	 * This method should be called after we wait for the
@@ -228,6 +233,7 @@ void gpu_context_profileQuery (gpuContextP q) {
 		clReleaseEvent(q->exec_event[i]);
 	}
 }
+#endif
 
 void gpu_context_waitForReadEvent (gpuContextP q) {
 	if (q->scheduled < 1 || q->readCount < 1)
@@ -437,7 +443,7 @@ void gpu_context_readOutput (gpuContextP q,
 			dbg("[DBG] mark is %d\n", mark);
 		}
 	}
-	mark = 0;
+	/* mark = 0; */
 	for (idx = 0; idx < q->kernelOutput.count; idx++)
 		(*callback) (q, env, obj, qid, idx, mark);
 	return;

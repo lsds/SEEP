@@ -7,7 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 #include <unistd.h>
 #include <sched.h>
@@ -96,7 +100,7 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 	char msg [32768]; /* Compiler message */
 	size_t length;
 	
-	const char *flags = "-cl-fast-relaxed-math -cl-nv-verbose -Werror"; 
+	const char *flags = "-cl-fast-relaxed-math -Werror"; /* -cl-nv-verbose */
 	/* -cl-nv-arch sm_20 */
 	
 	gpuQueryP p = (gpuQueryP) malloc (sizeof(gpu_query_t));
@@ -233,22 +237,22 @@ static int gpu_query_exec_1 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	(void) theOther;
 	
 	/* Wait for write event */
-	// gpu_context_waitForWriteEvent (p);
+	gpu_context_waitForWriteEvent (p);
 	
 	/* Write input */
-	// gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
+	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 
-	// gpu_context_moveInputBuffers (p);
+	gpu_context_moveInputBuffers (p);
 
-	// gpu_context_submitKernel (p, threads, threadsPerGroup);
+	gpu_context_submitKernel (p, threads, threadsPerGroup);
 
-	// gpu_context_moveOutputBuffers (p);
+	gpu_context_moveOutputBuffers (p);
 
-	// gpu_context_flush (p);
+	gpu_context_flush (p);
 	
-	// gpu_context_waitForReadEvent (p);
+	gpu_context_waitForReadEvent (p);
 	
-	// gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
+	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
 #ifdef GPU_PROFILE
 	gpu_context_profileQuery (p);

@@ -8,16 +8,27 @@ CFL_BASE = -W -Wall -DWARNING -fpic
 CFL_COMMON = $(CFL_BASE) -g
 
 CFLAGS = $(CFL_COMMON)
-CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-amd64/include
-CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-amd64/include/linux
+
+ifeq (Darwin,$(shell uname -s))
+	CFLAGS += -I/Library/Java/JavaVirtualMachines/jdk1.8.0_45.jdk/Contents/Home/include
+	CFLAGS += -I/Library/Java/JavaVirtualMachines/jdk1.8.0_45.jdk/Contents/Home/include/darwin
+else
+	CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-amd64/include
+	CFLAGS += -I/usr/lib/jvm/java-1.7.0-openjdk-amd64/include/linux
+endif
+
 CFLAGS += -I/usr/include -D_GNU_SOURCE
 
+LIBS = 
 # OpenCL
-CFLAGS += -I/usr/local/cuda-6.5/include
+ifeq (Darwin,$(shell uname -s))
+	LIBS += -framework opencl # pthread comes for free
+else
+	CFLAGS += -I/usr/local/cuda-6.5/include
+	LIBS += -lOpenCL -pthread
+endif
 
-LIBS = -lOpenCL -pthread
-
-CLIB = -L/home/akolious/tests/saber-jni -lGPU
+CLIB = -L/Users/akolious/SEEP/seep-system/clib -lGPU
 
 OBJS = GPU.o timer.o openclerrorcode.o inputbuffer.o outputbuffer.o gpucontext.o gpuquery.o
 

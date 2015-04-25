@@ -6,6 +6,7 @@ import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
@@ -24,7 +25,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	private IPredicate predicate;
 	private ITupleSchema schema;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Selection.cl";
+	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/Selection.cl";
 	
 	private String customFunctor = null;
 	

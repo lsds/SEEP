@@ -65,6 +65,7 @@ inline void scan (__local int *data, int length) {
 __kernel void joinKernel (
 	const int __s1_tuples,
 	const int __s2_tuples,
+	const int output_size,
 	__global const uchar *__s1_input,
 	__global const uchar *__s2_input,
 	__global const int *window_ptrs_,
@@ -93,13 +94,14 @@ __kernel void joinKernel (
 		__global _s1_input_t *lp = (__global _s1_input_t *) &__s1_input[lidx];
 		for (i = 0; i < __s2_tuples; i++) {
 			const int ridx = i * sizeof(_s2_input_t);
-			if (ridx < offset_ || ridx > _offset) {
+			/* Is the last tuple of the window included or not? */
+			if (ridx < offset_ || ridx >= _offset) {
 				flags[idx] = 0;
 				idx += 1;
 			} else {
 				/* Read tuple from second stream */
-				// __global _s2_input_t *rp = (__global _s2_input_t *) &__s2_input[ridx];
-				flags[idx] = 1; // selectf (lp, rp);
+				__global _s2_input_t *rp = (__global _s2_input_t *) &__s2_input[ridx];
+				flags[idx] = selectf (lp, rp);
 				idx += 1;
 			}
 		}
@@ -121,6 +123,7 @@ __kernel void joinKernel (
 __kernel void scanKernel (
 	const int __s1_tuples,
 	const int __s2_tuples,
+	const int output_size,
 	__global const uchar *__s1_input,
 	__global const uchar *__s2_input,
 	__global const int *window_ptrs_,
@@ -171,6 +174,7 @@ __kernel void scanKernel (
 __kernel void compactKernel (
 	const int __s1_tuples,
 	const int __s2_tuples,
+	const int output_size,
 	__global const uchar *__s1_input,
 	__global const uchar *__s2_input,
 	__global const int *window_ptrs_,
@@ -258,4 +262,3 @@ __kernel void compactKernel (
 		*/
 	}
 }
-

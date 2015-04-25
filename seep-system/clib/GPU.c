@@ -13,7 +13,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 #include <unistd.h>
 #include <sched.h>
@@ -341,13 +345,24 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelTheta
 	(void) obj;
 	
 	jsize argc = (*env)->GetArrayLength(env, _args);
-	if (argc != 3) /* # reduction kernel constants */
+	if (argc != 4) /* # theta-join kernel constants */
 		return -1;
 	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
 	/* Object `int []` pinned */
+
+	/*
+	 * Previous ThetaJoin code
+	 *
 	gpu_setKernel (qid, 0, "joinKernel",    &callback_setKernelThetaJoin, args);
 	gpu_setKernel (qid, 1, "scanKernel",    &callback_setKernelThetaJoin, args);
 	gpu_setKernel (qid, 2, "compactKernel", &callback_setKernelThetaJoin, args);
+	*/
+
+	gpu_setKernel (qid, 0, "countKernel",   &callback_setKernelThetaJoin, args);
+	gpu_setKernel (qid, 1, "scanKernel",    &callback_setKernelThetaJoin, args);
+	gpu_setKernel (qid, 2, "compactKernel", &callback_setKernelThetaJoin, args);
+	gpu_setKernel (qid, 3, "joinKernel",    &callback_setKernelThetaJoin, args);
+
 	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
 	/* Object `int []` released */
 	return 0;
@@ -484,6 +499,7 @@ void callback_setKernelThetaJoin (cl_kernel kernel, gpuContextP context, int *co
 	 *
 	 * const int __s1_tuples,
 	 * const int __s2_tuples,
+	 * const int output_size,
 	 * __global const uchar *__s1_input,
 	 * __global const uchar *__s2_input,
 	 * __global const int *window_ptrs_,
@@ -498,56 +514,58 @@ void callback_setKernelThetaJoin (cl_kernel kernel, gpuContextP context, int *co
 	/* Get all constants */
 	int    __s1_tuples = constants[0];
 	int    __s2_tuples = constants[1];
-	int  _scratch_size = constants[2]; /* Local buffer memory size */
+	int    output_size = constants[2];
+	int  _scratch_size = constants[3]; /* Local buffer memory size */
 
 	int error = 0;
 	/* Set constant arguments */
 	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *) &__s1_tuples);
 	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *) &__s2_tuples);
+	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *) &output_size);
 	/* Set I/O byte buffers */
 	error |= clSetKernelArg (
 		kernel,
-		2,
+		3,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[0]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		3, 
+		4,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[1]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		4, 
+		5,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[2]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		5, 
+		6,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[3]->device_buffer));
 	
 	error |= clSetKernelArg (
 		kernel,
-		6, 
+		7,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[0]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		7, 
+		8,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[1]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		8, 
+		9,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[2]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		9, 
+		10,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[3]->device_buffer));
 	/* Set local memory */
-	error |= clSetKernelArg (kernel, 10, (size_t)  _scratch_size, (void *) NULL);
+	error |= clSetKernelArg (kernel, 11, (size_t)  _scratch_size, (void *) NULL);
 
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));

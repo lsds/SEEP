@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
@@ -174,7 +175,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
-		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
+		b.append(String.format("#include \"%s/seep-system/clib/byteorder.h\"", Utils.SEEP_HOME));
 		b.append("\n");
 		int  _input_vector_size = getVectorSize ( input);
 		int _output_vector_size = getVectorSize (output);
@@ -195,7 +196,7 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");
-		b.append("#include \"/home/akolious/seep/seep-system/clib/byteorder.h\"");
+		b.append(String.format("#include \"%s/seep-system/clib/byteorder.h\"", Utils.SEEP_HOME));
 		b.append("\n");
 		int _s1_input_vector_size = getVectorSize (  left);
 		int _s2_input_vector_size = getVectorSize ( right);
