@@ -785,18 +785,19 @@ void callback_readOutput (gpuContextP context,
 		exit(1);
 	}
 	
-	if (! context->kernelOutput.outputs[ndx]->writeOnly)
-		return ;
+	// if (! context->kernelOutput.outputs[ndx]->writeOnly)
+	// 	return ;
 	
 	/* Use the mark */
 	int theSize;
-	if (mark > 0)
-		theSize = mark;
-	else
+	//if (mark > 0)
+	// 	theSize = mark;
+	//else
 		theSize = context->kernelOutput.outputs[ndx]->size;
 	
 	if (theSize > context->kernelOutput.outputs[ndx]->size) {
-		fprintf(stderr, "error: output buffer (qid %d ndx %d) overflow (%d bytes)\n", qid, ndx, theSize);
+		fprintf(stderr, "error: output buffer (qid %d ndx %d) overflow (%d bytes > %d bytes)\n", 
+			qid, ndx, theSize, context->kernelOutput.outputs[ndx]->size);
 		exit(1);
 	}
 	/* Copy data across the JNI boundary */

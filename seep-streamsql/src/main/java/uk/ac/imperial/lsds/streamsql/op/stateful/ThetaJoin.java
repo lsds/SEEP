@@ -310,7 +310,6 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 			));
 		}
 		*/
-		
 		api.outputWindowBatchResult(-1, firstWindowBatch);
 		/*
 		System.err.println("Disrupted");

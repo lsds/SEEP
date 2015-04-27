@@ -222,7 +222,7 @@ int gpu_query_exec (gpuQueryP q, size_t *threads, size_t *threadsPerGroup,
 	
 	   return gpu_query_exec_1 (q, threads, threadsPerGroup, operator, env, obj, qid);   
 	/* return gpu_query_exec_2 (q, threads, threadsPerGroup, operator, env, obj, qid); */
-	/* return gpu_query_exec_3 (q, threads, threadsPerGroup, operator, env, obj, qid); */
+	/* return gpu_query_exec_5 (q, threads, threadsPerGroup, operator, env, obj, qid); */   
 }
 
 /* */

@@ -34,6 +34,6 @@ public class IntMapFactory {
 	public static void free (IntMap e) {
 		/* The pool is ever growing based on peek demand */
 		// System.out.println(String.format("[DBG] freeing IntMap instance %04d", e.getId()));
-		//pool.offer (e);
+		pool.offer (e);
 	}
 }

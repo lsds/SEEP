@@ -182,21 +182,21 @@ public class TestJoinSelectivity {
 		
 		/* Fill the first buffer */
 		int value = 0;
-		int count = 0;
+		long count = 0;
 		while (firstBuffer.hasRemaining()) {
-			firstBuffer.putLong(1);
+			firstBuffer.putLong(count++);
 			firstBuffer.putInt(value);
 			value = (value + 1) % 100;
 			for (int i = 12; i < firstTupleSize; i += 4)
-				firstBuffer.putInt(count++);
+				firstBuffer.putInt(1);
 		}
 		/* Fill the second buffer */
 		count = 0;
 		while (secondBuffer.hasRemaining()) {
-			secondBuffer.putLong(1);
+			secondBuffer.putLong(count++);
 			secondBuffer.putInt(selectivity);
 			for (int i = 12; i < secondTupleSize; i += 4)
-				secondBuffer.putInt(count++);
+				secondBuffer.putInt(1);
 		}
 		
 		/* Populate time stamps */

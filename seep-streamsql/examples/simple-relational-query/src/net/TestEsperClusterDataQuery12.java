@@ -48,9 +48,10 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 				else if (Integer.parseInt(args[j]) == 2) 
 					query = ""
 							+ "select timestamp, jobId, max(cpu) as maxCpu "
+//							+ "from input.win:length(60)"
 							+ "from input.win:ext_timed(timestamp, 60)"
-							+ "group by jobId "
-							+ "having max(cpu) > 90 ";
+							+ "group by jobId " ;
+//							+ "having max(cpu) > 1 ";
 				else {
 					System.err.println(String.format("error: unknown query flag %s", args[j]));
 					System.exit(1);

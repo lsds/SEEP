@@ -298,10 +298,10 @@ __kernel void scanKernel (
 	int L = 2 * lgs;
 
 #ifdef HAVING_CLAUSE
-	const int lp = left * sizeof(output_t);
+	const int lp = left * sizeof(intermediate_t);
 	__global intermediate_t *lx = (__global intermediate_t *) &contents[lp];
 
-	const int rp = right * sizeof(output_t);
+	const int rp = right * sizeof(intermediate_t);
 	__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
 
 	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : selectf(lx);
@@ -384,7 +384,7 @@ __kernel void compactKernel (
 
 		const int lq = (offsets[left] + pivot) * sizeof(output_t);
 		const int lp = left * sizeof(intermediate_t);
-		indices[left] = lq + sizeof(output_t);
+		// indices[left] = lq + sizeof(output_t);
 		__global intermediate_t *lx = (__global intermediate_t *) &contents[lp];
 		__global output_t *ly = (__global output_t *) &output[lq];
 		copyf (lx, ly);
@@ -394,7 +394,7 @@ __kernel void compactKernel (
 
 		const int rq = (offsets[right] + pivot) * sizeof(output_t);
 		const int rp = right * sizeof(intermediate_t);
-		indices[right] = rq + sizeof(output_t);
+		// indices[right] = rq + sizeof(output_t);
 		__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
 		__global output_t *ry = (__global output_t *) &output[rq];
 		copyf (rx, ry);
