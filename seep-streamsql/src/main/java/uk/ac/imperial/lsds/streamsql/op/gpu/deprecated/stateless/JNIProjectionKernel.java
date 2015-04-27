@@ -26,8 +26,8 @@ public class JNIProjectionKernel implements IStreamSQLOperator, IMicroOperatorCo
 	 * This size must be greater or equal to the size of the byte array backing
 	 * an input window batch.
 	 */
-	private static final int _default_input_size = Utils._GPU_INPUT_;
-	private static final int _default_output_size = Utils._GPU_OUTPUT_;
+	private static final int _default_input_size = 1048576;
+	private static final int _default_output_size = 1048576;
 	
 	private Expression[] expressions;
 	private ITupleSchema inputSchema, outputSchema;

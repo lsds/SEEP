@@ -65,6 +65,7 @@ inline void scan (__local int *data, int length) {
 __kernel void joinKernel (
 	const int __s1_tuples,
 	const int __s2_tuples,
+	const int output_size,
 	__global const uchar *__s1_input,
 	__global const uchar *__s2_input,
 	__global const int *window_ptrs_,
@@ -78,21 +79,32 @@ __kernel void joinKernel (
 	int tid = get_global_id (0);
 	if (tid >= __s1_tuples)
 		return ;
-	const int lidx = tid * sizeof(_s1_input_t);
-	__global _s1_input_t *lp = (__global _s1_input_t *) &__s1_input[lidx];
 	/* Scan second stream */
 	const int offset_ = window_ptrs_[tid];
 	const int _offset = _window_ptrs[tid];
 	int idx = tid * __s2_tuples;
 	int i;
-	for (i = 0; i < __s2_tuples; i++) {
-		const int ridx = i * sizeof(_s2_input_t);
-		if (ridx < offset_ || ridx > _offset)
-			return;
-		/* Read tuple from second stream */
-		__global _s2_input_t *rp = (__global _s2_input_t *) &__s2_input[ridx];
-		flags[idx] = selectf (lp, rp);
-		idx += 1;
+	if (offset_ < 0 || _offset < 0) {
+		for (i = 0; i < __s2_tuples; i++) {
+			flags[idx] = 0;
+			idx += 1;
+		}
+	} else {
+		const int lidx = tid * sizeof(_s1_input_t);
+		__global _s1_input_t *lp = (__global _s1_input_t *) &__s1_input[lidx];
+		for (i = 0; i < __s2_tuples; i++) {
+			const int ridx = i * sizeof(_s2_input_t);
+			/* Is the last tuple of the window included or not? */
+			if (ridx < offset_ || ridx >= _offset) {
+				flags[idx] = 0;
+				idx += 1;
+			} else {
+				/* Read tuple from second stream */
+				__global _s2_input_t *rp = (__global _s2_input_t *) &__s2_input[ridx];
+				flags[idx] = selectf (lp, rp);
+				idx += 1;
+			}
+		}
 	}
 	return ;
 }
@@ -111,6 +123,7 @@ __kernel void joinKernel (
 __kernel void scanKernel (
 	const int __s1_tuples,
 	const int __s2_tuples,
+	const int output_size,
 	__global const uchar *__s1_input,
 	__global const uchar *__s2_input,
 	__global const int *window_ptrs_,
@@ -161,6 +174,7 @@ __kernel void scanKernel (
 __kernel void compactKernel (
 	const int __s1_tuples,
 	const int __s2_tuples,
+	const int output_size,
 	__global const uchar *__s1_input,
 	__global const uchar *__s2_input,
 	__global const int *window_ptrs_,
@@ -213,10 +227,13 @@ __kernel void compactKernel (
 
 		__global output_t *ly = (__global output_t *) & output[lq];
 
+		copyf (lx1, lx2, ly);
+		/*
 		ly->vectors[0] = lx1->vectors[0];
 		ly->vectors[1] = lx1->vectors[1];
 		ly->vectors[2] = lx2->vectors[0];
 		ly->vectors[3] = lx2->vectors[1];
+		*/
 	}
 
 	if (right < _product && flags[right] == 1) {
@@ -236,10 +253,12 @@ __kernel void compactKernel (
 
 		__global output_t *ry = (__global output_t *) & output[rq];
 
+		copyf (rx1, rx2, ry);
+		/*
 		ry->vectors[0] = rx1->vectors[0];
 		ry->vectors[1] = rx1->vectors[1];
 		ry->vectors[2] = rx2->vectors[0];
 		ry->vectors[3] = rx2->vectors[1];
+		*/
 	}
 }
-

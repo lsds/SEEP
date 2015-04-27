@@ -2,8 +2,8 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class TheCPU {
 	
-private static final String cpuLibrary = 
-"/home/akolious/seep/seep-system/clib/libCPU.so";
+	private static final String cpuLibrary = 
+		Utils.SEEP_HOME + "/seep-system/clib/libCPU.so";
 	
 	private static final TheCPU cpuInstance = new TheCPU ();
 	

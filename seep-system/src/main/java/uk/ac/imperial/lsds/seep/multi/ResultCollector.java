@@ -126,6 +126,8 @@ public class ResultCollector {
 		int latencyMark
 	) {
 		
+		// System.out.println(String.format("[DBG] task %d free offsets 1/%d 2/%d", taskid, freeOffset1, freeOffset2));
+		
 		if (taskid < 0) { /* Invalid task id */
 			return ;
 		}

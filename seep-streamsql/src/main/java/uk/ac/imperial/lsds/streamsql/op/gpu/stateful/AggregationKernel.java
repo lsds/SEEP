@@ -9,6 +9,7 @@ import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
@@ -23,14 +24,14 @@ import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
 public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private static final int threadsPerGroup = 256;
 	private static final int tuplesPerThread = 2;
 	
-	private static int dbg = 0;
+	private static int kdbg = 0;
+	private static boolean debug = false;
 	
 	private static final int pipelines = 2;
 	private int [] taskIdx;
@@ -62,7 +63,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = "/home/akolious/seep/seep-system/clib/templates/Aggregation.cl";
+	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/Aggregation.cl";
 	
 	private int qid;
 	
@@ -302,7 +303,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		   offsetsLength = 4 * batchSize * tableSlots;
 		partitionsLength = 4 *   ngroups;
 		
-		if (dbg > 0) {
+		if (kdbg > 0) {
 		contents   = new byte [  contentsLength];
 		stashed    = new byte [   stashedLength];
 		failed     = new byte [    failedLength];
@@ -326,13 +327,13 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().setInput(qid, 3, x.array().length);
 		TheGPU.getInstance().setInput(qid, 4, y.array().length);
 		
-		int move = (dbg > 0) ? 0 : 1;
+		int move = (kdbg > 0) ? 0 : 1;
 		
 		TheGPU.getInstance().setOutput(qid, 0,   contentsLength, 0, move, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 1,    stashedLength, 0, move, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 2,     failedLength, 0, move, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 3,   attemptsLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 4,    indicesLength, 0, move, 1, 0);
+		TheGPU.getInstance().setOutput(qid, 4,    indicesLength, 0,    0, 1, 0);
 		TheGPU.getInstance().setOutput(qid, 5,    offsetsLength, 0, move, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 6, partitionsLength, 0, move, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 7,       outputSize, 1,    0, 0, 1);
@@ -373,7 +374,8 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
 		windowBatch.initWindowPointers(startPtrs, endPtrs);
-		printWindowPointers (startPtrs, endPtrs);
+		if (debug)
+			printWindowPointers (startPtrs, endPtrs);
 		
 		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
 		TheGPU.getInstance().setInputBuffer(qid, 2,   endPtrs);
@@ -383,7 +385,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		TheGPU.getInstance().setInputBuffer(qid, 4, y.array());
 		
 		/* Set output */
-		if (dbg > 0) {
+		if (kdbg > 0) {
 		TheGPU.getInstance().setOutputBuffer(qid, 0,   contents);
 		TheGPU.getInstance().setOutputBuffer(qid, 1,    stashed);
 		TheGPU.getInstance().setOutputBuffer(qid, 2,     failed);
@@ -399,12 +401,28 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		/* TODO
-		 * 
+		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
+		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 7));
+		if (debug)
+			System.out.println("[DBG] output buffer position is " + outputBuffer.position());
 		
 		windowBatch.setBuffer(outputBuffer);
+		
+		/* Print tuples
+		outputBuffer.close();
+		int tid = 1;
+		while (outputBuffer.hasRemaining()) {
+			// Each tuple is 16-bytes long
+			System.out.println(String.format("%04d: %2d,%4d,%4.1f", 
+			tid++,
+			outputBuffer.getByteBuffer().getLong (),
+			outputBuffer.getByteBuffer().getInt  (),
+			outputBuffer.getByteBuffer().getFloat()
+			));
+		}
+		*/
 		
 		windowBatch.setTaskId     (taskIdx[0]);
 		windowBatch.setFreeOffset (freeIdx[0]);
@@ -417,6 +435,10 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		freeIdx [freeIdx.length - 1] = currentFreeIdx;
 		
 		api.outputWindowBatchResult(-1, windowBatch);
+		/*
+		System.err.println("Disrupted");
+		System.exit(-1);
+		*/
 	}
 	
 	@Override

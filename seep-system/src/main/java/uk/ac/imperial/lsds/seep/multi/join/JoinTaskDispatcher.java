@@ -120,12 +120,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 					firstNextIndex += firstTupleSize * firstWindow.getSlide();
 			
 			} else if (firstWindow.isRangeBased()) {
-				firstNextTime = firstBuffer.getLong(firstNextIndex);
-				firstEndTime = firstBuffer.getLong(firstEndIndex);
+				firstNextTime = getTimestamp(firstBuffer, firstNextIndex);
+				firstEndTime = getTimestamp(firstBuffer, firstEndIndex);
 				
 				while ((firstNextTime + firstWindow.getSize()) < firstEndTime) {
 					firstNextIndex += firstTupleSize;
-					firstNextTime = firstBuffer.getLong(firstNextIndex);
+					firstNextTime = getTimestamp(firstBuffer, firstNextIndex);
 				}
 			} else {
 				throw new UnsupportedOperationException("error: window is neither row-based nor range-based");
@@ -172,12 +172,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 					secondNextIndex += secondTupleSize * secondWindow.getSlide();
 			
 			} else if (secondWindow.isRangeBased()) {
-				secondNextTime = secondBuffer.getLong(secondNextIndex);
-				secondEndTime = secondBuffer.getLong(secondEndIndex);
+				secondNextTime = getTimestamp(secondBuffer, secondNextIndex); // secondBuffer.getLong(secondNextIndex);
+				secondEndTime = getTimestamp(secondBuffer, secondEndIndex); // secondBuffer.getLong(secondEndIndex);
 				
 				while ((secondNextTime + secondWindow.getSize()) < secondEndTime) {
 					secondNextIndex += secondTupleSize;
-					secondNextTime = secondBuffer.getLong(secondNextIndex);
+					secondNextTime = getTimestamp(secondBuffer, secondNextIndex); // secondBuffer.getLong(secondNextIndex);
 				}
 			} else {
 				throw new UnsupportedOperationException("error: window is neither row-based nor range-based");
@@ -189,6 +189,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			if (firstToProcessCount >= this.batch || secondToProcessCount >= this.batch)
 				createTask(false);
 		}
+	}
+	
+	private static int normaliseIndex (IQueryBuffer buffer, int p, int q) {
+		if (q <= p)
+			return (q + buffer.capacity());
+		return q;
 	}
 	
 	private void createTask(boolean dispatchedInFirst) {
@@ -205,16 +211,23 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		WindowBatch firstBatch  = WindowBatchFactory.newInstance(this.batch, taskid, firstFree, firstBuffer, firstWindow, firstSchema, -1);
 		WindowBatch secondBatch = WindowBatchFactory.newInstance(this.batch, taskid, secondFree, secondBuffer, secondWindow, secondSchema, -1);
-	
+		
 		if (dispatchedInFirst) {
-			firstBatch.setBatchPointers(firstLastEndIndex, firstEndIndex);
-			secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
+			// firstBatch.setBatchPointers(firstLastEndIndex, firstEndIndex);
+			// secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
+			firstBatch.setBatchPointers(firstLastEndIndex, normaliseIndex( firstBuffer, firstLastEndIndex, firstEndIndex));
+			secondBatch.setBatchPointers(secondStartIndex, normaliseIndex(secondBuffer, secondStartIndex, secondEndIndex));
+			
 			this.firstLastEndIndex = this.firstEndIndex;
 			this.secondLastEndIndex = this.secondEndIndex;
 		}
 		else {
-			firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
-			secondBatch.setBatchPointers(secondLastEndIndex, secondEndIndex);
+			// firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
+			// secondBatch.setBatchPointers(secondLastEndIndex, secondEndIndex);
+			
+			firstBatch.setBatchPointers(firstStartIndex, normaliseIndex( firstBuffer, firstStartIndex, firstEndIndex));
+			secondBatch.setBatchPointers(secondLastEndIndex, normaliseIndex(secondBuffer, secondLastEndIndex, secondEndIndex));
+			
 			this.firstLastEndIndex = this.firstEndIndex;
 			this.secondLastEndIndex = this.secondEndIndex;
 		}
@@ -308,6 +321,14 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		assembleSecond (idx, length);
 		return true;
+	}
+	
+	private long getTimestamp (IQueryBuffer buffer, int index) {
+		long value = buffer.getLong(index);
+		if (Utils.LATENCY_ON)
+			return (long) Utils.unpack(0, value);
+		else 
+			return value;
 	}
 }
 

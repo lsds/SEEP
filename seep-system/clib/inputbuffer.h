@@ -1,7 +1,11 @@
 #ifndef __INPUT_BUFFER_H_
 #define __INPUT_BUFFER_H_
 
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 #include <jni.h>
 

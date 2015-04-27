@@ -89,7 +89,8 @@ public class SubQuery {
 		
 		this.timestampReference = timestampReference;
 		this.latencyMonitor = new LatencyMonitor(this.timestampReference);
-		// this.latencyMonitor.disable();
+		if (! Utils.LATENCY_ON)
+			this.latencyMonitor.disable();
 		
 		this.dispatcher = new TaskDispatcher(this);
 	}
@@ -146,7 +147,8 @@ public class SubQuery {
 		
 		this.timestampReference = timestampReference;
 		this.latencyMonitor = new LatencyMonitor(this.timestampReference);
-		// this.latencyMonitor.disable();
+		if (! Utils.LATENCY_ON)
+			this.latencyMonitor.disable();
 		
 		this.dispatcher = new JoinTaskDispatcher(this);
 	}

@@ -18,7 +18,7 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
+public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private static final int threadsPerGroup = 256;
 	private static final int tuplesPerThread = 2;
@@ -36,7 +36,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private ITupleSchema leftInputSchema, rightInputSchema;
 	private ITupleSchema outputSchema = null;
 	
-	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/ThetaJoin.cl";
+	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/SimpleThetaJoin.cl";
 	
 	private int leftInputSize = -1, rightInputSize = -1, outputSize;
 	private int batchSize;
@@ -52,13 +52,12 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	private int [] tgs;
 	
 	private int ngroups;
-	private int product;
 	
 	private int outputTupleSize;
 	
 	private int localInputSize;
 	
-	byte [] flags, offsets, partitions;
+	byte [] counts, offsets, partitions;
 	
 	byte [] startPtrs, endPtrs;
 	
@@ -73,7 +72,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		return true;
 	}
 	
-	public ThetaJoinKernel (IPredicate predicate, ITupleSchema leftInputSchema, ITupleSchema rightInputSchema) {
+	public SimpleThetaJoinKernel (IPredicate predicate, ITupleSchema leftInputSchema, ITupleSchema rightInputSchema) {
 		this.predicate = predicate;
 		
 		this.leftInputSchema = leftInputSchema;
@@ -107,10 +106,18 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		this.customFunctor = customFunctor;
 	}
 	
+	public void setOutputSize (int outputSize) {
+		this.outputSize = outputSize;
+	}
+	
 	public void setup () {
 		
 		if (batchSize < 0) {
-			System.err.println("error: invalid input size");
+			System.err.println("error: invalid batch size");
+			System.exit(1);
+		}
+		if (outputSize < 0) {
+			System.err.println("error: invalid output size");
 			System.exit(1);
 		}
 		this.leftInputSize  = batchSize *  leftInputSchema.getByteSizeOfTuple();
@@ -126,33 +133,31 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		  endPtrs = new byte [leftTuples * 4];
 		
 		/* Determine #threads */
-		tgs = new int [3];
+		tgs = new int [4];
 		tgs[0] = threadsPerGroup;
 		/* For scan and compact kernels */
 		tgs[1] = threadsPerGroup;
 		tgs[2] = threadsPerGroup;
+		tgs[3] = threadsPerGroup;
 		
 		leftTuples_ = leftTuples;
 		while (! isPowerOfTwo(leftTuples_))
 			leftTuples_++;
 		
-		threads = new int [3];
+		threads = new int [4];
 		
 		threads[0] = leftTuples_;
 		
-		product = leftTuples * rightTuples;
-		System.out.println(String.format("[DBG] product is %10d (~2)", product));
-		while (! isPowerOfTwo(product))
-			product++;
-		System.out.println(String.format("[DBG] product is %10d (^2)", product));
-		
 		/* For scan and compact kernels */
-		threads[1] = product / tuplesPerThread;
-		threads[2] = product / tuplesPerThread;
+		threads[1] = leftTuples_ / tuplesPerThread;
+		threads[2] = leftTuples_ / tuplesPerThread;
+		
+		threads[3] = leftTuples_;
 		
 		System.out.println(String.format("[DBG] %10d threads[0]", threads[0]));
 		System.out.println(String.format("[DBG] %10d threads[1]", threads[1]));
 		System.out.println(String.format("[DBG] %10d threads[2]", threads[2]));
+		System.out.println(String.format("[DBG] %10d threads[3]", threads[3]));
 		
 		ngroups = threads[1] / tgs[1];
 		System.out.println(String.format("[DBG] %10d groups", ngroups));
@@ -162,21 +167,20 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		if (! isPowerOfTwo(outputTupleSize))
 			outputTupleSize++; 
 		
-		outputSize = outputTupleSize * product;
 		if (outputSize > Utils._UNBOUNDED_BUFFER_) {
-			System.err.println(String.format("warning: insufficient space in buffer to hold joined stream (estimated at %d bytes)", outputSize));
+			System.err.println(String.format("warning: insufficient space in buffer to hold output stream (estimated at %d bytes)", outputSize));
 		}
 		
 		/* Intermediate state */
 		
-		flags      = new byte [4 * product];
-		offsets    = new byte [4 * product];
+		counts     = new byte [4 * leftTuples_];
+		offsets    = new byte [4 * leftTuples_];
 		partitions = new byte [4 * ngroups];
 		
 		String source = KernelCodeGenerator.getThetaJoin(filename, leftInputSchema, rightInputSchema, outputSchema, predicate, customFunctor);
 		System.out.println(source);
 		
-		qid = TheGPU.getInstance().getQuery(source, 3, 4, 4);
+		qid = TheGPU.getInstance().getQuery(source, 4, 4, 4);
 		
 		TheGPU.getInstance().setInput(qid, 0,  leftInputSize);
 		TheGPU.getInstance().setInput(qid, 1, rightInputSize);
@@ -184,12 +188,12 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		TheGPU.getInstance().setInput(qid, 2, startPtrs.length);
 		TheGPU.getInstance().setInput(qid, 3,   endPtrs.length);
 		
-		System.out.println(String.format("[DBG] %10d bytes",      flags.length));
+		System.out.println(String.format("[DBG] %10d bytes",     counts.length));
 		System.out.println(String.format("[DBG] %10d bytes",    offsets.length));
 		System.out.println(String.format("[DBG] %10d bytes", partitions.length));
 		System.out.println(String.format("[DBG] %10d bytes",        outputSize));
 		
-		TheGPU.getInstance().setOutput(qid, 0,      flags.length, 0, 0, 1, 0);
+		TheGPU.getInstance().setOutput(qid, 0,     counts.length, 0, 0, 1, 0);
 		TheGPU.getInstance().setOutput(qid, 1,    offsets.length, 0, 1, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 2, partitions.length, 0, 1, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 3,        outputSize, 1, 0, 0, 1);
@@ -209,7 +213,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		throw new UnsupportedOperationException("ThetaJoinKernel requires two input streams");
 	}
-
+	
 	@Override
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {
@@ -252,7 +256,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		TheGPU.getInstance().setInputBuffer(qid, 2, startPtrs);
 		TheGPU.getInstance().setInputBuffer(qid, 3,   endPtrs);
 		
-		TheGPU.getInstance().setOutputBuffer(qid, 0,      flags);
+		TheGPU.getInstance().setOutputBuffer(qid, 0,     counts);
 		TheGPU.getInstance().setOutputBuffer(qid, 1,    offsets);
 		TheGPU.getInstance().setOutputBuffer(qid, 2, partitions);
 		

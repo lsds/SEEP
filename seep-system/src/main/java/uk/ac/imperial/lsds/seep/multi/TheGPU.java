@@ -11,7 +11,7 @@ public class TheGPU {
 	private static final int maxBuffers = 10;
 	
 	private static final String gpuLibrary = 
-		"/home/akolious/seep/seep-system/clib/libGPU.so";
+		Utils.SEEP_HOME + "/seep-system/clib/libGPU.so";
 	
 	private static final TheGPU gpuInstance = new TheGPU ();
 	
@@ -86,6 +86,11 @@ public class TheGPU {
 		this.outputs [qid][ndx] = output;
 	}
 	
+	public int getPosition (int qid, int ndx) {
+		
+		return outputPositions[qid][ndx];
+	}
+	
 	public void inputDataMovementCallback (int qid, int ndx, long address, int size, int offset) {
 		/* Check bounds */
 		if (qid < 0 || qid >= maxQueries)
@@ -93,10 +98,10 @@ public class TheGPU {
 		
 		if (ndx < 0 || ndx >= maxBuffers)
 			throw new IllegalArgumentException ("error: invalid buffer id");
-		
+		/*
 		System.out.println(String.format("[DBG] copy input: q %d ndx %d size %d (%d) offset %d", 
 			qid, ndx, size, end[qid][ndx] - start[qid][ndx], offset));
-		
+		*/
 		if (end[qid][ndx] > start[qid][ndx]) {
 			theUnsafe.copyMemory (
 				inputs[qid][ndx], 
@@ -106,7 +111,7 @@ public class TheGPU {
 				end[qid][ndx] - start[qid][ndx]
 			);
 		} else {
-			System.err.println("Fatal error: unsupported operation");
+			System.err.println("Fatal error: unsupported data movement operation");
 			System.exit(1);
 		}
 	}
@@ -119,9 +124,14 @@ public class TheGPU {
 		if (ndx < 0 || ndx >= maxBuffers)
 			throw new IllegalArgumentException ("error: invalid buffer id");
 		
+		if (size > outputs[qid][ndx].length) {
+			System.err.println(String.format("error: output buffer overflow (%d bytes)", size));
+			System.exit(-1);
+		}
+		/*
 		System.out.println(String.format("[DBG] copy output: q %d ndx %d size %d offset %d", 
 			qid, ndx, size, offset));
-		
+		*/
 		theUnsafe.copyMemory(
 			null, 
 			address, 

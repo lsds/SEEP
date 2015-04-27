@@ -272,7 +272,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		// System.out.println("[DBG] count " + count);
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		//outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		
 		//System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
 		// release old buffer (will return Unbounded Buffers to the pool)
@@ -483,7 +484,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		}
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		// outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		//System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
 		// release window buffer (will return Unbounded Buffers to the pool)
@@ -495,10 +496,29 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		// the data in this buffer
 		windowBatch.setBuffer(outBuffer);
 		windowBatch.setSchema(outSchema);
+		
+		System.out.println("[DBG] output buffer position is " + outBuffer.position());
+		
+		/* Print tuples */
+		outBuffer.close();
+		int tid = 1;
+		while (outBuffer.hasRemaining()) {
+			// Each tuple is 16-bytes long
+			System.out.println(String.format("%04d: %2d,%4d,%4.1f", 
+			tid++,
+			outBuffer.getByteBuffer().getLong (),
+			outBuffer.getByteBuffer().getInt  (),
+			outBuffer.getByteBuffer().getFloat()
+			));
+		}
+		/**/
 
 		api.outputWindowBatchResult(-1, windowBatch);
+		/**/
+		System.err.println("Disrupted");
+		System.exit(-1);
+		/**/
 	}
-
 	
 	private void processDataPerWindowIncrementallyWithGroupBy(WindowBatch windowBatch,
 			IWindowAPI api) {

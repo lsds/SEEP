@@ -158,7 +158,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		batch = WindowBatchFactory.newInstance(this.batch, taskid, (int) free, buffer, window, schema, mark);
 		if (window.isRangeBased()) {
-			if (buffer.getLong((int) p) > _t)
+			if (getTimestamp(buffer, (int) p) > _t)
 				batch.cancel();
 			else
 				batch.setBatchPointers((int) p, (int) q);
@@ -214,8 +214,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 		} else
 		if (window.isRangeBased()) {
 			/* Get the timestamp of the first and last tuple inserted */
-			start = buffer.getLong(index_);
-			end   = buffer.getLong(_index);
+			start = getTimestamp(buffer, index_);
+			end   = getTimestamp(buffer, _index);
 			
 			if (first) {
 				next_  = start;
@@ -332,13 +332,14 @@ public class TaskDispatcher implements ITaskDispatcher {
 		 * The `index` points to the location in the byte buffer of a tuple 
 		 * whose timestamp is `t`. But, is this tuple the first one?
 		 */
-		while (index >= offset && buffer.getLong(index) == t) {
+		
+		while (index >= offset && getTimestamp (buffer, index) == t) {
 			index -= tupleSize;
 		}
 		index += tupleSize;
 		return index;
 	}
-	
+
 	private int binarySearch (long t, int start, int end, int offset) {
 		/*
 		 * The `start` and `end` pointers represent tuple and not byte indices
@@ -347,10 +348,10 @@ public class TaskDispatcher implements ITaskDispatcher {
 			int m = start + (end - start) / 2;
 			/* Normalize tuple offset in byte buffer */
 			int y = (int) ((offset + m * tupleSize) & mask);
-			if (t < buffer.getLong(y)) 
+			if (t < getTimestamp (buffer, y)) 
 				end = m - 1;
 			else 
-			if (t > buffer.getLong(y))
+			if (t > getTimestamp (buffer, y))
 				start = m + 1;
 			else {
 				this.current = m;
@@ -393,6 +394,14 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public boolean tryDispatchSecond(byte[] data, int length) {
 		
 		return tryDispatch (data, length);
+	}
+	
+	private long getTimestamp (IQueryBuffer buffer, int index) {
+		long value = buffer.getLong(0);
+		if (Utils.LATENCY_ON)
+			return (long) Utils.unpack(0, value);
+		else 
+			return value;
 	}
 }
 

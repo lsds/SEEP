@@ -174,7 +174,7 @@ __kernel void aggregateKernel (
 			pos = _table_ + __s_minor_hash(__stash_x, __stash_y, q);
 		}
 		/* Assume position found; worst case, the key was stashed */
-		int output_idx = (table_offset + pos) * sizeof(intermediate_t);
+		int output_idx = (table_offset + pos) * sizeof(output_t);
 		__global intermediate_t *out = (__global intermediate_t *) &contents[output_idx];
 		storef(out, p);
 		idx += group_offset;
@@ -383,7 +383,7 @@ __kernel void compactKernel (
 	if (indices[left] != EMPTY_KEY) {
 
 		const int lq = (offsets[left] + pivot) * sizeof(output_t);
-		const int lp = left * sizeof(intermediate_t);
+		const int lp = left * sizeof(output_t);
 		indices[left] = lq + sizeof(output_t);
 		__global intermediate_t *lx = (__global intermediate_t *) &contents[lp];
 		__global output_t *ly = (__global output_t *) &output[lq];
@@ -393,7 +393,7 @@ __kernel void compactKernel (
 	if (indices[right] != EMPTY_KEY) {
 
 		const int rq = (offsets[right] + pivot) * sizeof(output_t);
-		const int rp = right * sizeof(intermediate_t);
+		const int rp = right * sizeof(output_t);
 		indices[right] = rq + sizeof(output_t);
 		__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
 		__global output_t *ry = (__global output_t *) &output[rq];
