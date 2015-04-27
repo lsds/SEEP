@@ -10,7 +10,7 @@ def compute_stats_dict(vals):
 def compute_stats(vals):
     meanVal = sum(vals)/len(vals)
     varianceVal = (reduce(lambda accum, x: math.pow(meanVal - x,2) + accum,
-        vals, 0)) / len(vals)
+        vals, 0)) / max(1, len(vals) - 1)
     stdDevVal = math.sqrt(varianceVal) 
 
     maxVal = max(vals)

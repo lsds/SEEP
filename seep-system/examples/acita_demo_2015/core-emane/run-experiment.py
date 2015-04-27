@@ -7,6 +7,7 @@ from run_sessions import run_sessions
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
+latency_percentile = '95'
 
 def main(ks,mobilities,sessions,params,plot_time_str=None):
 
@@ -21,9 +22,9 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         run_experiment(ks, mobilities, session_ids, params, time_str, data_dir )
 
     record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
-    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_99th_latency)
+    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
 
-    for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 'latency_vs_mobility']:
+    for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 'latency_vs_mobility', 'tput_vs_mobility_stddev', 'latency_vs_mobility_stddev']:
         plot(p, time_str, script_dir, data_dir)
 
 def get_session_dir(k, mob, session, time_str, data_dir):
@@ -100,16 +101,16 @@ def get_tput(logdir):
             
     raise Exception("Could not find tput in %s"%logfilename)
 
-def get_99th_latency(logdir):
+def get_latency(logdir):
     #TODO: Handle float for latency in regex!
-    regex = re.compile('99%_lat=(\d+)')
+    regex = re.compile('%s%%_lat=(\d+)'%(latency_percentile))
     with open('%s/latency.txt'%logdir, 'r') as latency_log:
         for line in latency_log:
             match = re.search(regex, line)
             if match:
                 return float(match.group(1))
             
-    raise Exception("Could not find 99% latency in %s"%logfilename)
+    raise Exception("Could not find %s% latency in %s"%(latency_percentile, logfilename))
 
 def plot(p, time_str, script_dir, data_dir):
     exp_dir = '%s/%s'%(data_dir,time_str)

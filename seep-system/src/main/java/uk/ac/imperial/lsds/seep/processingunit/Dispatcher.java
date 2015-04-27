@@ -436,7 +436,7 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 
-				nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
+				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
 				outputQueue.sendToDownstream(nextTuple, dest);
 				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 			}
