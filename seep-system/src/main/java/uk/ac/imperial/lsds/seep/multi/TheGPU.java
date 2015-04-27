@@ -98,10 +98,10 @@ public class TheGPU {
 		
 		if (ndx < 0 || ndx >= maxBuffers)
 			throw new IllegalArgumentException ("error: invalid buffer id");
-		
-//		System.out.println(String.format("[DBG] copy input: q %d ndx %d size %d (%d) offset %d", 
-//			qid, ndx, size, end[qid][ndx] - start[qid][ndx], offset));
-		
+		/*
+		System.out.println(String.format("[DBG] copy input: q %d ndx %d size %d (%d) offset %d", 
+			qid, ndx, size, end[qid][ndx] - start[qid][ndx], offset));
+		*/
 		if (end[qid][ndx] > start[qid][ndx]) {
 			theUnsafe.copyMemory (
 				inputs[qid][ndx], 
@@ -124,9 +124,14 @@ public class TheGPU {
 		if (ndx < 0 || ndx >= maxBuffers)
 			throw new IllegalArgumentException ("error: invalid buffer id");
 		
-//		System.out.println(String.format("[DBG] copy output: q %d ndx %d size %d offset %d", 
-//			qid, ndx, size, offset));
-		
+		if (size > outputs[qid][ndx].length) {
+			System.err.println(String.format("error: output buffer overflow (%d bytes)", size));
+			System.exit(-1);
+		}
+		/*
+		System.out.println(String.format("[DBG] copy output: q %d ndx %d size %d offset %d", 
+			qid, ndx, size, offset));
+		*/
 		theUnsafe.copyMemory(
 			null, 
 			address, 

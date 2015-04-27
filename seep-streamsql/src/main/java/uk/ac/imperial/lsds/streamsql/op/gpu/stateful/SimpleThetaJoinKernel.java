@@ -213,7 +213,7 @@ public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperator
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		throw new UnsupportedOperationException("ThetaJoinKernel requires two input streams");
 	}
-
+	
 	@Override
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {

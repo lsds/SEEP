@@ -794,6 +794,11 @@ void callback_readOutput (gpuContextP context,
 		theSize = mark;
 	else
 		theSize = context->kernelOutput.outputs[ndx]->size;
+	
+	if (theSize > context->kernelOutput.outputs[ndx]->size) {
+		fprintf(stderr, "error: output buffer (qid %d ndx %d) overflow (%d bytes)\n", qid, ndx, theSize);
+		exit(1);
+	}
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
 			env, obj, method,

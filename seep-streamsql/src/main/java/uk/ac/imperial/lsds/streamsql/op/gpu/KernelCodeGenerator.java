@@ -497,11 +497,11 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 					((IntColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof FloatExpression) { 
-				b.append(String.format(String.format("\tkey *= convert_int(__bswapfp(p->tuple._%d));\n", 
+				b.append(String.format(String.format("\tkey *= convert_int_rtp(__bswapfp(p->tuple._%d));\n", 
 					((FloatColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
-				b.append(String.format(String.format("\tkey *= convert_int(__bswap64(p->tuple._%d));\n", 
+				b.append(String.format(String.format("\tkey *= convert_int_rtp(__bswap64(p->tuple._%d));\n", 
 					((FloatColumnReference) groupBy[i-1]).getColumn())));
 			}
 			/* How to pack them? */
@@ -511,19 +511,19 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		b.append("\n");
 		b.append("inline void storef (__global intermediate_t *out, __global input_t *p) {\n");
 		/* Store the timestamp */
-		b.append("\tout->tuple.t = p->tuple.t;\n");
+		b.append("\tout->tuple.t = __bswap64(p->tuple.t);\n");
 		/* Store the (composite) key */
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
+				b.append(String.format(String.format("\tout->tuple.key_%d = __bswap32(p->tuple._%d);\n", 
 					i, ((IntColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof FloatExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
+				b.append(String.format(String.format("\tout->tuple.key_%d = __bswapfp(p->tuple._%d);\n", 
 					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
+				b.append(String.format(String.format("\tout->tuple.key_%d = __bswap64(p->tuple._%d);\n", 
 					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
 			}
 		}
@@ -533,15 +533,15 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 			b.append ("\tatomic_inc ((global int *) &(out->tuple.val));\n");
 		case SUM:
 		case AVG:
-			b.append (String.format("\tatomic_add ((global int *) &(out->tuple.val), convert_int(__bswapfp(p->tuple._%d)));\n",
+			b.append (String.format("\tatomic_add ((global int *) &(out->tuple.val), convert_int_rtp(__bswapfp(p->tuple._%d)));\n",
 				_the_aggregate.getColumn()));
 			break;
 		case MAX:
-			b.append (String.format("\tatomic_max ((global int *) &(out->tuple.val), convert_int(__bswapfp(p->tuple._%d)));\n",
+			b.append (String.format("\tatomic_max ((global int *) &(out->tuple.val), convert_int_rtp(__bswapfp(p->tuple._%d)));\n",
 				_the_aggregate.getColumn()));
 			break;
 		case MIN:
-			b.append (String.format("\tatomic_min ((global int *) &(out->tuple.val), convert_int(__bswapfp(p->tuple._%d)));\n",
+			b.append (String.format("\tatomic_min ((global int *) &(out->tuple.val), convert_int_rtp(__bswapfp(p->tuple._%d)));\n",
 				_the_aggregate.getColumn()));
 			break;
 		default:
@@ -577,7 +577,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		b.append("\n");
 		b.append("inline void copyf (__global intermediate_t *p, __global output_t *q) {\n");
 		/* Store the timestamp */
-		b.append("\tq->tuple.t = p->tuple.t;\n");
+		b.append("\tq->tuple.t = __bswap64(p->tuple.t);\n");
 		/* Store the (composite) key; we assume that same id for attribute and key */
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 

@@ -157,12 +157,14 @@ public class TestAggregationGroupBy {
 		
 		/* Fill the buffer */
 		Random r = new Random();
-		int g = 0;
+		int g = 1;
 		while (b.hasRemaining()) {
 			b.putLong(1); // time stamp
 			b.putFloat(r.nextFloat()); // the aggregate
 			b.putInt(g++); // group by attribute
 			g = g % ngroups;
+			if (g == 0)
+				g = 1;
 			for (int i = 16; i < tupleSize; i += 4)
 				b.putInt(1);
 		}
