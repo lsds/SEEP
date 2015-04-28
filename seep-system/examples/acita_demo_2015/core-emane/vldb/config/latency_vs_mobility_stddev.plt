@@ -1,10 +1,10 @@
 set terminal pdf 
 set output sprintf("%s/%s/latency_vs_mobility_stddev.pdf",outputdir,timestr)
 
-set title "Latency vs mobility for different replication factors (k)"
-set xlabel "Node speed (m/s)"
-set ylabel "Latency (ms)"
+set xlabel "Node speed (m/s)" font ", 30"
+set ylabel "Latency (ms)" font ", 30"
 #set yrange [0:100]
+set tics font ", 30"
 
 set border linewidth 1.5
 set style line 1 linewidth 2.5 linecolor rgb "red"
