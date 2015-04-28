@@ -304,7 +304,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		if (isDirect) {
 			System.err.println("Fatal error.");
 			System.exit(1);
-			// throw new UnsupportedOperationException("error: cannot append bytes from a circular buffer");
+			/* throw new UnsupportedOperationException("error: cannot append bytes from a circular buffer"); */
 		}
 		int start = normalise(offset);
 		destination.getByteBuffer().put(this.data, start, length);
@@ -324,7 +324,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		} else {
 			/* Copy in two parts */
 			System.arraycopy(this.data, start, destination, 0, this.size - start);
-			System.arraycopy(this.data, 0, destination, 0, end);
+			System.arraycopy(this.data, 0, destination, this.size - start, end);
 		}
 	}
 	

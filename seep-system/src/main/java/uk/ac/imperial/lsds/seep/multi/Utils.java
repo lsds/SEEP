@@ -24,7 +24,7 @@ public class Utils {
 	
 	public static boolean HYBRID = (CPU && GPU);
 	
-	public static boolean LATENCY_ON = false;
+	public static boolean LATENCY_ON = true;
 	
 	public static String SEEP_HOME = "/home/akolious/seep";
 	

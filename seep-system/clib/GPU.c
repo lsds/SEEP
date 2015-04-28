@@ -785,14 +785,14 @@ void callback_readOutput (gpuContextP context,
 		exit(1);
 	}
 	
-	// if (! context->kernelOutput.outputs[ndx]->writeOnly)
-	// 	return ;
+	if (! context->kernelOutput.outputs[ndx]->writeOnly)
+	 	return ;
 	
 	/* Use the mark */
 	int theSize;
-	//if (mark > 0)
-	// 	theSize = mark;
-	//else
+	if (mark > 0)
+	 	theSize = mark;
+	else
 		theSize = context->kernelOutput.outputs[ndx]->size;
 	
 	if (theSize > context->kernelOutput.outputs[ndx]->size) {

@@ -30,8 +30,8 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 	private static final int threadsPerGroup = 256;
 	private static final int tuplesPerThread = 2;
 	
-	private static int kdbg = 1;
-	private static boolean debug = true;
+	private static int kdbg = 0;
+	private static boolean debug = false;
 	
 	private static final int pipelines = 2;
 	private int [] taskIdx;
@@ -317,7 +317,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		String source = 
 			KernelCodeGenerator.getAggregation(inputSchema, outputSchema, filename, type, _the_aggregate, groupBy, havingClause);
-		// System.out.println(source);
+		System.out.println(source);
 		
 		qid = TheGPU.getInstance().getQuery(source, 4, 5, 8);
 		
@@ -370,8 +370,14 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		/* Set input */
 		byte [] inputArray = windowBatch.getBuffer().array();
-		int start = windowBatch.getBatchStartPointer();
-		int end   = windowBatch.getBatchEndPointer();
+		int start = windowBatch.normalise(windowBatch.getBatchStartPointer());
+		int end   = windowBatch.normalise(windowBatch.getBatchEndPointer());
+		
+		if (end > windowBatch.getBuffer().capacity()) {
+			System.err.println(String.format("warning: batch end pointer (%d) is greater than its buffer size (%d)", 
+				end, windowBatch.getBuffer().capacity()));
+			System.exit(1);
+		}
 		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
@@ -412,22 +418,6 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		windowBatch.setBuffer(outputBuffer);
 		
-		int idx;
-		ByteBuffer partitionsBuffer = ByteBuffer.wrap(partitions).order(ByteOrder.LITTLE_ENDIAN);
-		idx = 0;
-		while (partitionsBuffer.hasRemaining()) {
-			int value = partitionsBuffer.getInt();
-			idx += 1;
-			System.out.println(String.format("partition[%05d] = %10d", idx, value));
-		}
-		ByteBuffer indicesBuffer = ByteBuffer.wrap(indices).order(ByteOrder.LITTLE_ENDIAN);
-		idx = 0;
-		while (indicesBuffer.hasRemaining()) {
-			int value = indicesBuffer.getInt();
-			idx += 1;
-			System.out.println(String.format("indices[%05d] = %10d", idx, value));
-		}
-				
 		/* Print tuples
 		outputBuffer.close();
 		int tid = 1;
@@ -452,10 +442,10 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		freeIdx [freeIdx.length - 1] = currentFreeIdx;
 		
 		api.outputWindowBatchResult(-1, windowBatch);
-		/**/
+		/*
 		System.err.println("Disrupted");
 		System.exit(-1);
-		/**/
+		*/
 	}
 	
 	@Override

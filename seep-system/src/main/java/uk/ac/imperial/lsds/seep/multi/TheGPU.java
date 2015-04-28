@@ -111,8 +111,23 @@ public class TheGPU {
 				end[qid][ndx] - start[qid][ndx]
 			);
 		} else {
-			System.err.println("Fatal error: unsupported data movement operation");
-			System.exit(1);
+			/* Copy in two parts: from start to `capacity - start` (left) and from 0 to `end` (right) */
+			int left  = inputs[qid][ndx].length - start[qid][ndx];
+			int right = end   [qid][ndx];
+			theUnsafe.copyMemory (
+				inputs[qid][ndx], 
+				Unsafe.ARRAY_BYTE_BASE_OFFSET + start[qid][ndx], 
+				null, 
+				address + offset, 
+				left
+			);
+			theUnsafe.copyMemory (
+				inputs[qid][ndx], 
+				Unsafe.ARRAY_BYTE_BASE_OFFSET + 0, 
+				null, 
+				address + offset + left, 
+				right
+			);
 		}
 	}
 	
