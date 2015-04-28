@@ -24,7 +24,10 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
     record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
     record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
 
-    for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 'latency_vs_mobility', 'tput_vs_mobility_stddev', 'latency_vs_mobility_stddev']:
+    for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
+		'latency_vs_mobility', 'tput_vs_mobility_stddev', 
+		'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
+		'rel_latency_vs_mobility_stddev']:
         plot(p, time_str, script_dir, data_dir)
 
 def get_session_dir(k, mob, session, time_str, data_dir):
