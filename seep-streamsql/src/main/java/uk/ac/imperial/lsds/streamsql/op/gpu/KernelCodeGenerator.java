@@ -356,7 +356,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		if (customFunctor != null) {
 			b.append(String.format("\t%s\n", customFunctor));
 		} else {
-			b.append("\tint value = 0;\n");
+			b.append("\tint value = 1;\n");
 			b.append("\tint attr = __bswap32(p->tuple._1);\n");
 			b.append("\tvalue = value & ");
 			for (int i = 0; i < predicate.getNumPredicates(); i++) {
@@ -366,6 +366,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 					b.append(String.format("(attr != %d) & ", 
 						i - predicate.getNumPredicates() - 1));
 			}
+			/* b.append("\treturn 1;\n"); */
 			b.append("\treturn value;\n");
 		}
 		b.append("}\n");
@@ -560,7 +561,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		case COUNT:
 		case SUM:
 		case AVG:
-			b.append ("\tp->tuple.val = 0;\n");
+			/* Do nothing; `val` and `cnt` already initialised to 0 */
 			break;
 		case MAX:
 			b.append ("\tp->tuple.val = FLT_MIN;\n");
@@ -569,10 +570,8 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 			b.append ("\tp->tuple.val = FLT_MAX;\n");
 			break;
 		default:
-			b.append("\treturn -1;\n");
 			break;
 		}
-		b.append ("\tp->tuple.cnt = 0;\n");
 		b.append ("}\n");
 		b.append("\n");
 		b.append("inline void copyf (__global intermediate_t *p, __global output_t *q) {\n");

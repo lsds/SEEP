@@ -25,7 +25,6 @@ public class TestEsper {
 		configuration.addEventType(eventType, bindingForEventType);
 	}
 
-
 	public void initEngine() {
 		// do not use internal timer
 		configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);

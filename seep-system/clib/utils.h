@@ -6,6 +6,6 @@
 #define MAX_OUTPUTS  10
 #define MAX_QUERIES   2
 
-#define DEPTH 1
+#define DEPTH 2
 
 #endif /* __GPU_UTILS_H_ */

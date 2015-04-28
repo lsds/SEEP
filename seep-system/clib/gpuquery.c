@@ -100,7 +100,7 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 	char msg [32768]; /* Compiler message */
 	size_t length;
 	
-	const char *flags = "-cl-fast-relaxed-math -Werror"; /* -cl-nv-verbose */
+	const char *flags = "-cl-fast-relaxed-math -Werror -cl-nv-verbose";
 	/* -cl-nv-arch sm_20 */
 	
 	gpuQueryP p = (gpuQueryP) malloc (sizeof(gpu_query_t));
@@ -220,9 +220,9 @@ gpuContextP gpu_context_switch (gpuQueryP p) {
 int gpu_query_exec (gpuQueryP q, size_t *threads, size_t *threadsPerGroup,
 	queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
 	
-	   return gpu_query_exec_1 (q, threads, threadsPerGroup, operator, env, obj, qid);   
+	/* return gpu_query_exec_1 (q, threads, threadsPerGroup, operator, env, obj, qid); */
 	/* return gpu_query_exec_2 (q, threads, threadsPerGroup, operator, env, obj, qid); */
-	/* return gpu_query_exec_5 (q, threads, threadsPerGroup, operator, env, obj, qid); */   
+	   return gpu_query_exec_5 (q, threads, threadsPerGroup, operator, env, obj, qid);   
 }
 
 /* */
@@ -372,7 +372,7 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	
 	gpu_context_moveInputBuffers (p);
 	
-	gpu_context_submitKernel (p, threads, threadsPerGroup);
+	// gpu_context_submitKernel (p, threads, threadsPerGroup);
 	
 	gpu_context_moveOutputBuffers (p);
 	

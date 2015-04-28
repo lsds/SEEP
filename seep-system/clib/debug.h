@@ -8,8 +8,8 @@
 // #define GPU_PROFILE
 
 /* Parallel data movement */
-#undef GPU_IIDMVMT
-// #define GPU_IIDMVMT
+// #undef GPU_IIDMVMT
+#define GPU_IIDMVMT
 
 #undef dbg
 #ifdef GPU_VERBOSE

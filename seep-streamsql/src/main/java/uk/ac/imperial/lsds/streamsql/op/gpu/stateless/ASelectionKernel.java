@@ -18,6 +18,8 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	private static final int threadsPerGroup = 256;
 	private static final int tuplesPerThread = 2;
 	
+	private static boolean debug = false;
+	
 	private static final int pipelines = 2;
 	private int [] taskIdx; /* Control output based on depth of pipeline */
 	private int [] freeIdx;
@@ -146,14 +148,12 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		/* Deprecated: Forward time stamp (for latency measurements purposes) */
-		/* outputBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer())); */
-		
 		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
 		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 3));
-		outputBuffer.close();
+		if (debug)
+			System.out.println("[DBG] output buffer position is " + outputBuffer.position());
 		
 		windowBatch.setBuffer(outputBuffer);
 		
@@ -168,6 +168,10 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		freeIdx [freeIdx.length - 1] = currentFreeIdx;
 		
 		api.outputWindowBatchResult(-1, windowBatch);
+		/*
+		System.err.println("Disrupted");
+		System.exit(-1);
+		*/
 	}
 
 	@Override
