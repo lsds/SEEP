@@ -90,13 +90,7 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 		
 		/* Measurements */
 		long Bytes = 0L;
-		/* 
-		long count = 0L;
-		long previous = 0L; 
-		long t, _t = 0L;
-		double dt, rate, MB;
-		double _1MB = 1000000.0; // Or, MiB 1048576.0;
-		*/
+		
 		try {
 		
 			ServerSocketChannel server = ServerSocketChannel.open();
@@ -148,45 +142,41 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 							 *
 							 * Make sure the buffer is rewind before reading.
 							 */
-							buffer.rewind();
+							if (buffer.remaining() == 0) {
 							
-							item.clear();
-							while (buffer.hasRemaining()) {
-								item.put("timestamp", buffer.getLong());
-								item.put("jobId", buffer.getLong());
-								item.put("taskId", buffer.getLong());
-								item.put("machineId", buffer.getLong());
-								item.put("eventType", buffer.getInt());
-								item.put("userId", buffer.getInt());
-								item.put("category", buffer.getInt());
-								item.put("priority", buffer.getInt());
-								item.put("cpu", buffer.getFloat());
-								item.put("ram", buffer.getFloat());
-								item.put("disk", buffer.getFloat());
-								item.put("constraints", buffer.getInt());
-							}
-							
-							esper.sendEvent(item, "input");
-							
-							buffer.clear();
-							
-							/* Measurements */
-							Bytes += bytes;
-							/*
-							count += 1;
-							if (count % 10000 == 0) {
-								t = System.currentTimeMillis();
-								if (_t > 0 && previous > 0) {
-									dt = ((double) (t - _t)) / 1000.;
-									MB = ((double) (Bytes - previous)) / _1MB;
-									rate = MB / dt;
-									System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
-									MB, dt, rate, ((rate * 8.)/1000.)));
+								buffer.rewind();
+								
+								item.clear();
+								
+								long nitems = 0L;
+								
+								while (buffer.hasRemaining()) {
+									
+									item.put("timestamp",   buffer.getLong());
+									item.put("jobId",       buffer.getLong());
+									item.put("taskId",      buffer.getLong());
+									item.put("machineId",   buffer.getLong());
+									item.put("eventType",   buffer.getInt());
+									item.put("userId",      buffer.getInt());
+									item.put("category",    buffer.getInt());
+									item.put("priority",    buffer.getInt());
+									item.put("cpu",         buffer.getFloat());
+									item.put("ram",         buffer.getFloat());
+									item.put("disk",        buffer.getFloat());
+									item.put("constraints", buffer.getInt());
+									
+									esper.sendEvent(item, "input");
+									
+									nitems ++;
 								}
-								_t = t;
-								previous = Bytes;
+								
+								/* System.out.println(String.format("[DBG] %d items sent", nitems)); */
+								
+								/* Measurements */
+								Bytes += buffer.capacity();
+								
+								buffer.clear();
 							}
-							*/
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");
