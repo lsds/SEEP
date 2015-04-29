@@ -27,7 +27,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
     for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
 		'latency_vs_mobility', 'tput_vs_mobility_stddev', 
 		'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
-		'rel_latency_vs_mobility_stddev']:
+		'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
         plot(p, time_str, script_dir, data_dir)
 
 def get_session_dir(k, mob, session, time_str, data_dir):

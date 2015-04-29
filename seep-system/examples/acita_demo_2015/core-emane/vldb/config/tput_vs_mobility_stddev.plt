@@ -1,10 +1,10 @@
 set terminal pdf 
 set output sprintf("%s/%s/tput_vs_mobility_stddev.pdf",outputdir,timestr)
 
-set xlabel "Node speed (m/s)" font ", 30"
-set ylabel "Throughput (Kb/s)" font ", 30"
+set xlabel "Node speed (m/s)" font ", 16" offset 1
+set ylabel "Throughput (Kb/s)" font ", 16" offset 1
 #set yrange [0:100]
-set tics font ", 30"
+set tics font ", 10"
 
 set border linewidth 1.5
 set style line 1 linewidth 2.5 linecolor rgb "red"

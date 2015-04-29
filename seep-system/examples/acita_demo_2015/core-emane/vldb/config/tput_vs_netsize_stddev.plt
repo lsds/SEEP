@@ -1,11 +1,11 @@
 set terminal pdf 
 set output sprintf("%s/%s/tput_vs_netsize_stddev.pdf",outputdir,timestr)
 
-set xlabel "Network size (nodes)" font ", 30"
-set ylabel "Throughput (Kb/s)" font ", 30"
+set xlabel "Network size (nodes)" font ", 16" offset 1
+set ylabel "Throughput (Kb/s)" font ", 16" offset 1
 set yrange [0:*]
 set xrange [20:50]
-set tics font ", 30"
+set tics font ", 10"
 
 set style data histogram
 #set style histogram cluster gap 1
