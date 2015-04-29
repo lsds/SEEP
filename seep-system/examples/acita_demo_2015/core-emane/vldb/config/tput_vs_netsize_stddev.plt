@@ -1,7 +1,7 @@
 set terminal pdf 
 set output sprintf("%s/%s/tput_vs_netsize_stddev.pdf",outputdir,timestr)
 
-set xlabel "Network size (nodes)" font ", 16"
+set xlabel "Replication factor (k)" font ", 16"
 set ylabel "Throughput (Kb/s)" font ", 16" offset -2
 set yrange [0:*]
 #set xrange [20:50]
@@ -21,6 +21,7 @@ set style line 1 linewidth 2.5 linecolor rgb "red"
 set style line 2 linewidth 2.5 linecolor rgb "blue"
 set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
+set bmargin 3
 #set boxwidth 0.1
 #set style fill empty 
 #set xtics ()
