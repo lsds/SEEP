@@ -25,9 +25,9 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 #set style fill empty 
 #set xtics ()
 
-plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 2:4: xtic('') title "k=1", \
-	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 2:4: xtic('') title "k=2", \
-	sprintf("%s/%s/3k-tput.data",outputdir,timestr) using 2:4: xtic('') title "k=3", \
+plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 2:4: xtic('') title "k=1" lc rgb "red", \
+	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 2:4: xtic('') title "k=2" lc rgb "blue", \
+	sprintf("%s/%s/3k-tput.data",outputdir,timestr) using 2:4: xtic('') title "k=3" lc rgb "green", \
 	sprintf("%s/%s/5k-tput.data",outputdir,timestr) using 2:4: xtic('')
 
 #plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 2:4:xtic(1) title "k=1", \
