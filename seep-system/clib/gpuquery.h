@@ -26,7 +26,8 @@ typedef struct gpu_query {
 	int phase;
 	pthread_t thr;
 
-	gpuContextP contexts [DEPTH];
+	gpuContextP contexts [NCONTEXTS];
+
 } gpu_query_t;
 
 /* Constractor */

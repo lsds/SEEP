@@ -121,6 +121,9 @@ void gpu_context_setOutput (gpuContextP q, int ndx, void *buffer, int size,
 }
 
 #ifdef GPU_PROFILE
+static unsigned first = 0;
+static cl_ulong reference = 0;
+
 static float normalise (cl_ulong p, cl_ulong q) {
 	float result = ((float) (p - q) / 1000.);
 	return result;
@@ -128,7 +131,7 @@ static float normalise (cl_ulong p, cl_ulong q) {
 
 static void printEventProfilingInfo (cl_event event, const char *acronym) {
 	cl_ulong q, s, x, f; /* queued, submitted, start, and end timestamps */
-	float _s,_x,_f;
+	float   _q,_s,_x,_f;
 	int error = 0;
 	error |= clGetEventProfilingInfo(
 		event, 
@@ -154,10 +157,15 @@ static void printEventProfilingInfo (cl_event event, const char *acronym) {
 		sizeof(cl_ulong), 
 		&f, 
 		NULL);
-	_s = normalise(s, q);
-	_x = normalise(x, q);
-	_f = normalise(f, q);
-	fprintf(stdout, "[PRF] %5s\t s %10.1f\t x %10.1f\t f %10.1f t %10.1f\n", acronym, _s, _x, _f, ((float) (f - x)) / 1000.);
+	if (! first) {
+		reference = q;
+		first = 1;
+	}
+	_q = normalise(q, reference);
+	_s = normalise(s, reference);
+	_x = normalise(x, reference);
+	_f = normalise(f, reference);
+	fprintf(stdout, "[PRF] %5s\tq %10.1f\ts %10.1f\t x %10.1f\t f %10.1f t %10.1f\n", acronym, _q, _s, _x, _f, ((float) (f - x)) / 1000.);
 }
 #endif
 
@@ -250,6 +258,11 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 			error, getErrorMessage(error), __FUNCTION__);
 		exit (1);
 	}
+#ifdef GPU_PROFILE
+	printEventProfilingInfo(q->write_event, "W");
+	gpu_context_profileQuery (q);
+	printEventProfilingInfo(q->read_event, "R");
+#endif
 	q->readCount -= 1;
 	clReleaseEvent(q->read_event);
 	return ;

@@ -11,6 +11,10 @@
 // #undef GPU_IIDMVMT
 #define GPU_IIDMVMT
 
+/* Measure gpu_query_exec() */
+#undef GPU_TMSRMNT
+// #define GPU_TMSRMNT
+
 #undef dbg
 #ifdef GPU_VERBOSE
 #	define dbg(fmt, args...) fprintf(stdout, fmt, ## args)

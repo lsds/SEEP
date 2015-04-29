@@ -20,11 +20,19 @@ static int gpu_query_exec_1 (gpuQueryP, size_t *, size_t *, queryOperatorP, JNIE
 static int gpu_query_exec_2 (gpuQueryP, size_t *, size_t *, queryOperatorP, JNIEnv *, jobject, int); /* with pipelining */
 static int gpu_query_exec_3 (gpuQueryP, size_t *, size_t *, queryOperatorP, JNIEnv *, jobject, int); /* copy w/o  worker thread */
 
+#ifdef GPU_TMSRMNT
+#include "timer.h"
+timerP timer;
+#endif
+
 #ifdef GPU_IIDMVMT
 static int gpu_query_exec_4 (gpuQueryP, size_t *, size_t *, queryOperatorP, JNIEnv *, jobject, int); /* copy with worker thread */
 static int gpu_query_exec_5 (gpuQueryP, size_t *, size_t *, queryOperatorP, JNIEnv *, jobject, int); /* with pipelining and with worker thread */
 
 static volatile unsigned count = 0;
+
+pthread_mutex_t *mutex;
+pthread_cond_t *reading, *waiting;
 
 /* Current versions */
 static gpuContextP    __ctx = NULL;
@@ -54,11 +62,15 @@ static void *output_handler (void *args) {
 	started = 1;
 	
 	while (started) {
+
+		pthread_mutex_lock (mutex);
 		while (count != 1)
-			;
+			pthread_cond_wait(waiting, mutex);
 		gpu_context_readOutput (__ctx, __op_->readOutput, env, __obj, qid);
 		/* Block again */
 		count -= 1;
+		pthread_mutex_unlock (mutex);
+		pthread_cond_signal (reading);
 	}
 	
 	(*jvm)->DetachCurrentThread(jvm);
@@ -81,6 +93,16 @@ void gpu_query_init (gpuQueryP q, JNIEnv *env, int qid) {
 	(*env)->GetJavaVM(env, &handler.jvm);
 	handler.env = env;
 	handler.qid = qid;
+
+	/* Initialise mutex and conditions */
+	count = 0;
+	mutex = (pthread_mutex_t *) malloc (sizeof(pthread_mutex_t));
+	pthread_mutex_init (mutex, NULL);
+	reading = (pthread_cond_t *) malloc (sizeof(pthread_cond_t));
+	pthread_cond_init (reading, NULL);
+	waiting = (pthread_cond_t *) malloc (sizeof(pthread_cond_t));
+	pthread_cond_init (waiting, NULL);
+
 	/* Initialise thread */
 	if (pthread_create(&q->thr, NULL, output_handler, (void *) &handler)) {
 		fprintf(stderr, "error: failed to create output handler thread\n");
@@ -88,7 +110,11 @@ void gpu_query_init (gpuQueryP q, JNIEnv *env, int qid) {
 	}
 	/* Wait until thread attaches itself to the JVM */
 	while (! started) ;
-#endif	
+#endif
+
+#ifdef GPU_TMSRMNT
+	timer = timer_new();
+#endif
 	return ;
 }
 
@@ -145,7 +171,7 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 	}
 	p->ndx = -1;
 	p->phase = 0;
-	for (i = 0; i < DEPTH; i++) {
+	for (i = 0; i < NCONTEXTS; i++) {
 		p->contexts[i] =
 			gpu_context (p->device, p->context, p->program, _kernels, _inputs, _outputs);
 	}
@@ -155,7 +181,7 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 void gpu_query_free (gpuQueryP p) {
 	int i;
 	if (p) {
-		for (i = 0; i < DEPTH; i++)
+		for (i = 0; i < NCONTEXTS; i++)
 			gpu_context_free (p->contexts[i]);
 		if (p->program)
 			clReleaseProgram (p->program);
@@ -169,7 +195,7 @@ int gpu_query_setInput (gpuQueryP q, int ndx, void *buffer, int size) {
 	if (ndx < 0 || ndx > q->contexts[0]->kernelInput.count)
 		return -1;
 	int i;
-	for (i = 0; i < DEPTH; i++)
+	for (i = 0; i < NCONTEXTS; i++)
 		gpu_context_setInput (q->contexts[i], ndx, buffer, size);
 	return 0;
 }
@@ -182,7 +208,7 @@ int gpu_query_setOutput (gpuQueryP q, int ndx, void *buffer, int size,
 	if (ndx < 0 || ndx > q->contexts[0]->kernelOutput.count)
 		return -1;
 	int i;
-	for (i = 0; i < DEPTH; i++)
+	for (i = 0; i < NCONTEXTS; i++)
 		gpu_context_setOutput (q->contexts[i], ndx, buffer, size, 
 			writeOnly, doNotMove, bearsMark, readEvent);
 	return 0;
@@ -195,7 +221,7 @@ int gpu_query_setKernel (gpuQueryP q, int ndx, const char * name,
 	if (ndx < 0 || ndx > q->contexts[0]->kernel.count)
 		return -1;
 	int i;
-	for (i = 0; i < DEPTH; i++)
+	for (i = 0; i < NCONTEXTS; i++)
 		gpu_context_setKernel (q->contexts[i], ndx, name, callback, args);
 	return 0;
 }
@@ -206,9 +232,9 @@ gpuContextP gpu_context_switch (gpuQueryP p) {
 		return NULL;
 	}
 #ifdef GPU_VERBOSE
-	int current = (p->ndx) % DEPTH;
+	int current = (p->ndx) % NCONTEXTS;
 #endif
-	int next = (++p->ndx) % DEPTH;
+	int next = (++p->ndx) % NCONTEXTS;
 #ifdef GPU_VERBOSE
 	if (current >= 0)
 		dbg ("[DBG] switch from %d (%lld read(s), %lld write(s)) to context %d\n",
@@ -220,9 +246,14 @@ gpuContextP gpu_context_switch (gpuQueryP p) {
 int gpu_query_exec (gpuQueryP q, size_t *threads, size_t *threadsPerGroup,
 	queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
 	
-	/* return gpu_query_exec_1 (q, threads, threadsPerGroup, operator, env, obj, qid); */
-	/* return gpu_query_exec_2 (q, threads, threadsPerGroup, operator, env, obj, qid); */
-	   return gpu_query_exec_5 (q, threads, threadsPerGroup, operator, env, obj, qid);   
+#ifndef GPU_IIDMVMT
+	if (NCONTEXTS > 1)
+		return gpu_query_exec_2 (q, threads, threadsPerGroup, operator, env, obj, qid);
+	else
+		return gpu_query_exec_1 (q, threads, threadsPerGroup, operator, env, obj, qid);
+#else
+	return gpu_query_exec_5 (q, threads, threadsPerGroup, operator, env, obj, qid);
+#endif
 }
 
 /* */
@@ -254,10 +285,6 @@ static int gpu_query_exec_1 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	
 	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
-#ifdef GPU_PROFILE
-	gpu_context_profileQuery (p);
-#endif
-
 	return 0;
 }
 
@@ -270,22 +297,27 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	
 	gpuContextP theOther = (operator->execKernel(p));
 	
+#ifdef GPU_TMSRMNT
+	timer_start(timer);
+#endif
 	/* Wait for write event */
 	gpu_context_waitForWriteEvent (p);
-	
+
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
-	
+
 	if (theOther) {
-		
+
 		/* Wait for read event from previous query */
 		gpu_context_waitForReadEvent (theOther);
 		/* Read output */
 		gpu_context_readOutput (theOther, operator->readOutput, env, obj, qid);
-#ifdef GPU_PROFILE
-		gpu_context_profileQuery (theOther);
-#endif
 	}
+
+#ifdef GPU_TMSRMNT
+	tstamp_t dt = timer_getElapsedTime(timer);
+	fprintf (stderr, "[PRF] copy input/output %10llu usecs\n", dt);
+#endif
 	
 	gpu_context_moveInputBuffers (p);
 	
@@ -294,7 +326,7 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpu_context_moveOutputBuffers (p);
 	
 	gpu_context_flush (p);
-	
+
 	return 0;
 }
 
@@ -336,11 +368,22 @@ static int gpu_query_exec_4 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	__obj = obj;
 	if (theOther) {
 		/* Notify output handler */
+		pthread_mutex_lock (mutex);
 		count = 1;
+		pthread_mutex_unlock (mutex);
+		pthread_cond_signal (waiting);
 	}
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 	
+	/* Wait until read output from previous query has finished */
+	if (theOther) {
+		pthread_mutex_lock (mutex);
+		while (count == 1)
+			pthread_cond_wait (reading, mutex);
+		pthread_mutex_unlock (mutex);
+	}
+
 	return 0;
 }
 
@@ -352,7 +395,10 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpuContextP p = gpu_context_switch (q);
 	
 	gpuContextP theOther = (operator->execKernel(p));
-	
+
+#ifdef GPU_TMSRMNT
+	timer_start(timer);
+#endif
 	/* Set static variables */
 	__ctx = theOther;
 	__op_ = operator;
@@ -361,7 +407,10 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 		/* Wait for read event from previous query */
 		gpu_context_waitForReadEvent (theOther);
 		/* Notify output handler */
+		pthread_mutex_lock (mutex);
 		count = 1;
+		pthread_mutex_unlock (mutex);
+		pthread_cond_signal (waiting);
 	}
 	
 	/* Wait for write event */
@@ -370,22 +419,26 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 	
+	/* Wait until read output from previous query has finished */
+	if (theOther) {
+		pthread_mutex_lock (mutex);
+		while (count == 1)
+			pthread_cond_wait (reading, mutex);
+		pthread_mutex_unlock (mutex);
+	}
+#ifdef GPU_TMSRMNT
+	tstamp_t dt = timer_getElapsedTime(timer);
+	fprintf (stderr, "[PRF] copy input/output %10llu usecs\n", dt);
+#endif
+
 	gpu_context_moveInputBuffers (p);
 	
-	// gpu_context_submitKernel (p, threads, threadsPerGroup);
+	gpu_context_submitKernel (p, threads, threadsPerGroup);
 	
 	gpu_context_moveOutputBuffers (p);
 	
 	gpu_context_flush (p);
-	
-	/* Wait until read output from previous query has finished */
-	while (count == 1);
-	
-#ifdef GPU_PROFILE
-	if (theOther)
-		gpu_context_profileQuery (p);
-#endif
-	
+
 	return 0;
 }
 #endif

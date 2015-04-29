@@ -34,7 +34,7 @@ static int Q; /* Number of queries */
 static int freeIndex;
 static gpuQueryP queries [MAX_QUERIES];
 
-static gpuContextP previousQuery = NULL;
+static gpuContextP previousQuery [DEPTH];
 
 void callback_setKernelDummy     (cl_kernel, gpuContextP, int *);
 void callback_setKernelProject   (cl_kernel, gpuContextP, int *);
@@ -98,6 +98,8 @@ void gpu_init (int _queries) { /* Initialise `n` queries */
 	int i;
 	for (i = 0; i < MAX_QUERIES; i++)
 		queries[i] = NULL;
+	for (i = 0; i < DEPTH; i++)
+		previousQuery[i] = NULL;
 	return;
 }
 
@@ -814,14 +816,18 @@ void callback_readOutput (gpuContextP context,
 }
 
 gpuContextP callback_execKernel (gpuContextP context) {
+	gpuContextP p = previousQuery[0];
 #ifdef GPU_VERBOSE
-	if (! previousQuery)
+	if (! p)
 		dbg("[DBG] (null) callback_execKernel(%p)\n", context);
 	else
-		dbg("[DBG] %p callback_execKernel(%p)\n", previousQuery, context);
+		dbg("[DBG] %p callback_execKernel(%p)\n", p, context);
 #endif
-	gpuContextP p = previousQuery;
-	previousQuery = context;
-	return p; 
+	/* Shift */
+	int i;
+	for (i = 0; i < DEPTH - 1; i++) {
+		previousQuery[i] = previousQuery [i + 1];
+	}
+	previousQuery[DEPTH - 1] = context;
+	return p;
 }
-
