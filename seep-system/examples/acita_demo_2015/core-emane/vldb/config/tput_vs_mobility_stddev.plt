@@ -1,8 +1,8 @@
 set terminal pdf 
 set output sprintf("%s/%s/tput_vs_mobility_stddev.pdf",outputdir,timestr)
 
-set xlabel "Node speed (m/s)" font ", 16" offset 1
-set ylabel "Throughput (Kb/s)" font ", 16" offset 1
+set xlabel "Node speed (m/s)" font ", 16" 
+set ylabel "Throughput (Kb/s)" font ", 16" offset -2
 #set yrange [0:100]
 set tics font ", 10"
 
@@ -13,6 +13,7 @@ set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
 set boxwidth 0.1
 set style fill empty 
+set key spacing 1.75 font ", 12"
 
 plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \

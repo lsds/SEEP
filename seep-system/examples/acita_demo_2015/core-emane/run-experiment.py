@@ -22,7 +22,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         run_experiment(ks, mobilities, session_ids, params, time_str, data_dir )
 
     record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
-    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
+    #record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
 
     for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
 		'latency_vs_mobility', 'tput_vs_mobility_stddev', 
