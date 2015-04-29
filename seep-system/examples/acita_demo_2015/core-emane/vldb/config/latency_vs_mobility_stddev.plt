@@ -2,9 +2,10 @@ set terminal pdf
 set output sprintf("%s/%s/latency_vs_mobility_stddev.pdf",outputdir,timestr)
 
 set xlabel "Node speed (m/s)" font ", 16"
-set ylabel "Latency (ms)" font ", 16" offset -2
-#set yrange [0:100]
+set ylabel "95% Latency (ms)" font ", 16" offset -3
+set yrange [0:5000]
 set tics font ", 10"
+#set xtics 0,5,15
 
 set border linewidth 1.5
 set style line 1 linewidth 2.5 linecolor rgb "red"
@@ -13,7 +14,9 @@ set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
 set boxwidth 0.1
 set style fill empty 
-set key spacing 1.75 font ", 12"
+set key bottom right spacing 1.75 font ", 12"
+set bmargin 4
+set lmargin 15 
 
 plot sprintf("%s/%s/1k-lat.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 	sprintf("%s/%s/2k-lat.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \

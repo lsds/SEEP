@@ -14,6 +14,8 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 set boxwidth 0.1
 set style fill empty 
 set key spacing 1.75 font ", 12"
+set bmargin 4
+set lmargin 13 
 
 plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \
