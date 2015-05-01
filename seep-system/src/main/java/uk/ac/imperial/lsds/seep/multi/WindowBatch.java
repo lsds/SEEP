@@ -133,8 +133,8 @@ public class WindowBatch {
 	}
 	
 	public void setRange (long batchStartTime, long batchEndTime) {
-		this.batchStartTime = batchStartTime;
-		this.batchEndTime = batchEndTime;
+		this.batchStartTime = unpackTimestamp(batchStartTime);
+		this.batchEndTime   = unpackTimestamp(batchEndTime);
 	}
 	
 	private static int __indexOf (int idx) { return 4 * idx; }
@@ -176,7 +176,7 @@ public class WindowBatch {
 			b.putInt(__indexOf(p), 0);
 			
 			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
-				long t = buffer.getLong(i);
+				long t = getTimestamp(i);
 				/* 
 				 * Should we open new windows? 
 				 */
@@ -243,7 +243,7 @@ public class WindowBatch {
 			this.windowStartPointers[p] = this.batchStartPointer;
 			
 			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
-				long t = buffer.getLong(i);
+				long t = getTimestamp(i);
 				/* 
 				 * Should we open new windows? 
 				 */
@@ -280,9 +280,9 @@ public class WindowBatch {
 		if (taskId == 0)
 			return ;
 		
-		int tuple_ = schema.getByteSizeOfTuple ();
+		int tuple_  = schema.getByteSizeOfTuple ();
 		int window_ = (int) windowDefinition.getSize();
-		int slide_ = (int) windowDefinition.getSlide();
+		int slide_  = (int) windowDefinition.getSlide();
 		
 		int idx;
 		
@@ -311,12 +311,12 @@ public class WindowBatch {
 			 * whose timestamp is less than `previousStartTime` 
 			 */
 			idx = batchStartPointer;
-			long t = buffer.getLong(idx);
+			long t = getTimestamp(idx);
 			while (t >= previousStartTime) {
 				idx -= tuple_;
 				if (idx < 0)
 					idx += buffer.capacity();
-				t = buffer.getLong(idx);
+				t = getTimestamp(idx);
 			}
 			this.prevStartPointer = idx + tuple_;
 			
@@ -325,13 +325,14 @@ public class WindowBatch {
 			 * whose timestamp is greater than `previousEndTime` 
 			 */
 			idx = prevStartPointer;
-			t = buffer.getLong(idx);
+			t = getTimestamp(idx);
 			while (t < previousEndTime) {
 				idx += tuple_;
-				t = buffer.getLong(idx);
+				t = getTimestamp(idx);
 			}
 			this.prevEndPointer = idx;
 		}
+		
 		System.out.println(String.format("[DBG] last window of previous batch starts %10d ends %10d",
 				this.prevStartPointer, this.prevEndPointer));
 	}
@@ -480,6 +481,34 @@ public class WindowBatch {
 	
 	public void setLatencyMark(int latencyMark) {
 		this.latencyMark  = latencyMark;
+	}
+	
+	/*
+	 * Normalise a pointer to a location in the 
+	 * underlying byte buffer.
+	 * 
+	 * Avoids "out of bounds" memory accesses,
+	 * especially when we copy memory via the
+	 * Unsafe interface.
+	 */
+	public int normalise(int pointer) {
+		
+		return this.buffer.normalise((long) pointer);
+	}
+	
+	private long getTimestamp (int index) {
+		long value = this.buffer.getLong(0);
+		if (Utils.LATENCY_ON)
+			return (long) Utils.unpack(0, value);
+		else 
+			return value;
+	}
+	
+	private long unpackTimestamp (long timestamp) {
+		if (Utils.LATENCY_ON)
+			return (long) Utils.unpack(0, timestamp);
+		else 
+			return timestamp;
 	}
 }
 

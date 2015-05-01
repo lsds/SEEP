@@ -25,7 +25,6 @@ public class TestEsper {
 		configuration.addEventType(eventType, bindingForEventType);
 	}
 
-
 	public void initEngine() {
 		// do not use internal timer
 		configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
@@ -43,35 +42,50 @@ public class TestEsper {
 		EPStatement statement = esperService.getEPAdministrator().createEPL(query);
 
 		/*
-		 * Set a listener called when statement matches
+		 * Set a listener; called when statement matches
 		 */
 		statement.addListener(new UpdateListener() {
+			
 			long count = 0L;
-			long previous = 0L; 
+			long previous = 0L;
+			long delta, STEP = 1000000L;
 			long t, _t = 0L;
-			double dt, rate, MB;
-			double _1MB = 1048576.0;
-			long Bytes = 0;
+			double dt, rate;
 			
 			@Override
-			public void update(EventBean[] newEvents, EventBean[] oldEvents) {
+			public void update(EventBean [] newEvents, EventBean [] oldEvents) {
+				
 				if (newEvents != null) {
-					for (EventBean e : newEvents) { 
+					
+					for (EventBean e : newEvents) {
+						
 						// System.out.println(e);
+						
+						/*
+						 * Question:
+						 * 
+						 * Can we get the tuple size here, e.g. by iterating over
+						 * all attributes and check if they are instances of Long
+						 * (+8 bytes), or Integer (+4 bytes) and so on?
+						 * 
+						 */
+						
 						count ++;
-						//System.out.println(count);
-						Bytes += 64;
-						if (count % 1000 == 0) {
-							t = System.currentTimeMillis();
+						
+						if (count % STEP == 0) {
+							
+							/* System.out.println(String.format("[DBG] [Listener] count %10d _t %20d previous %20d", 
+							 * count, _t, previous));
+							 */
+							t = System.nanoTime();
 							if (_t > 0 && previous > 0) {
-								dt = ((double) (t - _t)) / 1000.;
-								MB = ((double) (Bytes - previous)) / _1MB;
-								rate = MB / dt;
-								System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
-								MB, dt, rate, ((rate * 8.)/1000.)));
+								dt = ((double) (t - _t)) / 1000000000.; /* In seconds */
+								delta = (count - previous);
+								rate = ((double) delta) / dt;
+								System.out.println(String.format("%10d tuples %10.3f sec %10.3f tuples/s", delta, dt, rate));
 							}
 							_t = t;
-							previous = Bytes;
+							previous = count;
 						}
 					}
 				}
