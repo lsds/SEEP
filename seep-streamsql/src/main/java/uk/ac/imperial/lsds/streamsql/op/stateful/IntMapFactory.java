@@ -5,35 +5,40 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapFactory {
 	
-	private static int _pool_size = 1;
+	private static int N = Runtime.getRuntime().availableProcessors();
 	
-	private static int idx = 0;
+	private static int _pool_size = 1;
 	
 	public static AtomicLong count;
 	
-	private static ConcurrentLinkedQueue<IntMap> pool = 
-		new ConcurrentLinkedQueue<IntMap>();
+	@SuppressWarnings("unchecked")
+	private static ConcurrentLinkedQueue<IntMap> [] pool = 
+		(ConcurrentLinkedQueue<IntMap> []) new ConcurrentLinkedQueue [N];
 	
 	static {
-		int i = _pool_size;
-		while (i-- > 0)
-			pool.add (new IntMap(idx++));
-		count = new AtomicLong(_pool_size);
+		for (int n = 0; n < N; n++) {
+			pool[n] = new ConcurrentLinkedQueue<IntMap>();
+			int i = _pool_size;
+			while (i-- > 0)
+				pool[n].add (new IntMap());
+		}
+		count = new AtomicLong(_pool_size * N);
 	}
 	
-	public static IntMap newInstance () {
-		IntMap e  = pool.poll();
+	public static IntMap newInstance (int pid) {
+		IntMap e = pool[pid].poll();
 		if (e == null) {
-			e = new IntMap(idx++);
+			e = new IntMap();
 			count.incrementAndGet();
 		}
-		// System.out.println(String.format("[DBG] getting IntMap instance %04d", e.getId()));
+		e.setId(pid);
+		/* System.out.println(String.format("[DBG] getting IntMap instance (pid=%04d)", e.getId())); */
 		return e;
 	}
 	
 	public static void free (IntMap e) {
 		/* The pool is ever growing based on peek demand */
 		// System.out.println(String.format("[DBG] freeing IntMap instance %04d", e.getId()));
-		pool.offer (e);
+		pool[e.getId()].offer (e);
 	}
 }

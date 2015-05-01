@@ -4,6 +4,7 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -315,6 +316,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		IntMap keyOffsets;
 		IntMap windowTupleCount = null;
 		
+		int pid = ThreadMap.getInstance().get(Thread.currentThread().getId());
+		
 		byte [] l_bytes = new byte [8];
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
@@ -327,10 +330,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			 */
 			if (inWindowStartOffset != -1) {
 
-				keyOffsets = IntMapFactory.newInstance();
+				keyOffsets = IntMapFactory.newInstance(pid);
 				/* In case of an average, get a second hash table to store the `count` per entry. */
 				if (this.aggregationType == AggregationType.AVG) 
-					windowTupleCount = IntMapFactory.newInstance();
+					windowTupleCount = IntMapFactory.newInstance(pid);
 				
 				windowBuffer.position(0);
 				
@@ -574,14 +577,16 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int prevWindowStart = -1;
 		int prevWindowEnd = -1;
 		
-		IntMap keyOffsets = IntMapFactory.newInstance();
-		IntMap windowTupleCount = null;
+		int pid = ThreadMap.getInstance().get(Thread.currentThread().getId());
 		
-		byte[] l_bytes = new byte[8];
+		IntMap keyOffsets = IntMapFactory.newInstance(pid);
+		IntMap windowTupleCount = null;
 
 		if (this.aggregationType == AggregationType.AVG) 
-			windowTupleCount = IntMapFactory.newInstance();
-
+			windowTupleCount = IntMapFactory.newInstance(pid);
+		
+		byte[] l_bytes = new byte[8];
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];

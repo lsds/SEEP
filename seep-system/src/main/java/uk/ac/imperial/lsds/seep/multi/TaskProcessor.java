@@ -58,6 +58,8 @@ public class TaskProcessor implements Runnable {
 			TheCPU.getInstance().bind(pid + 1);
 		}
 		
+		ThreadMap.getInstance().register(Thread.currentThread().getId());
+		
 		while (true) {
 			try {
 				

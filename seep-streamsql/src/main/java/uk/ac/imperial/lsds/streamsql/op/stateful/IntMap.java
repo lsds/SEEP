@@ -2,8 +2,9 @@ package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 
 public class IntMap {
-
-	public static final int INTMAP_CONTENT_SIZE = 1000;
+	
+	/* Note that the following value must be a power of two (see `hash`). */
+	public static final int INTMAP_CONTENT_SIZE = 1024;
 	
 	IntMapEntry[] content;
 	
@@ -15,11 +16,11 @@ public class IntMap {
 		return this.size;
 	}
 	
-	public IntMap(int id) {
+	public IntMap() {
 		content = new IntMapEntry[INTMAP_CONTENT_SIZE];
 		for (int i = 0; i < content.length; i++)
 			content[i] = null;
-		this.id = id;
+		this.id = -1;
 	}
 	
 	public int getId () {
@@ -34,7 +35,7 @@ public class IntMap {
 		IntMapEntry current = content[hash(key)];
 		
 		if (current == null) {
-			content[hash(key)] = IntMapEntryFactory.newInstance(key, value, null);
+			content[hash(key)] = IntMapEntryFactory.newInstance(id, key, value, null);
 			size++;
 		}
 		else {
@@ -45,7 +46,7 @@ public class IntMap {
 				current.value = value;
 			}
 			else {
-				current.next = IntMapEntryFactory.newInstance(key, value, null);
+				current.next = IntMapEntryFactory.newInstance(id, key, value, null);
 				size++;
 			}
 		}
@@ -90,7 +91,7 @@ public class IntMap {
 				IntMapEntry e = content[i];
 				while (e != null) {
 					IntMapEntry f = e.next;
-					e.release(); 
+					e.release(id); 
 					count++;
 					e = f;
 				}
@@ -122,37 +123,36 @@ public class IntMap {
 				else
 					previous.next = null;
 			}
-			current.release();
+			current.release(id);
 			size--;
 		}
 	}
+	
+	/*
+	public int[] keySet() {
+		int[] result = new int[size];
+		
+		int k = 0;
+		for (int i = 0; i < INTMAP_CONTENT_SIZE; i++) {
+			if (content[i] != null) {
+				IntMapEntry e = content[i];
+				result[k++] = e.key;
+				while (e.next != null) {
+					e = e.next;
+					result[k++] = e.key;
+				}
+			}
+		}
+		return result;
+	}
+	*/
 
-//	public int[] keySet() {
-//		int[] result = new int[size];
-//		
-//		int k = 0;
-//		for (int i = 0; i < INTMAP_CONTENT_SIZE; i++) {
-//			if (content[i] != null) {
-//				IntMapEntry e = content[i];
-//				result[k++] = e.key;
-//				while (e.next != null) {
-//					e = e.next;
-//					result[k++] = e.key;
-//				}
-//			}
-//		}
-//		return result;
-//	}
-
-	public IntMapEntry[] getEntries() {
+	public IntMapEntry [] getEntries() {
 		return this.content;
 	}
 	
-	public void release() {
-		// System.out.println(String.format("[DBG] %d entries in map %d", this.size, this.getId()));
-		// int freed = 
+	public void release () {
 		clear();
-		// System.out.println(String.format("[DBG] %d entries free'd", freed));
 		IntMapFactory.free(this);
 	}
 }

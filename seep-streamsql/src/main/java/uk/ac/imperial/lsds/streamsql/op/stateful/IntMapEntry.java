@@ -20,7 +20,7 @@ public class IntMapEntry {
 		this.next = next;
 	}
 	
-	public void release() {
-		IntMapEntryFactory.free(this);
+	public void release(int pid) {
+		IntMapEntryFactory.free(pid, this);
 	}
 }
