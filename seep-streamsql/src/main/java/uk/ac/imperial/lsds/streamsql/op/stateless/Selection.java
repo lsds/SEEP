@@ -11,9 +11,14 @@ import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
-
+	
+	private boolean selectivity = false;
+	
+	private long invoked = 0L;
+	private long matched = 0L;
+	
 	private IPredicate predicate;
-
+	
 	public Selection(IPredicate predicate) {
 		this.predicate = predicate;
 	}
@@ -26,7 +31,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		sb.append(")");
 		return sb.toString();
 	}
-
+	
 	@Override
 	public void accept(OperatorVisitor ov) {
 		ov.visit(this);
@@ -39,57 +44,79 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		
-		/*
-		 * Make sure the batch is initialised
-		 */
 		windowBatch.initWindowPointers();
 
-		int[] startPointers = windowBatch.getWindowStartPointers();
-		int[] endPointers = windowBatch.getWindowEndPointers();
+		int [] startPointers = windowBatch.getWindowStartPointers();
+		int []   endPointers = windowBatch.getWindowEndPointers();
 		
-		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		IQueryBuffer  inBuffer = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
 		
-		if (outBuffer.position() > 0)
-			System.err.println("buffer position at initialisation (" + outBuffer.position() + ")");
-			
+		if (outBuffer.position() > 0) {
+			System.err.println("error: invalid initial buffer position (" + outBuffer.position() + ")");
+			System.exit(1);
+		}
+		
 		ITupleSchema schema = windowBatch.getSchema();
-
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
+		if (selectivity) {
+			invoked = 0;
+			matched = 0;
+		}
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+			
 			int inWindowStartOffset = startPointers[currentWindow];
-			int inWindowEndOffset = endPointers[currentWindow];
-
+			int inWindowEndOffset   = endPointers[currentWindow];
+			
 			/*
-			 * If the window is empty, we skip it 
+			 * If the window is empty, skip it 
 			 */
 			if (inWindowStartOffset != -1) {
 				
 				startPointers[currentWindow] = outBuffer.position();
-				// for all the tuples in the window
+				/* For all the tuples in the window... */
 				while (inWindowStartOffset < inWindowEndOffset) {
+					if (selectivity)
+						invoked ++;
 					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
-						
-						if (outBuffer.position() >= outBuffer.capacity())
-							System.err.println("error: buffer overflow when running task " + windowBatch.getTaskId());
-						inBuffer.appendBytesTo(inWindowStartOffset, byteSizeOfTuple, outBuffer);
-					} 
-//					else {
-//						System.err.println("Unexpected error");
-//						System.exit(1);
-//					}
-					outBuffer.put(schema.getDummyContent());
+						if (selectivity)
+							matched ++;
+						/* Write tuple to result buffer */
+						if (outBuffer.position() >= outBuffer.capacity()) {
+							System.err.println("error: result buffer overflow");
+							System.exit(1);
+						}
+						inBuffer.appendBytesTo (inWindowStartOffset, byteSizeOfTuple, outBuffer);
+					}
+					/*
+					 * NOTE:
+					 * 
+					 * What is the purpose of the putting the dummy content?
+					 * Don't we copy `byteSizeOfTuple` bytes?
+					 *
+					 * outBuffer.put(schema.getDummyContent());
+					 */
 					inWindowStartOffset += byteSizeOfTuple;
 				}
 				endPointers[currentWindow] = outBuffer.position() - 1;
 			}
 		}
 		
-		// release old buffer (will return Unbounded Buffers to the pool)
+		if (selectivity) {
+			if (invoked > 0) {
+				System.out.println(String.format("[DBG] [Selection] batch selectivity is %4.1f%%", 
+						((double) matched) * 100D / ((double) invoked)));
+			}
+		}
+		
+		/* Release old buffer (returns UnboundedBuffer to the pool) */
 		inBuffer.release();
-		// reuse window batch by setting the new buffer
+		
+		/* Reuse window batch, setting the new buffer as its data */
 		windowBatch.setBuffer(outBuffer);
+		
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
 
@@ -98,5 +125,4 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 			WindowBatch secondWindowBatch, IWindowAPI api) {
 		throw new UnsupportedOperationException("Selection is single input operator and does not operate on two streams");
 	}
-
 }

@@ -17,6 +17,11 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private static boolean computePointers = false;
 	private static boolean debug = false;
+	
+	private boolean selectivity = true;
+	
+	private long invoked = 0L;
+	private long matched = 0L;
 
 	private IPredicate predicate;
 
@@ -73,6 +78,11 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				(secondEndIndex - secondCurrentIndex)/secondByteSizeOfInTuple,
 				secondWindowBatch.getFreeOffset()
 				));
+		}
+		
+		if (selectivity) {
+			invoked = 0L;
+			matched = 0L;
 		}
 		
 		long firstCurrentIndexTime;
@@ -143,6 +153,8 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 					 * Scan second window
 					 */
 					for (int i = secondCurrentWindowStart; i < secondCurrentWindowEnd; i += secondByteSizeOfInTuple) {
+						if (selectivity)
+							invoked++;
 						if (
 							predicate == null || 
 							predicate.satisfied (
@@ -150,6 +162,8 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 								secondInBuffer, secondInSchema, i
 							)
 						) {
+							if (selectivity)
+								matched++;
 							 firstInBuffer.appendBytesTo(firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
 							secondInBuffer.appendBytesTo(i, secondByteSizeOfInTuple, outBuffer);
 							// Write dummy content if needed
@@ -211,6 +225,8 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 					 * Scan first window
 					 */
 					for (int i = firstCurrentWindowStart; i < firstCurrentWindowEnd; i += firstByteSizeOfInTuple) {
+						if (selectivity)
+							invoked++;
 						if (
 							predicate == null || 
 							predicate.satisfied (
@@ -218,6 +234,9 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 								secondInBuffer, secondInSchema, secondCurrentIndex
 							)
 						) {
+							if (selectivity)
+								matched++;
+							
 							firstInBuffer.appendBytesTo(i, firstByteSizeOfInTuple, outBuffer);
 							secondInBuffer.appendBytesTo(secondCurrentIndex, secondByteSizeOfInTuple, outBuffer);
 							// Write dummy content if needed
@@ -269,6 +288,17 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				}
 			}
 		}
+		
+		if (selectivity) {
+			if (invoked > 0) {
+				System.out.println(String.format("[DBG] [Join] batch selectivity is %4.1f%%", 
+						((double) matched) * 100D / ((double) invoked)));
+			} else {
+				System.out.println(String.format("[DBG] [Join] batch selectivity is 0%% (invoked %d times)", 
+						invoked));
+			}
+		}
+		
 		/* Release old buffers (return UnboundedBuffer objects to the pool) */
 		 firstInBuffer.release();
 		secondInBuffer.release();

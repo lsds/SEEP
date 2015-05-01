@@ -85,6 +85,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);		
 		}
+		
 		/*
 		Expression [] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
 		tmpAllOutAttributes[0] = this.timestampReference;
