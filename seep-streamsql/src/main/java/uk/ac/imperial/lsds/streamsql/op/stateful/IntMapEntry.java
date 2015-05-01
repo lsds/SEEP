@@ -7,6 +7,8 @@ public class IntMapEntry {
 	public int value;
 	
 	public IntMapEntry next;
+	
+	private long autoIndex = -1;
 
 	public IntMapEntry(int key, int value, IntMapEntry next) {
 		this.key = key;
@@ -22,5 +24,13 @@ public class IntMapEntry {
 	
 	public void release(int pid) {
 		IntMapEntryFactory.free(pid, this);
+	}
+	
+	public long getAutoIndex () {
+		return this.autoIndex;
+	}
+	
+	public void setAutoIndex (long autoIndex) {
+		this.autoIndex = autoIndex;
 	}
 }

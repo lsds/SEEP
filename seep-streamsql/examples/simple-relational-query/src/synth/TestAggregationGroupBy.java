@@ -128,7 +128,7 @@ public class TestAggregationGroupBy {
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
 			uoperator = new MicroOperator (gpuAggCode, cpuAggCode, 1);
-		else
+		else 
 			uoperator = new MicroOperator (cpuAggCode, gpuAggCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);

@@ -22,7 +22,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	private static boolean debug = true;
+	private static boolean debug = false;
 
 	private Expression[] groupByAttributes;
 
@@ -318,6 +318,10 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		int pid = ThreadMap.getInstance().get(Thread.currentThread().getId());
 		
+		if (debug)
+			System.out.println(String.format("[DBG] %20s, thread id %03d pool id %03d", 
+					Thread.currentThread().getName(), Thread.currentThread().getId(), pid));
+		
 		byte [] l_bytes = new byte [8];
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
@@ -331,6 +335,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (inWindowStartOffset != -1) {
 
 				keyOffsets = IntMapFactory.newInstance(pid);
+				// System.out.println("[DBG] keyOffsets " + keyOffsets);
+				
 				/* In case of an average, get a second hash table to store the `count` per entry. */
 				if (this.aggregationType == AggregationType.AVG) 
 					windowTupleCount = IntMapFactory.newInstance(pid);
@@ -535,7 +541,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		if (debug)
 			System.out.println("[DBG] output buffer position is " + outBuffer.position());
 		
-		/* Print tuples */
+		/* Print tuples
 		outBuffer.close();
 		int tid = 1;
 		while (outBuffer.hasRemaining()) {
@@ -547,12 +553,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			outBuffer.getByteBuffer().getFloat()
 			));
 		}
-		
+		*/
 		api.outputWindowBatchResult(-1, windowBatch);
-		/**/
+		/*
 		System.err.println("Disrupted");
 		System.exit(-1);
-		/**/
+		*/
 	}
 	
 	private void processDataPerWindowIncrementallyWithGroupBy(WindowBatch windowBatch,

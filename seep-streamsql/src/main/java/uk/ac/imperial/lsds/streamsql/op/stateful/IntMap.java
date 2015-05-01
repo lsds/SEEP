@@ -4,23 +4,30 @@ package uk.ac.imperial.lsds.streamsql.op.stateful;
 public class IntMap {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static final int INTMAP_CONTENT_SIZE = 1024;
+	public static final int INTMAP_CONTENT_SIZE = 512;
 	
-	IntMapEntry[] content;
+	IntMapEntry [] content;
 	
 	int size = 0;
 	
 	int id = -1;
 	
+	long autoIndex = -1;
+	
 	public int size() {
 		return this.size;
 	}
 	
-	public IntMap() {
+	public IntMap (int id, long autoIndex) {
 		content = new IntMapEntry[INTMAP_CONTENT_SIZE];
 		for (int i = 0; i < content.length; i++)
 			content[i] = null;
-		this.id = -1;
+		this.id = id;
+		this.autoIndex = autoIndex;
+	}
+	
+	public IntMap () {
+		this(-1, -1);
 	}
 	
 	public int getId () {
@@ -29,6 +36,10 @@ public class IntMap {
 	
 	public void setId (int id) {
 		this.id = id;
+	}
+	
+	public long getAutoIndex () {
+		return autoIndex;
 	}
 
 	public void put(int key, int value) {
@@ -154,5 +165,10 @@ public class IntMap {
 	public void release () {
 		clear();
 		IntMapFactory.free(this);
+	}
+	
+	public String toString () {
+		
+		return String.format("[IntMap %03d pool-%02d %6d items] ", autoIndex, id, size);
 	}
 }
