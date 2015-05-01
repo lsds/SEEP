@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapEntryFactory {
@@ -14,16 +14,15 @@ public class IntMapEntryFactory {
 	public static AtomicLong count;
 	
 	@SuppressWarnings("unchecked")
-	public static LinkedList<IntMapEntry> [] pool = 
-		(LinkedList<IntMapEntry> []) new LinkedList [N];
+	public static ArrayDeque<IntMapEntry> [] pool = 
+		(ArrayDeque<IntMapEntry> []) new ArrayDeque [N];
 	
 	static {
 		for (int n = 0; n < N; n++) {
-			pool[n] = new LinkedList<IntMapEntry>();
+			pool[n] = new ArrayDeque<IntMapEntry>();
 			int i = _pool_size;
 			while (i-- > 0) {
 				IntMapEntry e = new IntMapEntry(-1, -1, null);
-				e.setAutoIndex(idx++);
 				pool[n].add (e);
 			}
 		}
@@ -34,11 +33,9 @@ public class IntMapEntryFactory {
 		IntMapEntry e = pool[pid].poll();
 		if (e == null) {
 			e = new IntMapEntry(key, value, next);
-			// e.setAutoIndex(idx++);
 			count.incrementAndGet();
 		}
 		e.set(key, value, next);
-		// System.out.println(String.format("[DBG] get  IntMapEntry instance (pid=%04d) (count %4d) (auto %4d)", pid, count.get(), e.getAutoIndex()));
 		return e;
 	}
 	

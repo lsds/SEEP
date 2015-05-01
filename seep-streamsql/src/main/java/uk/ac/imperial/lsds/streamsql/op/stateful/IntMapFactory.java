@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapFactory {
@@ -14,12 +14,12 @@ public class IntMapFactory {
 	public static AtomicLong count;
 	
 	@SuppressWarnings("unchecked")
-	public static LinkedList<IntMap> [] pool = 
-		(LinkedList<IntMap> []) new LinkedList [N];
+	public static ArrayDeque<IntMap> [] pool = 
+		(ArrayDeque<IntMap> []) new ArrayDeque [N];
 	
 	static {
 		for (int n = 0; n < N; n++) {
-			pool[n] = new LinkedList<IntMap>();
+			pool[n] = new ArrayDeque<IntMap>();
 			int i = _pool_size;
 			while (i-- > 0)
 				pool[n].add (new IntMap(n, idx++));
@@ -34,13 +34,12 @@ public class IntMapFactory {
 			e = new IntMap(pid, idx);
 		}
 		e.setId(pid);
-		// System.out.println(String.format("[DBG] get  IntMap instance (pid=%04d) (count %4d) (auto %4d)", e.getId(), count.get(), e.getAutoIndex()));
+		/* System.out.println(String.format("[DBG] IntMap instance %s (count %4d)", e, count.get())); */
 		return e;
 	}
 	
 	public static void free (IntMap e) {
 		/* The pool is ever growing based on peek demand */
-		// System.out.println(String.format("[DBG] free IntMap instance (pid=%04d)", e.getId()));
 		pool[e.getId()].offer (e);
 	}
 }

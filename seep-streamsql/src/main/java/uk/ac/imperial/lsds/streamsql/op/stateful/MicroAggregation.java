@@ -335,7 +335,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (inWindowStartOffset != -1) {
 
 				keyOffsets = IntMapFactory.newInstance(pid);
-				// System.out.println("[DBG] keyOffsets " + keyOffsets);
+				/* System.out.println("[DBG] keyOffsets " + keyOffsets); */
 				
 				/* In case of an average, get a second hash table to store the `count` per entry. */
 				if (this.aggregationType == AggregationType.AVG) 
