@@ -4,7 +4,7 @@ package uk.ac.imperial.lsds.streamsql.op.stateful;
 public class IntMap {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static final int INTMAP_CONTENT_SIZE = 512;
+	public static final int INTMAP_CONTENT_SIZE = 1024;
 	
 	IntMapEntry [] content;
 	
@@ -16,6 +16,10 @@ public class IntMap {
 	
 	public int size() {
 		return this.size;
+	}
+	
+	public boolean isEmpty () {
+		return (this.size == 0);
 	}
 	
 	public IntMap (int id, long autoIndex) {
@@ -84,8 +88,10 @@ public class IntMap {
 		while (current.key != key && current.next != null)
 			current = current.next;
 		
-		if (current.key != key)
-			System.err.println("Error in IntMap");
+		if (current.key != key) {
+			System.err.println("error: key not found in IntMap");
+			System.exit(1);
+		}
 		
 		return current.value;
 	}

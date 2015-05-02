@@ -171,7 +171,7 @@ public class TestLinearRoadBenchmarkData {
 		
 		ITupleSchema schema2 = new TupleSchema (offsets2, byteSize2);
 		
-		IMicroOperatorCode q2code = new LRBUDF();
+		IMicroOperatorCode q2code = new LRBUDFCPU(schema2, new IntColumnReference(1));
 		System.out.println(String.format("[DBG] %s", q2code));
 		
 		MicroOperator q2op = new MicroOperator(q2code, null, 1);

@@ -26,7 +26,7 @@ public class Utils {
 	
 	public static boolean LATENCY_ON = false;
 	
-	public static String SEEP_HOME = "/home/akolious/seep";
+	public static String SEEP_HOME = "/Users/akolious/SEEP";
 	
 	public static long pack (long left, long right) {
 		return (left << 32) | right;

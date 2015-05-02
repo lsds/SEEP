@@ -125,10 +125,17 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 	int error = 0;
 	char msg [32768]; /* Compiler message */
 	size_t length;
-	
+	/*
+	 * TODO
+	 *
+	 * Remove the following macro and select -cl-nv-verbose
+	 * based on the type of GPU device (i.e. NVIDIA or not)
+	 */
+#ifdef __APPLE__
+	const char *flags = "-cl-fast-relaxed-math -Werror";
+#else
 	const char *flags = "-cl-fast-relaxed-math -Werror -cl-nv-verbose";
-	/* -cl-nv-arch sm_20 */
-	
+#endif
 	gpuQueryP p = (gpuQueryP) malloc (sizeof(gpu_query_t));
 	if (! p) {
 		fprintf(stderr, "fatal error: out of memory\n");

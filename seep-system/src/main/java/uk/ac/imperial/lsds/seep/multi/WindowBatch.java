@@ -96,6 +96,9 @@ public class WindowBatch {
 		this.batchEndTime = -1;
 		
 		this.latencyMark = latencyMark;
+		
+		this.prevStartPointer = -1;
+		this.prevEndPointer = -1;
 	}
 	
 	public void setTaskId (int taskId) {
@@ -337,7 +340,7 @@ public class WindowBatch {
 				this.prevStartPointer, this.prevEndPointer));
 	}
 	
-	public void moveFreePointerToNotFreeLastWindow() {
+	public void moveFreePointerToNotFreeLastWindow () {
 		/*
 		 * Set new free pointer to the byte before the start of the last 
 		 * window of this window batch
@@ -345,7 +348,6 @@ public class WindowBatch {
 		this.freeOffset = this.windowStartPointers[this.windowStartPointers.length - 1] - 1;
 		// check whether we need to wrap
 		this.freeOffset = (this.freeOffset < 0) ? this.freeOffset + buffer.capacity() : this.freeOffset;
-		
 	}
 	
 	public void clear () {
