@@ -63,6 +63,7 @@ public class KernelCodeGenerator {
 			AggregationType type,
 			FloatColumnReference _the_aggregate,
 			Expression [] groupBy,
+			String where,
 			String having) {
 		
 		StringBuilder b = new StringBuilder ();
@@ -74,7 +75,13 @@ public class KernelCodeGenerator {
 		if (having != null) {
 			b.append("#define HAVING_CLAUSE");
 			b.append("\n");
-			b.append(getSelectionAggregationFunctor(having));
+			b.append(getHavingAggregationFunctor(having));
+			b.append("\n");
+		}
+		if (where != null) {
+			b.append("#define WHERE_CLAUSE");
+			b.append("\n");
+			b.append(getSelectionAggregationFunctor(where));
 			b.append("\n");
 		}
 		b.append(getAggregationKernel(filename));
@@ -610,11 +617,21 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		return b.toString();
 	}
 	
+	public static String getHavingAggregationFunctor (String customFunctor) {
+		
+		StringBuilder b = new StringBuilder ();
+		
+		b.append("inline int havingf (__global intermediate_t *p) {\n");
+		b.append(String.format("\t%s\n", customFunctor));
+		b.append("}\n");
+		return b.toString();
+	}
+	
 	public static String getSelectionAggregationFunctor (String customFunctor) {
 		
 		StringBuilder b = new StringBuilder ();
 		
-		b.append("inline int selectf (__global intermediate_t *p) {\n");
+		b.append("inline int selectf (__global input_t *p) {\n");
 		b.append(String.format("\t%s\n", customFunctor));
 		b.append("}\n");
 		return b.toString();

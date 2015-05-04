@@ -173,4 +173,7 @@ public class TheGPU {
 	public native int setKernelReduce    (int queryId, int [] args);
 	public native int setKernelAggregate (int queryId, int [] args);
 	public native int setKernelThetaJoin (int queryId, int [] args);
+	
+	/* LRB UDF */
+	public native int setKernelAggregateIStream (int queryId, int [] args);
 }

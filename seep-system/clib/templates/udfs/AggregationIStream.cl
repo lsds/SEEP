@@ -1,8 +1,69 @@
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
+
+#include "byteorder.h"
+
 #define _HASH_FUNCTIONS_  5
 
 #define _stash_ 100
 
 #define EMPTY_KEY (0)
+
+#define  INPUT_VECTOR_SIZE 2
+#define OUTPUT_VECTOR_SIZE 2
+
+typedef struct {
+	long t;
+	int _1; /* The key */
+	float _2;
+	int _2;
+	int _3;
+	int _4;
+	int _5;
+} input_tuple_t  __attribute__((aligned(1)));
+
+typedef union {
+	input_tuple_t tuple;
+	uchar16 vectors [INPUT_VECTOR_SIZE];
+} input_t;
+
+#define output_t input_t
+#define intermediate_t input_t
+
+inline int pack_key (__global input_t *p) {
+	int key = __bswap32(p->tuple._1);
+	return key;
+}
+
+inline void storef (__global intermediate_t *q, __global input_t *p, int idx) {
+	/*
+	 * We want to maintain the most recent tuple for a key.
+	 *
+	 * There are two ways to do this, based on time stamps
+	 * and based on input buffer indices. The larger value
+	 * replaces the previous value. We choose the latter.
+	 */
+	long lidx = convert_long(idx);
+	long prev = atom_max((global long *) &(q->tuple.t), lidx);
+	if (prev == lidx) {
+		/* Store the most recent tuple */
+		q->vectors[0] = p->vectors[0];
+		q->vectors[1] = p->vectors[1];
+	}
+	return ;
+}
+
+inline void clearf (__global intermediate_t *p) {
+    p->vectors[0] = 0;
+    p->vectors[1] = 0;
+}
+
+inline void copyf (__global intermediate_t *p, __global output_t *q) {
+	q->vectors[0] = p->vectors[0];
+	q->vectors[1] = p->vectors[1];
+}
 
 inline int __s_major_hash (int x, int y, int k) {
     const unsigned int prime = 2147483647U;
@@ -46,8 +107,8 @@ inline int getNextLocation(int size,
 
 __kernel void aggregateKernel (
 	const int tuples,
-	const int _bundle,
-	const int bundles,
+	const int dummyParam1,
+	const int dummyParam2,
 	const int _table_,
 	const int __stash_x,
 	const int __stash_y,
@@ -77,12 +138,13 @@ __kernel void aggregateKernel (
 	int offset_ =  window_ptrs_ [gid]; /* Window start and end pointers */
 	int _offset = _window_ptrs  [gid];
 
-	/* For debugging purposes only */ /* Tuples/group */
-	int tpg = (_offset - offset_ + 1) / sizeof(input_t);
-
+	/* For debugging purposes only, tuples/group
+	 *
+	 * int tpg = (_offset - offset_ + 1) / sizeof(input_t);
+	 */
 	int idx =  lid * sizeof(input_t) + offset_;
 	int bundle = 0;
-	int tuple_id = 0;
+	/* int tuple_id = 0; */
 
 	if (lid == 0) {
 		failed [gid] = 0;
@@ -92,9 +154,10 @@ __kernel void aggregateKernel (
 
 	while (idx < _offset) {
 
-		/* For debugging purposes only */ /* Tuple id */
-		tuple_id = lid + bundle * lgs + tpg * gid;
-
+		/* For debugging purposes only
+		 *
+		 * tuple_id = lid + bundle * lgs + tpg * gid;
+		 */
 		bool success = true;
 		bool inserted = false;
 		int iterations = 0;
@@ -124,7 +187,7 @@ __kernel void aggregateKernel (
 		}
 		if (success == false)
 			atomic_inc(&failed[gid]);
-		attempts[tuple_id] = (iterations > 0) ? iterations : max_iterations;
+		/* attempts[tuple_id] = (iterations > 0) ? iterations : max_iterations; */
 
 		idx += group_offset;
 		bundle += 1;
@@ -139,13 +202,8 @@ __kernel void aggregateKernel (
 
 	/*
 	 * For each hash table:
-	 * - lookup the position of each tuple;
+	 * - lookup the position of each tuple; and
 	 * - write to contents[pos + table_offset]
-	 *   (values are added or incremented atomically);
-	 *
-	 * - Prefix sum
-	 * - Propagate sum across work groups
-	 * - Compress
 	 */
 
 	int locations[_HASH_FUNCTIONS_];
@@ -176,9 +234,117 @@ __kernel void aggregateKernel (
 		/* Assume position found; worst case, the key was stashed */
 		int output_idx = (table_offset + pos) * sizeof(output_t);
 		__global intermediate_t *out = (__global intermediate_t *) &contents[output_idx];
-		storef(out, p);
+		storef(out, p, idx);
 		idx += group_offset;
 	}
+}
+
+__kernel void intersectKernel (
+	const int tuples,
+	const int dummyParam1,
+	const int dummyParam2,
+	const int _table_,
+	const int __stash_x,
+	const int __stash_y,
+	const int max_iterations,
+	__global const uchar* input,
+	__global const int* window_ptrs_,
+	__global const int* _window_ptrs,
+	__global const int* x,
+	__global const int* y,
+	__global uchar* contents,
+	__global int* stashed,
+	__global int* failed,
+	__global int* attempts,
+	__global int* indices,
+	__global int* offsets,
+	__global int* partitions,
+	__global uchar* output,
+	__local int* buffer
+	) {
+
+	int lid = (int) get_local_id   (0);
+	int gid = (int) get_group_id   (0);
+	int lgs = (int) get_local_size (0); /* Local group size */
+
+	/*
+	 * The first window is used to reconstruct the initial
+	 * state of this query based on the last window of the
+	 * previously processed batch.
+	 *
+	 * It does not produce any results.
+	 */
+	if (gid < 1)
+		return;
+
+	int curr_table_offset = gid * (_table_ + _stash_);
+	int group_offset = lgs * sizeof(input_t);
+	int offset_ =  window_ptrs_ [gid]; /* Window start and end pointers */
+	int _offset = _window_ptrs  [gid];
+
+	/* Get the previous window */
+	int _gid = gid - 1;
+	int prev_table_offset = _gid * (_table_ + _stash_);
+	/*
+	 * Ideally, if a vehicle `vid` is stored at slot `i` in this table, then
+	 * it would be stored at slot `i` in the table of the previous window as
+	 * well. However, due to cuckoo hashing this is not true. So, we have to
+	 * lookup every vehicle in the previous table as well.
+	 *
+	 * The possible `locations`, though, should be the same for both tables.
+	 */
+	int locations[_HASH_FUNCTIONS_];
+	idx =  lid * sizeof(input_t) + offset_;
+	while (idx < _offset) {
+		__global input_t *p = (__global input_t *) &input[idx];
+		int q = pack_key (p);
+		/* Search current hash table */
+		for (int i = 0; i < _HASH_FUNCTIONS_; i++) {
+			locations[i] = __s_major_hash(x[i], y[i], q) % _table_;
+		}
+		/* Check locations */
+		int currPos = locations[0];
+		int currkey = indices[currPos];
+#pragma unroll
+		for (int i = 1; i < _HASH_FUNCTIONS_; i++) {
+			if (currKey != q && currKey != EMPTY_KEY) {
+				/* Retry */
+				currPos = locations[i];
+				currKey = indices[currPos];
+			}
+		}
+		/* Check stashed keys */
+		if (currKey != q) {
+			currPos = _table_ + __s_minor_hash(__stash_x, __stash_y, q);
+		}
+		/* Assume position found; worst case, the key was stashed */
+		int curr_output_idx = (curr_table_offset + currPos) * sizeof(output_t);
+		__global intermediate_t *currOut = (__global intermediate_t *) &contents[curr_output_idx];
+		/*
+		 * Now search the hash table of the previous window
+		 */
+		int prevPos = locations[0];
+		int prevkey = indices[prevPos];
+#pragma unroll
+		for (int i = 1; i < _HASH_FUNCTIONS_; i++) {
+			if (prevKey != q && prevKey != EMPTY_KEY) {
+				prevPos = locations[i];
+				prevKey = indices[prevPos];
+			}
+		}
+		if (prevKey != q) {
+			prevPos = _table_ + __s_minor_hash(__stash_x, __stash_y, q);
+		}
+		int prev_output_idx = (prev_table_offset + prevPos) * sizeof(output_t);
+		__global intermediate_t *prevOut = (__global intermediate_t *) &contents[prev_output_idx];
+		/*
+		 * Compare the two entries, `currOut` and `prevOut`. If they refer to the same tuple,
+		 * then do emit the tuple in the current window.
+		 */
+		indices[currPos] = (prevOut->tuple.t == currOut->tuple.t) ? EMPTY_KEY : indices[currPos];
+		idx += group_offset;
+	}
+
 }
 
 /* Scan based on the implementation of [...] */
@@ -259,8 +425,8 @@ inline void scan (__local int *data, int length) {
 
 __kernel void scanKernel (
 	const int tuples,
-	const int bundle_,
-	const int bundles,
+	const int dummyParam1,
+	const int dummyParam2,
 	const int _table_,
 	const int __stash_x,
 	const int __stash_y,
@@ -297,19 +463,8 @@ __kernel void scanKernel (
 	/* A thread group processes twice as many tuples */
 	int L = 2 * lgs;
 
-#ifdef HAVING_CLAUSE
-	const int lp = left * sizeof(output_t);
-	__global intermediate_t *lx = (__global intermediate_t *) &contents[lp];
-
-	const int rp = right * sizeof(output_t);
-	__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
-
-	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : selectf(lx);
-	indices[right] = (indices[right] == EMPTY_KEY) ? 0 : selectf(rx);
-#else
 	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : 1;
 	indices[right] = (indices[right] == EMPTY_KEY) ? 0 : 1;
-#endif
 	/* Copy flag to local memory */
 
 	/* Checking left and right:
@@ -336,8 +491,8 @@ __kernel void scanKernel (
 
 __kernel void compactKernel (
 	const int tuples,
-	const int bundle_,
-	const int bundles,
+	const int dummyParam1,
+	const int dummyParam2,
 	const int _table_,
 	const int __stash_x,
 	const int __stash_y,
@@ -367,12 +522,21 @@ __kernel void compactKernel (
 
 	int gid = get_group_id (0);
 
+	/*
+	 * The first window is used to reconstruct the initial
+	 * state of this query based on the last window of the
+	 * previously processed batch.
+	 *
+	 * It does not produce any results.
+	 */
+	if (gid < 1)
+		return;
 	/* Compute pivot value */
 	__local int pivot;
 	if (lid == 0) {
 		pivot = 0;
-		if (gid > 0) {
-			for (int i = 0; i < gid; i++) {
+		if (gid > 1) {
+			for (int i = 1; i < gid; i++) {
 				pivot += (partitions[i]);
 			}
 		}
@@ -403,8 +567,8 @@ __kernel void compactKernel (
 
 __kernel void clearKernel (
 	const int tuples,
-	const int bundle_,
-	const int bundles,
+	const int dummyParam1,
+	const int dummyParam2,
 	const int _table_,
 	const int __stash_x,
 	const int __stash_y,

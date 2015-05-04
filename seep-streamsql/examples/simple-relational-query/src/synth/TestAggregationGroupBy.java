@@ -116,6 +116,7 @@ public class TestAggregationGroupBy {
 				aggregationType,
 				new FloatColumnReference(1), 
 				groupBy, 
+				null,
 				null, 
 				schema
 			);

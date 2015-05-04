@@ -44,6 +44,9 @@ void callback_setKernelCompact   (cl_kernel, gpuContextP, int *);
 void callback_setKernelAggregate (cl_kernel, gpuContextP, int *);
 void callback_setKernelThetaJoin (cl_kernel, gpuContextP, int *);
 
+/* UDFs */
+void callback_setKernelAggregateIStream (cl_kernel, gpuContextP, int *);
+
 void callback_writeInput (gpuContextP, JNIEnv *, jobject, int, int, int);
 void callback_readOutput (gpuContextP, JNIEnv *, jobject, int, int, int);
 /* Get previous execution context and set current one */
@@ -310,7 +313,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggre
 	(void) obj;
 
 	jsize argc = (*env)->GetArrayLength(env, _args);
-	if (argc != 8) /* # selection kernel constants */
+	if (argc != 8) /* # aggregation kernel constants */
 		return -1;
 	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
 	/* Object `int []` pinned */
@@ -364,6 +367,30 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelTheta
 	gpu_setKernel (qid, 1, "scanKernel",    &callback_setKernelThetaJoin, args);
 	gpu_setKernel (qid, 2, "compactKernel", &callback_setKernelThetaJoin, args);
 	gpu_setKernel (qid, 3, "joinKernel",    &callback_setKernelThetaJoin, args);
+
+	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
+	/* Object `int []` released */
+	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggregateIStream
+(JNIEnv *env, jobject obj, jint qid, jintArray _args) {
+
+	(void) obj;
+
+	jsize argc = (*env)->GetArrayLength(env, _args);
+	if (argc != 8) /* # UDF kernel constants */
+		return -1;
+	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
+	/* Object `int []` pinned */
+
+	gpu_setKernel (qid, 0,  "clearKernel",     &callback_setKernelAggregateIStream, args);
+	gpu_setKernel (qid, 1,  "aggregateKernel", &callback_setKernelAggregateIStream, args);
+	/* */
+	gpu_setKernel (qid, 1,  "intersectKernel", &callback_setKernelAggregateIStream, args);
+	/* */
+	gpu_setKernel (qid, 2,  "scanKernel",      &callback_setKernelAggregateIStream, args);
+	gpu_setKernel (qid, 3,  "compactKernel",   &callback_setKernelAggregateIStream, args);
 
 	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
 	/* Object `int []` released */
@@ -750,6 +777,130 @@ void callback_setKernelAggregate (cl_kernel kernel, gpuContextP context, int *co
 		exit (1);
 	}
 	
+	return;
+}
+
+void callback_setKernelAggregateIStream (cl_kernel kernel, gpuContextP context, int *constants) {
+
+	/* Kernel arguments are:
+ 	 *
+	const int tuples,
+	const int dummyParam1,
+	const int dummyParam2,
+	const int _table_,
+	const int __stash_x,
+	const int __stash_y,
+	const int max_iterations,
+	__global const uchar* input,
+	__global const int* window_ptrs_,
+	__global const int* _window_ptrs,
+	__global const int* x,
+	__global const int* y,
+	__global uchar* contents,
+	__global int* stashed,
+	__global int* failed,
+	__global int* attempts,
+	__global int* indices,
+	__global int* offsets,
+	__global int* partitions,
+	__global uchar* output,
+	__local int* x
+	*/
+
+	 /* Get all constants */
+	int         tuples = constants[0];
+	int    dummyParam1 = constants[1];
+	int    dummyParam2 = constants[2];
+	int        _table_ = constants[3];
+	int      __stash_x = constants[4];
+	int      __stash_y = constants[5];
+	int max_iterations = constants[6];
+	int   _buffer_size = constants[7]; /* Local memory size */
+
+	int error = 0;
+	/* Set constant arguments */
+	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *)         &tuples);
+	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)    &dummyParam1);
+	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *)    &dummyParam2);
+	error |= clSetKernelArg (kernel, 3, sizeof(int), (void *)        &_table_);
+	error |= clSetKernelArg (kernel, 4, sizeof(int), (void *)      &__stash_x);
+	error |= clSetKernelArg (kernel, 5, sizeof(int), (void *)      &__stash_y);
+	error |= clSetKernelArg (kernel, 6, sizeof(int), (void *) &max_iterations);
+	/* Set input buffers */
+	error |= clSetKernelArg (
+		kernel,
+		7,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[0]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		8,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[1]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		9,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[2]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		10,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[3]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		11,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[4]->device_buffer));
+	/* Set output buffers */
+	error |= clSetKernelArg (
+        kernel,
+        12,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[0]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        13,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[1]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        14,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[2]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        15,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[3]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        16,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[4]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        17,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[5]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        18,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[6]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        19,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[7]->device_buffer));
+	/* Set local memory */
+	error |= clSetKernelArg (kernel, 20, (size_t) _buffer_size, (void *) NULL);
+
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+
 	return;
 }
 

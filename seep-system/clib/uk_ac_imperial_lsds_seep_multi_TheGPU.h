@@ -107,6 +107,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggre
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelThetaJoin
   (JNIEnv *, jobject, jint, jintArray);
 
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    setKernelAggregateIStream
+ * Signature: (I[I)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggregateIStream
+  (JNIEnv *, jobject, jint, jintArray);
+
 #ifdef __cplusplus
 }
 #endif

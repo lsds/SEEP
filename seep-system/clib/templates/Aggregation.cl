@@ -77,8 +77,8 @@ __kernel void aggregateKernel (
 	int offset_ =  window_ptrs_ [gid]; /* Window start and end pointers */
 	int _offset = _window_ptrs  [gid];
 
-	/* For debugging purposes only */ /* Tuples/group */
-	int tpg = (_offset - offset_ + 1) / sizeof(input_t);
+	/* For debugging purposes only, Tuples/group */
+	/* int tpg = (_offset - offset_ + 1) / sizeof(input_t); */
 
 	int idx =  lid * sizeof(input_t) + offset_;
 	int bundle = 0;
@@ -92,13 +92,21 @@ __kernel void aggregateKernel (
 
 	while (idx < _offset) {
 
-		/* For debugging purposes only */ /* Tuple id */
-		tuple_id = lid + bundle * lgs + tpg * gid;
+		/* For debugging purposes only, tuple id */
+		/* tuple_id = lid + bundle * lgs + tpg * gid; */
 
 		bool success = true;
 		bool inserted = false;
 		int iterations = 0;
 		__global input_t *p = (__global input_t *) &input[idx];
+#ifdef WHERE_CLAUSE
+		int filter = selectf (p);
+		if (filter == 0) {
+			/* If the selection predicate returns false, skip this tuple */
+			idx += group_offset;
+			continue;
+		}
+#endif
 		/* Insert into hash table */
 		int _k, k_ = pack_key (p);
 		int pos = __s_major_hash(x[0], y[0], k_) % _table_;
@@ -124,8 +132,8 @@ __kernel void aggregateKernel (
 		}
 		if (success == false)
 			atomic_inc(&failed[gid]);
-		// atomic_add(&attempts[gid], ((iterations > 0) ? iterations : max_iterations));
-		// attempts[tuple_id] = (iterations > 0) ? iterations : max_iterations;
+		/* atomic_add(&attempts[gid], ((iterations > 0) ? iterations : max_iterations)); */
+		/* attempts[tuple_id] = (iterations > 0) ? iterations : max_iterations; */
 
 		idx += group_offset;
 		bundle += 1;
@@ -154,6 +162,14 @@ __kernel void aggregateKernel (
 	idx =  lid * sizeof(input_t) + offset_;
 	while (idx < _offset) {
 		__global input_t *p = (__global input_t *) &input[idx];
+#ifdef WHERE_CLAUSE
+		int filter = selectf (p);
+		if (filter == 0) {
+			/* If the selection predicate returns false, skip this tuple */
+			idx += group_offset;
+			continue;
+		}
+#endif
 		/* Search hash table */
 		int q = pack_key (p);
 		for (int i = 0; i < _HASH_FUNCTIONS_; i++) {
@@ -305,8 +321,8 @@ __kernel void scanKernel (
 	const int rp = right * sizeof(intermediate_t);
 	__global intermediate_t *rx = (__global intermediate_t *) &contents[rp];
 
-	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : selectf(lx);
-	indices[right] = (indices[right] == EMPTY_KEY) ? 0 : selectf(rx);
+	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : havingf(lx);
+	indices[right] = (indices[right] == EMPTY_KEY) ? 0 : havingf(rx);
 #else
 	indices[ left] = (indices[ left] == EMPTY_KEY) ? 0 : 1;
 	indices[right] = (indices[right] == EMPTY_KEY) ? 0 : 1;
