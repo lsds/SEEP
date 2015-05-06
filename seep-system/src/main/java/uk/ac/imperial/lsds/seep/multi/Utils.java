@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class Utils {
 	
+	public static int PIPELINE_DEPTH = 4;
+
 	public static int BATCH = 32;
 
 	public static int BUNDLE = 1048576;
@@ -26,7 +28,7 @@ public class Utils {
 	
 	public static boolean LATENCY_ON = false;
 	
-	public static String SEEP_HOME = "/Users/akolious/SEEP";
+	public static String SEEP_HOME = "/home/akolious/seep";
 	
 	public static long pack (long left, long right) {
 		return (left << 32) | right;

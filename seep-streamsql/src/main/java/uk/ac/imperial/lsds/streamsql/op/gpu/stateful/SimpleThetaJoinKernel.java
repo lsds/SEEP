@@ -25,10 +25,11 @@ public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperator
 	
 	private static final boolean debug = false;
 	
-	private static final int pipelines = 2;
+	private static int pipelines = Utils.PIPELINE_DEPTH;
 	private int []      taskIdx; /* Control output based on depth of pipeline */
 	private int [] _1st_freeIdx;
 	private int [] _2nd_freeIdx;
+	private int []      markIdx; /* Latency mark */
 	
 	private IPredicate predicate;
 	private String customFunctor = null;
@@ -91,10 +92,12 @@ public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperator
 		     taskIdx = new int [pipelines];
 		_1st_freeIdx = new int [pipelines];
 		_2nd_freeIdx = new int [pipelines];
+		     markIdx = new int [pipelines];
 		for (int i = 0; i < pipelines; i++) {
 			     taskIdx[i] = -1;
 			_1st_freeIdx[i] = -1;
 			_2nd_freeIdx[i] = -1;
+			     markIdx[i] = -1;
 		}
 	}
 	
@@ -223,6 +226,8 @@ public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperator
 		int  firstCurrentFreeIdx =  firstWindowBatch.getFreeOffset();
 		int secondCurrentFreeIdx = secondWindowBatch.getFreeOffset();
 		
+		int currentMarkIdx = firstWindowBatch.getLatencyMark();
+		
 		byte [] firstInputArray = firstWindowBatch.getBuffer().array();
 		int firstStart = firstWindowBatch.getBatchStartPointer();
 		int firstEnd   = firstWindowBatch.getBatchEndPointer();
@@ -303,6 +308,7 @@ public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperator
 		
 		firstWindowBatch.setTaskId     (     taskIdx[0]);
 		firstWindowBatch.setFreeOffset (_1st_freeIdx[0]);
+		firstWindowBatch.setLatencyMark(     markIdx[0]);
 		
 		secondWindowBatch.setTaskId     (     taskIdx[0]);
 		secondWindowBatch.setFreeOffset (_2nd_freeIdx[0]);
@@ -311,10 +317,12 @@ public class SimpleThetaJoinKernel implements IStreamSQLOperator, IMicroOperator
 			     taskIdx[i] =      taskIdx [i + 1];
 			_1st_freeIdx[i] = _1st_freeIdx [i + 1];
 			_2nd_freeIdx[i] = _2nd_freeIdx [i + 1];
+			     markIdx[i] =      markIdx [i + 1];
 		}
 		     taskIdx [     taskIdx.length - 1] =       currentTaskIdx;
 		_1st_freeIdx [_1st_freeIdx.length - 1] =  firstCurrentFreeIdx;
 		_2nd_freeIdx [_2nd_freeIdx.length - 1] = secondCurrentFreeIdx;
+		     markIdx [     markIdx.length - 1] =       currentMarkIdx;
 		
 		api.outputWindowBatchResult(-1, firstWindowBatch);
 		/*

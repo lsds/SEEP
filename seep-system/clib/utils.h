@@ -6,8 +6,8 @@
 #define MAX_OUTPUTS  10
 #define MAX_QUERIES   2
 
-#define NCONTEXTS 4
+#define NCONTEXTS 5
 
-#define DEPTH 2
+#define DEPTH 4 /* 5-stage pipeline */
 
 #endif /* __GPU_UTILS_H_ */

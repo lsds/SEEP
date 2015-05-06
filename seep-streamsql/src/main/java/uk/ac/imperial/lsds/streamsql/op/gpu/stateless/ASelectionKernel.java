@@ -20,9 +20,10 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	
 	private static boolean debug = false;
 	
-	private static final int pipelines = 2;
+	private static int pipelines = Utils.PIPELINE_DEPTH;
 	private int [] taskIdx; /* Control output based on depth of pipeline */
 	private int [] freeIdx;
+	private int [] markIdx; /* Latency mark */
 	
 	private IPredicate predicate;
 	private ITupleSchema schema;
@@ -64,9 +65,11 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		taskIdx = new int [pipelines];
 		freeIdx = new int [pipelines];
+		markIdx = new int [pipelines];
 		for (int i = 0; i < pipelines; i++) {
 			taskIdx[i] = -1;
 			freeIdx[i] = -1;
+			markIdx[i] = -1;
 		}
 	}
 	
@@ -134,6 +137,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		int currentTaskIdx = windowBatch.getTaskId();
 		int currentFreeIdx = windowBatch.getFreeOffset();
+		int currentMarkIdx = windowBatch.getLatencyMark();
 		
 		/* Set input */
 		byte [] inputArray = windowBatch.getBuffer().array();
@@ -159,13 +163,16 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		windowBatch.setTaskId     (taskIdx[0]);
 		windowBatch.setFreeOffset (freeIdx[0]);
+		windowBatch.setLatencyMark(markIdx[0]);
 		
 		for (int i = 0; i < taskIdx.length - 1; i++) {
 			taskIdx[i] = taskIdx [i + 1];
 			freeIdx[i] = freeIdx [i + 1];
+			markIdx[i] = markIdx [i + 1];
 		}
 		taskIdx [taskIdx.length - 1] = currentTaskIdx;
 		freeIdx [freeIdx.length - 1] = currentFreeIdx;
+		markIdx [markIdx.length - 1] = currentMarkIdx;
 		
 		api.outputWindowBatchResult(-1, windowBatch);
 		/*

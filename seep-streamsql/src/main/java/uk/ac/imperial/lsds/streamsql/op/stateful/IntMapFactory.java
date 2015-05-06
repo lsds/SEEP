@@ -5,11 +5,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapFactory {
 	
-	private static int N = Runtime.getRuntime().availableProcessors();
+	private static int N = 32; // Runtime.getRuntime().availableProcessors();
 	
 	private static long idx = 0;
 	
-	private static int _pool_size = 1;
+	private static int _pool_size = 100;
 	
 	public static AtomicLong count;
 	
@@ -40,6 +40,11 @@ public class IntMapFactory {
 	
 	public static void free (IntMap e) {
 		/* The pool is ever growing based on peek demand */
-		pool[e.getId()].offer (e);
+		
+		/*
+		 * Do not return IntMap; just allocate new ones.
+		 */ 
+		 pool[e.getId()].offer (e);
+		 /**/
 	}
 }

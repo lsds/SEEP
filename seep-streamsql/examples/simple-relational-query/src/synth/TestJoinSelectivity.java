@@ -122,8 +122,8 @@ public class TestJoinSelectivity {
 		/* Calculate batch-related statistics */
 		/* ... */
 		
-		Utils._CIRCULAR_BUFFER_ = 256 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 256 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ =  64 * 1024 * 1024;
 		
 		TheGPU.getInstance().init(1);
 		
@@ -140,7 +140,7 @@ public class TestJoinSelectivity {
 		
 		((SimpleThetaJoinKernel) gpuJoinCode).setBatchSize (batchSize);
 		((SimpleThetaJoinKernel) gpuJoinCode).setCustomFunctor (s.toString());
-		((SimpleThetaJoinKernel) gpuJoinCode).setOutputSize (1024768);
+		((SimpleThetaJoinKernel) gpuJoinCode).setOutputSize (32 * 1024768);
 		((SimpleThetaJoinKernel) gpuJoinCode).setup();
 		
 		MicroOperator uoperator;
@@ -165,8 +165,8 @@ public class TestJoinSelectivity {
 		/*
 		 * Set up the stream
 		 */
-		int firstTuplesPerInsert  = 100;
-		int secondTuplesPerInsert = 100;
+		int firstTuplesPerInsert  = 200;
+		int secondTuplesPerInsert = 200;
 		
 		int firstTupleSize  =  firstSchema.getByteSizeOfTuple();
 		int secondTupleSize = secondSchema.getByteSizeOfTuple();

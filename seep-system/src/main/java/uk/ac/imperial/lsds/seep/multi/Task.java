@@ -49,8 +49,25 @@ public class Task extends ITask {
 		}
 		
 		if (GPU) {
-			ResultCollector.forwardAndFree (handler, _query, this.batch.getBuffer(),
-					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
+			/*
+			 * `_query` is a query that was processed previously.
+			 * 
+			 * This `batch.getBuffer()` is an unbounded buffer that holds the results of `_query`.
+			 * The GPU library takes care of this.
+			 * 
+			 * The task id and free offset refer to the previous query (`_query`).
+			 * 
+			 * But, what about the latency mark? The latency mark refers to the current batch.
+			 * It should rather be refering to the latency mark of the previous query as well.
+			 * 
+			 */
+			ResultCollector.forwardAndFree (handler, 
+					_query,
+					this.batch.getBuffer(), 
+					this.batch.getTaskId(), 
+					this.batch.getFreeOffset(), 
+					this.batch.getLatencyMark(), 
+					GPU);
 		} else {
 			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
 					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);

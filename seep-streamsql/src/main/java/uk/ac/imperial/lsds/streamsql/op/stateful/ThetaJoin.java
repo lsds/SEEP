@@ -18,7 +18,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 	private static boolean computePointers = false;
 	private static boolean debug = false;
 	
-	private boolean selectivity = true;
+	private boolean selectivity = false;
 	
 	private long invoked = 0L;
 	private long matched = 0L;

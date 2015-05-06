@@ -425,14 +425,6 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
-	
-	/* Wait until read output from previous query has finished */
-	if (theOther) {
-		pthread_mutex_lock (mutex);
-		while (count == 1)
-			pthread_cond_wait (reading, mutex);
-		pthread_mutex_unlock (mutex);
-	}
 #ifdef GPU_TMSRMNT
 	tstamp_t dt = timer_getElapsedTime(timer);
 	fprintf (stderr, "[PRF] copy input/output %10llu usecs\n", dt);
@@ -445,6 +437,14 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpu_context_moveOutputBuffers (p);
 	
 	gpu_context_flush (p);
+	
+	/* Wait until read output from previous query has finished */
+	if (theOther) {
+		pthread_mutex_lock (mutex);
+		while (count == 1)
+			pthread_cond_wait (reading, mutex);
+		pthread_mutex_unlock (mutex);
+	}
 
 	return 0;
 }
