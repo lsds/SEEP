@@ -178,10 +178,29 @@ public class TheGPU {
 	/* LRB UDF */
 	public native int setKernelAggregateIStream (int queryId, int [] args);
 	
+	/*
+	 * Direct ByteBuffers
+	 * 
+	 * The GPU library manages a pool of (up to MAX_BUFFERS) buffers,
+	 * allocated using the OpenCL API. These buffers are set for DMA.
+	 * 
+	 * For every buffer allocated, we can return a direct byte buffer
+	 * object via JNI, using the address of DMA-capable buffers.
+	 */
 	public native int allocateBuffer (int size, int readOnly);
 	public native Object getDirectByteBuffer (int idx);
-	
+	/* 
+	 * 
+	 */
 	public native int setDirectInput (int queryId, int index, int size, int bufferId);
-
-	public native void setDirectInputBuffer(int queryId, int index, int bufferId, int start, int end);
+	/*
+	 * 
+	 */
+	public native int setDirectOutput (int queryId, int index, int size, 
+		int writeOnly, int doNotMove, int bearsMark, int readEvent, int bufferId);
+	/*
+	 * 
+	 */
+	public native int executeDirect (int queryId, int [] threads, int [] threadsPerGroup, 
+		int [] start, int [] end);
 }

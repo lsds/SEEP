@@ -462,6 +462,62 @@ void gpu_context_readOutput (gpuContextP q,
 	return;
 }
 
+void gpu_context_moveDirectInputBuffers (gpuContextP q, int *start, int *end) {
+	int i;
+	int error = 0;
+	/* Write */
+	for (i = 0; i < q->kernelInput.count; i++) {
+		/*
+		 * Make sure that if an input buffer wraps
+		 * (in case of a circular buffer), we move
+		 * data to GPU memory in two parts.
+		 */
+		if (start[i] >= end[i]) {
+			fprintf(stderr, "error: invalid buffer pointers (%s)\n", __FUNCTION__);
+			exit(-1);
+		}
+		int theSize = end - start;
+		dbg("[DBG] write input %d: start %13d end %13d (%13d bytes)\n",
+				i, start[i], end[i], theSize);
+		/*
+		 * Make sure that we do not overflow the
+		 * GPU memory buffer.
+		 */
+		if (theSize > q->kernelInput.inputs[i]->size) {
+			fprintf(stderr, "error: invalid buffer pointers (%s)\n", __FUNCTION__);
+			exit(-1);
+		}
+		if (i == q->kernelInput.count - 1) {
+			error |= clEnqueueWriteBuffer (
+				q->queue[0],
+				q->kernelInput.inputs[i]->device_buffer,
+				CL_FALSE,
+				0,
+				theSize,
+				(q->kernelInput.inputs[i]->mapped_buffer + start[i]),
+				0, NULL, &q->write_event);
+		} else {
+			error |= clEnqueueWriteBuffer (
+				q->queue[0],
+				q->kernelInput.inputs[i]->device_buffer,
+				CL_FALSE,
+				0,
+				theSize,
+				(q->kernelInput.inputs[i]->mapped_buffer + start[i]),
+				0, NULL, NULL);
+		}
+		if (error != CL_SUCCESS) {
+			fprintf(stderr, "opencl error (%d): %s (%s)\n",
+				error, getErrorMessage(error), __FUNCTION__);
+			exit (1);
+		}
+	}
+	q->writeCount += 1;
+	q->scheduled = 1;
+
+	return;
+}
+
 void gpu_context_moveInputBuffers (gpuContextP q) {
 	int i;
 	int error = 0;

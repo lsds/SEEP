@@ -34,7 +34,7 @@ directBufferP getDirectBuffer (cl_context context, cl_command_queue queue, int s
 		queue, 
 		p->pinned_buffer,
 		CL_TRUE, /* Blocking */
-		(readOnly == 0) ? CL_MAP_WRITE : CL_MAP_READ,
+		(readOnly == 1) ? CL_MAP_WRITE : CL_MAP_READ,
 		0, 
 		p->size, 
 		0, NULL, NULL, /* Zero dependencies */

@@ -12,6 +12,9 @@
 typedef struct input_buffer *inputBufferP;
 typedef struct input_buffer {
 	int size;
+	
+	unsigned char isDirect;
+	
 	cl_mem device_buffer;
 	cl_mem pinned_buffer;
 	void  *mapped_buffer;

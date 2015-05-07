@@ -51,4 +51,7 @@ int gpu_query_setKernel (gpuQueryP, int,
 int gpu_query_exec (gpuQueryP, size_t *, size_t *, queryOperatorP,
 		JNIEnv *, jobject, int);
 
+int gpu_query_exec_direct (gpuQueryP, size_t *, size_t *, int *, int *, queryOperatorP,
+		JNIEnv *, jobject, int);
+
 #endif /* __GPU_QUERY_H_ */

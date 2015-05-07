@@ -67,16 +67,14 @@ public class TestDMA {
 		
 		int qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
 		
+		int outputBufferId = TheGPU.getInstance().allocateBuffer (outputSize, 0); /* writeOnly buffer */
+		System.out.println("[DBG] output buffer id is " + outputBufferId);
+		ByteBuffer outputBuffer = (ByteBuffer) TheGPU.getInstance().getDirectByteBuffer (outputBufferId);
+		
 		TheGPU.getInstance().setDirectInput  (qid, 0, inputSize, bid);
-		TheGPU.getInstance().setOutput (qid, 0, outputSize, 1, 0, 0, 1);
+		TheGPU.getInstance().setDirectOutput (qid, 0, outputSize, 1, 0, 0, 1, outputBufferId);
 		
 		TheGPU.getInstance().setKernelDummy(qid, null);
-		
-		byte [] output = new byte [outputSize];
-		
-		Arrays.fill(output, (byte) 0);
-		TheGPU.getInstance().setDirectInputBuffer(qid, 0, bid, 0, _default_size);
-		TheGPU.getInstance().setOutputBuffer(qid, 0, output);
 		
 		TheGPU.getInstance().execute(qid, threads, threadsPerGroup);
 		

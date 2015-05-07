@@ -459,3 +459,31 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 }
 #endif
 
+int gpu_query_exec_direct (gpuQueryP q, size_t *threads, size_t *threadsPerGroup,
+	int *start, int *end,
+	queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
+
+	if (! q)
+		return -1;
+	gpuContextP p = gpu_context_switch (q);
+
+	gpuContextP theOther = (operator->execKernel(p));
+	(void) theOther;
+
+	/* Wait for write event */
+	gpu_context_waitForWriteEvent (p);
+
+	gpu_context_moveDirectInputBuffers (p, start, end);
+
+	gpu_context_submitKernel (p, threads, threadsPerGroup);
+
+	gpu_context_moveOutputBuffers (p);
+
+	gpu_context_flush (p);
+
+	gpu_context_waitForReadEvent (p);
+
+	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
+
+	return 0;
+}

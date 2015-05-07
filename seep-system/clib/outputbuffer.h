@@ -13,6 +13,8 @@ typedef struct output_buffer *outputBufferP;
 typedef struct output_buffer {
 	int size;
 	
+	unsigned char isDirect;
+	
 	unsigned char writeOnly;
 	unsigned char doNotMove;
 	unsigned char bearsMark; /* The last integer is the mark */

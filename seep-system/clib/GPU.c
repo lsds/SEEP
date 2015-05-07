@@ -215,6 +215,16 @@ int gpu_exec (int qid, size_t *threads, size_t *threadsPerGroup,
 	return gpu_query_exec (p, threads, threadsPerGroup, operator, env, obj, qid);
 }
 
+int gpu_exec_direct (int qid, size_t *threads, size_t *threadsPerGroup,
+		int *startPointers, int *endPointers,
+		queryOperatorP operator, JNIEnv *env, jobject obj) {
+	if (qid < 0 || qid >= Q)
+		return -1;
+	gpuQueryP p = queries[qid];
+	return gpu_query_exec_direct (p, threads, threadsPerGroup,
+		startPointers, endPointers, operator, env, obj, qid);
+}
+
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_init
 (JNIEnv *env, jobject obj, jint N) {
 
@@ -254,19 +264,8 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInput
 	(void) obj;
 
 	if (bid < 0 || bid >= MAX_BUFFERS)
-			return -1;
-	return gpu_setInput (qid, ndx, buffers[bid], size);
-}
-
-JNIEXPORT void JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInputBuffer
-(JNIEnv *env, jobject obj, jint qid, jint ndx, jint bid, jint start, jint end) {
-
-	(void) env;
-	(void) obj;
-
-	if (bid < 0 || bid >= MAX_BUFFERS)
 		return -1;
-	gpu_setDirectInputBuffer (qid, ndx, buffers[bid], start, end);
+	return gpu_setInput (qid, ndx, buffers[bid], size);
 }
 
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput
@@ -277,6 +276,19 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput
 	(void) obj;
 
 	return gpu_setOutput (qid, ndx, NULL, size, 
+		writeOnly, doNotMove, bearsMark, readEvent);
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectOutput
+(JNIEnv *env, jobject obj, jint qid, jint ndx, jint size,
+		jint writeOnly, jint doNotMove, jint bearsMark, jint readEvent, jint bid) {
+
+	(void) env;
+	(void) obj;
+
+	if (bid < 0 || bid >= MAX_BUFFERS)
+		return -1;
+	return gpu_setOutput (qid, ndx, buffers[bid], size,
 		writeOnly, doNotMove, bearsMark, readEvent);
 }
 
@@ -327,6 +339,65 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_execute
 	(*env)->ReleaseIntArrayElements(env, _threads, threads, 0);
 	(*env)->ReleaseIntArrayElements(env, _threadsPerGroup, threadsPerGroup, 0);
 	/* Free memory */
+	if (__threads)
+		free (__threads);
+	if (__threadsPerGroup)
+		free (__threadsPerGroup);
+	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executeDirect
+(JNIEnv *env, jobject obj, jint qid, jintArray _threads, jintArray _threadsPerGroup,
+	jintArray _start, jintArray _end) {
+
+	/* Create operator */
+	queryOperatorP operator = (queryOperatorP) malloc (sizeof(query_operator_t));
+	if (! operator) {
+		fprintf(stderr, "fatal error: out of memory\n");
+		exit(1);
+	}
+	int i;
+	/* Assert that `targc` = #kernels */
+	jsize targc = (*env)->GetArrayLength(env, _threads);
+	jint *threads = (*env)->GetIntArrayElements(env, _threads, 0);
+	jint *threadsPerGroup = (*env)->GetIntArrayElements(env, _threadsPerGroup, 0);
+	/* Debug # threads and threads/group */
+	for (i = 0; i < targc; i++) {
+		dbg("[DBG] kernel %d: %10d threads %10d threads/group\n",
+			i, threads[i], threadsPerGroup[i]);
+	}
+	size_t *__threads = (size_t *) malloc (targc * sizeof(size_t));
+	size_t *__threadsPerGroup = (size_t *) malloc (targc * sizeof(size_t));
+	for (i = 0; i < targc; i++) {
+		__threads[i] = (size_t) threads[i];
+		__threadsPerGroup[i] = (size_t) threadsPerGroup[i];
+	}
+	/* Assert that `pargc` = #inputs */
+	jsize pargc = (*env)->GetArrayLength(env, _start);
+	jint *start = (*env)->GetIntArrayElements(env, _start, 0);
+	jint *end = (*env)->GetIntArrayElements(env, _end, 0);
+	/* Debug start and end pointers for input buffers */
+	for (i = 0; i < pargc; i++) {
+		dbg("[DBG] input %d: start %13d end %13d\n", i, start[i], end[i]);
+	}
+
+	/* Currently, we assume the same execution pattern for all queries */
+	operator->writeInput = callback_writeInput;
+	operator->readOutput = callback_readOutput;
+	operator->execKernel = callback_execKernel;
+
+	gpu_exec_direct (qid, __threads, __threadsPerGroup, start, end, operator, env, obj);
+	/* Free operator */
+	if (operator)
+		free (operator);
+	/* Release Java arrays */
+	(*env)->ReleaseIntArrayElements(env, _threads, threads, 0);
+	(*env)->ReleaseIntArrayElements(env, _threadsPerGroup, threadsPerGroup, 0);
+
+	(*env)->ReleaseIntArrayElements(env, _start, start, 0);
+	(*env)->ReleaseIntArrayElements(env, _end, end, 0);
+
+	/* Free allocated memory */
 	if (__threads)
 		free (__threads);
 	if (__threadsPerGroup)

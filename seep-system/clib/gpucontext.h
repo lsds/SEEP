@@ -91,6 +91,8 @@ void gpu_context_readOutput (gpuContextP,
 
 void gpu_context_moveInputBuffers (gpuContextP);
 
+void gpu_context_moveDirectInputBuffers (gpuContextP, int *, int *);
+
 void gpu_context_moveOutputBuffers (gpuContextP);
 
 #endif /* __GPU_CONTEXT_H_ */

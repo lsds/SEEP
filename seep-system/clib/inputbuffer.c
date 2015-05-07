@@ -4,6 +4,8 @@
 
 #include "debug.h"
 
+#include "directbuffer.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,25 +34,22 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *b
 		exit (1);
 	}
 
-	if (buffer != NULL)
+	if (buffer != NULL) {
+		p->isDirect = 1;
+		/* Set pinned and mapped memory pointer to buffer */
+		directBufferP q = (directBufferP) buffer;
+		p->pinned_buffer = q->pinned_buffer;
+		p->mapped_buffer = q->mapped_buffer;
 		return p;
-	/* Else, set p->pinned_memory */
-
-	if (buffer == NULL) {
-		p->pinned_buffer = clCreateBuffer (
+	}
+	/* Else, set p->pinned_memory and p->mapped_memory */
+	p->isDirect = 0;
+	p->pinned_buffer = clCreateBuffer (
 		context, 
 		CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, 
 		p->size, 
 		NULL, 
 		&error);
-	} else {
-		p->pinned_buffer = clCreateBuffer (
-		context, 
-		CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, 
-		p->size, 
-		buffer, 
-		&error);
-	}
 	if (! p->pinned_buffer) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);

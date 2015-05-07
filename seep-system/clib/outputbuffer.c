@@ -4,19 +4,13 @@
 
 #include "debug.h"
 
+#include "directbuffer.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <stdint.h>
-
-static int IS_ZERO_COPY (void *ptr, int len) {
-	if ((uintptr_t) ptr % 256 != 0) /* 256-byte alignment*/
-		return 0;
-	if (len % 64 != 0) /* Cache alignment */
-		return 0;
-	return 1;
-}
 
 outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue, void *buffer, 
 	int size, int writeOnly, int doNotMove, int bearsMark, int readEvent) {
@@ -49,37 +43,24 @@ outputBufferP getOutputBuffer (cl_context context, cl_command_queue queue, void 
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	if (buffer == NULL) {
-		p->pinned_buffer = clCreateBuffer (
+	if (buffer != NULL) {
+		p->isDirect = 1;
+		p->pinned_buffer = ((directBufferP) buffer)->pinned_buffer;
+		p->mapped_buffer = ((directBufferP) buffer)->mapped_buffer;
+		return p;
+	}
+	/* Else, allocate buffers */
+	p->isDirect = 0;
+	p->pinned_buffer = clCreateBuffer (
 		context, 
 		CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
 		p->size, 
 		NULL, 
 		&error);
-	} else {
-		if (! IS_ZERO_COPY (buffer, size)) {
-			fprintf(stderr, "warning: buffer is not a zero-copy buffer (%s)\n", 
-				__FUNCTION__);
-		}
-		p->pinned_buffer = clCreateBuffer (
-		context,
-		CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-		p->size,
-		buffer,
-		&error);
-	}
 	if (! p->pinned_buffer) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	
-	/*
-	if (! IS_ZERO_COPY (p->pinned_buffer, size)) {
-		fprintf(stderr, "opencl warning: buffer is not a zero-copy buffer (%s)\n", 
-			__FUNCTION__);
-	}
-	*/
-	
 	p->mapped_buffer = (void *) clEnqueueMapBuffer (
 		queue, 
 		p->pinned_buffer,

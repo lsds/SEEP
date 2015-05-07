@@ -141,11 +141,19 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInput
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
- * Method:    setDirectInputBuffer
- * Signature: (IIIII)V
+ * Method:    setDirectOutput
+ * Signature: (IIIIIIII)I
  */
-JNIEXPORT void JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInputBuffer
-  (JNIEnv *, jobject, jint, jint, jint, jint, jint);
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectOutput
+  (JNIEnv *, jobject, jint, jint, jint, jint, jint, jint, jint, jint);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    executeDirect
+ * Signature: (I[I[I[I[I)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executeDirect
+  (JNIEnv *, jobject, jint, jintArray, jintArray, jintArray, jintArray);
 
 #ifdef __cplusplus
 }
