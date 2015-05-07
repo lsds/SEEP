@@ -1,56 +1,30 @@
-#include "inputbuffer.h"
+#include "directbuffer.h"
 
 #include "openclerrorcode.h"
 
 #include "debug.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <stdint.h>
-
-inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *buffer, 
-	int size) {
+directBufferP getDirectBuffer (cl_context context, cl_command_queue queue, int size, int readOnly) {
 	
-	inputBufferP p = malloc(sizeof(input_buffer_t));
+	directBufferP p = malloc(sizeof(direct_buffer_t));
 	if (! p) {
 		fprintf(stderr, "fatal error: out of memory\n");
 		exit(1);
 	}
 	p->size = size;
 	int error;
-	/* Set p->device_buffer */
-	p->device_buffer = clCreateBuffer (
-		context, 
-		CL_MEM_READ_ONLY,
-		p->size, 
-		NULL, 
-		&error);
-	if (! p->device_buffer) {
-		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
-		exit (1);
-	}
-
-	if (buffer != NULL)
-		return p;
-	/* Else, set p->pinned_memory */
-
-	if (buffer == NULL) {
-		p->pinned_buffer = clCreateBuffer (
+	/* Set p->pinned_memory */
+	p->pinned_buffer = clCreateBuffer (
 		context, 
 		CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, 
 		p->size, 
 		NULL, 
 		&error);
-	} else {
-		p->pinned_buffer = clCreateBuffer (
-		context, 
-		CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, 
-		p->size, 
-		buffer, 
-		&error);
-	}
 	if (! p->pinned_buffer) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
@@ -60,7 +34,7 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *b
 		queue, 
 		p->pinned_buffer,
 		CL_TRUE, /* Blocking */
-		CL_MAP_WRITE, 
+		(readOnly == 0) ? CL_MAP_WRITE : CL_MAP_READ,
 		0, 
 		p->size, 
 		0, NULL, NULL, /* Zero dependencies */
@@ -72,11 +46,11 @@ inputBufferP getInputBuffer (cl_context context, cl_command_queue queue, void *b
 	return p;
 }
 
-int getInputBufferSize (inputBufferP b) {
+int getDirectBufferSize (directBufferP b) {
 	return b->size;
 }
 
-void freeInputBuffer (inputBufferP b, cl_command_queue queue) {
+void freeDirectBuffer (directBufferP b, cl_command_queue queue) {
 	if (b) {
 		if (b->mapped_buffer)
 			clEnqueueUnmapMemObject (
@@ -86,8 +60,6 @@ void freeInputBuffer (inputBufferP b, cl_command_queue queue) {
 				0, NULL, NULL); /* Zero dependencies */
 		if (b->pinned_buffer)
 			clReleaseMemObject(b->pinned_buffer);
-		if (b->device_buffer)
-			clReleaseMemObject(b->device_buffer);
 		free (b);
 	}
 }

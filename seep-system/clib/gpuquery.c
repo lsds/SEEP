@@ -23,6 +23,8 @@ static int gpu_query_exec_3 (gpuQueryP, size_t *, size_t *, queryOperatorP, JNIE
 #ifdef GPU_TMSRMNT
 #include "timer.h"
 timerP timer;
+unsigned long long nmeasurements = 0ULL;
+unsigned long long total = 0ULL;
 #endif
 
 #ifdef GPU_IIDMVMT
@@ -416,7 +418,7 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 		/* Notify output handler */
 		pthread_mutex_lock (mutex);
 		count = 1;
-		pthread_mutex_unlock (mutex);
+		pthread_mutex_unlock (mutex);	
 		pthread_cond_signal (waiting);
 	}
 	
@@ -427,7 +429,13 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 #ifdef GPU_TMSRMNT
 	tstamp_t dt = timer_getElapsedTime(timer);
-	fprintf (stderr, "[PRF] copy input/output %10llu usecs\n", dt);
+	total += dt;
+	nmeasurements += 1;
+	if (nmeasurements == 100) {
+		fprintf (stderr, "[PRF] 100 copy input/output took %10llu usecs\n", total);
+		total = 0ULL;
+		nmeasurements = 0;
+	}
 #endif
 
 	gpu_context_moveInputBuffers (p);
@@ -439,10 +447,11 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpu_context_flush (p);
 	
 	/* Wait until read output from previous query has finished */
-	if (theOther) {
+ 	if (theOther) {
 		pthread_mutex_lock (mutex);
-		while (count == 1)
+		while (count == 1) {
 			pthread_cond_wait (reading, mutex);
+		}
 		pthread_mutex_unlock (mutex);
 	}
 

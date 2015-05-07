@@ -18,10 +18,17 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.AggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
+import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
 public class TestAggregationGroupBy {
 	
@@ -101,14 +108,31 @@ public class TestAggregationGroupBy {
 			/* , new IntColumnReference(3)
 			, new IntColumnReference(4) */
 		};
-		
+		/*
+		IPredicate [] predicates = new IPredicate[2];
+		predicates[0] = new FloatComparisonPredicate
+			(
+				FloatComparisonPredicate.GREATER_OP, 
+				new FloatColumnReference(2),
+				new FloatConstant(-1)
+			);
+		predicates[1] = new FloatComparisonPredicate
+			(
+				FloatComparisonPredicate.LESS_OP, 
+				new FloatColumnReference(2),
+				new FloatConstant(101)
+			);
+		IPredicate predicate = new ANDPredicate(predicates);
+		*/
 		IMicroOperatorCode cpuAggCode = new MicroAggregation
 			(
 				window,
 				aggregationType,
 				new FloatColumnReference(1),
 				groupBy
+				/* ,new Selection(predicate) */
 			);
+		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
 		IMicroOperatorCode gpuAggCode = new AggregationKernel
@@ -134,7 +158,7 @@ public class TestAggregationGroupBy {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 512 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = inputSize;
 		
 		long timestampReference = System.nanoTime();

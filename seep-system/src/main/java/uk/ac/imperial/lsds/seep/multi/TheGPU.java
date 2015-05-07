@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
 
 import sun.misc.Unsafe;
 
@@ -176,4 +177,11 @@ public class TheGPU {
 	
 	/* LRB UDF */
 	public native int setKernelAggregateIStream (int queryId, int [] args);
+	
+	public native int allocateBuffer (int size, int readOnly);
+	public native Object getDirectByteBuffer (int idx);
+	
+	public native int setDirectInput (int queryId, int index, int size, int bufferId);
+
+	public native void setDirectInputBuffer(int queryId, int index, int bufferId, int start, int end);
 }

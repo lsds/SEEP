@@ -9,6 +9,8 @@
 #include "gpuquery.h"
 #include "openclerrorcode.h"
 
+#include "directbuffer.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,10 +31,14 @@
 static cl_platform_id platform = NULL;
 static cl_device_id device = NULL;
 static cl_context context = NULL;
+static cl_command_queue theQueue = NULL;
 
 static int Q; /* Number of queries */
 static int freeIndex;
 static gpuQueryP queries [MAX_QUERIES];
+
+static int bufferIndex;
+static directBufferP buffers [MAX_BUFFERS];
 
 static gpuContextP previousQuery [DEPTH];
 
@@ -92,17 +98,53 @@ static void setContext () {
 	return ;
 }
 
+static void setQueue () {
+	int error;
+	theQueue = clCreateCommandQueue (
+		context,
+		device,
+		CL_QUEUE_PROFILING_ENABLE,
+		&error);
+	if (! theQueue) {
+		fprintf(stderr, "opencl error (%d): %s (%s)\n",
+			error, getErrorMessage(error), __FUNCTION__);
+		exit (1);
+	}
+}
+
+static void getDeviceInfo () {
+	cl_int error = 0;
+	cl_uint value = 0;
+	error = clGetDeviceInfo (device, CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof (cl_uint), &value, NULL);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+	fprintf(stderr, "[GPU] alignment is %u bits\n", value);
+	return ;
+}
+
 void gpu_init (int _queries) { /* Initialise `n` queries */
+	int i;
+
 	setPlatform ();
 	setDevice ();
 	setContext ();
+	setQueue ();
+	getDeviceInfo ();
+
 	Q = _queries; /* Number of queries */
+
 	freeIndex = 0;
-	int i;
 	for (i = 0; i < MAX_QUERIES; i++)
 		queries[i] = NULL;
+
 	for (i = 0; i < DEPTH; i++)
 		previousQuery[i] = NULL;
+
+	bufferIndex = 0;
+	for (i = 0; i < MAX_BUFFERS; i++)
+		buffers[i] = NULL;
 	return;
 }
 
@@ -128,6 +170,15 @@ JNIEnv *env) {
 	gpu_query_init (queries[ndx], env, ndx);
 
 	fprintf(stderr, "[GPU] _getQuery returns %d (%d/%d)\n", ndx, freeIndex, Q);
+	return ndx;
+}
+
+int gpu_getDirectBuffer (int size, int readOnly) {
+
+	int ndx = bufferIndex++;
+	if (ndx < 0 || ndx >= MAX_BUFFERS)
+		return -1;
+	buffers[ndx] = getDirectBuffer (context, theQueue, size, readOnly);
 	return ndx;
 }
 
@@ -194,6 +245,28 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setInput
 	(void) obj;
 	
 	return gpu_setInput (qid, ndx, NULL, size);
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInput
+(JNIEnv *env, jobject obj, jint qid, jint ndx, jint size, jint bid) {
+
+	(void) env;
+	(void) obj;
+
+	if (bid < 0 || bid >= MAX_BUFFERS)
+			return -1;
+	return gpu_setInput (qid, ndx, buffers[bid], size);
+}
+
+JNIEXPORT void JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInputBuffer
+(JNIEnv *env, jobject obj, jint qid, jint ndx, jint bid, jint start, jint end) {
+
+	(void) env;
+	(void) obj;
+
+	if (bid < 0 || bid >= MAX_BUFFERS)
+		return -1;
+	gpu_setDirectInputBuffer (qid, ndx, buffers[bid], start, end);
 }
 
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setOutput
@@ -395,6 +468,53 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggre
 	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
 	/* Object `int []` released */
 	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_allocateBuffer
+(JNIEnv *env, jobject obj, jint size, jint readOnly) {
+
+	(void) env;
+	(void) obj;
+
+	/*
+	 * Align memory according to CL_DEVICE_MEM_BASE_ADDR_ALIGN (see getDeviceInfo()).
+	 *
+	 * void *p = aligned_alloc (512, size);
+	 * if (! p) {
+	 * 	fprintf(stderr, "fatal error: out of memory\n");
+	 * 	exit(1);
+	 * }
+	 *
+	 * Pin memory
+	 *
+	 * if (mlock(p, size) != 0) {
+	 * 	fprintf(stderr, "fatal error: failed to pin allocated buffer\n");
+	 *	int e = errno;
+	 *	if (e == EAGAIN) { fprintf(stderr, "EAGAIN\n");
+	 *	} else
+	 *	if (e == ENOMEM) { fprintf(stderr, "ENOMEM\n");
+	 *	} else
+	 *	if (e == EPERM)  { fprintf(stderr,  "EPERM\n");
+	 *	} else
+	 *	if (e == EINVAL) { fprintf(stderr, "EINVAL\n");
+	 * 	}
+	 *	exit (1);
+	 * }
+	 */
+
+	return gpu_getDirectBuffer (size, readOnly);
+}
+
+JNIEXPORT jobject JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getDirectByteBuffer
+(JNIEnv *env, jobject obj, jint idx) {
+
+	(void) obj;
+
+	if (idx < 0 || idx >= MAX_BUFFERS)
+		return NULL;
+	directBufferP p = buffers[idx];
+	jobject buffer = (*env)->NewDirectByteBuffer(env, p->mapped_buffer, getDirectBufferSize(p));
+	return buffer;
 }
 
 void callback_setKernelDummy (cl_kernel kernel, gpuContextP context, int *constants) {

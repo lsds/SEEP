@@ -23,6 +23,8 @@ void gpu_free ();
 /* Set one context per query */
 int gpu_getQuery (const char *, int, int, int, JNIEnv *);
 
+int gpu_getDirectBuffer (int, int);
+
 int gpu_setInput (int, int, void *, int);
 
 int gpu_setOutput (int, int, void *, int, int, int, int, int);

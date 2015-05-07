@@ -115,6 +115,38 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelTheta
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggregateIStream
   (JNIEnv *, jobject, jint, jintArray);
 
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    allocateBuffer
+ * Signature: (II)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_allocateBuffer
+  (JNIEnv *, jobject, jint, jint);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    getDirectByteBuffer
+ * Signature: (I)Ljava/lang/Object;
+ */
+JNIEXPORT jobject JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_getDirectByteBuffer
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    setDirectInput
+ * Signature: (IIII)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInput
+  (JNIEnv *, jobject, jint, jint, jint, jint);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    setDirectInputBuffer
+ * Signature: (IIIII)V
+ */
+JNIEXPORT void JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setDirectInputBuffer
+  (JNIEnv *, jobject, jint, jint, jint, jint, jint);
+
 #ifdef __cplusplus
 }
 #endif

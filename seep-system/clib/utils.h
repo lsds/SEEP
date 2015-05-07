@@ -6,6 +6,8 @@
 #define MAX_OUTPUTS  10
 #define MAX_QUERIES   2
 
+#define MAX_BUFFERS  20
+
 #define NCONTEXTS 5
 
 #define DEPTH 4 /* 5-stage pipeline */

@@ -512,9 +512,8 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 				b.append(String.format(String.format("\tkey *= convert_int_rtp(__bswap64(p->tuple._%d));\n", 
 					((FloatColumnReference) groupBy[i-1]).getColumn())));
 			}
-			/* How to pack them? */
-			b.append("\treturn key;\n");
 		}
+		b.append("\treturn key;\n");
 		b.append ("}\n");
 		b.append("\n");
 		b.append("inline void storef (__global intermediate_t *out, __global input_t *p) {\n");

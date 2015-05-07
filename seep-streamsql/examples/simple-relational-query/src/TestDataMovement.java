@@ -33,7 +33,7 @@ public class TestDataMovement {
 		
 		TheGPU.getInstance().init(1);
 		
-		DummyKernel kernel = new DummyKernel (schema, filename, inputSize);
+		DummyKernel kernel = new DummyKernel (schema, inputSize);
 		kernel.setup();
 		int qid = kernel.getQueryId();
 		

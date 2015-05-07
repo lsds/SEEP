@@ -30,7 +30,7 @@ endif
 
 CLIB = -L/Users/akolious/SEEP/seep-system/clib -lGPU
 
-OBJS = GPU.o timer.o openclerrorcode.o inputbuffer.o outputbuffer.o gpucontext.o gpuquery.o
+OBJS = GPU.o timer.o openclerrorcode.o directbuffer.o inputbuffer.o outputbuffer.o gpucontext.o gpuquery.o
 
 all: libGPU.so libCPU.so
 
@@ -54,6 +54,7 @@ uk_ac_imperial_lsds_seep_multi_TheCPU.h:
 
 timer.o: timer.c timer.h
 openclerrorcode.o: openclerrorcode.c openclerrorcode.h
+directbuffer.o: directbuffer.c directbuffer.h
 inputbuffer.o: inputbuffer.c inputbuffer.h
 outputbuffer.o: outputbuffer.c outputbuffer.h
 gpucontext.o: gpucontext.c gpucontext.h
