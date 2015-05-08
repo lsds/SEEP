@@ -463,6 +463,10 @@ int gpu_query_exec_direct (gpuQueryP q, size_t *threads, size_t *threadsPerGroup
 	int *start, int *end,
 	queryOperatorP operator, JNIEnv *env, jobject obj, int qid) {
 
+	(void) env;
+	(void) obj;
+	(void) qid;
+
 	if (! q)
 		return -1;
 	gpuContextP p = gpu_context_switch (q);
@@ -482,8 +486,6 @@ int gpu_query_exec_direct (gpuQueryP q, size_t *threads, size_t *threadsPerGroup
 	gpu_context_flush (p);
 
 	gpu_context_waitForReadEvent (p);
-
-	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
 	return 0;
 }

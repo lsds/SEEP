@@ -476,7 +476,7 @@ void gpu_context_moveDirectInputBuffers (gpuContextP q, int *start, int *end) {
 			fprintf(stderr, "error: invalid buffer pointers (%s)\n", __FUNCTION__);
 			exit(-1);
 		}
-		int theSize = end - start;
+		int theSize = end[i] - start[i];
 		dbg("[DBG] write input %d: start %13d end %13d (%13d bytes)\n",
 				i, start[i], end[i], theSize);
 		/*

@@ -106,6 +106,17 @@ public class KernelCodeGenerator {
 		b.append("\n");
 		return b.toString();	
 	}
+	
+	public static String getDummyOperator (ITupleSchema input, ITupleSchema output, String filename) {
+		StringBuilder b = new StringBuilder ();
+		b.append(getHeader (input, output));
+		b.append("\n");
+		b.append(getDummyFunctor(input, output));
+		b.append("\n");
+		b.append(getDummyKernel(filename));
+		b.append("\n");
+		return b.toString();
+	}
 
 	private static String getIntermediateStruct (Expression [] groupBy) {
 		
@@ -417,6 +428,10 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		return load (filename);
 	}
 	
+	public static String getDummyKernel (String filename) {
+		return load (filename);
+	}
+	
 	private static String getReductionFunctors (AggregationType type, FloatColumnReference _the_aggregate) {
 
 		StringBuilder b = new StringBuilder ();
@@ -668,6 +683,23 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		}
 		for (int i = 0; i < r; i++) {
 			b.append(String.format("\tq->vectors[%d] = p2->vectors[%d];\n", j++, i));
+		}
+		b.append("}\n");
+		b.append("\n");
+		return b.toString();
+	}
+	
+	private static String getDummyFunctor (ITupleSchema input, ITupleSchema output) {
+		StringBuilder b = new StringBuilder ();
+		b.append("inline void copyf (__global input_t *p, __global output_t *q) {\n");
+		int l = getVectorSize( input);
+		int r = getVectorSize(output);
+		if (l != r) {
+			System.err.println("error: invalid tuple schema");
+			System.exit(1);
+		}
+		for (int i = 0; i < l; i++) {
+			b.append(String.format("\tq->vectors[%d] = p->vectors[%d];\n", i, i));
 		}
 		b.append("}\n");
 		b.append("\n");

@@ -4,10 +4,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.nio.ByteBuffer;
 
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.TupleSchema;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.TheGPU;
+import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 
 public class TestDMA {
 	
@@ -36,11 +39,29 @@ public class TestDMA {
 		int bid = TheGPU.getInstance().allocateBuffer (1073741824, 1); /* readOnly buffer */
 		System.out.println("[DBG] buffer id is " + bid);
 		ByteBuffer buffer = (ByteBuffer) TheGPU.getInstance().getDirectByteBuffer (bid);
+		System.out.println("[DBG] buffer capacity is " + buffer.capacity());
 		
-		int tupleSize = 512;
+		int tupleSize = 128;
+		/*
+		 * Construct schema
+		 */
+		int nattributes = (tupleSize - 8) / 4;
+		int[] offsets = new int[nattributes + 1];
+		offsets[0] = 0;
+		int byteSize = 8;
+		for (int i = 1; i < nattributes + 1; i++) {
+			offsets[i] = byteSize;
+			byteSize += 4;
+		}
+		ITupleSchema inputSchema = new TupleSchema (offsets, byteSize);
+		/* 0:undefined 1:int, 2:float, 3:long */
+		inputSchema.setType(0, 3);
+		for (int i = 1; i < nattributes + 1; i++) {
+			inputSchema.setType(i, 1);
+		}
 		
 		/* Populate the buffer with dummy tuples */
-		for (int i = 0; i < buffer.capacity(); i++) {
+		while(buffer.hasRemaining()) {
 			/*
 			 * Assume input schema is <long, int, int, ...>
 			 */
@@ -49,6 +70,9 @@ public class TestDMA {
 				buffer.putInt(1);
 		}
 		buffer.clear();
+		
+		int [] startPointers = new int [1];
+		int []   endPointers = new int [1];
 		
 		/* Configuration variables for the query */
 		int inputSize  = _default_size;
@@ -62,8 +86,8 @@ public class TestDMA {
 		int [] threadsPerGroup = new int [1];
 		threadsPerGroup[0] = 128;
 		
-		String filename = "templates/DummyKernel.cl";
-		String source = load(filename);
+		String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/DummyKernel.cl";
+		String source = KernelCodeGenerator.getDummyOperator(inputSchema, inputSchema, filename);
 		
 		int qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
 		
@@ -74,11 +98,35 @@ public class TestDMA {
 		TheGPU.getInstance().setDirectInput  (qid, 0, inputSize, bid);
 		TheGPU.getInstance().setDirectOutput (qid, 0, outputSize, 1, 0, 0, 1, outputBufferId);
 		
+		startPointers[0] = 0;
+		  endPointers[0] = startPointers[0] + _default_size;
+		
 		TheGPU.getInstance().setKernelDummy(qid, null);
 		
-		TheGPU.getInstance().execute(qid, threads, threadsPerGroup);
+		TheGPU.getInstance().executeDirect(qid, threads, threadsPerGroup, startPointers, endPointers);
+		/* At this point, outputBuffer should contain a copy of a slice of the input buffer, 
+		 * as determined by the start and end pointers. */
+		ByteBuffer slicedInput = buffer.slice();
+		slicedInput.position(startPointers[0]);
+		slicedInput.limit(endPointers[0]);
+		/* Reset outputBuffer */
+		outputBuffer.clear();
+		/*
+		 * TODO
+		 * 
+		 * a) Make sure that DummyKernel returns a copy of the input
+		 * 
+		 * b) Slide the input window batch and test whether the DMA
+		 *    throughput is sustained
+		 * 
+		 */
+		if (outputBuffer.equals(slicedInput))
+			System.out.println("OK");
+		else
+			System.err.println("Error");
 		
 		TheGPU.getInstance().free();
+		System.out.println("Bye.");
 	}
 }
 

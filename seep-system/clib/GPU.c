@@ -153,6 +153,11 @@ void gpu_free () {
 	for (i = 0; i < MAX_QUERIES; i++)
 		if (queries[i])
 			gpu_query_free (queries[i]);
+	for (i = 0; i < MAX_BUFFERS; i++)
+		if (buffers[i])
+			freeDirectBuffer (buffers[i], theQueue);
+	if (theQueue)
+		clReleaseCommandQueue(theQueue);
 	if (context)
 		clReleaseContext (context);
 	return;
