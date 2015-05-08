@@ -28,7 +28,7 @@ else
 	LIBS += -lOpenCL -pthread
 endif
 
-CLIB = -L/Users/akolious/SEEP/seep-system/clib -lGPU
+CLIB = -L/home/akolious/seep/seep-system/clib -lGPU
 
 OBJS = GPU.o timer.o openclerrorcode.o directbuffer.o inputbuffer.o outputbuffer.o gpucontext.o gpuquery.o
 
@@ -62,3 +62,6 @@ gpuquery.o: gpuquery.c gpuquery.h
 
 clean:
 	rm -f *.o *.so
+
+# test:
+#	$(CC) $(CFLAGS) test.c -o test $(LIBS) $(CLIB)

@@ -58,7 +58,8 @@ public class DummyKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		this.tgs = new int [1];
 		tgs[0] = 256;
 		
-		String source = KernelCodeGenerator.load(filename);
+		String source = KernelCodeGenerator.getDummyOperator(schema, schema, filename);
+		System.out.println(source);
 		
 		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
 		TheGPU.getInstance().setInput (qid, 0, inputSize);
@@ -140,6 +141,6 @@ public class DummyKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {
-		throw new UnsupportedOperationException("ProjectionKernel operates on a single stream only");
+		throw new UnsupportedOperationException("DummyKernel operates on a single stream only");
 	}
 }

@@ -150,6 +150,7 @@ void gpu_init (int _queries) { /* Initialise `n` queries */
 
 void gpu_free () {
 	int i;
+	int error;
 	for (i = 0; i < MAX_QUERIES; i++)
 		if (queries[i])
 			gpu_query_free (queries[i]);
@@ -159,7 +160,10 @@ void gpu_free () {
 	if (theQueue)
 		clReleaseCommandQueue(theQueue);
 	if (context)
-		clReleaseContext (context);
+		error = clReleaseContext (context);
+	if (error != CL_SUCCESS)
+		fprintf(stderr, "error: failed to free context\n");
+	
 	return;
 }
 
@@ -1125,7 +1129,10 @@ void callback_writeInput (gpuContextP context,
 
 void callback_readOutput (gpuContextP context,
 		JNIEnv *env, jobject obj, int qid, int ndx, int mark) {
-	// fprintf(stderr, "callback_readOutput\n");
+	
+	if (! context->kernelOutput.outputs[ndx]->writeOnly)
+	 	return ;
+	
 	jclass class = (*env)->GetObjectClass (env, obj);
 	jmethodID method = (*env)->GetMethodID (env, class,
 			"outputDataMovementCallback", "(IIJII)V");
@@ -1133,9 +1140,6 @@ void callback_readOutput (gpuContextP context,
 		fprintf(stderr, "JNI error: failed to acquire read method pointer\n");
 		exit(1);
 	}
-	
-	if (! context->kernelOutput.outputs[ndx]->writeOnly)
-	 	return ;
 	
 	/* Use the mark */
 	int theSize;

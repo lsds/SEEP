@@ -18,8 +18,8 @@ OPTS="-server -XX:+UseConcMarkSweepGC -XX:NewRatio=2 -XX:SurvivorRatio=16 -Xms48
 
 CLASS=$1
 
-# valgrind --error-limit=no --leak-check=full --show-reachable=yes 
-java $OPTS -cp $JCP $CLASS $2 # 2>&1 >test.out &
+valgrind --error-limit=no --leak-check=full --show-reachable=yes java  -cp $JCP $CLASS 16 row 1024 1024 6
+# $OPTS -cp $JCP $CLASS $2 # 2>&1 >test.out &
 
 # seep_pid=$!
 # top -b -n120 -d 1 | grep "Cpu" >> test-cpu.out

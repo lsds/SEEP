@@ -306,7 +306,7 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 void gpu_context_flush (gpuContextP q) {
 	int error = 0;
 	error |= clFlush (q->queue[0]);
-	error |= clFlush (q->queue[1]);
+	/* error |= clFlush (q->queue[1]); */
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
 			error, getErrorMessage(error), __FUNCTION__);
@@ -454,6 +454,7 @@ void gpu_context_readOutput (gpuContextP q,
 				}
 			}
 			dbg("[DBG] mark is %d\n", mark);
+			break;
 		}
 	}
 	/* mark = 0; */

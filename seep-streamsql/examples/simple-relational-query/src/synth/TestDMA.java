@@ -98,32 +98,36 @@ public class TestDMA {
 		TheGPU.getInstance().setDirectInput  (qid, 0, inputSize, bid);
 		TheGPU.getInstance().setDirectOutput (qid, 0, outputSize, 1, 0, 0, 1, outputBufferId);
 		
-		startPointers[0] = 0;
-		  endPointers[0] = startPointers[0] + _default_size;
-		
 		TheGPU.getInstance().setKernelDummy(qid, null);
 		
-		TheGPU.getInstance().executeDirect(qid, threads, threadsPerGroup, startPointers, endPointers);
-		/* At this point, outputBuffer should contain a copy of a slice of the input buffer, 
-		 * as determined by the start and end pointers. */
-		ByteBuffer slicedInput = buffer.slice();
-		slicedInput.position(startPointers[0]);
-		slicedInput.limit(endPointers[0]);
-		/* Reset outputBuffer */
-		outputBuffer.clear();
-		/*
-		 * TODO
-		 * 
-		 * a) Make sure that DummyKernel returns a copy of the input
-		 * 
-		 * b) Slide the input window batch and test whether the DMA
-		 *    throughput is sustained
-		 * 
-		 */
-		if (outputBuffer.equals(slicedInput))
-			System.out.println("OK");
-		else
-			System.err.println("Error");
+		int start = 0;
+		int end = _default_size;
+		while (true) {
+			
+			startPointers[0] = start;
+			endPointers[0] = end;
+			
+			TheGPU.getInstance().executeDirect(qid, threads, threadsPerGroup, startPointers, endPointers);
+			/* At this point, outputBuffer should contain a copy of a slice of the input buffer, 
+			 * as determined by the start and end pointers. */
+			ByteBuffer slicedInput = buffer.slice();
+			slicedInput.position(startPointers[0]);
+			slicedInput.limit(endPointers[0]);
+			/* Reset outputBuffer */
+			outputBuffer.clear();
+			if (! outputBuffer.equals(slicedInput)) {
+				System.err.println("Error");
+				System.exit(1);
+			}
+			/*
+			 * Slide the input window batch and test whether the DMA
+			 * throughput is sustained
+			 */
+			start += tupleSize;
+			end = start + _default_size;
+			if (end >= buffer.capacity())
+				break;
+		}
 		
 		TheGPU.getInstance().free();
 		System.out.println("Bye.");

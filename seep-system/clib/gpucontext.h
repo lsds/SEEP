@@ -3,6 +3,8 @@
 
 #include "utils.h"
 
+#include "debug.h"
+
 #include "inputbuffer.h"
 #include "outputbuffer.h"
 
@@ -47,7 +49,9 @@ typedef struct gpu_context {
 	cl_command_queue queue [2];
 	int scheduled;
 	cl_event read_event;
+#ifdef GPU_PROFILE
 	cl_event exec_event[MAX_KERNELS];
+#endif
 	cl_event write_event;
 	long long readCount;
 	long long writeCount;

@@ -414,19 +414,20 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	__obj = obj;
 	if (theOther) {
 		/* Wait for read event from previous query */
-		gpu_context_waitForReadEvent (theOther);
+ 		gpu_context_waitForReadEvent (theOther);
 		/* Notify output handler */
 		pthread_mutex_lock (mutex);
 		count = 1;
-		pthread_mutex_unlock (mutex);	
+		pthread_mutex_unlock (mutex);
 		pthread_cond_signal (waiting);
 	}
 	
 	/* Wait for write event */
-	gpu_context_waitForWriteEvent (p);
-	
+ 	gpu_context_waitForWriteEvent (p);
+
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
+
 #ifdef GPU_TMSRMNT
 	tstamp_t dt = timer_getElapsedTime(timer);
 	total += dt;
@@ -439,7 +440,7 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 #endif
 
 	gpu_context_moveInputBuffers (p);
-	
+
 	gpu_context_submitKernel (p, threads, threadsPerGroup);
 	
 	gpu_context_moveOutputBuffers (p);
