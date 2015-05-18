@@ -70,6 +70,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		this.firstTupleSize = firstSchema.getByteSizeOfTuple();
 		this.secondTupleSize = secondSchema.getByteSizeOfTuple();
 		
+		this.firstLastEndIndex = - firstTupleSize;
+		this.firstEndIndex = - firstTupleSize;
+		
+		this.secondLastEndIndex = - secondTupleSize;
+//		this.secondEndIndex = - secondTupleSize;
+		
 		this.firstMask = this.firstBuffer.capacity() - 1;
 		this.secondMask = this.secondBuffer.capacity() - 1;
 		
@@ -192,7 +198,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	}
 	
 	private static int normaliseIndex (IQueryBuffer buffer, int p, int q) {
-		if (q <= p)
+		if (q < p)
 			return (q + buffer.capacity());
 		return q;
 	}
@@ -215,7 +221,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		if (dispatchedInFirst) {
 			// firstBatch.setBatchPointers(firstLastEndIndex, firstEndIndex);
 			// secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
-			firstBatch.setBatchPointers(firstLastEndIndex, normaliseIndex( firstBuffer, firstLastEndIndex, firstEndIndex));
+			firstBatch.setBatchPointers(firstLastEndIndex + firstTupleSize, normaliseIndex( firstBuffer, firstLastEndIndex, firstEndIndex));
 			secondBatch.setBatchPointers(secondStartIndex, normaliseIndex(secondBuffer, secondStartIndex, secondEndIndex));
 			
 			this.firstLastEndIndex = this.firstEndIndex;
@@ -226,7 +232,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			// secondBatch.setBatchPointers(secondLastEndIndex, secondEndIndex);
 			
 			firstBatch.setBatchPointers(firstStartIndex, normaliseIndex( firstBuffer, firstStartIndex, firstEndIndex));
-			secondBatch.setBatchPointers(secondLastEndIndex, normaliseIndex(secondBuffer, secondLastEndIndex, secondEndIndex));
+			secondBatch.setBatchPointers(secondLastEndIndex + secondTupleSize, normaliseIndex(secondBuffer, secondLastEndIndex, secondEndIndex));
 			
 			this.firstLastEndIndex = this.firstEndIndex;
 			this.secondLastEndIndex = this.secondEndIndex;
@@ -259,9 +265,9 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		 * number of tuples that are fully processed in the task that was just created
 		 */
 		if (secondNextIndex != secondStartIndex)
-			secondToProcessCount -= (secondNextIndex - secondStartIndex + secondTupleSize) / secondTupleSize;
+			secondToProcessCount -= (secondNextIndex - secondStartIndex) / secondTupleSize;
 		if (firstNextIndex != firstStartIndex)
-			firstToProcessCount -= (firstNextIndex - firstStartIndex + firstTupleSize) / firstTupleSize;
+			firstToProcessCount -= (firstNextIndex - firstStartIndex) / firstTupleSize;
 		
 		/*
 		 * Second, move the start-pointer for the next task to the next-pointer
