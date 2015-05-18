@@ -71,11 +71,11 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 				firstWindowBatch.getTaskId(), 
 				firstCurrentIndex, 
 				firstEndIndex,
-				(firstEndIndex - firstCurrentIndex)/firstByteSizeOfInTuple,
+				(firstEndIndex + firstByteSizeOfInTuple - firstCurrentIndex)/firstByteSizeOfInTuple,
 				firstWindowBatch.getFreeOffset(),
 				secondCurrentIndex, 
 				secondEndIndex,
-				(secondEndIndex - secondCurrentIndex)/secondByteSizeOfInTuple,
+				(secondEndIndex + secondByteSizeOfInTuple - secondCurrentIndex)/secondByteSizeOfInTuple,
 				secondWindowBatch.getFreeOffset()
 				));
 		}
