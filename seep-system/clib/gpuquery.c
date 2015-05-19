@@ -87,6 +87,11 @@ void gpu_query_init (gpuQueryP q, JNIEnv *env, int qid) {
 	
 	(void) q;
 	(void) qid;
+
+#ifdef GPU_TMSRMNT
+	printf ("Create timer...\n");
+	timer = timer_new();
+#endif
 	
 	if (! env)
 		return;
@@ -112,10 +117,6 @@ void gpu_query_init (gpuQueryP q, JNIEnv *env, int qid) {
 	}
 	/* Wait until thread attaches itself to the JVM */
 	while (! started) ;
-#endif
-
-#ifdef GPU_TMSRMNT
-	timer = timer_new();
 #endif
 	return ;
 }
@@ -292,6 +293,7 @@ static int gpu_query_exec_1 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	
 	gpu_context_waitForReadEvent (p);
 	
+	
 	gpu_context_readOutput (p, operator->readOutput, env, obj, qid);
 
 	return 0;
@@ -306,11 +308,16 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	
 	gpuContextP theOther = (operator->execKernel(p));
 	
+	if (p == theOther) {
+		fprintf(stderr, "error: invalid context\n");
+		exit(-1);
+	}
+	
 #ifdef GPU_TMSRMNT
 	timer_start(timer);
 #endif
 	/* Wait for write event */
-	gpu_context_waitForWriteEvent (p);
+	// gpu_context_waitForWriteEvent (p);
 
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
@@ -318,9 +325,10 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	if (theOther) {
 
 		/* Wait for read event from previous query */
-		gpu_context_waitForReadEvent (theOther);
+		// gpu_context_waitForReadEvent (theOther);
+		// gpu_context_finish(theOther);
 		/* Read output */
-		gpu_context_readOutput (theOther, operator->readOutput, env, obj, qid);
+		// gpu_context_readOutput (theOther, operator->readOutput, env, obj, qid);
 	}
 
 #ifdef GPU_TMSRMNT
@@ -335,6 +343,8 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpu_context_moveOutputBuffers (p);
 	
 	gpu_context_flush (p);
+	
+	// gpu_context_waitForReadEvent (p);
 
 	return 0;
 }

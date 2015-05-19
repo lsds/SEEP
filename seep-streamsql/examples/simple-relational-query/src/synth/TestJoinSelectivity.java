@@ -122,7 +122,7 @@ public class TestJoinSelectivity {
 		/* Calculate batch-related statistics */
 		/* ... */
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 32 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ =  64 * 1024 * 1024;
 		
 		TheGPU.getInstance().init(1);
@@ -165,8 +165,8 @@ public class TestJoinSelectivity {
 		/*
 		 * Set up the stream
 		 */
-		int firstTuplesPerInsert  = 200;
-		int secondTuplesPerInsert = 200;
+		int firstTuplesPerInsert  = 100;
+		int secondTuplesPerInsert = 100;
 		
 		int firstTupleSize  =  firstSchema.getByteSizeOfTuple();
 		int secondTupleSize = secondSchema.getByteSizeOfTuple();

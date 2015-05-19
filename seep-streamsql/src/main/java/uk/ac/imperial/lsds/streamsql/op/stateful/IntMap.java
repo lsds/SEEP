@@ -47,6 +47,9 @@ public class IntMap {
 	}
 
 	public void put(int key, int value) {
+		
+		/* System.out.println ("[DBG] put in IntMap: " + key + " hash is " + hash(key) + " size is " + size); */
+		
 		IntMapEntry current = content[hash(key)];
 		
 		if (current == null) {

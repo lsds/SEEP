@@ -16,6 +16,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -23,24 +24,17 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
-import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
-import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
-import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
-import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
-import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
-public class TestGoogleClusterDataQuery1 {
+public class TestGoogleClusterDataRealTime {
 	
 	private static final String usage = "usage: java TestGoogleClusterData";
 	
 	public static void main (String [] args) {
 		
 		String hostname = "localhost";
-		int port = 6667;
+		int port = 6668;
 		
 		int bundle = 512;
 		int tupleSize = 64;
@@ -78,15 +72,16 @@ public class TestGoogleClusterDataQuery1 {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 8;
-		QueryConf queryConf = new QueryConf(60, 1024);
+		Utils.THREADS = 16;
+		QueryConf queryConf = new QueryConf(32, 1024);
 		/*
 		 * Set up configuration of query
 		 */
 		WindowType windowType = WindowType.fromString("row");
-		long windowRange = 100;
-		long windowSlide =  10;
+		long windowRange = 512;
+		long windowSlide = 512;
 		int numberOfAttributesInSchema = 12;
+		int numberOfProjectedAttributes = numberOfAttributesInSchema;
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -94,72 +89,68 @@ public class TestGoogleClusterDataQuery1 {
 		int [] offsets = new int [numberOfAttributesInSchema];
 		/* First attribute is timestamp */
 		offsets[ 0] =  0;
-		offsets[ 1] =  8; /*       jobId */
-		offsets[ 2] = 16; /*      taskId */
-		offsets[ 3] = 24; /*   machineId */
-		offsets[ 4] = 32; /*   eventType */
-		offsets[ 5] = 36; /*      userId */
-		offsets[ 6] = 40; /*    category */
-		offsets[ 7] = 44; /*    priority */
-		offsets[ 8] = 48; /*         cpu */
-		offsets[ 9] = 52; /*         ram */
-		offsets[10] = 56; /*        disk */
-		offsets[11] = 60; /* constraints */
+		offsets[ 1] =  8;
+		offsets[ 2] = 16;
+		offsets[ 3] = 24;
+		offsets[ 4] = 32;
+		offsets[ 5] = 36;
+		offsets[ 6] = 40;
+		offsets[ 7] = 44;
+		offsets[ 8] = 48;
+		offsets[ 9] = 52;
+		offsets[10] = 56;
+		offsets[11] = 60;
 		
 		int byteSize = 64;
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 		
-		IPredicate predicate =  new IntComparisonPredicate(
-			IntComparisonPredicate.EQUAL_OP, 
-			new IntColumnReference(4),
-			new IntConstant(3)); /* FAIL == 3 */
+		Expression [] expression = new Expression [numberOfProjectedAttributes];
 		
-		IMicroOperatorCode selectionCode = new Selection(predicate);
-		MicroOperator uoperator1;
-		uoperator1 = new MicroOperator (selectionCode, null, 1);
+		expression[ 0] = new  LongColumnReference( 0);
+		expression[ 1] = new  LongColumnReference( 1);
+		expression[ 2] = new  LongColumnReference( 2);
+		expression[ 3] = new  LongColumnReference( 3);
+		expression[ 4] = new   IntColumnReference( 4);
+		expression[ 5] = new   IntColumnReference( 5);
+		expression[ 6] = new   IntColumnReference( 6);
+		expression[ 7] = new   IntColumnReference( 7);
+		expression[ 8] = new FloatColumnReference( 8);
+		expression[ 9] = new FloatColumnReference( 9);
+		expression[10] = new FloatColumnReference(10);
+		expression[11] = new   IntColumnReference(11);
 		
-		/* After selection, apply aggregation */
+		IMicroOperatorCode projectionCode = new Projection (expression);
+		System.out.println(String.format("[DBG] %s", projectionCode));
 		
-		AggregationType aggregationType = AggregationType.fromString("count");
+		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 1048576; /* 1MB */
 		
-		Expression [] groupBy = new Expression [] {
-			new IntColumnReference(6)
-		};
+		MicroOperator uoperator;
+		uoperator = new MicroOperator (projectionCode, null, 1);
 		
-		IMicroOperatorCode aggregationCode = new MicroAggregation (
-			window,
-			aggregationType,
-			new FloatColumnReference(8), /* count(*), does not really matter */
-			groupBy
-			);
-		
-		MicroOperator uoperator2;
-		uoperator2 = new MicroOperator (aggregationCode, null, 1);
-		
-		uoperator1.connectTo(6001, uoperator2);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
-		operators.add(uoperator1);
-		operators.add(uoperator2);
+		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 128 * 1048576; /* 1MB */
+		long timestampReference = System.nanoTime();
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
-		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
+		SubQuery query = new SubQuery (0, operators, schema, window, queryConf, timestampReference);
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
 		
+		TheCPU.getInstance().bind(0);
+		
 		/* Measurements */
 		long Bytes = 0L;
-		/* 
+		 
 		long count = 0L;
 		long previous = 0L; 
 		long t, _t = 0L;
 		double dt, rate, MB;
 		double _1MB = 1000000.0; // Or, MiB 1048576.0;
-		*/
+		
 		try {
 		
 			ServerSocketChannel server = ServerSocketChannel.open();
@@ -211,13 +202,20 @@ public class TestGoogleClusterDataQuery1 {
 							 * Make sure the buffer is rewind before reading.
 							 */
 							buffer.rewind();
-							operator.processData (buffer.array(), bytes);
 							
-							buffer.clear();
+							/*
+							 * Change the timestamp of all tuples received
+							 */
+							long ts = (System.nanoTime() - timestampReference) / 1000000000L;
+							for (int idx = 0; idx < bytes; idx += schema.getByteSizeOfTuple()) {
+								buffer.putLong(idx, ts);
+							}
+							
+							/* operator.processData (buffer.array(), bytes); */
 							
 							/* Measurements */
 							Bytes += bytes;
-							/*
+							
 							count += 1;
 							if (count % 10000 == 0) {
 								t = System.currentTimeMillis();
@@ -231,7 +229,8 @@ public class TestGoogleClusterDataQuery1 {
 								_t = t;
 								previous = Bytes;
 							}
-							*/
+							
+							buffer.clear();
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");

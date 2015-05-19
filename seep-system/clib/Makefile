@@ -61,7 +61,7 @@ gpucontext.o: gpucontext.c gpucontext.h
 gpuquery.o: gpuquery.c gpuquery.h
 
 clean:
-	rm -f *.o *.so
+	rm -f *.o *.so test.exe
 
-# test:
-#	$(CC) $(CFLAGS) test.c -o test $(LIBS) $(CLIB)
+test: libGPU.so
+	$(CC) $(CFLAGS) test.c -o test.exe $(LIBS) $(CLIB)

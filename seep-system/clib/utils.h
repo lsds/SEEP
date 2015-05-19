@@ -8,8 +8,8 @@
 
 #define MAX_BUFFERS  20
 
-#define NCONTEXTS 1
+#define NCONTEXTS 5
 
-#define DEPTH 1 /* 5-stage pipeline */
+#define DEPTH 4 /* 5-stage pipeline */
 
 #endif /* __GPU_UTILS_H_ */

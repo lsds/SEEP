@@ -49,6 +49,11 @@ public class FloatDivision implements FloatExpression {
 			int offset, IQueryBuffer toBuffer) {
 		toBuffer.putFloat(eval(fromBuffer, schema, offset));
 	}
+	
+	public void appendByteResultToPosition(IQueryBuffer fromBuffer, ITupleSchema schema,
+			int offset, IQueryBuffer toBuffer, int position) {
+		toBuffer.putFloat(position, eval(fromBuffer, schema, offset));
+	}
 
 	@Override
 	public void writeByteResult(IQueryBuffer fromBuffer, ITupleSchema schema,

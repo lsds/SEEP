@@ -169,7 +169,6 @@ static void printEventProfilingInfo (cl_event event, const char *acronym) {
 }
 #endif
 
-#ifdef GPU_VERBOSE
 static int getEventReferenceCount (cl_event event) {
 	int error = 0;
 	cl_uint count = 0;
@@ -187,6 +186,7 @@ static int getEventReferenceCount (cl_event event) {
 		return (int) count;
 }
 
+#ifdef GPU_VERBOSE
 static char *getEventCommandStatus (cl_event event) {
 	int error = 0;
 	cl_int status;
@@ -234,11 +234,15 @@ void gpu_context_profileQuery (gpuContextP q) {
 	 */
 	char msg[64];
 	int i;
+	int error = 0;
 	for (i = 0; i < q->kernel.count; i++) {
 		memset(msg, 0, 64);
 		sprintf(msg, "K%02d", i);
 		printEventProfilingInfo(q->exec_event[i], msg);
-		clReleaseEvent(q->exec_event[i]);
+		error = clReleaseEvent(q->exec_event[i]);
+		if (error != CL_SUCCESS) {
+			fprintf(stderr, "warning: failed to release event (%s)\n", __FUNCTION__);
+		}
 	}
 }
 #endif
@@ -264,7 +268,14 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 	printEventProfilingInfo(q->read_event, "R");
 #endif
 	q->readCount -= 1;
-	clReleaseEvent(q->read_event);
+	/* At this stage, the write event should be finished as well. */
+	// int refCount = getEventReferenceCount (q->read_event);
+	// printf("[DBG] after waiting for  read event %p, its reference count is %d\n", q->read_event, refCount);
+	error = clReleaseEvent(q->read_event);
+	q->read_event = NULL;
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "warning: failed to release event (%s)\n", __FUNCTION__);
+	}
 	return ;
 }
 
@@ -299,14 +310,19 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 		exit (1);
 	}
 	q->writeCount -= 1;
-	clReleaseEvent(q->write_event);
+	// int refCount = getEventReferenceCount (q->write_event);
+	// printf("[DBG] after waiting for write event %p, its reference count is %d\n", q->write_event, refCount);
+	error = clReleaseEvent(q->write_event);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "warning: failed to release event (%s)\n", __FUNCTION__);
+	}
 	return ;
 }
 
 void gpu_context_flush (gpuContextP q) {
 	int error = 0;
 	error |= clFlush (q->queue[0]);
-	/* error |= clFlush (q->queue[1]); */
+	error |= clFlush (q->queue[1]);
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
 			error, getErrorMessage(error), __FUNCTION__);
@@ -341,7 +357,8 @@ void gpu_context_submitTask (gpuContextP q, size_t *threads, size_t *threadsPerG
 				0,
 				q->kernelInput.inputs[i]->size,
 				q->kernelInput.inputs[i]->mapped_buffer,
-				0, NULL, &q->write_event);
+				0, NULL, NULL);
+				// 0, NULL, &(q->write_event));
 		} else {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -400,7 +417,7 @@ void gpu_context_submitTask (gpuContextP q, size_t *threads, size_t *threadsPerG
 				0,
 				q->kernelOutput.outputs[i]->size,
 				q->kernelOutput.outputs[i]->mapped_buffer,
-				0, NULL, &q->read_event);
+				0, NULL, &(q->read_event));
 		} else {
 			error |= clEnqueueReadBuffer (
 				q->queue[0],
@@ -496,7 +513,8 @@ void gpu_context_moveDirectInputBuffers (gpuContextP q, int *start, int *end) {
 				0,
 				theSize,
 				(q->kernelInput.inputs[i]->mapped_buffer + start[i]),
-				0, NULL, &q->write_event);
+				0, NULL, NULL); //&(q->write_event));
+				// 0, NULL, &(q->write_event));
 		} else {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -532,7 +550,8 @@ void gpu_context_moveInputBuffers (gpuContextP q) {
 				0,
 				q->kernelInput.inputs[i]->size,
 				q->kernelInput.inputs[i]->mapped_buffer,
-				0, NULL, &q->write_event);
+				0, NULL, NULL);
+				// 0, NULL, &(q->write_event));
 		} else {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -572,7 +591,8 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 				0,
 				q->kernelOutput.outputs[i]->size,
 				q->kernelOutput.outputs[i]->mapped_buffer,
-				0, NULL, &q->read_event);
+				0, NULL, NULL); //&(q->read_event));
+				// 0, NULL, &(q->read_event));
 		} else {
 			error |= clEnqueueReadBuffer (
 				q->queue[0],
@@ -601,8 +621,8 @@ void gpu_context_submitKernel (gpuContextP q, size_t *threads, size_t *threadsPe
 
 	/* Execute */
 	for (i = 0; i < q->kernel.count; i++) {
-		dbg("[DBG] submit kernel %d: %10zu threads %10zu threads/group\n", 
-			i, threads[i], threadsPerGroup[i]);
+		/* dbg("[DBG] submit kernel %d: %10zu threads %10zu threads/group\n", 
+			i, threads[i], threadsPerGroup[i]); */
 #ifdef GPU_PROFILE
 		error |= clEnqueueNDRangeKernel (
 			q->queue[0],

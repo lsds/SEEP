@@ -58,6 +58,9 @@ void callback_readOutput (gpuContextP, JNIEnv *, jobject, int, int, int);
 /* Get previous execution context and set current one */
 gpuContextP callback_execKernel (gpuContextP);
 
+jclass class;
+jmethodID writeMethod;
+
 static void setPlatform () {
 	int error = 0;
 	cl_uint count = 0;
@@ -237,10 +240,18 @@ int gpu_exec_direct (int qid, size_t *threads, size_t *threadsPerGroup,
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_init
 (JNIEnv *env, jobject obj, jint N) {
 
-	(void) env;
-	(void) obj;
+	//(void) env;
+	//(void) obj;
 
 	gpu_init (N);
+	
+	class = (*env)->GetObjectClass (env, obj);
+	writeMethod = (*env)->GetMethodID (env, class,
+		"inputDataMovementCallback",  "(IIJII)V");
+	if (! writeMethod) {
+		fprintf(stderr, "JNI error: failed to acquire write method pointer\n");
+		exit(1);
+	}
 
 	return 0;
 }
@@ -1107,23 +1118,23 @@ void callback_setKernelAggregateIStream (cl_kernel kernel, gpuContextP context, 
 void callback_writeInput (gpuContextP context,
 		JNIEnv *env, jobject obj, int qid, int ndx, int offset) {
 
-	jclass class = (*env)->GetObjectClass (env, obj);
-	jmethodID method = (*env)->GetMethodID (env, class,
-			"inputDataMovementCallback",  "(IIJII)V");
-	if (! method) {
-		fprintf(stderr, "JNI error: failed to acquire write method pointer\n");
-		exit(1);
-	}
+	// jclass class = (*env)->GetObjectClass (env, obj);
+	//jmethodID method = (*env)->GetMethodID (env, class,
+	//		"inputDataMovementCallback",  "(IIJII)V");
+	//if (! method) {
+	//	fprintf(stderr, "JNI error: failed to acquire write method pointer\n");
+	//	exit(1);
+	//}
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
-			env, obj, method,
+			env, obj, writeMethod,
 			qid,
 			ndx,
 			(long) (context->kernelInput.inputs[ndx]->mapped_buffer),
 			context->kernelInput.inputs[ndx]->size,
 			offset);
 
-	(*env)->DeleteLocalRef(env, class);
+	// (*env)->DeleteLocalRef(env, class);
 	return ;
 }
 
