@@ -44,6 +44,9 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 	@Override
 	public void processData(WindowBatch windowBatch, IWindowAPI api) {
 		
+		ITupleSchema schema = windowBatch.getSchema();
+		int byteSizeOfTuple = schema.getByteSizeOfTuple();
+		
 		windowBatch.initWindowPointers();
 
 		int [] startPointers = windowBatch.getWindowStartPointers();
@@ -57,9 +60,6 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 			System.exit(1);
 		}
 		
-		ITupleSchema schema = windowBatch.getSchema();
-		int byteSizeOfTuple = schema.getByteSizeOfTuple();
-		
 		if (selectivity) {
 			invoked = 0;
 			matched = 0;
@@ -68,7 +68,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			
 			int inWindowStartOffset = startPointers[currentWindow];
-			int inWindowEndOffset   = endPointers[currentWindow];
+			int inWindowEndOffset   = endPointers[currentWindow]; // inWindowStartOffset + 32 * 4096; // 256 * 1024; // endPointers[currentWindow];
 			
 			/*
 			 * If the window is empty, skip it 
@@ -118,6 +118,11 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		windowBatch.setBuffer(outBuffer);
 		
 		api.outputWindowBatchResult(-1, windowBatch);
+		
+		
+//		System.err.println("Disrupted");
+//		System.exit(-1);
+		
 	}
 
 	@Override

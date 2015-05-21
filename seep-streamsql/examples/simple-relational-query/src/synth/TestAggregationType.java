@@ -117,7 +117,7 @@ public class TestAggregationType {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = inputSize;
 		
 		long timestampReference = System.nanoTime();

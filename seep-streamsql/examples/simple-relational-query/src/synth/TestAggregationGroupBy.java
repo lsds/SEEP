@@ -62,7 +62,7 @@ public class TestAggregationGroupBy {
 		Utils.THREADS = Integer.parseInt(args[1]);
 		
 		int batchSize = Integer.parseInt(args[2]);
-		QueryConf queryConf = new QueryConf (batchSize, 1024);
+		QueryConf queryConf = new QueryConf (batchSize, 1048576);
 		
 		WindowType windowType = WindowType.fromString(args[3]);
 		
@@ -135,7 +135,8 @@ public class TestAggregationGroupBy {
 		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
-		IMicroOperatorCode gpuAggCode = new AggregationKernel
+		IMicroOperatorCode gpuAggCode = null;
+		/*new AggregationKernel
 			(
 				aggregationType,
 				new FloatColumnReference(1), 
@@ -149,7 +150,7 @@ public class TestAggregationGroupBy {
 		((AggregationKernel) gpuAggCode).setBatchSize(queryConf.BATCH);
 		((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());
 		((AggregationKernel) gpuAggCode).setup();
-		
+		*/
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
 			uoperator = new MicroOperator (gpuAggCode, cpuAggCode, 1);
@@ -158,8 +159,8 @@ public class TestAggregationGroupBy {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = inputSize;
+		Utils._CIRCULAR_BUFFER_ = 256 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 64 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();

@@ -335,6 +335,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_execute
 	jsize argc = (*env)->GetArrayLength(env, _threads);
 	jint *threads = (*env)->GetIntArrayElements(env, _threads, 0);
 	jint *threadsPerGroup = (*env)->GetIntArrayElements(env, _threadsPerGroup, 0);
+	
 	int i;
 	for (i = 0; i < argc; i++) {
 		dbg("[DBG] kernel %d: %10d threads %10d threads/group\n", 

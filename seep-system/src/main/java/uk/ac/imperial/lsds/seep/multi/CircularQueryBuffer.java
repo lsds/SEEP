@@ -266,7 +266,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			bytes = size - index + offset + 1;
 		else
 			bytes = offset - index + 1;
-		/* System.out.println(String.format("[DBG] q %d %6d bytes processed; new start is %6d", this.id, bytes, _start + bytes)); */
+		// System.out.println(String.format("[DBG] q %d %6d bytes processed; new start is %6d", this.id, bytes, _start + bytes));
 		bytesProcessed.addAndGet(bytes);
 		/* Set new start pointer */
 		start.lazySet(_start + bytes);

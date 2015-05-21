@@ -300,7 +300,7 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
  		 * 
  		 * Assume output tuple schema is <long, int key, float value> (16 bytes) 
  		 */
-		outputSize = 2 * tuples * outputTupleSize;
+		outputSize = 4 * tuples * outputTupleSize;
 		System.out.println("[DBG] output size is " + outputSize + " bytes");
 		
 		/* Intermediate state */

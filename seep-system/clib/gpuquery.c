@@ -424,7 +424,8 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	__obj = obj;
 	if (theOther) {
 		/* Wait for read event from previous query */
- 		gpu_context_waitForReadEvent (theOther);
+ 		// gpu_context_waitForReadEvent (theOther);
+		gpu_context_finish(theOther);
 		/* Notify output handler */
 		pthread_mutex_lock (mutex);
 		count = 1;
@@ -433,7 +434,7 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	}
 	
 	/* Wait for write event */
- 	gpu_context_waitForWriteEvent (p);
+ 	// gpu_context_waitForWriteEvent (p);
 
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);

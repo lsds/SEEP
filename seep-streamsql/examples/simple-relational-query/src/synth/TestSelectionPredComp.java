@@ -121,7 +121,7 @@ public class TestSelectionPredComp {
 		operators.add(uoperator);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = inputSize;
+		Utils._UNBOUNDED_BUFFER_ = 256 * 1024 * 1024; // inputSize;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();

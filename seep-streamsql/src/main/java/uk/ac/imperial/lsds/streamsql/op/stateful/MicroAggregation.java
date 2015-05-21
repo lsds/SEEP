@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import java.nio.FloatBuffer;
+
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -83,8 +85,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		if (this.aggregationType == AggregationType.COUNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
-			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);		
+			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);
+			// this.doIncremental = true;
 		}
+		
+		if (this.doIncremental)
+			System.out.println("[DBG] incremental computation");
+		else
+			System.out.println("[DBG] non-incremental computation");
 		
 		/*
 		Expression [] tmpAllOutAttributes = new Expression[(this.groupByAttributes.length + 2)];
@@ -130,7 +138,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	}
 
 	private int getGroupByKey(IQueryBuffer buffer, ITupleSchema schema, int offset, byte [] bytes) {
-		
+		/*
 		int result = 1;
 		
 		for (int i = 0; i < this.groupByAttributes.length; i++) {
@@ -139,10 +147,12 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			int __result = 1;
 			for (int j = 0; j < bytes.length; j++)
 				__result =  31 * __result + bytes[j];
-			result = 31 * result + __result; /* Arrays.hashCode(bytes); */
+			result = 31 * result + __result;
 			
 		}
 		return result;
+		*/
+		return ((IntColumnReference) this.groupByAttributes[0]).eval(buffer, schema, offset);
 	}
 	
 	@Override
@@ -167,7 +177,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (this.hasGroupBy && this.doIncremental) 
 				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
 			else if (!this.hasGroupBy && this.doIncremental)
-				processDataPerWindowIncrementally(windowBatch, api);
+				processDataPerWindowIncrementally_TheOtherWay(windowBatch, api);
 			else if (this.hasGroupBy && !this.doIncremental)
 				processDataPerWindowWithGroupBy(windowBatch, api);
 			else if (!this.hasGroupBy && !this.doIncremental)
@@ -292,7 +302,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	
 	private void processDataPerWindowWithGroupBy(WindowBatch windowBatch, IWindowAPI api) {
 		
-		windowBatch.initWindowPointers();
+		// windowBatch.initWindowPointers();
 		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers   = windowBatch.getWindowEndPointers();
@@ -589,7 +599,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		IntMap keyOffsets = IntMapFactory.newInstance(pid);
 		IntMap windowTupleCount = null;
 
-		if (this.aggregationType == AggregationType.AVG) 
+		if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) 
 			windowTupleCount = IntMapFactory.newInstance(pid);
 		
 		byte[] l_bytes = new byte[8];
@@ -646,12 +656,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			}
 		}
 		
+		// System.out.println("[DBG] IntMap size is " + keyOffsets.size());
+		
 		keyOffsets.release();
 		if (aggregationType == AggregationType.AVG) 
 			windowTupleCount.release();
 
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		// outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 
 		// release window buffer (will return Unbounded Buffers to the pool)
@@ -666,15 +678,97 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
+	
+	private void processDataPerWindowIncrementally_TheOtherWay(WindowBatch windowBatch, IWindowAPI api) {
+
+		// assert (this.aggregationType == AggregationType.SUM);
+		
+		int [] startPointers = windowBatch.getWindowStartPointers();
+		int [] endPointers = windowBatch.getWindowEndPointers();
+		
+		/* Panes per batch */
+		int ppb = 557056;
+//				(int) windowBatch.getWindowDefinition().panesPerSlide() * windowBatch.getBatchSize() + 
+//				(int) windowBatch.getWindowDefinition().numberOfPanes();
+		
+		float [] paneResult = new float [ppb];
+		
+		int windowSize = (int) windowBatch.getWindowDefinition().getSize();
+		
+		// System.out.println(String.format("[DBG] panes/batch %10d window size %10d", ppb, windowSize));
+
+		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
+
+		ITupleSchema inSchema = windowBatch.getSchema();
+		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
+
+		float paneValue = 0;
+		
+		int start = startPointers[0];
+		int end = endPointers[startPointers.length - 1];
+		
+		// System.out.println(String.format("[DBG] batch starts at %10d ends at %10d", start, end));
+		
+		int currentPane = 0;
+		
+		int nextWindow = windowSize;
+		
+		for (int p = start; p < end; p += byteSizeOfInTuple) {
+			
+			paneValue = this.aggregationAttribute.eval(inBuffer, inSchema, p);
+			
+			if (currentPane > 0)
+				paneResult[currentPane] = paneResult[currentPane - 1] + paneValue;
+			else
+				paneResult[currentPane] = paneValue;
+			
+			currentPane ++;
+			
+			if (currentPane == nextWindow) {
+				
+				// System.out.println(String.format("[DBG] current pane is %10d next window ends at %10d", currentPane, nextWindow));
+				
+				// float windowValue = 0;
+				
+				// for (int j = currentPane - windowSize; j < currentPane; j++)
+				// 	windowValue += paneResult[j];
+				
+				// outBuffer.putLong(1);
+				// outBuffer.putFloat(paneResult[currentPane - 1]);
+				
+				// outBuffer.put(outSchema.getDummyContent());
+				
+				// System.out.println("[DBG] window value is " + windowValue);
+				
+				nextWindow += 1;
+				
+				// System.out.print(".");
+			}
+		}
+		
+		outBuffer.getByteBuffer().asFloatBuffer().put(paneResult);
+		
+		inBuffer.release();
+		
+		windowBatch.setBuffer(outBuffer);
+		windowBatch.setSchema(outSchema);
+
+		api.outputWindowBatchResult(-1, windowBatch);
+		
+		// System.out.println("Done.");
+	}
 
 	private void processDataPerWindowIncrementally(WindowBatch windowBatch,
 			IWindowAPI api) {
 
 		assert (this.aggregationType == AggregationType.COUNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG);
-
-		int[] startPointers = windowBatch.getWindowStartPointers();
-		int[] endPointers = windowBatch.getWindowEndPointers();
+		
+		int [] startPointers = windowBatch.getWindowStartPointers();
+		int [] endPointers = windowBatch.getWindowEndPointers();
+		
+		// System.out.println("[DBG] #windows/batch = " + startPointers.length);
 
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
@@ -706,14 +800,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					}
 				}
 				
-				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset - byteSizeOfInTuple);
+				// windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset - byteSizeOfInTuple);
 				
 				startPointers[currentWindow] = outBuffer.position();
-				outBuffer.putLong(windowTimestamp);
+				// outBuffer.putLong(windowTimestamp);
 				if (this.aggregationType == AggregationType.AVG)
 					windowValue = windowValue / windowTupleCount;
-				outBuffer.putFloat(windowValue);
-				outBuffer.put(outSchema.getDummyContent());
+				// outBuffer.putFloat(windowValue);
+				// outBuffer.put(outSchema.getDummyContent());
 				endPointers[currentWindow] = outBuffer.position() - 1;
 				
 			} else {
@@ -741,21 +835,21 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				if (prevWindowStart != -1) {
 					for (int i = prevWindowStart; i < inWindowStartOffset; i += byteSizeOfInTuple) {
 						windowTupleCount--;
-						windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, i);
+						// windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, i);
 						if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG)
 							windowValue -= this.aggregationAttribute.eval(inBuffer,inSchema, i);
 					}
 				}
 
-				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset);
+				// windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset);
 
 				startPointers[currentWindow] = outBuffer.position();
-				outBuffer.putLong(windowTimestamp);
+				// outBuffer.putLong(windowTimestamp);
 				if (this.aggregationType == AggregationType.AVG)
 					windowValue = windowValue / windowTupleCount;
-				outBuffer.putFloat(windowValue);
-				outBuffer.put(outSchema.getDummyContent());
-				endPointers[currentWindow] = outBuffer.position() - 1;
+				// outBuffer.putFloat(windowValue);
+				// outBuffer.put(outSchema.getDummyContent());
+				// endPointers[currentWindow] = outBuffer.position() - 1;
 
 				prevWindowStart = inWindowStartOffset;
 				prevWindowEnd = inWindowEndOffset;
@@ -763,7 +857,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		}
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		// outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 
 		// release old buffer (will return Unbounded Buffers to the pool)

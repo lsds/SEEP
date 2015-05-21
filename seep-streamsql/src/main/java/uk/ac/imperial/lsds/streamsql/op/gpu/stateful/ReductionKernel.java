@@ -130,7 +130,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		tgs = new int [1];
 		tgs[0] = threadsPerGroup; /* This is a constant */
 		
-		int [] threads = new int [1];
+		threads = new int [1];
 		threads[0] = ngroups * tgs[0];
 		
 		this.outputSize = ngroups * outputSchema.getByteSizeOfTuple();
@@ -187,7 +187,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		windowBatch.initWindowPointers(startPtrs, endPtrs);
 		/* The start and end pointers are normalised */
-		printWindowPointers(startPtrs, endPtrs);
+		// printWindowPointers(startPtrs, endPtrs);
 		
 		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
 		TheGPU.getInstance().setInputBuffer(qid, 2,   endPtrs);
