@@ -37,7 +37,7 @@ public class WindowBatch {
 	private int latencyMark = 0;
 	
 	public WindowBatch () {
-		this(Utils.BATCH, 0, 0, null, null, null, 0);
+		this(1, 0, 0, null, null, null, 0);
 	}
 	
 	public WindowBatch (int batchSize, 

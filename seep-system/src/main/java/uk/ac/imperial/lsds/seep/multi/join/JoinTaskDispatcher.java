@@ -6,6 +6,7 @@ import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.ResultHandler;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TaskQueue;
 import uk.ac.imperial.lsds.seep.multi.Utils;
@@ -335,6 +336,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			return (long) Utils.unpack(0, value);
 		else 
 			return value;
+	}
+
+	@Override
+	public long getBytesGenerated () {
+		
+		return this.handler.getTotalOutputBytes();
 	}
 }
 

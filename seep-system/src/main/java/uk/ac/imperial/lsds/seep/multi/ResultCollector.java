@@ -69,10 +69,8 @@ public class ResultCollector {
 							if (! result) {
 								handler.latch[handler.next] = i;
 								handler.slots.set(handler.next, 1);
-								/*
-								 * FIXME
-								 */
-								break;
+								
+								return;
 							}
 						}
 					}
@@ -84,6 +82,14 @@ public class ResultCollector {
 				if (handler.mark[handler.next] != -1)
 					query.getLatencyMonitor().monitor(handler.freeBuffer, handler.mark[handler.next]);
 				
+				/* Before releasing the buffer, count how many bytes are in the output.
+				 * 
+				 * It is important that all operators set the position of the buffer accordingly.
+				 * 
+				 * The assumption is that `buf` is an intermediate buffer and that the start
+				 * position is 0.
+				 */
+				handler.incTotalOutputBytes(buf.position());
 				buf.release();
 
 				/* Free input buffer */
@@ -194,7 +200,8 @@ public class ResultCollector {
 							if (! result) {
 								handler.latch[handler.next] = i;
 								handler.slots.set(handler.next, 1);
-								break;
+								
+								return;
 							}
 						}
 					}
@@ -206,7 +213,16 @@ public class ResultCollector {
 				if (handler.mark[handler.next] != -1)
 					query.getLatencyMonitor().monitor(handler.firstFreeBuffer, handler.mark[handler.next]);
 				
+				/* Before releasing the buffer, count how many bytes are in the output.
+				 * 
+				 * It is important that all operators set the position of the buffer accordingly.
+				 * 
+				 * The assumption is that `buf` is an intermediate buffer and that the start
+				 * position is 0.
+				 */
+				handler.incTotalOutputBytes(buf.position());
 				buf.release();
+				
 
 				/* Free first input buffer */
 				int offset1 = handler.firstOffsets[handler.next];

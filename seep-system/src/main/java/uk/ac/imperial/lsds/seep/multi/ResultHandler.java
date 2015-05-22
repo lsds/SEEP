@@ -33,6 +33,8 @@ public class ResultHandler {
 	int next;
 
 	public int wraps = 0;
+	
+	private long totalOutputBytes = 0L;
 
 	public ResultHandler (IQueryBuffer freeBuffer, SubQuery query) {
 		
@@ -50,5 +52,15 @@ public class ResultHandler {
 		
 		next = 0;
 		semaphore = new Semaphore(1, false);
+	}
+	
+	public long getTotalOutputBytes () {
+		
+		return totalOutputBytes;
+	}
+	
+	public void incTotalOutputBytes (int bytes) {
+		
+		totalOutputBytes += (long) bytes;
 	}
 }

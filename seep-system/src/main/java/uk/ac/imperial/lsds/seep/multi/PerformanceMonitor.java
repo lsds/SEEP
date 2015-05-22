@@ -43,7 +43,8 @@ public class PerformanceMonitor implements Runnable {
 				new Measurement (query.getId(), 
 						query.getTaskDispatcher().getBuffer(), 
 						query.getTaskDispatcher().getSecondBuffer(),
-						query.getLatencyMonitor());
+						query.getLatencyMonitor(),
+						query.getTaskDispatcher());
 		}
 		
 		_tasksProcessed = new long [Utils.THREADS][size];
@@ -133,16 +134,24 @@ public class PerformanceMonitor implements Runnable {
 		
 		LatencyMonitor monitor;
 		
+		ITaskDispatcher dispatcher;
+		
 		long bytes, _bytes = 0;
 		double Dt, MBps;
 		double MB, _1MB_ = 1048576.0;
+		
+		long bytesGenerated, _bytesGenerated = 0;
+		double MBpsGenerated;
 
-		public Measurement (int id, IQueryBuffer buffer, IQueryBuffer secondBuffer, LatencyMonitor monitor) {
+		public Measurement (int id, IQueryBuffer buffer, IQueryBuffer secondBuffer, LatencyMonitor monitor,
+				ITaskDispatcher dispatcher) {
 			this.id = id;
 			this.buffer = buffer;	
 			this.secondBuffer = secondBuffer;	
 			
 			this.monitor = monitor;
+			
+			this.dispatcher = dispatcher;
 		}
 			
 		public void stop() {
@@ -162,14 +171,22 @@ public class PerformanceMonitor implements Runnable {
 			if (secondBuffer != null)
 				bytes += secondBuffer.getBytesProcessed();
 			
+			bytesGenerated = dispatcher.getBytesGenerated();
+			
 			if (_bytes > 0) {
 				Dt = (delta / 1000.0);
 				MB = (bytes - _bytes) / _1MB_;
 				MBps = MB / Dt;
-				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps [%s] ", 
-						id, MBps, ((MBps / 1024.) * 8.), monitor);
+				
+				MBpsGenerated = (bytesGenerated - _bytesGenerated) / _1MB_ / Dt;
+				
+				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps output %10.3 MB/s [%s] ", 
+						id, MBps, ((MBps / 1024.) * 8.), MBpsGenerated, monitor);
 			}
 			_bytes = bytes;
+			
+			_bytesGenerated = bytesGenerated;
+			
 			return s;
 		}
 	}

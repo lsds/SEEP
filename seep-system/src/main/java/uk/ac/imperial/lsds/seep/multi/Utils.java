@@ -4,7 +4,7 @@ public class Utils {
 	
 	public static int PIPELINE_DEPTH = 4;
 
-	public static int BATCH = 32;
+	// public static int BATCH = 32;
 
 	public static int BUNDLE = 1048576;
 	

@@ -17,4 +17,6 @@ public interface ITaskDispatcher {
 	public boolean tryDispatchFirst (byte[] data, int length);
 	
 	public boolean tryDispatchSecond (byte[] data, int length);
+
+	public long getBytesGenerated();
 }

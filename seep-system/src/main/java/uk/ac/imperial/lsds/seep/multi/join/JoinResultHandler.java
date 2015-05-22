@@ -41,6 +41,8 @@ public class JoinResultHandler {
 
 	public int wraps = 0;
 	
+	private long totalOutputBytes = 0L;
+	
 	public JoinResultHandler(IQueryBuffer firstFreeBuffer, IQueryBuffer secondFreeBuffer) {
 		
 		this.firstFreeBuffer  =  firstFreeBuffer;
@@ -59,5 +61,15 @@ public class JoinResultHandler {
 		
 		next = 0;
 		semaphore = new Semaphore(1, false);
+	}
+	
+	public long getTotalOutputBytes () {
+		
+		return totalOutputBytes;
+	}
+	
+	public void incTotalOutputBytes (int bytes) {
+		
+		totalOutputBytes += (long) bytes;
 	}
 }

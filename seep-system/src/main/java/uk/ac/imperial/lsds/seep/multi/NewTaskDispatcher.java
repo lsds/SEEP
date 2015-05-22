@@ -2,7 +2,7 @@ package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.ArrayList;
 
-public class TaskDispatcher implements ITaskDispatcher {
+public class NewTaskDispatcher implements ITaskDispatcher {
 	
 	private static final int _undefined = -1;
 	
@@ -14,8 +14,10 @@ public class TaskDispatcher implements ITaskDispatcher {
 	private ResultHandler handler;
 	private SubQuery parent;
 	
-	private int batch;
+	private int batchBytes;
 	private int batchRecords;
+	
+	private int batch;
 	
 	private int nextTask = 1;
 	
@@ -58,9 +60,11 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	int remainder = 0;
 	
+	int accumulated = 0;
+	
 	private ArrayList<Integer> marks;
 	
-	public TaskDispatcher (SubQuery parent) {
+	public NewTaskDispatcher (SubQuery parent) {
 		
 		this.parent = parent;
 		this.buffer = new CircularQueryBuffer(parent.getId(), Utils._CIRCULAR_BUFFER_, false);
@@ -69,11 +73,20 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		this.handler = new ResultHandler (this.buffer, parent);
 		
-		this.batch        = this.parent.getQueryConf().BATCH;
+		this.batchBytes   = this.parent.getQueryConf().BATCH;
 		this.batchRecords = this.parent.getQueryConf()._BATCH_RECORDS;
 		
-		/* Initialise constants */
-		System.out.println(String.format("[DBG] %d panes/slide %d panes/window", window.panesPerSlide(), window.numberOfPanes()));
+		this.tupleSize = schema.getByteSizeOfTuple();
+		
+		int tuplesPerBatch = this.batchBytes / this.tupleSize;
+		int panesPerBatch = (int) (tuplesPerBatch / window.getPaneSize());
+		
+		this.batch = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
+		
+		/* Initialize constants */
+		System.out.println(String.format("[DBG] %d windows/batch %d panes/slide %d panes/window", 
+			this.batch, window.panesPerSlide(), window.numberOfPanes()));
+		
 		ppb = window.panesPerSlide() * (this.batch - 1) + 
 				window.numberOfPanes();
 		
@@ -84,18 +97,14 @@ public class TaskDispatcher implements ITaskDispatcher {
 		else
 			offset = (this.batch) * window.getSlide(); // (this.batch - 1) * window.getSlide();
 		
-		// System.out.println("[DBG] offset is " + offset);
-		
 		p = q = 0L;
 		next_ = 0L;
 		_next = tpb - 1;
 		
 		mask = buffer.capacity() - 1;
 		
-		tupleSize = schema.getByteSizeOfTuple();
-		
 		batches = new int [this.batchRecords][3];
-		/* Initialise state */
+		/* Initialize state */
 		for (int i = 0; i < this.batchRecords; i++)
 			batches[i][_START] = _undefined;
 		b = d = 0;
@@ -213,93 +222,48 @@ public class TaskDispatcher implements ITaskDispatcher {
 			}
 		} else
 		if (window.isRangeBased()) {
-			/* Get the timestamp of the first and last tuple inserted */
-			start = getTimestamp(buffer, index_);
-			end   = getTimestamp(buffer, _index);
 			
-			if (first) {
-				next_  = start;
-				_next += next_;
-				first = false;
-			}
-			
-			/* System.out.println(String.format("[DBG] range-based window: start %16d end %16d index %10d _index %10d length %10d next_ %16d", 
-					start, end, index_, _index, length, next_)); */
-			
-			/* Open one or more window batches */
-			current = 0;
-			while (end >= next_) {
-				/* Let's assume that we insert a sequence a tuples, marked 'x'
-				 * whose timestamps are 1, 2, 2, and 8.
-				 * 
-				 * The slide of the window is 1, so we wish to open windows at
-				 * times 1, 2, 3, and so on.
-				 * 
-				 * For t = 1 and t = 2, everything is fine. For t = 3, though,
-				 * there is no tuple with such timestamp.
-				 * 
-				 * When does the batch open? It may open at time 4, 5, 6...So,
-				 * one way is to search for t + 1, t + 2, and so on, until we
-				 * find the next tuple with a timestamp greater than t = 3.
-				 * 
-				 * x---xx-----------------x---------------------> t
-				 * 
-				 * |--|--|--|--|--|--|
-				 * 1                 7
-				 *    |--|--|--|--|--|--|
-				 *    2                 8
-				 *       |--|--|--|--|--|--|
-				 *       3                 9
-				 */
-				tmp = next_;
-				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
-					tmp ++;
-				
-				/* Set the start pointer for this window batch */
-				batches[b][_START] = position;
-				
-				/* 
-				 * Set the free pointer for the previous window batch, if any. 
-				 * If position is 0, then the free pointer should point at the 
-				 * end of the buffer, otherwise `position--` will be negative.
-				 */
-				position = (position == 0) ? buffer.capacity() : position;
-				position --;
-				if (previous >= 0)
-					batches[previous][_FREE] = position;
-				/* Set counters for the next batch to open */
-				previous = b;
-				b = incrementAndGet(b, true);
-				next_ += offset;
-			}
-			/* Should we close old batches? 
+			accumulated += _length;
+			if (accumulated < batchBytes)
+				return;
+			/* We have accumulated enough data for a batch.
 			 * 
-			 * If a window batch close at time `t`, we are looking for the
-			 * first element whose timestamp is greater than `t`.
-			 *  
+			 * `next_` points to the beginning of this batch.
+			 * 
+			 * `_index` points to the last tuple inserted.
+			 * 
+			 * We can not include the last tuple inserted into 
+			 * the current batch because we cannot know if the 
+			 * window it belongs to is closed.
+			 * 
+			 * So, the last time stamp of the current batch is
+			 * at best `end - 1`.
 			 */
-			current = 0;
-			while (end >= (_next + 1)) {
-				
-				tmp = _next + 1;
-				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
-					tmp ++;
-				
-				/* Set the end pointer for this window batch */
-				batches[d][_END] = position;
-				
-				/* Dispatch a task */
-				this.newTaskFor (
-						batches[d][_START], 
-						batches[d][  _END], 
-						batches[d][ _FREE], 
-						_next - tpb + 1, _next
-						);
-				batches[d][_START] = _undefined;
-				/* Set counters for the next batch to close */
-				d = incrementAndGet(d, false);
-				_next += offset;
-			}
+			start = getTimestamp(buffer, (int) next_);
+			end   = getTimestamp(buffer, _index);
+			/*
+			 * We can find out how many windows are in this batch.
+			 */
+			int panesPerBatch = (int) (end - 1 - start) / (int) window.getPaneSize();
+			this.batch = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
+			
+			/* Calculate again the end pointer */
+			ppb = window.panesPerSlide() * (this.batch - 1) + 
+					window.numberOfPanes();
+			
+			tpb = ppb * window.getPaneSize();
+			
+			end = tpb;
+			/*
+			 * We need to find the end pointer of this batch,
+			 * which is the first occurrence of timestamp `end`.
+			 */
+			tmp = next_;
+			position = firstOccurenceOf (end, (int) next_, _index, (int) next_);
+			/* Position is the free pointer */
+			
+			/* I guess we have to scan linearly to find the */
+			
 		} else
 		{
 			throw new UnsupportedOperationException("error: window is neither row-based nor range-based");
@@ -407,7 +371,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 	@Override
 	public long getBytesGenerated() {
 		
-		return handler.getTotalOutputBytes();
+		return this.handler.getTotalOutputBytes();
 	}
 }
 
