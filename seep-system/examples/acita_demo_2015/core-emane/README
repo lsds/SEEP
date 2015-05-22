@@ -6,4 +6,11 @@ BonnMotion
 Maven (you'll perhaps need to manually install soot-framework-2.5.0.jar into the local mvn repository
 using the suggested mvn install ... when mvn clean compile assembly:single fails).
 olsrd 0.6.3 from ppa at https://launchpad.net/~guardianproject/+archive/ubuntu/commotion (Don't forget to update before installing!).
+For 14.04 can just install olsrd from apt-get directly.
 
+Then apply diff to core.
+Then apply diff to emane?
+Then update olsrd config?
+Then need to point core config to acita config dir.
+Then need to update /etc/hosts.
+Then need to update core config (e.g. for control net).
