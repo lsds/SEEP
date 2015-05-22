@@ -45,3 +45,10 @@ make
 python setup.py install
 
 sudo apt-get install olsrd
+
+sudo apt-get install pip python-dev
+
+sudo pip install numpy
+sudo pip install pandas
+
+sudo apt-get install gnuplot

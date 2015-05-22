@@ -116,10 +116,12 @@ def run_session(time_str, k, mob, exp_session, params):
             wlan1.setposition(x=80,y=50)
             names = EmaneIeee80211abgModel.getnames()
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
-            print 'Emane Model default values: %s'%(str(list(EmaneIeee80211abgModel.getdefaultvalues())))
+            print 'Emane Model default names: %s'%(str(names))
+            print 'Emane Model default values: %s'%(str(values))
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('mode') ] = '3'
             values[ names.index('propagationmodel') ] = '2ray'
+            #values[ names.index('pathlossmode') ] = '2ray'
             #values[ names.index('multicastrate') ] = '12'
             values[ names.index('multicastrate') ] = '4'
             #values[ names.index('unicastrate') ] = '12'
