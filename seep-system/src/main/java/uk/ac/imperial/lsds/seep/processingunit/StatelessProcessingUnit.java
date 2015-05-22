@@ -465,9 +465,14 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			{
 				getOperator().getRouter().setMeanderRouting(new ShortestPathRouter(getOperator().getOpContext()));
 			}
-			else
+			else if ("backpressure".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new BackpressureRouter(getOperator().getOpContext()));
+			}
+			else
+			{
+				LOG.error("Unknown routing alg:"+routingAlg);
+				System.exit(2);
 			}
 		}
 		return ctx;
