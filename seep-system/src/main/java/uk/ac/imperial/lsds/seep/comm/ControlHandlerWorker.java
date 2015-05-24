@@ -16,7 +16,9 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -92,11 +94,12 @@ public class ControlHandlerWorker implements Runnable{
 		k.register(InitRI.class);
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
+		k.register(BitSet.class);
 		k.register(OpFailureCtrl.class);
 		k.register(FailureCtrl.class);
 		k.register(UpDownRCtrl.class);
 		k.register(DownUpRCtrl.class);
-		k.register(Set.class);
+		
 		return k;
 	}
 

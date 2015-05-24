@@ -30,16 +30,20 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitNodeState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpFailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.processingunit.PUContext;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
@@ -76,7 +80,6 @@ public class ControlDispatcher {
 		k.register(MemoryChunk.class);
 		k.register(StateChunk.class);
 		k.register(HashMap.class, new MapSerializer());
-		k.register(BitSet.class);
 		k.register(BackupOperatorState.class);
 		k.register(byte[].class);
 		k.register(RawData.class);
@@ -92,6 +95,12 @@ public class ControlDispatcher {
 		k.register(InitRI.class);
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
+		k.register(BitSet.class);
+		k.register(OpFailureCtrl.class);
+		k.register(FailureCtrl.class);
+		k.register(UpDownRCtrl.class);
+		k.register(DownUpRCtrl.class);
+
 		return k;
 	}
 	
