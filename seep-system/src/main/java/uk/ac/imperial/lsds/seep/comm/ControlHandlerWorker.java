@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,6 +96,7 @@ public class ControlHandlerWorker implements Runnable{
 		k.register(FailureCtrl.class);
 		k.register(UpDownRCtrl.class);
 		k.register(DownUpRCtrl.class);
+		k.register(Set.class);
 		return k;
 	}
 

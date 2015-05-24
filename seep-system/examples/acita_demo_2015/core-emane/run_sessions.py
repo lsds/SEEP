@@ -67,6 +67,7 @@ cp r_waypoints.params $resultsDir
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
 ./gen_core_results.py --expDir $resultsDir
+chmod -R go+rw $resultsDir
 cd $expDir
 '''
 def run_sessions(time_str, k, mob, sessions, params):

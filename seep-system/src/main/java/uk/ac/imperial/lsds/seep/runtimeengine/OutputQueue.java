@@ -41,10 +41,12 @@ public class OutputQueue {
 	private CoreRE owner = null;
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
+	private final boolean bestEffort;
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
 		this.k = initializeKryo();
+		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 	}
 	
 	private Kryo initializeKryo(){
@@ -81,8 +83,13 @@ public class OutputQueue {
 		LOG.debug("-> replaySemaphore to: {}", replaySemaphore.toString());
 	}
 	
+	public synchronized void reopenEndpoint(EndPoint dest)
+	{
+		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
+		channelRecord.reopenDownstreamDataSocket();
+	}
 	
-	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
+	public synchronized boolean sendToDownstream(DataTuple tuple, EndPoint dest) {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		IBuffer buffer = channelRecord.getBuffer();
@@ -124,7 +131,14 @@ public class OutputQueue {
 						}
 						catch(KryoException|IllegalArgumentException e)
 						{
-							LOG.error("Writing batch to "+dest.getOperatorId() + " failed, msg="+ msg);
+							LOG.error("Writing batch to "+dest.getOperatorId() + " failed, tp.ts="+ tp.timestamp);
+							if (!bestEffort)
+							{
+								buffer.save(msg, msg.outputTs, owner.getIncomingTT());
+							}
+							channelRecord.cleanBatch2();
+							return false;
+							/*
 							//TODO: Get rid of this global. Might want to
 							//Have different behaviour for different instances.
 							if(!"true".equals(GLOBALS.valueFor("autoReconnectChannel")))
@@ -132,6 +146,7 @@ public class OutputQueue {
 								throw(e);
 							}
 							channelRecord.reopenDownstreamDataSocket();
+							*/
 						}
 					}
 					
@@ -163,7 +178,9 @@ public class OutputQueue {
 		catch(InterruptedException ie){
 			LOG.error("-> Dispatcher. While trying to do wait() "+ie.getMessage());
 			ie.printStackTrace();
+			System.exit(1);	//dokeeffe abort - don't want this any more.
 		}
+		return true;
 	}
 	
 	public void replay(SynchronousCommunicationChannel oi){

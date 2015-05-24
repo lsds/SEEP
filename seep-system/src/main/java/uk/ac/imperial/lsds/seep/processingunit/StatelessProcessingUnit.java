@@ -572,7 +572,14 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public void ack(DataTuple dt)
 	{
-		dispatcher.ack(dt);
+		if (!getOperator().getOpContext().isSink())
+		{
+			throw new RuntimeException("Logic error.");
+		}
+		if (!GLOBALS.valueFor("reliability").equals("bestEffort"))
+		{
+			dispatcher.ack(dt);
+		}
 	}
 
 }

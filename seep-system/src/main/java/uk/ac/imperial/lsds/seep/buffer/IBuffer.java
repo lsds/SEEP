@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.buffer;
 
 import java.util.Iterator;
+import java.util.List;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
@@ -27,7 +28,7 @@ public interface IBuffer {
 
 	public abstract TimestampTracker trim(long ts);
 
-	public abstract void trim(FailureCtrl fctrl);
+	public abstract List<OutputLogEntry> trim(FailureCtrl fctrl);
 
 	///fixme{just for testing, do binary search on structure}
 	public abstract TimestampTracker getInputVTsForOutputTs(long output_ts);

@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.buffer;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import org.slf4j.Logger;
@@ -184,8 +185,9 @@ public class Buffer implements Serializable, IBuffer{
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#trim(uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl)
 	 */
 	@Override
-	public void trim(FailureCtrl fctrl)
+	public List<OutputLogEntry> trim(FailureCtrl fctrl)
 	{
+		/*
 		Iterator<OutputLogEntry> iter = log.iterator();
 		while (iter.hasNext())
 		{
@@ -193,6 +195,8 @@ public class Buffer implements Serializable, IBuffer{
 			batch.trim(fctrl);
 			if (batch.size() <= 0) { iter.remove(); }
 		}
+		*/
+		throw new RuntimeException("Logic error.");
 		//TODO: This won't work with SEEPs current batching/acking model.
 		//throw new RuntimeException("Need to handle (SEEP) batch sending properly here!");
 		

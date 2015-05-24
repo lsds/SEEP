@@ -5,24 +5,29 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.IBuffer;
+import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
@@ -38,20 +43,23 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long RETRANSMIT_CHECK_INTERVAL = 10 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	private static final long SEND_TIMEOUT = 1 * 1000;
-	private int MAX_NODE_OUT_BUFFER_TUPLES = Integer.MAX_VALUE;
 	private final int MAX_TOTAL_QUEUE_SIZE;
-	private final FailureCtrl nodeFctrl = new FailureCtrl();
-	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();
-	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//TODO: Perhaps change to a delayQueue
+	private final boolean bestEffort;
+	private final boolean optimizeReplay;
+	
+	private final IProcessingUnit owner;
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
 	private final Set<RoutingControlWorker> rctrlWorkers = new HashSet<>();
 	private final FailureDetector failureDetector = new FailureDetector();
 	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
-	private final IProcessingUnit owner;
+	
 	private ArrayList<OutputQueue> outputQueues;
-	private final boolean bestEffort;
 	private final OperatorOutputQueue opQueue;
-
+	private final FailureCtrl nodeFctrl = new FailureCtrl();	//KEEP THIS
+	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();	//REMOVE?
+	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//REMOVE? TODO: Perhaps change to a delayQueue
+	
+	private final Map<String, Integer> idxMapper = new HashMap<String, Integer>(); //Needed for replay after conn failure
 	
 	private final Object lock = new Object(){};
 	
@@ -59,18 +67,23 @@ public class Dispatcher implements IRoutingObserver {
 	{
 		this.owner = owner;
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
+		optimizeReplay = GLOBALS.valueFor("optimizeReplay").equals("true");
 		
 		if (owner.getOperator().getOpContext().isSource())
 		{
-			MAX_TOTAL_QUEUE_SIZE = 1;
+			MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxSrcTotalQueueSizeTuples"));
 		}
 		else
 		{
-			//MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
-			MAX_TOTAL_QUEUE_SIZE = 1;
+			MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+			//MAX_TOTAL_QUEUE_SIZE = 1;
 		}
 		//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
 		opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
+
+		for(int i = 0; i<owner.getOperator().getOpContext().getDeclaredWorkingAttributes().size(); i++){
+			idxMapper.put(owner.getOperator().getOpContext().getDeclaredWorkingAttributes().get(i), i);
+		}
 	}
 	
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
@@ -79,6 +92,7 @@ public class Dispatcher implements IRoutingObserver {
 		//threading etc.
 		this.outputQueues = outputQueues;
 		
+		/*
 		synchronized(lock)
 		{
 			String srcMaxBufferMB = GLOBALS.valueFor("srcMaxBufferMB");
@@ -90,6 +104,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			
 		}
+		*/
 		
 		for(int i = 0; i < outputQueues.size(); i++)
 		{
@@ -135,6 +150,8 @@ public class Dispatcher implements IRoutingObserver {
 		fDetectorT.start();
 		
 		logger.info("Started dispatcher failure detector.");
+		logger.error("Deprecated.");
+		System.exit(1);
 	}
 	
 	public FailureCtrl getNodeFailureCtrl()
@@ -147,16 +164,11 @@ public class Dispatcher implements IRoutingObserver {
 		return copy;
 	}
 	
-	/**
-	 * TODO: Need to rearrange locking so that caller can block on 
-	 * a full node out buffer without causing a deadlock.
-	 */
-	public void dispatch(DataTuple dt) { dispatch(dt, false); }
-	public void dispatch(DataTuple dt, boolean retransmission)
+	public void dispatch(DataTuple dt) 
 	{
 		if (!bestEffort)
 		{
-			dispatchReliable(dt, retransmission); 
+			dispatchReliable(dt); 
 		}
 		else
 		{
@@ -166,11 +178,16 @@ public class Dispatcher implements IRoutingObserver {
 	
 	private void dispatchBestEffort(DataTuple dt)
 	{
-		//TODO: for reliable should check if already in queue or node out buf.
 		opQueue.add(dt);
 	}
 	
-	private void dispatchReliable(DataTuple dt, boolean retransmission) { throw new RuntimeException("TODO"); }
+	private void dispatchReliable(DataTuple dt) 
+	{ 
+		//TODO: for reliable should check if already in queue or node out buf.
+		//Could have a separate node seen buf containing all previous output batches
+		//processed/held locally, that only gets trimmed in response to an ack.
+		opQueue.add(dt);
+	}
 	
 	
 	/*
@@ -255,7 +272,7 @@ public class Dispatcher implements IRoutingObserver {
 		return total;
 	}
 	*/
-	
+	/*
 	private void sendToDispatcher(DataTuple dt, ArrayList<Integer> targets)
 	{
 		for(int i = 0; i<targets.size(); i++){
@@ -278,22 +295,18 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 	}
-	
+	*/
 	
 	public void ack(DataTuple dt)
 	{
 		if (!bestEffort)
 		{
-			throw new RuntimeException("TODO");
-			/*
-			 TODO: Should be acking selectively here?
-			 Or perhaps refactor.
+			
 			long ts = dt.getPayload().timestamp;
 			synchronized(lock)
 			{
 				nodeFctrl.ack(ts);
-			}
-			*/		
+			}		
 		}
 		
 
@@ -301,14 +314,20 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public FailureCtrl handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 	{
+		if (bestEffort) { throw new RuntimeException("Logic error - best effort failure ctrl."); }
+		
 		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);
 		FailureCtrl toUpstream = new FailureCtrl(nodeFctrl);
-		synchronized(lock)
+		
+		if (optimizeReplay)
 		{
-			toUpstream.updateAlives(nodeOutBuffer.keySet());
+			synchronized(lock)
+			{
+				toUpstream.updateAlives(nodeOutBuffer.keySet());
+			}
+			throw new RuntimeException("TODO: Replay optimization.");
 		}
-		//return toUpstream;
-		throw new RuntimeException("TODO"); 
+		return toUpstream; 
 	}
 	
 	public void routingChanged()
@@ -358,16 +377,19 @@ public class Dispatcher implements IRoutingObserver {
 				if (success)
 				{
 					dt = opQueue.remove(dt.getPayload().timestamp);
+					/*
 					if (dt != null)
 					{
 						if (!bestEffort) { 
 							logger.error("TODO: Add to node out buf/timer.");
-							throw new RuntimeException("TODO: Add to node out buf/timer."); }
+							throw new RuntimeException("TODO: Add to node out buf/timer."); 
+						}
 					}
 					else { 
 						logger.error("TODO: Reliablity handling.");
-						throw new RuntimeException("TODO: Reliability handling."); 
+						System.exit(1); 
 					}
+					*/
 				}
 				else
 				{
@@ -382,7 +404,8 @@ public class Dispatcher implements IRoutingObserver {
 	public class DispatcherWorker implements Runnable
 	{
 		//private final BlockingQueue<DataTuple> tupleQueue = new LinkedBlockingQueue<DataTuple>();	//TODO: Want a priority set perhaps?
-		private final BlockingQueue<DataTuple> tupleQueue = new ArrayBlockingQueue<DataTuple>(1);
+		//private final BlockingQueue<DataTuple> tupleQueue = new ArrayBlockingQueue<DataTuple>(1);
+		private final Exchanger<DataTuple> exchanger = new Exchanger<>();
 		private final OutputQueue outputQueue;
 		private final EndPoint dest;
 		
@@ -392,6 +415,7 @@ public class Dispatcher implements IRoutingObserver {
 			this.dest = dest;
 		}
 		
+		/*
 		public void send(DataTuple dt)
 		{
 			//TODO: this needs to be thread safe.
@@ -404,10 +428,12 @@ public class Dispatcher implements IRoutingObserver {
 				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
 			}
 		}
+		*/
 		
 		public boolean trySend(DataTuple dt, long timeout)
 		{
 			//TODO: this needs to be thread safe.
+			/*
 			if (!tupleQueue.contains(dt))
 			{
 				try {
@@ -421,6 +447,13 @@ public class Dispatcher implements IRoutingObserver {
 				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
 				return true;
 			}
+			*/
+			try {
+				exchanger.exchange(dt, timeout, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException | TimeoutException e) {
+				return false;
+			}
+			return true;
 		}
 		
 		@Override
@@ -430,41 +463,87 @@ public class Dispatcher implements IRoutingObserver {
 			{				
 				DataTuple nextTuple = null;
 				try {
-					nextTuple = tupleQueue.take();					
+					//Use an exchanger instead of a tupleQueue.
+					nextTuple = exchanger.exchange(null);
+					//nextTuple = tupleQueue.take();					
 				} catch (InterruptedException e) {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
 				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 
 				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
-				outputQueue.sendToDownstream(nextTuple, dest);
-				logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+				boolean success = outputQueue.sendToDownstream(nextTuple, dest);
+				if (success)
+				{
+					logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+				}
+				else
+				{
+					//Connection must be down.
+					//Remove any output tuples from this replica's output log and add them to the operator output queue.
+					//This should include the current 'SEEP' batch since it might contain several tuples.
+					List<OutputLogEntry> logged = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+					//TODO: Get all logged and add back to op output queue.
+					requeueTuples(logged);
+					
+					//Update this connections routing cost 
+					//TODO: Double check the downstream operator id you're using here is the same as the routing control worker
+					owner.getOperator().getRouter().update_highestWeight(new DownUpRCtrl(dest.getOperatorId(), -1.0, null));
+					//TODO: Remove the alives for this downstream?
+					//TODO: Interrupt the dispatcher thread
+					
+					//Reconnect synchronously (might need to add a helper method to the output queue).
+					outputQueue.reopenEndpoint(dest);
+				}
+			}
+		}
+		
+		private void requeueTuples(List<OutputLogEntry> logged)
+		{
+			for (OutputLogEntry o: logged)
+			{
+				for (TuplePayload p : o.batch.batch)
+				{
+					DataTuple dt = new DataTuple(idxMapper, p);
+					logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
+					opQueue.add(dt);
+				}
 			}
 		}
 		
 		public boolean purgeSenderQueue()
-		{
+		{	
+			/*
 			logger.error("TODO: Thread safety?"); 
 			boolean changed = false;
-			  FailureCtrl currentFctrl = getNodeFailureCtrl();
-			  Iterator<DataTuple> qIter = tupleQueue.iterator();
-			  while (qIter.hasNext())
-			  {
-				  long batchId = qIter.next().getPayload().timestamp;
-				  if (batchId <= currentFctrl.lw() || currentFctrl.acks().contains(batchId) || currentFctrl.alives().contains(batchId))
-				  {
-				  	changed = true;
+			FailureCtrl currentFctrl = getNodeFailureCtrl();
+			Iterator<DataTuple> qIter = tupleQueue.iterator();
+			while (qIter.hasNext())
+			{
+				long batchId = qIter.next().getPayload().timestamp;
+				if (batchId <= currentFctrl.lw() || currentFctrl.acks().contains(batchId) || currentFctrl.alives().contains(batchId))
+				{
+					changed = true;
 					qIter.remove();
-				  }
-			  }
-			return changed;
+				}
+			}
+			*/
+			//return changed;
+
+			//TODO: Don't think I really need to bother given
+			//the tuple queue is only of size 1? Could perhaps
+			//optimize later.
+			throw new RuntimeException("TODO");
 		}
 		
+		/*
 		public int queueLength()
 		{
 			//TODO: Thread safe?
 			return tupleQueue.size();
 		}
+		*/
+	
 	}
 	
 	public class RoutingControlWorker implements Runnable
@@ -615,7 +694,7 @@ public class Dispatcher implements IRoutingObserver {
 					if (target >= 0)
 					{
 						logger.warn("Retransmitting tuple "+dt.getPayload().timestamp +" to "+target);
-						workers.get(target).send(dt);
+						workers.get(target).trySend(dt, -1);
 						synchronized(lock)
 						{
 							//If hasn't been acked
@@ -644,13 +723,29 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			logger.debug("Handling failure ctrl received from "+dsOpId+",nodefctrl="+nodeFctrl+ ", fctrl="+fctrl);
 			nodeFctrl.update(fctrl);
-			boolean nodeOutChanged = purgeNodeOut();
-			refreshNodeOutTimers(fctrl.alives());
-			boolean senderOutsChanged = purgeSenderQueues();
+			
+			boolean opQueueChanged = purgeOpOutputQueue();
+			
+			//boolean nodeOutChanged = purgeNodeOut();
+			//refreshNodeOutTimers(fctrl.alives());
+			if (optimizeReplay)
+			{
+				boolean senderOutsChanged = purgeSenderQueues();
+			}
 			boolean senderBuffersChanged = purgeSenderBuffers();
 
 			synchronized(lock) { lock.notifyAll(); }
 		}
+		
+		private boolean purgeOpOutputQueue()
+		{
+			boolean changed = false;
+			changed = !opQueue.removeOlderInclusive(nodeFctrl.lw()).isEmpty();
+			changed = changed || !opQueue.removeAll(nodeFctrl.acks()).isEmpty();
+			return changed;			
+		}
+		
+		
 		private boolean purgeNodeOut()
 		{
 			boolean changed = false;

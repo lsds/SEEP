@@ -364,10 +364,13 @@ public class CoreRE {
 				{
 					processingUnit.getDispatcher().startRoutingCtrlWorkers();
 					processingUnit.getDispatcher().startDispatcherMain();
+					
+					/*
 					if (!GLOBALS.valueFor("reliability").equals("bestEffort"))
 					{
 						processingUnit.getDispatcher().startFailureDetector();
 					}
+					*/
 				}
 			}
 		}

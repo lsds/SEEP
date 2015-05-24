@@ -26,12 +26,18 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	private final int maxInputQueueSize;
 	private long lw = -1;
 	private Set<Long> acks = new HashSet<>();
+	private final boolean optimizeReplay;
+	private final boolean bestEffort;
 	
 	public OutOfOrderInputQueue()
 	{
 		//inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
-		maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength")); 
+		maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
+		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
+		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
+		
 		logger.info("Setting max input queue size to:"+ maxInputQueueSize);
+		logger.info("Input queue reliability: bestEffort="+bestEffort+",optimizeReplay="+optimizeReplay);
 	}
 	
 	public synchronized void push(DataTuple data){
@@ -152,7 +158,9 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	@Override
 	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
 		
-		if (nodeFctrl.lw() < lw || (nodeFctrl.lw() == lw && nodeFctrl.acks().size() < acks.size()))
+		if (bestEffort || 
+				nodeFctrl.lw() < lw || 
+				(nodeFctrl.lw() == lw && nodeFctrl.acks().size() < acks.size()))
 		{
 			throw new RuntimeException("Logic error");
 		}
@@ -172,13 +180,13 @@ public class OutOfOrderInputQueue implements DataStructureI {
 				iter.remove();
 				removedSomething = true;
 			}
-			else
+			else if (optimizeReplay)
 			{
 				opAlives.add(ts);
 			}
 		}
 		FailureCtrl upOpFctrl = new FailureCtrl(nodeFctrl);
-		upOpFctrl.updateAlives(opAlives);
+		if (optimizeReplay) { upOpFctrl.updateAlives(opAlives); }
 		if (removedSomething) { this.notifyAll(); }
 		return upOpFctrl;
 	}

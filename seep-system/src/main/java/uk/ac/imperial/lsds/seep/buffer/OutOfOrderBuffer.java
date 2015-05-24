@@ -1,7 +1,9 @@
 package uk.ac.imperial.lsds.seep.buffer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -46,13 +48,24 @@ public class OutOfOrderBuffer implements IBuffer {
 	}
 
 	@Override
-	public synchronized void trim(FailureCtrl fctrl) {
-		Iterator<Long> iter = log.keySet().iterator();
-		while (iter.hasNext())
+	public synchronized List<OutputLogEntry> trim(FailureCtrl fctrl) {
+		if (fctrl == null)
 		{
-			BatchTuplePayload batch = log.get(iter.next()).batch;
-			batch.trim(fctrl);
-			if (batch.size() <= 0) { iter.remove(); }
+			//Return and remove everything, connection has failed.
+			List<OutputLogEntry> trimmed = new ArrayList<>(log.values());
+			log.clear();
+			return trimmed;
+		}
+		else
+		{
+			Iterator<Long> iter = log.keySet().iterator();
+			while (iter.hasNext())
+			{
+				BatchTuplePayload batch = log.get(iter.next()).batch;
+				batch.trim(fctrl);
+				if (batch.size() <= 0) { iter.remove(); }
+			}
+			return null;
 		}
 		//TODO: This won't work with SEEPs current batching/acking model.
 		//throw new RuntimeException("Need to handle (SEEP) batch sending properly here!");		

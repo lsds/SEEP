@@ -53,7 +53,8 @@ public class BatchTuplePayload {
 		while (iter.hasNext())
 		{
 			long tupleTs = iter.next().timestamp;
-			if (tupleTs <= fctrl.lw() || fctrl.acks().contains(tupleTs) || fctrl.alives().contains(tupleTs))
+			// Don't remove based on alives here - we're using this log for replay.
+			if (tupleTs <= fctrl.lw() || fctrl.acks().contains(tupleTs) /*|| fctrl.alives().contains(tupleTs)*/)
 			{
 				iter.remove();
 				batchSize--;
