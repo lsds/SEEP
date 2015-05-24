@@ -22,6 +22,7 @@ public class DataTuple implements DataTupleI, Serializable{
 	private static final long serialVersionUID = 1L;
 	private TuplePayload payload;
 	private final Map<String, Integer> idxMapper;
+    private int senderOpId ;
 
 	public DataTuple(Map<String, Integer> idxMapper, TuplePayload payload){
 		this.payload = payload;
@@ -39,6 +40,14 @@ public class DataTuple implements DataTupleI, Serializable{
 //		if(payload == null || payload.attrValues == null) return 0;
 		return payload.attrValues.size();
 	}
+
+    public void setSenderOpId (int senderOpId){
+        this.senderOpId = senderOpId ;
+    }
+
+    public int getSenderOpId(){
+        return senderOpId;
+    }
 	
 	/** */
 	
