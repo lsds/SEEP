@@ -334,11 +334,10 @@ public class Dispatcher implements IRoutingObserver {
 		@Override
 		public void run()
 		{
-			/*
 			outputQueue.reopenEndpoint(dest);
-			
+			logger.info("Dispatcher worker initial reconnect complete.");
 			synchronized(lock) { dataConnected = true; }
-			*/
+			
 			while (true)
 			{				
 				DataTuple nextTuple = null;
