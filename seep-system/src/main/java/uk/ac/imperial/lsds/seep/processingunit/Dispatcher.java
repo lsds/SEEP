@@ -308,11 +308,17 @@ public class Dispatcher implements IRoutingObserver {
 		private final Exchanger<DataTuple> exchanger = new Exchanger<>();
 		private final OutputQueue outputQueue;
 		private final EndPoint dest;
+		private boolean dataConnected = false;
 		
 		public DispatcherWorker(OutputQueue outputQueue, EndPoint dest)
 		{
 			this.outputQueue = outputQueue;
 			this.dest = dest;
+		}
+		
+		public boolean isConnected()
+		{
+			synchronized(lock) { return dataConnected; }
 		}
 		
 		public boolean trySend(DataTuple dt, long timeout)
@@ -328,6 +334,11 @@ public class Dispatcher implements IRoutingObserver {
 		@Override
 		public void run()
 		{
+			/*
+			outputQueue.reopenEndpoint(dest);
+			
+			synchronized(lock) { dataConnected = true; }
+			*/
 			while (true)
 			{				
 				DataTuple nextTuple = null;
@@ -355,6 +366,7 @@ public class Dispatcher implements IRoutingObserver {
 
 					synchronized(lock)
 					{
+						dataConnected = false;
 						//holding the lock
 						//1) compute the new joint alives
 						//2) Do a combined.set alives
@@ -373,6 +385,7 @@ public class Dispatcher implements IRoutingObserver {
 						//			move tuple from shared replay log to output queue
 						logger.info("Dispatcher worker "+dest.getOperatorId()+" checking for replay from shared log after failure.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
+						lock.notifyAll();
 					}	
 					
 					//Update this connections routing cost 
@@ -384,6 +397,8 @@ public class Dispatcher implements IRoutingObserver {
 					
 					//Reconnect synchronously (might need to add a helper method to the output queue).
 					outputQueue.reopenEndpoint(dest);
+					
+					synchronized(lock) { dataConnected = true; }
 				}
 			}
 		}
@@ -541,9 +556,12 @@ public class Dispatcher implements IRoutingObserver {
 
 				if (optimizeReplay)
 				{
-					Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
-					logger.info("Failure ctrl handler checking for replay from shared log.");
-					requeueFromSharedReplayLog(dsOpOldAlives);
+					if (workers.get(owner.getOperator().getOpContext().getDownOpIndexFromOpId(dsOpId)).isConnected())
+					{
+						Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+						logger.info("Failure ctrl handler checking for replay from shared log.");
+						requeueFromSharedReplayLog(dsOpOldAlives);
+					}
 				}
 				
 				if (acksChanged)
