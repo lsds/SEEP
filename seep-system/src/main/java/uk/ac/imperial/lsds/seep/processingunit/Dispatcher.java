@@ -39,8 +39,6 @@ public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private static final Logger logger = LoggerFactory.getLogger(Dispatcher.class);
-	private static final long FAILURE_TIMEOUT = 60 * 1000;
-	private static final long RETRANSMIT_CHECK_INTERVAL = 10 * 1000;
 	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
 	private static final long SEND_TIMEOUT = 1 * 1000;
 	private final int MAX_TOTAL_QUEUE_SIZE;
@@ -50,7 +48,6 @@ public class Dispatcher implements IRoutingObserver {
 	private final IProcessingUnit owner;
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
 	private final Set<RoutingControlWorker> rctrlWorkers = new HashSet<>();
-	private final FailureDetector failureDetector = new FailureDetector();
 	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
 	
 	private ArrayList<OutputQueue> outputQueues;
@@ -58,8 +55,6 @@ public class Dispatcher implements IRoutingObserver {
 	//private final FailureCtrl nodeFctrl = new FailureCtrl();	//KEEP THIS
 	private final FailureCtrl combinedDownFctrl = new FailureCtrl();
 	private final Map<Integer, Set<Long>> downAlives = new HashMap<>();	//TODO: Concurrency?
-	private final Map<Long, DataTuple> nodeOutBuffer = new LinkedHashMap<>();	//REMOVE?
-	private final Map<Long, Long> nodeOutTimers = new LinkedHashMap<>();	//REMOVE? TODO: Perhaps change to a delayQueue
 	
 	private final Map<String, Integer> idxMapper = new HashMap<String, Integer>(); //Needed for replay after conn failure
 	
@@ -139,21 +134,6 @@ public class Dispatcher implements IRoutingObserver {
 		Thread mainT = new Thread(new DispatcherMain());
 		mainT.start();
 		logger.info("Started dispatcher main.");
-	}
-	
-	public void startFailureDetector()
-	{
-		if (bestEffort)
-		{
-			logger.error("Logic error - starting failure detector for best effort reliability.");
-			System.exit(1);
-		}
-		Thread fDetectorT = new Thread(failureDetector);
-		fDetectorT.start();
-		
-		logger.info("Started dispatcher failure detector.");
-		logger.error("Deprecated.");
-		System.exit(1);
 	}
 	
 	public FailureCtrl getCombinedDownFailureCtrl()
@@ -676,108 +656,6 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 	}
-	
-	/** Resends timed-out tuples/batches, possibly to a different downstream. */
-	public class FailureDetector implements Runnable
-	{	
-		public void run()
-		{
-			//if (outputQueues.size() <= 1) { throw new RuntimeException("No need?"); }
-			
-			while(true)
-			{
-				checkForRetransmissions();
-				
-				//TODO: This will enforce a minimum wait of RETRANSMIT_CH
-				synchronized(lock)
-				{
-					long waitStart = System.currentTimeMillis();
-					long now = waitStart;
-					
-					while (waitStart + RETRANSMIT_CHECK_INTERVAL > now)
-					{
-						try {
-							lock.wait((waitStart + RETRANSMIT_CHECK_INTERVAL) - now);
-						} catch (InterruptedException e) {}
-						now = System.currentTimeMillis();
-					}
-				}
-			}
-		}
-		
-		public void checkForRetransmissions()
-		{
-			Set<Long> timerKeys = new HashSet<Long>();
-			synchronized(lock)
-			{
-				int maxRetransmits = MAX_TOTAL_QUEUE_SIZE - opQueue.size();
-				if (maxRetransmits <= 0) 
-				{
-					logger.info("Skipping retransmission as no space in output queues.");
-					return;
-				}
-				
-				//TODO: Really don't want to be holding the lock for this long.
-				for(Map.Entry<Long, Long> entry : nodeOutTimers.entrySet())
-				{
-					if (entry.getValue() + FAILURE_TIMEOUT  < System.currentTimeMillis())
-					{
-						timerKeys.add(entry.getKey());
-						if (timerKeys.size() > maxRetransmits)
-						{
-							//TODO: This is a bit arbitrary, should probably sort by age and then trim?
-							break;
-						}
-						//entry.setValue(System.currentTimeMillis());
-					}
-				}
-			}
-			
-			//TODO: This is a best effort retransmit. If there is no
-			//available downstream for a particular tuple, it will have
-			//to wait until the next failure detection timeout. Should
-			//possibly tweak to retry in the meantime whenever there is
-			//a routing change.
-			for (Long tupleKey : timerKeys)
-			{
-				DataTuple dt = null;
-				
-				synchronized(lock)
-				{
-					dt = nodeOutBuffer.get(tupleKey);
-				}
-								
-				if (dt != null)	
-				{
-					int target = -1;
-					ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
-					if (targets.size() > 1) { throw new RuntimeException("TODO"); }
-					else if (targets.size() == 1) { target = targets.get(0); }
-
-					if (target >= 0)
-					{
-						logger.warn("Retransmitting tuple "+dt.getPayload().timestamp +" to "+target);
-						workers.get(target).trySend(dt, -1);
-						synchronized(lock)
-						{
-							//If hasn't been acked
-							if (nodeOutTimers.containsKey(dt.getPayload().timestamp))
-							{
-								//Touch the retransmission timer
-								nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
-							}
-						}
-					}
-					else
-					{
-						//TODO: This might change once there are 'unmatched' hints.
-						return;
-					}
-				}
-			}					
-		}
-	}
-	
 	
 	private class FailureCtrlHandler
 	{
