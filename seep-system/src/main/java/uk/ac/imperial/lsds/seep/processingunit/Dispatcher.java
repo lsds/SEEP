@@ -167,127 +167,32 @@ public class Dispatcher implements IRoutingObserver {
 	{ 
 		//TODO: Locking around combinedDownFctrl?
 		long ts = dt.getPayload().timestamp;
-		if (combinedDownFctrl.lw() >= ts || combinedDownFctrl.acks().contains(ts))
-		{
-			return;	//Trim
-		}
-		if (!(optimizeReplay && combinedDownFctrl.alives().contains(ts)))
-		{
-			opQueue.add(dt);
-		}
-		else
-		{
-			sharedReplayLog.add(dt);
-		}
-	}
-	
-	
-	/*
-	private void dispatchBestEffortOld(DataTuple dt)
-	{
-		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
 		synchronized(lock)
 		{
-			while (totalQueueSize() > MAX_TOTAL_QUEUE_SIZE || targets.isEmpty())
+			if (combinedDownFctrl.lw() >= ts || combinedDownFctrl.acks().contains(ts))
 			{
-				logger.debug("Best effort dispatcher waiting on full queues, size="+totalQueueSize());
-				try
-				{
-					lock.wait();
-				}
-				catch(InterruptedException e) {}
-				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+				//Acked already, discard.
+				return;	
+			}
+			if (!(optimizeReplay && combinedDownFctrl.alives().contains(ts)))
+			{
+				//Schedule for sending
+				opQueue.add(dt);
+			}
+			else
+			{
+				//Live downstream already, save it in shared replay log
+				//Shouldn't be in per-sender log since would have been
+				//detected as a dupe at input.
+				sharedReplayLog.add(dt);
 			}
 		}
-		//Drop the lock before sending
-		sendToDispatcher(dt, targets);
 	}
-	
-	private void dispatchReliable(DataTuple dt, boolean retransmission)
-	{		
-		synchronized(lock)
-		{
-			if (nodeOutBuffer.containsKey(dt.getPayload().timestamp) && !retransmission) 
-			{
-				logger.info("Discarding tuple already added to node out buffer: "+dt.getPayload().timestamp);
-				return; 
-			}
-		}
-	
-		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
-		synchronized(lock)
-		{
-			while (nodeOutBuffer.size() > MAX_NODE_OUT_BUFFER_TUPLES ||
-					(!retransmission && totalQueueSize() > MAX_TOTAL_QUEUE_SIZE) ||
-					targets.isEmpty())
-			{
-				logger.debug("Dispatcher waiting on full node out buf, size="+nodeOutBuffer.size());
-				//return
-				
-				try
-				{
-					lock.wait();
-				}
-				catch(InterruptedException e) {}
-				
-				if (!retransmission && nodeOutBuffer.containsKey(dt.getPayload().timestamp)) { return; }
-				//TODO: Any way to drop the lock before calling this?
-				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
-				
-			}
-
-			
-			//TODO: Flow control if total q length > max q for round robin?
-			nodeOutBuffer.put(dt.getPayload().timestamp, dt);
-			nodeOutTimers.put(dt.getPayload().timestamp, System.currentTimeMillis());
-		}
-		
-		//Drop the lock before sending.
-		sendToDispatcher(dt, targets);
-	}
-	*/
 	
 	public int getTotalQlen()
 	{
 		return opQueue.size();
 	}
-	
-	//Should be called with lock held
-	/*
-	private int totalQueueSize()
-	{
-		int total = 0;
-		for (DispatcherWorker worker : workers.values())
-		{
-			total += worker.queueLength();
-		}
-		return total;
-	}
-	*/
-	/*
-	private void sendToDispatcher(DataTuple dt, ArrayList<Integer> targets)
-	{
-		for(int i = 0; i<targets.size(); i++){
-			int target = targets.get(i);
-			EndPoint dest = owner.getPUContext().getDownstreamTypeConnection().elementAt(target);
-			// REMOTE ASYNC
-			if(dest instanceof AsynchronousCommunicationChannel){
-				//Probably just tweak from spu.sendData
-				throw new RuntimeException("TODO");
-			}
-			// REMOTE SYNC
-			else if(dest instanceof SynchronousCommunicationChannel){
-				workers.get(target).send(dt);
-				//outputQueues.get(target).sendToDownstream(dt, dest);
-			}
-			// LOCAL
-			else if(dest instanceof Operator){
-				//Probably just tweak from spu.sendData
-				throw new RuntimeException("TODO");
-			}
-		}
-	}
-	*/
 	
 	public void ack(DataTuple dt)
 	{
@@ -300,33 +205,13 @@ public class Dispatcher implements IRoutingObserver {
 				combinedDownFctrl.ack(ts);
 			}		
 		}
-		
-
 	}
 	
 	public FailureCtrl handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 	{
 		if (bestEffort) { throw new RuntimeException("Logic error - best effort failure ctrl."); }
 		fctrlHandler.handleFailureCtrl(fctrl, dsOpId);
-		return new FailureCtrl(combinedDownFctrl);
-		
-		/*
-		if (!optimizeReplay)
-		{
-			return new FailureCtrl(combinedDownFctrl.lw(), combinedDownFctrl.acks())
-		}
-		FailureCtrl toUpstream = new FailureCtrl(nodeFctrl);
-		
-		if (optimizeReplay)
-		{
-			synchronized(lock)
-			{
-				toUpstream.updateAlives(nodeOutBuffer.keySet());
-			}
-			throw new RuntimeException("TODO: Replay optimization.");
-		}
-		return toUpstream;
-		*/ 
+		return getCombinedDownFailureCtrl();
 	}
 	
 	public void routingChanged()
@@ -399,19 +284,6 @@ public class Dispatcher implements IRoutingObserver {
 				if (success)
 				{
 					dt = opQueue.remove(dt.getPayload().timestamp);
-					/*
-					if (dt != null)
-					{
-						if (!bestEffort) { 
-							logger.error("TODO: Add to node out buf/timer.");
-							throw new RuntimeException("TODO: Add to node out buf/timer."); 
-						}
-					}
-					else { 
-						logger.error("TODO: Reliablity handling.");
-						System.exit(1); 
-					}
-					*/
 				}
 				else
 				{
@@ -425,8 +297,6 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public class DispatcherWorker implements Runnable
 	{
-		//private final BlockingQueue<DataTuple> tupleQueue = new LinkedBlockingQueue<DataTuple>();	//TODO: Want a priority set perhaps?
-		//private final BlockingQueue<DataTuple> tupleQueue = new ArrayBlockingQueue<DataTuple>(1);
 		private final Exchanger<DataTuple> exchanger = new Exchanger<>();
 		private final OutputQueue outputQueue;
 		private final EndPoint dest;
@@ -437,39 +307,8 @@ public class Dispatcher implements IRoutingObserver {
 			this.dest = dest;
 		}
 		
-		/*
-		public void send(DataTuple dt)
-		{
-			//TODO: this needs to be thread safe.
-			if (!tupleQueue.contains(dt))
-			{
-				tupleQueue.add(dt);
-			}
-			else
-			{
-				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
-			}
-		}
-		*/
-		
 		public boolean trySend(DataTuple dt, long timeout)
 		{
-			//TODO: this needs to be thread safe.
-			/*
-			if (!tupleQueue.contains(dt))
-			{
-				try {
-					return tupleQueue.offer(dt, timeout, TimeUnit.MILLISECONDS);
-				} catch (InterruptedException e) {
-					return false;
-				}
-			}
-			else
-			{
-				logger.info("Discarding duplicate retransmit "+dt.getPayload().timestamp);
-				return true;
-			}
-			*/
 			try {
 				exchanger.exchange(dt, timeout, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException | TimeoutException e) {
@@ -505,34 +344,33 @@ public class Dispatcher implements IRoutingObserver {
 					//Remove any output tuples from this replica's output log and add them to the operator output queue.
 					//This should include the current 'SEEP' batch since it might contain several tuples.
 					List<OutputLogEntry> logged = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
-					
-					if(!optimizeReplay)
-					{
-						requeueTuples(logged);
-					}
-					else
+
+					synchronized(lock)
 					{
 						//holding the lock
-						//1) Save the alives from the old fctrl for this downstream
-						//2) delete the old fctrl for this downstream (TODO: What if control connection still open?)
-						//3) compute the new joint alives
-						//4) Do a combined.set alives
+						//1) compute the new joint alives
+						//2) Do a combined.set alives
+						//3) Save the old alives for this downstream
+						//4) delete the old alives for this downstream (TODO: What if control connection still open?)
+						Set<Long> dsOpOldAlives = updateDownAlives(dest.getOperatorId(), null);
 						//5) for tuple in logged
 						//		if acked discard
 						//		else if in joint alives add to shared replay log
 						//		else add to output queue 
 						//
 						//		remove from the alives for the old fctrl for this downstream
+						requeueTuples(logged, dsOpOldAlives);
 						//6) For remaining tuples in old fctrl for this downstream
 						//		if tuple not acked and not in new joint alives and tuple in shared replay log
 						//			move tuple from shared replay log to output queue
-						
-					}
+						requeueFromSharedReplayLog(dsOpOldAlives);
+					}	
 					
 					//Update this connections routing cost 
 					//TODO: Double check the downstream operator id you're using here is the same as the routing control worker
+					//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
+					//Should you actually force close the control connection?
 					owner.getOperator().getRouter().update_highestWeight(new DownUpRCtrl(dest.getOperatorId(), -1.0, null));
-					//TODO: Remove the alives for this downstream?
 					//TODO: Interrupt the dispatcher thread
 					
 					//Reconnect synchronously (might need to add a helper method to the output queue).
@@ -541,52 +379,81 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		private void requeueTuples(List<OutputLogEntry> logged)
+		/* TODO: Should be holding lock here? */
+		private void requeueTuples(List<OutputLogEntry> logged, Set<Long> dsOpOldAlives)
 		{
+			//?
 			for (OutputLogEntry o: logged)
 			{
 				for (TuplePayload p : o.batch.batch)
 				{
-					DataTuple dt = new DataTuple(idxMapper, p);
-					logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
-					opQueue.add(dt);
+					long ts = p.timestamp;
+					if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
+					{	
+						//TODO: what if acked already?
+						DataTuple dt = new DataTuple(idxMapper, p);
+						if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
+						{
+							sharedReplayLog.add(dt);
+						}
+						else
+						{
+							logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
+							opQueue.add(dt);
+						}
+						
+						if (optimizeReplay && dsOpOldAlives != null)
+						{
+							//Don't replay this twice
+							dsOpOldAlives.remove(ts);
+						}
+					}
 				}
 			}
 		}
-		
-		public boolean purgeSenderQueue()
-		{	
-			/*
-			logger.error("TODO: Thread safety?"); 
-			boolean changed = false;
-			FailureCtrl currentFctrl = getNodeFailureCtrl();
-			Iterator<DataTuple> qIter = tupleQueue.iterator();
-			while (qIter.hasNext())
-			{
-				long batchId = qIter.next().getPayload().timestamp;
-				if (batchId <= currentFctrl.lw() || currentFctrl.acks().contains(batchId) || currentFctrl.alives().contains(batchId))
-				{
-					changed = true;
-					qIter.remove();
-				}
-			}
-			*/
-			//return changed;
-
-			//TODO: Don't think I really need to bother given
-			//the tuple queue is only of size 1? Could perhaps
-			//optimize later.
-			throw new RuntimeException("TODO");
-		}
-		
-		/*
-		public int queueLength()
-		{
-			//TODO: Thread safe?
-			return tupleQueue.size();
-		}
-		*/
+	}
 	
+	//Lock should be held
+	private Set<Long> updateDownAlives(int dsOpId, Set<Long> newDownAlives)
+	{
+		Set<Long> dsOpOldAlives = null;
+		if (optimizeReplay)
+		{
+			Set<Long> newAlives = new HashSet<>();
+			if (newDownAlives != null) { newAlives.addAll(newDownAlives); }
+			for (Integer id : downAlives.keySet())
+			{
+				if (id != dsOpId && downAlives.get(id) != null) 
+				{ 
+					newAlives.addAll(downAlives.get(id)); 
+				}
+			}
+
+			combinedDownFctrl.setAlives(newAlives);
+			dsOpOldAlives = downAlives.get(dsOpId);
+			downAlives.put(dsOpId, newDownAlives);
+		}
+		return dsOpOldAlives;
+	}
+	
+	/* Should be holding lock here */
+	private void requeueFromSharedReplayLog(Set<Long> dsOpOldAlives)
+	{
+		//Replay any retracted alives that we hold in shared replay logs
+		if (optimizeReplay && dsOpOldAlives != null)
+		{
+			for (Long oldDownAlive : dsOpOldAlives)
+			{
+				if (oldDownAlive > combinedDownFctrl.lw() && 
+						!combinedDownFctrl.acks().contains(oldDownAlive) &&
+						!combinedDownFctrl.alives().contains(oldDownAlive))
+				{
+					//Retraction, should schedule for replay if in shared replay log.
+					DataTuple dt = sharedReplayLog.remove(oldDownAlive);
+					if (dt != null) { opQueue.add(dt); }
+				}			
+			}
+		}
 	}
 	
 	public class RoutingControlWorker implements Runnable
@@ -602,24 +469,8 @@ public class Dispatcher implements IRoutingObserver {
 			// while true
 			while (true)
 			{
-				/*
-				int tupleQueueLength = 0;
-				int bufLength = 0;
-				int downIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId);
-				synchronized(lock)
-				{
-					//measure tuple queue length
-					tupleQueueLength = workers.get(downIndex).queueLength();
-					//measure buf length
-					bufLength = bufLength(downId);
-				}	
-				int totalQueueLength = tupleQueueLength + bufLength;
-				logger.debug("Total queue length to "+downId + " = "+ totalQueueLength+"("+tupleQueueLength+"/"+bufLength+")");
-				//Create and send control tuple
-				sendQueueLength(totalQueueLength);
-				*/
 				int totalQueueLength = getTotalQlen();
-				//N.B. TODO: This doesn't include anything in the arrayblockingqueues.
+				//TODO: This doesn't include the input queues.
 				logger.debug("Total queue length to "+downId + " = "+ totalQueueLength);
 				//Create and send control tuple
 				sendQueueLength(totalQueueLength);
@@ -630,19 +481,6 @@ public class Dispatcher implements IRoutingObserver {
 				} catch (InterruptedException e) {}
 			}
 		}
-		
-		/*
-		private int bufLength(int opId)
-		{
-			SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
-			if (cci != null)
-			{
-				IBuffer buffer = cci.getBuffer();
-				return buffer.numTuples();
-			}
-			else { throw new RuntimeException("Logic error."); }
-		}
-		*/
 		
 		private void sendQueueLength(int queueLength)
 		{
@@ -662,8 +500,6 @@ public class Dispatcher implements IRoutingObserver {
 
 		public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 		{
-
-			
 			// Holding lock:
 
 			//1) Remember combined.lw and combined.acks.size
@@ -688,35 +524,11 @@ public class Dispatcher implements IRoutingObserver {
 				long oldAcksSize = combinedDownFctrl.acks().size();
 				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
 				boolean acksChanged = oldLw < combinedDownFctrl.lw() || oldAcksSize < combinedDownFctrl.acks().size();
-				
+
 				if (optimizeReplay)
 				{
-					Set<Long> newAlives = new HashSet<>();
-					newAlives.addAll(fctrl.alives());
-					for (Integer id : downAlives.keySet())
-					{
-						if (id != dsOpId && downAlives.get(id) != null) 
-						{ 
-							newAlives.addAll(downAlives.get(id)); 
-						}
-					}
-
-					combinedDownFctrl.setAlives(newAlives);
-					if (downAlives.get(dsOpId) != null)
-					{
-						for (Long oldDownAlive : downAlives.get(dsOpId))
-						{
-							if (oldDownAlive > combinedDownFctrl.lw() && 
-									!combinedDownFctrl.acks().contains(oldDownAlive) &&
-									!newAlives.contains(oldDownAlive))
-							{
-								//Retraction, should schedule for replay if in shared replay log.
-								DataTuple dt = sharedReplayLog.remove(oldDownAlive);
-								if (dt != null) { opQueue.add(dt); }
-							}			
-						}
-					}
-					downAlives.put(dsOpId, fctrl.alives());
+					Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+					requeueFromSharedReplayLog(dsOpOldAlives);
 				}
 				
 				if (acksChanged)
@@ -728,11 +540,19 @@ public class Dispatcher implements IRoutingObserver {
 					if (aggressivePurge) { purgeOpOutputQueue(); }
 				}
 				
-				synchronized(lock) { lock.notifyAll(); }
+				lock.notifyAll();
 			}
 		}
 		
-		private boolean purgeSenderBuffers()
+		private void purgeSharedReplayLog()
+		{
+			if(optimizeReplay)
+			{
+				throw new RuntimeException("TODO");
+			}
+		}
+		
+		private void purgeSenderBuffers()
 		{
 			//TODO: How to trim buffer?
 			FailureCtrl currentFailureCtrl = getCombinedDownFailureCtrl();
@@ -745,7 +565,6 @@ public class Dispatcher implements IRoutingObserver {
 					buffer.trim(currentFailureCtrl);
 				}
 			}
-			return true;
 		}
 		
 		private boolean purgeOpOutputQueue()
