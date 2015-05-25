@@ -91,24 +91,30 @@ public class FailureCtrl {
 		synchronized(lock) { return new HashSet<>(alives); }
 	}
 	
-	public void update(FailureCtrl other)
+	public boolean update(FailureCtrl other)
 	{
+		boolean changed = false;
 		synchronized(lock)
 		{
 			if (other.lw() > lw)
 			{
 				lw = other.lw();
+				changed = true;
 			}
+			long prevAcksSize = acks.size();
 			acks.addAll(other.acks());
 	
 			Iterator<Long> iter = acks.iterator();
 			while (iter.hasNext())
 			{
-				if (iter.next() <= lw) 
+				long nxtAck = iter.next();
+				if (nxtAck <= lw) 
 				{ 
 					iter.remove();
+					if (!other.acks().contains(nxtAck)) { changed = true; }
 				}
 			}
+			long prevAlivesSize = alives.size();
 			alives.addAll(other.alives());
 			iter = alives.iterator();
 			while (iter.hasNext())
@@ -117,8 +123,10 @@ public class FailureCtrl {
 				if (nxtAlive <= lw || acks.contains(nxtAlive))
 				{
 					iter.remove();
+					if (!other.alives().contains(nxtAlive)) { changed = true; }
 				}
 			}
+			return changed || acks.size() != prevAcksSize || alives.size() != prevAlivesSize;
 		}
 	}
 	
@@ -143,6 +151,64 @@ public class FailureCtrl {
 		}
 	}
 	
+	public boolean update(long newLw, Set<Long> newAcks, Set<Long> newAlives)
+	{
+		boolean changed = false;
+		synchronized(lock)
+		{
+			if (newLw > lw) { changed = true; }
+			lw = Math.max(lw, newLw);
+			
+			int prevAcksSize = acks.size();
+			acks.addAll(newAcks);
+			
+			Iterator<Long> iter = acks.iterator();
+			while (iter.hasNext())
+			{
+				long nxtAck = iter.next();
+				if (nxtAck <= lw) 
+				{ 
+					iter.remove();
+					if (! newAcks.contains(nxtAck)) { changed = true; }
+				}
+			}
+			
+			int prevAlivesSize = alives.size();
+			if (newAlives != null) {  
+				alives.addAll(newAlives);
+			}
+			
+			iter =  alives.iterator();
+			while (iter.hasNext())
+			{
+				long nxtAlive = iter.next();
+				if (nxtAlive <= lw || acks.contains(nxtAlive)) 
+				{ 
+					iter.remove(); 
+					if (newAlives == null || !newAlives.contains(nxtAlive)) { changed = true; }
+				}
+			}
+			
+			return changed || prevAcksSize != acks.size() || prevAlivesSize != alives.size();
+		}
+	}
+	
+	public boolean updateAlives(long newAlive)
+	{
+		synchronized(lock)
+		{
+			if (newAlive <= lw || acks.contains(newAlive) || alives.contains(newAlive))
+			{
+				return false;
+			}
+			else
+			{
+				alives.add(newAlive);
+				return true;
+			}
+		}
+	}
+	
 	public void updateAlives(Set<Long> newAlives)
 	{
 		synchronized(lock)
@@ -158,6 +224,15 @@ public class FailureCtrl {
 				}
 			}
 		}
+	}
+	
+	public void setAlives(Set<Long> newAlives)
+	{
+		synchronized(lock)
+		{
+			alives.clear();
+			updateAlives(newAlives);
+		}	
 	}
 	
 }

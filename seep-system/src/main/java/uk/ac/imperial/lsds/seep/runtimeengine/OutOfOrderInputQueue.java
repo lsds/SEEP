@@ -24,10 +24,13 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	private final static Logger logger = LoggerFactory.getLogger(OutOfOrderInputQueue.class);
 	private TreeMap<Long, DataTuple> inputQueue = new TreeMap<>();
 	private final int maxInputQueueSize;
-	private long lw = -1;
-	private Set<Long> acks = new HashSet<>();
+	//private long lw = -1;
+	//private Set<Long> acks = new HashSet<>();
 	private final boolean optimizeReplay;
+	private final boolean reprocessNonLocals;
 	private final boolean bestEffort;
+	
+	private final FailureCtrl inputFctrl = new FailureCtrl();
 	
 	public OutOfOrderInputQueue()
 	{
@@ -35,6 +38,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 		maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
+		reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
 		
 		logger.info("Setting max input queue size to:"+ maxInputQueueSize);
 		logger.info("Input queue reliability: bestEffort="+bestEffort+",optimizeReplay="+optimizeReplay);
@@ -42,12 +46,10 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	
 	public synchronized void push(DataTuple data){
 		
-		//TODO: Should really check alives too (at least the local ones).
-		if (data.getPayload().timestamp <= lw || 
-				acks.contains(lw) ||
-				inputQueue.containsKey(data.getPayload().timestamp)) 
+		long ts = data.getPayload().timestamp; 
+		if (!inputFctrl.updateAlives(ts))
 		{
-			logger.debug("Ignoring tuple with ts="+data.getPayload().timestamp);
+			logger.debug("Ignoring tuple with ts="+ts);
 			return; 
 		}
 		
@@ -156,39 +158,48 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	//and downstream alives, since we can avoid adding most of the former 
 	// in the first place in push.
 	@Override
-	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
+	public synchronized FailureCtrl purge(FailureCtrl downFctrl) {
 		
 		if (bestEffort || 
-				nodeFctrl.lw() < lw || 
-				(nodeFctrl.lw() == lw && nodeFctrl.acks().size() < acks.size()))
+				downFctrl.lw() < inputFctrl.lw() || 
+				(downFctrl.lw() == inputFctrl.lw() && downFctrl.acks().size() < inputFctrl.acks().size()))
 		{
 			throw new RuntimeException("Logic error");
 		}
-		lw = nodeFctrl.lw();
-		acks = nodeFctrl.acks();
 		
-		Set<Long> opAlives = new HashSet<>();
+		//Trim, but don't pollute the record of batches received on this input
+		//with the ids of all tuples live downstream.
+		inputFctrl.update(downFctrl.lw(), downFctrl.acks(), null);
+		
 		Iterator<Long> iter = inputQueue.keySet().iterator();
 		boolean removedSomething = false;
 		while (iter.hasNext())
 		{
 			long ts = iter.next();
-			//TODO: Do we really want to delete alives that aren't local?
-			if (ts <= nodeFctrl.lw() || nodeFctrl.acks().contains(ts) 
-					|| nodeFctrl.alives().contains(ts))
+			//Probably want to delete tuples that are live downstream but not
+			//here to prevent leaks with multi-input ops.
+			if (ts <= inputFctrl.lw() || inputFctrl.acks().contains(ts) 
+					|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
 			{
 				iter.remove();
 				removedSomething = true;
 			}
-			else if (optimizeReplay)
-			{
-				opAlives.add(ts);
-			}
 		}
-		FailureCtrl upOpFctrl = new FailureCtrl(nodeFctrl);
-		if (optimizeReplay) { upOpFctrl.updateAlives(opAlives); }
+		
+		FailureCtrl upOpFctrl = null;
+		if (optimizeReplay)
+		{
+			upOpFctrl = new FailureCtrl(inputFctrl);
+			upOpFctrl.updateAlives(downFctrl.alives()); 
+		}
+		else
+		{
+			upOpFctrl = new FailureCtrl(downFctrl);
+		}
+	
 		if (removedSomething) { this.notifyAll(); }
 		return upOpFctrl;
+
 	}
 
 	@Override

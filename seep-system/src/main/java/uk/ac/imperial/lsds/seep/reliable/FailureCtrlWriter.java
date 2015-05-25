@@ -21,7 +21,7 @@ public class FailureCtrlWriter implements Runnable {
 		int sleep = new Integer(GLOBALS.valueFor("fctrlEmitInterval"));
 		while(goOn){
 			
-			FailureCtrl fctrl = processingUnit.getDispatcher().getNodeFailureCtrl();
+			FailureCtrl fctrl = processingUnit.getDispatcher().getCombinedDownFailureCtrl();
 			
 			/*
 			TimestampTracker currentTsV = processingUnit.getLastACK();
