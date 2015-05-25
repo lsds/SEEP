@@ -44,6 +44,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
+	private final boolean eagerPurgeOpQueue;
 	
 	private final IProcessingUnit owner;
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
@@ -52,6 +53,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	private ArrayList<OutputQueue> outputQueues;
 	private final OperatorOutputQueue opQueue;
+	private final OperatorOutputQueue sharedReplayLog;
 	//private final FailureCtrl nodeFctrl = new FailureCtrl();	//KEEP THIS
 	private final FailureCtrl combinedDownFctrl = new FailureCtrl();
 	private final Map<Integer, Set<Long>> downAlives = new HashMap<>();	//TODO: Concurrency?
@@ -64,7 +66,8 @@ public class Dispatcher implements IRoutingObserver {
 	{
 		this.owner = owner;
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
-		optimizeReplay = GLOBALS.valueFor("optimizeReplay").equals("true");
+		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
+		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
 		
 		if (owner.getOperator().getOpContext().isSource())
 		{
@@ -77,6 +80,9 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
 		opQueue = new OperatorOutputQueue(MAX_TOTAL_QUEUE_SIZE);
+		
+		//Not really an output queue but can reuse code. Possible unnecessary lock contention?
+		sharedReplayLog = new OperatorOutputQueue(Integer.MAX_VALUE);	
 
 		for(int i = 0; i<owner.getOperator().getOpContext().getDeclaredWorkingAttributes().size(); i++){
 			idxMapper.put(owner.getOperator().getOpContext().getDeclaredWorkingAttributes().get(i), i);
@@ -537,21 +543,24 @@ public class Dispatcher implements IRoutingObserver {
 					//TODO: Think it's ok to temporarily miss tuples being batched but not currently in log?
 					purgeSenderBuffers();
 					
-					if (aggressivePurge) { purgeOpOutputQueue(); }
+					if (eagerPurgeOpQueue) { purgeOpOutputQueue(); }
 				}
 				
 				lock.notifyAll();
 			}
 		}
 		
+		//Lock should be held
 		private void purgeSharedReplayLog()
 		{
 			if(optimizeReplay)
 			{
-				throw new RuntimeException("TODO");
+				sharedReplayLog.removeOlderInclusive(combinedDownFctrl.lw());
+				sharedReplayLog.removeAll(combinedDownFctrl.acks());
 			}
 		}
 		
+		//Lock should be held
 		private void purgeSenderBuffers()
 		{
 			//TODO: How to trim buffer?
@@ -567,13 +576,10 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		private boolean purgeOpOutputQueue()
+		private void purgeOpOutputQueue()
 		{
-			boolean changed = false;
-			changed = !opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
-			changed = changed || !opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
-			//TODO: Move alives to shared replay buffer?
-			return changed;			
+			opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
+			opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
 		}
 	}
 	
