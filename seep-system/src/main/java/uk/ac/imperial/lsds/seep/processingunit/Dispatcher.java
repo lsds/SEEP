@@ -190,6 +190,7 @@ public class Dispatcher implements IRoutingObserver {
 				//Live downstream already, save it in shared replay log
 				//Shouldn't be in per-sender log since would have been
 				//detected as a dupe at input.
+				logger.info("Dispatcher avoided sending live tuple: "+ts);
 				sharedReplayLog.add(dt);
 			}
 		}
@@ -268,6 +269,7 @@ public class Dispatcher implements IRoutingObserver {
 					dt = opQueue.remove(dt.getPayload().timestamp);
 					if (fctrl.alives().contains(ts) && dt != null)
 					{
+						logger.info("Replay optimization: dispatcher avoided replaying tuple "+ts);
 						sharedReplayLog.add(dt);
 					}
 					continue;
@@ -369,6 +371,7 @@ public class Dispatcher implements IRoutingObserver {
 						//6) For remaining tuples in old fctrl for this downstream
 						//		if tuple not acked and not in new joint alives and tuple in shared replay log
 						//			move tuple from shared replay log to output queue
+						logger.info("Dispatcher worker "+dest.getOperatorId()+" checking for replay from shared log after failure.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
 					}	
 					
@@ -400,6 +403,7 @@ public class Dispatcher implements IRoutingObserver {
 						DataTuple dt = new DataTuple(idxMapper, p);
 						if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
 						{
+							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender log of "+ts);
 							sharedReplayLog.add(dt);
 						}
 						else
@@ -456,7 +460,11 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					//Retraction, should schedule for replay if in shared replay log.
 					DataTuple dt = sharedReplayLog.remove(oldDownAlive);
-					if (dt != null) { opQueue.add(dt); }
+					if (dt != null) 
+					{ 
+						logger.info("Replay optimization: Forced to replay tuple from shared log: "+oldDownAlive);
+						opQueue.add(dt); 
+					}
 				}			
 			}
 		}
@@ -534,6 +542,7 @@ public class Dispatcher implements IRoutingObserver {
 				if (optimizeReplay)
 				{
 					Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+					logger.info("Failure ctrl handler checking for replay from shared log.");
 					requeueFromSharedReplayLog(dsOpOldAlives);
 				}
 				
