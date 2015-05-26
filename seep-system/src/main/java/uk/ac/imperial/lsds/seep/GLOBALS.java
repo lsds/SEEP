@@ -50,6 +50,7 @@ public class GLOBALS {
 			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
 			globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
 			globals.put("chainLength", System.getProperty("chainLength", "1"));
+			globals.put("queryType", System.getProperty("queryType", "chain"));
 			LOG.info("Loaded global properties="+propsToString());
 		}
 		catch (FileNotFoundException e1) {

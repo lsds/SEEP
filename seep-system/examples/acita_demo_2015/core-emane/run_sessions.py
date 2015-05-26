@@ -87,8 +87,11 @@ def run_session(time_str, k, mob, exp_session, params):
         if not add_to_server(session): 
             print 'Could not add to server'
 
+        #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
         write_chain_length(params['h'], session.sessiondir)
+        write_query_type(params['query'], session.sessiondir)
+
         copy_seep_jar(session.sessiondir)
         trace_file = None
         if mob > 0.0:
@@ -286,6 +289,10 @@ def write_chain_length(h, session_dir):
     with open('%s/h.txt'%session_dir, 'w') as f:
         f.write(str(h))
 
+def write_query_type(query, session_dir):
+    with open('%s/query.txt'%session_dir, 'w') as f:
+        f.write(str(query))
+
 def copy_seep_jar(session_dir):
     dest = '%s/lib'%session_dir
     os.mkdir(dest)
@@ -301,6 +308,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--k', dest='k', default='2', help='replication factors (2)')
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
+    parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join')
     parser.add_argument('--pausetime', dest='pt', default='2.0', help='pause time (2.0)')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
@@ -326,6 +334,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['specific']=args.specific
     params['preserve']=args.preserve
     params['h']=int(args.h)
+    params['query']=args.query
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
     params['placement']=args.placement

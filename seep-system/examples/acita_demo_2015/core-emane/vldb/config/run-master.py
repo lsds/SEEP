@@ -8,7 +8,7 @@ query_jar = 'acita_demo_2015.jar'
 query_base = 'Base'
 data_dir = '%s/log'%eg_dir
 
-def main(k, h, plot_time_str, run_master):
+def main(k, h, query, plot_time_str, run_master):
     sim_env = os.environ.copy()
        
     if plot_time_str:
@@ -20,8 +20,8 @@ def main(k, h, plot_time_str, run_master):
             if run_master:
 
                 print 'Starting master'
-                master_logfilename = mlog(k, time_str) 
-                master = start_master(k,h, master_logfilename, sim_env)
+                master_logfilename = mlog(k, query, time_str) 
+                master = start_master(k,h, query, master_logfilename, sim_env)
 
                 time.sleep(5)
 
@@ -67,9 +67,9 @@ def run_query(master):
     master.stdin.write('\n')
     print 'Started query'
 
-def start_master(k, h, logfilename, sim_env):
+def start_master(k, h, query, logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h, '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
+        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h, '-DqueryType=%s'%query, '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -79,8 +79,8 @@ def stop_master(p):
     p.terminate()
     print 'Terminated master.'
 
-def mlog(k, time_str):
-    return 'master-k%d-%s.log'%(k,time_str)
+def mlog(k, query, time_str):
+    return 'master-k%d-%s-%s.log'%(k,query,time_str)
 
 def read_k():
     with open('../k.txt', 'rb') as f:
@@ -91,6 +91,11 @@ def read_h():
     with open('../h.txt', 'rb') as f:
         for line in f:
             return int(line.strip())
+
+def read_query():
+    with open('../query.txt', 'rb') as f:
+        for line in f:
+            return line.strip()
 
 def wait_for_deploy(master):
     while not os.path.exists("deployComplete.txt"):
@@ -103,6 +108,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--k', dest='k', help='Number of replicas for each intermediate operator')
     parser.add_argument('--h', dest='h', help='Number of logical operators (chain)')
+    parser.add_argument('--query', dest='query', help='Query type: chain, join')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nomaster', dest='no_master', default=False, help='Disable master (False)')
     
@@ -110,6 +116,7 @@ if __name__ == "__main__":
 
     k = int(args.k) if args.k else read_k()
     h = int(args.h) if args.h else read_h()
+    query = args.query if args.query else read_query() 
     
-    main(k, h, args.plot_time_str, not bool(args.no_master))
+    main(k, h, query, args.plot_time_str, not bool(args.no_master))
 

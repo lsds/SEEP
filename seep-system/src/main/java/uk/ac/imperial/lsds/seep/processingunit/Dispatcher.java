@@ -361,7 +361,7 @@ public class Dispatcher implements IRoutingObserver {
 					//Connection must be down.
 					//Remove any output tuples from this replica's output log and add them to the operator output queue.
 					//This should include the current 'SEEP' batch since it might contain several tuples.
-					List<OutputLogEntry> logged = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+					List<OutputLogEntry> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 
 					synchronized(lock)
 					{
@@ -378,7 +378,7 @@ public class Dispatcher implements IRoutingObserver {
 						//		else add to output queue 
 						//
 						//		remove from the alives for the old fctrl for this downstream
-						requeueTuples(logged, dsOpOldAlives);
+						requeueTuples(sessionLog, dsOpOldAlives);
 						//6) For remaining tuples in old fctrl for this downstream
 						//		if tuple not acked and not in new joint alives and tuple in shared replay log
 						//			move tuple from shared replay log to output queue
@@ -403,10 +403,10 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		/* TODO: Should be holding lock here? */
-		private void requeueTuples(List<OutputLogEntry> logged, Set<Long> dsOpOldAlives)
+		private void requeueTuples(List<OutputLogEntry> sessionLog, Set<Long> dsOpOldAlives)
 		{
 			//?
-			for (OutputLogEntry o: logged)
+			for (OutputLogEntry o: sessionLog)
 			{
 				for (TuplePayload p : o.batch.batch)
 				{
@@ -417,7 +417,7 @@ public class Dispatcher implements IRoutingObserver {
 						DataTuple dt = new DataTuple(idxMapper, p);
 						if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
 						{
-							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender log of "+ts);
+							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
 							sharedReplayLog.add(dt);
 						}
 						else
@@ -567,7 +567,7 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					purgeSharedReplayLog();
 					//TODO: Think it's ok to temporarily miss tuples being batched but not currently in log?
-					purgeSenderBuffers();
+					purgeSenderSessionLogs();
 					
 					if (eagerPurgeOpQueue) { purgeOpOutputQueue(); }
 				}
@@ -587,7 +587,7 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		//Lock should be held
-		private void purgeSenderBuffers()
+		private void purgeSenderSessionLogs()
 		{
 			//TODO: How to trim buffer?
 			FailureCtrl currentFailureCtrl = getCombinedDownFailureCtrl();

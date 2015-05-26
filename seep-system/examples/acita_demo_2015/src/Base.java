@@ -14,6 +14,7 @@ import java.util.HashMap;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
+import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
@@ -35,6 +36,19 @@ public class Base implements QueryComposer{
 		REPLICATION_FACTOR = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 		CHAIN_LENGTH = Integer.parseInt(GLOBALS.valueFor("chainLength"));
 		
+		if (GLOBALS.valueFor("queryType").equals("chain"))
+		{
+			return composeChain();
+		}
+		else if (GLOBALS.valueFor("queryType").equals("join"))
+		{
+			return composeJoin();
+		}
+		else { throw new RuntimeException("Logic error - unknown query type: "+GLOBALS.valueFor("queryType")); }
+	}
+
+	private QueryPlan composeChain()
+	{
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();
 		srcFields.add("tupleId");
@@ -73,7 +87,42 @@ public class Base implements QueryComposer{
 		
 		return QueryBuilder.build();
 	}
-
+	
+	private QueryPlan composeJoin()
+	{
+		if (CHAIN_LENGTH != 1) { throw new RuntimeException("TODO"); }
+		
+		// Declare Source 1
+		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("tupleId");
+		srcFields.add("value");
+		Connectable src1 = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
+		
+		
+		// Declare Source 2
+		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, srcFields);
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		
+		//Declare join
+		ArrayList<String> jFields = new ArrayList<String>();
+		jFields.add("tupleId");
+		jFields.add("value");
+		Connectable j = QueryBuilder.newStatelessOperator(new Join(), 0, jFields);
+		
+		src1.connectTo(j, true, 0);
+		src2.connectTo(j, true, 1);
+		j.connectTo(snk, true, 2);
+		
+		QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
+		
+		return QueryBuilder.build();
+	}
+	
 	private Map<Integer, Map<Integer, Connectable>> createChainOps(int chainLength, int replicationFactor)
 	{
 		Map<Integer, Map<Integer, Connectable>> ops = new HashMap();

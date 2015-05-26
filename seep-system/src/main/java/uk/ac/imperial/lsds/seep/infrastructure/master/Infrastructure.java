@@ -460,6 +460,19 @@ public class Infrastructure {
 	
 	private Query buildMeanderQuery()
 	{
+		if (GLOBALS.valueFor("queryType").equals("chain"))
+		{
+			return buildChainQuery();
+		}
+		else if (GLOBALS.valueFor("queryType").equals("join"))
+		{
+			return buildJoinQuery();
+		}
+		else { throw new RuntimeException("Logic error."); }
+	}
+	
+	private Query buildChainQuery()
+	{
 		//TreeMap logicalTopology
 		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
 		//TODO: Generalize this for non-face recognition queries.
@@ -518,6 +531,67 @@ public class Infrastructure {
 		}
 
 		return new Query(logicalTopology, log2phys, phys2addr);
+	}
+	
+	
+	private Query buildJoinQuery()
+	{
+		//TreeMap logicalTopology
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		
+		//TODO: Tmp hack for join query with 2 sources, 1 join op (potentially replicated) and the sink.
+		logicalTopology.put(1, new Integer[]{}); //src 1
+		logicalTopology.put(2, new Integer[]{}); //src 2
+		logicalTopology.put(3, new Integer[]{1,2}); //join
+		logicalTopology.put(4, new Integer[]{3}); //snk
+		
+		//TreeMap log2Phys
+		//use SEEP operator ids here for now. Will need to also store operator id <-> (node_addr, port) mapping
+		//Will probably need to change the getCost function in LinkCostHandler too to look up the costs by node_addr
+		// (from the op id).
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<>();
+
+		if (src.size() != 2) { throw new RuntimeException("TODO"); }
+		
+		Operator currentSrc = null;
+		//Walk the ops, starting at the source.
+		for (int i = 0; i < 2; i++)
+		{
+			Set<Integer> srcPhys = new HashSet<>();
+			currentSrc = src.get(i);
+			srcPhys.add(currentSrc.getOperatorId());
+			log2phys.put(1, srcPhys);
+			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(srcPhys));
+		}
+
+		int numDownstreams = currentSrc.getOpContext().getDownstreamSize();
+		int downstreamLogicalIndex = 3;
+		
+		Operator current = currentSrc;
+		while (numDownstreams > 0)
+		{
+			LOG.info("Number of downstreams for op "+ current.getOperatorId()+"= "+numDownstreams);
+			Set<Integer> downstreamPhys = new HashSet<Integer>();
+
+			//TODO: Complete hack. For the FR query, enough to know the downstreams of one
+			//physical replica to know the downstreams of all.
+			Operator next = null;
+			for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)
+			{
+				downstreamPhys.add(downstreamPlacement.opID());
+				next = getOp(downstreamPlacement.opID());
+				phys2addr.put(downstreamPlacement.opID(), next.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+				LOG.info("Added op "+ current.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+			}
+			log2phys.put(downstreamLogicalIndex, downstreamPhys);
+			downstreamLogicalIndex++;
+			numDownstreams = next.getOpContext().getDownstreamSize();
+			current = next;
+		}
+
+		return new Query(logicalTopology, log2phys, phys2addr);	
 	}
 
 	private Operator getOp(int opId)
