@@ -65,7 +65,6 @@ public class TestEsperSmartGrid extends TestEsper {
 		
 		Map<String, Object> bindingForEventType2 = new HashMap<String, Object>();
 		bindingForEventType2.put("timestamp", Long.class);
-		bindingForEventType2.put("house", Integer.class);
 		bindingForEventType2.put("load", Double.class);
 		
 		esper.addEventType("q1_out", bindingForEventType2);
@@ -87,7 +86,7 @@ public class TestEsperSmartGrid extends TestEsper {
 		 */
 		String query1 = ""
 				+ "insert into q1_out "
-				+ "select timestamp, house, avg(value) as load "
+				+ "select timestamp, avg(value) as load "
 				+ "from input(property=1).win:ext_timed(timestamp, 3600) ";
 
 		esper.addQuery(query1, 1);
@@ -110,14 +109,16 @@ public class TestEsperSmartGrid extends TestEsper {
 		/*
 		 * Query 3
 		 * 
-		 * select house, count(*)
+		 * select S1.timestamp, S2.timestamp, S2.house, count(*)
 		 * from <query 1 output stream> as S1, <query 2 output stream> as S2
-		 * where S2.load > S1.load
+		 * group by S2.house
+		 * where avg(S2.load) > avg(S1.load)
 		 */
 		String query3 = ""
-				+ "select S1.timestamp, S2.timestamp, S1.house, S2.house, count(*) "
+				+ "select S1.timestamp, S2.timestamp, S2.house, count(*) "
 				+ "from q1_out.win:ext_timed(timestamp, 1) as S1, q2_out.win:ext_timed(timestamp, 1) as S2 "
-				+ "where S2.load > S1.load " ;
+				+ "group by S2.house " 
+				+ "having avg(S2.load) > avg(S1.load) " ;
 		
 		esper.addQuery(query3, 3);
 
