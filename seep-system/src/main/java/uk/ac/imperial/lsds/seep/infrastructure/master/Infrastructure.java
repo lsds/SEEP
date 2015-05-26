@@ -561,7 +561,7 @@ public class Infrastructure {
 			Set<Integer> srcPhys = new HashSet<>();
 			currentSrc = src.get(i);
 			srcPhys.add(currentSrc.getOperatorId());
-			log2phys.put(1, srcPhys);
+			log2phys.put(i+1, srcPhys);
 			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
 			LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(srcPhys));
 		}

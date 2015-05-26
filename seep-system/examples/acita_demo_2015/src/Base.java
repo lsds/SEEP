@@ -21,6 +21,7 @@ import uk.ac.imperial.lsds.seep.api.QueryBuilder;
 import uk.ac.imperial.lsds.seep.api.QueryComposer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
+import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 
 public class Base implements QueryComposer{
 	private int CHAIN_LENGTH;
@@ -93,14 +94,19 @@ public class Base implements QueryComposer{
 		if (CHAIN_LENGTH != 1) { throw new RuntimeException("TODO"); }
 		
 		// Declare Source 1
-		ArrayList<String> srcFields = new ArrayList<String>();
-		srcFields.add("tupleId");
-		srcFields.add("value");
-		Connectable src1 = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
+		ArrayList<String> src1Fields = new ArrayList<String>();
+		src1Fields.add("tupleId");
+		src1Fields.add("value");
+		Connectable src1 = QueryBuilder.newStatelessSource(new Source(), -1, src1Fields);
 		
 		
+		/*
 		// Declare Source 2
-		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, srcFields);
+		ArrayList<String> src2Fields = new ArrayList<String>();
+		src2Fields.add("tupleId");
+		src2Fields.add("value");
+		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, src2Fields);
+		*/
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
@@ -114,10 +120,11 @@ public class Base implements QueryComposer{
 		jFields.add("value");
 		Connectable j = QueryBuilder.newStatelessOperator(new Join(), 0, jFields);
 		
-		src1.connectTo(j, true, 0);
-		src2.connectTo(j, true, 1);
-		j.connectTo(snk, true, 2);
+		src1.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 0);
+		//src2.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 1);
+		j.connectTo(snk, true, 1);
 		
+		QueryBuilder.scaleOut(src1.getOperatorId(), 2);
 		QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
 		
 		return QueryBuilder.build();

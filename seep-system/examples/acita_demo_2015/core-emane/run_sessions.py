@@ -165,7 +165,11 @@ def run_session(time_str, k, mob, exp_session, params):
 
         workers = []
         num_workers = 2 + (k * params['h'])
-	print 'Creating %d workers'%num_workers
+        if params['query'] == 'join':
+            if params['h'] != 1: raise Exception('Only support query of height 1 for join')
+            num_workers += 1
+        else: raise Exception("Temp.")
+
         placements = get_initial_placements(params['placement'], mob)
         for i in range(3,3+num_workers):
             if placements:

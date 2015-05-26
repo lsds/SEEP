@@ -63,7 +63,8 @@ public class DataStructureAdapter {
 	private void setUpMeanderQuery(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext)
 	{
 		Query query = opContext.getMeanderQuery();
-		int logicalId = query.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
+		int opId = opContext.getOperatorStaticInformation().getOpId();
+		int logicalId = query.getLogicalNodeId(opId);
 		Map<Integer, DataStructureI> tmpLogicalDsoMap = new HashMap<>();
 		
 		Set[] inputs = query.getPhysicalInputs(logicalId);
@@ -106,6 +107,12 @@ public class DataStructureAdapter {
 					OutOfOrderInputQueue iq = new OutOfOrderInputQueue();
 					uniqueDso = iq;
 					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
+				}
+				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER))
+				{
+					OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier();
+					uniqueDso = b;
+					LOG.debug("-> Ingest with batch buffered Sync-Barrier from {}", entry.getKey());
 				}
 				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all. In this case is the same}
