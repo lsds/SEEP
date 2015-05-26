@@ -9,6 +9,7 @@ import com.espertech.esper.client.EPServiceProviderManager;
 import com.espertech.esper.client.EPStatement;
 import com.espertech.esper.client.EventBean;
 import com.espertech.esper.client.UpdateListener;
+import com.espertech.esper.core.service.EPServiceProviderSPI;
 
 public class TestEsper {
 
@@ -25,16 +26,27 @@ public class TestEsper {
 		configuration.addEventType(eventType, bindingForEventType);
 	}
 
-	public void initEngine() {
+	public void initEngine(int threads) {
 		// do not use internal timer
 		configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
+		
+		if (threads > 1) {
+//			configuration.getEngineDefaults().getThreading().setThreadPoolInbound(true);
+//			configuration.getEngineDefaults().getThreading().setThreadPoolInboundNumThreads(2);
+			configuration.getEngineDefaults().getThreading().setThreadPoolRouteExec(true);
+			configuration.getEngineDefaults().getThreading().setThreadPoolRouteExecNumThreads(threads);
+		}
 	}
 
 	public void setupEngine() {
 		esperService = EPServiceProviderManager.getProvider(esperEngineURL, configuration);
 	}
-		
+
 	public void addQuery(String query) {
+		this.addQuery(query, 1);
+	}
+
+	public void addQuery(String query, final int query_id) {
 		
 		/*
 		 * Build the ESPER statement
@@ -82,11 +94,15 @@ public class TestEsper {
 								dt = ((double) (t - _t)) / 1000000000.; /* In seconds */
 								delta = (count - previous);
 								rate = ((double) delta) / dt;
-								System.out.println(String.format("%10d tuples %10.3f sec %10.3f tuples/s", delta, dt, rate));
+								System.out.println(String.format("Q %10d \t %10d tuples %10.3f sec %10.3f tuples/s", query_id, delta, dt, rate));
 							}
 							_t = t;
 							previous = count;
 						}
+						
+//						if (outputStream != null) {
+//							esperService.getEPRuntime().sendEvent((Map) e.getUnderlying(), outputStream);		
+//						}
 					}
 				}
 			}

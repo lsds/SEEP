@@ -21,6 +21,7 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 		
 		int bundle = 512;
 		int tupleSize = 64;
+		int threads = 1;
 		
 		String query = "";
 		
@@ -38,6 +39,9 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 			} else
 			if (args[i].equals("-b")) {
 				bundle = Integer.parseInt(args[j]);
+			} else
+			if (args[i].equals("-t")) {
+				threads = Integer.parseInt(args[j]);
 			} else
 			if (args[i].equals("-q")) {
 				if (Integer.parseInt(args[j]) == 1) 
@@ -68,7 +72,7 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 		System.out.println(String.format("[DBG] %6d bytes/buffer", _BUFFER_));
 		
 		TestEsper esper = new TestEsper();
-		esper.initEngine();
+		esper.initEngine(threads);
 	
 		Map<String, Object> bindingForEventType = new HashMap<String, Object>();
 		bindingForEventType.put("timestamp", Long.class);

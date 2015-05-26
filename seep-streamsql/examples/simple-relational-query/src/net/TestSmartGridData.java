@@ -131,9 +131,9 @@ public class TestSmartGridData {
 		/*
 		 * Query 2
 		 * 
-		 * select avg (load)
+		 * select avg (value)
 		 * from <input stream> [range 3600 seconds slide 1 second]
-		 * group by house, plug
+		 * group by house, household, plug
 		 */
 		QueryConf queryConf2 = new QueryConf(10, 1024);
 		/*
