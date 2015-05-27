@@ -16,6 +16,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
+import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
 
 public class RoutingController implements Runnable{
 
@@ -77,6 +78,7 @@ public class RoutingController implements Runnable{
 			Map<Integer, Double> weightsCopy = null;
 			synchronized(lock)
 			{
+				updateWeight();
 				weightsCopy = new HashMap<>(weights);
 			}
 			
@@ -84,8 +86,14 @@ public class RoutingController implements Runnable{
 			
 			if (numLogicalInputs > 1)
 			{
-				ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), new HashSet<Long>());
-				owner.getControlDispatcher().sendAllUpstreams(ct, false);
+				Map<Integer, Set<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+				for (Integer upstreamId : weightsCopy.keySet())
+				{
+					int logicalInput = query.getLogicalNodeId(upstreamId);
+					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), routingConstraints.get(logicalInput));
+					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
+					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+				}
 			}
 			else
 			{
@@ -118,7 +126,7 @@ public class RoutingController implements Runnable{
 			int inputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(rctrl.getOpId()));
 			if (!upstreamQlens.get(inputIndex).containsKey(rctrl.getOpId())) { throw new RuntimeException("Logic error."); }
 			this.upstreamQlens.get(inputIndex).put(rctrl.getOpId(),  new Integer(rctrl.getQlen()));
-			updateWeight();
+			//updateWeight();
 			lock.notifyAll();
 		}
 	}
@@ -148,11 +156,12 @@ public class RoutingController implements Runnable{
 				}
 			}
 			logger.debug("Updated upstream net rates: "+upstreamNetRates);
-			updateWeight();
+			//updateWeight();
 			lock.notifyAll();
 		}
 	}
 	
+	/*
 	public DownUpRCtrl getDownUpRCtrl(Integer upstreamId)
 	{
 		synchronized (lock) {
@@ -160,6 +169,7 @@ public class RoutingController implements Runnable{
 					getUnmatched(upstreamId));
 		}
 	}
+	*/
 	
 	private int getLocalInputQLen()
 	{
@@ -191,29 +201,46 @@ public class RoutingController implements Runnable{
 	
 	private void updateWeight()
 	{
-
-			Set<Double> joinWeights = new HashSet<>();
-
-			if (numLogicalInputs > 1) { throw new RuntimeException("TODO: What if join?"); }
-			int localInputQlen = getLocalInputQLen();	//TODO: What if join!
+			Map<Integer, Integer> localInputQlens = null;
+			if (numLogicalInputs > 1)
+			{
+				 ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+			}
+			else
+			{
+				//TODO: Just change dsa inf to have a single sizes method.
+				localInputQlens = new HashMap<Integer, Integer>();
+				localInputQlens.put(-1,owner.getDSA().getUniqueDso().size());
+			}
+			
+			//int localInputQlen = getLocalInputQLen();	//TODO: What if join!
 			int localOutputQlen = getLocalOutputQLen();
+			Set<Double> joinWeights = new HashSet<>();
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				//Iterator<Integer> iter = query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i].iterator();
+				//Iterator<Integer> iter = query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i].iterator(); 
 				ArrayList<Integer> upstreamIds = owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList();
 				Iterator<Integer> iter = upstreamIds.iterator();
 				while (iter.hasNext())
 				{
 					Integer upstreamId = iter.next();
+					int localTotalInputQlen = localInputQlens.get(-1);
+					//TODO: Should we be multiplying the input q length by the processing rate?
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
-							localInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
+							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
+					
 					if (numLogicalInputs == 1)
 					{
 						weights.put(upstreamId, weight);
 					}
 					else
 					{
-						joinWeights.add(weight);					
+						joinWeights.add(weight);
+						//Also compute per upstream weight for routing constraints
+						int localPerInputQlen = localInputQlens.get(i);
+						weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
+								localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
+						weights.put(upstreamId, weight);
 					}					
 				}
 			}
@@ -245,10 +272,11 @@ public class RoutingController implements Runnable{
 		{
 			sum += ((Double)iter.next()).doubleValue();
 		}
-		return sum / joinWeights.size();
+		//return sum / joinWeights.size();
+		throw new RuntimeException("TODO: Return mean of maxes?");
 	}
 	
-	
+	/*
 	private double getWeight(Integer upstreamId)
 	{
 		logger.debug("Controller "+nodeId+" getting weight for upstream "+upstreamId+", weights="+weights);
@@ -275,5 +303,5 @@ public class RoutingController implements Runnable{
 			throw new RuntimeException("TODO");
 		}		
 	}
-
+	*/
 }
