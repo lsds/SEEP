@@ -77,7 +77,7 @@ public class BufferedBarrier implements DataStructureI{
 	}
 	
 	@Override
-	public synchronized FailureCtrl purge(FailureCtrl nodeFctrl) {
+	public synchronized ArrayList<FailureCtrl> purge(FailureCtrl nodeFctrl) {
 		throw new RuntimeException("TODO");
 	}
 	@Override

@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.buffer;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
@@ -15,8 +16,6 @@ public interface IBuffer {
 
 	public abstract int size();
 
-	public abstract int numTuples();
-
 	public abstract BackupOperatorState getBackupState();
 
 	public abstract void replaceBackupOperatorState(BackupOperatorState bs);
@@ -28,7 +27,7 @@ public interface IBuffer {
 
 	public abstract TimestampTracker trim(long ts);
 
-	public abstract List<OutputLogEntry> trim(FailureCtrl fctrl);
+	public abstract TreeMap<Long, BatchTuplePayload> trim(FailureCtrl fctrl);
 
 	///fixme{just for testing, do binary search on structure}
 	public abstract TimestampTracker getInputVTsForOutputTs(long output_ts);

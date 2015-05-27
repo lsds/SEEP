@@ -158,7 +158,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	//and downstream alives, since we can avoid adding most of the former 
 	// in the first place in push.
 	@Override
-	public synchronized FailureCtrl purge(FailureCtrl downFctrl) {
+	public synchronized ArrayList<FailureCtrl> purge(FailureCtrl downFctrl) {
 		
 		if (bestEffort || 
 				downFctrl.lw() < inputFctrl.lw() || 
@@ -198,7 +198,9 @@ public class OutOfOrderInputQueue implements DataStructureI {
 		}
 	
 		if (removedSomething) { this.notifyAll(); }
-		return upOpFctrl;
+		ArrayList<FailureCtrl> upOpFctrls = new ArrayList<FailureCtrl>(1);
+		upOpFctrls.set(0, upOpFctrl);
+		return upOpFctrls;
 
 	}
 

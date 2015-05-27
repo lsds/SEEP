@@ -21,7 +21,7 @@ public interface DataStructureI {
 	public void push(DataTuple dt);
 	public DataTuple pull();
 	public ArrayList<DataTuple> pull_from_barrier();
-	public FailureCtrl purge(FailureCtrl nodeFctrl);
+	public ArrayList<FailureCtrl> purge(FailureCtrl downFctrl);
 	public int size();
 	
 }

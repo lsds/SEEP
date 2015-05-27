@@ -27,6 +27,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -361,7 +362,7 @@ public class Dispatcher implements IRoutingObserver {
 					//Connection must be down.
 					//Remove any output tuples from this replica's output log and add them to the operator output queue.
 					//This should include the current 'SEEP' batch since it might contain several tuples.
-					List<OutputLogEntry> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+					TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 
 					synchronized(lock)
 					{
@@ -403,34 +404,32 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		/* TODO: Should be holding lock here? */
-		private void requeueTuples(List<OutputLogEntry> sessionLog, Set<Long> dsOpOldAlives)
+		private void requeueTuples(TreeMap<Long, BatchTuplePayload> sessionLog, Set<Long> dsOpOldAlives)
 		{
-			//?
-			for (OutputLogEntry o: sessionLog)
+			for (Map.Entry<Long, BatchTuplePayload> e : sessionLog.entrySet())
 			{
-				for (TuplePayload p : o.batch.batch)
-				{
-					long ts = p.timestamp;
-					if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
-					{	
-						//TODO: what if acked already?
-						DataTuple dt = new DataTuple(idxMapper, p);
-						if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
-						{
-							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
-							sharedReplayLog.add(dt);
-						}
-						else
-						{
-							logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
-							opQueue.add(dt);
-						}
-						
-						if (optimizeReplay && dsOpOldAlives != null)
-						{
-							//Don't replay this twice
-							dsOpOldAlives.remove(ts);
-						}
+				long ts = e.getKey();
+				TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
+
+				if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
+				{	
+					//TODO: what if acked already?
+					DataTuple dt = new DataTuple(idxMapper, p);
+					if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
+					{
+						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
+						sharedReplayLog.add(dt);
+					}
+					else
+					{
+						logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
+						opQueue.add(dt);
+					}
+					
+					if (optimizeReplay && dsOpOldAlives != null)
+					{
+						//Don't replay this twice
+						dsOpOldAlives.remove(ts);
 					}
 				}
 			}

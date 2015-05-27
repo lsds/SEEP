@@ -86,11 +86,11 @@ public class RoutingController implements Runnable{
 			
 			if (numLogicalInputs > 1)
 			{
-				Map<Integer, Set<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+				ArrayList<Set<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
 				for (Integer upstreamId : weightsCopy.keySet())
 				{
-					int logicalInput = query.getLogicalNodeId(upstreamId);
-					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), routingConstraints.get(logicalInput));
+					int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
+					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), routingConstraints.get(logicalInputIndex));
 					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
 				}

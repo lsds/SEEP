@@ -882,15 +882,22 @@ public class CoreRE {
 	{
 		if (controlDispatcher == null) { return; }
 		LOG.debug("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
+		DataStructureI dso = dsa.getUniqueDso();
+		if (dso == null) { throw new RuntimeException("TODO"); }
+		ArrayList<FailureCtrl> upFctrls = dso.purge(nodeFctrl);
+		Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
+		int opId = processingUnit.getOperator().getOperatorId();
 		for (int upOpIndex : upOpIndexes)
 		{
 			int upOpId = processingUnit.getOperator().getOpContext().getUpOpIdFromIndex(upOpIndex);
 			LOG.debug("Writing failure ctrl to up op id:"+upOpId);
-			DataStructureI dso = dsa.getUniqueDso();
-			if (dso == null) { dso = dsa.getDataStructureIForOp(upOpId); }
-			FailureCtrl upFctrl = dso.purge(nodeFctrl);
+			//if (dso == null) { dso = dsa.getDataStructureIForOp(upOpId); }
+			//FailureCtrl upFctrl = dso.purge(nodeFctrl);
+			FailureCtrl upFctrl = upFctrls.get(meanderQuery.getLogicalInputIndex(
+					meanderQuery.getLogicalNodeId(opId), 
+					meanderQuery.getLogicalNodeId(upOpId)));
 			LOG.debug("Writing failure ctrl, node="+nodeFctrl+",upOp="+upFctrl);
-			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, processingUnit.getOperator().getOperatorId(), upFctrl);
+			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId , upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
 		}

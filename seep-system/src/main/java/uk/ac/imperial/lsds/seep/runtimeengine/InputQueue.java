@@ -118,7 +118,7 @@ public class InputQueue implements DataStructureI{
 	}
 
 	@Override
-	public FailureCtrl purge(FailureCtrl nodeFctrl) {
+	public ArrayList<FailureCtrl> purge(FailureCtrl nodeFctrl) {
 		throw new RuntimeException("TODO");
 	}
 

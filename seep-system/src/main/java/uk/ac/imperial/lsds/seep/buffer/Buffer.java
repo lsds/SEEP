@@ -14,6 +14,7 @@ import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import org.slf4j.Logger;
@@ -65,23 +66,6 @@ public class Buffer implements Serializable, IBuffer{
 	public int size(){
 		return log.size();
 	} 
- 
-	/* (non-Javadoc)
-	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#numTuples()
-	 */
-	@Override
-	public int numTuples()
-	{
-		int total = 0;
-		for (OutputLogEntry o : log)
-		{
-			total += o.batch.size();
-		}
-		logger.error("TODO: Tmp hack, not thread safe.");
-		return total;
-		//throw new RuntimeException("TODO: Tmp hack, not thread safe.");
-		
-	}
 	
 	/* (non-Javadoc)
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#getBackupState()
@@ -185,7 +169,7 @@ public class Buffer implements Serializable, IBuffer{
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#trim(uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl)
 	 */
 	@Override
-	public List<OutputLogEntry> trim(FailureCtrl fctrl)
+	public TreeMap<Long, BatchTuplePayload> trim(FailureCtrl fctrl)
 	{
 		/*
 		Iterator<OutputLogEntry> iter = log.iterator();
