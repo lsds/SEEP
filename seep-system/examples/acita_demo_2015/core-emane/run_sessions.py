@@ -154,7 +154,7 @@ def run_session(time_str, k, mob, exp_session, params):
         elif params['constraints']:
             session_constraints = '%s/static/%s'%(script_dir, params['constraints'])
             if not os.path.exists(session_constraints):
-                raise Exception("Could not find sessions constraints: %s"%sesiosn_constraints)
+                raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         services_str = "IPForward|%s"%params['net-routing']

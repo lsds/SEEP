@@ -99,14 +99,11 @@ public class Base implements QueryComposer{
 		src1Fields.add("value");
 		Connectable src1 = QueryBuilder.newStatelessSource(new Source(), -1, src1Fields);
 		
-		
-		/*
 		// Declare Source 2
 		ArrayList<String> src2Fields = new ArrayList<String>();
 		src2Fields.add("tupleId");
 		src2Fields.add("value");
 		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, src2Fields);
-		*/
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
@@ -121,10 +118,9 @@ public class Base implements QueryComposer{
 		Connectable j = QueryBuilder.newStatelessOperator(new Join(), 0, jFields);
 		
 		src1.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 0);
-		//src2.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 1);
-		j.connectTo(snk, true, 1);
+		src2.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 1);
+		j.connectTo(snk, true, 2);
 		
-		QueryBuilder.scaleOut(src1.getOperatorId(), 2);
 		QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
 		
 		return QueryBuilder.build();

@@ -30,6 +30,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
+import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -143,7 +144,14 @@ public class IncomingDataHandlerWorker implements Runnable{
 						LOG.debug("icdhw for "+opId+" rx latency="+latency);
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
 						LOG.debug("Adding batch to dso.");
-						dso.push(reg);
+						if (dso instanceof OutOfOrderBufferedBarrier)
+						{
+							((OutOfOrderBufferedBarrier)dso).push(reg, opId);
+						}
+						else
+						{
+							dso.push(reg);
+						}
 					}
 					else{
 						///\todo{check for garbage in the tcp buffers}

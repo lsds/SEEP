@@ -4,19 +4,25 @@ import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.manet.Query;
 
 public class OutOfOrderBufferedBarrier implements DataStructureI {
 
+	private final Query meanderQuery;
+
+	public OutOfOrderBufferedBarrier(Query meanderQuery)
+	{
+		this.meanderQuery = meanderQuery;	//To get logical index for upstreams.
+	}
+	
 	@Override
 	public void push(DataTuple dt) {
-		// TODO Auto-generated method stub
-
+		throw new RuntimeException("Logic error - use push(DataTuple, int)");
 	}
 
 	@Override
 	public DataTuple pull() {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("Logic error - use pull_from_barrier()");
 	}
 
 	@Override
@@ -36,5 +42,12 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		// TODO Auto-generated method stub
 		return 0;
 	}
-
+	
+	//TODO: Note the incoming data handler worker
+	//could tell us both the upOpId, the upOpOriginalId
+	//or even the meander query index.
+	public void push(DataTuple dt, int upOpId)
+	{
+		
+	}
 }

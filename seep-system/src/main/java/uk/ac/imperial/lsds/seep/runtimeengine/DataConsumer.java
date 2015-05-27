@@ -61,7 +61,7 @@ public class DataConsumer implements Runnable {
 					}
 				}
 			}
-			else if(dso instanceof Barrier){
+			else if(dso instanceof Barrier || dso instanceof OutOfOrderBufferedBarrier){
 				while(doWork){
 					ArrayList<DataTuple> ldata = dso.pull_from_barrier();
 					if(owner.checkSystemStatus()){

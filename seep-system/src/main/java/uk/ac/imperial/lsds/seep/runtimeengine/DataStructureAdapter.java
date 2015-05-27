@@ -87,6 +87,15 @@ public class DataStructureAdapter {
 					}	
 					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}
+				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER))
+				{
+					if (uniqueDso == null)
+					{
+						OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier(query);
+						uniqueDso = b;
+						LOG.debug("-> Ingest with batch buffered Sync-Barrier from {}", entry.getKey());
+					}
+				}
 				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BARRIER)){
 					///\fixme{careful with the num of upstreams. its the upstreams on the barriera, not all}
 					int originalOperatorOnBarrier = entry.getKey();
@@ -110,7 +119,7 @@ public class DataStructureAdapter {
 				}
 				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER))
 				{
-					OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier();
+					OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier(query);
 					uniqueDso = b;
 					LOG.debug("-> Ingest with batch buffered Sync-Barrier from {}", entry.getKey());
 				}
