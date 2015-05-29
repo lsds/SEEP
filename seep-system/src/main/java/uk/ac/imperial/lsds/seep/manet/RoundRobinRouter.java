@@ -78,7 +78,7 @@ public class RoundRobinRouter implements IRouter {
 			if (downOpId != null)
 			{
 				ArrayList<Integer> targets = new ArrayList<>();
-				targets.set(0, opContext.getDownOpIndexFromOpId(downOpId));
+				targets.add(opContext.getDownOpIndexFromOpId(downOpId));
 				return targets;
 			}
 		}

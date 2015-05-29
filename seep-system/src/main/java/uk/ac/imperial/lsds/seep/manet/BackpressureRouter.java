@@ -60,7 +60,7 @@ public class BackpressureRouter implements IRouter {
 						if (targets == null)
 						{
 							targets = new ArrayList<>();
-							targets.set(0,  -1);	//Hack: allows dispatcher to distinguish constrained routing.
+							targets.add(-1);	//Hack: allows dispatcher to distinguish constrained routing.
 							logger.info("Adding routing constraints for "+batchId);
 						}
 						//Don't care about weight, must at least be connected if non-empty constraints.
@@ -86,7 +86,7 @@ public class BackpressureRouter implements IRouter {
 				if (downOpId != null)
 				{
 					targets = new ArrayList<>();
-					targets.set(0, opContext.getDownOpIndexFromOpId(downOpId));
+					targets.add(opContext.getDownOpIndexFromOpId(downOpId));
 				}
 				else { return null; }
 			}

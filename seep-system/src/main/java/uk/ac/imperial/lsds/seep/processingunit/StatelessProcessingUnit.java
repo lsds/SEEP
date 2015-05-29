@@ -449,7 +449,7 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	@Override
 	public PUContext setUpRemoteConnections() {
 		ctx.configureOperatorConnections(runningOp);
-		if (dispatcher != null)
+		if (dispatcher != null && !getOperator().getOpContext().isSink())
 		{
 			String routingAlg = GLOBALS.valueFor("meanderRouting");
 			if ("roundRobin".equals(routingAlg))

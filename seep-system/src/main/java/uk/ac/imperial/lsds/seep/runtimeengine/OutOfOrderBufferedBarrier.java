@@ -43,8 +43,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		pending = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			pending.set(i, new TreeMap<Long, DataTuple>());
-			inputFctrls.set(i, new FailureCtrl());
+			pending.add(new TreeMap<Long, DataTuple>());
+			inputFctrls.add(new FailureCtrl());
 		}
 	}
 	
@@ -78,8 +78,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				if (i == logicalInputIndex) { readyBatches.set(i, dt); }
-				else { readyBatches.set(i, pending.get(logicalInputIndex).remove(ts)); }
+				if (i == logicalInputIndex) { readyBatches.add(dt); }
+				else { readyBatches.add(pending.get(logicalInputIndex).remove(ts)); }
 			}	
 			this.notifyAll();
 		}
@@ -124,14 +124,14 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			{
 				FailureCtrl upOpFctrl = new FailureCtrl(inputFctrls.get(i));
 				upOpFctrl.updateAlives(downFctrl.alives());
-				upOpFctrls.set(i, upOpFctrl);
+				upOpFctrls.add(upOpFctrl);
 			}
 		}
 		else
 		{
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				upOpFctrls.set(i, new FailureCtrl(downFctrl));
+				upOpFctrls.add(new FailureCtrl(downFctrl));
 			}
 		}
 	
@@ -182,7 +182,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		ArrayList<Set<Long>> constraints = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			constraints.set(i, new HashSet<Long>());
+			constraints.add(new HashSet<Long>());
 			
 			for (int j = 0; j < numLogicalInputs; j++)
 			{

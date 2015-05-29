@@ -204,7 +204,7 @@ public class RoutingController implements Runnable{
 			Map<Integer, Integer> localInputQlens = null;
 			if (numLogicalInputs > 1)
 			{
-				 ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 localInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
 			}
 			else
 			{
@@ -241,6 +241,7 @@ public class RoutingController implements Runnable{
 						weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 								localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 						weights.put(upstreamId, weight);
+						throw new RuntimeException("TODO");
 					}					
 				}
 			}

@@ -199,7 +199,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	
 		if (removedSomething) { this.notifyAll(); }
 		ArrayList<FailureCtrl> upOpFctrls = new ArrayList<FailureCtrl>(1);
-		upOpFctrls.set(0, upOpFctrl);
+		upOpFctrls.add(upOpFctrl);
 		return upOpFctrls;
 
 	}

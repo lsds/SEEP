@@ -880,7 +880,7 @@ public class CoreRE {
 	
 	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
 	{
-		if (controlDispatcher == null) { return; }
+		if (controlDispatcher == null || upOpIndexes.isEmpty()) { return; }
 		LOG.debug("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		DataStructureI dso = dsa.getUniqueDso();
 		if (dso == null) { throw new RuntimeException("TODO"); }

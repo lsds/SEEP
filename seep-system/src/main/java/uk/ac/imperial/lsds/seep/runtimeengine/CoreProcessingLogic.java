@@ -232,7 +232,10 @@ public class CoreProcessingLogic implements Serializable{
 			
 			//Now trim the input data structures + trigger the fctrl writer to write 
 			//a new fctrl.
-			owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
+			if (!pu.getOperator().getOpContext().isSource())
+			{
+				owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
+			}
 		}
 	}
 	

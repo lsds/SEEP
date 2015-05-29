@@ -41,7 +41,7 @@ public class ShortestPathRouter implements IRouter {
 		else
 		{
 			ArrayList<Integer> targets = new ArrayList<>();
-			targets.set(0, currentNextHop);
+			targets.add(currentNextHop);
 			return targets;
 		}
 	}
