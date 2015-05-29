@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.manet;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -33,10 +34,16 @@ public class ShortestPathRouter implements IRouter {
 
 	//
 	@Override
-	public Integer route(long batchId) {
+	public ArrayList<Integer> route(long batchId) {
 		// TODO Auto-generated method stub
 		logger.debug("Routing to next hop: "+currentNextHop);
-		return currentNextHop;
+		if (currentNextHop == null) { return null; }
+		else
+		{
+			ArrayList<Integer> targets = new ArrayList<>();
+			targets.set(0, currentNextHop);
+			return targets;
+		}
 	}
 
 	@Override
@@ -241,7 +248,7 @@ public class ShortestPathRouter implements IRouter {
 	}
 
 	@Override
-	public void handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
 		throw new RuntimeException("Logic error.");
 	}
 }

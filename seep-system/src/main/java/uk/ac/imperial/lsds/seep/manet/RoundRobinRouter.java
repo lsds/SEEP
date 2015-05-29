@@ -43,7 +43,7 @@ public class RoundRobinRouter implements IRouter {
 	}
 	
 	@Override
-	public Integer route(long batchId) {
+	public ArrayList<Integer> route(long batchId) {
 		synchronized(lock)
 		{
 			Integer downOpId = maxWeightOpId();
@@ -77,7 +77,9 @@ public class RoundRobinRouter implements IRouter {
 			}
 			if (downOpId != null)
 			{
-				return opContext.getDownOpIndexFromOpId(downOpId);
+				ArrayList<Integer> targets = new ArrayList<>();
+				targets.set(0, opContext.getDownOpIndexFromOpId(downOpId));
+				return targets;
 			}
 		}
 		//TODO: Unmatched;
@@ -85,7 +87,7 @@ public class RoundRobinRouter implements IRouter {
 	}
 
 	@Override
-	public void handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
@@ -103,6 +105,7 @@ public class RoundRobinRouter implements IRouter {
 			}
 			logger.debug("RR router weights= "+weights);
 		}
+		throw new RuntimeException("TODO");
 	}
 	
 	private Integer maxWeightOpId()

@@ -1,7 +1,9 @@
 package uk.ac.imperial.lsds.seep.manet;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
@@ -9,15 +11,15 @@ import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 public class AbstractRouter implements IRouter {
 
 	@Override
-	public Integer route(long batchId) {
+	public ArrayList<Integer> route(long batchId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public void handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
 		// TODO Auto-generated method stub
-
+		throw new RuntimeException("TODO");
 	}
 	
 	@Override

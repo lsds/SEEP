@@ -19,6 +19,7 @@ public class BackpressureRouter implements IRouter {
 
 	private final static Logger logger = LoggerFactory.getLogger(BackpressureRouter.class);
 	private final static double INITIAL_WEIGHT = 1;
+	private final boolean downIsMultiInput;
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Set<Long>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
@@ -38,34 +39,64 @@ public class BackpressureRouter implements IRouter {
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
 		logger.info("Initial weights: "+weights);
+		Query meanderQuery = opContext.getMeanderQuery(); 
+		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
+		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
+
+		downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
 	}
 	
-	public Integer route(long batchId)
+	public ArrayList<Integer> route(long batchId)
 	{
-		
+		ArrayList<Integer> targets = null;
 		synchronized(lock)
 		{
-			Integer downOpId = maxWeightOpId();
-			
-			if (downOpId != lastRouted)
+			if (downIsMultiInput)
 			{
-				switchCount++;
-				logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
-				lastRouted = downOpId;
+				for (Integer downOpId : unmatched.keySet())
+				{
+					if (unmatched.get(downOpId).contains(batchId))
+					{
+						if (targets == null)
+						{
+							targets = new ArrayList<>();
+							targets.set(0,  -1);	//Hack: allows dispatcher to distinguish constrained routing.
+							logger.info("Adding routing constraints for "+batchId);
+						}
+						//Don't care about weight, must at least be connected if non-empty constraints.
+						//Problem: If catchup weight has changed!
+						//TODO: Can perhaps optimize this, although need to be careful.
+						targets.add(opContext.getDownOpIndexFromOpId(downOpId));
+						logger.info("Added routing constraint to "+downOpId);
+					}
+				}
 			}
-			if (downOpId != null)
+			
+			//If no constrained routes, try to get based on weight.
+			if (targets == null)
 			{
-				return opContext.getDownOpIndexFromOpId(downOpId);
+				Integer downOpId = maxWeightOpId();
+				
+				if (downOpId != lastRouted)
+				{
+					switchCount++;
+					logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
+					lastRouted = downOpId;
+				}
+				if (downOpId != null)
+				{
+					targets = new ArrayList<>();
+					targets.set(0, opContext.getDownOpIndexFromOpId(downOpId));
+				}
+				else { return null; }
 			}
 		}
-		//TODO: Unmatched;
-		return null;		
-		
-	
+		return targets;
 	}
 	
-	public void handleDownUp(DownUpRCtrl downUp)
+	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp)
 	{
+		Map<Integer, Set<Long>> newConstraints = null;
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
@@ -74,15 +105,22 @@ public class BackpressureRouter implements IRouter {
 			}
 			logger.debug("BP router handling downup rctrl: "+ downUp);
 			weights.put(downUp.getOpId(), downUp.getWeight());
+			logger.debug("Backpressure router weights= "+weights);
 			if (downUp.getUnmatched() != null)
 			{
 				//TODO: Tmp hack: Null here indicates a local update because
 				//an attempt to send a q length msg upstream failed - should
 				//clean it up to perhaps use a different method.
 				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
+				newConstraints = new HashMap<Integer, Set<Long>>();
+				newConstraints.put(downUp.getOpId(), downUp.getUnmatched());
 			}
-			logger.debug("Backpressure router weights= "+weights);
+			else
+			{
+				unmatched.get(downUp.getOpId()).clear();
+			}
 		}
+		return newConstraints;
 	}
 	
 	private Integer maxWeightOpId()

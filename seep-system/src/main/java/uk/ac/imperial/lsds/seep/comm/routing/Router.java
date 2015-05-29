@@ -14,6 +14,8 @@ package uk.ac.imperial.lsds.seep.comm.routing;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.zip.CRC32;
 
 import org.slf4j.Logger;
@@ -190,18 +192,7 @@ public class Router implements Serializable{
 		LOG.debug("Routing data tuple: "+dt.getPayload().timestamp);
 		if (meanderRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
-		Integer target = meanderRouter.route(dt.getLong("tupleId"));
-		if (target != null)
-		{
-			ArrayList<Integer> targets = new ArrayList<>();
-			targets.add(target);
-			LOG.debug("Forwarding to targets="+targets);
-			return targets;		//TODO: Are these the right targets?
-		}
-		else
-		{
-			return null;
-		}
+		return meanderRouter.route(dt.getLong("tupleId"));
 	}
 	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
@@ -260,21 +251,24 @@ public class Router implements Serializable{
 		}
 		if (downUp != null)
 		{
-			meanderRouter.handleDownUp(downUp);
+			notifyObservers(meanderRouter.handleDownUp(downUp));
 		}
-		//downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_highestWeight(newTarget);
-		notifyObservers();
+		else
+		{
+			//downstreamRoutingImpl.get(INDEX_FOR_ROUTING_IMPL).update_highestWeight(newTarget);
+			notifyObservers(null);
+		}
 	}
 	
 	public void addObserver(IRoutingObserver o)
 	{
 		observers.add(o);
 	}
-	private void notifyObservers()
+	private void notifyObservers(Map<Integer, Set<Long>> newConstraints)
 	{
 		for (IRoutingObserver o : observers)
 		{
-			o.routingChanged();
+			o.routingChanged(newConstraints);
 		}
 	}
 	

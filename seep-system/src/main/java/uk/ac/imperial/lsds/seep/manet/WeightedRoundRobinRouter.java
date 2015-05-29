@@ -42,7 +42,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 	}
 	
 	@Override
-	public Integer route(long batchId) {
+	public ArrayList<Integer> route(long batchId) {
 
 		Integer downOpId = null;
 		
@@ -76,14 +76,16 @@ public class WeightedRoundRobinRouter implements IRouter {
 			
 			if (downOpId != null)
 			{
-				return opContext.getDownOpIndexFromOpId(downOpId);
+				ArrayList<Integer> targets = new ArrayList<>();
+				targets.set(0, opContext.getDownOpIndexFromOpId(downOpId));
+				return targets;
 			}
 		}
 		return null;
 	}
 
 	@Override
-	public void handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
@@ -101,6 +103,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 			}
 			logger.debug("Weighted rr router weights= "+weights);
 		}
+		throw new RuntimeException("TODO");
 	}
 
 	private ArrayList<Integer> getActiveOpIds()

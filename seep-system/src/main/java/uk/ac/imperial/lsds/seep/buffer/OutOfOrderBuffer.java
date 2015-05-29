@@ -52,6 +52,16 @@ public class OutOfOrderBuffer implements IBuffer {
 		return log.size();
 	}
 	
+	public synchronized boolean contains(long ts)
+	{
+		return log.containsKey(ts);
+	}
+	
+	public synchronized BatchTuplePayload get(long ts)
+	{
+		return log.get(ts);
+	}
+	
 	@Override
 	public Iterator<OutputLogEntry> iterator() {
 		throw new RuntimeException("Synchronization?");

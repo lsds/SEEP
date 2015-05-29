@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.IBuffer;
+import uk.ac.imperial.lsds.seep.buffer.OutOfOrderBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
@@ -29,6 +30,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
@@ -46,6 +48,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
 	private final boolean eagerPurgeOpQueue;
+	private final boolean downIsMultiInput;
 	
 	private final IProcessingUnit owner;
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
@@ -67,6 +70,19 @@ public class Dispatcher implements IRoutingObserver {
 	{
 		this.owner = owner;
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
+		
+		if (bestEffort)
+		{
+			Query meanderQuery = owner.getOperator().getOpContext().getMeanderQuery(); 
+			int logicalId = meanderQuery.getLogicalNodeId(owner.getOperator().getOperatorId());
+			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
+			if (meanderQuery.getLogicalInputs(downLogicalId).length > 1)
+			{
+				throw new RuntimeException("TODO");
+			}
+		}
+		
+		downIsMultiInput = true;
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
 		
@@ -222,9 +238,62 @@ public class Dispatcher implements IRoutingObserver {
 		return getCombinedDownFailureCtrl();
 	}
 	
+	/*
 	public void routingChanged()
 	{
 		synchronized(lock) { lock.notifyAll(); }
+	}
+	*/
+	
+	public void routingChanged(Map<Integer, Set<Long>> newConstraints)
+	{
+        //for each dj in newConstraints.keySet
+        //	for each batch id i in rctrl(dj).constraints():
+        //        if not i in opQueue or sessionsLogs(j)
+        //                if !optimize replay or optimizeReplay and i not in alives dj
+        //                        if i in shared replay log
+        //                                mv to opQueue
+        //                        else if i in other session log
+        //                                copy to output queue
+		synchronized(lock)
+		{
+			if (newConstraints != null)
+			{
+				if (newConstraints.size() > 1) { throw new RuntimeException("Logic error."); }
+				for (Integer downOpId : newConstraints.keySet())
+				{
+					for (Long ts : newConstraints.get(downOpId))
+					{
+						int target = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
+						if (!opQueue.contains(ts) && !workers.get(target).inSessionLog(ts))
+						{
+							if (!optimizeReplay || 
+									(optimizeReplay && !downAlives.get(downOpId).contains(ts)))
+							{
+								DataTuple dt = sharedReplayLog.remove(ts);
+								if (dt == null)
+								{
+									for (Integer workerIndex : workers.keySet())
+									{
+										if (target != workerIndex)
+										{
+											dt = workers.get(workerIndex).getFromSessionLog(ts);
+										}
+										if (dt != null) { break; }
+									}
+								}
+								if (dt != null)
+								{
+									opQueue.add(dt);
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			lock.notifyAll();
+		}
 	}
 	
 	public void stop(int target) { throw new RuntimeException("TODO"); }
@@ -255,6 +324,12 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets.get(0));
 				
+				//Convention: If the routing is constrained, ignore the first
+				//target and route to all the remaining targets.
+				//TODO: Will probably break once we have multiple logical outputs, but ok
+				//for now.
+				boolean constrainedRoute = targets.size() > 1;
+				if (constrainedRoute && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
 				
 				//TODO: Do this earlier to keep op queue shorter
 				//1) if acked or alive
@@ -265,7 +340,7 @@ public class Dispatcher implements IRoutingObserver {
 				//    else, as below
 				FailureCtrl fctrl = getCombinedDownFailureCtrl();
 				long ts = dt.getPayload().timestamp;
-				if (fctrl.lw() >= ts || fctrl.acks().contains(ts) || fctrl.alives().contains(ts))
+				if (!shouldTrySend(ts, fctrl, constrainedRoute))
 				{
 					dt = opQueue.remove(dt.getPayload().timestamp);
 					if (fctrl.alives().contains(ts) && dt != null)
@@ -289,20 +364,78 @@ public class Dispatcher implements IRoutingObserver {
 				//Problem: A bit crude. Can't check if the tuple has been acked, routing has changed or a 
 				//higher priority tuple has been queued. Simplest for now though perhaps. More importantly
 				//could hurt parallelism? Can perhaps avoid with priorities. 
-				boolean success = workers.get(targets.get(0)).trySend(dt, SEND_TIMEOUT);
-				if (success)
+				
+				if (!constrainedRoute)
 				{
-					dt = opQueue.remove(dt.getPayload().timestamp);
+					//Could already be in session log if sending to multi-input op.
+					int target = targets.get(0);
+					if (downIsMultiInput && workers.get(target).inSessionLog(ts))
+					{
+						logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
+					}
+					
+					boolean success = workers.get(target).trySend(dt, SEND_TIMEOUT);
+					if (success)
+					{
+						dt = opQueue.remove(dt.getPayload().timestamp);
+					}
+					else
+					{
+						logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target);
+					}
 				}
 				else
 				{
-					logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+targets.get(0));
+					boolean allSucceeded = true;
+					for (Integer target : targets)
+					{
+						// if not in session log for target
+						if (!workers.get(target).inSessionLog(ts))
+						{
+							//Don't retransmit if optimizing replay and in alives.
+							int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
+							if (optimizeReplay && downAlives.get(downOpId).contains(ts))
+							{
+								//Might need to resend if an alive is removed.
+								sharedReplayLog.add(dt);
+							}
+							else
+							{
+								logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
+								allSucceeded = allSucceeded && workers.get(target).trySend(dt, SEND_TIMEOUT);
+							}
+						}
+					}
+					
+					if (allSucceeded)
+					{
+						opQueue.remove(dt.getPayload().timestamp);
+					}
 				}
-				
+			}
+		}
+		
+		//If safe to trim batch or already exists downstream, then don't try to send.
+		//Special case if down op is multi-input, might need to send even if alive
+		//downstream in order to recover from a coordination failure.
+		//However, if this batch isn't being routed according to constraints,
+		//it will be safe to just add to the shared replay log.
+		private boolean shouldTrySend(long ts, FailureCtrl fctrl, boolean constrainedRoute)
+		{
+			if (fctrl.lw() >= ts || fctrl.acks().contains(ts) || 
+					(optimizeReplay && fctrl.alives().contains(ts) && 
+							(!downIsMultiInput || !constrainedRoute)))
+			{
+				return false;
+			}
+			else
+			{
+				return true;
 			}
 		}
 	}
 	
+
 	
 	public class DispatcherWorker implements Runnable
 	{
@@ -320,6 +453,23 @@ public class Dispatcher implements IRoutingObserver {
 		public boolean isConnected()
 		{
 			synchronized(lock) { return dataConnected; }
+		}
+		
+		public boolean inSessionLog(long ts)
+		{
+			if (!downIsMultiInput) { throw new RuntimeException("Logic error."); }
+			return ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).contains(ts);
+		}
+		
+		public DataTuple getFromSessionLog(long ts)
+		{
+			if (!downIsMultiInput) { throw new RuntimeException("Logic error."); }
+			BatchTuplePayload b = ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).get(ts);
+			if (b == null) { return null; }
+			else
+			{
+				return new DataTuple(idxMapper,b.getTuple(0));
+			}
 		}
 		
 		public boolean trySend(DataTuple dt, long timeout)
