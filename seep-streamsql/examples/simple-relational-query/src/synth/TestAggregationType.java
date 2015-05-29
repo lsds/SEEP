@@ -83,12 +83,24 @@ public class TestAggregationType {
 		AggregationType aggregationType = AggregationType.fromString(args[7]);
 		
 		/* Calculate batch-related statistics */
+		/*
+		 * The batch size is specified in terms of bytes not windows.
+		 *
 		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
 		long tpb = ppb * window.getPaneSize();
 		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
 		System.out.println(String.format("[DBG] %d bytes input", inputSize));
 		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
 		System.out.println("[DBG] offset is " + batchOffset);
+		*/
+		int inputSize = queryConf.BATCH;
+		int tuplesPerBatch = inputSize / schema.getByteSizeOfTuple();
+        int panesPerBatch = (int) (tuplesPerBatch / window.getPaneSize());
+
+        int nwindows = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
+		
+		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+		System.out.println(String.format("[DBG] %d windows", nwindows));
 		
 		TheGPU.getInstance().init(1);
 				
@@ -105,8 +117,10 @@ public class TestAggregationType {
 				schema
 				);
 		
-		gpuAggCode.setBatchSize(queryConf.BATCH);
+		gpuAggCode.setBatchSize(nwindows);
 		gpuAggCode.setInputSize (inputSize);
+		gpuAggCode.setWindowSize ((int) window.getSize());
+		gpuAggCode.setWindowSlide ((int) window.getSlide());
 		gpuAggCode.setup();
 		
 		MicroOperator uoperator;
@@ -117,7 +131,7 @@ public class TestAggregationType {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 128 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = inputSize;
 		
 		long timestampReference = System.nanoTime();

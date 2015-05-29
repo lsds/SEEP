@@ -62,9 +62,9 @@ public class ResultCollector {
 						if (query.getDownstreamSubQuery(i) != null) {
 							boolean result = false;
 							if (query.isLeft()) {
-								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, arr.length);
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, buf.position()); // arr.length);
 							} else {
-								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, arr.length);
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, buf.position()); // arr.length);
 							}
 							if (! result) {
 								handler.latch[handler.next] = i;
@@ -182,6 +182,7 @@ public class ResultCollector {
 			while (busy) {
 
 				IQueryBuffer buf = handler.results[handler.next];
+				// buf.close();
 				byte [] arr = buf.array();
 				
 				/*
@@ -193,9 +194,9 @@ public class ResultCollector {
 						if (query.getDownstreamSubQuery(i) != null) {
 							boolean result = false;
 							if (query.isLeft()) {
-								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, arr.length);
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, buf.position()); // arr.length);
 							} else {
-								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, arr.length);
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, buf.position()); // arr.length);
 							}
 							if (! result) {
 								handler.latch[handler.next] = i;
@@ -223,7 +224,6 @@ public class ResultCollector {
 				handler.incTotalOutputBytes(buf.position());
 				buf.release();
 				
-
 				/* Free first input buffer */
 				int offset1 = handler.firstOffsets[handler.next];
 				if (offset1 != Integer.MIN_VALUE) {

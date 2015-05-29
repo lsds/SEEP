@@ -149,6 +149,10 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		/* Execute */
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
+		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 0));
+		
+		// System.out.println("[DBG] output buffer position is " + outputBuffer.position());
+		
 		windowBatch.setBuffer(outputBuffer);
 		
 		windowBatch.setTaskId     (taskIdx[0]);

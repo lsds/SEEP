@@ -164,10 +164,12 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 						) {
 							if (selectivity)
 								matched++;
+							
 							 firstInBuffer.appendBytesTo(firstCurrentIndex, firstByteSizeOfInTuple, outBuffer);
 							secondInBuffer.appendBytesTo(i, secondByteSizeOfInTuple, outBuffer);
 							// Write dummy content if needed
 							outBuffer.put(outSchema.getDummyContent());
+							
 						}
 					}
 					/*
@@ -241,6 +243,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 							secondInBuffer.appendBytesTo(secondCurrentIndex, secondByteSizeOfInTuple, outBuffer);
 							// Write dummy content if needed
 							outBuffer.put(outSchema.getDummyContent());
+							
 						}
 					}
 					
@@ -291,8 +294,8 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		if (selectivity) {
 			if (invoked > 0) {
-				System.out.println(String.format("[DBG] [Join] batch selectivity is %4.1f%%", 
-						((double) matched) * 100D / ((double) invoked)));
+				System.out.println(String.format("[DBG] [Join] batch selectivity is %4.1f%% (%13d/%13d)", 
+						((double) matched) * 100D / ((double) invoked), matched, invoked));
 			} else {
 				System.out.println(String.format("[DBG] [Join] batch selectivity is 0%% (invoked %d times)", 
 						invoked));

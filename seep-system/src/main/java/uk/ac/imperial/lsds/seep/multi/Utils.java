@@ -4,7 +4,7 @@ public class Utils {
 	
 	public static int PIPELINE_DEPTH = 4;
 
-	// public static int BATCH = 32;
+	public static int BATCH = 32;
 
 	public static int BUNDLE = 1048576;
 	
@@ -26,7 +26,7 @@ public class Utils {
 	
 	public static boolean HYBRID = (CPU && GPU);
 	
-	public static boolean LATENCY_ON = true;
+	public static boolean LATENCY_ON = false;
 	
 	public static String SEEP_HOME = "/home/akolious/seep";
 	

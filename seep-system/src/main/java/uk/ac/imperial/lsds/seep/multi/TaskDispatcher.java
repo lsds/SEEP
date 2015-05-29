@@ -15,6 +15,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	private SubQuery parent;
 	
 	private int batch;
+	
+	private int batchBytes;
 	private int batchRecords;
 	
 	private int nextTask = 1;
@@ -58,7 +60,25 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	int remainder = 0;
 	
+	private long count = 0L;
+	private long starttime;
+	private double  dt;
+	double _m, m, _s, s;
+	double avg = 0D, std = 0D;
+	
 	private ArrayList<Integer> marks;
+	
+	long accumulated = 0;
+	
+	long nextBatchStartPointer = 0;
+	long nextBatchEndPointer = 0;
+	
+	long thisBatchStartPointer = 0;
+	long thisBatchEndPointer = 0;
+	long thisBatchFreePointer = 0;
+	
+	long batchStartTimestamp = 0;
+	long batchEndTimestamp = 0;
 	
 	public TaskDispatcher (SubQuery parent) {
 		
@@ -69,11 +89,21 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		this.handler = new ResultHandler (this.buffer, parent);
 		
-		this.batch        = this.parent.getQueryConf().BATCH;
+		this.batchBytes   = this.parent.getQueryConf().BATCH;
 		this.batchRecords = this.parent.getQueryConf()._BATCH_RECORDS;
 		
+		this.tupleSize = schema.getByteSizeOfTuple();
+		
+		int tuplesPerBatch = this.batchBytes / this.tupleSize;
+		int panesPerBatch = (int) (tuplesPerBatch / window.getPaneSize());
+		
+		this.batch = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
+		// this.batch = this.batchBytes;
+		
 		/* Initialise constants */
-		System.out.println(String.format("[DBG] %d panes/slide %d panes/window", window.panesPerSlide(), window.numberOfPanes()));
+		System.out.println(String.format("[DBG] %d windows %d panes/slide %d panes/window", 
+				batch, window.panesPerSlide(), window.numberOfPanes()));
+		
 		ppb = window.panesPerSlide() * (this.batch - 1) + 
 				window.numberOfPanes();
 		
@@ -84,7 +114,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		else
 			offset = (this.batch) * window.getSlide(); // (this.batch - 1) * window.getSlide();
 		
-		// System.out.println("[DBG] offset is " + offset);
+		System.out.println("[DBG] offset is " + offset);
 		
 		p = q = 0L;
 		next_ = 0L;
@@ -103,6 +133,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 		previous = -1;
 		
 		marks = new ArrayList<Integer>();
+		
+		nextBatchEndPointer = batchBytes;
 	}
 	
 	@Override
@@ -137,22 +169,29 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		taskid = this.getTaskNumber();
 		
-		/* 
-		 * long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
-		 * 
-		 * System.out.println(
-			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
-					parent.getId(), taskid, p, q, free, t_, _t, size)); */
+//		if (p == q) {
+//			q = p + tupleSize;
+//		}
+		
+//		 long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+//		  
+//		  System.out.println(
+//			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
+//					parent.getId(), taskid, p, q, free, t_, _t, size)); 
 		 
-		if (q <= p)
+		if (q <= p) {
 			q += buffer.capacity();
+			// System.exit(1);
+		}
 		
 		/* Find latency mark */
 		int mark = -1;
-		for (int i = 0; i < marks.size(); i++) {
-			if (marks.get(i) >= ((int) p) && marks.get(i) < ((int) free)) {
-				mark = marks.remove(i);
-				break;
+		if (Utils.LATENCY_ON) {
+			for (int i = 0; i < marks.size(); i++) {
+				if (marks.get(i) >= ((int) p) && marks.get(i) < ((int) free)) {
+					mark = marks.remove(i);
+					break;
+				}
 			}
 		}
 		
@@ -170,13 +209,33 @@ public class TaskDispatcher implements ITaskDispatcher {
 		batch.initWindowPointers();
 		batch.debug();
 		*/
+//		starttime = System.nanoTime();
+		
 		task = TaskFactory.newInstance(parent, batch, handler, taskid, (int) free);
+		
 		workerQueue.add(task);
+		
+		
+//		count += 1;
+//		if (count > 1) {
+//			dt = (double) (System.nanoTime() - starttime);
+//			if (count == 2) {
+//				_m = m = dt;
+//				_s = s = 0D;
+//			} else {
+//				m = _m + (dt - _m) / (count - 1);
+//				s = _s + (dt - _m) * (dt - m);
+//				_m = m;
+//				_s = s;
+//			}
+//		}
+//		starttime = System.nanoTime();
 	}
 	
 	private void assemble (int index, int length) {
 		
-		marks.add(index);
+		if (Utils.LATENCY_ON)
+			marks.add(index);
 		
 		/* Number of rows added */
 		int rows = length / tupleSize;
@@ -189,6 +248,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		/* Index of the last tuple inserted in the circular buffer */
 		int _index = (int) ((index_ + _length - tupleSize) & mask);
+		
+//		System.out.println(String.format("[DBG] start %16d end %16d index %10d _index %10d length %10d next_ %16d rows %16d", 
+//				start, end, index_, _index, length, next_, rowCount));
 		
 		if (window.isRowBased()) {
 			while ((rowCount + rows) >= _next + 1) {
@@ -217,89 +279,167 @@ public class TaskDispatcher implements ITaskDispatcher {
 			start = getTimestamp(buffer, index_);
 			end   = getTimestamp(buffer, _index);
 			
+//			if (first) {
+//				next_  = start;
+//				_next += next_;
+//				first = false;
+//			}
+			
+			/*
+			 * Inserted `length` bytes, from `index_` to `_index`.
+			 * 
+			 * The first tuple timestamp is `start` and the last tuple timestamp is `end`.
+			 * 
+			 */
+			// System.out.println(String.format("[DBG] range-based window: start %16d end %16d index %10d _index %10d length %10d", 
+			//		start, end, index_, _index, length));
+			
 			if (first) {
-				next_  = start;
-				_next += next_;
+				// batches[b][_START] = 0;
+				thisBatchStartPointer = 0;
+				nextBatchEndPointer = batchBytes;
+				batchStartTimestamp = 0;
 				first = false;
 			}
 			
-			/* System.out.println(String.format("[DBG] range-based window: start %16d end %16d index %10d _index %10d length %10d next_ %16d", 
-					start, end, index_, _index, length, next_)); */
+			accumulated += length;
 			
-			/* Open one or more window batches */
-			current = 0;
-			while (end >= next_) {
-				/* Let's assume that we insert a sequence a tuples, marked 'x'
-				 * whose timestamps are 1, 2, 2, and 8.
-				 * 
-				 * The slide of the window is 1, so we wish to open windows at
-				 * times 1, 2, 3, and so on.
-				 * 
-				 * For t = 1 and t = 2, everything is fine. For t = 3, though,
-				 * there is no tuple with such timestamp.
-				 * 
-				 * When does the batch open? It may open at time 4, 5, 6...So,
-				 * one way is to search for t + 1, t + 2, and so on, until we
-				 * find the next tuple with a timestamp greater than t = 3.
-				 * 
-				 * x---xx-----------------x---------------------> t
-				 * 
-				 * |--|--|--|--|--|--|
-				 * 1                 7
-				 *    |--|--|--|--|--|--|
-				 *    2                 8
-				 *       |--|--|--|--|--|--|
-				 *       3                 9
-				 */
-				tmp = next_;
-				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
-					tmp ++;
+			// System.out.println(String.format("[DBG] %20d bytes accumulated; next batch end pointer is %10d", accumulated, nextBatchEndPointer));
+			
+			/* Open and close one or more window batches */
+			
+			while (accumulated > nextBatchEndPointer) {
+				// We have enough data for a batch
+				// Close the current batch
+				// The end pointer is the start pointer + batchBytes
+				// What is the timestamp of the tuple at `endPointer`?
+				long endTimestamp = getTimestamp (buffer, (int) ((nextBatchEndPointer) & mask));
+				// System.out.println(String.format("[DBG] end timestamp is %10d; end batch at %10d", endTimestamp, endTimestamp - window.getSlide()));
+				// We cannot include the current timestamp,
+				// because it belongs to a window that may not
+				// be closed yet.
+				// We  go one before.
+				endTimestamp -= window.getSlide();
+				// Look backwards for the last tuple with timestamp `endTimestamp` or less.
+				while (nextBatchEndPointer >= thisBatchStartPointer && 
+						getTimestamp (buffer, (int) ((nextBatchEndPointer) & mask)) > endTimestamp) {
+					// System.out.println(String.format("[DBG] batch end pointer is %13d...", nextBatchEndPointer));
+					nextBatchEndPointer -= tupleSize;
+				}
+				nextBatchEndPointer += tupleSize;
 				
-				/* Set the start pointer for this window batch */
-				batches[b][_START] = position;
+				thisBatchEndPointer = (int) ((nextBatchEndPointer) & mask);
 				
-				/* 
-				 * Set the free pointer for the previous window batch, if any. 
-				 * If position is 0, then the free pointer should point at the 
-				 * end of the buffer, otherwise `position--` will be negative.
-				 */
-				position = (position == 0) ? buffer.capacity() : position;
-				position --;
-				if (previous >= 0)
-					batches[previous][_FREE] = position;
-				/* Set counters for the next batch to open */
-				previous = b;
-				b = incrementAndGet(b, true);
-				next_ += offset;
-			}
-			/* Should we close old batches? 
-			 * 
-			 * If a window batch close at time `t`, we are looking for the
-			 * first element whose timestamp is greater than `t`.
-			 *  
-			 */
-			current = 0;
-			while (end >= (_next + 1)) {
+				// OK. So we have a batch end pointer and a batch start pointer.
+				// Can we dispatch a task?
+				// What's missing is a free pointer. The free pointer is the
+				// beginning of the next batch.
+				// The next pointer is the beginning of window with timestamp `endTimestamp + slide`.
+				nextBatchStartPointer = nextBatchEndPointer;
+				while (getTimestamp (buffer, (int) ((nextBatchStartPointer) & mask)) >= endTimestamp) {
+//					System.out.println(String.format("[DBG] next batch start pointer is %13d with timestamp %5d...", 
+//							nextBatchStartPointer, getTimestamp (buffer, (int) ((nextBatchStartPointer) & mask))));
+					nextBatchStartPointer -= tupleSize;
+				}
+				nextBatchStartPointer += tupleSize;
+				thisBatchFreePointer = (int) ((nextBatchStartPointer) & mask);
 				
-				tmp = _next + 1;
-				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
-					tmp ++;
-				
-				/* Set the end pointer for this window batch */
-				batches[d][_END] = position;
-				
-				/* Dispatch a task */
+				/* Launch task */
 				this.newTaskFor (
-						batches[d][_START], 
-						batches[d][  _END], 
-						batches[d][ _FREE], 
-						_next - tpb + 1, _next
-						);
-				batches[d][_START] = _undefined;
-				/* Set counters for the next batch to close */
-				d = incrementAndGet(d, false);
-				_next += offset;
+					thisBatchStartPointer & mask, 
+					thisBatchEndPointer & mask, 
+					thisBatchFreePointer & mask, 
+					batchStartTimestamp, endTimestamp
+					);
+				batches[b][_START] = _undefined;
+				
+				b = incrementAndGet(b, true);
+				batches[b][_START] = (int) ((nextBatchStartPointer) & mask);
+				
+				nextBatchEndPointer = nextBatchStartPointer + batchBytes;
+				thisBatchStartPointer = nextBatchStartPointer;
+				
+				batchStartTimestamp = endTimestamp;
 			}
+			
+//			/* Open one or more window batches */
+//			current = 0;
+//			while (end >= next_) {
+//				/* Let's assume that we insert a sequence a tuples, marked 'x'
+//				 * whose timestamps are 1, 2, 2, and 8.
+//				 * 
+//				 * The slide of the window is 1, so we wish to open windows at
+//				 * times 1, 2, 3, and so on.
+//				 * 
+//				 * For t = 1 and t = 2, everything is fine. For t = 3, though,
+//				 * there is no tuple with such timestamp.
+//				 * 
+//				 * When does the batch open? It may open at time 4, 5, 6...So,
+//				 * one way is to search for t + 1, t + 2, and so on, until we
+//				 * find the next tuple with a timestamp greater than t = 3.
+//				 * 
+//				 * x---xx-----------------x---------------------> t
+//				 * 
+//				 * |--|--|--|--|--|--|
+//				 * 1                 7
+//				 *    |--|--|--|--|--|--|
+//				 *    2                 8
+//				 *       |--|--|--|--|--|--|
+//				 *       3                 9
+//				 */
+//				tmp = next_;
+//				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
+//					tmp ++;
+//				
+//				/* Set the start pointer for this window batch */
+//				batches[b][_START] = position;
+//				
+//				/* 
+//				 * Set the free pointer for the previous window batch, if any. 
+//				 * If position is 0, then the free pointer should point at the 
+//				 * end of the buffer, otherwise `position--` will be negative.
+//				 */
+//				position = (position == 0) ? buffer.capacity() : position;
+//				position --;
+//				if (previous >= 0)
+//					batches[previous][_FREE] = position;
+//				/* Set counters for the next batch to open */
+//				previous = b;
+//				b = incrementAndGet(b, true);
+//				next_ += offset;
+//			}
+//			/* Should we close old batches? 
+//			 * 
+//			 * If a window batch close at time `t`, we are looking for the
+//			 * first element whose timestamp is greater than `t`.
+//			 *  
+//			 */
+//			current = 0;
+//			while (end >= (_next + 1)) {
+//				
+//				tmp = _next + 1;
+//				while ((position = firstOccurenceOf (tmp, current, rows, index_)) < 0)
+//					tmp ++;
+//				
+//				/* Set the end pointer for this window batch */
+//				batches[d][_END] = position;
+//				
+//				if (batches[d][_FREE] == buffer.capacity()) {
+//					System.out.println("Free buffer");
+//				}
+//				
+//				/* Dispatch a task */
+//				this.newTaskFor (
+//						batches[d][_START], 
+//						batches[d][  _END], 
+//						batches[d][ _FREE], 
+//						_next - tpb + 1, _next
+//						);
+//				batches[d][_START] = _undefined;
+//				/* Set counters for the next batch to close */
+//				d = incrementAndGet(d, false);
+//				_next += offset;
+//			}
 		} else
 		{
 			throw new UnsupportedOperationException("error: window is neither row-based nor range-based");
@@ -397,9 +537,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 	}
 	
 	private long getTimestamp (IQueryBuffer buffer, int index) {
-		long value = buffer.getLong(0);
+		long value = buffer.getLong(index);
 		if (Utils.LATENCY_ON)
-			return (long) Utils.unpack(0, value);
+			return (long) Utils.unpack(1, value);
 		else 
 			return value;
 	}
@@ -408,6 +548,16 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public long getBytesGenerated() {
 		
 		return handler.getTotalOutputBytes();
+	}
+	
+	public double mean () {
+		avg = (count > 0) ? m : 0D;
+		return avg;
+	}
+	
+	public double stdv () {
+		std = (count > 2) ? Math.sqrt(s / (double) (count - 1 - 1)) : 0D;
+		return std;
 	}
 }
 

@@ -47,10 +47,10 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		ITupleSchema schema = windowBatch.getSchema();
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
-		windowBatch.initWindowPointers();
+		// windowBatch.initWindowPointers();
 
-		int [] startPointers = windowBatch.getWindowStartPointers();
-		int []   endPointers = windowBatch.getWindowEndPointers();
+		// int [] startPointers = windowBatch.getWindowStartPointers();
+		// int []   endPointers = windowBatch.getWindowEndPointers();
 		
 		IQueryBuffer  inBuffer = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
@@ -60,47 +60,64 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 			System.exit(1);
 		}
 		
+		// System.out.println("[DBG] task " + windowBatch.getTaskId());
+		
 		if (selectivity) {
 			invoked = 0;
 			matched = 0;
 		}
 		
-		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			
-			int inWindowStartOffset = startPointers[currentWindow];
-			int inWindowEndOffset   = endPointers[currentWindow]; // inWindowStartOffset + 32 * 4096; // 256 * 1024; // endPointers[currentWindow];
-			
-			/*
-			 * If the window is empty, skip it 
-			 */
-			if (inWindowStartOffset != -1) {
-				
-				startPointers[currentWindow] = outBuffer.position();
-				/* For all the tuples in the window... */
-				while (inWindowStartOffset < inWindowEndOffset) {
-					if (selectivity)
-						invoked ++;
-					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
-						if (selectivity)
-							matched ++;
-						/* Write tuple to result buffer */
-						if (outBuffer.position() >= outBuffer.capacity()) {
-							System.err.println("error: result buffer overflow");
-							System.exit(1);
-						}
-						inBuffer.appendBytesTo (inWindowStartOffset, byteSizeOfTuple, outBuffer);
-					}
-					/*
-					 * NOTE:
-					 * 
-					 * What is the purpose of the putting the dummy content?
-					 * Don't we copy `byteSizeOfTuple` bytes?
-					 *
-					 * outBuffer.put(schema.getDummyContent());
-					 */
-					inWindowStartOffset += byteSizeOfTuple;
+//		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+//			
+//			int inWindowStartOffset = startPointers[currentWindow];
+//			int inWindowEndOffset   = endPointers[currentWindow]; // inWindowStartOffset + 32 * 4096; // 256 * 1024; // endPointers[currentWindow];
+//			
+//			/*
+//			 * If the window is empty, skip it 
+//			 */
+//			if (inWindowStartOffset != -1) {
+//				
+//				startPointers[currentWindow] = outBuffer.position();
+//				/* For all the tuples in the window... */
+//				while (inWindowStartOffset < inWindowEndOffset) {
+//					if (selectivity)
+//						invoked ++;
+//					if (this.predicate.satisfied(inBuffer, schema, inWindowStartOffset)) {
+//						if (selectivity)
+//							matched ++;
+//						/* Write tuple to result buffer */
+//						if (outBuffer.position() >= outBuffer.capacity()) {
+//							System.err.println("error: result buffer overflow");
+//							System.exit(1);
+//						}
+//						inBuffer.appendBytesTo (inWindowStartOffset, byteSizeOfTuple, outBuffer);
+//					}
+//					/*
+//					 * NOTE:
+//					 * 
+//					 * What is the purpose of the putting the dummy content?
+//					 * Don't we copy `byteSizeOfTuple` bytes?
+//					 *
+//					 * outBuffer.put(schema.getDummyContent());
+//					 */
+//					inWindowStartOffset += byteSizeOfTuple;
+//				}
+//				endPointers[currentWindow] = outBuffer.position() - 1;
+//			}
+//		}
+		
+		for (int p = windowBatch.getBatchStartPointer(); p < windowBatch.getBatchEndPointer(); p += byteSizeOfTuple) {
+			if (selectivity)
+				invoked ++;
+			if (this.predicate.satisfied(inBuffer, schema, p)) {
+				if (selectivity)
+					matched ++;
+				/* Write tuple to result buffer */
+				if (outBuffer.position() >= outBuffer.capacity()) {
+					System.err.println("error: result buffer overflow");
+					System.exit(1);
 				}
-				endPointers[currentWindow] = outBuffer.position() - 1;
+				inBuffer.appendBytesTo (p, byteSizeOfTuple, outBuffer);
 			}
 		}
 		

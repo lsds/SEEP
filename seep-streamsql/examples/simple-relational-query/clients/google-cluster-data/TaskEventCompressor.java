@@ -130,7 +130,7 @@ public class TaskEventCompressor {
 							System.exit(1);
 						}
 						/* Compress the data */
-						compressed = SmartGridUtils.compress(data.array());
+						compressed = TaskEventUtils.compress(data.array());
 						compressedBytes += compressed.length;
 						ByteBuffer buffer = ByteBuffer.wrap(compressed);
 						bundles.add(buffer);

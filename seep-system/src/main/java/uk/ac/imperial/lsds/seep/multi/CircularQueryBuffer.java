@@ -194,7 +194,8 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		if (h.value <= wrapPoint) {
 			h.value = start.get();
 			if (h.value <= wrapPoint) {
-				/* debug (); */
+				// debug ();
+				// System.out.println("Waiting...");
 				return -1;
 			}
 		}
@@ -213,7 +214,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 				buffer.position(0);
 				buffer.put(values, size - index, left);
 			}
-			/* System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left)); */
+			// System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left));
 		} else {
 			if (! this.isDirect)
 				System.arraycopy(values, 0, data, index, length);
@@ -228,6 +229,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			wraps ++;
 		/* buffer.position(p); */
 		end.lazySet(_end + length);
+		// debug ("I");
 		return index;
 	}
 	
@@ -266,8 +268,14 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			bytes = size - index + offset + 1;
 		else
 			bytes = offset - index + 1;
-		// System.out.println(String.format("[DBG] q %d %6d bytes processed; new start is %6d", this.id, bytes, _start + bytes));
+		
+//		System.out.println(String.format("[DBG] q %d %10d bytes processed; new start is %20d end is %20d", this.id, bytes, _start + bytes, end.get()));
+//		debug("F");
+		
+		// long x = 
 		bytesProcessed.addAndGet(bytes);
+		// if (x == size)
+		//	System.out.println(x + "\t" + size);
 		/* Set new start pointer */
 		start.lazySet(_start + bytes);
 	}
@@ -290,13 +298,22 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		return wraps;
 	}
 	
+	public void debug (String type) {
+		long head = start.get();
+		long tail = end.get();
+		int remaining = (tail < head) ? (int) (head - tail) : (size - (int) (tail - head));
+		System.out.println(
+		String.format("[DBG] %s start %20d [%20d] end %20d [%20d] %7d wraps %20d bytes remaining", 
+		type, normalise(head), head, normalise(tail), tail, getWraps(), remaining));
+	}
+	
 	public void debug () {
 		long head = start.get();
 		long tail = end.get();
 		int remaining = (tail < head) ? (int) (head - tail) : (size - (int) (tail - head));
 		System.out.println(
-		String.format("[DBG] start %7d [%7d] end %7d [%7d] %7d wraps %13d bytes remaining", 
-		normalise(head), head, normalise(tail), tail, getWraps(), remaining));
+		String.format("[DBG] %s start %20d [%20d] end %20d [%20d] %7d wraps %20d bytes remaining", 
+		" ", normalise(head), head, normalise(tail), tail, getWraps(), remaining));
 	}
 
 	@Override

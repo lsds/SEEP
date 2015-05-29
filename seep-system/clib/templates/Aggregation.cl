@@ -445,6 +445,10 @@ __kernel void clearKernel (
 	indices[tid] = EMPTY_KEY;
 	offsets[tid] = -1;
 	__global intermediate_t *c = (__global intermediate_t *) &contents[tid * sizeof(intermediate_t)];
+	// int idx = (tid * sizeof(intermediate_t)) / 16;
+	// contents[idx] = 0;
+	// contents[idx+1] = 0;
+
 	clearf(c);
 }
 

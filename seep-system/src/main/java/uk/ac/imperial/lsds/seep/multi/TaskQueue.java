@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 /* import java.util.concurrent.ConcurrentLinkedQueue; */
 
 /* 
@@ -9,23 +11,22 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class TaskQueue {
 	
-	/*
-	ConcurrentLinkedQueue<Task> queue;
 	
-	public TaskQueue (int p, int q) {
-		queue = new ConcurrentLinkedQueue<Task>();
-	}
-	
-	public boolean add (Task task) {
-		return queue.add(task);
-	}
-	
-	public Task poll (int [][] policy, int p, int q) {
-		return queue.poll();
-	}
-	
-	public int size () { return queue.size(); }
-	*/
+//	ConcurrentLinkedQueue<Task> queue;
+//	
+//	public TaskQueue (int p, int q) {
+//		queue = new ConcurrentLinkedQueue<Task>();
+//	}
+//	
+//	public boolean add (Task task) {
+//		return queue.add(task);
+//	}
+//	
+//	public Task poll (int [][] policy, int p, int q) {
+//		return queue.poll();
+//	}
+//	
+//	public int size () { return queue.size(); }
 	
 	private ITask head;
 	
@@ -166,8 +167,8 @@ public class TaskQueue {
 	}
 	
 	public ITask poll (int [][] policy, int p, int q) {
-		// return getNextTask(policy, p, q);
-		return getFirstTask(policy, p, q);
+		return getNextTask(policy, p, q);
+		// return getFirstTask(policy, p, q);
 	}
 	
 	public int size () {

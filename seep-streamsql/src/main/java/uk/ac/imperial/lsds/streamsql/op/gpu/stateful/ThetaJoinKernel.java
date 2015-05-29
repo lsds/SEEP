@@ -112,7 +112,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	public void setup () {
 		
-		if (batchSize < 0) {
+		if (batchSize <= 0) {
 			System.err.println("error: invalid input size");
 			System.exit(1);
 		}
@@ -236,12 +236,12 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		int __rightTuples = (secondEnd - secondStart)/rightInputSchema.getByteSizeOfTuple();
 		
 		if (__leftTuples > leftTuples) {
-			System.err.println(String.format("error: left join batch size out of bounds", __leftTuples));
+			System.err.println(String.format("error: left join batch size out of bounds (%d > %d)", __leftTuples, leftTuples));
 			System.exit(-1);
 		}
 		
 		if (__rightTuples > rightTuples) {
-			System.err.println(String.format("error: right join batch size out of bounds", __rightTuples));
+			System.err.println(String.format("error: right join batch size out of bounds (%d > %d)", __rightTuples, rightTuples));
 			System.exit(-1);
 		}
 		

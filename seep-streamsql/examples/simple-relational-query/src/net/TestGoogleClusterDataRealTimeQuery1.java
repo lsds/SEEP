@@ -24,17 +24,23 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
-public class TestGoogleClusterDataRealTime {
+public class TestGoogleClusterDataRealTimeQuery1 {
 	
 	private static final String usage = "usage: java TestGoogleClusterData";
 	
 	public static void main (String [] args) {
 		
 		String hostname = "localhost";
-		int port = 6668;
+		int port = 6667;
 		
 		int bundle = 512;
 		int tupleSize = 64;
@@ -72,14 +78,14 @@ public class TestGoogleClusterDataRealTime {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 16;
-		QueryConf queryConf = new QueryConf(32, 1024);
+		Utils.THREADS = 1;
+		QueryConf queryConf = new QueryConf(1, 1048576);
 		/*
 		 * Set up configuration of query
 		 */
-		WindowType windowType = WindowType.fromString("row");
-		long windowRange = 512;
-		long windowSlide = 512;
+		WindowType windowType = WindowType.fromString("range");
+		long windowRange = 500;
+		long windowSlide = 500;
 		int numberOfAttributesInSchema = 12;
 		int numberOfProjectedAttributes = numberOfAttributesInSchema;
 		
@@ -105,32 +111,40 @@ public class TestGoogleClusterDataRealTime {
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 		
-		Expression [] expression = new Expression [numberOfProjectedAttributes];
+		IPredicate predicate =  new IntComparisonPredicate(
+			IntComparisonPredicate.EQUAL_OP, 
+			new IntColumnReference(4),
+			new IntConstant(3)); /* FAIL == 3 */
+			
+		IMicroOperatorCode selectionCode = new Selection(predicate);
+		MicroOperator uoperator1;
+		uoperator1 = new MicroOperator (selectionCode, null, 1);
 		
-		expression[ 0] = new  LongColumnReference( 0);
-		expression[ 1] = new  LongColumnReference( 1);
-		expression[ 2] = new  LongColumnReference( 2);
-		expression[ 3] = new  LongColumnReference( 3);
-		expression[ 4] = new   IntColumnReference( 4);
-		expression[ 5] = new   IntColumnReference( 5);
-		expression[ 6] = new   IntColumnReference( 6);
-		expression[ 7] = new   IntColumnReference( 7);
-		expression[ 8] = new FloatColumnReference( 8);
-		expression[ 9] = new FloatColumnReference( 9);
-		expression[10] = new FloatColumnReference(10);
-		expression[11] = new   IntColumnReference(11);
+		/* After selection, apply aggregation */
 		
-		IMicroOperatorCode projectionCode = new Projection (expression);
-		System.out.println(String.format("[DBG] %s", projectionCode));
+		AggregationType aggregationType = AggregationType.fromString("min");
 		
-		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 1048576; /* 1MB */
+		Expression [] groupBy = new Expression [] {
+			new IntColumnReference(6)
+		};
 		
-		MicroOperator uoperator;
-		uoperator = new MicroOperator (projectionCode, null, 1);
+		IMicroOperatorCode aggregationCode = new MicroAggregation (
+			window,
+			aggregationType,
+			new FloatColumnReference(8), /* count(*), does not really matter */
+			groupBy
+			);
 		
+		MicroOperator uoperator2;
+		uoperator2 = new MicroOperator (aggregationCode, null, 1);
+		
+		uoperator1.connectTo(6001, uoperator2);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
-		operators.add(uoperator);
+		operators.add(uoperator1);
+		operators.add(uoperator2);
+		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 256 * 1048576; /* 1MB */
 		
 		long timestampReference = System.nanoTime();
 		
@@ -195,42 +209,47 @@ public class TestGoogleClusterDataRealTime {
 						int bytes = 0;
 						if ((bytes = client.read(buffer)) > 0) {
 							
-							/*
-							 * System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
-							 *		bytes, buffer.remaining()));
-							 *
-							 * Make sure the buffer is rewind before reading.
-							 */
-							buffer.rewind();
+							if (! buffer.hasRemaining()) {
+//								System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
+//										bytes, buffer.remaining()));
+								/*
+								 * Make sure the buffer is rewind before reading.
+								 */
+								buffer.rewind();
 							
-							/*
-							 * Change the timestamp of all tuples received
-							 */
-							long ts = (System.nanoTime() - timestampReference) / 1000000000L;
-							for (int idx = 0; idx < bytes; idx += schema.getByteSizeOfTuple()) {
-								buffer.putLong(idx, ts);
-							}
-							
-							/* operator.processData (buffer.array(), bytes); */
-							
-							/* Measurements */
-							Bytes += bytes;
-							
-							count += 1;
-							if (count % 10000 == 0) {
-								t = System.currentTimeMillis();
-								if (_t > 0 && previous > 0) {
-									dt = ((double) (t - _t)) / 1000.;
-									MB = ((double) (Bytes - previous)) / _1MB;
-									rate = MB / dt;
-									System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
-									MB, dt, rate, ((rate * 8.)/1000.)));
+								/*
+								 * Change the timestamp of all tuples received
+								 */
+								long ts = (System.nanoTime() - timestampReference) / 1000000L;
+//								System.out.println("timestamp is " + ts);
+								for (int idx = 0; idx < buffer.capacity(); idx += schema.getByteSizeOfTuple()) {
+									if (! Utils.LATENCY_ON)
+										buffer.putLong(idx, ts);
+									else 
+										buffer.putLong(idx, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), ts));
 								}
-								_t = t;
-								previous = Bytes;
-							}
 							
-							buffer.clear();
+								operator.processData (buffer.array(), buffer.capacity());
+							
+//								/* Measurements */
+//								Bytes += bytes;
+//							
+//								count += 1;
+//								if (count % 10000 == 0) {
+//									t = System.currentTimeMillis();
+//									if (_t > 0 && previous > 0) {
+//										dt = ((double) (t - _t)) / 1000.;
+//										MB = ((double) (Bytes - previous)) / _1MB;
+//										rate = MB / dt;
+//										System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
+//										MB, dt, rate, ((rate * 8.)/1000.)));
+//									}
+//									_t = t;
+//									previous = Bytes;
+//								}
+							
+								buffer.clear();
+							}
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");

@@ -16,7 +16,7 @@ public class TaskProcessor implements Runnable {
 	private AtomicLong [] tasksProcessed;
 	
 	/* Latency measurements */
-	boolean monitor = false;
+	boolean monitor = true;
 	
 	private long count = 0L;
 	private long start;
@@ -70,6 +70,7 @@ public class TaskProcessor implements Runnable {
 				
 				while ((task = queue.poll(policy, cid, 0)) == null) {
 					LockSupport.parkNanos(1L);
+					// Thread.yield();
 				}
 				
 				if (monitor) {

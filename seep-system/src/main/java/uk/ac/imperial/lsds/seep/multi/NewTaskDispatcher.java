@@ -185,7 +185,8 @@ public class NewTaskDispatcher implements ITaskDispatcher {
 	
 	private void assemble (int index, int length) {
 		
-		marks.add(index);
+		if (Utils.LATENCY_ON)
+			marks.add(index);
 		
 		/* Number of rows added */
 		int rows = length / tupleSize;

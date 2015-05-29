@@ -22,11 +22,8 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatDivision;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatMultiplication;
-
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.AProjectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 
@@ -107,12 +104,15 @@ public class TestProjectionAttributes {
 		expression[1] = fexpr;
 		
 		/* Calculate batch-related statistics */
-		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
-		long tpb = ppb * window.getPaneSize();
-		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
-		System.out.println(String.format("[DBG] %d bytes input", inputSize));
-		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
-		System.out.println("[DBG] offset is " + batchOffset);
+//		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
+//		long tpb = ppb * window.getPaneSize();
+//		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+//		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+//		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
+//		System.out.println("[DBG] offset is " + batchOffset);
+		
+		 int inputSize = queryConf.BATCH;
+		 System.out.println(String.format("[DBG] %d bytes input", inputSize));
 		
 		TheGPU.getInstance().init(1);
 		

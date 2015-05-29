@@ -108,6 +108,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		marks.add(idx);
 		
+		// System.out.println(String.format("[DBG] insert into 1st stream %10d bytes or %10d tuples", length, length / firstTupleSize));
+		
 		this.firstEndIndex = idx + length - firstTupleSize;
 		
 		synchronized (lock) {
@@ -161,6 +163,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	private void assembleSecond (int idx, int length) {
 		
 		this.secondEndIndex = idx + length - secondTupleSize;
+		
+		// System.out.println(String.format("[DBG] insert into 2nd stream %10d bytes or %10d tuples", length, length / secondTupleSize));
 		
 		synchronized (lock) {
 			if (secondEndIndex < secondStartIndex)

@@ -27,7 +27,7 @@ import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	private static final int threadsPerGroup = 512;
+	private static final int threadsPerGroup = 128;
 	private static final int tuplesPerThread = 2;
 	
 	private static int kdbg = 0;
@@ -313,6 +313,16 @@ public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode
 		   offsetsLength = 4 * batchSize * tableSlots;
 		partitionsLength = 4 *   ngroups;
 		
+		System.out.println(String.format("[DBG] input.length      = %13d", inputSize));
+		System.out.println(String.format("[DBG] contents.length   = %13d", contentsLength));
+		System.out.println(String.format("[DBG] stashed.length    = %13d", stashedLength));
+		System.out.println(String.format("[DBG] failed.length     = %13d", failedLength));
+		System.out.println(String.format("[DBG] attempts.length   = %13d", attemptsLength));
+		System.out.println(String.format("[DBG] indices.length    = %13d", indicesLength));
+		System.out.println(String.format("[DBG] offsets.length    = %13d", offsetsLength));
+		System.out.println(String.format("[DBG] partitions.length = %13d", partitionsLength));
+		System.out.println(String.format("[DBG] output.length     = %13d", outputSize));
+//		
 		if (kdbg > 0) {
 		contents   = new byte [  contentsLength];
 		stashed    = new byte [   stashedLength];

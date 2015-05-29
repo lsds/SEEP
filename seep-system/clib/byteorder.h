@@ -20,4 +20,34 @@ inline float __bswapfp (float _x) {
 	return _y;
 }
 
+inline float __getFloat (uchar16 x) {
+	float _y;
+	char *y = (char *) &_y;
+	y[0] = x.sB;
+	y[1] = x.sA;
+	y[2] = x.s9;
+	y[3] = x.s8;
+	return _y;
+}
+
+inline float __getFloatFour (uchar4 x) {
+	float _y;
+	char *y = (char *) &_y;
+	y[0] = x.s3;
+	y[1] = x.s2;
+	y[2] = x.s1;
+	y[3] = x.s0;
+	return _y;
+}
+
+inline uchar4 __getCharFour (float _y) {
+	uchar4 x;
+	char *y = (char *) &_y;
+	x.s3 = y[0];
+	x.s2 = y[1];
+	x.s1 = y[2];
+	x.s0 = y[3];
+	return x;
+}
+
 #endif /* __GPU_BYTEORDER_H_ */

@@ -111,11 +111,11 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		/*
 		 * Make sure the batch is initialised
 		 */
-		windowBatch.initWindowPointers();
+		// windowBatch.initWindowPointers();
 //		System.out.println("RUN projection");
 		
-		int [] startPointers = windowBatch.getWindowStartPointers ();
-		int [] endPointers   = windowBatch.getWindowEndPointers ();
+//		int [] startPointers = windowBatch.getWindowStartPointers ();
+//		int [] endPointers   = windowBatch.getWindowEndPointers ();
 		
 		IQueryBuffer inBuffer  = windowBatch.getBuffer();
 		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
@@ -133,27 +133,34 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 		int byteSizeOfTuple = schema.getByteSizeOfTuple();
 		
 		
-		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
-			
-			int inWindowStartOffset = startPointers[currentWindow];
-			int inWindowEndOffset = endPointers[currentWindow];
-			
-			/*
-			 * If the window is empty, skip it 
-			 */
-			if (inWindowStartOffset != -1) {
-				
-				startPointers[currentWindow] = outBuffer.position();
-				/* For all the tuples in the window */
-				while (inWindowStartOffset < inWindowEndOffset) {
-					for (int i = 0; i < expressions.length; i++) {
-						expressions[i].appendByteResult(inBuffer, schema, inWindowStartOffset, outBuffer);
-					}
-					outBuffer.put(outSchema.getDummyContent());
-					inWindowStartOffset += byteSizeOfTuple;
-				}
-				endPointers[currentWindow] = outBuffer.position() - 1;
+//		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+//			
+//			int inWindowStartOffset = startPointers[currentWindow];
+//			int inWindowEndOffset = endPointers[currentWindow];
+//			
+//			/*
+//			 * If the window is empty, skip it 
+//			 */
+//			if (inWindowStartOffset != -1) {
+//				
+//				startPointers[currentWindow] = outBuffer.position();
+//				/* For all the tuples in the window */
+//				while (inWindowStartOffset < inWindowEndOffset) {
+//					for (int i = 0; i < expressions.length; i++) {
+//						expressions[i].appendByteResult(inBuffer, schema, inWindowStartOffset, outBuffer);
+//					}
+//					outBuffer.put(outSchema.getDummyContent());
+//					inWindowStartOffset += byteSizeOfTuple;
+//				}
+//				endPointers[currentWindow] = outBuffer.position() - 1;
+//			}
+//		}
+		
+		for (int p = windowBatch.getBatchStartPointer(); p < windowBatch.getBatchEndPointer(); p += byteSizeOfTuple) {
+			for (int i = 0; i < expressions.length; i++) {
+				expressions[i].appendByteResult(inBuffer, schema, p, outBuffer);
 			}
+			outBuffer.put(outSchema.getDummyContent());
 		}
 		
 		/* Return (unbounded) buffers to the pool */

@@ -78,7 +78,7 @@ public class TestLinearRoadBenchmarkData {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 4;
+		Utils.THREADS = 1;
 		
 		/*
 		 * Query 1 (Projection)
@@ -89,7 +89,7 @@ public class TestLinearRoadBenchmarkData {
 		 * Note that we introduce `lane` in the output stream instead of padding
 		 */
 		
-		QueryConf queryConf1 = new QueryConf(32, 1024);
+		QueryConf queryConf1 = new QueryConf(1048576, 1024);
 		
 		WindowType windowType1 = WindowType.fromString("row");
 		long windowRange1 = 1024;
@@ -147,39 +147,39 @@ public class TestLinearRoadBenchmarkData {
 		 * 
 		 */
 		
-		QueryConf queryConf2 = new QueryConf(10, 1024);
-		
-		WindowType windowType2 = WindowType.fromString("range");
-		long windowRange2 = 30;
-		long windowSlide2 =  1;
-		int numberOfAttributesInSchema2 = 7;
-		
-		WindowDefinition window2 = 
-			new WindowDefinition (windowType2, windowRange2, windowSlide2);
-		
-		int [] offsets2 = new int [numberOfAttributesInSchema2];
-		/* First attribute is timestamp */
-		offsets2[ 0] =  0;
-		offsets2[ 1] =  8; /*   vehicle */ 
-		offsets2[ 2] = 12; /*     speed */
-		offsets2[ 3] = 16; /*   highway */
-		offsets2[ 4] = 20; /*      lane */
-		offsets2[ 5] = 24; /* direction */
-		offsets2[ 6] = 28; /*   segment */
-		
-		int byteSize2 = 32;
-		
-		ITupleSchema schema2 = new TupleSchema (offsets2, byteSize2);
-		
-		IMicroOperatorCode q2code = new LRBUDFCPU(schema2, new IntColumnReference(1));
-		System.out.println(String.format("[DBG] %s", q2code));
-		
-		MicroOperator q2op = new MicroOperator(q2code, null, 1);
-
-		Set<MicroOperator> q2operators = new HashSet<>();
-		q2operators.add(q2op);
-		
-		SubQuery q2 = new SubQuery (0, q2operators, schema2, window2, queryConf2);
+//		QueryConf queryConf2 = new QueryConf(10, 1024);
+//		
+//		WindowType windowType2 = WindowType.fromString("range");
+//		long windowRange2 = 30;
+//		long windowSlide2 =  1;
+//		int numberOfAttributesInSchema2 = 7;
+//		
+//		WindowDefinition window2 = 
+//			new WindowDefinition (windowType2, windowRange2, windowSlide2);
+//		
+//		int [] offsets2 = new int [numberOfAttributesInSchema2];
+//		/* First attribute is timestamp */
+//		offsets2[ 0] =  0;
+//		offsets2[ 1] =  8; /*   vehicle */ 
+//		offsets2[ 2] = 12; /*     speed */
+//		offsets2[ 3] = 16; /*   highway */
+//		offsets2[ 4] = 20; /*      lane */
+//		offsets2[ 5] = 24; /* direction */
+//		offsets2[ 6] = 28; /*   segment */
+//		
+//		int byteSize2 = 32;
+//		
+//		ITupleSchema schema2 = new TupleSchema (offsets2, byteSize2);
+//		
+//		IMicroOperatorCode q2code = new LRBUDFCPU(schema2, new IntColumnReference(1));
+//		System.out.println(String.format("[DBG] %s", q2code));
+//		
+//		MicroOperator q2op = new MicroOperator(q2code, null, 1);
+//
+//		Set<MicroOperator> q2operators = new HashSet<>();
+//		q2operators.add(q2op);
+//		
+//		SubQuery q2 = new SubQuery (0, q2operators, schema2, window2, queryConf2);
 		
 		/*
 		 * Query 3 (Aggregation)
@@ -190,7 +190,7 @@ public class TestLinearRoadBenchmarkData {
 		 * having AVG(speed) < 40
 		 */
 		
-		QueryConf queryConf3 = new QueryConf(10, 1024);
+		QueryConf queryConf3 = new QueryConf(1048576, 1024);
 		/*
 		 * Set up configuration of query
 		 */
@@ -263,84 +263,84 @@ public class TestLinearRoadBenchmarkData {
 		 * group by highway, direction, segment, vehicle
 		 */
 		
-		QueryConf queryConf4 = new QueryConf(10, 1024);
-		/*
-		 * Set up configuration of query
-		 */
-		WindowType windowType4 = WindowType.fromString("range");
-		long windowRange4 = 30;
-		long windowSlide4 =  1;
-		int numberOfAttributesInSchema4 = 7;
-		
-		WindowDefinition window4 = 
-			new WindowDefinition (windowType4, windowRange4, windowSlide4);
-		
-		int [] offsets4 = new int [numberOfAttributesInSchema4];
-		/* First attribute is timestamp */
-		offsets4[ 0] =  0;
-		offsets4[ 1] =  8; /*   vehicle */ 
-		offsets4[ 2] = 12; /*     speed */
-		offsets4[ 3] = 16; /*   highway */
-		offsets4[ 4] = 20; /*      lane */
-		offsets4[ 5] = 24; /* direction */
-		offsets4[ 6] = 28; /*   segment */
-		
-		int byteSize4 = 32;
-		
-		ITupleSchema schema4 = new TupleSchema (offsets4, byteSize4);
-		
-		IMicroOperatorCode q4code1 = new MicroAggregation (
-			window4,
-			AggregationType.COUNT, 
-			new FloatColumnReference(1), /* Does it matter, since this is a count? No */
-			new Expression [] { 
-				new IntColumnReference(1),  /*  vehicle */
-				new IntColumnReference(3), /*   highway */
-				new IntColumnReference(5), /* direction */
-				new IntColumnReference(6)  /*   segment */
-			}
-		);
-		System.out.println(String.format("[DBG] %s", q4code1));
-		
-		MicroOperator q4op1 = new MicroOperator(q4code1, null, 1);
-		
-		/* The output schema of the first microoperator is: 
-		 * 
-		 * 0: timestamp, 1: vehicle, 2: highway, 3: direction, 4: segment, 5: count
-		 */
-		IMicroOperatorCode q4code2 = new MicroAggregation (
-			window4,
-			AggregationType.COUNT, 
-			new FloatColumnReference(1), /* vehicle */
-			new Expression [] { 
-				new IntColumnReference(2), /*   highway */
-				new IntColumnReference(3), /* direction */
-				new IntColumnReference(4)  /*   segment */
-			}
-		);
-		System.out.println(String.format("[DBG] %s", q4code2));
-		
-		MicroOperator q4op2 = new MicroOperator(q4code2, null, 1);
-		
-		q4op1.connectTo(6001, q4op2);
-		Set<MicroOperator> q4operators = new HashSet<>();
-		q4operators.add(q4op1);
-		
-		SubQuery q4 = new SubQuery (0, q4operators, schema4, window4, queryConf4);
+//		QueryConf queryConf4 = new QueryConf(10, 1024);
+//		/*
+//		 * Set up configuration of query
+//		 */
+//		WindowType windowType4 = WindowType.fromString("range");
+//		long windowRange4 = 30;
+//		long windowSlide4 =  1;
+//		int numberOfAttributesInSchema4 = 7;
+//		
+//		WindowDefinition window4 = 
+//			new WindowDefinition (windowType4, windowRange4, windowSlide4);
+//		
+//		int [] offsets4 = new int [numberOfAttributesInSchema4];
+//		/* First attribute is timestamp */
+//		offsets4[ 0] =  0;
+//		offsets4[ 1] =  8; /*   vehicle */ 
+//		offsets4[ 2] = 12; /*     speed */
+//		offsets4[ 3] = 16; /*   highway */
+//		offsets4[ 4] = 20; /*      lane */
+//		offsets4[ 5] = 24; /* direction */
+//		offsets4[ 6] = 28; /*   segment */
+//		
+//		int byteSize4 = 32;
+//		
+//		ITupleSchema schema4 = new TupleSchema (offsets4, byteSize4);
+//		
+//		IMicroOperatorCode q4code1 = new MicroAggregation (
+//			window4,
+//			AggregationType.COUNT, 
+//			new FloatColumnReference(1), /* Does it matter, since this is a count? No */
+//			new Expression [] { 
+//				new IntColumnReference(1),  /*  vehicle */
+//				new IntColumnReference(3), /*   highway */
+//				new IntColumnReference(5), /* direction */
+//				new IntColumnReference(6)  /*   segment */
+//			}
+//		);
+//		System.out.println(String.format("[DBG] %s", q4code1));
+//		
+//		MicroOperator q4op1 = new MicroOperator(q4code1, null, 1);
+//		
+//		/* The output schema of the first microoperator is: 
+//		 * 
+//		 * 0: timestamp, 1: vehicle, 2: highway, 3: direction, 4: segment, 5: count
+//		 */
+//		IMicroOperatorCode q4code2 = new MicroAggregation (
+//			window4,
+//			AggregationType.COUNT, 
+//			new FloatColumnReference(1), /* vehicle */
+//			new Expression [] { 
+//				new IntColumnReference(2), /*   highway */
+//				new IntColumnReference(3), /* direction */
+//				new IntColumnReference(4)  /*   segment */
+//			}
+//		);
+//		System.out.println(String.format("[DBG] %s", q4code2));
+//		
+//		MicroOperator q4op2 = new MicroOperator(q4code2, null, 1);
+//		
+//		q4op1.connectTo(6001, q4op2);
+//		Set<MicroOperator> q4operators = new HashSet<>();
+//		q4operators.add(q4op1);
+//		
+//		SubQuery q4 = new SubQuery (0, q4operators, schema4, window4, queryConf4);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 256 * 1048576; /* 1MB */
+		Utils._UNBOUNDED_BUFFER_ = 8 * 1048576; /* 1MB */
 		
 		/* Query graph */
-		q1.connectTo(10000, q2);
+		// q1.connectTo(10000, q2);
 		q1.connectTo(10001, q3);
-		q1.connectTo(10002, q4);
+		// q1.connectTo(10002, q4);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		queries.add(q1);
-		queries.add(q2);
+		// queries.add(q2);
 		queries.add(q3);
-		queries.add(q4);
+		// queries.add(q4);
 		
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
@@ -404,14 +404,15 @@ public class TestLinearRoadBenchmarkData {
 							 *
 							 * Make sure the buffer is rewind before reading.
 							 */
-							buffer.rewind();
-							operator.processData (buffer.array(), bytes);
+							if (! buffer.hasRemaining()) {
+								buffer.rewind();
+								operator.processData (buffer.array(), buffer.capacity());
 							
-							/* Measurements */
-							Bytes += bytes;
-							/*
-							count += 1;
-							if (count % 10000 == 0) {
+								/* Measurements */
+								Bytes += buffer.capacity();
+								/*
+								count += 1;
+								if (count % 10000 == 0) {
 								t = System.currentTimeMillis();
 								if (_t > 0 && previous > 0) {
 									dt = ((double) (t - _t)) / 1000.;
@@ -422,9 +423,10 @@ public class TestLinearRoadBenchmarkData {
 								}
 								_t = t;
 								previous = Bytes;
+								}
+								 */
+								buffer.clear();
 							}
-							*/
-							buffer.clear();
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");

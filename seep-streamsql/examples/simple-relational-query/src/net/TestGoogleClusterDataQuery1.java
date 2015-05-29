@@ -79,7 +79,7 @@ public class TestGoogleClusterDataQuery1 {
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
 		Utils.THREADS = 8;
-		QueryConf queryConf = new QueryConf(60, 1024);
+		QueryConf queryConf = new QueryConf(1, 1024);
 		/*
 		 * Set up configuration of query
 		 */

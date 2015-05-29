@@ -499,7 +499,8 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelReduc
 	(void) obj;
 
 	jsize argc = (*env)->GetArrayLength(env, _args);
-	if (argc != 3) /* # reduction kernel constants */
+	// if (argc != 3) /* # reduction kernel constants */
+	if (argc != 7) /* # reduction kernel constants */
 		return -1;
 	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
 	/* Object `int []` pinned */
@@ -685,10 +686,16 @@ void callback_setKernelReduce (cl_kernel kernel, gpuContextP context, int *const
 	 * __kernel void reduce (
 	 * const int tuples,
 	 * const int bytes,
+	 *
+	 * More variables: nwindows, window size and window slide
+	 *
 	 * __global const uchar *input,
-	 * __global const int *startPointers,
-	 * __global const int *endPointers,
+	 * // __global const int *startPointers,
+	 * // __global const int *endPointers,
 	 * __global uchar *output,
+	 *
+	 * More local memory, this time for input 
+	 * 
 	 * __local float *scratch
 	 * )
 	 */
@@ -696,35 +703,45 @@ void callback_setKernelReduce (cl_kernel kernel, gpuContextP context, int *const
 	/* Get all constants */
 	int         tuples = constants[0];
 	int          bytes = constants[1];
-	int  _scratch_size = constants[2]; /* Local buffer memory size */
-
+	int       nwindows = constants[2];
+	int   _window_size = constants[3];
+	int  _window_slide = constants[4];
+	int  _local_input_size = constants[5];
+	int  _scratch_size = constants[6]; /* Local buffer memory size */
+	
+	// printf ("[GPU] scratch size is %d bytes\n", _scratch_size);
+	
 	int error = 0;
 	/* Set constant arguments */
 	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *) &tuples);
-	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)  &bytes);
+	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *) &bytes);
+	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *) &nwindows);
+	error |= clSetKernelArg (kernel, 3, sizeof(int), (void *) &_window_size);
+	error |= clSetKernelArg (kernel, 4, sizeof(int), (void *) &_window_slide);
 	/* Set I/O byte buffers */
 	error |= clSetKernelArg (
 		kernel,
-		2, /* 3rd argument */
+		5, /* 3rd argument */
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[0]->device_buffer));
+	// error |= clSetKernelArg (
+	//	kernel,
+	//	3, /* 4th argument */
+	//	sizeof(cl_mem),
+	//	(void *) &(context->kernelInput.inputs[1]->device_buffer));
+	//error |= clSetKernelArg (
+	//	kernel,
+	//	4, /* 5th argument */
+	//	sizeof(cl_mem),
+	//	(void *) &(context->kernelInput.inputs[2]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		3, /* 4th argument */
-		sizeof(cl_mem),
-		(void *) &(context->kernelInput.inputs[1]->device_buffer));
-	error |= clSetKernelArg (
-		kernel,
-		4, /* 5th argument */
-		sizeof(cl_mem),
-		(void *) &(context->kernelInput.inputs[2]->device_buffer));
-	error |= clSetKernelArg (
-		kernel,
-		5, /* 6th argument */
+		6, /* 6th argument */
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[0]->device_buffer));
 	/* Set local memory */
-	error |= clSetKernelArg (kernel, 6, (size_t)  _scratch_size, (void *) NULL);
+	error |= clSetKernelArg (kernel, 7, (size_t)  _local_input_size, (void *) NULL);
+	error |= clSetKernelArg (kernel, 8, (size_t)  _scratch_size, (void *) NULL);
 
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
@@ -1127,6 +1144,9 @@ void callback_writeInput (gpuContextP context,
 	//	exit(1);
 	//}
 	/* Copy data across the JNI boundary */
+	
+	// printf("[GPU] write %10d bytes of input\n", context->kernelInput.inputs[ndx]->size);
+	
 	(*env)->CallVoidMethod (
 			env, obj, writeMethod,
 			qid,
@@ -1154,8 +1174,8 @@ void callback_readOutput (gpuContextP context,
 	}
 	
 	/* Use the mark */
-	int theSize;
-	if (mark > 0)
+	 int theSize;
+	 if (mark > 0)
 	 	theSize = mark;
 	else
 		theSize = context->kernelOutput.outputs[ndx]->size;
@@ -1165,6 +1185,9 @@ void callback_readOutput (gpuContextP context,
 			qid, ndx, theSize, context->kernelOutput.outputs[ndx]->size);
 		exit(1);
 	}
+	
+	// printf("[GPU] read  %10d bytes of output\n", theSize);
+	
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
 			env, obj, method,

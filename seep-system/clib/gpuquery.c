@@ -326,9 +326,13 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 
 		/* Wait for read event from previous query */
 		// gpu_context_waitForReadEvent (theOther);
-		// gpu_context_finish(theOther);
+		gpu_context_finish(theOther);
+		
+#ifdef GPU_PROFILE
+		gpu_context_profileQuery (theOther);
+#endif
 		/* Read output */
-		// gpu_context_readOutput (theOther, operator->readOutput, env, obj, qid);
+		gpu_context_readOutput (theOther, operator->readOutput, env, obj, qid);
 	}
 
 #ifdef GPU_TMSRMNT
@@ -426,6 +430,9 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 		/* Wait for read event from previous query */
  		// gpu_context_waitForReadEvent (theOther);
 		gpu_context_finish(theOther);
+#ifdef GPU_PROFILE
+		gpu_context_profileQuery (theOther);
+#endif
 		/* Notify output handler */
 		pthread_mutex_lock (mutex);
 		count = 1;

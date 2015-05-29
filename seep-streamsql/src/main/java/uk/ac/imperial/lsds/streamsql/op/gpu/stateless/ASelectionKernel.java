@@ -106,9 +106,16 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		threads[1] = tuples_ / tuplesPerThread;
 		
 		tgs = new int [2];
-		tgs[0] = threadsPerGroup;
-		tgs[1] = threadsPerGroup;
-		
+		if (threads[0] < threadsPerGroup) {
+			tgs[0] = threads[0];
+		} else { 
+			tgs[0] = threadsPerGroup;
+		}
+		if (threads[1] < threadsPerGroup) {
+			tgs[1] = threads[1];
+		} else { 
+			tgs[1] = threadsPerGroup;
+		}
 		ngroups = threads[0] / tgs[0];
 		
 		args = new int[3];

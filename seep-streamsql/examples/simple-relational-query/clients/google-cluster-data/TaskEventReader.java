@@ -37,7 +37,7 @@ public class TaskEventReader {
 		
 		long percent_ = 0L, _percent = 0L;
 		
-		int NTHREADS = 7;
+		int NTHREADS = 1;
 		
 		/* Parse command line arguments */
 		int i, j;

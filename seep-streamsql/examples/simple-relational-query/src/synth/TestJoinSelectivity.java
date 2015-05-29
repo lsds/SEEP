@@ -165,8 +165,8 @@ public class TestJoinSelectivity {
 		/*
 		 * Set up the stream
 		 */
-		int firstTuplesPerInsert  = 100;
-		int secondTuplesPerInsert = 100;
+		int firstTuplesPerInsert  = 128;
+		int secondTuplesPerInsert = 128;
 		
 		int firstTupleSize  =  firstSchema.getByteSizeOfTuple();
 		int secondTupleSize = secondSchema.getByteSizeOfTuple();
@@ -184,7 +184,7 @@ public class TestJoinSelectivity {
 		int value = 0;
 		long count = 0;
 		while (firstBuffer.hasRemaining()) {
-			firstBuffer.putLong(count++);
+			firstBuffer.putLong(1);
 			firstBuffer.putInt(value);
 			value = (value + 1) % 100;
 			for (int i = 12; i < firstTupleSize; i += 4)
@@ -193,7 +193,7 @@ public class TestJoinSelectivity {
 		/* Fill the second buffer */
 		count = 0;
 		while (secondBuffer.hasRemaining()) {
-			secondBuffer.putLong(count++);
+			secondBuffer.putLong(1);
 			secondBuffer.putInt(selectivity);
 			for (int i = 12; i < secondTupleSize; i += 4)
 				secondBuffer.putInt(1);

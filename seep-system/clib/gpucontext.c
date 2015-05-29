@@ -169,6 +169,7 @@ static void printEventProfilingInfo (cl_event event, const char *acronym) {
 }
 #endif
 
+#ifdef GPU_VERBOSE
 static int getEventReferenceCount (cl_event event) {
 	int error = 0;
 	cl_uint count = 0;
@@ -186,7 +187,6 @@ static int getEventReferenceCount (cl_event event) {
 		return (int) count;
 }
 
-#ifdef GPU_VERBOSE
 static char *getEventCommandStatus (cl_event event) {
 	int error = 0;
 	cl_int status;
@@ -235,6 +235,8 @@ void gpu_context_profileQuery (gpuContextP q) {
 	char msg[64];
 	int i;
 	int error = 0;
+	printEventProfilingInfo(q->write_event, "W");
+	error = clReleaseEvent(q->write_event);
 	for (i = 0; i < q->kernel.count; i++) {
 		memset(msg, 0, 64);
 		sprintf(msg, "K%02d", i);
@@ -244,6 +246,8 @@ void gpu_context_profileQuery (gpuContextP q) {
 			fprintf(stderr, "warning: failed to release event (%s)\n", __FUNCTION__);
 		}
 	}
+	printEventProfilingInfo(q->read_event, "R");
+	error = clReleaseEvent(q->read_event);
 }
 #endif
 
@@ -268,9 +272,6 @@ void gpu_context_waitForReadEvent (gpuContextP q) {
 	printEventProfilingInfo(q->read_event, "R");
 #endif
 	q->readCount -= 1;
-	/* At this stage, the write event should be finished as well. */
-	// int refCount = getEventReferenceCount (q->read_event);
-	// printf("[DBG] after waiting for  read event %p, its reference count is %d\n", q->read_event, refCount);
 	error = clReleaseEvent(q->read_event);
 	q->read_event = NULL;
 	if (error != CL_SUCCESS) {
@@ -310,8 +311,6 @@ void gpu_context_waitForWriteEvent (gpuContextP q) {
 		exit (1);
 	}
 	q->writeCount -= 1;
-	// int refCount = getEventReferenceCount (q->write_event);
-	// printf("[DBG] after waiting for write event %p, its reference count is %d\n", q->write_event, refCount);
 	error = clReleaseEvent(q->write_event);
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "warning: failed to release event (%s)\n", __FUNCTION__);
@@ -358,7 +357,6 @@ void gpu_context_submitTask (gpuContextP q, size_t *threads, size_t *threadsPerG
 				q->kernelInput.inputs[i]->size,
 				q->kernelInput.inputs[i]->mapped_buffer,
 				0, NULL, NULL);
-				// 0, NULL, &(q->write_event));
 		} else {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -513,8 +511,7 @@ void gpu_context_moveDirectInputBuffers (gpuContextP q, int *start, int *end) {
 				0,
 				theSize,
 				(q->kernelInput.inputs[i]->mapped_buffer + start[i]),
-				0, NULL, NULL); //&(q->write_event));
-				// 0, NULL, &(q->write_event));
+				0, NULL, NULL); 
 		} else {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -542,6 +539,9 @@ void gpu_context_moveInputBuffers (gpuContextP q) {
 	int error = 0;
 	/* Write */
 	for (i = 0; i < q->kernelInput.count; i++) {
+		
+		/* printf("[GPU] move %10d byte in\n", q->kernelInput.inputs[i]->size); */
+		
 		if (i == q->kernelInput.count - 1) {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -550,8 +550,11 @@ void gpu_context_moveInputBuffers (gpuContextP q) {
 				0,
 				q->kernelInput.inputs[i]->size,
 				q->kernelInput.inputs[i]->mapped_buffer,
+#ifdef GPU_PROFILE				
+				0, NULL, &(q->write_event));
+#else				
 				0, NULL, NULL);
-				// 0, NULL, &(q->write_event));
+#endif
 		} else {
 			error |= clEnqueueWriteBuffer (
 				q->queue[0],
@@ -583,6 +586,8 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 		if (q->kernelOutput.outputs[i]->doNotMove)
 			continue;
 		
+		/* printf("[GPU] move %10d byte out\n", q->kernelOutput.outputs[i]->size); */
+		
 		if (q->kernelOutput.outputs[i]->readEvent) {
 			error |= clEnqueueReadBuffer (
 				q->queue[0],
@@ -591,8 +596,11 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 				0,
 				q->kernelOutput.outputs[i]->size,
 				q->kernelOutput.outputs[i]->mapped_buffer,
-				0, NULL, NULL); //&(q->read_event));
-				// 0, NULL, &(q->read_event));
+#ifdef GPU_PROFILE
+				0, NULL, &(q->read_event));
+#else
+				0, NULL, NULL);
+#endif
 		} else {
 			error |= clEnqueueReadBuffer (
 				q->queue[0],

@@ -94,12 +94,20 @@ public class TestAggregationGroupBy {
 		int ngroups = Integer.parseInt(args[8]);
 		
 		/* Calculate batch-related statistics */
-		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
-		long tpb = ppb * window.getPaneSize();
-		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+//		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
+//		long tpb = ppb * window.getPaneSize();
+//		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+//		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+//		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
+//		System.out.println("[DBG] offset is " + batchOffset);
+		
+		int inputSize = queryConf.BATCH;
 		System.out.println(String.format("[DBG] %d bytes input", inputSize));
-		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
-		System.out.println("[DBG] offset is " + batchOffset);
+		
+		int tuplesPerBatch = inputSize / schema.getByteSizeOfTuple();
+		int panesPerBatch = (int) (tuplesPerBatch / window.getPaneSize());
+		
+		int nwindows = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
 		
 		TheGPU.getInstance().init(1);
 				
@@ -136,21 +144,22 @@ public class TestAggregationGroupBy {
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
 		IMicroOperatorCode gpuAggCode = null;
-		/*new AggregationKernel
-			(
-				aggregationType,
-				new FloatColumnReference(1), 
-				groupBy, 
-				null,
-				null, 
-				schema
-			);
+//		new AggregationKernel
+//			(
+//				aggregationType,
+//				new FloatColumnReference(1), 
+//				groupBy, 
+//				null,
+//				null, 
+//				schema
+//			);
+//		
+//		((AggregationKernel) gpuAggCode).setInputSize(inputSize);
+//		((AggregationKernel) gpuAggCode).setBatchSize(nwindows);
+//		// ((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());
+//		((AggregationKernel) gpuAggCode).setWindowSize(64);
+//		((AggregationKernel) gpuAggCode).setup();
 		
-		((AggregationKernel) gpuAggCode).setInputSize(inputSize);
-		((AggregationKernel) gpuAggCode).setBatchSize(queryConf.BATCH);
-		((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());
-		((AggregationKernel) gpuAggCode).setup();
-		*/
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
 			uoperator = new MicroOperator (gpuAggCode, cpuAggCode, 1);
@@ -159,8 +168,8 @@ public class TestAggregationGroupBy {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 256 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 64 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 256 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();

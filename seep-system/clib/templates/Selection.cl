@@ -167,10 +167,14 @@ __kernel void compactKernel (
 		const int lq = (offsets[left] + pivot) * sizeof(output_t);
 		const int lp = left * sizeof(input_t);
 		flags[left] = lq + sizeof(output_t);
-		__global  input_t *lx = (__global  input_t *) &  input[lp];
-		__global output_t *ly = (__global output_t *) & output[lq];
-		ly->vectors[0] = lx->vectors[0];
-		ly->vectors[1] = lx->vectors[1];
+		 __global  input_t *lx = (__global  input_t *) &  input[lp];
+		 __global output_t *ly = (__global output_t *) & output[lq];
+		 ly->vectors[0] = lx->vectors[0];
+		 ly->vectors[1] = lx->vectors[1];
+//		uchar16 lx1 = vload16(0, &input[lp]);
+//		uchar16 lx2 = vload16(0, &input[lp + 16]);
+//		vstore16 (lx1, 0, &output[lq]);
+//		vstore16 (lx2, 0, &output[lq + 16]);
 	}
 
 	if (flags[right] == 1) {
@@ -178,10 +182,15 @@ __kernel void compactKernel (
 		const int rq = (offsets[right] + pivot) * sizeof(output_t);
 		const int rp = right * sizeof(input_t);
 		flags[right] = rq + sizeof(output_t);
-		__global  input_t *rx = (__global  input_t *) &  input[rp];
-		__global output_t *ry = (__global output_t *) & output[rq];
-		ry->vectors[0] = rx->vectors[0];
-		ry->vectors[1] = rx->vectors[1];
+		 __global  input_t *rx = (__global  input_t *) &  input[rp];
+		 __global output_t *ry = (__global output_t *) & output[rq];
+		 ry->vectors[0] = rx->vectors[0];
+		 ry->vectors[1] = rx->vectors[1];
+
+//		uchar16 rx1 = vload16(0, &input[rp]);
+//		uchar16 rx2 = vload16(0, &input[rp + 16]);
+//		vstore16 (rx1, 0, &output[rq]);
+//		vstore16 (rx2, 0, &output[rq + 16]);
 	}
 }
 

@@ -153,6 +153,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		return result;
 		*/
 		return ((IntColumnReference) this.groupByAttributes[0]).eval(buffer, schema, offset);
+		// return (int) ((LongColumnReference) this.groupByAttributes[0]).eval(buffer, schema, offset);
 	}
 	
 	@Override
@@ -177,7 +178,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			if (this.hasGroupBy && this.doIncremental) 
 				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
 			else if (!this.hasGroupBy && this.doIncremental)
-				processDataPerWindowIncrementally_TheOtherWay(windowBatch, api);
+				processDataPerWindowIncrementally(windowBatch, api);
 			else if (this.hasGroupBy && !this.doIncremental)
 				processDataPerWindowWithGroupBy(windowBatch, api);
 			else if (!this.hasGroupBy && !this.doIncremental)
@@ -532,6 +533,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				}
 				
 				/* Release hash maps */
+				// System.out.println("[DBG] #keys is " + keyOffsets.size());
 				keyOffsets.release();
 				if (aggregationType == AggregationType.AVG) 
 					windowTupleCount.release();
@@ -800,14 +802,14 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					}
 				}
 				
-				// windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset - byteSizeOfInTuple);
+				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset - byteSizeOfInTuple);
 				
 				startPointers[currentWindow] = outBuffer.position();
-				// outBuffer.putLong(windowTimestamp);
+				outBuffer.putLong(windowTimestamp);
 				if (this.aggregationType == AggregationType.AVG)
 					windowValue = windowValue / windowTupleCount;
-				// outBuffer.putFloat(windowValue);
-				// outBuffer.put(outSchema.getDummyContent());
+				outBuffer.putFloat(windowValue);
+				outBuffer.put(outSchema.getDummyContent());
 				endPointers[currentWindow] = outBuffer.position() - 1;
 				
 			} else {
@@ -841,15 +843,15 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					}
 				}
 
-				// windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset);
+				windowTimestamp = this.timestampReference.eval(inBuffer, inSchema, inWindowStartOffset);
 
 				startPointers[currentWindow] = outBuffer.position();
-				// outBuffer.putLong(windowTimestamp);
+				outBuffer.putLong(windowTimestamp);
 				if (this.aggregationType == AggregationType.AVG)
 					windowValue = windowValue / windowTupleCount;
-				// outBuffer.putFloat(windowValue);
-				// outBuffer.put(outSchema.getDummyContent());
-				// endPointers[currentWindow] = outBuffer.position() - 1;
+				outBuffer.putFloat(windowValue);
+				outBuffer.put(outSchema.getDummyContent());
+				endPointers[currentWindow] = outBuffer.position() - 1;
 
 				prevWindowStart = inWindowStartOffset;
 				prevWindowEnd = inWindowEndOffset;

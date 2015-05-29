@@ -94,19 +94,22 @@ public class TestSelectionPredComp {
 		IPredicate predicate = new ANDPredicate(predicates);
 		
 		/* Calculate batch-related statistics */
-		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
-		long tpb = ppb * window.getPaneSize();
-		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+//		long ppb = window.panesPerSlide() * (queryConf.BATCH - 1) + window.numberOfPanes();
+//		long tpb = ppb * window.getPaneSize();
+//		int inputSize = (int) tpb * schema.getByteSizeOfTuple();
+//		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+//		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
+//		System.out.println("[DBG] offset is " + batchOffset);
+		
+		int inputSize = queryConf.BATCH;
 		System.out.println(String.format("[DBG] %d bytes input", inputSize));
-		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
-		System.out.println("[DBG] offset is " + batchOffset);
 		
 		TheGPU.getInstance().init(1);
 		
 		IMicroOperatorCode cpuSelectionCode = new Selection (predicate);
 		System.out.println(String.format("[DBG] %s", cpuSelectionCode));
 		
-		IMicroOperatorCode gpuSelectionCode = 
+		IMicroOperatorCode gpuSelectionCode = // null; // cpuSelectionCode;
 				new ASelectionKernel(predicate, schema);
 		
 		((ASelectionKernel) gpuSelectionCode).setInputSize(inputSize);
@@ -120,8 +123,8 @@ public class TestSelectionPredComp {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 256 * 1024 * 1024; // inputSize;
+		Utils._CIRCULAR_BUFFER_ = 256 * 1024 * 1024; // inputSize * Utils.THREADS * 2; // 64 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = inputSize; // (int) window.getSize() * schema.getByteSizeOfTuple() * nwindows; // * 1024; // inputSize; // 4 * 1024 * 1024; // inputSize;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();
@@ -136,7 +139,8 @@ public class TestSelectionPredComp {
 		/*
 		 * Set up the stream
 		 */
-		int tuplesPerInsert = 32768;
+		// int tuplesPerInsert = 32768;
+		int tuplesPerInsert = 1024; // 32768 * 2;
 		int tupleSize = schema.getByteSizeOfTuple();
 		int bufferBundle = tupleSize * tuplesPerInsert;
 		byte [] data = new byte [bufferBundle];
@@ -156,10 +160,19 @@ public class TestSelectionPredComp {
 			b.putLong(0, packed);
 		}
 		try {
+			// long timestamp = 1;
 			while (true) {
 				operator.processData (data);
 				if (Utils.LATENCY_ON)
 					b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1));
+//				timestamp += 1;
+//				b.clear();
+//				while (b.hasRemaining()) {
+//					b.putLong(timestamp);
+//					b.position(b.position() + 24);
+//					// for (int i = 8; i < tupleSize; i += 4)
+//					//	b.putInt(1);
+//				}
 			}
 		} catch (Exception e) { 
 			e.printStackTrace(); 

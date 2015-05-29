@@ -235,5 +235,4 @@ public class TestEsperSmartGrid extends TestEsper {
 			System.exit(1);
 		}
 	}
-	
 }
