@@ -83,7 +83,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			{
 				inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
 				if (i == logicalInputIndex) { readyBatches.add(dt); }
-				else { readyBatches.add(pending.get(logicalInputIndex).remove(ts)); }
+				else { readyBatches.add(pending.get(i).remove(ts)); }
 			}
 			ready.put(ts, readyBatches);
 			this.notifyAll();

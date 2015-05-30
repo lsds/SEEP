@@ -307,29 +307,25 @@ public class Dispatcher implements IRoutingObserver {
 			while(true)
 			{
 				//iterate sending tuples to the appropriate downstreams.
-				DataTuple dt = opQueue.tryPeekHead();
-				ArrayList<Integer> targets = null;
-				if (dt != null) 
-				{ 
-					targets = owner.getOperator().getRouter().forward_highestWeight(dt); 
-				}
-				while(dt == null || targets == null || targets.isEmpty())
+				DataTuple dt = null;
+				ArrayList<Integer> targets = null; 
+				
+				synchronized(lock)
 				{
-					synchronized(lock)
+					dt = opQueue.peekHead();
+					targets = owner.getOperator().getRouter().forward_highestWeight(dt); 
+	
+					//TODO: This is racy - targets could change between the check and when we wait, could
+					//end up waiting unnecessarily.
+					if (targets == null || targets.isEmpty())
 					{
 						try { lock.wait(); } catch (InterruptedException e) {}
+						continue;
 					}
-					dt = opQueue.tryPeekHead();
-					if (dt != null) { targets = owner.getOperator().getRouter().forward_highestWeight(dt); }
+					
 				}
-				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets);
 				
-				//Convention: If the routing is constrained, ignore the first
-				//target and route to all the remaining targets.
-				//TODO: Will probably break once we have multiple logical outputs, but ok
-				//for now.
-				boolean constrainedRoute = targets.size() > 1;
-				if (constrainedRoute && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
+				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets);
 				
 				//TODO: Do this earlier to keep op queue shorter
 				//1) if acked or alive
@@ -338,84 +334,119 @@ public class Dispatcher implements IRoutingObserver {
 				//
 				//		continue
 				//    else, as below
-				FailureCtrl fctrl = getCombinedDownFailureCtrl();
-				long ts = dt.getPayload().timestamp;
-				if (!shouldTrySend(ts, fctrl, constrainedRoute))
+				if (admitBatch(dt, targets))
 				{
-					dt = opQueue.remove(dt.getPayload().timestamp);
-					if (fctrl.alives().contains(ts) && dt != null)
-					{
-						logger.info("Replay optimization: dispatcher avoided replaying tuple "+ts);
-						sharedReplayLog.add(dt);
-					}
-					continue;
-				}
-				
-				//Option 1: Don't remove unless there is space in target
-				//Problem: Will just end up busy spinning
-				//Could have disp workers signal lock when there is space (i.e. get rid of arrayblocking queue).
-				//Option 2: Iterate over targets in priority order
-				//Problem: Could still end up with problem 1.
-				//Option 3: Try to send to blocked queue, with no timeout.
-				//Problem: If routing changes the whole dispatcher will be blocked
-				//Solution: Could wait on a notify and check the head of line or routing hasn't changed.
-				//Essentially repeating the above.
-				//Option 4: Send to blocking queue with a timeout.
-				//Problem: A bit crude. Can't check if the tuple has been acked, routing has changed or a 
-				//higher priority tuple has been queued. Simplest for now though perhaps. More importantly
-				//could hurt parallelism? Can perhaps avoid with priorities. 
-				
-				if (!constrainedRoute)
-				{
-					//Could already be in session log if sending to multi-input op.
-					int target = targets.get(0);
-					if (downIsMultiInput && workers.get(target).inSessionLog(ts))
-					{
-						logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
-					}
-					
-					boolean success = workers.get(target).trySend(dt, SEND_TIMEOUT);
-					if (success)
-					{
-						dt = opQueue.remove(dt.getPayload().timestamp);
-					}
-					else
-					{
-						logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target);
-					}
-				}
-				else
-				{
-					boolean allSucceeded = true;
-					//Skip first target here, it's just an indicator the remaining targets are constrained.
-					for (int i = 1; i < targets.size(); i++)
-					{
-						Integer target = targets.get(i);
-						// if not in session log for target
-						if (!workers.get(target).inSessionLog(ts))
-						{
-							//Don't retransmit if optimizing replay and in alives.
-							int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
-							if (optimizeReplay && downAlives.get(downOpId).contains(ts))
-							{
-								//Might need to resend if an alive is removed.
-								sharedReplayLog.add(dt);
-							}
-							else
-							{
-								logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
-								allSucceeded = allSucceeded && workers.get(target).trySend(dt, SEND_TIMEOUT);
-							}
-						}
-					}
-					
-					if (allSucceeded)
-					{
-						opQueue.remove(dt.getPayload().timestamp);
-					}
+					sendBatch(dt, targets);
 				}
 			}
 		}
+
+		//Check whether we should send this batch, discard it, or move
+		//it to the shared replay log.
+		private boolean admitBatch(DataTuple dt, ArrayList<Integer> targets)
+		{
+			FailureCtrl fctrl = getCombinedDownFailureCtrl();
+			long ts = dt.getPayload().timestamp;
+			if (!shouldTrySend(ts, fctrl, isConstrainedRoute(targets)))
+			{
+				dt = opQueue.remove(dt.getPayload().timestamp);
+				
+				//Alive downstream, so don't discard in case we need
+				//to replay if the downstream fails.
+				if (fctrl.alives().contains(ts) && dt != null)
+				{
+					logger.info("Replay optimization: dispatcher avoided replaying tuple "+ts);
+					sharedReplayLog.add(dt);
+				}
+				
+				return false;
+			}
+			
+			return true;
+		}
+		
+		private void sendBatch(DataTuple dt, ArrayList<Integer> targets)
+		{
+			if (targets == null) { throw new RuntimeException("Logic error."); }
+			boolean constrainedRoute = isConstrainedRoute(targets);
+			long ts = dt.getPayload().timestamp;
+			
+			//Option 1: Don't remove unless there is space in target
+			//Problem: Will just end up busy spinning
+			//Could have disp workers signal lock when there is space (i.e. get rid of arrayblocking queue).
+			//Option 2: Iterate over targets in priority order
+			//Problem: Could still end up with problem 1.
+			//Option 3: Try to send to blocked queue, with no timeout.
+			//Problem: If routing changes the whole dispatcher will be blocked
+			//Solution: Could wait on a notify and check the head of line or routing hasn't changed.
+			//Essentially repeating the above.
+			//Option 4: Send to blocking queue with a timeout.
+			//Problem: A bit crude. Can't check if the tuple has been acked, routing has changed or a 
+			//higher priority tuple has been queued. Simplest for now though perhaps. More importantly
+			//could hurt parallelism? Can perhaps avoid with priorities. 
+			if (!constrainedRoute)
+			{
+				//Could already be in session log if sending to multi-input op.
+				int target = targets.get(0);
+				if (downIsMultiInput && workers.get(target).inSessionLog(ts))
+				{
+					logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
+				}
+				
+				boolean success = workers.get(target).trySend(dt, SEND_TIMEOUT);
+				if (success)
+				{
+					dt = opQueue.remove(dt.getPayload().timestamp);
+				}
+				else
+				{
+					logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target);
+				}
+			}
+			else
+			{
+				boolean allSucceeded = true;
+				//Skip first target here, it's just an indicator the remaining targets are constrained.
+				for (int i = 1; i < targets.size(); i++)
+				{
+					Integer target = targets.get(i);
+					// if not in session log for target
+					if (!workers.get(target).inSessionLog(ts))
+					{
+						//Don't retransmit if optimizing replay and in alives.
+						int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
+						if (optimizeReplay && downAlives.get(downOpId).contains(ts))
+						{
+							//Might need to resend if an alive is removed.
+							sharedReplayLog.add(dt);
+						}
+						else
+						{
+							logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
+							allSucceeded = allSucceeded && workers.get(target).trySend(dt, SEND_TIMEOUT);
+						}
+					}
+				}
+				
+				if (allSucceeded)
+				{
+					opQueue.remove(dt.getPayload().timestamp);
+				}
+			}
+		}
+		
+		//Convention: If the routing is constrained, ignore the first
+		//target and route to all the remaining targets.
+		//TODO: Will probably break once we have multiple logical outputs, but ok
+		//for now.
+		private boolean isConstrainedRoute(ArrayList<Integer> targets)
+		{
+			boolean constrainedRoute = targets != null && targets.size() > 1;
+			if (constrainedRoute && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
+			return constrainedRoute;
+		}
+		
+		
 		
 		//If safe to trim batch or already exists downstream, then don't try to send.
 		//Special case if down op is multi-input, might need to send even if alive
@@ -861,6 +892,18 @@ public class Dispatcher implements IRoutingObserver {
 					lock.notifyAll();
 					return dt;
 				}
+			}
+		}
+		
+		public DataTuple peekHead()
+		{
+			synchronized(lock)
+			{				
+				while (queue.isEmpty()) 
+				{
+					try { lock.wait(); } catch (InterruptedException e) {}
+				}
+				return queue.get(queue.firstKey());
 			}
 		}
 		

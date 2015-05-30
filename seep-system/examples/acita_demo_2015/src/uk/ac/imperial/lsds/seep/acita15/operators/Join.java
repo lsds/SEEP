@@ -33,6 +33,7 @@ public class Join implements StatelessOperator{
 	public void processData(List<DataTuple> arg0) {
 		if (arg0.size() != 2) { throw new RuntimeException("Logic error - should be 2 tuples, 1 tuple per input for a binary join."); }
 		
+		logger.debug("Processing tuples: "+arg0);
 		if (arg0.get(0).getPayload().timestamp != arg0.get(1).getPayload().timestamp)
 		{
 			// We expect sync'd batch timestamps.
@@ -63,6 +64,7 @@ public class Join implements StatelessOperator{
 			logger.debug("Join operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 			recordTuple(outputTuple);
 		} 
+		api.send_highestWeight(outputTuple);
 	}
 
 	private void recordTuple(DataTuple dt)

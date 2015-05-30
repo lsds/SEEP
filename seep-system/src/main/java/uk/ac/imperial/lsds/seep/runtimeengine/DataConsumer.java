@@ -74,7 +74,7 @@ public class DataConsumer implements Runnable {
 					ArrayList<DataTuple> ldata = dso.pull_from_barrier();
 					logger.debug("Pulled from barrier");
 					if(owner.checkSystemStatus()){
-						logger.debug("Forwarding data.");
+						logger.debug("Forwarding data: "+ldata);
 						owner.forwardData(ldata);
 					}
 					logger.debug("Next.");
