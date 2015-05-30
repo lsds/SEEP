@@ -14,10 +14,14 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 
 public class DataConsumer implements Runnable {
 
+	private final static Logger logger = LoggerFactory.getLogger(DataConsumer.class);
 	private CoreRE owner;
 	private DataStructureAdapter dataAdapter;
 	private boolean doWork = true;
@@ -36,6 +40,7 @@ public class DataConsumer implements Runnable {
 		Map<Integer, DataStructureI> inputDataModeMap = dataAdapter.getInputDataIngestionModeMap();
 		// For performance reasons we make the differentiation between cases where more than 1 inputdataIngestion mode...
 		if(inputDataModeMap.size() > 1){
+			logger.info("Multiple input data ingestion modes.");
 			for(Entry<Integer, DataStructureI> entry : inputDataModeMap.entrySet()){
 				DataConsumerWorker dcw = new DataConsumerWorker(entry.getValue());
 				Thread worker = new Thread(dcw);
@@ -44,8 +49,10 @@ public class DataConsumer implements Runnable {
 		}
 		//... and only one, case that we can exploit for performance reasons
 		else{
+			logger.info("1 input data ingestion mode.");
 			DataStructureI dso = dataAdapter.getUniqueDso();
 			if(dso instanceof InputQueue || dso instanceof OutOfOrderInputQueue){
+				logger.info("Pulling from input queue");
 				while(doWork){
 					DataTuple data = dso.pull();
 //					DataTuple[] dataBatch = ((InputQueue)dso).pullMiniBatch();
@@ -62,12 +69,20 @@ public class DataConsumer implements Runnable {
 				}
 			}
 			else if(dso instanceof Barrier || dso instanceof OutOfOrderBufferedBarrier){
+				logger.info("Pulling from barrier");
 				while(doWork){
 					ArrayList<DataTuple> ldata = dso.pull_from_barrier();
+					logger.debug("Pulled from barrier");
 					if(owner.checkSystemStatus()){
+						logger.debug("Forwarding data.");
 						owner.forwardData(ldata);
 					}
+					logger.debug("Next.");
 				}
+			}
+			else
+			{
+				logger.error("Unknown dso type.");
 			}
 		}
 	}
@@ -82,6 +97,7 @@ public class DataConsumer implements Runnable {
 		@Override
 		public void run() {			
 			if(dsi instanceof InputQueue || dsi instanceof OutOfOrderInputQueue){
+				logger.info("Pulling from input queue.");
 				while(doWork){
 					DataTuple data = dsi.pull();
 					if(owner.checkSystemStatus()){
@@ -90,13 +106,18 @@ public class DataConsumer implements Runnable {
 				}
 			}
 			else if(dsi instanceof Barrier){
+				logger.info("Pulling from barrier.");
 				while(doWork){
 					ArrayList<DataTuple> ldata = dsi.pull_from_barrier();
 					if(owner.checkSystemStatus()){
 						owner.forwardData(ldata);
 					}
 				}
-			}	
+			}
+			else
+			{
+				logger.error("Unknown dso type.");
+			}
 		}
 	}
 }

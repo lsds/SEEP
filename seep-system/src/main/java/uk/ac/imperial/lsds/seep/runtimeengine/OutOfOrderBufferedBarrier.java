@@ -39,7 +39,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
 		
 		if (numLogicalInputs != 2) { throw new RuntimeException("TODO"); }
-		inputFctrls = new ArrayList<>(numLogicalInputs);
+		inputFctrls = new ArrayList<>(numLogicalInputs);	//TODO: Bit redundant to have per input fctrls?
 		pending = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
@@ -55,7 +55,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	{
 		long ts = dt.getPayload().timestamp;
 		int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
-		if (!inputFctrls.get(logicalInputIndex).updateAlives(ts))
+		FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
+		if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
 		{
 			logger.debug("Ignoring tuple with ts="+ts);
 			return; 
@@ -68,6 +69,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			if (!pending.get(i).containsKey(ts))
 			{
 				tsReady = false;
+				logger.debug("Adding "+ts+" to pending queue "+logicalInputIndex);
 				pending.get(logicalInputIndex).put(ts, dt);
 				break;
 			}
@@ -75,12 +77,15 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		
 		if (tsReady)
 		{
+			logger.debug("Tuple "+ts+" ready."); 
 			ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
+				inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
 				if (i == logicalInputIndex) { readyBatches.add(dt); }
 				else { readyBatches.add(pending.get(logicalInputIndex).remove(ts)); }
-			}	
+			}
+			ready.put(ts, readyBatches);
 			this.notifyAll();
 		}
 	}
@@ -89,14 +94,17 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	public synchronized ArrayList<DataTuple> pull_from_barrier() {
 		while(ready.isEmpty())
 		{
+			logger.debug("Waiting for ready batches.");
 			try {
 				this.wait();
 			} catch (InterruptedException e) {
 				logger.warn("Unexpectedly interrupted while waiting on barrier.");
 			}
 		}
-		
-		return ready.remove(ready.firstKey());
+		logger.debug("Pulling batches with ts="+ready.firstKey());
+		ArrayList<DataTuple> dts = ready.remove(ready.firstKey());
+		this.notifyAll();
+		return dts;
 	}
 
 	@Override
@@ -167,6 +175,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			sizes.put(i, ready.size() + pending.get(i).size());
 			sizes.put(-1, sizes.get(-1) + pending.get(i).size());
 		}
+		logger.debug("Sizes="+sizes);
 		return sizes;
 	}
 	
@@ -191,7 +200,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 				constraints.get(i).addAll(pending.get(j).keySet());
 			}
 		}
-		
+		logger.debug("Constraints: "+constraints);
 		return constraints;
 	}
 	

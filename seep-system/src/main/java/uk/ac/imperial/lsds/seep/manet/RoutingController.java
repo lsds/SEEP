@@ -87,10 +87,11 @@ public class RoutingController implements Runnable{
 			if (numLogicalInputs > 1)
 			{
 				ArrayList<Set<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
-				for (Integer upstreamId : weightsCopy.keySet())
+				for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
 				{
 					int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
-					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), routingConstraints.get(logicalInputIndex));
+					//N.B. Sending the *aggregate* weight across all upstreams.
+					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
 					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
 				}
@@ -161,28 +162,6 @@ public class RoutingController implements Runnable{
 		}
 	}
 	
-	/*
-	public DownUpRCtrl getDownUpRCtrl(Integer upstreamId)
-	{
-		synchronized (lock) {
-			return new DownUpRCtrl(upstreamId, getWeight(upstreamId),
-					getUnmatched(upstreamId));
-		}
-	}
-	*/
-	
-	private int getLocalInputQLen()
-	{
-		if (owner.getDSA().getUniqueDso() != null)
-		{
-			return owner.getDSA().getUniqueDso().size();
-		}
-		else
-		{
-			throw new RuntimeException("TODO"); 
-		}
-	}
-	
 	private int getLocalOutputQLen()
 	{
 		if (owner.getProcessingUnit().getDispatcher() != null)
@@ -215,17 +194,19 @@ public class RoutingController implements Runnable{
 			
 			//int localInputQlen = getLocalInputQLen();	//TODO: What if join!
 			int localOutputQlen = getLocalOutputQLen();
-			Set<Double> joinWeights = new HashSet<>();
+			ArrayList<Set<Double>> joinWeights = new ArrayList<>();
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				//Iterator<Integer> iter = query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i].iterator(); 
-				ArrayList<Integer> upstreamIds = owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList();
+				//Iterator<Integer> iter = query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i].iterator();
+				joinWeights.add(new HashSet<Double>());
+				ArrayList<Integer> upstreamIds = new ArrayList<>(query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i]);
 				Iterator<Integer> iter = upstreamIds.iterator();
 				while (iter.hasNext())
 				{
 					Integer upstreamId = iter.next();
 					int localTotalInputQlen = localInputQlens.get(-1);
 					//TODO: Should we be multiplying the input q length by the processing rate?
+					logger.debug("Computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					
@@ -235,13 +216,13 @@ public class RoutingController implements Runnable{
 					}
 					else
 					{
-						joinWeights.add(weight);
+						joinWeights.get(i).add(weight);
 						//Also compute per upstream weight for routing constraints
+						//TODO: Debatable what should actually be used here.
 						int localPerInputQlen = localInputQlens.get(i);
 						weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
-								localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
+								localPerInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 						weights.put(upstreamId, weight);
-						throw new RuntimeException("TODO");
 					}					
 				}
 			}
@@ -264,45 +245,33 @@ public class RoutingController implements Runnable{
 		//return netRate * pRate;
 	}
 	
-	private double aggregate(Set<Double> joinWeights)
+	private double aggregate(ArrayList<Set<Double>> joinWeights)
 	{
+		ArrayList<Double> perInputAggregates = aggregateInputs(joinWeights);
+		
 		//Return mean for now.
 		double sum = 0;
-		Iterator<Double> iter = joinWeights.iterator();
-		while(iter.hasNext())
+		for (Double aggregatedInputWeight : perInputAggregates)
 		{
-			sum += ((Double)iter.next()).doubleValue();
+			sum += aggregatedInputWeight;
 		}
-		//return sum / joinWeights.size();
-		throw new RuntimeException("TODO: Return mean of maxes?");
+		logger.debug("Aggregate weight = "+ (sum/perInputAggregates.size()));
+		return sum / perInputAggregates.size();
 	}
 	
-	/*
-	private double getWeight(Integer upstreamId)
+	private ArrayList<Double> aggregateInputs(ArrayList<Set<Double>> joinWeights)
 	{
-		logger.debug("Controller "+nodeId+" getting weight for upstream "+upstreamId+", weights="+weights);
-		if (numLogicalInputs == 1)
+		//Get the max across all upstreams for this logical input.
+		ArrayList<Double> result = new ArrayList<>();
+		for (Set<Double> inputWeights : joinWeights)
 		{
-			//Special case if #inputs = 1
-			return weights.get(upstreamId);
+			double max = 0;
+			for (Double upstreamWeight : inputWeights)
+			{
+				max = Math.max(upstreamWeight, max);
+			}
+			result.add(max);
 		}
-		else
-		{
-			return weights.get(nodeId);
-		}	
+		return result;
 	}
-	
-	private Set<Long> getUnmatched(Integer upstreamId)
-	{
-		//TODO: Do this properly for joins
-		if (numLogicalInputs == 1)
-		{
-			return new HashSet<>();
-		}
-		else
-		{
-			throw new RuntimeException("TODO");
-		}		
-	}
-	*/
 }

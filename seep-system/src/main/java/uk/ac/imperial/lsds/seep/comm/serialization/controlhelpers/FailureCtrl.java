@@ -235,4 +235,12 @@ public class FailureCtrl {
 		}	
 	}
 	
+	
+	public boolean isAcked(long ts)
+	{
+		synchronized(lock)
+		{
+			return ts <= lw || acks.contains(ts);
+		}
+	}
 }

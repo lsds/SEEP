@@ -146,10 +146,12 @@ public class IncomingDataHandlerWorker implements Runnable{
 						LOG.debug("Adding batch to dso.");
 						if (dso instanceof OutOfOrderBufferedBarrier)
 						{
+							LOG.debug("Pushing to ooo buffered barrier.");
 							((OutOfOrderBufferedBarrier)dso).push(reg, opId);
 						}
 						else
 						{
+							LOG.debug("Pushing to dso.");
 							dso.push(reg);
 						}
 					}

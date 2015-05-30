@@ -322,7 +322,7 @@ public class Dispatcher implements IRoutingObserver {
 					dt = opQueue.tryPeekHead();
 					if (dt != null) { targets = owner.getOperator().getRouter().forward_highestWeight(dt); }
 				}
-				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets.get(0));
+				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets);
 				
 				//Convention: If the routing is constrained, ignore the first
 				//target and route to all the remaining targets.
@@ -387,8 +387,10 @@ public class Dispatcher implements IRoutingObserver {
 				else
 				{
 					boolean allSucceeded = true;
-					for (Integer target : targets)
+					//Skip first target here, it's just an indicator the remaining targets are constrained.
+					for (int i = 1; i < targets.size(); i++)
 					{
+						Integer target = targets.get(i);
 						// if not in session log for target
 						if (!workers.get(target).inSessionLog(ts))
 						{
