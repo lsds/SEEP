@@ -10,11 +10,19 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.esotericsoftware.kryo.io.ByteBufferOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,11 +48,12 @@ public class OutputQueue {
 	private CoreRE owner = null;
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
-        
+    private ExecutorService senderThread;
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
 		this.k = initializeKryo();
+        senderThread = Executors.newFixedThreadPool(1);
 	}
 	
 	private Kryo initializeKryo(){
@@ -82,15 +91,14 @@ public class OutputQueue {
 	}
 	
 	
-	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest) {
+	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest)  {
                 //System.out.println("Hi, I'm: "+Thread.currentThread().getId());
                 
-		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
+		final SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
-                
-		//Output for this socket
+
 		try{
 			//To send tuple
 			if(replay.compareAndSet(true, false)){
@@ -105,13 +113,35 @@ public class OutputQueue {
 				tp.timestamp = System.currentTimeMillis(); // assign local ack
 				channelRecord.addDataToBatch(tp);
 				long currentTime = System.currentTimeMillis();
+
 				if(channelRecord.getChannelBatchSize() <= 0){
+
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
-					k.writeObject(channelRecord.getOutput(), msg);
-					//Flush the buffer to the stream
-					channelRecord.getOutput().flush();
-					// We save the data
+                    ByteBufferOutput kryoOutput = (ByteBufferOutput)channelRecord.getOutput();
+					k.writeObject(kryoOutput, msg);
+					//Actually since the Kryo Output we use is a ByteBufferOutput without any output stream, so flush() here doesn't cause anything
+                    kryoOutput.flush();
+
+                    final byte[] serialisedData = kryoOutput.toBytes();
+
+                    if(senderThread == null){
+                        senderThread = Executors.newFixedThreadPool(1);
+                    }
+                    senderThread.execute(new Runnable() {
+                        public void run() {
+                            try {
+                                OutputStream downStreamOuputStream = channelRecord.getDownStreamOuputStream();
+                                downStreamOuputStream.write(serialisedData);
+                                downStreamOuputStream.flush();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+
+
+                    // We save the data
 					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
 						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
 						if(GLOBALS.valueFor("TTT").equals("TRUE")){

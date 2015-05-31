@@ -10,6 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
@@ -17,6 +18,7 @@ import java.net.Socket;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.esotericsoftware.kryo.io.ByteBufferOutput;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
@@ -38,8 +40,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private Buffer buffer;
 	
 	private Output output = null;
-	private OutputStream bos = null;
-	
+    private OutputStream downStreamOuputStream ;
+
 	//Set atomic variables to their initial value
 	private AtomicBoolean stop = new AtomicBoolean(false);
 	private AtomicBoolean replay = new AtomicBoolean(false);
@@ -59,23 +61,28 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		this.downstreamControlSocket = downstreamSocketC;
 		//this.blindSocket = blindSocket;
 		this.buffer = buffer;
-		try {
-			/// \fixme{this must be fixed, different CONSTRUCTORS, please...}
-			if(downstreamDataSocket != null){
-				//Create buffered output stream
-				//Create common outputstream and let kryo to manage buffers
-				bos = downstreamSocketD.getOutputStream();
-				//Create the kryo output for this socket
-				output = new Output(bos);
-			}
-		}
-		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
+        /// \fixme{this must be fixed, different CONSTRUCTORS, please...}
+        if(downstreamDataSocket != null){
+            //Create buffered output stream
+            //Create common outputstream and let kryo to manage buffers
+            //bos = downstreamSocketD.getOutputStream();
+            //Create the kryo output for this socket
+            output = new ByteBufferOutput(5*1024*1024, -1);
+            try {
+                downStreamOuputStream = new BufferedOutputStream(downstreamSocketD.getOutputStream());
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+                throw new RuntimeException("Fail to get outputStream from downstreamSocketD");
+            }
+        }
 	}
-	
-	public int getOperatorId(){
+
+    public OutputStream getDownStreamOuputStream() {
+        return downStreamOuputStream;
+    }
+
+    public int getOperatorId(){
 		return targetOperatorId;
 	}
 	
