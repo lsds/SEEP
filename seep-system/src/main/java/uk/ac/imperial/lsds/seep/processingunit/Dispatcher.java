@@ -49,6 +49,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final boolean optimizeReplay;
 	private final boolean eagerPurgeOpQueue;
 	private final boolean downIsMultiInput;
+	private final boolean boundedOpQueue;
 	
 	private final IProcessingUnit owner;
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
@@ -85,6 +86,7 @@ public class Dispatcher implements IRoutingObserver {
 		downIsMultiInput = true;
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
+		boundedOpQueue = GLOBALS.valueFor("meanderRouting").equals("backpressure");
 		
 		if (owner.getOperator().getOpContext().isSource())
 		{
@@ -199,8 +201,16 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			if (!(optimizeReplay && combinedDownFctrl.alives().contains(ts)))
 			{
-				//Schedule for sending
-				opQueue.add(dt);
+				if (owner.getOperator().getOpContext().isSource() || boundedOpQueue)
+				{
+					//Schedule for sending
+					opQueue.add(dt);
+				}
+				else
+				{
+					//TODO: Only if bp routing surely?
+					opQueue.forceAdd(dt);
+				}
 			}
 			else
 			{
@@ -255,6 +265,7 @@ public class Dispatcher implements IRoutingObserver {
         //                                mv to opQueue
         //                        else if i in other session log
         //                                copy to output queue
+		logger.debug("Routing changed, new constraints="+newConstraints);
 		synchronized(lock)
 		{
 			if (newConstraints != null)
@@ -267,12 +278,15 @@ public class Dispatcher implements IRoutingObserver {
 						int target = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 						if (!opQueue.contains(ts) && !workers.get(target).inSessionLog(ts))
 						{
+							logger.debug("Constrained tuple "+ts+" not in op queue or session log "+target+"/"+downOpId);
 							if (!optimizeReplay || 
 									(optimizeReplay && !downAlives.get(downOpId).contains(ts)))
 							{
+								logger.debug("Constrained tuple "+ts+ "+not in alives.");
 								DataTuple dt = sharedReplayLog.remove(ts);
 								if (dt == null)
 								{
+									logger.debug("Constrained tuple not in shared replay log.");
 									for (Integer workerIndex : workers.keySet())
 									{
 										if (target != workerIndex)
@@ -280,11 +294,13 @@ public class Dispatcher implements IRoutingObserver {
 											dt = workers.get(workerIndex).getFromSessionLog(ts);
 										}
 										if (dt != null) { break; }
+										else { logger.debug("Constrained tuple "+ts+" not in session log "+workerIndex); }
 									}
 								}
 								if (dt != null)
 								{
-									opQueue.add(dt);
+									logger.debug("Readding constrained tuple "+ts+" to op queue.");
+									opQueue.forceAdd(dt);
 								}
 							}
 						}
@@ -306,41 +322,90 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			while(true)
 			{
-				//iterate sending tuples to the appropriate downstreams.
-				DataTuple dt = null;
-				ArrayList<Integer> targets = null; 
+				Set<Long> constraints = dispatchHead();
 				
-				synchronized(lock)
+				if (constraints != null && !constraints.isEmpty())
 				{
-					dt = opQueue.peekHead();
-					targets = owner.getOperator().getRouter().forward_highestWeight(dt); 
-	
-					//TODO: This is racy - targets could change between the check and when we wait, could
-					//end up waiting unnecessarily.
-					if (targets == null || targets.isEmpty())
-					{
-						try { lock.wait(); } catch (InterruptedException e) {}
-						continue;
-					}
-					
+					dispatchConstrained(constraints);
 				}
+			}
+		}
+
+		private Set<Long> dispatchHead()
+		{
+			DataTuple dt = null;
+			ArrayList<Integer> targets = null; 
+			Set<Long> constraints = null;
+			
+			synchronized(lock)
+			{
+				dt = opQueue.peekHead();
+				targets = owner.getOperator().getRouter().forward_highestWeight(dt); 
+
+				if (dt == null) { throw new RuntimeException("Logic error"); }
+				if (targets == null || targets.isEmpty())
+				{
+					//TODO: Really don't like doing this while holding the lock.
+					constraints = owner.getOperator().getRouter().areConstrained(opQueue.keys());
+
+					if (constraints == null || constraints.isEmpty())
+					{
+						//If no constraints, wait for some queue/routing change and then loop back
+						try { lock.wait(); } catch (InterruptedException e) {}
+						return null;
+					}
+					//else fall through and try to route from further back in the queue
+				}
+			}
+			
+			//if head of queue has a target (i.e. positive differential with some ds)
+			if (targets != null && !targets.isEmpty())
+			{
+				//assert constraints null or constraints empty
+				//N.B. The head tuple could still be constrained, we just shouldn't have
+				//explicitly retrieved the set of all currently constrained tuples!
+				logger.debug("Sending head tuple "+dt.getPayload().timestamp +" to "+targets);
 				
-				logger.debug("Sending tuple "+dt.getPayload().timestamp +" to "+targets);
-				
-				//TODO: Do this earlier to keep op queue shorter
-				//1) if acked or alive
-				//		if acked remove and discard
-				//		else move to shared replay log
-				//
-				//		continue
-				//    else, as below
+				//TODO: Should perhaps do admission before dispatch? Don't want
+				//to be waiting unnecessarily on a batch that should be trimmed?
 				if (admitBatch(dt, targets))
 				{
 					sendBatch(dt, targets);
 				}
 			}
+			
+			return constraints;
 		}
-
+		
+		private void dispatchConstrained(Set<Long> constraints)
+		{
+			//Otherwise try to route constrained from further back in the queue
+			if (constraints == null || constraints.isEmpty()) { throw new RuntimeException("Logic error."); }
+			
+			//for each batch in constraints
+			for (Long ts : constraints)
+			{
+				//if opQueue has batch
+				DataTuple dt = opQueue.get(ts);
+				if (dt != null)
+				{
+					logger.debug("Dispatching non-head constrained tuple "+ts);
+					ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+					if (targets != null && !targets.isEmpty())
+					{
+						// if admit batch
+						if (admitBatch(dt, targets))
+						{
+							//sendBatch
+							//TODO: Should somehow enforce that this send must be constrained?
+							sendBatch(dt, targets);
+							//TODO: Should we go back to the head of the queue if any succeeded?
+						}
+					}
+				}
+			}
+		}
+		
 		//Check whether we should send this batch, discard it, or move
 		//it to the shared replay log.
 		private boolean admitBatch(DataTuple dt, ArrayList<Integer> targets)
@@ -383,19 +448,26 @@ public class Dispatcher implements IRoutingObserver {
 			//Option 4: Send to blocking queue with a timeout.
 			//Problem: A bit crude. Can't check if the tuple has been acked, routing has changed or a 
 			//higher priority tuple has been queued. Simplest for now though perhaps. More importantly
-			//could hurt parallelism? Can perhaps avoid with priorities. 
+			//could hurt parallelism? Can perhaps avoid with priorities. ;
 			if (!constrainedRoute)
 			{
+				logger.debug("Sending unconstrained tuple "+ ts);
 				//Could already be in session log if sending to multi-input op.
 				int target = targets.get(0);
+				boolean remove = false;
 				if (downIsMultiInput && workers.get(target).inSessionLog(ts))
 				{
 					logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
+					remove = true;
+				}
+				else
+				{
+					remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
 				}
 				
-				boolean success = workers.get(target).trySend(dt, SEND_TIMEOUT);
-				if (success)
+				if (remove)
 				{
+					logger.debug("Removing tuple "+ts+" from op queue.");
 					dt = opQueue.remove(dt.getPayload().timestamp);
 				}
 				else
@@ -405,6 +477,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			else
 			{
+				logger.debug("Sending constrained tuple "+ ts);
 				boolean allSucceeded = true;
 				//Skip first target here, it's just an indicator the remaining targets are constrained.
 				for (int i = 1; i < targets.size(); i++)
@@ -417,6 +490,7 @@ public class Dispatcher implements IRoutingObserver {
 						int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
 						if (optimizeReplay && downAlives.get(downOpId).contains(ts))
 						{
+							logger.debug("Skipping recovery for "+ts+", adding to shared replay:"+sharedReplayLog.keys());
 							//Might need to resend if an alive is removed.
 							sharedReplayLog.add(dt);
 						}
@@ -606,7 +680,7 @@ public class Dispatcher implements IRoutingObserver {
 					else
 					{
 						logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
-						opQueue.add(dt);
+						opQueue.forceAdd(dt);
 					}
 					
 					if (optimizeReplay && dsOpOldAlives != null)
@@ -659,7 +733,7 @@ public class Dispatcher implements IRoutingObserver {
 					if (dt != null) 
 					{ 
 						logger.info("Replay optimization: Forced to replay tuple from shared log: "+oldDownAlive);
-						opQueue.add(dt); 
+						opQueue.forceAdd(dt); 
 					}
 				}			
 			}
@@ -813,6 +887,37 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				queue.put(dt.getPayload().timestamp, dt);
 				lock.notifyAll();
+			}
+		}
+		
+		public void forceAdd(DataTuple dt)
+		{
+			synchronized(lock)
+			{
+				queue.put(dt.getPayload().timestamp, dt);
+				lock.notifyAll();
+			}
+		}
+		
+		public DataTuple get(Long ts)
+		{
+			synchronized(lock)
+			{
+				return queue.get(ts);
+			}
+		}
+		
+		public Set<Long> keys()
+		{
+			synchronized(lock)
+			{
+				if (queue.isEmpty()) { return null; }
+				else
+				{
+					Set<Long> result = new HashSet<>();
+					result.addAll(queue.keySet());
+					return result;
+				}
 			}
 		}
 		

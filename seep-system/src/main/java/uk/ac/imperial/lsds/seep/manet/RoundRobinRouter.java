@@ -130,4 +130,9 @@ public class RoundRobinRouter implements IRouter {
 			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState) {
 		throw new RuntimeException("Logic error");		
 	}
+	
+	public Set<Long> areConstrained(Set<Long> queued)
+	{
+		return null;
+	}
 }

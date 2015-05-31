@@ -144,4 +144,26 @@ public class BackpressureRouter implements IRouter {
 			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState) {
 		throw new RuntimeException("Logic error");		
 	}
+	
+	public Set<Long> areConstrained(Set<Long> queued)
+	{
+		if (queued == null || queued.isEmpty() || !downIsMultiInput) { return null; }
+		logger.debug("Checking constrained for queued: "+queued);
+		synchronized(lock)
+		{
+			Set<Long> constraints = new HashSet<>();
+			for (Integer dsOpId : unmatched.keySet())
+			{
+				for (Long constrained : unmatched.get(dsOpId))
+				{
+					if (queued.contains(constrained))
+					{
+						constraints.add(constrained);
+					}
+				}
+			}
+			logger.debug("Constrained in queue: "+constraints);
+			return constraints;
+		}
+	}
 }

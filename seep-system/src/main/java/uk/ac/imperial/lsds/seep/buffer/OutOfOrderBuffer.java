@@ -20,6 +20,7 @@ public class OutOfOrderBuffer implements IBuffer {
 	@Override
 	public synchronized void save(BatchTuplePayload batch, long outputTs,
 			TimestampTracker inputTs) {
+		logger.debug("Saving tuple "+batch.getTuple(0).timestamp);
 		log.put(batch.getTuple(0).timestamp, batch);		
 	}
 
@@ -30,6 +31,7 @@ public class OutOfOrderBuffer implements IBuffer {
 			//Return and remove everything, connection has failed.
 			TreeMap<Long, BatchTuplePayload> trimmed = new TreeMap<>(log);
 			log.clear();
+			logger.debug("Cleared log.");
 			return trimmed;
 		}
 		else
@@ -37,9 +39,14 @@ public class OutOfOrderBuffer implements IBuffer {
 			Iterator<Long> iter = log.keySet().iterator();
 			while (iter.hasNext())
 			{
-				BatchTuplePayload batch = log.get(iter.next());
+				Long ts = iter.next();
+				BatchTuplePayload batch = log.get(ts);
 				batch.trim(fctrl);
-				if (batch.size() <= 0) { iter.remove(); }
+				if (batch.size() <= 0) 
+				{ 
+					logger.debug("Trimmed batch "+ts);
+					iter.remove(); 
+				}
 			}
 			return null;
 		}
@@ -53,12 +60,14 @@ public class OutOfOrderBuffer implements IBuffer {
 	}
 	
 	public synchronized boolean contains(long ts)
-	{
+	{		
+		logger.debug("Checking for "+ts+" in log: "+log.keySet());
 		return log.containsKey(ts);
 	}
 	
 	public synchronized BatchTuplePayload get(long ts)
 	{
+		logger.debug("Trying to get "+ts+" from log: "+log.keySet());
 		return log.get(ts);
 	}
 	

@@ -251,5 +251,10 @@ public class ShortestPathRouter implements IRouter {
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
 		throw new RuntimeException("Logic error.");
 	}
+	
+	public Set<Long> areConstrained(Set<Long> queued)
+	{
+		return null;
+	}
 }
 

@@ -195,6 +195,11 @@ public class Router implements Serializable{
 		return meanderRouter.route(dt.getLong("tupleId"));
 	}
 	
+	public Set<Long> areConstrained(Set<Long> batches)
+	{
+		return meanderRouter.areConstrained(batches);
+	}
+	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
 		ArrayList<Integer> targets = new ArrayList<Integer>();
 		ArrayList<Integer> logicalTargets = logicalRouting(dt, streamId);

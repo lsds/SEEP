@@ -13,4 +13,5 @@ public interface IRouter {
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp);
 	public void updateNetTopology(
 			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState);
+	public Set<Long> areConstrained(Set<Long> queued);
 }
