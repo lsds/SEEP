@@ -16,10 +16,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectStreamClass;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +130,8 @@ public class NodeManagerCommunication {
 	//This method gets the local IP and sends a BOOT message to the central node.
 	public void sendBootstrapInformation(int port, InetAddress bindAddr, int ownPort){
 		try{
-			InetAddress ownIp = InetAddress.getLocalHost();
+			//InetAddress ownIp = InetAddress.getLocalHost();
+            InetAddress ownIp = getPrivateIpAddressForWorker();
 			String command = "bootstrap "+(ownIp.getHostAddress()+" "+ownPort+"\n");
 			LOG.info("--> Boot Info: {} to: {} on: {}", command, bindAddr, port);
 			Socket conn = new Socket(bindAddr, port);
@@ -148,4 +148,27 @@ public class NodeManagerCommunication {
 			io.printStackTrace();
 		}
 	}
+
+    public InetAddress getPrivateIpAddressForWorker(){
+        Enumeration e = null;
+        try {
+            e = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e1) {
+            e1.printStackTrace();
+        }
+        while(e.hasMoreElements())
+        {
+            NetworkInterface n = (NetworkInterface) e.nextElement();
+            Enumeration ee = n.getInetAddresses();
+            while (ee.hasMoreElements())
+            {
+                InetAddress i = (InetAddress) ee.nextElement();
+                String str2 = "192.168.0.";
+                if(i.getHostAddress().toLowerCase().contains(str2.toLowerCase())){
+                    return i;
+                }
+            }
+        }
+        return null ;
+    }
 }

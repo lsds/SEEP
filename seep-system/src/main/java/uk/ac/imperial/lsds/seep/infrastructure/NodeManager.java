@@ -17,13 +17,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.URL;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,15 +68,40 @@ public class NodeManager{
 		this.bindAddr = bindAddr;
         
 		this.ownPort = ownPort;
+        /*
 		try {
 			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
-		} 
+		}
 		catch (UnknownHostException e) {
 			e.printStackTrace();
-		}
+		}*/
+        nodeDescr = new WorkerNodeDescription(getPrivateIpAddressForWorker(), ownPort);
         
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
+
+    static public InetAddress getPrivateIpAddressForWorker(){
+        Enumeration e = null;
+        try {
+            e = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e1) {
+            e1.printStackTrace();
+        }
+        while(e.hasMoreElements())
+        {
+            NetworkInterface n = (NetworkInterface) e.nextElement();
+            Enumeration ee = n.getInetAddresses();
+            while (ee.hasMoreElements())
+            {
+                InetAddress i = (InetAddress) ee.nextElement();
+                String str2 = "192.168.0.";
+                if(i.getHostAddress().toLowerCase().contains(str2.toLowerCase())){
+                    return i;
+                }
+            }
+        }
+        return null ;
+    }
 	
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
