@@ -488,7 +488,7 @@ public class Dispatcher implements IRoutingObserver {
 					{
 						//Don't retransmit if optimizing replay and in alives.
 						int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
-						if (optimizeReplay && downAlives.get(downOpId).contains(ts))
+						if (optimizeReplay && isDownAlive(downOpId, ts))
 						{
 							logger.debug("Skipping recovery for "+ts+", adding to shared replay:"+sharedReplayLog.keys());
 							//Might need to resend if an alive is removed.
@@ -520,6 +520,10 @@ public class Dispatcher implements IRoutingObserver {
 			return constrainedRoute;
 		}
 		
+		private boolean isDownAlive(int downOpId, long ts)
+		{
+			synchronized(lock) { return downAlives.get(downOpId) != null && downAlives.get(downOpId).contains(ts); }
+		}
 		
 		
 		//If safe to trim batch or already exists downstream, then don't try to send.

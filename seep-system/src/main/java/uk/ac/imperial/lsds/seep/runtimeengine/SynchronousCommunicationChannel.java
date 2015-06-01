@@ -204,7 +204,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				}
 				else
 				{
-					logger.debug("Data connection "+ numReconnects+" to "+ip+" failed: "+e);
+					logger.trace("Data connection "+ numReconnects+" to "+ip+" failed: "+e);
 				}
 				numReconnects++;
 			}
