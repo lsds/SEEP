@@ -96,7 +96,6 @@ public class ControlHandlerWorker implements Runnable{
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
 		k.register(BitSet.class);
-		k.register(RangeSet.class);
 		k.register(OpFailureCtrl.class);
 		k.register(FailureCtrl.class);
 		k.register(UpDownRCtrl.class);
