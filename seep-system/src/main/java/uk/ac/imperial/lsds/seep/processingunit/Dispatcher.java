@@ -278,15 +278,15 @@ public class Dispatcher implements IRoutingObserver {
 						int target = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 						if (!opQueue.contains(ts) && !workers.get(target).inSessionLog(ts))
 						{
-							logger.debug("Constrained tuple "+ts+" not in op queue or session log "+target+"/"+downOpId);
+							logger.trace("Constrained tuple "+ts+" not in op queue or session log "+target+"/"+downOpId);
 							if (!optimizeReplay || 
 									(optimizeReplay && !downAlives.get(downOpId).contains(ts)))
 							{
-								logger.debug("Constrained tuple "+ts+ "+not in alives.");
+								logger.trace("Constrained tuple "+ts+ "+not in alives.");
 								DataTuple dt = sharedReplayLog.remove(ts);
 								if (dt == null)
 								{
-									logger.debug("Constrained tuple not in shared replay log.");
+									logger.trace("Constrained tuple not in shared replay log.");
 									for (Integer workerIndex : workers.keySet())
 									{
 										if (target != workerIndex)
@@ -294,12 +294,12 @@ public class Dispatcher implements IRoutingObserver {
 											dt = workers.get(workerIndex).getFromSessionLog(ts);
 										}
 										if (dt != null) { break; }
-										else { logger.debug("Constrained tuple "+ts+" not in session log "+workerIndex); }
+										else { logger.trace("Constrained tuple "+ts+" not in session log "+workerIndex); }
 									}
 								}
 								if (dt != null)
 								{
-									logger.debug("Readding constrained tuple "+ts+" to op queue.");
+									logger.info("Readding constrained tuple "+ts+" to op queue.");
 									opQueue.forceAdd(dt);
 								}
 							}
@@ -814,7 +814,7 @@ public class Dispatcher implements IRoutingObserver {
 					if (workers.get(owner.getOperator().getOpContext().getDownOpIndexFromOpId(dsOpId)).isConnected())
 					{
 						Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
-						logger.info("Failure ctrl handler checking for replay from shared log.");
+						logger.trace("Failure ctrl handler checking for replay from shared log.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
 					}
 				}

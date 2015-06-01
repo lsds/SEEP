@@ -148,7 +148,7 @@ public class BackpressureRouter implements IRouter {
 	public Set<Long> areConstrained(Set<Long> queued)
 	{
 		if (queued == null || queued.isEmpty() || !downIsMultiInput) { return null; }
-		logger.debug("Checking constrained for queued: "+queued);
+		logger.trace("Checking constrained for queued: "+queued);
 		synchronized(lock)
 		{
 			Set<Long> constraints = new HashSet<>();
@@ -162,7 +162,7 @@ public class BackpressureRouter implements IRouter {
 					}
 				}
 			}
-			logger.debug("Constrained in queue: "+constraints);
+			logger.trace("Constrained in queue: "+constraints);
 			return constraints;
 		}
 	}

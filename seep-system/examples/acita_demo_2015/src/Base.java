@@ -121,7 +121,10 @@ public class Base implements QueryComposer{
 		src2.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 1);
 		j.connectTo(snk, true, 2);
 		
-		QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
+		if (REPLICATION_FACTOR > 1)
+		{
+			QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
+		}
 		
 		return QueryBuilder.build();
 	}

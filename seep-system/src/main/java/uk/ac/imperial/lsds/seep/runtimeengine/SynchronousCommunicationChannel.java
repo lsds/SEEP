@@ -200,11 +200,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				}
 				if (numReconnects < 1 || numReconnects % 100 == 0)
 				{
-					logger.error("Data connection "+ numReconnects+" failed: "+e);					
+					logger.error("Data connection "+ numReconnects+" to "+ip+" failed: "+e);					
 				}
 				else
 				{
-					logger.debug("Data connection "+ numReconnects+" failed: "+e);
+					logger.debug("Data connection "+ numReconnects+" to "+ip+" failed: "+e);
 				}
 				numReconnects++;
 			}
