@@ -280,7 +280,7 @@ public class Dispatcher implements IRoutingObserver {
 						{
 							logger.trace("Constrained tuple "+ts+" not in op queue or session log "+target+"/"+downOpId);
 							if (!optimizeReplay || 
-									(optimizeReplay && !downAlives.get(downOpId).contains(ts)))
+									(optimizeReplay && !isDownAlive(downOpId, ts)))
 							{
 								logger.trace("Constrained tuple "+ts+ "+not in alives.");
 								DataTuple dt = sharedReplayLog.remove(ts);
@@ -310,6 +310,11 @@ public class Dispatcher implements IRoutingObserver {
 			
 			lock.notifyAll();
 		}
+	}
+	
+	private boolean isDownAlive(int downOpId, long ts)
+	{
+		synchronized(lock) { return downAlives.get(downOpId) != null && downAlives.get(downOpId).contains(ts); }
 	}
 	
 	public void stop(int target) { throw new RuntimeException("TODO"); }
@@ -519,12 +524,6 @@ public class Dispatcher implements IRoutingObserver {
 			if (constrainedRoute && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
 			return constrainedRoute;
 		}
-		
-		private boolean isDownAlive(int downOpId, long ts)
-		{
-			synchronized(lock) { return downAlives.get(downOpId) != null && downAlives.get(downOpId).contains(ts); }
-		}
-		
 		
 		//If safe to trim batch or already exists downstream, then don't try to send.
 		//Special case if down op is multi-input, might need to send even if alive
