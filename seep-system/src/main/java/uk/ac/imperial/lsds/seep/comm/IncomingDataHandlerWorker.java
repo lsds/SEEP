@@ -19,6 +19,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 
 
+import com.esotericsoftware.kryo.io.ByteBufferInput;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
@@ -113,8 +114,8 @@ public class IncomingDataHandlerWorker implements Runnable{
             //Get inputStream of incoming connection
             InputStream is = upstreamSocket.getInputStream();
 
-            BufferedInputStream bis = new BufferedInputStream(is);
-            Input i = new Input(bis);
+           // BufferedInputStream bis = new BufferedInputStream(is);
+            Input i = new Input(is);
             BatchTuplePayload batchTuplePayload = null;
 
             long lastIncomingTs = -1;
@@ -123,17 +124,17 @@ public class IncomingDataHandlerWorker implements Runnable{
 
                 batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
 
-                ArrayList<TuplePayload> batch = batchTuplePayload.batch;
+                List<TuplePayload> batch = batchTuplePayload.batch;
 
                 for(TuplePayload t_payload : batch){
                     long incomingTs = t_payload.timestamp;
                     // Check for already processed data
                     /// \todo{should be <= but the problem is that logical clock in java has ms granularity. This means that once you
                     /// send more than 1000 events per second, some events are discarded here, since their ts is the same...}
-                    if(incomingTs < lastIncomingTs){
-                        System.out.println("Duplicate : incomingTs =" + incomingTs + ", lastIncomingTs = " + lastIncomingTs);
-                        continue;
-                    }
+//                    if(incomingTs < lastIncomingTs){
+//                        System.out.println("Duplicate : incomingTs =" + incomingTs + ", lastIncomingTs = " + lastIncomingTs);
+//                        continue;
+//                    }
                     owner.setTsData(opId, incomingTs);
                     lastIncomingTs = incomingTs;
                     //Put data in inputQueue

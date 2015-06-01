@@ -150,16 +150,20 @@ public class OutputQueue {
 
 				if(channelRecord.getChannelBatchSize() <= 0){
 
+                    channelRecord.setTick(currentTime);
+                    BatchTuplePayload msg = channelRecord.getBatch();
+
                     //Split the serialisation from sending to the socket outputstream
 
-					channelRecord.setTick(currentTime);
-					BatchTuplePayload msg = channelRecord.getBatch();
+                    // (1) SERIALISATION
                     ByteBufferOutput kryoOutput = (ByteBufferOutput) channelRecord.getOutput();
 					k.writeObject(kryoOutput, msg);
 					//Actually since the Kryo Output we use is a ByteBufferOutput without any output stream, so flush() here doesn't cause anything
-                    kryoOutput.flush();
+                    //kryoOutput.flush();
 
                     byte[] serialisedData = kryoOutput.toBytes();
+
+                    // (2) SEND VIA OUTPUT-STREAM OF THE SOCKET
 
                     //bufferOfByteArraysToSend.put(serialisedData);
                     OutputStream outputStream = channelRecord.getDownStreamOuputStream();
