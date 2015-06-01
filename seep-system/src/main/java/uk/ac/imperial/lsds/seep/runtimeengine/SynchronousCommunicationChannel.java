@@ -71,6 +71,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
             output = new ByteBufferOutput(5*1024*1024, -1);
             try {
                 downStreamOuputStream = new BufferedOutputStream(downstreamSocketD.getOutputStream());
+//                downStreamOuputStream = downstreamSocketD.getOutputStream();
             } catch (IOException e) {
                 System.out.println(e.getMessage());
                 throw new RuntimeException("Fail to get outputStream from downstreamSocketD");

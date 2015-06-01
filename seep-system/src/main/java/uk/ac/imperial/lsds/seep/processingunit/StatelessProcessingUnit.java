@@ -272,6 +272,9 @@ public class StatelessProcessingUnit implements IProcessingUnit {
                 else if (dest instanceof SynchronousCommunicationChannel) {
                     ///\fixme{do some proper thing with var now}
                     OutputQueue outputQForThisOpId = outputQList.get(target);
+//                    if(outputQForThisOpId.getChannelDownStreamOuputStream() == null){
+//                        outputQForThisOpId.setDownStreamOuputStreamAndLaunchSendingThread(((SynchronousCommunicationChannel) dest).getDownStreamOuputStream());
+//                    }
                     outputQForThisOpId.sendToDownstream(dt, dest);
 
                 } // LOCAL

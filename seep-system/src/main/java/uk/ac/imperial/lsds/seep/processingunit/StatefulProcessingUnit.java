@@ -399,7 +399,7 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 				else if(dest instanceof SynchronousCommunicationChannel){
 					///\fixme{do some proper thing with var now}
 					OutputQueue outputQForThisOpId = outputQList.get(target);
-                                        outputQForThisOpId.sendToDownstream(dt, dest);
+                    outputQForThisOpId.sendToDownstream(dt, dest);
 				}
 				// LOCAL
 				else if(dest instanceof Operator){

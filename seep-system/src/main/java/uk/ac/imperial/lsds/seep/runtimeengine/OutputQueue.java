@@ -48,12 +48,12 @@ public class OutputQueue {
 	private CoreRE owner = null;
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
-    private ExecutorService senderThread;
+    private OutputStream downStreamOuputStream = null;
+    private LinkedBlockingQueue<byte[]> bufferOfByteArraysToSend;
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
 		this.k = initializeKryo();
-        senderThread = Executors.newFixedThreadPool(1);
 	}
 	
 	private Kryo initializeKryo(){
@@ -65,6 +65,30 @@ public class OutputQueue {
 		k.register(BatchTuplePayload.class);
 		return k;
 	}
+
+    private class SendingThread implements Runnable {
+        private LinkedBlockingQueue<byte[]> bufferOfByteArraysToSend;
+        public SendingThread(LinkedBlockingQueue<byte[]> bufferOfByteArraysToSend){
+            this.bufferOfByteArraysToSend = bufferOfByteArraysToSend;
+        }
+        @Override
+        public void run() {
+            while(true) {
+                if(downStreamOuputStream != null){
+                    try {
+                        byte[] serialisedData = bufferOfByteArraysToSend.take();
+                        downStreamOuputStream.write(serialisedData);
+                        downStreamOuputStream.flush();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+        }
+    }
 	
 	//Start incoming data, one thread has finished replaying
 	public synchronized void start(){
@@ -89,12 +113,21 @@ public class OutputQueue {
 		replaySemaphore.incrementAndGet();
 		LOG.debug("-> replaySemaphore to: {}", replaySemaphore.toString());
 	}
-	
+
+    public void setDownStreamOuputStreamAndLaunchSendingThread(OutputStream downStreamOuputStream){
+        this.downStreamOuputStream = downStreamOuputStream;
+        bufferOfByteArraysToSend = new LinkedBlockingQueue<>(10);
+        new Thread(new SendingThread(bufferOfByteArraysToSend)).start();
+    }
+
+    public OutputStream getChannelDownStreamOuputStream(){
+        return downStreamOuputStream ;
+    }
 	
 	public synchronized void sendToDownstream(DataTuple tuple, EndPoint dest)  {
-                //System.out.println("Hi, I'm: "+Thread.currentThread().getId());
-                
-		final SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
+
+
+		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		Buffer buffer = channelRecord.getBuffer();
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
@@ -109,6 +142,7 @@ public class OutputQueue {
 				NodeManager.setSystemStable();
 			}
 			if(!stop.get()){
+
 				TuplePayload tp = tuple.getPayload();
 				tp.timestamp = System.currentTimeMillis(); // assign local ack
 				channelRecord.addDataToBatch(tp);
@@ -116,29 +150,25 @@ public class OutputQueue {
 
 				if(channelRecord.getChannelBatchSize() <= 0){
 
+                    //Split the serialisation from sending to the socket outputstream
+
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
-                    ByteBufferOutput kryoOutput = (ByteBufferOutput)channelRecord.getOutput();
+                    ByteBufferOutput kryoOutput = (ByteBufferOutput) channelRecord.getOutput();
 					k.writeObject(kryoOutput, msg);
 					//Actually since the Kryo Output we use is a ByteBufferOutput without any output stream, so flush() here doesn't cause anything
                     kryoOutput.flush();
 
-                    final byte[] serialisedData = kryoOutput.toBytes();
+                    byte[] serialisedData = kryoOutput.toBytes();
 
-                    if(senderThread == null){
-                        senderThread = Executors.newFixedThreadPool(1);
+                    //bufferOfByteArraysToSend.put(serialisedData);
+                    OutputStream outputStream = channelRecord.getDownStreamOuputStream();
+                    try {
+                        outputStream.write(serialisedData);
+                        outputStream.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    senderThread.execute(new Runnable() {
-                        public void run() {
-                            try {
-                                OutputStream downStreamOuputStream = channelRecord.getDownStreamOuputStream();
-                                downStreamOuputStream.write(serialisedData);
-                                downStreamOuputStream.flush();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    });
 
 
                     // We save the data
@@ -176,10 +206,24 @@ public class OutputQueue {
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){
 					BatchTuplePayload batch = oi.getSharedIterator().next().batch;
-					Output output = oi.getOutput();
-					k.writeObject(output, batch);
-					output.flush();
-				}
+//					Output output = oi.getOutput();
+//					k.writeObject(output, batch);
+//					output.flush();
+                    ByteBufferOutput kryoOutput = (ByteBufferOutput)oi.getOutput();
+                    k.writeObject(kryoOutput, batch);
+                    //Actually since the Kryo Output we use is a ByteBufferOutput without any output stream, so flush() here doesn't cause anything
+                    kryoOutput.flush();
+
+                    byte[] serialisedData = kryoOutput.toBytes();
+
+                    OutputStream outputStream = oi.getDownStreamOuputStream();
+                    try {
+                        outputStream.write(serialisedData);
+                        outputStream.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
 		long b = System.currentTimeMillis() - a;
 		System.out.println("Dis.replay: "+b);
 	}

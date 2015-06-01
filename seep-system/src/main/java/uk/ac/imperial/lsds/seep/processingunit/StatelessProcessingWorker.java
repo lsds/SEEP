@@ -44,5 +44,4 @@ public class StatelessProcessingWorker implements Runnable{
 			runningOp.processData(dt);
 		}
 	}
-
 }
