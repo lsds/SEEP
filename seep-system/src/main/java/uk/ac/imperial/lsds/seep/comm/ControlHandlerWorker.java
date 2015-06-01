@@ -50,6 +50,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
+import com.google.common.collect.RangeSet;
 
 /** 
 * ControlHandlerWorker. This class is in charge of managing control messages.
@@ -95,6 +96,7 @@ public class ControlHandlerWorker implements Runnable{
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
 		k.register(BitSet.class);
+		k.register(RangeSet.class);
 		k.register(OpFailureCtrl.class);
 		k.register(FailureCtrl.class);
 		k.register(UpDownRCtrl.class);

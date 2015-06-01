@@ -52,6 +52,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
+import com.google.common.collect.RangeSet;
 
 public class ControlDispatcher {
 	
@@ -96,6 +97,7 @@ public class ControlDispatcher {
 		k.register(InvalidateState.class);
 		k.register(ReconfigureConnection.class);
 		k.register(BitSet.class);
+		k.register(RangeSet.class);
 		k.register(OpFailureCtrl.class);
 		k.register(FailureCtrl.class);
 		k.register(UpDownRCtrl.class);

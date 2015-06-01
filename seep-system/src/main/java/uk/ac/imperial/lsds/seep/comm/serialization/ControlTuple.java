@@ -14,6 +14,8 @@ package uk.ac.imperial.lsds.seep.comm.serialization;
 import java.util.ArrayList;
 import java.util.Set;
 
+import com.google.common.collect.RangeSet;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
@@ -94,7 +96,7 @@ public class ControlTuple {
 		this.upDown = new UpDownRCtrl(opId, qLen);
 	}
 
-	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, Set<Long> unmatched)
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, RangeSet<Long> unmatched)
 	{
 		this.type = type;
 		this.downUp = new DownUpRCtrl(opId, weight, unmatched);

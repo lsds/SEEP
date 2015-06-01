@@ -11,6 +11,9 @@ import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
@@ -86,7 +89,7 @@ public class RoutingController implements Runnable{
 			
 			if (numLogicalInputs > 1)
 			{
-				ArrayList<Set<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+				ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
 				for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
 				{
 					int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
@@ -101,20 +104,38 @@ public class RoutingController implements Runnable{
 
 				for (Integer upstreamId : weightsCopy.keySet())
 				{
-					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), new HashSet<Long>());
+					RangeSet<Long> empty = TreeRangeSet.create();
+					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
 					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
 				}
 			}
 			
-			synchronized(lock)
+			long tStart = System.currentTimeMillis();
+			long tNow = tStart;
+			while (tNow - tStart < MAX_WEIGHT_DELAY)
 			{
-				try {
-					lock.wait(MAX_WEIGHT_DELAY);
-				} catch (InterruptedException e) {
-					//Woken up early, that's fine.
+				synchronized(lock)
+				{
+					try {
+						lock.wait(MAX_WEIGHT_DELAY - (tNow - tStart));
+					} catch (InterruptedException e) {
+						//Woken up early, that's fine.
+					}
 				}
+				tNow = System.currentTimeMillis();
 			}
+		
+		/*
+		synchronized(lock)
+		{
+			try {
+				lock.wait(MAX_WEIGHT_DELAY);
+			} catch (InterruptedException e) {
+				//Woken up early, that's fine.
+			}
+		}
+		*/
 		}
 	}
 

@@ -7,9 +7,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -187,11 +192,12 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	/** Get the current 'constraints' i.e. for each input the set
 	 * of batch ids not yet received but already received for other inputs 
 	 */
-	public synchronized ArrayList<Set<Long>> getRoutingConstraints() {
-		ArrayList<Set<Long>> constraints = new ArrayList<>(numLogicalInputs);
+	public synchronized ArrayList<RangeSet<Long>> getRoutingConstraints() {
+		ArrayList<TreeSet<Long>> constraints = new ArrayList<>(numLogicalInputs);
+		ArrayList<RangeSet<Long>> constraintRanges = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			constraints.add(new HashSet<Long>());
+			constraints.add(new TreeSet<Long>());
 			
 			for (int j = 0; j < numLogicalInputs; j++)
 			{
@@ -199,9 +205,50 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 				// TODO: if numLogicalInputs > 2 should really have a count for each constraint
 				constraints.get(i).addAll(pending.get(j).keySet());
 			}
+			constraintRanges.add(toRangeSet(constraints.get(i)));
 		}
-		logger.debug("Constraints: "+constraints);
-		return constraints;
+		logger.debug("Constraints: "+constraintRanges);
+		return constraintRanges;
+	}
+	
+	private RangeSet<Long> toRangeSet(TreeSet<Long> constraints)
+	{ 
+		RangeSet<Long> result = TreeRangeSet.create();
+		if (constraints == null || constraints.isEmpty()) { return result; }
+		
+		Iterator<Long> iter = constraints.iterator();
+		Long rangeStart = null;
+		Long rangeEnd = null;
+		while(iter.hasNext())
+		{
+			Long next = iter.next();
+			if (rangeStart == null)
+			{
+				rangeStart = next;
+				rangeEnd = next;
+				if (!iter.hasNext())
+				{
+					result.add(Range.closed(rangeStart, rangeEnd));
+					break;
+				}
+			}
+			else if (next == rangeEnd + 1)
+			{
+				rangeEnd++;
+				if (!iter.hasNext())
+				{
+					result.add(Range.closed(rangeStart, rangeEnd));
+					break;
+				}
+			}
+			else
+			{
+				result.add(Range.closed(rangeStart, rangeEnd));
+				rangeStart = null;
+				rangeEnd = null;
+			}
+		}
+		return result;
 	}
 	
 	@Override
