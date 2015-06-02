@@ -387,6 +387,7 @@ public class Dispatcher implements IRoutingObserver {
 			//Otherwise try to route constrained from further back in the queue
 			if (constraints == null || constraints.isEmpty()) { throw new RuntimeException("Logic error."); }
 			
+			int constrainedInQueue = 0;
 			//for each batch in constraints
 			for (Long ts : constraints)
 			{
@@ -394,8 +395,9 @@ public class Dispatcher implements IRoutingObserver {
 				DataTuple dt = opQueue.get(ts);
 				if (dt != null)
 				{
-					logger.debug("Dispatching non-head constrained tuple "+ts);
+					constrainedInQueue++;
 					ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+					logger.debug("Dispatching non-head constrained tuple "+ts+" to targets "+targets);
 					if (targets != null && !targets.isEmpty())
 					{
 						// if admit batch
@@ -408,6 +410,11 @@ public class Dispatcher implements IRoutingObserver {
 						}
 					}
 				}
+			}
+			logger.debug("Found "+constrainedInQueue+" of "+constraints.size() + " tuples in queue");
+			if (constrainedInQueue == 0)
+			{
+				logger.debug("Constraints="+constraints+", keys="+opQueue.keys());
 			}
 		}
 		
@@ -509,6 +516,7 @@ public class Dispatcher implements IRoutingObserver {
 				
 				if (allSucceeded)
 				{
+					logger.debug("All succeeded, removing tuple "+dt.getPayload().timestamp);
 					opQueue.remove(dt.getPayload().timestamp);
 				}
 			}
