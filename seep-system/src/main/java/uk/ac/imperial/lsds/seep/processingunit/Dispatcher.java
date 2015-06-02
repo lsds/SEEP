@@ -345,9 +345,9 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock)
 			{
 				dt = opQueue.peekHead();
-				targets = owner.getOperator().getRouter().forward_highestWeight(dt); 
+				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+				logger.debug("Dispatcher peeked at head tuple "+dt.getPayload().timestamp + " with targets "+targets);
 
-				if (dt == null) { throw new RuntimeException("Logic error"); }
 				if (targets == null || targets.isEmpty())
 				{
 					//TODO: Really don't like doing this while holding the lock.
@@ -355,11 +355,13 @@ public class Dispatcher implements IRoutingObserver {
 
 					if (constraints == null || constraints.isEmpty())
 					{
+						logger.debug("Dispatcher waiting for routing change or constrained tuples.");
 						//If no constraints, wait for some queue/routing change and then loop back
 						try { lock.wait(); } catch (InterruptedException e) {}
 						return null;
 					}
 					//else fall through and try to route from further back in the queue
+					logger.debug("Dispatcher found constrained tuples in queue: "+constraints);
 				}
 			}
 			
@@ -377,9 +379,16 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					sendBatch(dt, targets);
 				}
+				return null;
+			}
+			else
+			{
+				if (constraints == null || constraints.isEmpty()) { throw new RuntimeException("Logic error.");}
+				logger.debug("Cannot dispatch from head, will try with constraints: "+constraints);
+				return constraints;
 			}
 			
-			return constraints;
+			//return constraints;
 		}
 		
 		private void dispatchConstrained(Set<Long> constraints)
@@ -617,16 +626,17 @@ public class Dispatcher implements IRoutingObserver {
 				} catch (InterruptedException e) {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
-				logger.debug("Dispatcher sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+				logger.debug("Dispatcher worker sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 
 				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
 				boolean success = outputQueue.sendToDownstream(nextTuple, dest);
 				if (success)
 				{
-					logger.debug("Dispatcher sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+					logger.debug("Dispatcher worker sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 				}
 				else
 				{
+					logger.debug("Dispatcher worker failed to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 					//Connection must be down.
 					//Remove any output tuples from this replica's output log and add them to the operator output queue.
 					//This should include the current 'SEEP' batch since it might contain several tuples.
@@ -667,6 +677,7 @@ public class Dispatcher implements IRoutingObserver {
 					outputQueue.reopenEndpoint(dest);
 					
 					synchronized(lock) { dataConnected = true; }
+					logger.debug("Dispatcher worker recovered from failure to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 				}
 			}
 		}
