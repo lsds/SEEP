@@ -344,7 +344,7 @@ public class Dispatcher implements IRoutingObserver {
 			
 			synchronized(lock)
 			{
-				dt = opQueue.peekHead();
+				dt = peekNext();
 				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
 				logger.debug("Dispatcher peeked at head tuple "+dt.getPayload().timestamp + " with targets "+targets);
 
@@ -355,9 +355,13 @@ public class Dispatcher implements IRoutingObserver {
 
 					if (constraints == null || constraints.isEmpty())
 					{
-						logger.debug("Dispatcher waiting for routing change or constrained tuples.");
-						//If no constraints, wait for some queue/routing change and then loop back
-						try { lock.wait(); } catch (InterruptedException e) {}
+						//Check unconstrained tuple isn't alive downstream already.
+						if (admitBatch(dt, null))
+						{
+							logger.debug("Dispatcher waiting for routing change or constrained tuples.");
+							//If no constraints, wait for some queue/routing change and then loop back
+							try { lock.wait(); } catch (InterruptedException e) {}
+						}
 						return null;
 					}
 					//else fall through and try to route from further back in the queue
@@ -425,6 +429,23 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				logger.debug("Constraints="+constraints+", keys="+opQueue.keys());
 			}
+		}
+		
+		//Should be holding lock.
+		private DataTuple peekNext()
+		{
+			DataTuple dt = null;
+			while (dt == null)
+			{
+				dt = opQueue.peekHead();
+				long ts = dt.getPayload().timestamp;
+				if (ts <= combinedDownFctrl.lw() || combinedDownFctrl.acks().contains(ts))
+				{
+					opQueue.remove(ts);
+					dt = null;
+				}
+			}
+			return dt;
 		}
 		
 		//Check whether we should send this batch, discard it, or move
