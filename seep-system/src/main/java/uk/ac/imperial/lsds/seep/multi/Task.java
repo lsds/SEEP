@@ -61,16 +61,27 @@ public class Task extends ITask {
 			 * It should rather be refering to the latency mark of the previous query as well.
 			 * 
 			 */
-			ResultCollector.forwardAndFree (handler, 
+			NewResultCollector.forwardAndFree (handler, 
 					_query,
 					this.batch.getBuffer(), 
 					this.batch.getTaskId(), 
 					this.batch.getFreeOffset(), 
 					this.batch.getLatencyMark(), 
-					GPU);
+					GPU, true);
+			
+//			ResultCollector.forwardAndFree (handler, 
+//					_query,
+//					this.batch.getBuffer(), 
+//					this.batch.getTaskId(), 
+//					this.batch.getFreeOffset(), 
+//					this.batch.getLatencyMark(), 
+//					GPU);
 		} else {
-			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
-					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
+			NewResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
+					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU, true);
+			
+//			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
+//					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
 		}
 		
 		WindowBatchFactory.free(this.batch);

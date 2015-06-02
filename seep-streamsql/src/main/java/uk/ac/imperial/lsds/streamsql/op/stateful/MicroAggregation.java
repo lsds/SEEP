@@ -6,6 +6,9 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.IntMap;
+import uk.ac.imperial.lsds.seep.multi.IntMapEntry;
+import uk.ac.imperial.lsds.seep.multi.IntMapFactory;
 import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
@@ -305,8 +308,13 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		// windowBatch.initWindowPointers();
 		
+		
+		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers   = windowBatch.getWindowEndPointers();
+		
+//		System.out.println(String.format("[DBG] MicroAggregation; batch starts at %10d ends at %10d", 
+//				startPointers[0], endPointers[endPointers.length - 1]));
 		
 		IQueryBuffer inBuffer = windowBatch.getBuffer();
 		
@@ -340,6 +348,9 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset   = endPointers  [currentWindow];
+			
+//			System.out.println(String.format("[DBG] MicroAggregation; window starts at %10d ends at %10d", 
+//					inWindowStartOffset, inWindowEndOffset));
 
 			/*
 			 * If the window is empty, we skip it.

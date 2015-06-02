@@ -4,13 +4,13 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.IntMap;
+import uk.ac.imperial.lsds.seep.multi.IntMapEntry;
+import uk.ac.imperial.lsds.seep.multi.IntMapFactory;
 import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.stateful.IntMap;
-import uk.ac.imperial.lsds.streamsql.op.stateful.IntMapEntry;
-import uk.ac.imperial.lsds.streamsql.op.stateful.IntMapFactory;
 
 public class LRBUDFCPU implements IMicroOperatorCode {
 

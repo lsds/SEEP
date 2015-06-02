@@ -1,4 +1,4 @@
-package uk.ac.imperial.lsds.streamsql.op.stateful;
+package uk.ac.imperial.lsds.seep.multi;
 
 public class IntMapEntry {
 

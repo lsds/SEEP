@@ -3,7 +3,7 @@ package uk.ac.imperial.lsds.seep.multi;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
-public class ResultHandler {
+public class NewResultHandler {
 
 	public final int SLOTS = Utils.TASKS * 4;
 
@@ -13,11 +13,14 @@ public class ResultHandler {
 	 * Flags:
 	 *  -1 - slot is free
 	 *   0 - slot is being populated by a thread
-	 *   1 - slot is occupied, but "unlocked"
+	 *   
+	 *   1 - slot is occupied, but "unlocked"; partial  results
+	 *   3 - slot is occupied, but "unlocked"; complete results
+	 *   
 	 *   2 - slot is occupied, but "locked" (somebody is working on it)
 	 */
 	public AtomicIntegerArray slots;
-
+	
 	/*
 	 * Structures to hold the actual data
 	 */
@@ -36,11 +39,9 @@ public class ResultHandler {
 	
 	private long totalOutputBytes = 0L;
 
-	public ResultHandler (IQueryBuffer freeBuffer, SubQuery query) {
+	public NewResultHandler (IQueryBuffer freeBuffer, SubQuery query) {
 		
 		this.freeBuffer = freeBuffer;
-		
-		System.out.println(SLOTS + " slots");
 		
 		slots = new AtomicIntegerArray(SLOTS);
 		
