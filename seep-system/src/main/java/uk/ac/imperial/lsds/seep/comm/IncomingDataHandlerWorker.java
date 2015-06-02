@@ -114,8 +114,8 @@ public class IncomingDataHandlerWorker implements Runnable{
             //Get inputStream of incoming connection
             InputStream is = upstreamSocket.getInputStream();
 
-           // BufferedInputStream bis = new BufferedInputStream(is);
-            Input i = new Input(is);
+           BufferedInputStream bis = new BufferedInputStream(is);
+            Input i = new Input(bis);
             BatchTuplePayload batchTuplePayload = null;
 
             long lastIncomingTs = -1;
@@ -131,10 +131,11 @@ public class IncomingDataHandlerWorker implements Runnable{
                     // Check for already processed data
                     /// \todo{should be <= but the problem is that logical clock in java has ms granularity. This means that once you
                     /// send more than 1000 events per second, some events are discarded here, since their ts is the same...}
-//                    if(incomingTs < lastIncomingTs){
-//                        System.out.println("Duplicate : incomingTs =" + incomingTs + ", lastIncomingTs = " + lastIncomingTs);
-//                        continue;
-//                    }
+                    if(incomingTs < lastIncomingTs){
+                        System.out.println("Duplicate from op:" + opId + " : incomingTs =" + incomingTs + ", lastIncomingTs = " + lastIncomingTs);
+                        continue;
+                    }
+                    //System.out.println("Success from op:" + opId + " : incomingTs =" + incomingTs + ", lastIncomingTs = " + lastIncomingTs);
                     owner.setTsData(opId, incomingTs);
                     lastIncomingTs = incomingTs;
                     //Put data in inputQueue
