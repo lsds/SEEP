@@ -8,6 +8,7 @@ seep_jar = 'seep-system-0.0.1-SNAPSHOT.jar'
 query_jar = 'acita_demo_2015.jar'
 query_base = 'Base'
 data_dir = '%s/log'%eg_dir
+user = 'dan'
 
 def main(k,h,query,w,hostname):
     sim_env = os.environ.copy()
@@ -33,7 +34,7 @@ def main(k,h,query,w,hostname):
 
 def start_worker(k, h, query, logfilename, sim_env):
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query, '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker']
+        args = ['sudo', '-u', user, 'java', '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query, '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker']
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 

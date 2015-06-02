@@ -7,6 +7,7 @@ from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
 from core.misc.xmlutils import savesessionxml
+from util import chmod_dir
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
@@ -205,6 +206,8 @@ def run_session(time_str, k, mob, exp_session, params):
 
         print 'Instantiating session.'
         session.instantiate()
+
+        chmod_dir(session.sessiondir)
 
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n, range(2,3 + num_workers)))

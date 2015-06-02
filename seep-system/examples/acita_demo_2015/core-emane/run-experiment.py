@@ -4,6 +4,7 @@ import subprocess,os,time,re,argparse
 
 from compute_stats import compute_stats,median,compute_relative_raw_vals
 from run_sessions import run_sessions
+from util import chmod_dir
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
@@ -30,13 +31,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
 		'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
         plot(p, time_str, script_dir, data_dir)
 
-	
-    os.chmod('%s/%s'%(data_dir, time_str), 0777)
-    for root,dirs,files in os.walk('%s/%s'%(data_dir, time_str)):
-        for d in dirs:
-            os.chmod(os.path.join(root,d), 0777)
-        for f in files:
-            os.chmod(os.path.join(root,f), 0777)
+    chmod_dir('%s/%s'%(data_dir, time_str))
 
 def get_session_dir(k, mob, session, time_str, data_dir):
     return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
@@ -151,6 +146,7 @@ if __name__ == "__main__":
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
     parser.add_argument('--constraints', dest='constraints', default='', help='Initial mapping constraints for each session ')
     parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
+    parser.add_argument('--user', dest='user', default='dan', help='Non-root user to start processes with')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -171,6 +167,7 @@ if __name__ == "__main__":
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
     params['placement']=args.placement
+    params['user']=args.user
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 
