@@ -3,7 +3,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable
 
-#include "/home/akolious/seep/seep-system/clib/byteorder.h"
+#include "/Users/akolious/SEEP/seep-system/clib/byteorder.h"
 #define  INPUT_VECTOR_SIZE 2
 #define OUTPUT_VECTOR_SIZE 2
 

@@ -5,6 +5,84 @@ import java.util.concurrent.locks.LockSupport;
 import uk.ac.imperial.lsds.seep.multi.join.JoinResultHandler;
 
 public class ResultCollector {
+	
+	public static void aggregateAndFree (ResultHandler handler, SubQuery query, 
+			int taskid, int freeOffset) {
+		
+		if (taskid < 0) { /* Invalid task id */
+			return ;
+		}
+		int idx = ((taskid - 1) % handler.SLOTS);
+		
+		try {
+			
+			while (! handler.slots.compareAndSet(idx, -1, 0)) {
+				
+				System.err.println(String.format("warning: result collector blocked at %s q %d t %4d idx %4d", 
+						Thread.currentThread(), query.getId(), taskid, idx));
+				LockSupport.parkNanos(1L);
+			}
+			
+			handler.offsets[idx] = freeOffset;
+			handler.results[idx] = null;
+			
+			handler.latch [idx] = 0;
+			
+			/* No other thread can modify this slot. */
+			handler.slots.set(idx, 1);
+			
+			/* Forward and free */
+			
+			if (! handler.semaphore.tryAcquire())
+				return;
+			
+			/* No other thread can enter this section */
+			
+			/* Is slot `index` occupied? 
+			 */
+			if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
+				handler.semaphore.release();
+				return ;
+			}
+			
+			boolean busy = true;
+			
+			while (busy) {
+				
+				/* Forward to the distributed API */
+
+				/* Free input buffer */
+				int offset = handler.offsets[handler.next];
+				if (offset != Integer.MIN_VALUE) {
+					
+					handler.freeBuffer.free (offset);
+				} else {
+					System.err.println(String.format("[DBG] %s skip slot qid %d idx %6d", 
+							Thread.currentThread(), query.getId(), handler.next));
+					System.exit(1);
+				}
+				
+				/* Release the current slot */
+				handler.slots.set(handler.next, -1);
+				
+				/* Increment next */
+				handler.next = handler.next + 1;
+				handler.next = handler.next % handler.SLOTS;
+				
+				/* Check if next is ready to be pushed */
+				
+				if (! handler.slots.compareAndSet(handler.next, 1, 2)) {
+					busy = false;
+				 }
+				
+			}
+			/* Thread exit critical section */
+			handler.semaphore.release();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	public static void forwardAndFree (ResultHandler handler, SubQuery query, IQueryBuffer buffer, 
 			int taskid, int freeOffset, int latencyMark, boolean GPU) {

@@ -7,11 +7,11 @@ public class WindowChunk {
 	
 	WindowStateStatus status;
 	long start, end;
-	IntMap result;
+	IntermediateMap result;
 	long owner;
 	Lock lock;
 	
-	public void init (long start, long end, IntMap result) {
+	public void init (long start, long end, IntermediateMap result) {
 		this.start = start;
 		this.end = end;
 		this.result = result;

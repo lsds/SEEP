@@ -9,6 +9,8 @@ import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.IntMap;
 import uk.ac.imperial.lsds.seep.multi.IntMapEntry;
 import uk.ac.imperial.lsds.seep.multi.IntMapFactory;
+import uk.ac.imperial.lsds.seep.multi.IntermediateMap;
+import uk.ac.imperial.lsds.seep.multi.IntermediateMapFactory;
 import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
@@ -171,38 +173,144 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		 * Make sure the batch is initialised
 		 */
 		// System.out.println("[DBG] aggregation task " + windowBatch.getTaskId());
-		windowBatch.initWindowPointers();
+//		windowBatch.initWindowPointers();
 //		System.out.println("RUN aggregration");
 
-		switch (aggregationType) {
-		case COUNT:
-		case SUM:
-		case AVG:
-			if (this.hasGroupBy && this.doIncremental) 
-				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
-			else if (!this.hasGroupBy && this.doIncremental)
-				processDataPerWindowIncrementally(windowBatch, api);
-			else if (this.hasGroupBy && !this.doIncremental)
-				processDataPerWindowWithGroupBy(windowBatch, api);
-			else if (!this.hasGroupBy && !this.doIncremental)
-				processDataPerWindow(windowBatch, api);
-			break;
-		case MAX:
-		case MIN:
-			if (this.hasGroupBy)
-				processDataPerWindowWithGroupBy(windowBatch, api);
-			else 
-				processDataPerWindow(windowBatch, api);
-				
-			break;
-		default:
-			break;
-		}
+//		switch (aggregationType) {
+//		case COUNT:
+//		case SUM:
+//		case AVG:
+//			if (this.hasGroupBy && this.doIncremental) 
+//				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
+//			else if (!this.hasGroupBy && this.doIncremental)
+//				processDataPerWindowIncrementally(windowBatch, api);
+//			else if (this.hasGroupBy && !this.doIncremental)
+//				processDataPerWindowWithGroupBy(windowBatch, api);
+//			else if (!this.hasGroupBy && !this.doIncremental)
+//				processDataPerWindow(windowBatch, api);
+//			break;
+//		case MAX:
+//		case MIN:
+//			if (this.hasGroupBy)
+//				processDataPerWindowWithGroupBy(windowBatch, api);
+//			else 
+//				processDataPerWindow(windowBatch, api);
+//				
+//			break;
+//		default:
+//			break;
+//		}
+		
+		processDataPerPane(windowBatch, api);
 	}
 
+	private void processDataPerPane(WindowBatch windowBatch, IWindowAPI api) {
+		
+		ITupleSchema inSchema = windowBatch.getSchema();
+		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
+		
+		IQueryBuffer inBuffer = windowBatch.getBuffer();
+		
+		long start = windowBatch.getBatchStartTime() / byteSizeOfInTuple;
+		long end = windowBatch.getBatchEndTime() / byteSizeOfInTuple;
+		long idx = start;
+		
+		/* Compute results for each pane */ 
+		
+		int pid = ThreadMap.getInstance().get(Thread.currentThread().getId());
+		
+		if (debug)
+			System.out.println(String.format("[DBG] %20s, thread id %03d pool id %03d", 
+					Thread.currentThread().getName(), Thread.currentThread().getId(), pid));
+		
+		
+		float windowValue = 0, newWindowValue = 0;
+		int windowTupleCount = 0;
+		
+		int dataPointer = windowBatch.getBatchStartPointer();
+		
+		boolean first = true;
+		
+		long currPane = (idx) / windowBatch.getWindowDefinition().getSlide();
+		long nextPane;
+		
+		System.out.println("[DBG] current pane is " + currPane);
+		
+		while (idx < end) {
+			
+			if (first) {
+				if (
+					this.aggregationType == AggregationType.MAX || 
+					this.aggregationType == AggregationType.MIN) {
+				
+					windowValue = this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
+				}
+				else 
+				if (this.aggregationType == AggregationType.COUNT) {
+				
+					windowValue++;
+				}
+				else 
+				if (
+					this.aggregationType == AggregationType.SUM || 
+					this.aggregationType == AggregationType.AVG) {
+				
+					windowValue += this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
+					windowTupleCount++;
+				}
+				first = false;
+			} else {
+				
+				if (
+					this.aggregationType == AggregationType.MAX || 
+					this.aggregationType == AggregationType.MIN) {
+					
+					newWindowValue = this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
+					
+					if (
+						(newWindowValue > windowValue && this.aggregationType == AggregationType.MAX) || 
+						(newWindowValue < windowValue && this.aggregationType == AggregationType.MIN)) {
+						
+						windowValue = newWindowValue;
+					}
+				}
+				else 
+				if (this.aggregationType == AggregationType.COUNT) {
+					windowValue++;
+				}
+				else 
+				if (
+					this.aggregationType == AggregationType.SUM || 
+					this.aggregationType == AggregationType.AVG) {
+					
+					windowValue += this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
+					windowTupleCount++;
+				}
+			}
+			
+			dataPointer += byteSizeOfInTuple;
+			idx += byteSizeOfInTuple;
+			
+			/* Is the next tuple part of the same pane or a different pane? */
+			nextPane = (idx) / windowBatch.getWindowDefinition().getSlide();
+			if (nextPane != currPane) {
+				
+				// System.out.println("[DBG] emit results for pane " + currPane);
+				
+				/* Emit */
+				IntermediateMap paneResult = IntermediateMapFactory.newInstance(pid);
+				paneResult.put(0, windowValue, windowTupleCount);
+				api.outputPaneResult(currPane, paneResult);
+				
+				windowValue = newWindowValue = 0;
+				currPane = nextPane;
+			}
+		}
+	}
+	
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {
 		// initialise pointers
-		windowBatch.initWindowPointers();
+		// windowBatch.initWindowPointers();
 		
 		int[] startPointers = windowBatch.getWindowStartPointers();
 		int[] endPointers = windowBatch.getWindowEndPointers();
@@ -217,8 +325,8 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		int inWindowEndOffset;
 		
 		float windowValue, newWindowValue;
-		int   windowTupleCount;
-		long  windowTimestamp;
+		int windowTupleCount;
+		long windowTimestamp;
 
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			inWindowStartOffset = startPointers[currentWindow];

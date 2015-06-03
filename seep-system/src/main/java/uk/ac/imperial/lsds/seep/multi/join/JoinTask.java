@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.seep.multi.join;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 import uk.ac.imperial.lsds.seep.multi.ITask;
+import uk.ac.imperial.lsds.seep.multi.IntermediateMap;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.ResultCollector;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
@@ -114,5 +115,11 @@ public class JoinTask extends ITask {
 	@Override
 	public SubQuery getQuery() {
 		return query;
+	}
+
+	@Override
+	public void outputPaneResult(long id, IntermediateMap paneResult) {
+		// TODO Auto-generated method stub
+		
 	}
 }

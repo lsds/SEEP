@@ -111,17 +111,18 @@ public class TestAggregationType {
 				);
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
-		ReductionKernel gpuAggCode = new ReductionKernel (
-				aggregationType,
-				new FloatColumnReference(1),
-				schema
-				);
-		
-		gpuAggCode.setBatchSize(nwindows);
-		gpuAggCode.setInputSize (inputSize);
-		gpuAggCode.setWindowSize ((int) window.getSize());
-		gpuAggCode.setWindowSlide ((int) window.getSlide());
-		gpuAggCode.setup();
+		ReductionKernel gpuAggCode = null;
+//		new ReductionKernel (
+//				aggregationType,
+//				new FloatColumnReference(1),
+//				schema
+//				);
+//		
+//		gpuAggCode.setBatchSize(nwindows);
+//		gpuAggCode.setInputSize (inputSize);
+//		gpuAggCode.setWindowSize ((int) window.getSize());
+//		gpuAggCode.setWindowSlide ((int) window.getSlide());
+//		gpuAggCode.setup();
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)

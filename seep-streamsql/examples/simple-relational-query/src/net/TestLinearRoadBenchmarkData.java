@@ -249,7 +249,7 @@ public class TestLinearRoadBenchmarkData {
 		Set<MicroOperator> q3operators = new HashSet<>();
 		q3operators.add(q3op);
 		
-		SubQuery q3 = new SubQuery (0, q3operators, schema3, window3, queryConf3);
+		SubQuery q3 = new SubQuery (1, q3operators, schema3, window3, queryConf3);
 		
 		/*
 		 * Query 4 (Aggregation in two steps)

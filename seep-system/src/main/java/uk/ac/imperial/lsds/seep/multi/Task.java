@@ -61,13 +61,13 @@ public class Task extends ITask {
 			 * It should rather be refering to the latency mark of the previous query as well.
 			 * 
 			 */
-			NewResultCollector.forwardAndFree (handler, 
-					_query,
-					this.batch.getBuffer(), 
-					this.batch.getTaskId(), 
-					this.batch.getFreeOffset(), 
-					this.batch.getLatencyMark(), 
-					GPU, true);
+//			NewResultCollector.forwardAndFree (handler, 
+//					_query,
+//					this.batch.getBuffer(), 
+//					this.batch.getTaskId(), 
+//					this.batch.getFreeOffset(), 
+//					this.batch.getLatencyMark(), 
+//					GPU, true);
 			
 //			ResultCollector.forwardAndFree (handler, 
 //					_query,
@@ -76,12 +76,16 @@ public class Task extends ITask {
 //					this.batch.getFreeOffset(), 
 //					this.batch.getLatencyMark(), 
 //					GPU);
+			
+			ResultCollector.aggregateAndFree (handler, _query, this.batch.getTaskId(), this.batch.getFreeOffset());
 		} else {
-			NewResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
-					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU, true);
+//			NewResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
+//					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU, true);
 			
 //			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
 //					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
+			
+			ResultCollector.aggregateAndFree (handler, query, this.batch.getTaskId(), this.batch.getFreeOffset());
 		}
 		
 		WindowBatchFactory.free(this.batch);
@@ -111,5 +115,12 @@ public class Task extends ITask {
 	@Override
 	public SubQuery getQuery() {
 		return query;
+	}
+
+	@Override
+	public void outputPaneResult(long paneId, IntermediateMap paneResult) {
+		
+		/* */
+		handler.windowHeap.add(paneId, 0, paneResult);
 	}
 }

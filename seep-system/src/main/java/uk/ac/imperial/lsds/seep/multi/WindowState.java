@@ -11,7 +11,7 @@ public class WindowState {
 	
 	private WindowChunk [] heap;
 	
-	private static int capacity = 128;
+	private static int capacity = 1048576;
 	
 	private static int root = 1;
 	private static int noone = -1;
@@ -38,7 +38,7 @@ public class WindowState {
 		long start = p.start;
 		long end = p.end;
 		
-		IntMap result = p.result;
+		IntermediateMap result = p.result;
 		
 		WindowStateStatus status = p.status;
 		
@@ -57,7 +57,7 @@ public class WindowState {
 		q.owner = owner;
 	}
 	
-	public void add (long start, long end, IntMap result) {
+	public void add (long start, long end, IntermediateMap result) {
 		
 		heapLock.lock();
 		int child = next++;
@@ -101,7 +101,7 @@ public class WindowState {
 		}
 	}
 	
-	public IntMap remove () {
+	public IntermediateMap remove () {
 		
 		heapLock.lock();
 		int bottom = --next;
@@ -109,7 +109,7 @@ public class WindowState {
 		heap[root].lock();
 		heapLock.unlock();
 		
-		IntMap result = heap[root].result;
+		IntermediateMap result = heap[root].result;
 		heap[root].status = WindowStateStatus.EMPTY;
 		heap[root].owner = noone;
 		swap(heap[bottom], heap[root]);

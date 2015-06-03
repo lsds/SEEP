@@ -173,11 +173,11 @@ public class TaskDispatcher implements ITaskDispatcher {
 //			q = p + tupleSize;
 //		}
 		
-//		 long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
-//		  
-//		  System.out.println(
-//			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
-//					parent.getId(), taskid, p, q, free, t_, _t, size)); 
+		 long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+		  
+		  System.out.println(
+			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
+					parent.getId(), taskid, p, q, free, t_, _t, size)); 
 		 
 		if (q <= p) {
 			q += buffer.capacity();
@@ -202,8 +202,10 @@ public class TaskDispatcher implements ITaskDispatcher {
 			else
 				batch.setBatchPointers((int) p, (int) q);
 			batch.setRange(t_, _t);
-		} else
+		} else {
 			batch.setBatchPointers((int) p, (int) q);
+			batch.setRange(t_, _t);
+		}
 		
 		/*
 		batch.initWindowPointers();
@@ -252,32 +254,32 @@ public class TaskDispatcher implements ITaskDispatcher {
 //		System.out.println(String.format("[DBG] start %16d end %16d index %10d _index %10d length %10d next_ %16d rows %16d", 
 //				start, end, index_, _index, length, next_, rowCount));
 		
-		if (window.isRowBased()) {
-			while ((rowCount + rows) >= _next + 1) {
-				/* Set start and end pointers for batch */
-				p = ((next_) * tupleSize) & mask;
-				q = ((_next + 1) * tupleSize) & mask;
-				q = (q == 0) ? buffer.capacity() : q;
-				/* Set free pointer */
-				f = (p + (offset * tupleSize)) & mask;
-				f = (f == 0) ? buffer.capacity() : f;
-				f--;
-				/* Dispatch task */
-				this.newTaskFor (p, q, f, _undefined, _undefined);
-				if (window.isTumbling()) {
-					next_ += offset;
-					_next += tpb;
-				}
-				else {
-					next_ += offset;
-					_next += ((this.batch) * window.getSlide()); // ((this.batch - 1) * window.getSlide());
-				}
-			}
-		} else
-		if (window.isRangeBased()) {
+//		if (window.isRowBased()) {
+//			while ((rowCount + rows) >= _next + 1) {
+//				/* Set start and end pointers for batch */
+//				p = ((next_) * tupleSize) & mask;
+//				q = ((_next + 1) * tupleSize) & mask;
+//				q = (q == 0) ? buffer.capacity() : q;
+//				/* Set free pointer */
+//				f = (p + (offset * tupleSize)) & mask;
+//				f = (f == 0) ? buffer.capacity() : f;
+//				f--;
+//				/* Dispatch task */
+//				this.newTaskFor (p, q, f, _undefined, _undefined);
+//				if (window.isTumbling()) {
+//					next_ += offset;
+//					_next += tpb;
+//				}
+//				else {
+//					next_ += offset;
+//					_next += ((this.batch) * window.getSlide()); // ((this.batch - 1) * window.getSlide());
+//				}
+//			}
+//		} else
+		if (window.isRangeBased() || window.isRowBased()) {
 			/* Get the timestamp of the first and last tuple inserted */
-			start = getTimestamp(buffer, index_);
-			end   = getTimestamp(buffer, _index);
+//N			start = getTimestamp(buffer, index_);
+//N			end   = getTimestamp(buffer, _index);
 			
 //			if (first) {
 //				next_  = start;
@@ -308,58 +310,77 @@ public class TaskDispatcher implements ITaskDispatcher {
 			
 			/* Open and close one or more window batches */
 			
-			while (accumulated > nextBatchEndPointer) {
+			while (accumulated >= nextBatchEndPointer) {
+				
+				/* Launch task */
+				this.newTaskFor (
+					thisBatchStartPointer & mask, 
+					nextBatchEndPointer & mask, 
+					nextBatchEndPointer & mask, 
+					thisBatchStartPointer, nextBatchEndPointer
+					);
+				
+				// b = incrementAndGet(b, true);
+				// batches[b][_START] = (int) ((nextBatchStartPointer) & mask);
+				
+				thisBatchStartPointer = thisBatchStartPointer + batchBytes;
+				nextBatchEndPointer = nextBatchEndPointer + batchBytes;
+				
+				// batchStartTimestamp = endTimestamp;
+				
+				
+				
 				// We have enough data for a batch
 				// Close the current batch
 				// The end pointer is the start pointer + batchBytes
 				// What is the timestamp of the tuple at `endPointer`?
-				long endTimestamp = getTimestamp (buffer, (int) ((nextBatchEndPointer) & mask));
+//N				long endTimestamp = getTimestamp (buffer, (int) ((nextBatchEndPointer) & mask));
 				// System.out.println(String.format("[DBG] end timestamp is %10d; end batch at %10d", endTimestamp, endTimestamp - window.getSlide()));
 				// We cannot include the current timestamp,
 				// because it belongs to a window that may not
 				// be closed yet.
 				// We  go one before.
-				endTimestamp -= window.getSlide();
+//N				endTimestamp -= window.getSlide();
 				// Look backwards for the last tuple with timestamp `endTimestamp` or less.
-				while (nextBatchEndPointer >= thisBatchStartPointer && 
-						getTimestamp (buffer, (int) ((nextBatchEndPointer) & mask)) > endTimestamp) {
+//N				while (nextBatchEndPointer >= thisBatchStartPointer && 
+//N						getTimestamp (buffer, (int) ((nextBatchEndPointer) & mask)) > endTimestamp) {
 					// System.out.println(String.format("[DBG] batch end pointer is %13d...", nextBatchEndPointer));
-					nextBatchEndPointer -= tupleSize;
-				}
-				nextBatchEndPointer += tupleSize;
+//N					nextBatchEndPointer -= tupleSize;
+//N				}
+//N				nextBatchEndPointer += tupleSize;
 				
-				thisBatchEndPointer = (int) ((nextBatchEndPointer) & mask);
+//N				thisBatchEndPointer = (int) ((nextBatchEndPointer) & mask);
 				
 				// OK. So we have a batch end pointer and a batch start pointer.
 				// Can we dispatch a task?
 				// What's missing is a free pointer. The free pointer is the
 				// beginning of the next batch.
 				// The next pointer is the beginning of window with timestamp `endTimestamp + slide`.
-				nextBatchStartPointer = nextBatchEndPointer;
-				while (getTimestamp (buffer, (int) ((nextBatchStartPointer) & mask)) >= endTimestamp) {
-//					System.out.println(String.format("[DBG] next batch start pointer is %13d with timestamp %5d...", 
-//							nextBatchStartPointer, getTimestamp (buffer, (int) ((nextBatchStartPointer) & mask))));
-					nextBatchStartPointer -= tupleSize;
-				}
-				nextBatchStartPointer += tupleSize;
-				thisBatchFreePointer = (int) ((nextBatchStartPointer) & mask);
-				
-				/* Launch task */
-				this.newTaskFor (
-					thisBatchStartPointer & mask, 
-					thisBatchEndPointer & mask, 
-					thisBatchFreePointer & mask, 
-					batchStartTimestamp, endTimestamp
-					);
-				batches[b][_START] = _undefined;
-				
-				b = incrementAndGet(b, true);
-				batches[b][_START] = (int) ((nextBatchStartPointer) & mask);
-				
-				nextBatchEndPointer = nextBatchStartPointer + batchBytes;
-				thisBatchStartPointer = nextBatchStartPointer;
-				
-				batchStartTimestamp = endTimestamp;
+//				nextBatchStartPointer = nextBatchEndPointer;
+//				while (getTimestamp (buffer, (int) ((nextBatchStartPointer) & mask)) >= endTimestamp) {
+////					System.out.println(String.format("[DBG] next batch start pointer is %13d with timestamp %5d...", 
+////							nextBatchStartPointer, getTimestamp (buffer, (int) ((nextBatchStartPointer) & mask))));
+//					nextBatchStartPointer -= tupleSize;
+//				}
+//				nextBatchStartPointer += tupleSize;
+//				thisBatchFreePointer = (int) ((nextBatchStartPointer) & mask);
+//				
+//				/* Launch task */
+//				this.newTaskFor (
+//					thisBatchStartPointer & mask, 
+//					thisBatchEndPointer & mask, 
+//					thisBatchFreePointer & mask, 
+//					batchStartTimestamp, endTimestamp
+//					);
+//				batches[b][_START] = _undefined;
+//				
+//				b = incrementAndGet(b, true);
+//				batches[b][_START] = (int) ((nextBatchStartPointer) & mask);
+//				
+//				nextBatchEndPointer = nextBatchStartPointer + batchBytes;
+//				thisBatchStartPointer = nextBatchStartPointer;
+//				
+//				batchStartTimestamp = endTimestamp;
 			}
 			
 //			/* Open one or more window batches */
