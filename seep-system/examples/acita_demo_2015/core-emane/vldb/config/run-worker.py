@@ -8,7 +8,7 @@ seep_jar = 'seep-system-0.0.1-SNAPSHOT.jar'
 query_jar = 'acita_demo_2015.jar'
 query_base = 'Base'
 data_dir = '%s/log'%eg_dir
-user = 'dan'
+user = 'root'
 
 def main(k,h,query,w,hostname):
     sim_env = os.environ.copy()

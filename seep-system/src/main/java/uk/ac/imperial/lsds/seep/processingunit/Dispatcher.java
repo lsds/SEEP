@@ -255,6 +255,8 @@ public class Dispatcher implements IRoutingObserver {
 	}
 	*/
 	
+	//N.B. newConstraints will contain all constrains for the given input,
+	//but only if there was a change from the previous constraints.
 	public void routingChanged(Map<Integer, Set<Long>> newConstraints)
 	{
         //for each dj in newConstraints.keySet
@@ -265,17 +267,19 @@ public class Dispatcher implements IRoutingObserver {
         //                                mv to opQueue
         //                        else if i in other session log
         //                                copy to output queue
+
 		logger.debug("Routing changed, new constraints="+newConstraints);
-		synchronized(lock)
+		long tStart = System.currentTimeMillis();
+		if (newConstraints != null)
 		{
-			if (newConstraints != null)
+			if (newConstraints.size() > 1) { throw new RuntimeException("Logic error."); }
+			for (Integer downOpId : newConstraints.keySet())
 			{
-				if (newConstraints.size() > 1) { throw new RuntimeException("Logic error."); }
-				for (Integer downOpId : newConstraints.keySet())
+				for (Long ts : newConstraints.get(downOpId))
 				{
-					for (Long ts : newConstraints.get(downOpId))
+					int target = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
+					synchronized(lock)
 					{
-						int target = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 						if (!opQueue.contains(ts) && !workers.get(target).inSessionLog(ts))
 						{
 							logger.trace("Constrained tuple "+ts+" not in op queue or session log "+target+"/"+downOpId);
@@ -304,11 +308,13 @@ public class Dispatcher implements IRoutingObserver {
 								}
 							}
 						}
+						lock.notifyAll();
 					}
 				}
 			}
 			
-			lock.notifyAll();
+			synchronized(lock) { lock.notifyAll(); }
+			logger.debug("Finished handling routing change, duration=" + ((System.currentTimeMillis() - tStart)/1000));
 		}
 	}
 	
@@ -817,6 +823,7 @@ public class Dispatcher implements IRoutingObserver {
 			boolean flushSuccess = owner.getOwner().getControlDispatcher().sendDownstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId), false);
 			if (!flushSuccess)
 			{
+				logger.warn("Failed to send control tuple, clearing routing ctrl.");
 				owner.getOperator().getRouter().update_highestWeight(new DownUpRCtrl(downId, -1.0, null));
 			}
 		}
@@ -843,9 +850,10 @@ public class Dispatcher implements IRoutingObserver {
 			//		trim output bufs & shared replay log
 			//		if aggressive purge
 			//			trim output queue
-			
+
 			synchronized(lock)
 			{
+				long tStart = System.currentTimeMillis();
 				logger.debug("Handling failure ctrl received from "+dsOpId+",cdfctrl="+combinedDownFctrl+ ", fctrl="+fctrl);
 				long oldLw = combinedDownFctrl.lw();
 				long oldAcksSize = combinedDownFctrl.acks().size();
@@ -872,7 +880,9 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				
 				lock.notifyAll();
+				logger.debug("Handled failure ctrl in duration(s)="+ ((System.currentTimeMillis() - tStart)/1000));
 			}
+			
 		}
 		
 		//Lock should be held

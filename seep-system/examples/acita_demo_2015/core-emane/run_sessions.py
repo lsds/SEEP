@@ -158,7 +158,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
-        services_str = "IPForward|%s"%params['net-routing']
+        services_str = "IPForward|SSH|%s"%params['net-routing']
 
 
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
@@ -208,6 +208,11 @@ def run_session(time_str, k, mob, exp_session, params):
         session.instantiate()
 
         chmod_dir(session.sessiondir)
+        for n in range(2,3+num_workers):
+            node_dir = '%s/n%d.conf'%(session.sessiondir,n)
+            chmod_dir('%s/var.run/sshd'%node_dir, 0655)
+            chmod_dir('%s/var.run.sshd'%node_dir, 0655)
+            os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
 
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n, range(2,3 + num_workers)))

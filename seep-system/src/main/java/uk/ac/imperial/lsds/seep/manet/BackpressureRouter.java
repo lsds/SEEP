@@ -106,14 +106,20 @@ public class BackpressureRouter implements IRouter {
 			logger.debug("BP router handling downup rctrl: "+ downUp);
 			weights.put(downUp.getOpId(), downUp.getWeight());
 			logger.debug("Backpressure router weights= "+weights);
-			if (downUp.getUnmatched() != null)
+			Set<Long> newUnmatched = downUp.getUnmatched();
+			if (newUnmatched != null)
 			{
 				//TODO: Tmp hack: Null here indicates a local update because
 				//an attempt to send a q length msg upstream failed - should
 				//clean it up to perhaps use a different method.
-				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
-				newConstraints = new HashMap<Integer, Set<Long>>();
-				newConstraints.put(downUp.getOpId(), downUp.getUnmatched());
+				Set<Long> oldUnmatched = unmatched.get(downUp.getOpId());
+				boolean changed = unmatchedChanged(oldUnmatched, newUnmatched);
+				unmatched.put(downUp.getOpId(), newUnmatched);
+				
+				if (changed) {
+					newConstraints = new HashMap<Integer, Set<Long>>();
+					newConstraints.put(downUp.getOpId(), newUnmatched);
+				}
 			}
 			else
 			{
@@ -165,5 +171,18 @@ public class BackpressureRouter implements IRouter {
 			logger.debug("Constrained in queue: "+constraints);
 			return constraints;
 		}
+	}
+	
+	private boolean unmatchedChanged(Set<Long> oldUnmatched, Set<Long> newUnmatched)
+	{
+		if (oldUnmatched == null && newUnmatched == null) { return true;}		
+		if (oldUnmatched == null || newUnmatched == null) { return false;}
+		if (oldUnmatched.size() != newUnmatched.size()) { return false; }
+		
+		for (Long unmatched : oldUnmatched) 
+		{ 
+			if (!newUnmatched.contains(unmatched)) { return false; }
+		}
+		return true;
 	}
 }
