@@ -183,15 +183,17 @@ public class PerformanceMonitor implements Runnable {
 				
 				MBpsGenerated = (bytesGenerated - _bytesGenerated) / _1MB_ / Dt;
 				
-				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps output %10.3f MB/s [%s] ", 
+				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps output %10.3f MB/s [%s] heap %10d", 
 						id, 
 						/* (bytes - _bytes), */
 						/* ((TaskDispatcher) dispatcher).mean(), ((TaskDispatcher) dispatcher).stdv(), */
-						MBps, ((MBps / 1024.) * 8.), MBpsGenerated, monitor);
+						MBps, ((MBps / 1024.) * 8.), MBpsGenerated, monitor, dispatcher.getWindowStateSize());
 			}
 			_bytes = bytes;
 			
 			_bytesGenerated = bytesGenerated;
+			
+			// ((TaskDispatcher) dispatcher).getHandler().windowHeap.dump();
 			
 			return s;
 		}

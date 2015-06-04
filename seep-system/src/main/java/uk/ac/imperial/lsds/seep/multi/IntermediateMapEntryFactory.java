@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class IntermediateMapEntryFactory {
@@ -14,12 +15,12 @@ public class IntermediateMapEntryFactory {
 	public static AtomicLong count;
 	
 	@SuppressWarnings("unchecked")
-	public static ArrayDeque<IntermediateMapEntry> [] pool = 
-		(ArrayDeque<IntermediateMapEntry> []) new ArrayDeque [N];
+	public static ConcurrentLinkedQueue<IntermediateMapEntry> [] pool = 
+		(ConcurrentLinkedQueue<IntermediateMapEntry> []) new ConcurrentLinkedQueue [N];
 	
 	static {
 		for (int n = 0; n < N; n++) {
-			pool[n] = new ArrayDeque<IntermediateMapEntry>();
+			pool[n] = new ConcurrentLinkedQueue<IntermediateMapEntry>();
 			int i = _pool_size;
 			while (i-- > 0) {
 				IntermediateMapEntry e = new IntermediateMapEntry(-1, -1, -1, null);

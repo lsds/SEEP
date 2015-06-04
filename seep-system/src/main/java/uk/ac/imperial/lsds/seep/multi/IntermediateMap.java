@@ -180,4 +180,67 @@ public class IntermediateMap {
 		
 		return String.format("[IntermediateMap %03d pool-%02d %6d items] ", autoIndex, id, size);
 	}
+	
+	public void intersect (IntermediateMap x) {
+		
+		if (x == null)
+			return;
+		
+		if (this.size == 0) {
+			
+			for (int k = 0; k < x.content.length; k++) {
+				
+				IntermediateMapEntry e = x.content[k];
+			
+				while (e != null) {
+					
+					put (e.key, e.value, e.count);
+					
+					e = e.next;
+				}
+			}
+			
+		} else {
+		
+			for (int k = 0; k < content.length; k++) {
+			
+				IntermediateMapEntry e = content[k];
+			
+				while (e != null) {
+				
+					IntermediateMapEntry otherentry = x.get(e.key);
+					e.value += otherentry.value;
+					e.count += otherentry.count; /* TODO: Add count properly */
+				
+					e = e.next;
+				}
+			}
+		}
+	}
+
+	public void populate(IQueryBuffer outBuffer) {
+		
+		for (int k = 0; k < content.length; k++) {
+			
+			IntermediateMapEntry e = content[k];
+			
+			while (e != null) {
+				
+				outBuffer.putLong(1);
+				outBuffer.putInt(e.key);
+				// if (aggregationType == AggregationType.AVG) {
+				//	outBuffer.putFloat(e.value / (float) e.count);
+				// }
+				// else {
+					outBuffer.putFloat(e.value);
+				// }
+				e = e.next;
+			}
+		}
+	}
+
+	public void clear(IntermediateMap currentWindow) {
+		
+		
+	}
 }

@@ -175,9 +175,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		 long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 		  
-		  System.out.println(
-			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
-					parent.getId(), taskid, p, q, free, t_, _t, size)); 
+//		  System.out.println(
+//			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
+//					parent.getId(), taskid, p, q, free, t_, _t, size)); 
 		 
 		if (q <= p) {
 			q += buffer.capacity();
@@ -569,6 +569,15 @@ public class TaskDispatcher implements ITaskDispatcher {
 	public long getBytesGenerated() {
 		
 		return handler.getTotalOutputBytes();
+	}
+	
+	public int getWindowStateSize () {
+		
+		return handler.windowHeap.next;
+	}
+	
+	public ResultHandler getHandler () {
+		return handler;
 	}
 	
 	public double mean () {

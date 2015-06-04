@@ -234,7 +234,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		long currPane = (idx) / windowBatch.getWindowDefinition().getSlide();
 		long nextPane;
 		
-		System.out.println("[DBG] current pane is " + currPane);
+		// System.out.println("[DBG] current pane is " + currPane);
 		
 		while (idx < end) {
 			
@@ -306,6 +306,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 				currPane = nextPane;
 			}
 		}
+		// System.out.println("[DBG] Task " + windowBatch.getTaskId() + " finished");
 	}
 	
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {

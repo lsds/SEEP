@@ -18,6 +18,9 @@ public class WindowState {
 	private Lock heapLock;
 	int next;
 	
+	long lastInserted = -1;
+	long lastRemoved  = -1;
+	
 	public WindowState (long start, long end) {
 		
 		this.start = start;
@@ -60,13 +63,25 @@ public class WindowState {
 	public void add (long start, long end, IntermediateMap result) {
 		
 		heapLock.lock();
+		
+		// System.out.println(String.format("[DBG] [ADD] thread %3d got the heap lock", Thread.currentThread().getId()));
+		
+		lastInserted = start;
+		
 		int child = next++;
 		heap[child].lock();
 		heap[child].init(start, end, result);
+		
+		// System.out.println(heap[child]);
+		
 		heapLock.unlock();
 		heap[child].unlock();
 		
 		while (child > root) {
+			
+			/* Loop */
+			// System.out.println("Looping...");
+			
 			int parent = child / 2;
 			heap[parent].lock();
 			heap[child].lock();
@@ -101,27 +116,56 @@ public class WindowState {
 		}
 	}
 	
-	public IntermediateMap remove () {
+	public IntermediateMap remove (long index) {
+		
+		// System.out.println("Remove..." + index);
 		
 		heapLock.lock();
+		// System.out.println(String.format("[DBG] [DEL] thread %3d got the heap lock", Thread.currentThread().getId()));
+		// lastRemoved = heap[root].start;
+		if (heap[root].start != index) {
+			heapLock.unlock();
+			return null;
+		}
+		if (next <= 1) {
+			heapLock.unlock();
+			return null;
+		}
+		
 		int bottom = --next;
-		heap[bottom].lock();
 		heap[root].lock();
+		heap[bottom].lock();
+		
 		heapLock.unlock();
 		
 		IntermediateMap result = heap[root].result;
+		
 		heap[root].status = WindowStateStatus.EMPTY;
 		heap[root].owner = noone;
+		
 		swap(heap[bottom], heap[root]);
+		// heap[root].start = heap[bottom].start;
+		// heap[root].end = heap[bottom].start;
+		// heap[root].result = heap[bottom].result;
+		// heap[root].status = heap[bottom].status;
+		// heap[root].owner = heap[bottom].owner;
+		
 		heap[bottom].unlock();
+		
 		if (heap[root].status == WindowStateStatus.EMPTY) {
 			heap[root].unlock();
 			return result;
 		}
 		
+		// int len = next;
+		/*************/
+		heap[root].status = WindowStateStatus.AVAILABLE;
+		/**************/
 		int child = 0;
 		int parent = root;
+		
 		while (parent < heap.length / 2) {
+			
 			int left = parent * 2;
 			int right = (parent * 2) + 1;
 			heap[left].lock();
@@ -138,8 +182,10 @@ public class WindowState {
 				heap[left].unlock();
 				child = right;
 			}
-			if (heap[child].start < heap[parent].start) {
+			if (heap[child].start < heap[parent].start && heap[child].status != WindowStateStatus.EMPTY) {
+				
 				swap (heap[parent], heap[child]);
+				
 				heap[parent].unlock();
 				parent = child;
 			} else {
@@ -151,7 +197,23 @@ public class WindowState {
 		return result;
 	}
 	
+	public long getLastInserted () {
+		return lastInserted;
+	}
+	
+	public long getLastRemoved () {
+		return lastRemoved;
+	}
+	
 	public boolean isComplete () {
 		return completed;
+	}
+	
+	public synchronized void dump () {
+		heapLock.lock();
+		for (int i = 1; i < next; i++) {
+			System.out.println(String.format("[HEAP] [%3d] %s", i, heap[i]));
+		}
+		heapLock.unlock();
 	}
 }

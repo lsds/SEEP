@@ -35,4 +35,17 @@ public class WindowChunk {
 	public boolean amOwner () {
 		return (Thread.currentThread().getId() == owner);
 	}
+	
+	public String toString() {
+		
+		String s;
+		if (status == WindowStateStatus.AVAILABLE) {
+			s = "AVAIL";
+		} else if (status == WindowStateStatus.EMPTY) {
+			s = "EMPTY";
+		} else {
+			s = "BUSY";
+		}
+		return String.format("[owner %3d] [start %10d] [status %5s]", owner, start, s);
+	}
 }

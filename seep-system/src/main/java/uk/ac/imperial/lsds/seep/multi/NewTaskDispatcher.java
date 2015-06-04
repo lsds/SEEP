@@ -374,5 +374,11 @@ public class NewTaskDispatcher implements ITaskDispatcher {
 		
 		return this.handler.getTotalOutputBytes();
 	}
+
+	@Override
+	public int getWindowStateSize() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }
 
