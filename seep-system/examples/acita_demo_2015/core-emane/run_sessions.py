@@ -165,11 +165,14 @@ def run_session(time_str, k, mob, exp_session, params):
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1))
 
         workers = []
-        num_workers = 2 + (k * params['h'])
+        num_workers = get_num_workers(k, params)
+        """
+        Num_workers = 2 + (k * params['h'])
         if params['query'] == 'join':
             if params['h'] != 1: raise Exception('Only support query of height 1 for join')
             num_workers += 1
         else: raise Exception("Temp.")
+        """
 
         placements = get_initial_placements(params['placement'], mob)
         for i in range(3,3+num_workers):
@@ -226,6 +229,19 @@ def run_session(time_str, k, mob, exp_session, params):
         print 'Shutting down session.'
         if session:
             session.shutdown()
+
+def get_num_workers(k, params):
+    q = params['query']
+    if q == 'chain' or q == 'fr' or q == 'join': 
+        num_workers = 2 + (k * params['h'])
+        if params['query'] == 'join':
+            if params['h'] != 1: raise Exception('Only support query of height 1 for join')
+            num_workers += 1
+        else: raise Exception("Temp.")
+    elif q == 'debs_gc_13':
+        if k > 2: raise Exception('Only support replication factors <= 2 for debs_gc_13') 
+        num_workers = '23'
+        num_extra_workers = 8 * k
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
 #def create_node(i, session, services_str, wlan, pos, ip_offset=8):
