@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IntermediateTupleFactory {
 	
-	private static int N = 2 * Runtime.getRuntime().availableProcessors();
+	private static int N = 2 * Runtime.getRuntime().availableProcessors() + 1;
 	
 	private static int _pool_size = 1;
 	

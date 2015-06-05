@@ -89,4 +89,8 @@ public class IntermediateTupleSet {
 		while (remove() != null)
 			;
 	}
+
+	public IntermediateTuple getElement(int i) {
+		return heap[i].tuple;
+	}
 }

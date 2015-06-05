@@ -55,6 +55,12 @@ public class PaneSet {
 		}
 	}
 	
+	public long tryFirst () {
+		if (next <= 1)
+			return -1;
+		return heap[root].key;
+	}
+	
 	public Pane remove () {
 		
 		if (next <= root)
@@ -89,5 +95,9 @@ public class PaneSet {
 	public void clear () {
 		while (remove() != null)
 			;
+	}
+	
+	public Pane getElement(int i) {
+		return heap[i].pane;
 	}
 }

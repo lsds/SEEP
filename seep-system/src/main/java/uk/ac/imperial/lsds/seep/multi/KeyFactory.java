@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class KeyFactory {
 	
-	private static final int N = 2 * Runtime.getRuntime().availableProcessors();
+	private static final int N = 2 * Runtime.getRuntime().availableProcessors() + 1;
 	
 	private static final int M = KeyType.numTypes();
 	

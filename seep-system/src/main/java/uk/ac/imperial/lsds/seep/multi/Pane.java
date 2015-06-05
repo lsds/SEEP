@@ -208,6 +208,11 @@ public class Pane {
 		PaneFactory.free(this);
 	}
 	
+	public IntermediateTupleSet getPaneSet () {
+		
+		return heap;
+	}
+	
 	public String toString () {
 		
 		return String.format("[pane %010d pool-%02d %6d items] ", paneIndex, id, size);
