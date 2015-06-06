@@ -35,8 +35,10 @@ public class ResultHandler {
 	public int wraps = 0;
 	
 	private long totalOutputBytes = 0L;
+
+	public TheWindowHeap theWindowHeap;
 	
-	WindowState windowHeap;
+	public TheCurrentWindow theCurrentWindow;
 
 	public ResultHandler (IQueryBuffer freeBuffer, SubQuery query) {
 		
@@ -57,7 +59,10 @@ public class ResultHandler {
 		next = 0;
 		semaphore = new Semaphore(1, false);
 		
-		windowHeap = new WindowState (0, 0);
+		theWindowHeap = new TheWindowHeap ();
+		
+		theCurrentWindow = new TheCurrentWindow(query.getWindowDefinition());
+		System.out.println(theCurrentWindow);
 	}
 	
 	public long getTotalOutputBytes () {

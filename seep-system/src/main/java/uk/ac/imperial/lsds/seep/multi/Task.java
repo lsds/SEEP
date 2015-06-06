@@ -118,9 +118,24 @@ public class Task extends ITask {
 	}
 
 	@Override
-	public void outputPaneResult(long paneId, IntermediateMap paneResult) {
+	public void outputPaneResult(long paneId, Pane paneResult) {
 		
 		/* */
-		handler.windowHeap.add(paneId, 0, paneResult);
+		// handler.theWindowHeap.add(paneResult);
+		
+		// handler.theWindowHeap.dump();
+		// if (paneId % 1024 == 0)
+		// try {
+			
+			// handler.semaphore.acquire();
+			// System.out.println("[DBG] free " + paneResult.getFreeIndex());
+		handler.freeBuffer.free(paneResult.getFreeIndex());
+			// handler.semaphore.release();
+			
+		// } catch (InterruptedException e) {
+		//	e.printStackTrace();
+		//}
+		
+		paneResult.release();
 	}
 }

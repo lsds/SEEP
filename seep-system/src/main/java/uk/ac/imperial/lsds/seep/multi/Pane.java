@@ -4,7 +4,7 @@ package uk.ac.imperial.lsds.seep.multi;
 public class Pane {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	private static final int CONTENT_SIZE = 1024;
+	private static final int CONTENT_SIZE = 1;
 	
 	IntermediateTuple [] contents;
 	

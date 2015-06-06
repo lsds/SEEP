@@ -167,7 +167,7 @@ public class TheWindowHeap {
 		return key;
 	}
 	
-	public Pane remove (long index) {
+	public Pane remove () {
 		
 		theLock.lock();
 		
@@ -237,7 +237,7 @@ public class TheWindowHeap {
 	public synchronized void dump () {
 		theLock.lock();
 		for (int i = 1; i < next; i++) {
-			System.out.println(String.format("[DBG] [HEAP] [%04d] %s", i, heap[i]));
+			System.out.println(String.format("[DBG] [TheWindowHeap] [%04d] %s", i, heap[i]));
 		}
 		theLock.unlock();
 	}

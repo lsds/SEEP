@@ -5,5 +5,5 @@ public interface IWindowAPI {
 
 	public void outputWindowBatchResult(int streamID, WindowBatch windowBatchResult);
 	
-	public void outputPaneResult (long id, IntermediateMap paneResult);
+	public void outputPaneResult (long id, Pane p);
 }

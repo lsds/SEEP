@@ -18,6 +18,11 @@ public class PaneSet {
 			this.key = pane.getPaneIndex();
 			this.pane = pane;
 		}
+		
+		public String toString() {
+			
+			return String.format("[index %10d] [code %10d]", key, this.hashCode());
+		}
 	}
 	
 	private static final int root = 1;
@@ -63,12 +68,13 @@ public class PaneSet {
 	
 	public Pane remove () {
 		
-		if (next <= root)
-			return null;
+//		if (next <= root)
+//			return null;
 		
 		int bottom = --next;
 		Pane pane = heap[root].pane;
-		heap[root] = heap[bottom];
+		/* heap[root] = heap[bottom]; */
+		swap(heap[root], heap[bottom]);
 		if (bottom == root)
 			return pane;
 		
@@ -99,5 +105,11 @@ public class PaneSet {
 	
 	public Pane getElement(int i) {
 		return heap[i].pane;
+	}
+	
+	public synchronized void dump () {
+		for (int i = 1; i < next; i++) {
+			System.out.println(String.format("[DBG] [TheCurrentWindow.PaneSet] [%04d] %s", i, heap[i]));
+		}
 	}
 }

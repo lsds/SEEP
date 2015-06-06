@@ -9,7 +9,7 @@ public class TheCurrentWindow {
 	private static final int CONTENT_SIZE = 1024;
 	private static final int PANESET_SIZE = 1024;
 	
-	private static final int pid = 2 * Runtime.getRuntime().availableProcessors() + 1;
+	private static final int pid = 2 * Runtime.getRuntime().availableProcessors();
 	IntermediateTuple [] contents;
 	
 	PaneSet heap;
@@ -52,7 +52,7 @@ public class TheCurrentWindow {
 		windowIndex = 0;
 		
 		firstPaneIndex = 0;
-		lastPaneIndex = windowDefinition.numberOfPanes();
+		lastPaneIndex = windowDefinition.numberOfPanes() - 1;
 	}
 	
 	private void put (long timestamp, Key key, float value, int count) {
@@ -190,9 +190,13 @@ public class TheCurrentWindow {
 	public long getFirstPaneIndex() {
 		return this.firstPaneIndex;
 	}
-
+	
 	public long getLastPaneIndex() {
 		return this.lastPaneIndex;
+	}
+	
+	public long getWindowIndex() {
+		return this.windowIndex;
 	}
 	
 	/* Slide the window to the right */
@@ -219,6 +223,8 @@ public class TheCurrentWindow {
 				combine(_t, t);
 			} else {
 				/* Create a new entry in the table */
+				/* Debug */
+				// System.out.println("New key");
 				key = KeyFactory.newInstance(t.key.type, pid);
 				key.buffer.put(t.key.buffer);
 				put(t.timestamp, key, t.value, t.count);
@@ -234,7 +240,7 @@ public class TheCurrentWindow {
 		 */
 	}
 	
-	public void closeAndShiftLeft () {
+	public void closeAndShiftLeft (ResultHandler handler) {
 		
 		/* Materialise intermediate tuple to a result stream */
 		
@@ -253,7 +259,7 @@ public class TheCurrentWindow {
 		IntermediateTupleSet theSet;
 		IntermediateTuple t, _t;
 		Key key;
-		while (paneIdx < nextWindowStartsAt) {
+		while (paneIdx >= 0 && paneIdx < nextWindowStartsAt) {
 			
 			p = heap.remove();
 			/* Iterate over the items in `pane` and remove them from the window */
@@ -276,11 +282,14 @@ public class TheCurrentWindow {
 			
 			/* Free input data based on `p`'s free pointer */
 			
-			// TODO
+			/* System.out.println(String.format("[DBG] [TheCurrentWindow] free pane %2d free pointer %10d", 
+					p.getPaneIndex(), p.getFreeIndex()));
+			*/
+			
+			handler.freeBuffer.free (p.getFreeIndex());
 			
 			/* Free pane */
 			p.release();
-			
 			
 			paneIdx = heap.tryFirst();
 		}
@@ -288,6 +297,8 @@ public class TheCurrentWindow {
 		/* Set new window pointers */
 		firstPaneIndex = nextWindowStartsAt;
 		lastPaneIndex += windowDefinition.panesPerSlide();
+		
+		windowIndex ++;
 	}
 	
 	private void combine(IntermediateTuple _t, IntermediateTuple t) {
@@ -324,6 +335,7 @@ public class TheCurrentWindow {
 	
 	public String toString () {
 		
-		return String.format("[window pool-%02d %010d %6d items] ", pid, windowIndex, size);
+		return String.format("[window pool-%02d id %010d %6d items starts at %3d ends at %3d] ", 
+				pid, windowIndex, size, firstPaneIndex, lastPaneIndex);
 	}
 }

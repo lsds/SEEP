@@ -1,7 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
 import java.util.concurrent.atomic.AtomicLong;
 
 public class KeyFactory {

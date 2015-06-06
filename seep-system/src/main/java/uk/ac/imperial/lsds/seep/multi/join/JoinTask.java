@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 import uk.ac.imperial.lsds.seep.multi.ITask;
 import uk.ac.imperial.lsds.seep.multi.IntermediateMap;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
+import uk.ac.imperial.lsds.seep.multi.Pane;
 import uk.ac.imperial.lsds.seep.multi.ResultCollector;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
@@ -118,8 +119,8 @@ public class JoinTask extends ITask {
 	}
 
 	@Override
-	public void outputPaneResult(long id, IntermediateMap paneResult) {
-		// TODO Auto-generated method stub
+	public void outputPaneResult(long id, Pane p) {
 		
+		throw new UnsupportedOperationException("A join task cannot output panes");
 	}
 }

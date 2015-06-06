@@ -170,8 +170,13 @@ public class TestAggregationType {
 			b.putLong(0, packed);
 		}
 		try {
+			int iterations = 0;
 			while (true) {
 				operator.processData (data);
+				
+				if (++iterations >= 1000000)
+					break;
+				
 				if (Utils.LATENCY_ON)
 					b.putLong(0, Utils.pack((long) ((System.nanoTime() - timestampReference) / 1000L), 1));
 			}
@@ -179,5 +184,6 @@ public class TestAggregationType {
 			e.printStackTrace(); 
 			System.exit(1);
 		}
+		System.out.println("Bye.");
 	}
 }
