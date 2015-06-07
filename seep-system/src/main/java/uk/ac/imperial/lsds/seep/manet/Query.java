@@ -40,13 +40,13 @@ public class Query implements Serializable
 	public Query(TreeMap logicalTopology, TreeMap log2phys, Set parallelized, Map<Integer, InetAddress> phys2addr)
 	{
 		this.logicalTopology = logicalTopology;
+		logger.info("Number of logical nodes:"+logicalTopology.size());
 		this.log2phys = log2phys;
 		this.parallelized = parallelized;
 		this.phys2log = computePhys2log();
 		this.phys2addr = phys2addr;
 		this.addr2phys = computeAddr2phys();
 
-		logger.info("Number of logical nodes:"+logicalTopology.size());
 		logger.info("Logical topology: "+ logicalTopologyToString());
 		logger.info("Log2phys: "+ log2physToString());
 		logger.info("Parallelizable: "+ parallelized);
@@ -65,7 +65,12 @@ public class Query implements Serializable
 			while(physIter.hasNext())
 			{
 				Integer physicalId = (Integer)physIter.next();
-				if (result.containsKey(physicalId)) throw new RuntimeException("Logic error.");
+				if (result.containsKey(physicalId))
+				{
+					logger.error("computePhys2log: result="+result+",physId="+physicalId);
+					throw new RuntimeException("Logic error.");
+				
+				}
 				result.put(physicalId, logicalId);
 			}
 		}
@@ -75,6 +80,7 @@ public class Query implements Serializable
 
 	private Map<InetAddress, Set<Integer>> computeAddr2phys()
 	{
+		logger.info("Computing addr2phys");
 		Map<InetAddress, Set<Integer>> result = new HashMap<>();
 		for (Integer id : phys2addr.keySet())
 		{
@@ -177,7 +183,7 @@ public class Query implements Serializable
 				result.addAll(getPhysicalNodeIds(logicalId));
 			}
 		}
-		if (result.isEmpty()) { throw new RuntimeException("Logic error."); }
+		if (result.isEmpty()) { throw new RuntimeException("Logic error, getSourcePhysicalIds."); }
 		return result;
 	}
 
@@ -334,7 +340,7 @@ public class Query implements Serializable
 			Integer logicalId = (Integer)iter.next();
 			if (isSink(logicalId)) { return logicalId; }
 		}
-		throw new RuntimeException("Logic error.");
+		throw new RuntimeException("Logic error, getSinkLogicalId");
 	}
 
 	private List getLogicalNodeSubPlans(Integer logicalId)

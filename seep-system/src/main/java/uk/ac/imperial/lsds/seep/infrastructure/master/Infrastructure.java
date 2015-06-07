@@ -344,7 +344,7 @@ public class Infrastructure {
 	public void localMapPhysicalOperatorsToNodes(){		
 		Map<Integer, String> constraints = readMappingConstraints();
 		  		
-		// First assign any constrained mappings.
+		// First assign any operators in constrained mappings to the corresponding node (ip addr, port).
 		for(Entry<Integer, Operator> e : queryToNodesMapping.entrySet()){
 			int opId = e.getValue().getOperatorId();
 			Node a = null;
@@ -372,7 +372,7 @@ public class Infrastructure {
 			}
 		}
 		
-		//	Finally get the mapping for this query and assign remaining ops to real nodes
+		//	Finally, for operators with no pre-existing constraints, assign them to one of the remaining nodes.
 		for(Entry<Integer, Operator> e : queryToNodesMapping.entrySet()){
 			int opId = e.getValue().getOperatorId();
 			Node a = null;
@@ -394,6 +394,7 @@ public class Infrastructure {
 				
 		LOG.info("-> All operators have been mapped");
 		Query q = buildMeanderQuery();
+		LOG.info("Finished building meander query.");
 		for(Operator o : queryToNodesMapping.values()){
 			LOG.info("OP: {}, CONF: {}", o.getOperatorId(), o);
 			o.getOpContext().setMeanderQuery(q);
@@ -460,13 +461,18 @@ public class Infrastructure {
 	
 	private Query buildMeanderQuery()
 	{
-		if (GLOBALS.valueFor("queryType").equals("chain"))
+		String queryType = GLOBALS.valueFor("queryType"); 
+		if (queryType.equals("chain"))
 		{
 			return buildChainQuery();
 		}
-		else if (GLOBALS.valueFor("queryType").equals("join"))
+		else if (queryType.equals("join"))
 		{
 			return buildJoinQuery();
+		}
+		else if (queryType.equals("nameAssist"))
+		{
+			return buildNameAssist();
 		}
 		else { throw new RuntimeException("Logic error."); }
 	}
@@ -591,6 +597,88 @@ public class Infrastructure {
 			current = next;
 		}
 
+		return new Query(logicalTopology, log2phys, phys2addr);	
+	}
+	
+	private Query buildNameAssist()
+	{
+		//TreeMap logicalTopology
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		
+		//TODO: Tmp hack for join query with 2 sources, 1 join op (potentially replicated) and the sink.
+		logicalTopology.put(1, new Integer[]{}); //video src
+		logicalTopology.put(2, new Integer[]{}); //audio src
+		logicalTopology.put(3, new Integer[]{1}); //face detector
+		logicalTopology.put(4, new Integer[]{2}); //speech recognizer
+		logicalTopology.put(5, new Integer[]{3,4}); //join
+		logicalTopology.put(6, new Integer[]{5}); //snk
+		
+		//TreeMap log2Phys
+		//use SEEP operator ids here for now. Will need to also store operator id <-> (node_addr, port) mapping
+		//Will probably need to change the getCost function in LinkCostHandler too to look up the costs by node_addr
+		// (from the op id).
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<>();
+
+		if (src.size() != 2) { throw new RuntimeException("TODO"); }
+
+		Set<Integer> allPhys = new HashSet<>();
+		Operator currentSrc = null;
+		//Walk the ops, starting at the source.
+		for (int i = 0; i < 2; i++)
+		{
+			Set<Integer> srcPhys = new HashSet<>();
+			currentSrc = src.get(i);
+			srcPhys.add(currentSrc.getOperatorId());
+			allPhys.add(currentSrc.getOperatorId());
+			log2phys.put(i+1, srcPhys);
+			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(srcPhys));
+		}
+		
+		ArrayList<Operator> currentOps = new ArrayList<>(src);
+		ArrayList<Operator> nextOps = new ArrayList<>();
+		
+		int currentOpsIndex = 0;
+		int nextLogicalId = currentOps.size() + 1;
+		
+		//Breadth first traverse logical ops and record all physical replicas.		
+		while (currentOpsIndex < currentOps.size() || !nextOps.isEmpty())
+		{
+			if (currentOpsIndex >= currentOps.size())
+			{
+				currentOps = nextOps;
+				nextOps = new ArrayList<>();
+				currentOpsIndex = 0;
+			}
+			
+			Operator current = currentOps.get(currentOpsIndex);
+			int numDownstreams = current.getOpContext().getDownstreamSize();
+			
+			LOG.info("Number of downstreams for op "+ current.getOperatorId()+"= "+numDownstreams);
+			Set<Integer> downstreamPhys = new HashSet<>();
+			
+			Operator next = null;
+			for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)
+			{
+				if (allPhys.contains(downstreamPlacement.opID())) { break; }
+				downstreamPhys.add(downstreamPlacement.opID());
+				next = getOp(downstreamPlacement.opID());
+				phys2addr.put(downstreamPlacement.opID(), next.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+				LOG.info("Added op "+ current.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+			}
+			
+			if (next != null)
+			{
+				log2phys.put(nextLogicalId, downstreamPhys);
+				nextOps.add(next);
+				allPhys.addAll(downstreamPhys);
+				nextLogicalId++;
+			}
+			
+			currentOpsIndex++;
+		}
+		LOG.debug("Creating new meander query, logTop="+logicalTopology+", log2phys="+log2phys+",phys2addr="+phys2addr);
 		return new Query(logicalTopology, log2phys, phys2addr);	
 	}
 

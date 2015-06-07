@@ -57,7 +57,11 @@ mkdir -p $resultsDir
 # Copy all log files to results dir
 for d in n*.conf 
 do
-	cp $d/log/*.log $resultsDir	
+	cp $d/log1/*.log $resultsDir	
+    if [ -e "$d/log2" ]
+    then
+        cp $d/log2/*.log $resultsDir	
+    fi
 	cp $d/mappingRecordOut.txt $resultsDir	
 	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
 done
@@ -166,6 +170,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         workers = []
         num_workers = get_num_workers(k, params)
+        print 'num_workers=', num_workers
         """
         Num_workers = 2 + (k * params['h'])
         if params['query'] == 'join':
@@ -175,16 +180,17 @@ def run_session(time_str, k, mob, exp_session, params):
         """
 
         placements = get_initial_placements(params['placement'], mob)
-        for i in range(3,3+num_workers):
+        for i in range(3,3+len(num_workers)):
             if placements:
                 pos = placements[i]
             else:
                 pos = gen_grid_position(i, params['nodes']-1)
-            workers.append(create_node(i, session, "%s|MeanderWorker"%services_str, wlan1, pos)) 
+            worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
+            workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
        
         routers = []
         # Create auxiliary 'router' nodes if any left
-        for i in range(3+num_workers, 2+params['nodes']):
+        for i in range(3+len(num_workers), 2+params['nodes']):
             if placements:
                 pos = placements[i]
             else:
@@ -211,14 +217,15 @@ def run_session(time_str, k, mob, exp_session, params):
         session.instantiate()
 
         chmod_dir(session.sessiondir)
-        for n in range(2,3+num_workers):
+        for n in range(2,3+len(num_workers)):
             node_dir = '%s/n%d.conf'%(session.sessiondir,n)
             chmod_dir('%s/var.run/sshd'%node_dir, 0655)
             chmod_dir('%s/var.run.sshd'%node_dir, 0655)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
 
         print 'Waiting for a meander worker/master to terminate'
-        watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n, range(2,3 + num_workers)))
+        watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
+            range(2,3 + sum(num_workers))))
         #time.sleep(30)
         print 'Collecting data'
         session.datacollect()
@@ -233,15 +240,32 @@ def run_session(time_str, k, mob, exp_session, params):
 def get_num_workers(k, params):
     q = params['query']
     if q == 'chain' or q == 'fr' or q == 'join': 
-        num_workers = 2 + (k * params['h'])
+        num_workers = [1] * (2 + (k * params['h']))
         if params['query'] == 'join':
             if params['h'] != 1: raise Exception('Only support query of height 1 for join')
-            num_workers += 1
+            num_workers.append(1)
         else: raise Exception("Temp.")
-    elif q == 'debs_gc_13':
-        if k > 2: raise Exception('Only support replication factors <= 2 for debs_gc_13') 
-        num_workers = '23'
-        num_extra_workers = 8 * k
+    elif q == 'debsGC13':
+        if k > 2 or h > 1: raise Exception('Only support replication factors <= 2 for debs_gc_13') 
+        num_workers = [1] * 23 
+        if h > 0:
+            num_workers[1] += 1 #A RB
+            num_workers[5] += 1 #A RM
+            num_workers[9] += 1 #A RF
+            num_workers[12] += 1 #B RB
+            num_workers[16] += 1 #B RM
+            num_workers[20] += 1 #B RF
+            if k > 1:
+                num_workers[2] += 1 #A RCB
+                num_workers[6] += 1 #A RCM
+                num_workers[10] += 1 #A LF
+                num_workers[13] += 1 #B RCB
+                num_workers[17] += 1 #B RCM
+                num_workers[21] += 1 #B LF
+
+    elif q == 'nameAssist':
+        num_workers = [2]+([1]*(4+ (k*3))) 
+    return num_workers
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
 #def create_node(i, session, services_str, wlan, pos, ip_offset=8):

@@ -14,6 +14,8 @@ import java.util.HashMap;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
+import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
+import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
@@ -37,13 +39,22 @@ public class Base implements QueryComposer{
 		REPLICATION_FACTOR = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 		CHAIN_LENGTH = Integer.parseInt(GLOBALS.valueFor("chainLength"));
 		
-		if (GLOBALS.valueFor("queryType").equals("chain"))
+		String queryType = GLOBALS.valueFor("queryType");
+		if (queryType.equals("chain"))
 		{
 			return composeChain();
 		}
-		else if (GLOBALS.valueFor("queryType").equals("join"))
+		else if (queryType.equals("join"))
 		{
 			return composeJoin();
+		}
+		else if (queryType.equals("nameAssist"))
+		{
+			return composeNameAssist();
+		}
+		else if (queryType.equals("debsGC13"))
+		{
+			throw new RuntimeException("TODO");
 		}
 		else { throw new RuntimeException("Logic error - unknown query type: "+GLOBALS.valueFor("queryType")); }
 	}
@@ -123,6 +134,62 @@ public class Base implements QueryComposer{
 		
 		if (REPLICATION_FACTOR > 1)
 		{
+			QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
+		}
+		
+		return QueryBuilder.build();
+	}
+	
+	private QueryPlan composeNameAssist()
+	{
+		// Declare Source 1
+		ArrayList<String> src1Fields = new ArrayList<String>();
+		src1Fields.add("tupleId");
+		src1Fields.add("value");
+		Connectable src1 = QueryBuilder.newStatelessSource(new Source(), -1, src1Fields);
+		
+		// Declare Source 2
+		ArrayList<String> src2Fields = new ArrayList<String>();
+		src2Fields.add("tupleId");
+		src2Fields.add("value");
+		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, src2Fields);
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		
+		//Declare SpeechRecognizer
+		ArrayList<String> speechFields = new ArrayList<String>();
+		speechFields.add("tupleId");
+		speechFields.add("value");
+		Connectable speechRec = QueryBuilder.newStatelessOperator(new SpeechRecognizer(), 0, speechFields);
+		
+		//Declare FaceDetector
+		ArrayList<String> faceFields = new ArrayList<String>();
+		faceFields.add("tupleId");
+		faceFields.add("value");
+		Connectable faceDet = QueryBuilder.newStatelessOperator(new FaceDetector(), 1, faceFields);
+		
+		
+		//Declare join
+		ArrayList<String> jFields = new ArrayList<String>();
+		jFields.add("tupleId");
+		jFields.add("value");
+		Connectable j = QueryBuilder.newStatelessOperator(new Join(), 2, jFields);
+		
+		src1.connectTo(faceDet, true, 0);
+		src2.connectTo(speechRec, true, 1);
+		speechRec.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 2);
+		faceDet.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 3);
+		j.connectTo(snk, true, 4);
+		
+		if (REPLICATION_FACTOR > 1)
+		{
+			if (REPLICATION_FACTOR > 2) { throw new RuntimeException("TODO"); }
+			QueryBuilder.scaleOut(speechRec.getOperatorId(), REPLICATION_FACTOR);
+			QueryBuilder.scaleOut(faceDet.getOperatorId(), REPLICATION_FACTOR);
 			QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
 		}
 		

@@ -8,9 +8,11 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,10 +113,13 @@ public class NetRateMonitor implements Runnable {
 		{
 			String[] splits = route.split(" ");
 			//TODO: Convert hostname/ip addresses to op ids (or vice versa)
-			Integer upOpId = getUpOpId(splits[1]);
-			if (upOpId != null)
+			Set<Integer> hostUpOpIds = getHostUpOpIds(splits[1]);
+			if (hostUpOpIds != null)
 			{
-				upstreamCosts.put(upOpId, Double.parseDouble(splits[2]));
+				for (Integer upOpId : hostUpOpIds)
+				{
+					upstreamCosts.put(upOpId, Double.parseDouble(splits[2]));
+				}
 			}
 		}
 		
@@ -122,12 +127,13 @@ public class NetRateMonitor implements Runnable {
 		return upstreamCosts;
 	}
 	
-	private Integer getUpOpId(String hostname)
+	//Find ids of all operators/workers located on a particular host.
+	private Set<Integer> getHostUpOpIds(String hostname)
 	{
+		Set<Integer> result = new HashSet<>();
 		for (Integer upOpId : upOpIds.keySet())
 		{
 			String upOpHostname = upOpIds.get(upOpId);
-			//TODO: What if two workers on the same node!
 			String upOpIp = null;
 			try
 			{
@@ -139,9 +145,9 @@ public class NetRateMonitor implements Runnable {
 			}
 			if (upOpHostname.equals(hostname) || upOpIp != null && upOpIp.equals(hostname))
 			{
-				return upOpId;
+				result.add(upOpId);
 			}
 		}
-		return null;
+		return result;
 	}
 }
