@@ -33,7 +33,7 @@ public class AudioSource implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(AudioSource.class);
 	private static String[] audioFiles = new String[]{"my_name_is_dan.wav", "my_name_is_peter.wav", "my_name_is_theodoros.wav", "my_name_is_bob.wav", "testing_one_two.wav"};
-	private static final String audioDir = "/tmp/audio";
+	private static final String audioDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/resources";
 	private int audioIndex = 0;
 	
 	public void setUp() {
