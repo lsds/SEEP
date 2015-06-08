@@ -10,9 +10,12 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -29,14 +32,33 @@ public class AudioSource implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(AudioSource.class);
+	private static String[] audioFiles = new String[]{"my_name_is_dan.wav", "my_name_is_peter.wav", "my_name_is_theodoros.wav", "my_name_is_bob.wav", "testing_one_two.wav"};
+	private static final String audioDir = "/tmp/audio";
+	private int audioIndex = 0;
 	
 	public void setUp() {
 		System.out.println("Setting up AUDIO_SOURCE operator with id="+api.getOperatorId());
+		
 	}
 
 	public void processData(DataTuple dt) {
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
+	
+		byte[] audioClip = null;
+		try
+		{
+			audioClip = Files.readAllBytes(Paths.get(audioDir + "/" + audioFiles[audioIndex]));
+			audioIndex++;
+		} catch(IOException e)
+		{
+			logger.error("Problem opening audio file: ", e);
+			System.exit(1);
+		}
+		//InputStream stream = new FileInputStream(audio);
+		//InputStream stream = GLOBALS.class
+				//.getResourceAsStream("10001-90210-01803.wav");
+				//.getResourceAsStream("/edu/cmu/sphinx/demo/aligner/10001-90210-01803.wav");
 		
 		long tupleId = 0;
 		
@@ -48,14 +70,14 @@ public class AudioSource implements StatelessOperator {
 		long interFrameDelay = 1000 / frameRate;
 		logger.info("Source inter-frame delay="+interFrameDelay);
 		
-		final String value = generateFrame(tupleSizeChars);
+		//final String value = generateFrame(tupleSizeChars);
 		final long tStart = System.currentTimeMillis();
 		logger.info("Source sending started at t="+tStart);
 		logger.info("Source sending started at t="+tStart);
 		logger.info("Source sending started at t="+tStart);
 		while(sendIndefinitely || tupleId < numTuples){
 			
-			DataTuple output = data.newTuple(tupleId, value);
+			DataTuple output = data.newTuple(tupleId, audioClip);
 			output.getPayload().timestamp = tupleId;
 			if (tupleId % 1000 == 0)
 			{
