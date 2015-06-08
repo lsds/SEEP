@@ -19,6 +19,8 @@ import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
+import uk.ac.imperial.lsds.seep.acita15.operators.AudioSource;
+import uk.ac.imperial.lsds.seep.acita15.operators.VideoSource;
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
 import uk.ac.imperial.lsds.seep.api.QueryComposer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
@@ -152,7 +154,7 @@ public class Base implements QueryComposer{
 		ArrayList<String> src2Fields = new ArrayList<String>();
 		src2Fields.add("tupleId");
 		src2Fields.add("value");
-		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, src2Fields);
+		Connectable src2 = QueryBuilder.newStatelessSource(new AudioSource(), -3, src2Fields);
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();

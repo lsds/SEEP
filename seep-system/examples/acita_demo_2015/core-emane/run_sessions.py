@@ -221,6 +221,8 @@ def run_session(time_str, k, mob, exp_session, params):
             node_dir = '%s/n%d.conf'%(session.sessiondir,n)
             chmod_dir('%s/var.run/sshd'%node_dir, 0655)
             chmod_dir('%s/var.run.sshd'%node_dir, 0655)
+            while not os.path.exists('%s/etc.ssh/ssh_host_rsa_key'%node_dir):
+                time.sleep(1)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
 
         print 'Waiting for a meander worker/master to terminate'
@@ -264,7 +266,7 @@ def get_num_workers(k, params):
                 num_workers[21] += 1 #B LF
 
     elif q == 'nameAssist':
-        num_workers = [2]+([1]*(4+ (k*3))) 
+        num_workers = [2]+([1]*(1+ (k*3))) 
     return num_workers
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
