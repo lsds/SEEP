@@ -35,8 +35,8 @@ public class SpeechRecognizer implements StatelessOperator{
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(SpeechRecognizer.class);
 	private int processed = 0;
-	//private Object configuration = null;
-	//private Object recognizer = null;
+	private Object configurationObj = null;
+	//private Object recognizerObj = null;
 	//private Configuration configuration = null;
 	//private StreamSpeechRecognizer recognizer = null;
 	
@@ -47,6 +47,7 @@ public class SpeechRecognizer implements StatelessOperator{
 		
 		//String value = data.getString("value") + "," + api.getOperatorId();
 		long tRecStart = System.currentTimeMillis();
+		/*
 		Configuration configuration = new Configuration();
 		// Load model from the jar
 		configuration
@@ -57,13 +58,14 @@ public class SpeechRecognizer implements StatelessOperator{
 		.setDictionaryPath("resource:/edu/cmu/sphinx/models/en-us/cmudict-en-us.dict");
 		configuration
 		.setLanguageModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us.lm.dmp");
-		
+		*/
 		String outputValue = "";
+		
 		
 		try
 		{
 			StreamSpeechRecognizer recognizer = new StreamSpeechRecognizer(
-					configuration);
+					(Configuration)configurationObj);
 			//File audio = new File("/tmp/10001-90210-01803.wav");
 			//InputStream stream = new FileInputStream(audio);
 			InputStream stream = new ByteArrayInputStream(audioClip);
@@ -130,6 +132,17 @@ public class SpeechRecognizer implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up SPEECH RECOGNIZER operator with id="+api.getOperatorId());
+		Configuration configuration = new Configuration();
+		// Load model from the jar
+		configuration
+		.setAcousticModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us");
+		// You can also load model from folder
+		// configuration.setAcousticModelPath("file:en-us");
+		configuration
+		.setDictionaryPath("resource:/edu/cmu/sphinx/models/en-us/cmudict-en-us.dict");
+		configuration
+		.setLanguageModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us.lm.dmp");
+		configurationObj = configuration;
 	}
 
 }

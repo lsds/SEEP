@@ -10,8 +10,10 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -21,6 +23,14 @@ import java.util.Map;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+
+import edu.cmu.sphinx.api.Configuration;
+import edu.cmu.sphinx.api.SpeechResult;
+import edu.cmu.sphinx.api.StreamSpeechRecognizer;
+import edu.cmu.sphinx.decoder.adaptation.Stats;
+import edu.cmu.sphinx.decoder.adaptation.Transform;
+import edu.cmu.sphinx.result.WordResult;
+
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
@@ -45,16 +55,9 @@ public class AudioSource implements StatelessOperator {
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
 	
+		testSpeechRec(audioIndex);
+		
 		byte[] audioClip = null;
-		try
-		{
-			audioClip = Files.readAllBytes(Paths.get(audioDir + "/" + audioFiles[audioIndex]));
-			audioIndex++;
-		} catch(IOException e)
-		{
-			logger.error("Problem opening audio file: ", e);
-			System.exit(1);
-		}
 		//InputStream stream = new FileInputStream(audio);
 		//InputStream stream = GLOBALS.class
 				//.getResourceAsStream("10001-90210-01803.wav");
@@ -76,6 +79,15 @@ public class AudioSource implements StatelessOperator {
 		logger.info("Source sending started at t="+tStart);
 		logger.info("Source sending started at t="+tStart);
 		while(sendIndefinitely || tupleId < numTuples){
+			try
+			{
+				audioClip = Files.readAllBytes(Paths.get(audioDir + "/" + audioFiles[audioIndex]));
+				audioIndex = (audioIndex + 1) % audioFiles.length;
+			} catch(IOException e)
+			{
+				logger.error("Problem opening audio file: ", e);
+				System.exit(1);
+			}
 			
 			DataTuple output = data.newTuple(tupleId, audioClip);
 			output.getPayload().timestamp = tupleId;
@@ -112,13 +124,50 @@ public class AudioSource implements StatelessOperator {
 		
 	}
 	
-	private String generateFrame(int tupleSizeChars)
+	private void testSpeechRec(int audioIndex)
 	{
-		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < tupleSizeChars; i++)
+		Configuration configuration = new Configuration();
+		// Load model from the jar
+		configuration
+		.setAcousticModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us");
+		// You can also load model from folder
+		// configuration.setAcousticModelPath("file:en-us");
+		configuration
+		.setDictionaryPath("resource:/edu/cmu/sphinx/models/en-us/cmudict-en-us.dict");
+		configuration
+		.setLanguageModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us.lm.dmp");
+		
+		try
 		{
-			builder.append('x');
+			StreamSpeechRecognizer recognizer = new StreamSpeechRecognizer(
+					configuration);
+			File audio = new File(audioDir + "/" + audioFiles[audioIndex]);
+			InputStream stream = new FileInputStream(audio);
+			//InputStream stream = new ByteArrayInputStream(audioClip);
+					//.getResourceAsStream("/edu/cmu/sphinx/demo/aligner/10001-90210-01803.wav");
+					
+					
+			stream.skip(44);
+			// Simple recognition with generic model
+			recognizer.startRecognition(stream);
+			SpeechResult result;
+			while ((result = recognizer.getResult()) != null) {
+				System.out.format("Hypothesis: %s\n", result.getHypothesis());
+				System.out.println("List of recognized words and their times:");
+				for (WordResult r : result.getWords()) {
+					System.out.println(r);
+				}
+				System.out.println("Best 4 hypothesis:");
+				for (String s : result.getNbest(4))
+				{
+					System.out.println(s);
+				}
+			}
+			recognizer.stopRecognition();
+		} catch(IOException e) 
+		{
+			logger.error("Problem with speech recognition: ", e);
+			System.exit(1);
 		}
-		return builder.toString();
 	}
 }
