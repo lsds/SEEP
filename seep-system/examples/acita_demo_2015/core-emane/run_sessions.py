@@ -246,7 +246,6 @@ def get_num_workers(k, params):
         if params['query'] == 'join':
             if params['h'] != 1: raise Exception('Only support query of height 1 for join')
             num_workers.append(1)
-        else: raise Exception("Temp.")
     elif q == 'debsGC13':
         if k > 2 or h > 1: raise Exception('Only support replication factors <= 2 for debs_gc_13') 
         num_workers = [1] * 23 
