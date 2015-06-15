@@ -78,7 +78,7 @@ public class FaceDetector implements StatelessOperator{
 	}
 	
 	public void setUp() {
-		System.out.println("Setting up FACE DETECTOR operator with id="+api.getOperatorId());
+		System.out.println("Setting up FACE_DETECTOR operator with id="+api.getOperatorId());
 	}
 
 }

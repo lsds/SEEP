@@ -131,7 +131,7 @@ public class SpeechRecognizer implements StatelessOperator{
 	}
 	
 	public void setUp() {
-		System.out.println("Setting up SPEECH RECOGNIZER operator with id="+api.getOperatorId());
+		System.out.println("Setting up SPEECH_RECOGNIZER operator with id="+api.getOperatorId());
 		Configuration configuration = new Configuration();
 		// Load model from the jar
 		configuration
