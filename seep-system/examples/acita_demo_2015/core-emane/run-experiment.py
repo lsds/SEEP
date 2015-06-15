@@ -168,6 +168,7 @@ if __name__ == "__main__":
     parser.add_argument('--constraints', dest='constraints', default='', help='Initial mapping constraints for each session ')
     parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
     parser.add_argument('--user', dest='user', default='dan', help='Non-root user to start processes with')
+    parser.add_argument('--duration', dest='duration', default='100000', help='Mobility params duration')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -189,6 +190,7 @@ if __name__ == "__main__":
     params['constraints']=args.constraints
     params['placement']=args.placement
     params['user']=args.user
+    params['duration']=args.duration
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

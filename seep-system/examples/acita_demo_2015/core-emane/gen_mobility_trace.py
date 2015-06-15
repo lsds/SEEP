@@ -26,7 +26,7 @@ def gen_trace(session_dir, session_id, params):
     bm_raw_params = ['bm', '-f', trace_file, 'RandomWaypoint', 
             '-n', str(params['nodes']-1), 
             '-R', str(session_id),
-            '-d', str(params.get('d', default_duration)), 
+            '-d', str(params.get('duration', default_duration)), 
             '-x', str(params.get('x', default_x)), 
             '-y', str(params.get('y', default_y)),
             '-h', str(params.get('h', default_speed + 1.0)),
