@@ -25,11 +25,15 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
     record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
     record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
 
-    for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
-		'latency_vs_mobility', 'tput_vs_mobility_stddev', 
-		'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
-		'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
-        plot(p, time_str, script_dir, data_dir)
+    if len(mobilities) > 1:
+        for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
+            'latency_vs_mobility', 'tput_vs_mobility_stddev', 
+            'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
+            'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    else:
+        plot('m1_tput_vs_netsize_stddev', time_str, script_dir, data_dir)
+        plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
 
     chmod_dir('%s/%s'%(data_dir, time_str))
 
@@ -56,6 +60,7 @@ def run_experiment(ks, mobilities, sessions, params, time_str, data_dir):
 
 def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffix, get_metric_fn):
     raw_vals = {}
+    all_loglines = []
     for k in ks:
         raw_vals[k] = {}
         for (i_mob, mob) in enumerate(mobilities):
@@ -68,10 +73,19 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffi
             with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_mob_plotdata:
                 if writeHeader: 
                     rx_vs_mob_plotdata.write('#k=%d\n'%k)
-                    rx_vs_mob_plotdata.write('#mob mean ? stdDev max min med lq uq\n')
-                rx_vs_mob_plotdata.write('%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, 1, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal))
+                    rx_vs_mob_plotdata.write('#mob mean k stdDev max min med lq uq\n')
+                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                rx_vs_mob_plotdata.write(logline)
+                all_loglines.append(logline)
+
+    # Write a joint log file too in case we want to plot a histogram
+    with open('%s/%s/all-k-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rx_vs_mob_plotdata:
+        for line in all_loglines:
+           all_rx_vs_mob_plotdata.write(line) 
+
 	#TODO Do relative weights with raw_vals.
     if 1 in ks:
+        all_loglines = []
         relative_raw_vals = compute_relative_raw_vals(raw_vals)
         for k in ks:
             for (i_mob, mob) in enumerate(mobilities):
@@ -83,9 +97,15 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffi
                 with open('%s/%s/%dk-rel-%s.data'%(data_dir,time_str,k,metric_suffix), 'w' if writeHeader else 'a') as rel_rx_vs_mob_plotdata:	
                     if writeHeader:
                         rel_rx_vs_mob_plotdata.write('#k=%d\n'%k)
-                        rel_rx_vs_mob_plotdata.write('#mob mean ? stdDev max min med lq uq\n')
-                    rel_rx_vs_mob_plotdata.write('%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, 1, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal))
-	
+                        rel_rx_vs_mob_plotdata.write('#mob mean k stdDev max min med lq uq\n')
+                    logline =  '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                    rel_rx_vs_mob_plotdata.write(logline)
+                    all_loglines.append(logline)
+
+        # Write a joint log file too in case we want to plot a histogram
+        with open('%s/%s/all-k-rel-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rel_rx_vs_mob_plotdata:
+            for line in all_loglines:
+               all_rel_rx_vs_mob_plotdata.write(line) 
 
 def get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn):
     metrics = {} 
@@ -121,9 +141,10 @@ def get_latency(logdir):
 def plot(p, time_str, script_dir, data_dir):
     exp_dir = '%s/%s'%(data_dir,time_str)
     print exp_dir
+    tmpl_dir = '%s/vldb/config'%script_dir
+    tmpl_file = '%s/%s.plt'%(tmpl_dir,p)
     plot_proc = subprocess.Popen(['gnuplot', '-e',
-'timestr=\'%s\';outputdir=\'%s\''%(time_str,data_dir),
-script_dir+'/vldb/config/%s.plt'%p], cwd=exp_dir)
+'timestr=\'%s\';outputdir=\'%s\';tmpldir=\'%s\''%(time_str,data_dir,tmpl_dir), tmpl_file], cwd=exp_dir)
     plot_proc.wait()
 
 if __name__ == "__main__":
