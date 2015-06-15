@@ -329,9 +329,10 @@ def create_datacollect_hook(time_str, k, mob, exp_session):
 def watch_meander_services(sessiondir, node_names):
     while True:
         for name in node_names:
-            if os.path.exists("%s/%s.conf/worker.shutdown"%(sessiondir, name)) or os.path.exists("%s/%s.conf/master.shutdown"%(sessiondir, name)):
-                print 'Shutdown file exists for node %s - exiting'%name
-                return
+            for process in ['worker1', 'worker2', 'master']:
+                if os.path.exists("%s/%s.conf/%s.shutdown"%(sessiondir, name, process)):
+		    print 'Shutdown file exists for node %s (%s) - exiting'%(name, process)
+		    return
 
         time.sleep(0.5)
 
