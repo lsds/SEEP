@@ -1,4 +1,6 @@
-package uk.ac.imperial.lsds.seep.multi;
+package uk.ac.imperial.lsds.seep.multi.tmp;
+
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 
 
 public class IntermediateMap {

@@ -1,7 +1,11 @@
-package uk.ac.imperial.lsds.seep.multi;
+package uk.ac.imperial.lsds.seep.multi.tmp;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicIntegerArray;
+
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 
 public class NewResultHandler {
 

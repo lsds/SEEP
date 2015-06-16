@@ -347,11 +347,5 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		
 		return this.handler.getTotalOutputBytes();
 	}
-
-	@Override
-	public int getWindowStateSize() {
-		
-		return 0;
-	}
 }
 

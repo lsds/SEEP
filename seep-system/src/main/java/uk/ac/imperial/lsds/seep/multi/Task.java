@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
+import uk.ac.imperial.lsds.seep.multi.tmp.Pane;
+
 public class Task extends ITask {
 	
 	private SubQuery query;
@@ -77,7 +79,22 @@ public class Task extends ITask {
 //					this.batch.getLatencyMark(), 
 //					GPU);
 			
-			ResultCollector.aggregateAndFree (handler, _query, this.batch.getTaskId(), this.batch.getFreeOffset());
+			// ResultCollector.aggregateAndFree (handler, _query, this.batch.getTaskId(), this.batch.getFreeOffset());
+			
+			/*
+			ResultCollector.aggregatePartialWindowsAndFree(
+					handler, _query, 
+					null, null, null, 
+					this.batch.getTaskId(), 
+					this.batch.getFreeOffset(),
+					-1,
+					GPU);
+			*/
+			
+			handler.resultAggregator.add(this.batch.getTaskId(), 
+					batch.getOpening(), batch.getClosing(), batch.getPending(), batch.getComplete(), 
+					this.batch.getFreeOffset());
+			
 		} else {
 //			NewResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
 //					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU, true);
@@ -85,7 +102,33 @@ public class Task extends ITask {
 //			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
 //					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
 			
-			ResultCollector.aggregateAndFree (handler, query, this.batch.getTaskId(), this.batch.getFreeOffset());
+			// ResultCollector.aggregateAndFree (handler, query, this.batch.getTaskId(), this.batch.getFreeOffset());
+			
+			/*
+			ResultHandler handler, 
+			SubQuery query, 
+			PartialWindowResults left,
+			PartialWindowResults center,
+			PartialWindowResults right,
+			int taskid, 
+			int freeOffset, 
+			int latencyMark, 
+			boolean GPU
+			*/
+			
+			/*
+			ResultCollector.aggregatePartialWindowsAndFree(
+					handler, _query, 
+					null, null, null, 
+					this.batch.getTaskId(), 
+					this.batch.getFreeOffset(),
+					-1,
+					GPU);
+			*/
+			
+			handler.resultAggregator.add(this.batch.getTaskId(), 
+					batch.getOpening(), batch.getClosing(), batch.getPending(), batch.getComplete(), 
+					this.batch.getFreeOffset());
 		}
 		
 		WindowBatchFactory.free(this.batch);
@@ -137,5 +180,14 @@ public class Task extends ITask {
 		//}
 		
 		paneResult.release();
+	}
+
+	@Override
+	public void outputWindowResult(long windowId, int freeIndex,
+			IQueryBuffer buffer) {
+		
+		// handler.windowResults.add (windowId, freeIndex, buffer);
+		
+		// ResultCollector.partialAggregateAndFree (handler, windowId, freeIndex, buffer);
 	}
 }

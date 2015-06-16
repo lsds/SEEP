@@ -2,14 +2,15 @@ package uk.ac.imperial.lsds.seep.multi.join;
 
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITask;
-import uk.ac.imperial.lsds.seep.multi.IntermediateMap;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
-import uk.ac.imperial.lsds.seep.multi.Pane;
 import uk.ac.imperial.lsds.seep.multi.ResultCollector;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowBatchFactory;
+import uk.ac.imperial.lsds.seep.multi.tmp.IntermediateMap;
+import uk.ac.imperial.lsds.seep.multi.tmp.Pane;
 
 public class JoinTask extends ITask {
 
@@ -122,5 +123,12 @@ public class JoinTask extends ITask {
 	public void outputPaneResult(long id, Pane p) {
 		
 		throw new UnsupportedOperationException("A join task cannot output panes");
+	}
+
+	@Override
+	public void outputWindowResult(long windowId, int freeIndex,
+			IQueryBuffer buffer) {
+		
+		throw new UnsupportedOperationException("A join task cannot output partial window results");
 	}
 }

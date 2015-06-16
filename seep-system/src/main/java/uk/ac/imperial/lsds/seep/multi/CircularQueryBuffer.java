@@ -194,8 +194,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		if (h.value <= wrapPoint) {
 			h.value = start.get();
 			if (h.value <= wrapPoint) {
-				// debug ();
-				// System.out.println("Waiting...");
+				/* debug (); */
 				return -1;
 			}
 		}
@@ -214,7 +213,9 @@ public class CircularQueryBuffer implements IQueryBuffer {
 				buffer.position(0);
 				buffer.put(values, size - index, left);
 			}
-			// System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", index, right, left));
+			/* System.out.println(String.format("[DBG] part I [%d, %d) part II [0, %d)", 
+			 * index, right, left));
+			 */
 		} else {
 			if (! this.isDirect)
 				System.arraycopy(values, 0, data, index, length);
@@ -229,7 +230,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 			wraps ++;
 		/* buffer.position(p); */
 		end.lazySet(_end + length);
-		// debug ("I");
+		/* debug (); */
 		return index;
 	}
 	
@@ -245,7 +246,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	
 	@Override
 	public int put (IQueryBuffer source, int offset, int length) {
-		return 0;
+		throw new UnsupportedOperationException("error: cannot copy part of a byte array into a circular buffer");
 	}
 	
 	@Override
@@ -269,13 +270,10 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		else
 			bytes = offset - index + 1;
 		
-//		System.out.println(String.format("[DBG] q %d %10d bytes processed; new start is %20d end is %20d", this.id, bytes, _start + bytes, end.get()));
-//		debug("F");
+		/* debug(); */
 		
-		// long x = 
 		bytesProcessed.addAndGet(bytes);
-		// if (x == size)
-		//	System.out.println(x + "\t" + size);
+		
 		/* Set new start pointer */
 		start.lazySet(_start + bytes);
 	}
@@ -296,15 +294,6 @@ public class CircularQueryBuffer implements IQueryBuffer {
 	
 	public long getWraps () {
 		return wraps;
-	}
-	
-	public void debug (String type) {
-		long head = start.get();
-		long tail = end.get();
-		int remaining = (tail < head) ? (int) (head - tail) : (size - (int) (tail - head));
-		System.out.println(
-		String.format("[DBG] %s start %20d [%20d] end %20d [%20d] %7d wraps %20d bytes remaining", 
-		type, normalise(head), head, normalise(tail), tail, getWraps(), remaining));
 	}
 	
 	public void debug () {

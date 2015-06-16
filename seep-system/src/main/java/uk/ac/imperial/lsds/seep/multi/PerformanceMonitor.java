@@ -112,16 +112,13 @@ public class PerformanceMonitor implements Runnable {
 			b.append(String.format(" t %6d", TaskFactory.count.get()));
 			b.append(String.format(" w %6d", WindowBatchFactory.count.get()));
 			b.append(String.format(" b %6d", UnboundedQueryBufferFactory.count.get()));
-			
+			/*
 			b.append(String.format(" panes   %6d", PaneFactory.count.get()));
 			b.append(String.format(" tuples  %6d",  IntermediateTupleFactory.count.get()));
 			b.append(String.format(" keys    %6d",  KeyFactory.count[0].get()));
-						
+			*/			
 			System.out.println(b);
-//			for (int i = 0; i < size; i++)
-//				((CircularQueryBuffer) (measurements[i].buffer)).debug();
-			
-			
+						
 			_time = time;
 			
 //			if (counter++ > 60) {
@@ -187,19 +184,17 @@ public class PerformanceMonitor implements Runnable {
 				
 				MBpsGenerated = (bytesGenerated - _bytesGenerated) / _1MB_ / Dt;
 				
-				s = String.format(" S%03d %10.3f MB/s %10.3f Gbps output %10.3f MB/s [%s] heap %10d window heap %10d", 
+				s = String.format(" S%03d %20d bytes %10.3f MB/s %10.3f Gbps output %10.3f MB/s [%s]", 
 						id, 
+						bytes,
 						/* (bytes - _bytes), */
 						/* ((TaskDispatcher) dispatcher).mean(), ((TaskDispatcher) dispatcher).stdv(), */
-						MBps, ((MBps / 1024.) * 8.), MBpsGenerated, monitor, dispatcher.getWindowStateSize(),
-						
-						((TaskDispatcher) dispatcher).getHandler().theCurrentWindow.heap.next);
+						MBps, ((MBps / 1024.) * 8.), MBpsGenerated, monitor);
 			}
+			
 			_bytes = bytes;
 			
 			_bytesGenerated = bytesGenerated;
-			
-			// ((TaskDispatcher) dispatcher).getHandler().theCurrentWindow.heap.next;
 			
 			return s;
 		}

@@ -13,6 +13,7 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.DummyKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MultiMicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
@@ -50,4 +51,6 @@ public interface OperatorVisitor {
 	public void visit(SimpleThetaJoinKernel simpleThetaJoinKernel);
 
 	public void visit(MultiMicroAggregation multiMicroAggregation);
+
+	public void visit(PartialMicroAggregation partialMicroAggregation);
 }

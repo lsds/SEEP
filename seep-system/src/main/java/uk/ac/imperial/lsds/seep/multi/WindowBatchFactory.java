@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class WindowBatchFactory {
 	
-	private static final int _pool_size = 0; // Utils.TASKS; /* Initial pool size */
+	private static final int _pool_size = 0; /* Initial pool size */
 	
 	public static AtomicLong count;
 	

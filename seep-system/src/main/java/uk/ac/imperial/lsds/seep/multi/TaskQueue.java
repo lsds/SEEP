@@ -167,8 +167,8 @@ public class TaskQueue {
 	}
 	
 	public ITask poll (int [][] policy, int p, int q) {
-		return getNextTask(policy, p, q);
-		// return getFirstTask(policy, p, q);
+		// return getNextTask(policy, p, q);
+		return getFirstTask(policy, p, q);
 	}
 	
 	public int size () {

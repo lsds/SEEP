@@ -1,9 +1,11 @@
-package uk.ac.imperial.lsds.seep.multi;
+package uk.ac.imperial.lsds.seep.multi.tmp;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class TheWindowHeap {
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+
+public class WindowResultHeap {
 	
 	private static enum Status {
 		
@@ -13,7 +15,8 @@ public class TheWindowHeap {
 	private static class WindowHeapNode {
 		
 		long key;
-		Pane pane;
+		IQueryBuffer buffer = null;
+		int free;
 		
 		Status status;
 		long owner;
@@ -26,10 +29,11 @@ public class TheWindowHeap {
 			lock = new ReentrantLock();
 		}
 		
-		public void init (Pane pane) {
+		public void init (long key, int free, IQueryBuffer buffer) {
 			
-			this.key = pane.getPaneIndex();
-			this.pane = pane;
+			this.key = key;
+			this.free = free;
+			this.buffer = buffer;
 			
 			status = Status.BUSY;
 			owner = Thread.currentThread().getId();
@@ -57,7 +61,7 @@ public class TheWindowHeap {
 			} else {
 				s = "BUSY";
 			}
-			return String.format("[owner %3d] [index %10d] [status %10s]", owner, key, s);
+			return String.format("[owner %3d] [index %10d] [free %10d] [status %10s]", owner, key, free, s);
 		}
 	}
 	
@@ -72,7 +76,7 @@ public class TheWindowHeap {
 	
 	int next;
 	
-	public TheWindowHeap () {
+	public WindowResultHeap () {
 		
 		theLock = new ReentrantLock ();
 		next = root;
@@ -86,26 +90,29 @@ public class TheWindowHeap {
 	
 	private void swap (WindowHeapNode x, WindowHeapNode y) {
 		long k   = x.key;
-		Pane p   = x.pane;
+		int  f   = x.free;
+		IQueryBuffer p = x.buffer;
 		Status s = x.status;
 		long o   = x.owner;
 		x.key    = y.key;
-		x.pane   = y.pane;
+		x.free   = y.free;
+		x.buffer = y.buffer;
 		x.status = y.status;
 		x.owner  = y.owner;
 		y.key    = k;
-		y.pane   = p;
+		y.free   = f;
+		y.buffer = p;
 		y.status = s;
 		y.owner  = o;
 	}
 	
-	public void add (Pane pane) {
+	public void add (long key, int freeIndex, IQueryBuffer buffer) {
 		
 		theLock.lock();
 		
 		int child = next++;
 		heap[child].lock();
-		heap[child].init(pane);
+		heap[child].init(key, freeIndex, buffer);
 		
 		theLock.unlock();
 		heap[child].unlock();
@@ -152,10 +159,10 @@ public class TheWindowHeap {
 		
 		theLock.lock();
 		
-		if (next <= 1) {
-			theLock.unlock();
-			return key;
-		}
+//		if (next <= 1) {
+//			theLock.unlock();
+//			return key;
+//		}
 		
 		heap[root].lock();
 		
@@ -167,14 +174,14 @@ public class TheWindowHeap {
 		return key;
 	}
 	
-	public Pane remove () {
+	public int remove () {
 		
 		theLock.lock();
 		
-		if (next <= 1) {
-			theLock.unlock();
-			return null;
-		}
+//		if (next <= 1) {
+//			theLock.unlock();
+//			return -1;
+//		}
 		
 		int bottom = --next;
 		heap[root].lock();
@@ -182,7 +189,8 @@ public class TheWindowHeap {
 		
 		theLock.unlock();
 		
-		Pane result = heap[root].pane;
+		/* IQueryBuffer result = heap[root].buffer; */
+		int freeIndex = heap[root].free;
 		
 		heap[root].status = Status.EMPTY;
 		heap[root].owner = noone;
@@ -193,7 +201,7 @@ public class TheWindowHeap {
 		
 		if (heap[root].status == Status.EMPTY) {
 			heap[root].unlock();
-			return result;
+			return freeIndex;
 		}
 		
 		heap[root].status = Status.AVAILABLE;
@@ -231,7 +239,7 @@ public class TheWindowHeap {
 			}
 		}
 		heap[parent].unlock();
-		return result;
+		return freeIndex;
 	}
 	
 	public synchronized void dump () {

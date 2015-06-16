@@ -36,6 +36,40 @@ public class WindowBatch {
 
 	private int latencyMark = 0;
 	
+	PartialWindowResults opening, closing, pending, complete;
+	
+	public PartialWindowResults getOpening() {
+		return opening;
+	}
+
+	public void setOpening(PartialWindowResults opening) {
+		this.opening = opening;
+	}
+
+	public PartialWindowResults getClosing() {
+		return closing;
+	}
+
+	public void setClosing(PartialWindowResults closing) {
+		this.closing = closing;
+	}
+
+	public PartialWindowResults getPending() {
+		return pending;
+	}
+
+	public void setPending(PartialWindowResults pending) {
+		this.pending = pending;
+	}
+
+	public PartialWindowResults getComplete() {
+		return complete;
+	}
+
+	public void setComplete(PartialWindowResults complete) {
+		this.complete = complete;
+	}
+
 	public WindowBatch () {
 		this(0, 0, 0, null, null, null, 0);
 	}

@@ -20,6 +20,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 
 public class TestAggregationType {
 	
@@ -103,12 +104,15 @@ public class TestAggregationType {
 		System.out.println(String.format("[DBG] %d windows", nwindows));
 		
 		TheGPU.getInstance().init(1);
-				
+		/*		
 		IMicroOperatorCode cpuAggCode = new MicroAggregation(
 				window,
 				aggregationType,
 				new FloatColumnReference(1)
 				);
+		*/
+		IMicroOperatorCode cpuAggCode = new PartialMicroAggregation(window);
+		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
 		ReductionKernel gpuAggCode = null;
@@ -132,7 +136,7 @@ public class TestAggregationType {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 128 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_  = 128 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = 128 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();

@@ -1,13 +1,16 @@
-package uk.ac.imperial.lsds.seep.multi;
+package uk.ac.imperial.lsds.seep.multi.tmp;
 
 import java.util.concurrent.locks.LockSupport;
 
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.ResultHandler;
+import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.join.JoinResultHandler;
 
 
 public class NewResultCollector {
 
-	public static void forwardAndFree (ResultHandler handler, SubQuery query, IQueryBuffer buffer, 
+	public static void forwardAndFree (NewResultHandler handler, SubQuery query, IQueryBuffer buffer, 
 			int taskid, int freeOffset, int latencyMark, boolean GPU, boolean isRStream) {
 		
 		if (taskid < 0) { /* Invalid task id */

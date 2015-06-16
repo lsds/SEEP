@@ -573,7 +573,8 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	public int getWindowStateSize () {
 		
-		return handler.theWindowHeap.next;
+		// return handler.windowResults.next;
+		return 0; // (int) handler.windowResults.size();
 	}
 	
 	public ResultHandler getHandler () {
