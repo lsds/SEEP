@@ -32,8 +32,8 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
             'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
             plot(p, time_str, script_dir, data_dir)
     else:
-        plot('m1_tput_vs_netsize_stddev', time_str, script_dir, data_dir)
         plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
 
     chmod_dir('%s/%s'%(data_dir, time_str))
 

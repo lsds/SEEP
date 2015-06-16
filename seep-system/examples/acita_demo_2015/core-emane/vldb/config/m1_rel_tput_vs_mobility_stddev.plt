@@ -2,7 +2,7 @@ load sprintf("%s/colours.plt",tmpldir)
 set terminal pdf 
 set output sprintf("%s/%s/rel_tput_vs_mobility_stddev.pdf",outputdir,timestr)
 
-set title "Relative throughput vs mobility for different replication factors (k)"
+set title "Relative throughput for different replication factors (k)"
 set xlabel "Replication factor (k)"
 set ylabel "Relative throughput"
 #set yrange [0:100]
@@ -21,7 +21,7 @@ set style data histograms
 set style histogram errorbars gap 10 lw 5 
 set style fill empty 
 set boxwidth 2 absolute
-set border linewidth 1.5
+#set border linewidth 1.5
 
 set key off 
 set bmargin 4
