@@ -25,9 +25,8 @@ public class RoutingController implements Runnable{
 
 	private final static Logger logger = LoggerFactory.getLogger(RoutingController.class);
 	private final static double INITIAL_WEIGHT = -1;
-	private final static long MAX_WEIGHT_DELAY = 10 * 1000;
+	private final long MAX_WEIGHT_DELAY;// = 1 * 1000;
 	private final CoreRE owner;
-	
 	private final Integer nodeId;
 	private final int numLogicalInputs;
 	private final Map<Integer, TreeMap<Integer, Integer>> upstreamQlens;
@@ -47,10 +46,15 @@ public class RoutingController implements Runnable{
 
 		this.upstreamNetRates = new HashMap<>();
 		this.upstreamQlens = new HashMap<>();
-		
+
 		if (numLogicalInputs > 1)
 		{
+			this.MAX_WEIGHT_DELAY = 10 * 1000;
 			weights.put(nodeId, INITIAL_WEIGHT);
+		}
+		else
+		{
+			this.MAX_WEIGHT_DELAY = 1 * 1000;
 		}
 		
 		for (int i = 0; i < numLogicalInputs; i++)
