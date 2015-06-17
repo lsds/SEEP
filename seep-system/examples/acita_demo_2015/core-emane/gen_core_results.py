@@ -16,6 +16,8 @@ def main(exp_dir):
     # Get sink logfilename
     sink_log = get_sink_logfile(exp_dir)
 
+    op_logs = get_processor_logfiles(exp_dir)
+
     # Get time src started sending
     with open(src_log, 'r') as src:
         # Get time src sent first message
@@ -34,6 +36,13 @@ def main(exp_dir):
         rx_latencies = sink_rx_latencies(sink)
         #if not rx_latencies: raise Exception("Could not find any latencies.")
 
+    op_tputs = {}
+    for op_log in op_logs:
+        with open(op_log, 'r') as f:
+            (op_id, tput) = processor_tput(f)
+            if op_id:
+                op_tputs[op_id] = tput 
+
     # Record the tput, k, w, query name etc.
     # Compute the mean tput
     if t_src_begin: 
@@ -50,6 +59,8 @@ def main(exp_dir):
     lstats = latency_stats(rx_latencies)
     record_stat('%s/latency.txt'%exp_dir, lstats)
 
+    record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
+
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
 
@@ -62,6 +73,14 @@ def get_logfile(exp_dir, type_fn):
         with open(filename, 'r') as f:
             if type_fn(f): return filename 
     return None
+
+def get_processor_logfiles(exp_dir):
+    files = glob.glob("%s/*worker*.log"%exp_dir)
+    filenames = []
+    for filename in files:
+        with open(filename, 'r') as f:
+            if is_processor_log(f): filenames.append(filename) 
+    return filenames 
 
 def mean_tput(t_start, t_end, bites):
     duration_s = float(t_end - t_start) / 1000.0

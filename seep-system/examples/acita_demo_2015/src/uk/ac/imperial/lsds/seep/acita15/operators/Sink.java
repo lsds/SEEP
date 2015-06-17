@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
 
 public class Sink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
@@ -27,10 +28,11 @@ public class Sink implements StatelessOperator {
 	private long tupleSize;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
-	private final Stats stats = new Stats();
+	private Stats stats = null;
 	
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
+		stats = new Stats(api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
@@ -81,38 +83,6 @@ public class Sink implements StatelessOperator {
 	}
 	
 	public void processData(List<DataTuple> arg0) {
-	}
-	private static class Stats implements Serializable {
-		private final long MIN_INTERVAL= 1 * 1000;
-		private long tStart = System.currentTimeMillis();
-		private long byteCount = 0;
-
-		//TODO: Initial tStart?
-		public String reset(long t)
-		{
-			long interval = t - tStart;
-			
-			double intervalTput = computeTput(byteCount, interval);
-			byteCount = 0;
-			tStart = t;
-			return "t="+t+",interval="+interval+",tput="+intervalTput;
-		}
-
-		public void add(long t, long bytes)
-		{
-			byteCount+=bytes;
-			if (t - tStart > MIN_INTERVAL)
-			{
-				logger.info(reset(t));
-			}
-		}
-
-		private double computeTput(long bytes, long interval)
-		{
-			if (interval < 0) { throw new RuntimeException("Logic error."); }
-			if (interval == 0) { return 0; }
-			return ((8 * bytes * 1000) / interval)/1024;
-		}
-
+		throw new RuntimeException("TODO");
 	}
 }

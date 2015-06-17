@@ -69,3 +69,17 @@ def sink_rx_tuples(f):
             results.append(match.groups())
 
     return results
+
+def processor_tput(f):
+    regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
+
+    last_cum_tput = 0
+    op_id = None
+    for line in f:
+        match = re.search(regex, line)
+        if match:
+            last_cum_tput = float(match.group(5))
+            op_id = match.group(2)
+
+    return (op_id, last_cum_tput)
+    

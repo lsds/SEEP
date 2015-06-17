@@ -17,12 +17,14 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
 
 public class Processor implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Processor.class);
 	private int processed = 0;
+	private Stats stats;
 	
 	public void processData(DataTuple data) {
 		long tupleId = data.getLong("tupleId");
@@ -42,6 +44,8 @@ public class Processor implements StatelessOperator{
 				recordTuple(outputTuple);
 			}
 		}
+		
+		stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -79,6 +83,7 @@ public class Processor implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up PROCESSOR operator with id="+api.getOperatorId());
+		stats = new Stats(api.getOperatorId());
 	}
 
 }
