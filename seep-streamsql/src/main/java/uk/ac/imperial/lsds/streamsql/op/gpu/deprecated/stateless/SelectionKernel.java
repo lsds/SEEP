@@ -169,8 +169,8 @@ public class SelectionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
 		windowBatch.getBuffer().appendBytesTo(
-				windowBatch.getBatchStartPointer(), 
-				windowBatch.getBatchEndPointer(), 
+				windowBatch.getBufferStartPointer(), 
+				windowBatch.getBufferEndPointer(), 
 				input);
 		
 		/* Execute `select & scan` kernel */

@@ -40,11 +40,11 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 	public void processData(WindowBatch firstWindowBatch,
 			WindowBatch secondWindowBatch, IWindowAPI api) {
 
-		int firstCurrentIndex  =  firstWindowBatch.getBatchStartPointer();
-		int secondCurrentIndex = secondWindowBatch.getBatchStartPointer();
+		int firstCurrentIndex  =  firstWindowBatch.getBufferStartPointer();
+		int secondCurrentIndex = secondWindowBatch.getBufferStartPointer();
 
-		int firstEndIndex  = firstWindowBatch.getBatchEndPointer();
-		int secondEndIndex = secondWindowBatch.getBatchEndPointer();
+		int firstEndIndex  = firstWindowBatch.getBufferEndPointer();
+		int secondEndIndex = secondWindowBatch.getBufferEndPointer();
 		
 		int firstCurrentWindowStart = firstCurrentIndex;
 		int firstCurrentWindowEnd   = firstCurrentIndex;
@@ -219,7 +219,7 @@ public class ThetaJoin implements IStreamSQLOperator, IMicroOperatorCode {
 						for (int i = firstCurrentWindowStart; i <= (firstCurrentWindowEnd - firstByteSizeOfInTuple); 
 								i += firstByteSizeOfInTuple) {
 							
-							int __tmpIndex = (i - firstWindowBatch.getBatchStartPointer()) / firstByteSizeOfInTuple;
+							int __tmpIndex = (i - firstWindowBatch.getBufferStartPointer()) / firstByteSizeOfInTuple;
 							__endPointersInSecond[__tmpIndex] = secondCurrentIndex;
 						}
 					}

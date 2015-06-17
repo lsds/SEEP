@@ -123,8 +123,8 @@ public class JNIProjectionKernel implements IStreamSQLOperator, IMicroOperatorCo
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		/* Copy input */
 		windowBatch.getBuffer().appendBytesTo(
-			windowBatch.getBatchStartPointer(), 
-			windowBatch.getBatchEndPointer(), 
+			windowBatch.getBufferStartPointer(), 
+			windowBatch.getBufferEndPointer(), 
 			input);
 		
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();

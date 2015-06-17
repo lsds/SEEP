@@ -232,7 +232,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		float paneValue = 0, newPaneValue = 0;
 		int paneTupleCount = 0;
 		
-		int dataPointer = windowBatch.getBatchStartPointer();
+		int dataPointer = windowBatch.getBufferStartPointer();
 		
 		boolean first = true;
 		

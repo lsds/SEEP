@@ -137,8 +137,8 @@ public class ProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		/* Copy input */
 		windowBatch.getBuffer().appendBytesTo(
-				windowBatch.getBatchStartPointer(), 
-				windowBatch.getBatchEndPointer(), 
+				windowBatch.getBufferStartPointer(), 
+				windowBatch.getBufferEndPointer(), 
 				input);
 		
 		/* Execute kernel */

@@ -225,12 +225,12 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		int currentMarkIdx = firstWindowBatch.getLatencyMark();
 		
 		byte [] firstInputArray = firstWindowBatch.getBuffer().array();
-		int firstStart = firstWindowBatch.getBatchStartPointer();
-		int firstEnd   = firstWindowBatch.getBatchEndPointer();
+		int firstStart = firstWindowBatch.getBufferStartPointer();
+		int firstEnd   = firstWindowBatch.getBufferEndPointer();
 		
 		byte [] secondInputArray = secondWindowBatch.getBuffer().array();
-		int secondStart = secondWindowBatch.getBatchStartPointer();
-		int secondEnd   = secondWindowBatch.getBatchEndPointer();
+		int secondStart = secondWindowBatch.getBufferStartPointer();
+		int secondEnd   = secondWindowBatch.getBufferEndPointer();
 		
 		int __leftTuples  = ( firstEnd -  firstStart)/ leftInputSchema.getByteSizeOfTuple();
 		int __rightTuples = (secondEnd - secondStart)/rightInputSchema.getByteSizeOfTuple();
@@ -368,11 +368,11 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private void __computePointers(WindowBatch batch1, WindowBatch batch2) {
 		
-		int currentIndex1 = batch1.getBatchStartPointer();
-		int currentIndex2 = batch2.getBatchStartPointer();
+		int currentIndex1 = batch1.getBufferStartPointer();
+		int currentIndex2 = batch2.getBufferStartPointer();
 
-		int endIndex1 = batch1.getBatchEndPointer();
-		int endIndex2 = batch2.getBatchEndPointer();
+		int endIndex1 = batch1.getBufferEndPointer();
+		int endIndex2 = batch2.getBufferEndPointer();
 		
 		int currentWindowStart1 = currentIndex1;
 		int currentWindowStart2 = currentIndex2;
@@ -476,7 +476,7 @@ public class ThetaJoinKernel implements IStreamSQLOperator, IMicroOperatorCode {
 			} else { /* Move in second batch! */
 				
 				for (int i = currentWindowStart1; i <= (currentWindowEnd1-tupleSize1); i += tupleSize1) {
-					int __tmpIndex = (i - batch1.getBatchStartPointer()) / tupleSize1;
+					int __tmpIndex = (i - batch1.getBufferStartPointer()) / tupleSize1;
 					d.putInt(__tmpIndex * 4, currentIndex2);
 				}
 				

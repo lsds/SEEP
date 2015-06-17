@@ -10,13 +10,15 @@ public class PartialWindowResults {
 	
 	boolean empty;
 	
+	int size;
+	
 	public PartialWindowResults (int pid) {
 		
 		this.pid = pid;
 		
 		this.buffer = null;
 		this.complete = false;
-		this.empty = true;
+		this.size = 0;
 	}
 	
 	public IQueryBuffer getBuffer() {
@@ -28,7 +30,7 @@ public class PartialWindowResults {
 	}
 	
 	public boolean isEmpty () {
-		return empty;
+		return (this.size == 0);
 	}
 	
 	public void release() {

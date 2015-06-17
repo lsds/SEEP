@@ -156,7 +156,7 @@ public class Projection implements IStreamSQLOperator, IMicroOperatorCode {
 //			}
 //		}
 		
-		for (int p = windowBatch.getBatchStartPointer(); p < windowBatch.getBatchEndPointer(); p += byteSizeOfTuple) {
+		for (int p = windowBatch.getBufferStartPointer(); p < windowBatch.getBufferEndPointer(); p += byteSizeOfTuple) {
 			for (int i = 0; i < expressions.length; i++) {
 				expressions[i].appendByteResult(inBuffer, schema, p, outBuffer);
 			}

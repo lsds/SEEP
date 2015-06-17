@@ -36,8 +36,6 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
-		// processDataPerPane (windowBatch, api);
-		
 		processPartialWindows (windowBatch, api);
 	}
 	
@@ -49,20 +47,67 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		int workerId = ThreadMap.getInstance().get(Thread.currentThread().getId());
 		
 		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
-		// PartialWindowResults pending  = new PartialWindowResults();
+		PartialWindowResults pending  = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
 		
-		// windowBatch.setPending (pending);
-		windowBatch.setPending  (null);
+		/* Iterate over the window sets */
 		
-		if (p == 0)
-			windowBatch.setClosing (null);
-		else
+		/* 1. Compute windows that close */
+		
+		// for each tuple
+		// // store tuple in memory
+		// // compute pane id
+		// // compute window id that closes at pane id
+		// // put tuple in window id buffer
+		// // compute window id that opens at pane id
+		// // put tuple in window id buffer
+		// // if batch has pending windows
+		// // // for each pending window id
+		// // // // store tuple in pending window buffer
+		// // 
+		
+		/* 2. Compute windows that are pending (if any) */
+		
+		/* 3. Compute complete windows (if there are no pending windows). */
+		
+		/* For every window that closes, there may be a complete window. */
+		
+		/* 4. Compute opening windows */
+		
+		/* For every window that closes, there is one window opening.
+		 * If the opening window is not complete, then process it. */
+		
+		/* */
+		
+		/* At the end of processing, set window batch accordingly */
+		if (closing != null)
 			windowBatch.setClosing (closing);
-			
-		windowBatch.setComplete (complete);
-		windowBatch.setOpening  ( opening);
+		else {
+			windowBatch.setClosing(null);
+			closing.release();
+		}
+		
+		if (pending != null)
+			windowBatch.setPending (pending);
+		else {
+			windowBatch.setPending(null);
+			pending.release();
+		}
+		
+		if (complete != null)
+			windowBatch.setComplete (complete);
+		else {
+			windowBatch.setComplete(null);
+			complete.release();
+		}
+		
+		if (opening != null)
+			windowBatch.setOpening (opening);
+		else {
+			windowBatch.setOpening(null);
+			opening.release();
+		}
 		
 		if (debug)
 			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 

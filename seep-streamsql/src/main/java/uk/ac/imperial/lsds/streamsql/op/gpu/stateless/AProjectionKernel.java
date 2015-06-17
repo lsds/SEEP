@@ -137,8 +137,8 @@ public class AProjectionKernel implements IStreamSQLOperator, IMicroOperatorCode
 		
 		/* Set input */
 		byte [] inputArray = windowBatch.getBuffer().array();
-		int start = windowBatch.getBatchStartPointer();
-		int end   = windowBatch.getBatchEndPointer();
+		int start = windowBatch.getBufferStartPointer();
+		int end   = windowBatch.getBufferEndPointer();
 		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		

@@ -339,8 +339,8 @@ public class LRBUDFGPU implements IMicroOperatorCode {
 		
 		/* Set input */
 		byte [] inputArray = windowBatch.getBuffer().array();
-		int start = windowBatch.normalise(windowBatch.getBatchStartPointer());
-		int end   = windowBatch.normalise(windowBatch.getBatchEndPointer());
+		int start = windowBatch.normalise(windowBatch.getBufferStartPointer());
+		int end   = windowBatch.normalise(windowBatch.getBufferEndPointer());
 		
 		if (end > windowBatch.getBuffer().capacity()) {
 			System.err.println(String.format("warning: batch end pointer (%d) is greater than its buffer size (%d)", 

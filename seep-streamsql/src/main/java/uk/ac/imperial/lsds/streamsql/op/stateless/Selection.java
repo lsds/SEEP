@@ -106,7 +106,7 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 //			}
 //		}
 		
-		for (int p = windowBatch.getBatchStartPointer(); p < windowBatch.getBatchEndPointer(); p += byteSizeOfTuple) {
+		for (int p = windowBatch.getBufferStartPointer(); p < windowBatch.getBufferEndPointer(); p += byteSizeOfTuple) {
 			if (selectivity)
 				invoked ++;
 			if (this.predicate.satisfied(inBuffer, schema, p)) {

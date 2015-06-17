@@ -12,6 +12,8 @@ public class WindowBatch {
 	
 	private int batchSize;
 	
+	private int numWindowsInBatch;
+	
 	private IQueryBuffer buffer;
 	private WindowDefinition windowDefinition;
 	private ITupleSchema schema;
@@ -19,8 +21,11 @@ public class WindowBatch {
 	private int taskId;
 	private int freeOffset;
 	
-	private int batchStartPointer;
-	private int batchEndPointer;
+	private int bufferStartPointer;
+	private int bufferEndPointer;
+	
+	private long batchStartPointer;
+	private long batchEndPointer;
 	
 	private int [] windowStartPointers;
 	private int [] windowEndPointers;
@@ -31,45 +36,13 @@ public class WindowBatch {
 	private long batchStartTime;
 	private long batchEndTime;
 	
-	private int prevStartPointer;
-	private int prevEndPointer;
+	private int prevWindowStartPointer;
+	private int prevWindowEndPointer;
 
 	private int latencyMark = 0;
 	
 	PartialWindowResults opening, closing, pending, complete;
 	
-	public PartialWindowResults getOpening() {
-		return opening;
-	}
-
-	public void setOpening(PartialWindowResults opening) {
-		this.opening = opening;
-	}
-
-	public PartialWindowResults getClosing() {
-		return closing;
-	}
-
-	public void setClosing(PartialWindowResults closing) {
-		this.closing = closing;
-	}
-
-	public PartialWindowResults getPending() {
-		return pending;
-	}
-
-	public void setPending(PartialWindowResults pending) {
-		this.pending = pending;
-	}
-
-	public PartialWindowResults getComplete() {
-		return complete;
-	}
-
-	public void setComplete(PartialWindowResults complete) {
-		this.complete = complete;
-	}
-
 	public WindowBatch () {
 		this(0, 0, 0, null, null, null, 0);
 	}
@@ -83,6 +56,8 @@ public class WindowBatch {
                         int latencyMark) {
 		
 		this.batchSize = batchSize;
+		this.numWindowsInBatch = -1; /* Unknown */
+		
 		this.taskId = taskId;
 		this.freeOffset = freeOffset;
 		this.buffer = buffer;
@@ -90,6 +65,9 @@ public class WindowBatch {
 		this.schema = schema;
 		
 		this.latencyMark = latencyMark;
+		
+		this.bufferStartPointer = -1;
+		this.bufferEndPointer = -1;
 		
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
@@ -102,8 +80,13 @@ public class WindowBatch {
 		this.batchStartTime = -1;
 		this.batchEndTime = -1;
 		
-		this.prevStartPointer = -1;
-		this.prevEndPointer = -1;
+		this.prevWindowStartPointer = -1;
+		this.prevWindowEndPointer = -1;
+		
+		this.closing = null;
+		this.pending = null;
+		this.complete = null;
+		this.opening = null;
 	}
 	
 	public void set (int batchSize, 
@@ -121,6 +104,9 @@ public class WindowBatch {
 		this.windowDefinition = windowDefinition;
 		this.schema = schema;
 		
+		this.bufferStartPointer = -1;
+		this.bufferEndPointer = -1;
+		
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
@@ -131,8 +117,13 @@ public class WindowBatch {
 		
 		this.latencyMark = latencyMark;
 		
-		this.prevStartPointer = -1;
-		this.prevEndPointer = -1;
+		this.prevWindowStartPointer = -1;
+		this.prevWindowEndPointer = -1;
+		
+		this.closing = null;
+		this.pending = null;
+		this.complete = null;
+		this.opening = null;
 	}
 	
 	public void setTaskId (int taskId) {
@@ -144,32 +135,33 @@ public class WindowBatch {
 	}
 
 	public int getFreeOffset () {
-		return freeOffset;
+		return this.freeOffset;
 	}
 	
 	public void setFreeOffset (int freeOffset) {
 		this.freeOffset = freeOffset;
 	}
 	
-	public void setBatchPointers (int batchStartPointer, int batchEndPointer) {
-		this.batchStartPointer = batchStartPointer;
-		this.batchEndPointer = batchEndPointer;
+	public void setBufferPointers (int bufferStartPointer, int bufferEndPointer) {
+		this.bufferStartPointer = bufferStartPointer;
+		this.bufferEndPointer = bufferEndPointer;
 	}
 	
 	public void cancel () {
-		this.batchStartPointer = -1;
-		this.batchEndPointer = -1;
+		this.bufferStartPointer = -1;
+		this.bufferEndPointer = -1;
 	}
 	
 	public boolean isEmpty () {
-		return (this.batchStartPointer == -1) && (this.batchEndPointer == -1);
+		return (this.bufferStartPointer == -1) && (this.bufferEndPointer == -1);
 	}
 	
 	public int getBatchSize () {
 		return this.batchSize;
 	}
 	
-	public void setRange (long batchStartTime, long batchEndTime) {
+	public void setBatchTime (long batchStartTime, long batchEndTime) {
+		
 		this.batchStartTime = unpackTimestamp(batchStartTime);
 		this.batchEndTime   = unpackTimestamp(batchEndTime);
 	}
@@ -178,7 +170,10 @@ public class WindowBatch {
 	
 	public void initWindowPointers (byte [] startPtrs, byte [] endPtrs) {
 		
-		if (batchStartPointer < 0 && batchEndPointer < 0)
+		if (bufferStartPointer < 0 && bufferEndPointer < 0)
+			return ;
+		
+		if (numWindowsInBatch < 0)
 			return ;
 		
 		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
@@ -199,10 +194,10 @@ public class WindowBatch {
 			else
 				offset *= slide_;
 			
-			b.putInt(batchStartPointer - batchStartPointer);
-			d.putInt(batchStartPointer + bpw - batchStartPointer);
+			b.putInt(bufferStartPointer - bufferStartPointer);
+			d.putInt(bufferStartPointer + bpw - bufferStartPointer);
 			
-			for (int i = 1; i < batchSize; i++) {
+			for (int i = 1; i < numWindowsInBatch; i++) {
 				b.putInt(b.getInt((i-1) * 4) + offset);
 				d.putInt(d.getInt((i-1) * 4) + offset);
 			}
@@ -212,7 +207,7 @@ public class WindowBatch {
 			
 			b.putInt(__indexOf(p), 0);
 			
-			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
+			for (int i = bufferStartPointer; i <= bufferEndPointer; i += tuple_) {
 				long t = getTimestamp(i);
 				/* 
 				 * Should we open new windows? 
@@ -222,8 +217,8 @@ public class WindowBatch {
 					p ++;
 					open |= true;
 				}
-				if (open && p < this.batchSize)
-					b.putInt(__indexOf(p), i - this.batchStartPointer);
+				if (open && p < this.numWindowsInBatch)
+					b.putInt(__indexOf(p), i - this.bufferStartPointer);
 				/* 
 				 * Should we close old windows? 
 				 */
@@ -231,7 +226,7 @@ public class WindowBatch {
 				
 				while (t > this.batchStartTime + q * windowDefinition.getSlide() + windowDefinition.getSize() - 1) {
 					if (close)
-						d.putInt(__indexOf(q), i - this.batchStartPointer);
+						d.putInt(__indexOf(q), i - this.bufferStartPointer);
 					close = false;
 					q ++;
 				}
@@ -241,14 +236,16 @@ public class WindowBatch {
 	
 	public void initWindowPointers () {
 		
-		// System.out.println("[DBG] batch size is " + batchSize);
-		windowStartPointers = new int [batchSize];
-		windowEndPointers   = new int [batchSize];
+		if (numWindowsInBatch < 0)
+			return;
+		
+		windowStartPointers = new int [numWindowsInBatch];
+		windowEndPointers   = new int [numWindowsInBatch];
 		
 		Arrays.fill(windowStartPointers, -1);
 		Arrays.fill(windowEndPointers,   -1);
 		
-		if (batchStartPointer < 0 && batchEndPointer < 0)
+		if (bufferStartPointer < 0 && bufferEndPointer < 0)
 			return ;
 		
 		int tuple_ = schema.getByteSizeOfTuple ();
@@ -266,10 +263,10 @@ public class WindowBatch {
 			else
 				offset *= slide_;
 			
-			windowStartPointers [0] = batchStartPointer;
+			windowStartPointers [0] = bufferStartPointer;
 			windowEndPointers   [0] = windowStartPointers[0] + bpw;
 			
-			for (int i = 1; i < batchSize; i++) {
+			for (int i = 1; i < numWindowsInBatch; i++) {
 				windowStartPointers [i] = windowStartPointers [i - 1] + offset;
 				windowEndPointers   [i] = windowEndPointers   [i - 1] + offset;
 			}
@@ -278,35 +275,32 @@ public class WindowBatch {
 			int p = 0; /* Current opened window */ 
 			int q = 0; /* Current closed window */
 			
-			this.windowStartPointers[p] = this.batchStartPointer;
+			this.windowStartPointers[p] = this.bufferStartPointer;
 			
-			/* HACK - debugging real-time and a window of 1 */
-			this.windowEndPointers[q] = this.batchEndPointer;
-			
-//			for (int i = batchStartPointer; i <= batchEndPointer; i += tuple_) {
-//				long t = getTimestamp(i);
-//				/* 
-//				 * Should we open new windows? 
-//				 */
-//				boolean open = false;
-//				while (t - slide_ >= this.batchStartTime + ((long) p) * windowDefinition.getSlide()) {
-//					p ++;
-//					open |= true;
-//				}
-//				if (open && p < this.batchSize)
-//					this.windowStartPointers[p] = i;
-//				/* 
-//				 * Should we close old windows? 
-//				 */
-//				boolean close = true;
-//				
-//				while (t > this.batchStartTime + q * windowDefinition.getSlide() + windowDefinition.getSize() ) {
-//					if (close)
-//						this.windowEndPointers[q] = i;
-//					close = false;
-//					q ++;
-//				}
-//			} /* End of batch */
+			for (int i = bufferStartPointer; i <= bufferEndPointer; i += tuple_) {
+				long t = getTimestamp(i);
+				/* 
+				 * Should we open new windows? 
+				 */
+				boolean open = false;
+				while (t - slide_ >= this.batchStartTime + ((long) p) * windowDefinition.getSlide()) {
+					p ++;
+					open |= true;
+				}
+				if (open && p < this.numWindowsInBatch)
+					this.windowStartPointers[p] = i;
+				/* 
+				 * Should we close old windows? 
+				 */
+				boolean close = true;
+				
+				while (t > this.batchStartTime + q * windowDefinition.getSlide() + windowDefinition.getSize() ) {
+					if (close)
+						this.windowEndPointers[q] = i;
+					close = false;
+					q ++;
+				}
+			} /* End of batch */
 		}
 	}
 	
@@ -315,7 +309,7 @@ public class WindowBatch {
 		/* Find start and end pointer of the last window
 		 * from the previous batch.
 		 */
-		if (batchStartPointer < 0 && batchEndPointer < 0)
+		if (bufferStartPointer < 0 && bufferEndPointer < 0)
 			return ;
 		
 		if (taskId == 0)
@@ -338,12 +332,12 @@ public class WindowBatch {
 			else
 				offset *= slide_;
 			
-			this.prevStartPointer = this.batchStartPointer - offset;
+			this.prevWindowStartPointer = this.bufferStartPointer - offset;
 			// check whether we crossed the buffer boundary
-			if (this.prevStartPointer < 0)
-				this.prevStartPointer += buffer.capacity();
+			if (this.prevWindowStartPointer < 0)
+				this.prevWindowStartPointer += buffer.capacity();
 			
-			this.prevEndPointer = this.prevStartPointer + bpw; 
+			this.prevWindowEndPointer = this.prevWindowStartPointer + bpw; 
 			
 		} else { /* Find last range-based window */
 			
@@ -351,7 +345,7 @@ public class WindowBatch {
 			/* We work our way backwards until we find the first tuple
 			 * whose timestamp is less than `previousStartTime` 
 			 */
-			idx = batchStartPointer;
+			idx = bufferStartPointer;
 			long t = getTimestamp(idx);
 			while (t >= previousStartTime) {
 				idx -= tuple_;
@@ -359,23 +353,23 @@ public class WindowBatch {
 					idx += buffer.capacity();
 				t = getTimestamp(idx);
 			}
-			this.prevStartPointer = idx + tuple_;
+			this.prevWindowStartPointer = idx + tuple_;
 			
 			long previousEndTime = previousStartTime + windowDefinition.getSize();
 			/* We work our way forward until we find the first tuple
 			 * whose timestamp is greater than `previousEndTime` 
 			 */
-			idx = prevStartPointer;
+			idx = prevWindowStartPointer;
 			t = getTimestamp(idx);
 			while (t < previousEndTime) {
 				idx += tuple_;
 				t = getTimestamp(idx);
 			}
-			this.prevEndPointer = idx;
+			this.prevWindowEndPointer = idx;
 		}
 		
 		System.out.println(String.format("[DBG] last window of previous batch starts %10d ends %10d",
-				this.prevStartPointer, this.prevEndPointer));
+				this.prevWindowStartPointer, this.prevWindowEndPointer));
 	}
 	
 	public void moveFreePointerToNotFreeLastWindow () {
@@ -384,7 +378,7 @@ public class WindowBatch {
 		 * window of this window batch
 		 */
 		this.freeOffset = this.windowStartPointers[this.windowStartPointers.length - 1] - 1;
-		// check whether we need to wrap
+		/* Check whether we need to wrap */
 		this.freeOffset = (this.freeOffset < 0) ? this.freeOffset + buffer.capacity() : this.freeOffset;
 	}
 	
@@ -393,7 +387,7 @@ public class WindowBatch {
 		windowStartPointers = windowEndPointers = null;
 		batchStartTime = batchEndTime = -1;
 		this.buffer = null;
-		this.prevStartPointer = this.prevEndPointer = -1;
+		this.prevWindowStartPointer = this.prevWindowEndPointer = -1;
 	}
 	
 	public int getInt (int offset, int attribute) {
@@ -431,12 +425,12 @@ public class WindowBatch {
 		return this.windowEndPointers;
 	}
 	
-	public int getBatchStartPointer () {
-		return this.batchStartPointer;
+	public int getBufferStartPointer () {
+		return this.bufferStartPointer;
 	}
 	
-	public int getBatchEndPointer () {
-		return this.batchEndPointer;
+	public int getBufferEndPointer () {
+		return this.bufferEndPointer;
 	}
 	
 	public long getBatchStartTime () {
@@ -472,7 +466,7 @@ public class WindowBatch {
 	 */
 	public void debug () {
 		
-		for (int i = 0; i < this.batchSize; i++) {
+		for (int i = 0; i < this.numWindowsInBatch; i++) {
 			
 			int start = this.windowStartPointers[i];
 			int end = this.windowEndPointers[i];
@@ -493,26 +487,27 @@ public class WindowBatch {
 	}
 
 	public void normalizeWindowPointers () {
-		for (int i = 0; i < batchSize; i++) {
-			
-			windowStartPointers[i] -= batchStartPointer;
-			windowEndPointers  [i] -= batchStartPointer;
+		
+		for (int i = 0; i < numWindowsInBatch; i++) {
+			windowStartPointers[i] -= bufferStartPointer;
+			windowEndPointers  [i] -= bufferStartPointer;
 		}
 	}
 	
 	public void normalizeWindowPointers (int [] startPtrs, int [] endPtrs) {
-		for (int i = 0; i < batchSize; i++) {
-			startPtrs[i] -= batchStartPointer;
-			endPtrs  [i] -= batchStartPointer;
+		
+		for (int i = 0; i < numWindowsInBatch; i++) {
+			startPtrs[i] -= bufferStartPointer;
+			endPtrs  [i] -= bufferStartPointer;
 		}
 	}
 
-	public int getPrevStartPointer() {
-		return prevStartPointer;
+	public int getPrevWindowStartPointer() {
+		return prevWindowStartPointer;
 	}
 
-	public int getPrevEndPointer() {
-		return prevEndPointer;
+	public int getPrevWindowEndPointer() {
+		return prevWindowEndPointer;
 	}
 
 	public int getLatencyMark() {
@@ -524,16 +519,48 @@ public class WindowBatch {
 	}
 	
 	/*
-	 * Normalise a pointer to a location in the 
+	 * Normalize a pointer to a location of the 
 	 * underlying byte buffer.
 	 * 
 	 * Avoids "out of bounds" memory accesses,
 	 * especially when we copy memory via the
 	 * Unsafe interface.
 	 */
-	public int normalise(int pointer) {
+	public int normalise (int pointer) {
 		
 		return this.buffer.normalise((long) pointer);
+	}
+	
+	public PartialWindowResults getOpening() {
+		return opening;
+	}
+	
+	public void setOpening(PartialWindowResults opening) {
+		this.opening = opening;
+	}
+
+	public PartialWindowResults getClosing() {
+		return closing;
+	}
+
+	public void setClosing(PartialWindowResults closing) {
+		this.closing = closing;
+	}
+
+	public PartialWindowResults getPending() {
+		return pending;
+	}
+
+	public void setPending(PartialWindowResults pending) {
+		this.pending = pending;
+	}
+
+	public PartialWindowResults getComplete() {
+		return complete;
+	}
+
+	public void setComplete(PartialWindowResults complete) {
+		this.complete = complete;
 	}
 	
 	private long getTimestamp (int index) {
@@ -549,6 +576,19 @@ public class WindowBatch {
 			return (long) Utils.unpack(1, timestamp);
 		else 
 			return timestamp;
+	}
+
+	public void setBatchPointers(long batchStartPointer, long batchEndPointer) {
+		this.batchStartPointer = batchStartPointer;
+		this.batchEndPointer   = batchEndPointer;
+	}
+	
+	public long getBatchStartPointer () {
+		return this.batchStartPointer;
+	}
+	
+	public long getBatchEndPointer () {
+		return this.batchEndPointer;
 	}
 }
 

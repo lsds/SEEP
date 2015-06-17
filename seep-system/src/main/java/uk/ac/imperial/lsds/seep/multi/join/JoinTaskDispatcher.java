@@ -226,8 +226,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 		if (dispatchedInFirst) {
 			// firstBatch.setBatchPointers(firstLastEndIndex, firstEndIndex);
 			// secondBatch.setBatchPointers(secondStartIndex, secondEndIndex);
-			firstBatch.setBatchPointers(firstLastEndIndex + firstTupleSize, normaliseIndex( firstBuffer, firstLastEndIndex, firstEndIndex));
-			secondBatch.setBatchPointers(secondStartIndex, normaliseIndex(secondBuffer, secondStartIndex, secondEndIndex));
+			firstBatch.setBufferPointers(firstLastEndIndex + firstTupleSize, normaliseIndex( firstBuffer, firstLastEndIndex, firstEndIndex));
+			secondBatch.setBufferPointers(secondStartIndex, normaliseIndex(secondBuffer, secondStartIndex, secondEndIndex));
 			
 			this.firstLastEndIndex = this.firstEndIndex;
 			this.secondLastEndIndex = this.secondEndIndex;
@@ -236,8 +236,8 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			// firstBatch.setBatchPointers(firstStartIndex, firstEndIndex);
 			// secondBatch.setBatchPointers(secondLastEndIndex, secondEndIndex);
 			
-			firstBatch.setBatchPointers(firstStartIndex, normaliseIndex( firstBuffer, firstStartIndex, firstEndIndex));
-			secondBatch.setBatchPointers(secondLastEndIndex + secondTupleSize, normaliseIndex(secondBuffer, secondLastEndIndex, secondEndIndex));
+			firstBatch.setBufferPointers(firstStartIndex, normaliseIndex( firstBuffer, firstStartIndex, firstEndIndex));
+			secondBatch.setBufferPointers(secondLastEndIndex + secondTupleSize, normaliseIndex(secondBuffer, secondLastEndIndex, secondEndIndex));
 			
 			this.firstLastEndIndex = this.firstEndIndex;
 			this.secondLastEndIndex = this.secondEndIndex;
@@ -247,7 +247,7 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 			/* Find and set latency mark in first batch */
 			int mark = -1;
 			for (int i = 0; i < marks.size(); i++) {
-				if (marks.get(i) >= firstBatch.getBatchStartPointer() && marks.get(i) < firstBatch.getFreeOffset()) {
+				if (marks.get(i) >= firstBatch.getBufferStartPointer() && marks.get(i) < firstBatch.getFreeOffset()) {
 					mark = marks.remove(i);
 					break;
 				}

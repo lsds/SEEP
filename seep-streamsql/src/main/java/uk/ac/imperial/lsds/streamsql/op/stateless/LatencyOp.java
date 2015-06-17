@@ -19,7 +19,7 @@ public class LatencyOp implements IMicroOperatorCode {
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		if (count++ % 100 == 0) {
 			IQueryBuffer inputBuffer = windowBatch.getBuffer();
-			long _t = inputBuffer.getLong(windowBatch.getBatchStartPointer());
+			long _t = inputBuffer.getLong(windowBatch.getBufferStartPointer());
 			long t_ = System.nanoTime();
 			long dt = t_ - _t;
 			// long dt = _t;

@@ -245,7 +245,7 @@ public class OLDMicroAggregation implements IStreamSQLOperator, IMicroOperatorCo
 		// System.out.println("[DBG] count " + count);
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBufferStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
 		// release old buffer (will return Unbounded Buffers to the pool)
@@ -425,7 +425,7 @@ public class OLDMicroAggregation implements IStreamSQLOperator, IMicroOperatorCo
 		}
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBufferStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 		
 		// release window buffer (will return Unbounded Buffers to the pool)
@@ -523,7 +523,7 @@ public class OLDMicroAggregation implements IStreamSQLOperator, IMicroOperatorCo
 		}
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBufferStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 
 		// release window buffer (will return Unbounded Buffers to the pool)
@@ -635,7 +635,7 @@ public class OLDMicroAggregation implements IStreamSQLOperator, IMicroOperatorCo
 		}
 		
 		/* Let's set the timestamp from the first tuple of the window batch */
-		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBatchStartPointer()));
+		outBuffer.putLong(0, windowBatch.getBuffer().getLong(windowBatch.getBufferStartPointer()));
 		// System.out.println("In operator, set timestamp to be " + outBuffer.getLong(0) + " (" + windowBatch.getBatchStartPointer() + ")");
 
 		// release old buffer (will return Unbounded Buffers to the pool)
