@@ -125,7 +125,7 @@ public class ResultAggregator {
 			 * 
 			 * Opening windows are managed by this task. 
 			 */
-			return (this.closing == null && this.pending == null && this.opening == null);
+			return (this.closing == null && this.pending == null && this.opening == null && this.complete != null);
 		}
 
 		public int getFreeOffset() {
@@ -169,6 +169,8 @@ public class ResultAggregator {
 	/* Sentinel pointers */
 	int nextToAggregate;
 	int nextToForward;
+	
+	int nextPointer;
 	
 	Semaphore semaphore;
 	Lock lock;
@@ -223,6 +225,11 @@ public class ResultAggregator {
 		/* Slot `idx` has been reserved for this task id */
 		ResultAggregatorNode node = nodes[idx];
 		
+		if (! (opening != null && closing != null && pending == null && complete != null) && taskid != 1) {
+			System.err.println("error");
+			System.exit(1);
+		}
+		
 		node.init (opening, closing, pending, complete, freeOffset);
 //		System.out.println(node);
 		
@@ -233,10 +240,12 @@ public class ResultAggregator {
 		 */
 		slots.set(idx, IDLE);
 		
+		// slots.set(idx, READY);
+		
 		/* Aggregate, starting from `nextToAggregate` */
 		
-		ResultAggregatorNode p;
-		ResultAggregatorNode q;
+		// ResultAggregatorNode p;
+		// ResultAggregatorNode q;
 		
 		while (true) {
 			
@@ -244,10 +253,13 @@ public class ResultAggregator {
 		
 			if (slots.get(nextToAggregate) == IDLE) {
 				
-				if (slots.get(nextToAggregate + 1) == IDLE) {
+				nextPointer  = nextToAggregate + 1;
+				nextPointer %= size;
+				
+				if (slots.get(nextPointer) == IDLE) {
 					
-					p = nodes[nextToAggregate];
-					q = p.next;
+					ResultAggregatorNode p = nodes[nextToAggregate];
+					ResultAggregatorNode q = nodes[nextPointer]; // p.next;
 					/* Check whether p has any opening windows.
 					 * 
 					 * If the set of p's complete windows is not null
@@ -267,15 +279,19 @@ public class ResultAggregator {
 						/* Let other threads aggregate results as well, 
 						 * picking up from `nextToAggregate`.
 						 */
-						lock.unlock();
-//						System.out.println(String.format("[DBG] aggregate current %4d next %4d", p.index, q.index));
+						// lock.unlock();
+						// System.out.println(String.format("[DBG] %s aggregate current %4d next %4d", Thread.currentThread(), p.index, q.index));
 						/* Aggregate */
 						p.aggregate(q);
 //						System.out.println("[DBG] After aggregation, current is " + p);
 						if (p.isReady()) {
 							
 							slots.set(p.index, READY);
+						} else {
+							System.err.println("Something is terribly wrong...");
+							System.exit(1);
 						}
+						lock.unlock();
 						
 					} else {
 						/*
@@ -318,10 +334,10 @@ public class ResultAggregator {
 	
 		while (busy) {
 			
-//			System.out.println(String.format("[DBG] __________FREE %4d", nextToForward));
-			
 			/* Process (forward and free the current slot) */
 			int offset = nodes[nextToForward].getFreeOffset();
+			
+//			System.out.println(String.format("[DBG] __________FREE %4d (%10d)", nextToForward, offset));
 			
 			if (offset != Integer.MIN_VALUE) {
 				
@@ -336,6 +352,7 @@ public class ResultAggregator {
 			}
 			
 			nodes[nextToForward].releaseAll ();
+			
 			/* Release the current slot */
 			slots.set(nextToForward, FREE);
 			

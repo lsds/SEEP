@@ -1,6 +1,6 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.util.ArrayDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PartialWindowResultsFactory {
@@ -14,12 +14,12 @@ public class PartialWindowResultsFactory {
 	public static AtomicLong count;
 	
 	@SuppressWarnings("unchecked")
-	public static ArrayDeque<PartialWindowResults> [] pool = 
-		(ArrayDeque<PartialWindowResults> []) new ArrayDeque [N];
+	public static ConcurrentLinkedQueue<PartialWindowResults> [] pool = 
+		(ConcurrentLinkedQueue<PartialWindowResults> []) new ConcurrentLinkedQueue [N];
 	
 	static {
 		for (int n = 0; n < N; n++) {
-			pool[n] = new ArrayDeque<PartialWindowResults>();
+			pool[n] = new ConcurrentLinkedQueue<PartialWindowResults>();
 			int i = _pool_size;
 			while (i-- > 0) {
 				PartialWindowResults e = new PartialWindowResults(n);

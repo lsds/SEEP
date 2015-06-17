@@ -41,8 +41,8 @@ public class LRBQ2IStreamMicroOpCode implements IMicroOperatorCode {
 		/*
 		 * Create state
 		 */
-		int windowBeforeBatchStart = windowBatch.getPrevStartPointer();
-		int windowBeforeBatchEnd   = windowBatch.getPrevEndPointer();
+		int windowBeforeBatchStart = windowBatch.getPrevWindowStartPointer();
+		int windowBeforeBatchEnd   = windowBatch.getPrevWindowEndPointer();
 		for (int i = windowBeforeBatchStart; i < windowBeforeBatchEnd; i += byteSizeOfInTuple) {
 			int vehicleValue = vehicleAttribute.eval(inBuffer,
 					inSchema, i);

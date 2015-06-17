@@ -270,7 +270,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		else
 			bytes = offset - index + 1;
 		
-		/* debug(); */
+		// debug();
 		
 		bytesProcessed.addAndGet(bytes);
 		

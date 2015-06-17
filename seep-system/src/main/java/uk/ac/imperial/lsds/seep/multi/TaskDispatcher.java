@@ -156,7 +156,11 @@ public class TaskDispatcher implements ITaskDispatcher {
 //		 long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 //		  System.out.println(
 //			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
-//					parent.getId(), taskid, p, q, free, t_, _t, size)); 
+//					parent.getId(), taskid, p, q, free, t_, _t, size));
+		
+		if (q <= p) {
+			q += buffer.capacity();
+		}
 		
 		/* Find latency mark */
 		int mark = -1;
@@ -169,11 +173,11 @@ public class TaskDispatcher implements ITaskDispatcher {
 			}
 		}
 		
-		batch = WindowBatchFactory.newInstance(this.batchBytes, taskid, (int) free, buffer, window, schema, mark);
+		batch = WindowBatchFactory.newInstance(this.batchBytes, taskid, (int) (free), buffer, window, schema, mark);
 		
 		if (window.isRangeBased()) {
 			long startTime = getTimestamp(buffer, (int) p);
-			long endTime   = getTimestamp(buffer, (int) q);
+			long endTime   = getTimestamp(buffer, (int) q - tupleSize);
 			batch.setBatchTime(startTime, endTime);
 		} else {
 			batch.setBatchTime(-1, -1);
@@ -225,11 +229,14 @@ public class TaskDispatcher implements ITaskDispatcher {
 			
 			while (accumulated >= nextBatchEndPointer) {
 				
+				f = nextBatchEndPointer & mask;
+				f = (f == 0) ? buffer.capacity() : f;
+				f--;
 				/* Launch task */
 				this.newTaskFor (
 					thisBatchStartPointer & mask, 
 					nextBatchEndPointer & mask, 
-					nextBatchEndPointer & mask, 
+					f, 
 					thisBatchStartPointer, nextBatchEndPointer
 					);
 				

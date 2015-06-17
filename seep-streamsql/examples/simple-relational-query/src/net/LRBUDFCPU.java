@@ -47,8 +47,8 @@ public class LRBUDFCPU implements IMicroOperatorCode {
 		 */
 		windowBatch.initPrevWindowPointers();
 		
-		int lastPrevWindowStart = windowBatch.getPrevStartPointer();
-		int lastPrevWindowEnd   = windowBatch.getPrevEndPointer();
+		int lastPrevWindowStart = windowBatch.getPrevWindowStartPointer();
+		int lastPrevWindowEnd   = windowBatch.getPrevWindowEndPointer();
 		/*
 		 * Do not free the last window of this batch (say `i`), so that the worker that 
 		 * processes batch `i + 1` can get the last window of this one.

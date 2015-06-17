@@ -135,7 +135,7 @@ public class ResultHandler {
 		// windowResults = new WindowResultHeap ();
 		
 		
-		resultAggregator = new ResultAggregator(SLOTS, freeBuffer, query);
+		resultAggregator = new ResultAggregator(1024 * 512, freeBuffer, query);
 	}
 	
 	public long getTotalOutputBytes () {

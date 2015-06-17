@@ -72,8 +72,8 @@ public class WindowBatch {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
-		this.windowStartPointers = null;
-		this.windowEndPointers = null;
+		this.windowStartPointers = new int [65536]; // null;
+		this.windowEndPointers = new int [65536]; // null;
 		
 		this.initialised = false;
 		
@@ -109,6 +109,9 @@ public class WindowBatch {
 		
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
+		
+		Arrays.fill(windowStartPointers, -1);
+		Arrays.fill(  windowEndPointers, -1);
 		
 		this.initialised = false;
 		
@@ -384,7 +387,7 @@ public class WindowBatch {
 	
 	public void clear () {
 		initialised = false;
-		windowStartPointers = windowEndPointers = null;
+		// windowStartPointers = windowEndPointers = null;
 		batchStartTime = batchEndTime = -1;
 		this.buffer = null;
 		this.prevWindowStartPointer = this.prevWindowEndPointer = -1;
@@ -589,6 +592,75 @@ public class WindowBatch {
 	
 	public long getBatchEndPointer () {
 		return this.batchEndPointer;
+	}
+
+	public void initPartialWindowPointers() {
+		
+//		this.windowStartPointers = new int [65536];
+//		this.windowEndPointers   = new int [65536];
+		
+		int tupleSize = schema.getByteSizeOfTuple ();
+		long paneSize = windowDefinition.getPaneSize(); 
+		
+		Arrays.fill(windowStartPointers, -1);
+		Arrays.fill(  windowEndPointers, -1);
+		
+		long streamIndex, bufferIndex;
+		long pid, _pid = ((batchStartPointer / tupleSize) / paneSize) - 1; /* _pid is the previous pane id */
+		
+		long offset = -1; /* Undefined */
+		
+		long wid, opensAt;
+		
+		for (streamIndex = batchStartPointer, bufferIndex = bufferStartPointer; 
+				streamIndex < batchEndPointer && bufferIndex < bufferEndPointer; 
+				streamIndex += tupleSize, bufferIndex += tupleSize) {
+			
+			pid = (streamIndex / tupleSize) / paneSize; /* Current pane */
+			
+			if (_pid < pid) {
+				
+				/* Pane `_pid` closed; pane `pid` opened */
+				
+				/* Check if a window closes at `_pid` */
+				if (_pid % windowDefinition.panesPerSlide() == 0) {
+					
+					opensAt = _pid - windowDefinition.numberOfPanes() + 1;
+					wid = opensAt / windowDefinition.panesPerSlide();
+					
+					if (wid >= 0) {
+						
+						// System.out.println(String.format("[DBG] closing %05d; buffer index %10d", wid, bufferIndex));
+						
+						/* Calculate offset */
+						if (offset < 0) {
+							offset = wid;
+							// System.out.println(String.format("[DBG] window %05d is closing; offset %10d", wid, offset));
+						}
+						
+						/* Store end pointer */
+						windowEndPointers[(int) (wid - offset)] = (int) bufferIndex;
+					}
+				}
+				/* Check if a window opens at `pid` */
+				if ( pid % windowDefinition.panesPerSlide() == 0) {
+					
+					wid = pid / windowDefinition.panesPerSlide();
+					
+					// System.out.println(String.format("[DBG] opening %05d; buffer index %10d", wid, bufferIndex));
+					
+					/* Calculate offset */
+					if (offset < 0) {
+						offset = wid;
+						// System.out.println(String.format("[DBG] window %05d is opening; offset %10d", wid, offset));
+					}
+					
+					/* Store start pointer */
+					windowStartPointers[(int) (wid - offset)] = (int) bufferIndex;
+				}
+				_pid = pid;
+			}
+		}
 	}
 }
 

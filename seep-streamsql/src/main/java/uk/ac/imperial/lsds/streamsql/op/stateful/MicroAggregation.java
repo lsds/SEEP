@@ -1002,7 +1002,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
 	
-	
 	private void enteredWindow(IQueryBuffer inBuffer, ITupleSchema inSchema,
 			int enterOffset, IQueryBuffer windowBuffer,
 			IntMap keyOffsets,
