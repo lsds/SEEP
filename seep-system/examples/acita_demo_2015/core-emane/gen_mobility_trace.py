@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import subprocess,argparse
 
+default_model = 'SteadyStateRandomWaypoint'
 default_duration = '100000'
 default_x = '1200'
 #default_x = '1500'
@@ -12,7 +13,7 @@ default_y = '1200'
 #default_y = '5000' 
 #default_y = '4000' 
 #default_y = '3000' 
-default_speed = 2.0
+default_speed = 5.0
 default_p = '2.0' 
 trace_name = 'r_waypoints'
 
@@ -21,17 +22,32 @@ def gen_trace(session_dir, session_id, params):
     # get trace file name
     trace_file = '%s/%s'%(session_dir, trace_name)
 
-    # get relevant params
+   
+    mobility_model = params.get('mobilityModel', default_model)
 
-    bm_raw_params = ['bm', '-f', trace_file, 'RandomWaypoint', 
-            '-n', str(params['nodes']-1), 
-            '-R', str(session_id),
-            '-d', str(params.get('duration', default_duration)), 
-            '-x', str(params.get('x', default_x)), 
-            '-y', str(params.get('y', default_y)),
-            '-h', str(params.get('h', default_speed + 1.0)),
-            '-l', str(params.get('l', default_speed - 1.0)),
-            '-p', params.get('p', default_p)]
+    if mobility_model ==  'RandomWaypoint':
+        # get relevant params
+        bm_raw_params = ['bm', '-f', trace_file, 'RandomWaypoint', 
+                '-n', str(params['nodes']-1), 
+                '-R', str(session_id),
+                '-d', str(params.get('duration', default_duration)), 
+                '-x', str(params.get('x', default_x)), 
+                '-y', str(params.get('y', default_y)),
+                '-h', str(params.get('h', default_speed + 1.0)),
+                '-l', str(params.get('l', default_speed - 1.0)),
+                '-p', params.get('p', default_p)]
+
+    elif mobility_model ==  'SteadyStateRandomWaypoint':
+        bm_raw_params = ['bm', '-f', trace_file, 'SteadyStateRandomWaypoint', 
+                '-n', str(params['nodes']-1), 
+                '-R', str(session_id),
+                '-d', str(params.get('duration', default_duration)), 
+                '-x', str(params.get('x', default_x)), 
+                '-y', str(params.get('y', default_y)),
+                '-o', str(params.get('o', default_speed)),
+                '-p', "1.0",
+                '-k', default_p,
+                '-l', "0.5"]
 
     print 'Generating mobility trace with cmd=%s'%str(bm_raw_params)
     # call bonn_motion to generate trace

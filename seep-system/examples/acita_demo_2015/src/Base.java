@@ -15,6 +15,7 @@ import java.util.HashMap;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
+import uk.ac.imperial.lsds.seep.acita15.operators.FaceRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
@@ -49,6 +50,10 @@ public class Base implements QueryComposer{
 		else if (queryType.equals("join"))
 		{
 			return composeJoin();
+		}
+		else if (queryType.equals("fr"))
+		{
+			return composeFaceRecognizer();
 		}
 		else if (queryType.equals("nameAssist"))
 		{
@@ -101,6 +106,48 @@ public class Base implements QueryComposer{
 		
 		return QueryBuilder.build();
 	}
+	
+	private QueryPlan composeFaceRecognizer()
+	{
+		// Declare Source
+		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("tupleId");
+		srcFields.add("value");
+		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
+		
+		
+		//Declare SpeechRecognizer
+		ArrayList<String> faceDetectFields = new ArrayList<String>();
+		faceDetectFields.add("tupleId");
+		faceDetectFields.add("value");
+		Connectable faceDetect = QueryBuilder.newStatelessOperator(new FaceDetector(), 0, faceDetectFields);
+		
+		
+		//Declare SpeechRecognizer
+		ArrayList<String> faceRecFields = new ArrayList<String>();
+		faceRecFields.add("tupleId");
+		faceRecFields.add("value");
+		Connectable faceRec = QueryBuilder.newStatelessOperator(new FaceRecognizer(), 1, faceRecFields);
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		
+		src.connectTo(faceDetect, true, 0);
+		faceDetect.connectTo(faceRec, true, 1);
+		faceRec.connectTo(snk, true, 2);
+		
+		if (REPLICATION_FACTOR > 1)
+		{
+			QueryBuilder.scaleOut(faceDetect.getOperatorId(), REPLICATION_FACTOR);
+			QueryBuilder.scaleOut(faceRec.getOperatorId(), REPLICATION_FACTOR);
+		}
+		
+		return QueryBuilder.build();
+	}
+	
 	
 	private QueryPlan composeJoin()
 	{

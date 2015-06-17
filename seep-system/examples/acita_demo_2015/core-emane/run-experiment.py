@@ -151,6 +151,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
     parser.add_argument('--ks', dest='ks', default='1,2,3,5', help='replication factors [1,2,3,5]')
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
+    parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
+    parser.add_argument('--y', dest='y', default='1200', help='Grid y dimension (1200)')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join, debsgc, fr, frshard, nameassist')
     parser.add_argument('--pausetimes', dest='pts', default='0.0,2.0,4.0,6.0,8.0', help='pause times [0.0,2.0,4.0,6.0,8.0]')
     parser.add_argument('--sessions', dest='sessions', default='2', help='number of sessions (2)')
@@ -185,6 +187,8 @@ if __name__ == "__main__":
     params['specific']=args.specific
     params['preserve']=args.preserve
     params['h']=int(args.h)
+    params['x']=int(args.x)
+    params['y']=int(args.y)
     params['query']=args.query
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
