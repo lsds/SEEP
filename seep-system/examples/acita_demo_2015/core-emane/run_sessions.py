@@ -370,7 +370,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
     parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
     parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
-    parser.add_argument('--routing', dest='routing', default='OLSR',
+    parser.add_argument('--routing', dest='routing', default='OLSRETX',
             help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
