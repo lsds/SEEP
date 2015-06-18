@@ -148,7 +148,7 @@ public class RoutingController implements Runnable{
 		synchronized(lock)
 		{
 			if (query == null) { throw new RuntimeException("Logic error?"); }
-			logger.debug("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
+			logger.info("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
 			int inputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(rctrl.getOpId()));
 			if (!upstreamQlens.get(inputIndex).containsKey(rctrl.getOpId())) { throw new RuntimeException("Logic error."); }
 			this.upstreamQlens.get(inputIndex).put(rctrl.getOpId(),  new Integer(rctrl.getQlen()));
@@ -181,7 +181,7 @@ public class RoutingController implements Runnable{
 					}
 				}
 			}
-			logger.debug("Updated upstream net rates: "+upstreamNetRates);
+			logger.info("Updated upstream net rates: "+upstreamNetRates);
 			//updateWeight();
 			lock.notifyAll();
 		}
@@ -195,7 +195,9 @@ public class RoutingController implements Runnable{
 			if (owner.getProcessingUnit().getOperator().getOpContext().isSink())
 			{ throw new RuntimeException("Logic error."); }
 			*/
-			return owner.getProcessingUnit().getDispatcher().getTotalQlen();
+			int localOutputQlen = owner.getProcessingUnit().getDispatcher().getTotalQlen();
+			//logger.info("Op "+nodeId+" local output qlen=" + localOutputQlen);
+			return localOutputQlen;
 		}
 		else
 		{
@@ -230,10 +232,14 @@ public class RoutingController implements Runnable{
 				{
 					Integer upstreamId = iter.next();
 					int localTotalInputQlen = localInputQlens.get(-1);
+
 					//TODO: Should we be multiplying the input q length by the processing rate?
-					logger.debug("Computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
+					logger.info("Computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
+					
+					logger.info("Op "+nodeId+" total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
+					logger.info("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
 					
 					if (numLogicalInputs == 1)
 					{
