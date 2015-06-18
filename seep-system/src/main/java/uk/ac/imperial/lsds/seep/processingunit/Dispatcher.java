@@ -884,6 +884,7 @@ public class Dispatcher implements IRoutingObserver {
 				
 				if (acksChanged)
 				{
+					logger.debug("Acks changed, purging.");
 					purgeSharedReplayLog();
 					//TODO: Think it's ok to temporarily miss tuples being batched but not currently in log?
 					purgeSenderSessionLogs();
@@ -912,11 +913,13 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			//TODO: How to trim buffer?
 			FailureCtrl currentFailureCtrl = getCombinedDownFailureCtrl();
-			for (int opId : workers.keySet())
+			for (int opIndex : workers.keySet())
 			{
-				SynchronousCommunicationChannel cci = owner.getPUContext().getCCIfromOpId(opId, "d");
+				logger.debug("Purging sender session log for "+opIndex);
+				SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(opIndex);
 				if (cci != null)
 				{
+					logger.debug("Found channel for "+opIndex+" to purge.");
 					IBuffer buffer = cci.getBuffer();
 					buffer.trim(currentFailureCtrl);
 				}

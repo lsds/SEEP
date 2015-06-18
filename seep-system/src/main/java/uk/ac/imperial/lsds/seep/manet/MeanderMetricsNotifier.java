@@ -73,4 +73,23 @@ public class MeanderMetricsNotifier {
     	final Meter missedSwitch = metricRegistry.meter(MetricRegistry.name(MeanderMetricsNotifier.class, "dispatcherMain", "missedSwitch"));
     	missedSwitch.mark();
     }
+    
+    //TODO: Would like to know the downOpId here.
+    public void savedBatch()
+    {
+    	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(MeanderMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
+    	bufferLength.inc();
+    }
+    
+    public void trimmedBuffer(int trimmed)
+    {
+      	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(MeanderMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
+    	bufferLength.dec(trimmed);
+    }
+    
+    public void clearedBuffer()
+    {
+      	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(MeanderMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
+    	bufferLength.dec(bufferLength.getCount());	//approx
+    }
 }

@@ -252,7 +252,7 @@ public class PUContext {
 						socketC = new Socket(ip, portC);
 					}					
 						
-					IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer() : new Buffer();
+					IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer(opID) : new Buffer();
 					
 					SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
 					downstreamTypeConnection.add(con);
@@ -301,7 +301,7 @@ public class PUContext {
 				socketC = new Socket(ip, portC);
 			}					
 			*/
-			IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer() : new Buffer();
+			IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer(opID) : new Buffer();
 			
 			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, portD, portC, buffer);
 			downstreamTypeConnection.add(con);

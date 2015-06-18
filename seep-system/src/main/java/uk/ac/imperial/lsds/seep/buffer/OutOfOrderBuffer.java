@@ -11,17 +11,25 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
+import static uk.ac.imperial.lsds.seep.manet.MeanderMetricsNotifier.notifyThat;
 
 public class OutOfOrderBuffer implements IBuffer {
 	private static final Logger logger = LoggerFactory.getLogger(OutOfOrderBuffer.class);
 	
 	private final TreeMap<Long, BatchTuplePayload> log = new TreeMap<>();
-
+	private final int opID;
+	
+	public OutOfOrderBuffer(int opID)
+	{
+		this.opID = opID;
+	}
+	
 	@Override
 	public synchronized void save(BatchTuplePayload batch, long outputTs,
 			TimestampTracker inputTs) {
 		logger.trace("Saving tuple "+batch.getTuple(0).timestamp);
-		log.put(batch.getTuple(0).timestamp, batch);		
+		log.put(batch.getTuple(0).timestamp, batch);
+		notifyThat(opID).savedBatch();
 	}
 
 	@Override
@@ -32,6 +40,7 @@ public class OutOfOrderBuffer implements IBuffer {
 			TreeMap<Long, BatchTuplePayload> trimmed = new TreeMap<>(log);
 			log.clear();
 			logger.debug("Cleared log.");
+			notifyThat(opID).clearedBuffer();
 			return trimmed;
 		}
 		else
@@ -46,6 +55,7 @@ public class OutOfOrderBuffer implements IBuffer {
 				{ 
 					logger.trace("Trimmed batch "+ts);
 					iter.remove(); 
+					notifyThat(opID).trimmedBuffer(1);
 				}
 			}
 			return null;
