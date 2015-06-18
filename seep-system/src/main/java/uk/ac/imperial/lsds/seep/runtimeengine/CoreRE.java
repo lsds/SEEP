@@ -330,7 +330,7 @@ public class CoreRE {
 					Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 				
 					netTopologyMonitor = new NetTopologyMonitor(processingUnit.getOperator().getOperatorId(), meanderQuery, processingUnit.getOperator().getRouter());
-					ntMonT = new Thread(netTopologyMonitor);
+					ntMonT = new Thread(netTopologyMonitor, "NetTopologyMonitor");
 					ntMonT.start();
 				}
 				if (!processingUnit.getOperator().getOpContext().isSink())
@@ -343,7 +343,7 @@ public class CoreRE {
 				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
 					routingController = new RoutingController(this);
-					Thread rControllerT = new Thread(routingController);
+					Thread rControllerT = new Thread(routingController, "RoutingController");
 					rControllerT.start();
 					
 					ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
@@ -357,7 +357,7 @@ public class CoreRE {
 					}
 					
 					netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
-					nrMonT = new Thread(netRateMonitor);
+					nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
 					nrMonT.start();					
 				}
 				if (!processingUnit.getOperator().getOpContext().isSink())

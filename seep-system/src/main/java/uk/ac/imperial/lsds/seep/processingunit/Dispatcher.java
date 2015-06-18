@@ -37,13 +37,14 @@ import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
+import static uk.ac.imperial.lsds.seep.manet.MeanderMetricsNotifier.notifyThat;
 
 public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private static final Logger logger = LoggerFactory.getLogger(Dispatcher.class);
-	private static final long ROUTING_CTRL_DELAY = 1 * 1000;
-	private static final long SEND_TIMEOUT = 1 * 1000;
+	private static final long ROUTING_CTRL_DELAY = 1 * 500;
+	private static final long SEND_TIMEOUT = 1 * 500;
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
@@ -131,8 +132,9 @@ public class Dispatcher implements IRoutingObserver {
 		for(int i = 0; i < outputQueues.size(); i++)
 		{
 			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
-			DispatcherWorker worker = new DispatcherWorker(outputQueues.get(i), owner.getPUContext().getDownstreamTypeConnection().elementAt(i));			
-			Thread workerT = new Thread(worker);
+			EndPoint dest = owner.getPUContext().getDownstreamTypeConnection().elementAt(i);
+			DispatcherWorker worker = new DispatcherWorker(outputQueues.get(i), dest);			
+			Thread workerT = new Thread(worker, "DispatcherWorker-"+dest.getOperatorId());
 			workers.put(i, worker);
 			workerT.start();
 		}
@@ -145,7 +147,7 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
 			RoutingControlWorker worker = new RoutingControlWorker(downOpId);			
-			Thread workerT = new Thread(worker);
+			Thread workerT = new Thread(worker, "RoutingControlWorker-"+downOpId);
 			rctrlWorkers.add(worker);
 			workerT.start();
 		}
@@ -156,7 +158,7 @@ public class Dispatcher implements IRoutingObserver {
 	public void startDispatcherMain()
 	{
 		//TODO: Is this safe?
-		Thread mainT = new Thread(new DispatcherMain());
+		Thread mainT = new Thread(new DispatcherMain(), "DispatcherMain");
 		mainT.start();
 		logger.info("Started dispatcher main.");
 	}
@@ -511,6 +513,16 @@ public class Dispatcher implements IRoutingObserver {
 				else
 				{
 					remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
+					notifyThat(owner.getOperator().getOperatorId()).triedSend();
+					if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
+					else
+					{
+						ArrayList<Integer> nextTargets = owner.getOperator().getRouter().forward_highestWeight(dt);
+						if (nextTargets != null && !nextTargets.isEmpty() && nextTargets.get(0) != target)
+						{
+							notifyThat(owner.getOperator().getOperatorId()).missedSwitch();
+						}
+					}
 				}
 				
 				if (remove)

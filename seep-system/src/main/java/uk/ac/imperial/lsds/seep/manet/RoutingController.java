@@ -54,7 +54,7 @@ public class RoutingController implements Runnable{
 		}
 		else
 		{
-			this.MAX_WEIGHT_DELAY = 1 * 1000;
+			this.MAX_WEIGHT_DELAY = 1 * 500;
 		}
 		
 		for (int i = 0; i < numLogicalInputs; i++)
