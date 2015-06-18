@@ -8,22 +8,19 @@ public class Utils {
 
 	public static int BUNDLE = 1048576;
 	
-	// Default size of circular input buffers
+	/* Default size of circular input byte buffers */
 	public static int _CIRCULAR_BUFFER_ = 1073741824;
 	
-	// Initial size of intermediate array buffers
+	/* Default size of intermediate result byte buffers */
 	public static int _UNBOUNDED_BUFFER_ = 1048576;
 	
-	// Number of CPU threads
+	/* Number of CPU worker threads */
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
 	public static int TASKS = 2 * 1024 * 1024;
 	
-	/* GPU-specific constants */
-	
 	public static boolean GPU = Boolean.parseBoolean(Globals.valueFor("GPU"));
-	/* Check if hybrid execution mode is enabled */
 	public static boolean CPU = Boolean.parseBoolean(Globals.valueFor("CPU"));
-	
+	/* Check if hybrid execution mode is enabled */
 	public static boolean HYBRID = (CPU && GPU);
 	
 	public static boolean LATENCY_ON = false;

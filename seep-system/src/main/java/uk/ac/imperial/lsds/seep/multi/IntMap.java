@@ -1,6 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-
 public class IntMap {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
@@ -149,7 +148,7 @@ public class IntMap {
 	}
 	
 	/*
-	public int[] keySet() {
+	public int [] keySet() {
 		int[] result = new int[size];
 		
 		int k = 0;

@@ -89,8 +89,6 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 		buffer.clear();
 	}
 	
-	/* The buffer is every growing based on peek demand */
-	
 	@Override
 	@SuppressWarnings("finally")
 	public int putInt (int value) { 
@@ -217,10 +215,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 
 	@Override
 	public void release() {
-		
 		UnboundedQueryBufferFactory.free(this);
 	}
-
+	
 	@Override
 	public byte [] array (int offset, int length) {
 		
@@ -259,10 +256,9 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 
 	@Override
 	public int normalise(long index) {
-		
 		return (int) index;
 	}
-
+	
 	@Override
 	public long getBytesProcessed() {
 		
@@ -271,13 +267,11 @@ public class UnboundedQueryBuffer implements IQueryBuffer {
 
 	@Override
 	public boolean isDirect() {
-		
 		return this.isDirect;
 	}
 
 	@Override
 	public int getBufferId() {
-		
 		return id;
 	}
 }

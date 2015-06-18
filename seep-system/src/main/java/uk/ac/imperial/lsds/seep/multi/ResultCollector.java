@@ -135,7 +135,8 @@ public class ResultCollector {
 		int latencyMark
 	) {
 		
-		// System.out.println(String.format("[DBG] task %d free offsets 1/%d 2/%d", taskid, freeOffset1, freeOffset2));
+		/* System.out.println(String.format("[DBG] task %d free offsets 1/%d 2/%d", 
+		 * taskid, freeOffset1, freeOffset2)); */
 		
 		if (taskid < 0) { /* Invalid task id */
 			return ;
@@ -182,7 +183,6 @@ public class ResultCollector {
 			while (busy) {
 
 				IQueryBuffer buf = handler.results[handler.next];
-				// buf.close();
 				byte [] arr = buf.array();
 				
 				/*
@@ -194,9 +194,9 @@ public class ResultCollector {
 						if (query.getDownstreamSubQuery(i) != null) {
 							boolean result = false;
 							if (query.isLeft()) {
-								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, buf.position()); // arr.length);
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchFirst( arr, buf.position());
 							} else {
-								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, buf.position()); // arr.length);
+								result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, buf.position());
 							}
 							if (! result) {
 								handler.latch[handler.next] = i;

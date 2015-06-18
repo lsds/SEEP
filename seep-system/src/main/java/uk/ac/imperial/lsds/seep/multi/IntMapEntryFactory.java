@@ -5,9 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IntMapEntryFactory {
 	
-	private static int N = 32; // Runtime.getRuntime().availableProcessors();
-	
-	private static long idx = 0;
+	private static int N = Runtime.getRuntime().availableProcessors();
 	
 	private static int _pool_size = 1;
 	

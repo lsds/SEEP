@@ -2,8 +2,6 @@ package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
-import uk.ac.imperial.lsds.seep.multi.tmp.Pane;
-
 public class Task extends ITask {
 	
 	private SubQuery query;
@@ -51,84 +49,46 @@ public class Task extends ITask {
 		}
 		
 		if (GPU) {
-			/*
-			 * `_query` is a query that was processed previously.
-			 * 
-			 * This `batch.getBuffer()` is an unbounded buffer that holds the results of `_query`.
-			 * The GPU library takes care of this.
-			 * 
-			 * The task id and free offset refer to the previous query (`_query`).
-			 * 
-			 * But, what about the latency mark? The latency mark refers to the current batch.
-			 * It should rather be refering to the latency mark of the previous query as well.
-			 * 
-			 */
-//			NewResultCollector.forwardAndFree (handler, 
-//					_query,
-//					this.batch.getBuffer(), 
-//					this.batch.getTaskId(), 
-//					this.batch.getFreeOffset(), 
-//					this.batch.getLatencyMark(), 
-//					GPU, true);
 			
-//			ResultCollector.forwardAndFree (handler, 
-//					_query,
-//					this.batch.getBuffer(), 
-//					this.batch.getTaskId(), 
-//					this.batch.getFreeOffset(), 
-//					this.batch.getLatencyMark(), 
-//					GPU);
-			
-			// ResultCollector.aggregateAndFree (handler, _query, this.batch.getTaskId(), this.batch.getFreeOffset());
-			
-			/*
-			ResultCollector.aggregatePartialWindowsAndFree(
-					handler, _query, 
-					null, null, null, 
+			if (this.batch.hasPartialResults()) {
+				
+				handler.resultAggregator.add(
+					
 					this.batch.getTaskId(), 
-					this.batch.getFreeOffset(),
-					-1,
-					GPU);
-			*/
-			
-			handler.resultAggregator.add(this.batch.getTaskId(), 
-					batch.getOpening(), batch.getClosing(), batch.getPending(), batch.getComplete(), 
-					this.batch.getFreeOffset());
+					this.batch.getOpening(), 
+					this.batch.getClosing(), 
+					this.batch.getPending(), 
+					this.batch.getComplete(), 
+					this.batch.getFreeOffset()
+					);
+				
+			} else {
+				
+				ResultCollector.forwardAndFree (handler, query, this.batch.getBuffer(),
+						this.batch.getTaskId(), this.batch.getFreeOffset(), 
+						this.batch.getLatencyMark(), GPU);
+			}
 			
 		} else {
-//			NewResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
-//					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU, true);
 			
-//			ResultCollector.forwardAndFree (handler,  query, this.batch.getBuffer(),
-//					this.batch.getTaskId(), this.batch.getFreeOffset(), this.batch.getLatencyMark(), GPU);
+			if (this.batch.hasPartialResults()) {
 			
-			// ResultCollector.aggregateAndFree (handler, query, this.batch.getTaskId(), this.batch.getFreeOffset());
-			
-			/*
-			ResultHandler handler, 
-			SubQuery query, 
-			PartialWindowResults left,
-			PartialWindowResults center,
-			PartialWindowResults right,
-			int taskid, 
-			int freeOffset, 
-			int latencyMark, 
-			boolean GPU
-			*/
-			
-			/*
-			ResultCollector.aggregatePartialWindowsAndFree(
-					handler, _query, 
-					null, null, null, 
+				handler.resultAggregator.add(
+					
 					this.batch.getTaskId(), 
-					this.batch.getFreeOffset(),
-					-1,
-					GPU);
-			*/
-			
-			handler.resultAggregator.add(this.batch.getTaskId(), 
-					batch.getOpening(), batch.getClosing(), batch.getPending(), batch.getComplete(), 
-					this.batch.getFreeOffset());
+					this.batch.getOpening(), 
+					this.batch.getClosing(), 
+					this.batch.getPending(), 
+					this.batch.getComplete(), 
+					this.batch.getFreeOffset()
+					);
+				
+			} else {
+				
+				ResultCollector.forwardAndFree (handler, query, this.batch.getBuffer(),
+						this.batch.getTaskId(), this.batch.getFreeOffset(), 
+						this.batch.getLatencyMark(), GPU);
+			}
 		}
 		
 		WindowBatchFactory.free(this.batch);
@@ -150,44 +110,13 @@ public class Task extends ITask {
 	public int getFreeIndex() {
 		return freeIndex;
 	}
-
-	public void setFreeIndex(int freeIndex) {
+	
+	public void setFreeIndex (int freeIndex) {
 		this.freeIndex = freeIndex;
 	}
 
 	@Override
 	public SubQuery getQuery() {
 		return query;
-	}
-
-	@Override
-	public void outputPaneResult(long paneId, Pane paneResult) {
-		
-		/* */
-		// handler.theWindowHeap.add(paneResult);
-		
-		// handler.theWindowHeap.dump();
-		// if (paneId % 1024 == 0)
-		// try {
-			
-			// handler.semaphore.acquire();
-			// System.out.println("[DBG] free " + paneResult.getFreeIndex());
-		handler.freeBuffer.free(paneResult.getFreeIndex());
-			// handler.semaphore.release();
-			
-		// } catch (InterruptedException e) {
-		//	e.printStackTrace();
-		//}
-		
-		paneResult.release();
-	}
-
-	@Override
-	public void outputWindowResult(long windowId, int freeIndex,
-			IQueryBuffer buffer) {
-		
-		// handler.windowResults.add (windowId, freeIndex, buffer);
-		
-		// ResultCollector.partialAggregateAndFree (handler, windowId, freeIndex, buffer);
 	}
 }

@@ -7,7 +7,7 @@ import uk.ac.imperial.lsds.seep.multi.join.JoinTaskDispatcher;
 public class SubQuery {
 	
 	/* Since we implement an N-way join as a series of binary joins,
-	 * the maximum number of upstream operators should be 2.  
+	 * the maximum number of upstream operators should be 2.
 	 */
 	private static final int _max_upstream_subqueries = 2;
 	
@@ -222,6 +222,9 @@ public class SubQuery {
 
 	public void connectTo (int localStreamId, SubQuery sq) {
 		
+		if (freeDownstreamIdx >= _max_downstream_subqueries)
+			throw new ArrayIndexOutOfBoundsException("error: invalid number of down-stream queries in sub-query");
+		
 		this.downstreamSubQuery [freeDownstreamIdx++] = sq;
 		sq.setUpstreamSubQuery (this);
 	}
@@ -244,6 +247,9 @@ public class SubQuery {
 		 */
 		if (freeUpstreamIdx == 0)
 			sq.setLeft(true);
+		
+		if (freeUpstreamIdx >= _max_upstream_subqueries)
+			throw new ArrayIndexOutOfBoundsException("error: invalid number of up-stream queries in sub-query");
 		
 		this.upstreamSubQuery[freeUpstreamIdx++] = sq;
 	}
@@ -269,6 +275,9 @@ public class SubQuery {
 	}
 	
 	public void setDownstreamSubQuery (SubQuery sq) {
+		
+		if (freeDownstreamIdx >= _max_downstream_subqueries)
+			throw new ArrayIndexOutOfBoundsException("error: invalid number of down-stream queries in sub-query");
 		
 		this.downstreamSubQuery[freeDownstreamIdx++] = sq;
 	}

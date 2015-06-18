@@ -1,7 +1,5 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
-import java.nio.FloatBuffer;
-
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -13,13 +11,6 @@ import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
-import uk.ac.imperial.lsds.seep.multi.tmp.IntermediateMap;
-import uk.ac.imperial.lsds.seep.multi.tmp.IntermediateMapFactory;
-import uk.ac.imperial.lsds.seep.multi.tmp.Key;
-import uk.ac.imperial.lsds.seep.multi.tmp.KeyFactory;
-import uk.ac.imperial.lsds.seep.multi.tmp.KeyType;
-import uk.ac.imperial.lsds.seep.multi.tmp.Pane;
-import uk.ac.imperial.lsds.seep.multi.tmp.PaneFactory;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
@@ -178,147 +169,34 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		 * Make sure the batch is initialised
 		 */
 		// System.out.println("[DBG] aggregation task " + windowBatch.getTaskId());
-//		windowBatch.initWindowPointers();
-//		System.out.println("RUN aggregration");
-
-//		switch (aggregationType) {
-//		case COUNT:
-//		case SUM:
-//		case AVG:
-//			if (this.hasGroupBy && this.doIncremental) 
-//				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
-//			else if (!this.hasGroupBy && this.doIncremental)
-//				processDataPerWindowIncrementally(windowBatch, api);
-//			else if (this.hasGroupBy && !this.doIncremental)
-//				processDataPerWindowWithGroupBy(windowBatch, api);
-//			else if (!this.hasGroupBy && !this.doIncremental)
-//				processDataPerWindow(windowBatch, api);
-//			break;
-//		case MAX:
-//		case MIN:
-//			if (this.hasGroupBy)
-//				processDataPerWindowWithGroupBy(windowBatch, api);
-//			else 
-//				processDataPerWindow(windowBatch, api);
-//				
-//			break;
-//		default:
-//			break;
-//		}
-		
-		processDataPerPane(windowBatch, api);
-	}
-
-	private void processDataPerPane(WindowBatch windowBatch, IWindowAPI api) {
-		
-		ITupleSchema inSchema = windowBatch.getSchema();
-		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
-		
-		IQueryBuffer inBuffer = windowBatch.getBuffer();
-		
-		long start = windowBatch.getBatchStartTime(); // / byteSizeOfInTuple;
-		long end = windowBatch.getBatchEndTime(); // / byteSizeOfInTuple;
-		long idx = start;
-		
-		/* Compute results for each pane */ 
-		
-		int pid = ThreadMap.getInstance().get(Thread.currentThread().getId());
-		
-		if (debug)
-			System.out.println(String.format("[DBG] %20s, thread id %03d pool id %03d", 
-					Thread.currentThread().getName(), Thread.currentThread().getId(), pid));
-		
-		
-		float paneValue = 0, newPaneValue = 0;
-		int paneTupleCount = 0;
-		
-		int dataPointer = windowBatch.getBufferStartPointer();
-		
-		boolean first = true;
-		
-		long currPane = (idx) / byteSizeOfInTuple / windowBatch.getWindowDefinition().getSlide();
-		long nextPane;
-		
-//		System.out.println(String.format("[DBG] first pane is %2d idx %7d end %7d", currPane, idx, end));
-		
-		while (idx < end) {
-			
-//			if (first) {
-//				if (
-//					this.aggregationType == AggregationType.MAX || 
-//					this.aggregationType == AggregationType.MIN) {
-//				
-//					paneValue = this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
-//				}
-//				else 
-//				if (this.aggregationType == AggregationType.COUNT) {
-//				
-//					paneValue++;
-//				}
-//				else 
-//				if (
-//					this.aggregationType == AggregationType.SUM || 
-//					this.aggregationType == AggregationType.AVG) {
-//				
-//					paneValue += this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
-//					paneTupleCount++;
-//				}
-//				first = false;
-//			} else {
-//				
-//				if (
-//					this.aggregationType == AggregationType.MAX || 
-//					this.aggregationType == AggregationType.MIN) {
-//					
-//					newPaneValue = this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
-//					
-//					if (
-//						(newPaneValue > paneValue && this.aggregationType == AggregationType.MAX) || 
-//						(newPaneValue < paneValue && this.aggregationType == AggregationType.MIN)) {
-//						
-//						paneValue = newPaneValue;
-//					}
-//				}
-//				else 
-//				if (this.aggregationType == AggregationType.COUNT) {
-//					paneValue++;
-//				}
-//				else 
-//				if (
-//					this.aggregationType == AggregationType.SUM || 
-//					this.aggregationType == AggregationType.AVG) {
-//					
-//					paneValue += this.aggregationAttribute.eval(inBuffer, inSchema, dataPointer);
-//					paneTupleCount++;
-//				}
-//			}
-			
-			dataPointer += byteSizeOfInTuple;
-			idx += byteSizeOfInTuple;
-			
-			/* Is the next tuple part of the same pane or a different pane? */
-			nextPane = (idx) / byteSizeOfInTuple / windowBatch.getWindowDefinition().getSlide();
-			if (nextPane != currPane) {
+		windowBatch.initWindowPointers();
+		System.out.println("RUN aggregration");
+		switch (aggregationType) {
+		case COUNT:
+		case SUM:
+		case AVG:
+			if (this.hasGroupBy && this.doIncremental) 
+				processDataPerWindowIncrementallyWithGroupBy(windowBatch, api);
+			else if (!this.hasGroupBy && this.doIncremental)
+				processDataPerWindowIncrementally(windowBatch, api);
+			else if (this.hasGroupBy && !this.doIncremental)
+				processDataPerWindowWithGroupBy(windowBatch, api);
+			else if (!this.hasGroupBy && !this.doIncremental)
+				processDataPerWindow(windowBatch, api);
+			break;
+		case MAX:
+		case MIN:
+			if (this.hasGroupBy)
+				processDataPerWindowWithGroupBy(windowBatch, api);
+			else 
+				processDataPerWindow(windowBatch, api);
 				
-//				System.out.println(String.format("[DBG] worker %2d (task %2d) emits result for pane %6d; data pointer at %10d", 
-//						pid, windowBatch.getTaskId(), currPane, dataPointer));
-				
-				/* Emit */
-				Key key = KeyFactory.newInstance(KeyType._16, pid);
-				key.buffer.putInt(0);
-				Pane p = PaneFactory.newInstance(pid);
-				p.put(0, key, 1, 1);
-				p.setPaneIndex(currPane);
-				p.setFreeIndex(dataPointer - 1);
-				api.outputPaneResult(currPane, p);
-				
-				paneValue = newPaneValue = 0;
-				currPane = nextPane;
-			}
+			break;
+		default:
+			break;
 		}
-		// System.out.println("[DBG] Task " + windowBatch.getTaskId() + " finished; " + currPane);
 	}
-	
+
 	private void processDataPerWindow(WindowBatch windowBatch, IWindowAPI api) {
 		// initialise pointers
 		// windowBatch.initWindowPointers();
@@ -811,86 +689,6 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
 	
-	private void processDataPerWindowIncrementally_TheOtherWay(WindowBatch windowBatch, IWindowAPI api) {
-
-		// assert (this.aggregationType == AggregationType.SUM);
-		
-		int [] startPointers = windowBatch.getWindowStartPointers();
-		int [] endPointers = windowBatch.getWindowEndPointers();
-		
-		/* Panes per batch */
-		int ppb = 557056;
-//				(int) windowBatch.getWindowDefinition().panesPerSlide() * windowBatch.getBatchSize() + 
-//				(int) windowBatch.getWindowDefinition().numberOfPanes();
-		
-		float [] paneResult = new float [ppb];
-		
-		int windowSize = (int) windowBatch.getWindowDefinition().getSize();
-		
-		// System.out.println(String.format("[DBG] panes/batch %10d window size %10d", ppb, windowSize));
-
-		IQueryBuffer inBuffer = windowBatch.getBuffer();
-		IQueryBuffer outBuffer = UnboundedQueryBufferFactory.newInstance();
-
-		ITupleSchema inSchema = windowBatch.getSchema();
-		int byteSizeOfInTuple = inSchema.getByteSizeOfTuple();
-
-		float paneValue = 0;
-		
-		int start = startPointers[0];
-		int end = endPointers[startPointers.length - 1];
-		
-		// System.out.println(String.format("[DBG] batch starts at %10d ends at %10d", start, end));
-		
-		int currentPane = 0;
-		
-		int nextWindow = windowSize;
-		
-		for (int p = start; p < end; p += byteSizeOfInTuple) {
-			
-			paneValue = this.aggregationAttribute.eval(inBuffer, inSchema, p);
-			
-			if (currentPane > 0)
-				paneResult[currentPane] = paneResult[currentPane - 1] + paneValue;
-			else
-				paneResult[currentPane] = paneValue;
-			
-			currentPane ++;
-			
-			if (currentPane == nextWindow) {
-				
-				// System.out.println(String.format("[DBG] current pane is %10d next window ends at %10d", currentPane, nextWindow));
-				
-				// float windowValue = 0;
-				
-				// for (int j = currentPane - windowSize; j < currentPane; j++)
-				// 	windowValue += paneResult[j];
-				
-				// outBuffer.putLong(1);
-				// outBuffer.putFloat(paneResult[currentPane - 1]);
-				
-				// outBuffer.put(outSchema.getDummyContent());
-				
-				// System.out.println("[DBG] window value is " + windowValue);
-				
-				nextWindow += 1;
-				
-				// System.out.print(".");
-			}
-		}
-		
-		outBuffer.getByteBuffer().asFloatBuffer().put(paneResult);
-		
-		inBuffer.release();
-		
-		windowBatch.setBuffer(outBuffer);
-		windowBatch.setSchema(outSchema);
-
-		api.outputWindowBatchResult(-1, windowBatch);
-		
-		// System.out.println("Done.");
-	}
-
 	private void processDataPerWindowIncrementally(WindowBatch windowBatch,
 			IWindowAPI api) {
 

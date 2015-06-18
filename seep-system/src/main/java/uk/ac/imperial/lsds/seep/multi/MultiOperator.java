@@ -8,11 +8,17 @@ public class MultiOperator {
 
 	private static int threads = Utils.THREADS;
 	
-	private static final int _max_upstream_subqueries = 2;
-
 	private Set<SubQuery> subQueries;
 	private int id;
-
+	
+	/*
+	 * At the top level, the input stream will be stream
+	 * will be dispatched to N subqueries, where:
+	 * 
+	 * N < `_max_upstream_subqueries`
+	 */
+	private static final int _max_upstream_subqueries = 2;
+	
 	private ITaskDispatcher	[] dispatcher;
 	private int freeIndex = 0;
 	
@@ -21,39 +27,41 @@ public class MultiOperator {
 	private Executor executor;
 	
 	int nqueries = 1;
-	int nclasses = 2;
+	int nclasses = 2; /* CPU and GPU */
 	
 	int [][] policy;
 
 	public MultiOperator (Set<SubQuery> subQueries, int id) {
+		
 		this.subQueries = subQueries;
 		this.id = id;
 		
-		dispatcher = new ITaskDispatcher [_max_upstream_subqueries];
-		freeIndex = 0;
+		this.dispatcher = new ITaskDispatcher [_max_upstream_subqueries];
+		this.freeIndex = 0;
 		
 		this.nqueries = this.subQueries.size();
 	}
-
-	public void processData (byte[] values) {
+	
+	public void processData (byte [] values) {
 		
-		for (int i = 0; i < freeIndex; i++)
-			this.dispatcher[i].dispatch (values, values.length);
+		processData (values, values.length);
 	}
 	
-	public void processData (byte[] values, int length) {
+	public void processData (byte [] values, int length) {
+		
 		for (int i = 0; i < freeIndex; i++)
 			this.dispatcher[i].dispatch (values, length);
 	}
 
 	public void processDataSecond (byte [] values) {
-		for (int i = 0; i < freeIndex; i++)
-			this.dispatcher[i].dispatchSecond(values,  values.length);
+		
+		processDataSecond (values, values.length);
 	}
 	
 	public void processDataSecond (byte [] values, int length) {
+		
 		for (int i = 0; i < freeIndex; i++)
-			this.dispatcher[i].dispatchSecond(values,  length);
+			this.dispatcher[i].dispatchSecond(values, length);
 	}
 	
 	public void setup() {
@@ -66,11 +74,14 @@ public class MultiOperator {
 		}
 		
 		this.queue = new TaskQueue(threads, nqueries);
+		
 		this.workerPool = new TaskProcessorPool(threads, queue, policy, Utils.HYBRID);
 		this.executor = Executors.newCachedThreadPool();
 		this.queue = workerPool.start(executor);
 
 		for (SubQuery q : this.subQueries) {
+			if (freeIndex >= _max_upstream_subqueries)
+				throw new ArrayIndexOutOfBoundsException("error: invalid number of queries in multi-operator");
 			q.setParent(this);
 			q.setup();
 			if (q.isMostUpstream())
@@ -81,34 +92,40 @@ public class MultiOperator {
 		monitor.setName("Monitor");
 		monitor.start();
 	}
-
-	public int getId() {
+	
+	public int getId () {
+		
 		return id;
 	}
 	
 	public TaskQueue getExecutorQueue() {
+		
 		return this.queue;
 	}
 	
 	public int getExecutorQueueSize() {
+		
 		return this.queue.size();
 	}
 
 	public Set<SubQuery> getSubQueries() {
+		
 		return this.subQueries;
 	}
 	
-	public TaskProcessorPool getTaskProcessorPool () { 
+	public TaskProcessorPool getTaskProcessorPool () {
+		
 		return workerPool; 
 	}
 
-	public void updatePolicy(int[][] policy_) {
+	public void updatePolicy (int [][] policy_) {
+		
 		for (int i = 0; i < nclasses; i++)
 			for (int j = 0; j < nqueries; j++)
 				policy[i][j] = policy_[i][j];
 	}
 
-	public Object policyToString() {
+	public String policyToString () {
 		StringBuilder b = new StringBuilder("[");
 		for (int i = 0; i < nclasses; i++) {
 			for (int j = 0; j < nqueries; j++) {

@@ -101,7 +101,7 @@ public class TestAggregationType {
         int nwindows = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
 		
 		System.out.println(String.format("[DBG] %d bytes input", inputSize));
-		System.out.println(String.format("[DBG] %d windows", nwindows));
+		System.out.println(String.format("[DBG] %d windows (approximately complete)", nwindows));
 		
 		TheGPU.getInstance().init(1);
 		/*		
@@ -111,7 +111,13 @@ public class TestAggregationType {
 				new FloatColumnReference(1)
 				);
 		*/
-		IMicroOperatorCode cpuAggCode = new PartialMicroAggregation(window);
+		IMicroOperatorCode cpuAggCode = new PartialMicroAggregation(
+			window,
+			aggregationType,
+			new FloatColumnReference(1)
+			);
+		
+		// IMicroOperatorCode cpuAggCode = new PartialMicroAggregation(window);
 		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		

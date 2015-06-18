@@ -23,10 +23,11 @@ public interface IQueryBuffer {
 	public int normalise (long index);
 	
 	public int remaining ();
-	
 	public boolean hasRemaining ();
+	
 	public void position (int index);
 	public int position ();
+	
 	public int limit ();
 	
 	public void close ();
@@ -34,10 +35,13 @@ public interface IQueryBuffer {
 	
 	public int putInt (int value);
 	public int putInt(int index, int value);
+	
 	public int putFloat (float value);
 	public int putFloat(int index, float value);
+	
 	public int putLong (long value);
 	public int putLong(int index, long value);
+	
 	public int put (byte [] values);
 	public int put (byte [] source, int offset, int length);
 	public int put (byte [] values, int length);

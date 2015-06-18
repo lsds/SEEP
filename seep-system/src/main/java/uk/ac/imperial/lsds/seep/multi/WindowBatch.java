@@ -32,14 +32,15 @@ public class WindowBatch {
 	
 	private boolean initialised = false;
 	
-	/* Expected timestamps, based on range and slide of window definition */
 	private long batchStartTime;
 	private long batchEndTime;
 	
 	private int prevWindowStartPointer;
 	private int prevWindowEndPointer;
-
+	
 	private int latencyMark = 0;
+	
+	private boolean partialResults = false;
 	
 	PartialWindowResults opening, closing, pending, complete;
 	
@@ -72,8 +73,8 @@ public class WindowBatch {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
-		this.windowStartPointers = new int [65536]; // null;
-		this.windowEndPointers = new int [65536]; // null;
+		this.windowStartPointers = new int [65536];
+		this.windowEndPointers   = new int [65536];
 		
 		this.initialised = false;
 		
@@ -87,6 +88,8 @@ public class WindowBatch {
 		this.pending = null;
 		this.complete = null;
 		this.opening = null;
+		
+		this.partialResults = false;
 	}
 	
 	public void set (int batchSize, 
@@ -110,9 +113,13 @@ public class WindowBatch {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
+		/*
+		 * Avoid the cost of initialising
+		 * the arrays.
+		 * 
 		Arrays.fill(windowStartPointers, -1);
 		Arrays.fill(  windowEndPointers, -1);
-		
+		*/
 		this.initialised = false;
 		
 		this.batchStartTime = -1;
@@ -127,6 +134,8 @@ public class WindowBatch {
 		this.pending = null;
 		this.complete = null;
 		this.opening = null;
+		
+		this.partialResults = false;
 	}
 	
 	public void setTaskId (int taskId) {
@@ -136,7 +145,7 @@ public class WindowBatch {
 	public int getTaskId () {
 		return this.taskId;
 	}
-
+	
 	public int getFreeOffset () {
 		return this.freeOffset;
 	}
@@ -387,7 +396,7 @@ public class WindowBatch {
 	
 	public void clear () {
 		initialised = false;
-		// windowStartPointers = windowEndPointers = null;
+		/* windowStartPointers = windowEndPointers = null; */
 		batchStartTime = batchEndTime = -1;
 		this.buffer = null;
 		this.prevWindowStartPointer = this.prevWindowEndPointer = -1;
@@ -539,6 +548,7 @@ public class WindowBatch {
 	}
 	
 	public void setOpening(PartialWindowResults opening) {
+		this.partialResults = true;
 		this.opening = opening;
 	}
 
@@ -547,6 +557,7 @@ public class WindowBatch {
 	}
 
 	public void setClosing(PartialWindowResults closing) {
+		this.partialResults = true;
 		this.closing = closing;
 	}
 
@@ -555,6 +566,7 @@ public class WindowBatch {
 	}
 
 	public void setPending(PartialWindowResults pending) {
+		this.partialResults = true;
 		this.pending = pending;
 	}
 
@@ -563,6 +575,7 @@ public class WindowBatch {
 	}
 
 	public void setComplete(PartialWindowResults complete) {
+		this.partialResults = true;
 		this.complete = complete;
 	}
 	
@@ -593,11 +606,12 @@ public class WindowBatch {
 	public long getBatchEndPointer () {
 		return this.batchEndPointer;
 	}
+	
+	public boolean hasPartialResults () {
+		return this.partialResults;
+	}
 
-	public void initPartialWindowPointers() {
-		
-//		this.windowStartPointers = new int [65536];
-//		this.windowEndPointers   = new int [65536];
+	public void initPartialWindowPointers () {
 		
 		int tupleSize = schema.getByteSizeOfTuple ();
 		long paneSize = windowDefinition.getPaneSize(); 
@@ -630,12 +644,14 @@ public class WindowBatch {
 					
 					if (wid >= 0) {
 						
-						// System.out.println(String.format("[DBG] closing %05d; buffer index %10d", wid, bufferIndex));
+						/* System.out.println(String.format("[DBG] closing %05d; buffer index %10d", 
+						 * wid, bufferIndex)); */
 						
 						/* Calculate offset */
 						if (offset < 0) {
 							offset = wid;
-							// System.out.println(String.format("[DBG] window %05d is closing; offset %10d", wid, offset));
+							/* System.out.println(String.format("[DBG] window %05d is closing; offset %10d", 
+							 * wid, offset)); */
 						}
 						
 						/* Store end pointer */
@@ -647,12 +663,14 @@ public class WindowBatch {
 					
 					wid = pid / windowDefinition.panesPerSlide();
 					
-					// System.out.println(String.format("[DBG] opening %05d; buffer index %10d", wid, bufferIndex));
+					/* System.out.println(String.format("[DBG] opening %05d; buffer index %10d", 
+					 * wid, bufferIndex)); */
 					
 					/* Calculate offset */
 					if (offset < 0) {
 						offset = wid;
-						// System.out.println(String.format("[DBG] window %05d is opening; offset %10d", wid, offset));
+						/* System.out.println(String.format("[DBG] window %05d is opening; offset %10d", 
+						 * wid, offset)); */
 					}
 					
 					/* Store start pointer */
@@ -663,4 +681,3 @@ public class WindowBatch {
 		}
 	}
 }
-

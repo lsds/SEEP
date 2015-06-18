@@ -118,17 +118,4 @@ public class JoinTask extends ITask {
 	public SubQuery getQuery() {
 		return query;
 	}
-
-	@Override
-	public void outputPaneResult(long id, Pane p) {
-		
-		throw new UnsupportedOperationException("A join task cannot output panes");
-	}
-
-	@Override
-	public void outputWindowResult(long windowId, int freeIndex,
-			IQueryBuffer buffer) {
-		
-		throw new UnsupportedOperationException("A join task cannot output partial window results");
-	}
 }

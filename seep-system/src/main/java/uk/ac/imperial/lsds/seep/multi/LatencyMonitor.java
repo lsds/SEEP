@@ -17,17 +17,6 @@ public class LatencyMonitor {
 	
 	ArrayList<Double> measurements;
 	
-	private static int unpack (int idx, long value) {
-		if (idx == 0) { /* left */
-			return (int) (value >> 32);
-		} else
-		if (idx == 1) { /* right value */
-			return (int) value;
-		} else {
-			return -1;
-		}
-	}
-	
 	public LatencyMonitor (long timestampReference) {
 		
 		this.timestampReference = timestampReference;
@@ -57,7 +46,7 @@ public class LatencyMonitor {
 		
 		avg = latency / count;
 		
-		return String.format("~= %10.3f >= %10.3f <= %10.3f",
+		return String.format("avg %10.3f min %10.3f max %10.3f",
 			avg,
 			min,
 			max
@@ -71,9 +60,10 @@ public class LatencyMonitor {
 		}
 		
 		double dt = 0;
+		
 		/* Check buffer */
 		
-		long t1 = (long) unpack(0, buffer.getLong(mark));
+		long t1 = (long) Utils.unpack(0, buffer.getLong(mark));
 		
 		long t2 = (System.nanoTime() - timestampReference) / 1000L;
 		dt = (t2 - t1) / 1000.; /* In milliseconds */
@@ -114,32 +104,7 @@ public class LatencyMonitor {
 			));
 	}
 	
-	/*
-	private double evaluate (final double[] values, final int begin, final int length, final double p) {
-			
-		if ((p > 100) || (p <= 0)) {
-			throw new IllegalArgumentException("invalid quantile value: " + p);
-		}
-		
-		if (length == 0) {
-			return Double.NaN;
-		}
-		
-		if (length == 1) {
-			return values[begin]; // always return single value for n = 1
-		}
-		
-		double [] sorted = new double[length];
-		
-		System.arraycopy (values, begin, sorted, 0, length);
-		
-		Arrays.sort(sorted);
-		
-		return evaluateSorted (sorted, p);
-	}
-	*/
-	
-	private double evaluateSorted(final double[] sorted, final double p) {
+	private double evaluateSorted (final double[] sorted, final double p) {
 		
 		double n = sorted.length;
 		double pos = p * (n + 1) / 100;

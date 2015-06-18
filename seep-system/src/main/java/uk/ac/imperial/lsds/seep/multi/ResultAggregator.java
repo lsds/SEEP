@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
@@ -20,9 +21,9 @@ public class ResultAggregator {
 	 * Nodes are statically linked.
 	 * 
 	 * Nodes are removed from the list only by 
-	 * marking them as "complete", which means
-	 * that all windows contained in this task
-	 * are complete.
+	 * marking them as FREE (-1), meaning that
+	 * all windows contained of this task  are
+	 * complete and they have been forwarded.
 	 */
 	
 	/* Individual slot states 
@@ -33,10 +34,10 @@ public class ResultAggregator {
 	 *  2:  forwarded  (BUSY)
 	 */
 	private static final int  FREE = -1;
-	private static final int  WAIT =  0;
-	private static final int  IDLE =  1;
-	private static final int READY =  2;
-	private static final int  BUSY =  3;
+	private static final int  WAIT =  0; /* A thread is populating the slot */
+	private static final int  GREX =  1; /* The slot can be aggregated with its next one */
+	private static final int  NEAT =  2;
+	private static final int  BUSY =  3; /* A thread is busy forwarding the results of the slot */
 	
 	private static class ResultAggregatorNode {
 		
@@ -44,6 +45,8 @@ public class ResultAggregator {
 		int freeOffset;
 		
 		ResultAggregatorNode next;
+		
+		AtomicBoolean left, right;
 		
 		PartialWindowResults closing, pending, opening, complete;
 		
@@ -58,6 +61,9 @@ public class ResultAggregator {
 			this.complete = null;
 			
 			next = null;
+			
+			left  = new AtomicBoolean (false);
+			right = new AtomicBoolean (false); 
 		}
 		
 		public void init (
@@ -76,6 +82,9 @@ public class ResultAggregator {
 			this.complete = complete;
 			
 			this.freeOffset = freeOffset;
+			
+			 left.set(false);
+			right.set(false); 
 		}
 		
 		public void connectTo (ResultAggregatorNode node) {
@@ -87,47 +96,77 @@ public class ResultAggregator {
 			return (this.opening != null && this.complete != null);
 		}
 		
-		public void aggregate(ResultAggregatorNode p) {
-			
-			/* Aggregate this nodes opening windows with node
-			 * p's closing or pending windows.
-			 * 
-			 * According to the aggregation rules, the output 
-			 * of this operation will always produce complete 
-			 * or opening windows - never pending or closing.
-			 */
+		/* Aggregate this nodes opening windows with node
+		 * p's closing or pending windows.
+		 * 
+		 * According to the aggregation rules, the output 
+		 * of this operation will always produce complete 
+		 * or opening windows - never pending or closing.
+		 */
+		public void aggregate (ResultAggregatorNode p) {
 			
 			/* Populate node p's complete or opening windows and 
-			 * nullify its closing and pending ones. 
+			 * nullify its closing and pending ones.
 			 */
 			if (p.closing != null) {
+				
+				/* System.out.println(String.format(
+				 * "[DBG] %40s aggregate: %6d bytes in opening window %6d bytes in closing window",
+				 * Thread.currentThread(), this.opening.getBuffer().position(), p.closing.getBuffer().position())); 
+				 */ 
+				
+				IQueryBuffer b1 = this.opening.getBuffer();
+				IQueryBuffer b2 =    p.closing.getBuffer();
+				
+				for (int i = 0; i < b1.position(); i += 16) {
+					b2.putFloat(i + 8, (b2.getFloat(i + 8) + b1.getFloat(i + 8)));
+				}
+				
 				p.closing.release();
 				p.closing = null;
 			}
 			
 			if (p.pending != null) {
+				System.err.println("error: aggregating pending windows is not supported yet");
+				/*
 				p.pending.release();
 				p.pending = null;
+				*/
 			}
 			
-			/* Nullify this node's opening windows (the results
-			 * are stored in p's sets). 
-			 */
+			p.setRight();
 			
+			/* Nullify this node's opening windows (the results
+			 * have been stored in p's sets). 
+			 */
 			this.opening.release();
 			this.opening = null;
+			
+			p.setLeft();
 		}
 		
 		public boolean isReady() {
 			/*
-			 * Closing and pending windows are managed by a different 
-			 * aggregation task.
+			 * Closing and pending windows may be managed 
+			 * by a different worker.
 			 * 
-			 * Opening windows are managed by this task. 
+			 * Opening windows are managed by this worker. 
 			 */
-			return (this.closing == null && this.pending == null && this.opening == null && this.complete != null);
+			return left.get() && right.get();
 		}
-
+		
+		public void setLeft () {
+			if (! left.compareAndSet(false, true)) {
+				System.err.println("warning: unexpected state in ResultAggregator");
+			}
+		}
+		
+		public void setRight () {
+			if (! right.compareAndSet(false, true)) {
+				System.err.println("warning: unexpected state in ResultAggregator");
+			}
+		}
+		
 		public int getFreeOffset() {
 			return freeOffset;
 		}
@@ -135,30 +174,21 @@ public class ResultAggregator {
 		public String toString() {
 			StringBuilder s = new StringBuilder();
 			s.append("[");
-			s.append("opening: ");
-			s.append(opening);
-			s.append(", closing: ");
-			s.append(closing);
-			s.append(", pending: ");
-			s.append(pending);
-			s.append(", complete: ");
-			s.append(complete);
-			s.append(", free: ");
-			s.append(freeOffset);
+			s.append(   "opening: "); s.append(   opening);
+			s.append( ", closing: "); s.append(   closing);
+			s.append( ", pending: "); s.append(   pending);
+			s.append(", complete: "); s.append(  complete);
+			s.append(    ", free: "); s.append(freeOffset);
 			s.append("]");
 			return s.toString();
 		}
 
 		public void releaseAll() {
 			
-			if (this.closing != null)
-				this.closing.release();
-			if (this.opening != null)
-				this.opening.release();
-			if (this.pending != null)
-				this.pending.release();
-			if (this.complete != null)
-				this.complete.release();
+			if ( this.closing != null)  this.closing.release();
+			if ( this.opening != null)  this.opening.release();
+			if ( this.pending != null)  this.pending.release();
+			if (this.complete != null) this.complete.release();
 		}
 	}
 	
@@ -170,7 +200,7 @@ public class ResultAggregator {
 	int nextToAggregate;
 	int nextToForward;
 	
-	int nextPointer;
+	int nextPointer; /* Temp. variable */
 	
 	Semaphore semaphore;
 	Lock lock;
@@ -225,94 +255,107 @@ public class ResultAggregator {
 		/* Slot `idx` has been reserved for this task id */
 		ResultAggregatorNode node = nodes[idx];
 		
-		if (! (opening != null && closing != null && pending == null && complete != null) && taskid != 1) {
-			System.err.println("error");
-			System.exit(1);
-		}
-		
 		node.init (opening, closing, pending, complete, freeOffset);
-//		System.out.println(node);
+		/* System.out.println(node); */
 		
 		/* Check if the slot is ready to forward and free
 		 * (i.e. there are no partial results).
 		 * 
 		 * If not, make slot available for aggregation.
 		 */
-		slots.set(idx, IDLE);
+		slots.set(idx, GREX);
 		
-		// slots.set(idx, READY);
+		slots.set(idx, NEAT);
 		
-		/* Aggregate, starting from `nextToAggregate` */
-		
-		// ResultAggregatorNode p;
-		// ResultAggregatorNode q;
-		
-		while (true) {
-			
-			lock.lock();
-		
-			if (slots.get(nextToAggregate) == IDLE) {
-				
-				nextPointer  = nextToAggregate + 1;
-				nextPointer %= size;
-				
-				if (slots.get(nextPointer) == IDLE) {
-					
-					ResultAggregatorNode p = nodes[nextToAggregate];
-					ResultAggregatorNode q = nodes[nextPointer]; // p.next;
-					/* Check whether p has any opening windows.
-					 * 
-					 * If the set of p's complete windows is not null
-					 * then aggregate p's opening windows with q's. 
-					 * 
-					 */
-					
-//					System.out.println(String.format("[DBG] aggregator thread %s current %4d next %4d", 
-//							Thread.currentThread(), p.index, q.index));
-					
-					/* Increment pointer only if there is work to do */
-					if (p.isRightOpen()) {
-						
-						nextToAggregate = nextToAggregate + 1;
-						nextToAggregate = nextToAggregate % size;
-						
-						/* Let other threads aggregate results as well, 
-						 * picking up from `nextToAggregate`.
-						 */
-						// lock.unlock();
-						// System.out.println(String.format("[DBG] %s aggregate current %4d next %4d", Thread.currentThread(), p.index, q.index));
-						/* Aggregate */
-						p.aggregate(q);
-//						System.out.println("[DBG] After aggregation, current is " + p);
-						if (p.isReady()) {
-							
-							slots.set(p.index, READY);
-						} else {
-							System.err.println("Something is terribly wrong...");
-							System.exit(1);
-						}
-						lock.unlock();
-						
-					} else {
-						/*
-						 * This means that node p is locked from the
-						 * left. 
-						 */
-						System.err.println ("warning: current node is locked from the left: " + p);
-						lock.unlock();
-						break;
-					}
-					
-				} else {
-					lock.unlock();
-					break;
-				}
-				
-			} else {
-				lock.unlock();
-				break;
-			}
-		}
+//		/* Aggregate, starting from `nextToAggregate` */
+//		ResultAggregatorNode p;
+//		ResultAggregatorNode q;
+//		
+//		while (true) {
+//			
+//			lock.lock();
+//		
+//			if (slots.get(nextToAggregate) == GREX) {
+//				
+//				nextPointer  = nextToAggregate + 1;
+//				nextPointer %= size;
+//				
+//				if (slots.get(nextPointer) == GREX) {
+//					
+//					p = nodes[nextToAggregate];
+//					q = nodes[nextPointer]; /* p.next; */
+//					
+//					/* Check whether p has any opening windows.
+//					 * 
+//					 * If the set of p's complete windows is not null
+//					 * then aggregate p's opening windows with q's. 
+//					 * 
+//					 */
+//					
+//					/* System.out.println(String.format("[DBG] aggregator thread %s current %4d next %4d", 
+//							Thread.currentThread(), p.index, q.index)); */
+//					
+//					if (p.isRightOpen()) {
+//						
+//						/* Increment pointer only if there is work to do */
+//						
+//						nextToAggregate = nextToAggregate + 1;
+//						nextToAggregate = nextToAggregate % size;
+//						
+//						/* Let other threads aggregate results as well, starting 
+//						 * from `nextToAggregate`, by releasing the lock.
+//						 * 
+//						 * However, we have to deal with a race condition:
+//						 * 
+//						 * This thread (say, thread A) will aggregate p's opening 
+//						 * windows with q's (p.next) closing windows. 
+//						 * 
+//						 * At the same time, we permit another thread (say, B) to 
+//						 * aggregate q's opening windows with q.next's closing ones.
+//						 * 
+//						 * If thread B finishes before A, then q will not be ready 
+//						 * (since thread A is working on q's closing windows).
+//						 * 
+//						 * So, thread B will never set q's slot status to NEAT; and, 
+//						 * neither will thread A. 
+//						 * 
+//						 * So q's slot will never be free'd.
+//						 */
+//						lock.unlock();
+//						
+//						/* System.out.println(String.format("[DBG] %s aggregate current %4d next %4d", 
+//						 * Thread.currentThread(), p.index, q.index)); */
+//						
+//						p.aggregate(q);
+//						
+//						if (p.isReady())
+//							slots.compareAndSet(p.index, GREX, NEAT);
+//						/* Also check node q, in case two workers raced together */
+//						if (q.isReady())
+//							slots.compareAndSet(p.index, GREX, NEAT);
+//						
+//						/* lock.unlock(); */
+//						
+//					} else {
+//						/*
+//						 * This means that node p is locked from the
+//						 * left. 
+//						 */
+//						System.err.println ("warning: current node is locked from the left: " + p);
+//						lock.unlock();
+//						break;
+//					}
+//					
+//				} else {
+//					lock.unlock();
+//					break;
+//				}
+//				
+//			} else {
+//				lock.unlock();
+//				break;
+//			}
+//		}
 		
 		/* Forward and free */
 		
@@ -320,13 +363,13 @@ public class ResultAggregator {
 			return;
 		
 		/* No other thread can enter this section */
-//		System.out.println ("[DBG] next to forward is " + nextToForward);
+		
+		/* System.out.println ("[DBG] next to forward is " + nextToForward); */
 		
 		/* Is slot `nextToForward` occupied? 
 		 */
-		if (! slots.compareAndSet(nextToForward, READY, BUSY)) {
+		if (! slots.compareAndSet(nextToForward, NEAT, BUSY)) {
 			semaphore.release();
-//			System.out.println ("[DBG] failed to forward " + nextToForward);
 			return ;
 		}
 		
@@ -337,7 +380,7 @@ public class ResultAggregator {
 			/* Process (forward and free the current slot) */
 			int offset = nodes[nextToForward].getFreeOffset();
 			
-//			System.out.println(String.format("[DBG] __________FREE %4d (%10d)", nextToForward, offset));
+			/* System.out.println(String.format("[DBG] forward and free results in slot %4d (%10d)", nextToForward, offset)); */
 			
 			if (offset != Integer.MIN_VALUE) {
 				
@@ -361,7 +404,7 @@ public class ResultAggregator {
 			nextToForward = nextToForward % size;
 			
 			/* Check if next is ready to be pushed */
-			if (! slots.compareAndSet(nextToForward, READY, BUSY)) {
+			if (! slots.compareAndSet(nextToForward, NEAT, BUSY)) {
 				busy = false;
 			}
 		}
