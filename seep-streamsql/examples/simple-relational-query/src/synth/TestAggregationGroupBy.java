@@ -24,6 +24,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.AggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.ANDPredicate;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
@@ -101,13 +102,13 @@ public class TestAggregationGroupBy {
 //		int batchOffset = (int) ((queryConf.BATCH) * window.getSlide());
 //		System.out.println("[DBG] offset is " + batchOffset);
 		
-		int inputSize = queryConf.BATCH;
-		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+//		int inputSize = queryConf.BATCH;
+//		System.out.println(String.format("[DBG] %d bytes input", inputSize));
+//		
+//		int tuplesPerBatch = inputSize / schema.getByteSizeOfTuple();
+//		int panesPerBatch = (int) (tuplesPerBatch / window.getPaneSize());
 		
-		int tuplesPerBatch = inputSize / schema.getByteSizeOfTuple();
-		int panesPerBatch = (int) (tuplesPerBatch / window.getPaneSize());
-		
-		int nwindows = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
+//		int nwindows = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
 		
 		TheGPU.getInstance().init(1);
 				
@@ -132,14 +133,22 @@ public class TestAggregationGroupBy {
 			);
 		IPredicate predicate = new ANDPredicate(predicates);
 		*/
-		IMicroOperatorCode cpuAggCode = new MicroAggregation
-			(
-				window,
-				aggregationType,
-				new FloatColumnReference(1),
-				groupBy
-				/* ,new Selection(predicate) */
-			);
+//		IMicroOperatorCode cpuAggCode = new MicroAggregation
+//			(
+//				window,
+//				aggregationType,
+//				new FloatColumnReference(1),
+//				groupBy
+//				/* ,new Selection(predicate) */
+//			);
+		
+		IMicroOperatorCode cpuAggCode = new PartialMicroAggregation
+				(
+					window,
+					aggregationType,
+					new FloatColumnReference(1),
+					groupBy
+				);
 		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
@@ -169,7 +178,7 @@ public class TestAggregationGroupBy {
 		operators.add(uoperator);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 256 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 1 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();

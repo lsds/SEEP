@@ -4,13 +4,13 @@ import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
-import uk.ac.imperial.lsds.seep.multi.IntMap;
-import uk.ac.imperial.lsds.seep.multi.IntMapEntry;
-import uk.ac.imperial.lsds.seep.multi.IntMapFactory;
 import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
+import uk.ac.imperial.lsds.seep.multi.tmp.IntMap;
+import uk.ac.imperial.lsds.seep.multi.tmp.IntMapEntry;
+import uk.ac.imperial.lsds.seep.multi.tmp.IntMapFactory;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
@@ -78,6 +78,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			AggregationType aggregationType,
 			FloatColumnReference aggregationAttribute,
 			Expression[] groupByAttributes, Selection havingSel) {
+		
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
 		this.groupByAttributes = groupByAttributes;
