@@ -35,6 +35,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
 
     chmod_dir('%s/%s'%(data_dir, time_str))
 

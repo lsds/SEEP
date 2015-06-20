@@ -6,7 +6,6 @@ set title "Throughput for different replication factors (k)"
 set xlabel "Replication factor (k)"
 set ylabel "Relative throughput"
 set y2label "Absolute throughput (Kb/s)"
-#set yrange [0:100]
 set yrange [0:*]
 set ytics nomirror
 
@@ -21,12 +20,9 @@ set style line 2 lw 5 lt 2 linecolor rgb CADMIUMORANGE
 set style line 4 lw 5 lt 2 linecolor rgb GREEN 
 
 set style data histograms
-#set style histogram cluster gap 1
-#set style histogram errorbars gap 2 lw 1
 set style histogram errorbars gap 10 lw 5 
 set style fill empty 
 set boxwidth 0.95 relative 
-#set border linewidth 1.5
 
 set key off 
 set bmargin 4
