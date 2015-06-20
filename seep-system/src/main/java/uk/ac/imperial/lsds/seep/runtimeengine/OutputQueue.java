@@ -114,6 +114,8 @@ public class OutputQueue {
 				}
 				channelRecord.addDataToBatch(tp);
 				long currentTime = System.currentTimeMillis();
+				long latency = currentTime - tp.instrumentation_ts;
+				LOG.debug("oq.sync sending"+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency);
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
