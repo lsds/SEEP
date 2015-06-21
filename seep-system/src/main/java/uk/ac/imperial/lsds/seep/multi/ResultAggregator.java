@@ -110,10 +110,11 @@ public class ResultAggregator {
 			 */
 			if (p.closing != null) {
 				
-				/* System.out.println(String.format(
-				 * "[DBG] %40s aggregate: %6d bytes in opening window %6d bytes in closing window",
-				 * Thread.currentThread(), this.opening.getBuffer().position(), p.closing.getBuffer().position())); 
-				 */ 
+				/* 
+				 System.out.println(String.format(
+				 "[DBG] %40s aggregate: %6d bytes in opening window %6d bytes in closing window",
+				 Thread.currentThread(), this.opening.getBuffer().position(), p.closing.getBuffer().position())); 
+				*/ 
 				
 				IQueryBuffer b1 = this.opening.getBuffer();
 				IQueryBuffer b2 =    p.closing.getBuffer();
@@ -265,97 +266,95 @@ public class ResultAggregator {
 		 */
 		slots.set(idx, GREX);
 		
-		slots.set(idx, NEAT);
+		/* Aggregate, starting from `nextToAggregate` */
+		ResultAggregatorNode p;
+		ResultAggregatorNode q;
 		
-//		/* Aggregate, starting from `nextToAggregate` */
-//		ResultAggregatorNode p;
-//		ResultAggregatorNode q;
-//		
-//		while (true) {
-//			
-//			lock.lock();
-//		
-//			if (slots.get(nextToAggregate) == GREX) {
-//				
-//				nextPointer  = nextToAggregate + 1;
-//				nextPointer %= size;
-//				
-//				if (slots.get(nextPointer) == GREX) {
-//					
-//					p = nodes[nextToAggregate];
-//					q = nodes[nextPointer]; /* p.next; */
-//					
-//					/* Check whether p has any opening windows.
-//					 * 
-//					 * If the set of p's complete windows is not null
-//					 * then aggregate p's opening windows with q's. 
-//					 * 
-//					 */
-//					
-//					/* System.out.println(String.format("[DBG] aggregator thread %s current %4d next %4d", 
-//							Thread.currentThread(), p.index, q.index)); */
-//					
-//					if (p.isRightOpen()) {
-//						
-//						/* Increment pointer only if there is work to do */
-//						
-//						nextToAggregate = nextToAggregate + 1;
-//						nextToAggregate = nextToAggregate % size;
-//						
-//						/* Let other threads aggregate results as well, starting 
-//						 * from `nextToAggregate`, by releasing the lock.
-//						 * 
-//						 * However, we have to deal with a race condition:
-//						 * 
-//						 * This thread (say, thread A) will aggregate p's opening 
-//						 * windows with q's (p.next) closing windows. 
-//						 * 
-//						 * At the same time, we permit another thread (say, B) to 
-//						 * aggregate q's opening windows with q.next's closing ones.
-//						 * 
-//						 * If thread B finishes before A, then q will not be ready 
-//						 * (since thread A is working on q's closing windows).
-//						 * 
-//						 * So, thread B will never set q's slot status to NEAT; and, 
-//						 * neither will thread A. 
-//						 * 
-//						 * So q's slot will never be free'd.
-//						 */
-//						lock.unlock();
-//						
-//						/* System.out.println(String.format("[DBG] %s aggregate current %4d next %4d", 
-//						 * Thread.currentThread(), p.index, q.index)); */
-//						
-//						p.aggregate(q);
-//						
-//						if (p.isReady())
-//							slots.compareAndSet(p.index, GREX, NEAT);
-//						/* Also check node q, in case two workers raced together */
-//						if (q.isReady())
-//							slots.compareAndSet(p.index, GREX, NEAT);
-//						
-//						/* lock.unlock(); */
-//						
-//					} else {
-//						/*
-//						 * This means that node p is locked from the
-//						 * left. 
-//						 */
-//						System.err.println ("warning: current node is locked from the left: " + p);
-//						lock.unlock();
-//						break;
-//					}
-//					
-//				} else {
-//					lock.unlock();
-//					break;
-//				}
-//				
-//			} else {
-//				lock.unlock();
-//				break;
-//			}
-//		}
+		while (true) {
+			
+			lock.lock();
+		
+			if (slots.get(nextToAggregate) == GREX) {
+				
+				nextPointer  = nextToAggregate + 1;
+				nextPointer %= size;
+				
+				if (slots.get(nextPointer) == GREX) {
+					
+					p = nodes[nextToAggregate];
+					q = nodes[nextPointer]; /* p.next; */
+					
+					/* Check whether p has any opening windows.
+					 * 
+					 * If the set of p's complete windows is not null
+					 * then aggregate p's opening windows with q's. 
+					 * 
+					 */
+					
+					/* System.out.println(String.format("[DBG] aggregator thread %s current %4d next %4d", 
+							Thread.currentThread(), p.index, q.index)); */
+					
+					if (p.isRightOpen()) {
+						
+						/* Increment pointer only if there is work to do */
+						
+						nextToAggregate = nextToAggregate + 1;
+						nextToAggregate = nextToAggregate % size;
+						
+						/* Let other threads aggregate results as well, starting 
+						 * from `nextToAggregate`, by releasing the lock.
+						 * 
+						 * However, we have to deal with a race condition:
+						 * 
+						 * This thread (say, thread A) will aggregate p's opening 
+						 * windows with q's (p.next) closing windows. 
+						 * 
+						 * At the same time, we permit another thread (say, B) to 
+						 * aggregate q's opening windows with q.next's closing ones.
+						 * 
+						 * If thread B finishes before A, then q will not be ready 
+						 * (since thread A is working on q's closing windows).
+						 * 
+						 * So, thread B will never set q's slot status to NEAT; and, 
+						 * neither will thread A. 
+						 * 
+						 * So q's slot will never be free'd.
+						 */
+						lock.unlock();
+						
+						/* System.out.println(String.format("[DBG] %s aggregate current %4d next %4d", 
+						 * Thread.currentThread(), p.index, q.index)); */
+						
+						p.aggregate(q);
+						
+						if (p.isReady())
+							slots.compareAndSet(p.index, GREX, NEAT);
+						/* Also check node q, in case two workers raced together */
+						if (q.isReady())
+							slots.compareAndSet(p.index, GREX, NEAT);
+						
+						/* lock.unlock(); */
+						
+					} else {
+						/*
+						 * This means that node p is locked from the
+						 * left. 
+						 */
+						System.err.println ("warning: current node is locked from the left: " + p);
+						lock.unlock();
+						break;
+					}
+					
+				} else {
+					lock.unlock();
+					break;
+				}
+				
+			} else {
+				lock.unlock();
+				break;
+			}
+		}
 		
 		/* Forward and free */
 		

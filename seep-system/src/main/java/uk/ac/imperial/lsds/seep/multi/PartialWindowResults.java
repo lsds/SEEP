@@ -9,6 +9,7 @@ public class PartialWindowResults {
 	boolean empty;
 	
 	int size;
+	int count;
 	
 	public PartialWindowResults (int pid) {
 		
@@ -16,6 +17,7 @@ public class PartialWindowResults {
 		
 		this.buffer = null;
 		this.size = 0;
+		this.count = 0;
 	}
 	
 	public void setBuffer(IQueryBuffer buffer) {
@@ -41,6 +43,7 @@ public class PartialWindowResults {
 		}
 		buffer = null;
 		size = 0;
+		count = 0;
 		PartialWindowResultsFactory.free(this.pid, this);
 	}
 	
@@ -48,5 +51,15 @@ public class PartialWindowResults {
 		
 		this.buffer = null;
 		this.size = 0;
+		this.count = 0;
+	}
+
+	public void increment() {
+		count ++;
+	}
+
+	public Object numberOfWindows() {
+		
+		return count;
 	}
 }
