@@ -242,4 +242,10 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		return handler;
 	}
+
+	@Override
+	public void setAggregateOperator(IAggregateOperator operator) {
+		
+		this.handler.setAggregateOperator (operator);
+	}
 }

@@ -16,7 +16,7 @@ public class Utils {
 	
 	/* Number of CPU worker threads */
 	public static int THREADS = Integer.parseInt(Globals.valueFor("threads"));
-	public static int TASKS = 2 * 1024 * 1024;
+	public static int TASKS = 1024;
 	
 	public static boolean GPU = Boolean.parseBoolean(Globals.valueFor("GPU"));
 	public static boolean CPU = Boolean.parseBoolean(Globals.valueFor("CPU"));
@@ -25,7 +25,7 @@ public class Utils {
 	
 	public static boolean LATENCY_ON = false;
 	
-	public static String SEEP_HOME = "/Users/akolious/SEEP";
+	public static String SEEP_HOME = "/home/akolious/seep";
 	
 	public static long pack (long left, long right) {
 		return (left << 32) | right;

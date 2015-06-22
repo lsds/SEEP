@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public class ResultHandler {
 	
-	public final int SLOTS = Utils.TASKS * 4;
+	public final int SLOTS = Utils.TASKS;
 
 	public IQueryBuffer freeBuffer;
 	
@@ -68,5 +68,10 @@ public class ResultHandler {
 	public void incTotalOutputBytes (int bytes) {
 		
 		totalOutputBytes += (long) bytes;
+	}
+
+	public void setAggregateOperator(IAggregateOperator operator) {
+		
+		this.resultAggregator.setOperator (operator);
 	}
 }

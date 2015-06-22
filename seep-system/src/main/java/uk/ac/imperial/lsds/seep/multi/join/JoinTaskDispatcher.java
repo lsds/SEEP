@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.seep.multi.join;
 import java.util.ArrayList;
 
 import uk.ac.imperial.lsds.seep.multi.CircularQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -346,6 +347,12 @@ public class JoinTaskDispatcher implements ITaskDispatcher {
 	public long getBytesGenerated () {
 		
 		return this.handler.getTotalOutputBytes();
+	}
+
+	@Override
+	public void setAggregateOperator(IAggregateOperator operator) {
+		
+		return ;
 	}
 }
 

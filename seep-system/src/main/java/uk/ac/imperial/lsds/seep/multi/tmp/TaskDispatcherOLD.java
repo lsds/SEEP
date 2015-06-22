@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.multi.tmp;
 
 import java.util.ArrayList;
 
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
 
@@ -59,6 +60,12 @@ public class TaskDispatcherOLD implements ITaskDispatcher {
 	public long getBytesGenerated() {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public void setAggregateOperator(IAggregateOperator operator) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 //	private static final int _undefined = -1;

@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.seep.multi.tmp;
 
 import java.util.ArrayList;
 
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITaskDispatcher;
 
@@ -431,5 +432,10 @@ public class NewTaskDispatcher implements ITaskDispatcher {
 //		
 //		return this.handler.getTotalOutputBytes();
 //	}
+	
+	@Override
+	public void setAggregateOperator(IAggregateOperator operator) {
+	
+	}
 }
 

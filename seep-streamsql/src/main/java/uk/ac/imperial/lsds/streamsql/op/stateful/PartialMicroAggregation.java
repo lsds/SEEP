@@ -1,6 +1,7 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 import uk.ac.imperial.lsds.seep.multi.AggregationType;
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -26,9 +27,9 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
-public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode {
+public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IAggregateOperator {
 	
-	private static boolean debug = true;
+	private static boolean debug = false;
 	
 	WindowDefinition windowDefinition;
 	
@@ -689,12 +690,18 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset   =   endPointers[currentWindow];
 			
-			if (inWindowStartOffset < 0 && inWindowEndOffset < 0)
+			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
 			
+			if (inWindowStartOffset < 0 && inWindowEndOffset < 0 && windowBatch.hasPending()) {
+				outputBuffer = pending.getBuffer();
+				pending.increment();
+				inWindowStartOffset = (int) b;
+				inWindowEndOffset = (int) d;
+			} else
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
 				closing.increment();
@@ -875,10 +882,11 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		*/
 		
 		api.outputWindowBatchResult(-1, windowBatch);
-		/*
+		
+		if (taskId == 3) { 
 		System.err.println("Disrupted");
 		System.exit(-1);
-		*/
+		}
 	}
 	
 	private void processDataPerWindowIncrementallyWithGroupBy (
@@ -1267,5 +1275,30 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	public void processData(WindowBatch firstWindowBatch, WindowBatch secondWindowBatch, IWindowAPI api) {
 		
 		throw new UnsupportedOperationException("MicroAggregation is single input operator and does not operate on two streams");
+	}
+
+	@Override
+	public boolean hasGroupBy() {
+		return this.hasGroupBy;
+	}
+
+	@Override
+	public ITupleSchema getOutputSchema () {
+		return this.outputSchema;
+	}
+
+	@Override
+	public int getKeyLength () {
+		return this.keyLength;
+	}
+
+	@Override
+	public int numberOfValues () {
+		return 1;
+	}
+
+	@Override
+	public AggregationType getAggregateType() {
+		return this.aggregationType;
 	}
 }

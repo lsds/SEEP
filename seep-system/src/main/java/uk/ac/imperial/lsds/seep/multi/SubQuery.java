@@ -219,7 +219,7 @@ public class SubQuery {
 		
 		this.dispatcher.setup();
 	}
-
+	
 	public void connectTo (int localStreamId, SubQuery sq) {
 		
 		if (freeDownstreamIdx >= _max_downstream_subqueries)
@@ -310,5 +310,10 @@ public class SubQuery {
 	public boolean isLeft() {
 		
 		return this.isLeft;
+	}
+	
+	public void setAggregateOperator (IAggregateOperator operator) {
+		
+		this.dispatcher.setAggregateOperator (operator);
 	}
 }

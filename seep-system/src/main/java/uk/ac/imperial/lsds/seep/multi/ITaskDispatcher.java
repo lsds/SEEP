@@ -19,4 +19,6 @@ public interface ITaskDispatcher {
 	public boolean tryDispatchSecond (byte[] data, int length);
 
 	public long getBytesGenerated();
+
+	public void setAggregateOperator(IAggregateOperator operator);
 }
