@@ -206,8 +206,11 @@ public class TestAggregationGroupBy {
 		/* Fill the buffer */
 		Random r = new Random();
 		int g = 1;
+		long count = 0;
 		while (b.hasRemaining()) {
-			b.putLong(1); // time stamp
+			b.putLong(count++); // time stamp
+			if (count == 5)
+				count += 5;
 			b.putFloat(r.nextFloat()); // the aggregate
 			b.putInt(g++); // group by attribute
 			g = g % ngroups;

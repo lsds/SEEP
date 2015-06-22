@@ -119,7 +119,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		if (
 			this.aggregationType == AggregationType.CNT || 
-			this.aggregationType == AggregationType.SUM   || 
+			this.aggregationType == AggregationType.SUM || 
 			this.aggregationType == AggregationType.AVG) {
 				
 			this.incremental = (windowDefinition.getSlide() < windowDefinition.getSize() / 2);
@@ -248,14 +248,19 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];
 			
-			if (inWindowStartOffset < 0 && inWindowEndOffset < 0)
+			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
-			/*
-			System.out.println(String.format("[DBG] current window is %3d start %6d end %6d", 
+			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
-			*/
 			
+			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
+				/* This is a pending window */
+				outputBuffer = pending.getBuffer();
+				pending.increment();
+				inWindowStartOffset = (int) b;
+				inWindowEndOffset = (int) d;
+			} else
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
 				closing.increment();
@@ -266,6 +271,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				opening.increment();
 				inWindowEndOffset = (int) d;
 			} else {
+				
+				if (inWindowStartOffset == inWindowEndOffset) /* Empty window */
+					continue;
+				
 				outputBuffer = complete.getBuffer();
 				complete.increment();
 			}
@@ -445,21 +454,35 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			inWindowStartOffset = startPointers[currentWindow];
 			inWindowEndOffset = endPointers[currentWindow];
 			
-			if (inWindowStartOffset < 0 && inWindowEndOffset < 0)
+			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
-			/*
-			System.out.println(String.format("[DBG] current window is %3d start %6d end %6d", 
+			
+			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
-			*/
+			
+			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
+				/* This is a pending window */
+				outputBuffer = pending.getBuffer();
+				pending.increment();
+				inWindowStartOffset = (int) b;
+				inWindowEndOffset = (int) d;
+			} else
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
+				closing.increment();
 				inWindowStartOffset = (int) b;
 			} else
 			if (inWindowEndOffset < 0) {
 				outputBuffer = opening.getBuffer();
+				opening.increment();
 				inWindowEndOffset = (int) d;
 			} else {
+				
+				if (inWindowStartOffset == inWindowEndOffset) /* Empty window */
+					continue;
+				
 				outputBuffer = complete.getBuffer();
+				complete.increment();
 			}
 			
 			/* Is the window empty? */
@@ -696,7 +719,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
 			
-			if (inWindowStartOffset < 0 && inWindowEndOffset < 0 && windowBatch.hasPending()) {
+			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
+				/* This is a pending window */
 				outputBuffer = pending.getBuffer();
 				pending.increment();
 				inWindowStartOffset = (int) b;
@@ -712,10 +736,14 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				opening.increment();
 				inWindowEndOffset = (int) d;
 			} else {
+				
+				if (inWindowStartOffset == inWindowEndOffset) /* Empty window */
+					continue;
+				
 				outputBuffer = complete.getBuffer();
 				complete.increment();
 			}
-
+			
 			/* If the window is empty, skip it */
 			if (inWindowStartOffset != -1) {
 				
@@ -965,14 +993,19 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			currWindowStartOffset = startPointers[currentWindow];
 			currWindowEndOffset = endPointers[currentWindow];
 			
-			if (currWindowStartOffset < 0 && currWindowEndOffset < 0)
+			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
-			/*
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
-					currentWindow, inWindowStartOffset, inWindowEndOffset));
-			*/
+					currentWindow, currWindowStartOffset, currWindowEndOffset));
 			
+			if (currWindowStartOffset < 0 && currWindowEndOffset < 0) {
+				/* This is a pending window */
+				outputBuffer = pending.getBuffer();
+				pending.increment();
+				currWindowStartOffset = (int) b;
+				currWindowEndOffset = (int) d;
+			} else
 			if (currWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
 				closing.increment();
@@ -983,6 +1016,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				opening.increment();
 				currWindowEndOffset = (int) d;
 			} else {
+				
+				if (currWindowStartOffset == currWindowEndOffset) /* Empty window */
+					continue;
+				
 				outputBuffer = complete.getBuffer();
 				complete.increment();
 			}
