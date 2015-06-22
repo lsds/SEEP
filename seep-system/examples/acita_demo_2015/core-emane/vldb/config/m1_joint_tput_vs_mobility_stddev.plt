@@ -19,18 +19,25 @@ set style line 3 lw 5 lt 3 linecolor rgb BLUE
 set style line 2 lw 5 lt 2 linecolor rgb CADMIUMORANGE 
 set style line 4 lw 5 lt 2 linecolor rgb GREEN 
 
-set style data histograms
-set style histogram errorbars gap 10 lw 5 
-set style fill empty 
-set boxwidth 0.95 relative 
+#set style data histograms
+#set style histogram errorbars gap 10 lw 5 
+#set style fill empty 
+#set boxwidth 0.95 relative 
 
 set key off 
-set bmargin 4
-set lmargin 13 
+#set bmargin 4
+#set lmargin 13 
 
-plot sprintf("%s/%s/all-k-rel-tput.data",outputdir,timestr) using 2:4:xticlabels(3) ls 1, \
-	sprintf("%s/%s/all-k-tput.data",outputdir,timestr) using 2:4:xticlabels(3) ls 4 axes x1y2
+#plot sprintf("%s/%s/all-k-rel-tput.data",outputdir,timestr) using 2:4:xticlabels(3) ls 1, \
+#	sprintf("%s/%s/all-k-tput.data",outputdir,timestr) using 2:4:xticlabels(3) ls 4 axes x1y2
 
+set style data boxerrorbars
+set style fill empty 
+set boxwidth 0.25 relative 
+
+
+plot sprintf("%s/%s/all-k-rel-tput.data",outputdir,timestr) using 3:2:4:xticlabels(3) ls 1, \
+	sprintf("%s/%s/all-k-tput.data",outputdir,timestr) using ($3+0.25):2:4:xticlabels(3) ls 4 axes x1y2
 
 #plot sprintf("%s/%s/1k-rel-tput.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 #	sprintf("%s/%s/2k-rel-tput.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \
