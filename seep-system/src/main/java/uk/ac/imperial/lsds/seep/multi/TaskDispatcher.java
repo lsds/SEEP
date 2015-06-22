@@ -50,7 +50,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		this.tupleSize = schema.getByteSizeOfTuple();
 		
-		/* Initialise constants */
+		/* Initialize constants */
 		System.out.println(String.format("[DBG] %d bytes/batch %d panes/slide %d panes/window", 
 				batchBytes, window.panesPerSlide(), window.numberOfPanes()));
 		

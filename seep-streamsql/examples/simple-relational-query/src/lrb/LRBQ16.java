@@ -2,6 +2,7 @@ package lrb;
 import java.util.HashSet;
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
@@ -20,7 +21,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.eint.IntDivision;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntMultiplication;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntSubtraction;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -142,7 +142,7 @@ public class LRBQ16 {
 
 		IMicroOperatorCode q5AggCode = new MicroAggregation(
 				window5,
-				AggregationType.COUNT, new FloatColumnReference(1),
+				AggregationType.CNT, new FloatColumnReference(1),
 				new Expression[] { new IntColumnReference(2),
 						new IntColumnReference(3), new IntColumnReference(4) });
 

@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -23,7 +24,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class AggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	

@@ -1,7 +1,5 @@
 package uk.ac.imperial.lsds.seep.multi;
 
-import java.nio.ByteBuffer;
-
 public class WindowTuple {
 	
 	public int          hashcode; /* key */
@@ -76,5 +74,4 @@ public class WindowTuple {
 		
 		return 0;
 	}
-	
 }

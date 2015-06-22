@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
@@ -20,7 +21,6 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelCodeGenerator;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelDevice;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelInvocationHandler;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.KernelOperator;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
@@ -294,7 +294,7 @@ public class MicroAggregationKernel implements IStreamSQLOperator, IMicroOperato
 	@Override
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		switch (type) {
-			case COUNT:
+			case CNT:
 			case   SUM:
 			case   AVG:
 			case   MAX:

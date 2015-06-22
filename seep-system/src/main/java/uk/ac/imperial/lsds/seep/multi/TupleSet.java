@@ -25,12 +25,17 @@ public class TupleSet {
 			
 			return this.tuple.compareTo(otherNode.tuple.offset);
 		}
+
+		public void reset() {
+			
+			this.tuple = null;
+		}
 	}
 	
 	private static final int root = 1;
 	
-	int next;
-	TupleSetNode [] heap;
+	public int next;
+	public TupleSetNode [] heap;
 	
 	public TupleSet (int capacity) {
 		next = root;
@@ -101,5 +106,15 @@ public class TupleSet {
 		for (int i = 1; i < next; i++) {
 			System.out.println(String.format("[DBG] [TheCurrentWindow.PaneSet] [%04d] %s", i, heap[i]));
 		}
+	}
+
+	public WindowTuple getTuple(int i) {
+		return heap[i].tuple;
+	}
+
+	public void reset() {
+		for (int i = 1; i < next; i++)
+			heap[i].reset();
+		next = root;
 	}
 }

@@ -3,12 +3,12 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class MicroOperator {
 
-	private int	               id;
+	private int	id;
 	
-	private SubQuery           parent;
+	private SubQuery parent;
 	
-	private MicroOperator      localDownstream;
-	private MicroOperator      localUpstream;
+	private MicroOperator localDownstream;
+	private MicroOperator localUpstream;
 	
 	private IMicroOperatorCode cpuCode;
 	private IMicroOperatorCode gpuCode;

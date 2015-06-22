@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;

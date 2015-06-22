@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
@@ -13,7 +14,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
 public class KernelCodeGenerator {
@@ -437,7 +437,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		StringBuilder b = new StringBuilder ();
 
 		switch (type) {
-		case COUNT:
+		case CNT:
 		case SUM:
 		case AVG:
 			b.append("#define INITIAL_VALUE 0\n");
@@ -454,7 +454,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		b.append("\n");
 		b.append("inline float reducef (float p, float q, int n) {\n");
 		switch (type) {
-		case COUNT:
+		case CNT:
 			b.append("\treturn (p + 1);\n");
 			break;
 		case SUM:
@@ -477,7 +477,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		b.append("\n");
 		b.append("inline float mergef (float p, float q, int n) {\n");
 		switch (type) {
-		case COUNT:
+		case CNT:
 		case SUM:
 			b.append("\treturn (p + q);\n");
 			break;
@@ -551,7 +551,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		}
 		/* Update the value */
 		switch (type) {
-		case COUNT:
+		case CNT:
 			b.append ("\tatomic_inc ((global int *) &(out->tuple.val));\n");
 		case SUM:
 		case AVG:
@@ -579,7 +579,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		for (int i = 0; i < vectors; i++)
 			b.append(String.format("\tp->vectors[%d] = 0;\n", i));
 		switch (type) {
-		case COUNT:
+		case CNT:
 		case SUM:
 		case AVG:
 			/* Do nothing; `val` and `cnt` already initialised to 0 */
@@ -613,7 +613,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		/* Store the value */
 		int valueIndex = groupBy.length + 1;
 		switch (type) {
-		case COUNT:
+		case CNT:
 		case SUM:
 		case MIN:
 		case MAX:

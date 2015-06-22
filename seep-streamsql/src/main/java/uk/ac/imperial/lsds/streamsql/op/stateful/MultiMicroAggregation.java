@@ -2,6 +2,7 @@ package uk.ac.imperial.lsds.streamsql.op.stateful;
 
 import java.nio.ByteBuffer;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -75,7 +76,7 @@ public class MultiMicroAggregation
 		this.doIncremental = true;
 		for (int i = 0; i < this.aggregationType.length; i++) {
 			if (
-				this.aggregationType[i] != AggregationType.COUNT && 
+				this.aggregationType[i] != AggregationType.CNT && 
 				this.aggregationType[i] != AggregationType.SUM   && 
 				this.aggregationType[i] != AggregationType.AVG  ) {
 			
@@ -125,7 +126,7 @@ public class MultiMicroAggregation
 		this.doIncremental = true;
 		for (int i = 0; i < this.aggregationType.length; i++) {
 			if (
-				this.aggregationType[i] != AggregationType.COUNT && 
+				this.aggregationType[i] != AggregationType.CNT && 
 				this.aggregationType[i] != AggregationType.SUM   && 
 				this.aggregationType[i] != AggregationType.AVG  ) {
 			
@@ -279,7 +280,7 @@ public class MultiMicroAggregation
 						windowValue[i] = this.aggregationAttribute[i].eval(inBuffer, inSchema, inWindowStartOffset);
 					}
 					else 
-					if (this.aggregationType[i] == AggregationType.COUNT) {
+					if (this.aggregationType[i] == AggregationType.CNT) {
 						
 						windowValue[i]++;
 					}
@@ -315,7 +316,7 @@ public class MultiMicroAggregation
 							}
 						}
 						else 
-						if (this.aggregationType[i] == AggregationType.COUNT) {
+						if (this.aggregationType[i] == AggregationType.CNT) {
 							windowValue[i]++;
 						}
 						else
@@ -459,7 +460,7 @@ public class MultiMicroAggregation
 								this.aggregationAttribute[i].appendByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer);
 							}
 							else 
-							if (this.aggregationType[i] == AggregationType.COUNT) {
+							if (this.aggregationType[i] == AggregationType.CNT) {
 							
 								windowBuffer.putFloat(1f);
 							}
@@ -483,7 +484,7 @@ public class MultiMicroAggregation
 						
 							oldValue = windowBuffer.getFloat(oldValuePositionInWindowBuffer);
 						
-							if (this.aggregationType[i] == AggregationType.COUNT) {
+							if (this.aggregationType[i] == AggregationType.CNT) {
 							
 								windowBuffer.putFloat(oldValuePositionInWindowBuffer, oldValue + 1);
 							} else {

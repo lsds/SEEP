@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -56,7 +57,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		this.havingSel = null;
 		this.hasGroupBy = false;
 		
-		if (this.aggregationType == AggregationType.COUNT
+		if (this.aggregationType == AggregationType.CNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);	
 		}
@@ -85,7 +86,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		this.havingSel = havingSel;
 		this.hasGroupBy = true;
 		
-		if (this.aggregationType == AggregationType.COUNT
+		if (this.aggregationType == AggregationType.CNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 			this.doIncremental = (windowDef.getSlide() < windowDef.getSize() / 2);
 			// this.doIncremental = true;
@@ -173,7 +174,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 		windowBatch.initWindowPointers();
 		System.out.println("RUN aggregration");
 		switch (aggregationType) {
-		case COUNT:
+		case CNT:
 		case SUM:
 		case AVG:
 			if (this.hasGroupBy && this.doIncremental) 
@@ -240,7 +241,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 					// write value for aggregation attribute
 					windowValue = this.aggregationAttribute.eval(inBuffer, inSchema, inWindowStartOffset);
 				}
-				else if (this.aggregationType == AggregationType.COUNT) {
+				else if (this.aggregationType == AggregationType.CNT) {
 					windowValue++;
 				}
 				else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
@@ -263,7 +264,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 								|| (newWindowValue < windowValue && this.aggregationType == AggregationType.MIN))
 							windowValue = newWindowValue;
 					}
-					else if (this.aggregationType == AggregationType.COUNT) {
+					else if (this.aggregationType == AggregationType.CNT) {
 						windowValue++;
 					}
 					else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
@@ -403,7 +404,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 							this.aggregationAttribute.appendByteResult(inBuffer, inSchema, inWindowStartOffset, windowBuffer);
 						}
 						else 
-						if (this.aggregationType == AggregationType.COUNT) {
+						if (this.aggregationType == AggregationType.CNT) {
 							
 							windowBuffer.putFloat(1f);
 						}
@@ -424,7 +425,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						
 						oldValue = windowBuffer.getFloat(oldValuePositionInWindowBuffer);
 						
-						if (this.aggregationType == AggregationType.COUNT) {
+						if (this.aggregationType == AggregationType.CNT) {
 							
 							windowBuffer.putFloat(keyOffset + offsetOutAggAttribute, oldValue + 1);
 						} else {
@@ -586,7 +587,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	private void processDataPerWindowIncrementallyWithGroupBy(WindowBatch windowBatch,
 			IWindowAPI api) {
 
-		assert (this.aggregationType == AggregationType.COUNT
+		assert (this.aggregationType == AggregationType.CNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG);
 
 		int[] startPointers = windowBatch.getWindowStartPointers();
@@ -693,7 +694,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 	private void processDataPerWindowIncrementally(WindowBatch windowBatch,
 			IWindowAPI api) {
 
-		assert (this.aggregationType == AggregationType.COUNT
+		assert (this.aggregationType == AggregationType.CNT
 				|| this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG);
 		
 		int [] startPointers = windowBatch.getWindowStartPointers();
@@ -815,7 +816,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			float currentValue = windowBuffer
 					.getFloat(currentValuePositionInWindowBuffer);
 
-			if (this.aggregationType == AggregationType.COUNT) {
+			if (this.aggregationType == AggregationType.CNT) {
 				currentValue += 1;
 				windowBuffer.putFloat(currentValuePositionInWindowBuffer, currentValue);
 			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
@@ -837,7 +838,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 						enterOffset, windowBuffer);
 			
 			// write value for aggregation attribute
-			if (this.aggregationType == AggregationType.COUNT) {
+			if (this.aggregationType == AggregationType.CNT) {
 				windowBuffer.putFloat(1f);
 			} else if (this.aggregationType == AggregationType.SUM || this.aggregationType == AggregationType.AVG) {
 				this.aggregationAttribute.appendByteResult(inBuffer, inSchema,
@@ -867,7 +868,7 @@ public class MicroAggregation implements IStreamSQLOperator, IMicroOperatorCode 
 			float currentValue = windowBuffer
 					.getFloat(currentValuePositionInWindowBuffer);
 
-			if (this.aggregationType == AggregationType.COUNT) {
+			if (this.aggregationType == AggregationType.CNT) {
 				currentValue -= 1;
 				
 				// is the partition empty? (check with 0.0001 because of floating

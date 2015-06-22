@@ -1,5 +1,6 @@
 package uk.ac.imperial.lsds.streamsql.op.stateful;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -7,6 +8,7 @@ import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
 import uk.ac.imperial.lsds.seep.multi.PartialWindowResults;
 import uk.ac.imperial.lsds.seep.multi.PartialWindowResultsFactory;
 import uk.ac.imperial.lsds.seep.multi.ThreadMap;
+import uk.ac.imperial.lsds.seep.multi.TupleSet;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -26,7 +28,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	private static boolean debug = false;
+	private static boolean debug = true;
 	
 	WindowDefinition windowDefinition;
 	
@@ -42,6 +44,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	private boolean hasGroupBy = false;
 	
 	private int keyLength;
+	
+	private boolean incremental;
 
 	public PartialMicroAggregation (WindowDefinition windowDefinition) {
 		
@@ -49,8 +53,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		this.timestampReference = new LongColumnReference(0);
 		
-		this.aggregationType = AggregationType.COUNT;
+		this.aggregationType = AggregationType.CNT;
 		this.aggregationAttribute = new FloatColumnReference(1);
+		
+		this.incremental = true;
 		
 		/* Create output schema */
 		Expression [] outputAttributes = new Expression[2];
@@ -73,6 +79,14 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		this.aggregationType = aggregationType;
 		this.aggregationAttribute = aggregationAttribute;
+		
+		if (
+			this.aggregationType == AggregationType.CNT || 
+			this.aggregationType == AggregationType.SUM   || 
+			this.aggregationType == AggregationType.AVG) {
+			
+			this.incremental = (windowDefinition.getSlide() < windowDefinition.getSize() / 2);
+		}
 		
 		/* Create output schema */
 		Expression [] outputAttributes = new Expression[2];
@@ -101,6 +115,14 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		if (this.groupByAttributes != null)
 			this.hasGroupBy = true;
+		
+		if (
+			this.aggregationType == AggregationType.CNT || 
+			this.aggregationType == AggregationType.SUM   || 
+			this.aggregationType == AggregationType.AVG) {
+				
+			this.incremental = (windowDefinition.getSlide() < windowDefinition.getSize() / 2);
+		}
 		
 		/* Create output schema */
 		
@@ -138,6 +160,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		final StringBuilder sb = new StringBuilder();
 		sb.append("[Partial window u-aggregation] ");
 		sb.append(aggregationType.asString(aggregationAttribute.toString()));
+		sb.append(" [incremental computation ? " + this.incremental + " ]");
 		return sb.toString();
 	}
 	
@@ -150,16 +173,215 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	public void processData (WindowBatch windowBatch, IWindowAPI api) {
 		
 		if (! this.hasGroupBy) {
-			processDataPerWindowIncrementally (windowBatch, api);
+			if (this.incremental) { 
+				processDataPerWindowIncrementally (windowBatch, api);
+			} else {
+				processDataPerWindow (windowBatch, api);
+			}
 		} else {
-			processDataPerWindowWithGroupBy (windowBatch, api);
+			if (this.incremental) { 
+				processDataPerWindowIncrementallyWithGroupBy (windowBatch, api);
+			} else {
+				processDataPerWindowWithGroupBy (windowBatch, api);
+			}
 		}
+	}
+	
+	private void processDataPerWindow (WindowBatch windowBatch, IWindowAPI api) {
+		
+		int workerId = ThreadMap.getInstance().get(Thread.currentThread().getId());
+		
+		int taskId = windowBatch.getTaskId();
+		
+		long b = windowBatch.getBufferStartPointer();
+		long d = windowBatch.getBufferEndPointer();
+		
+		if (debug) {
+			long p = windowBatch.getBatchStartPointer();
+			long q = windowBatch.getBatchEndPointer();
+		
+			System.out.println(String.format("[DBG] MicroAggregation; batch starts at %10d (%10d) ends at %10d (%10d)", 
+					b, p, d, q));
+		}
+		
+		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults pending  = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
+		
+		windowBatch.initPartialWindowPointers();
+		
+		int [] startPointers = windowBatch.getWindowStartPointers();
+		int [] endPointers   = windowBatch.getWindowEndPointers();
+
+		IQueryBuffer inputBuffer  = windowBatch.getBuffer();
+		
+		IQueryBuffer closingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer pendingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer completeOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer openingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		
+		IQueryBuffer outputBuffer;
+		
+		 closing.setBuffer( closingOutputBuffer);
+		 pending.setBuffer( pendingOutputBuffer);
+		complete.setBuffer(completeOutputBuffer);
+		 opening.setBuffer( openingOutputBuffer);
+		
+		ITupleSchema inputSchema = windowBatch.getSchema();
+		int inputTupleSize = inputSchema.getByteSizeOfTuple();
+		
+		int inWindowStartOffset;
+		int inWindowEndOffset;
+		
+		/* Cumulative value and count */
+		float windowValue = 0;
+		int   windowTupleCount = 0;
+		
+		float value;
+		
+		long  windowTimestamp;
+
+		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+			
+			inWindowStartOffset = startPointers[currentWindow];
+			inWindowEndOffset = endPointers[currentWindow];
+			
+			if (inWindowStartOffset < 0 && inWindowEndOffset < 0)
+				break;
+			
+			/*
+			System.out.println(String.format("[DBG] current window is %3d start %6d end %6d", 
+					currentWindow, inWindowStartOffset, inWindowEndOffset));
+			*/
+			
+			if (inWindowStartOffset < 0) {
+				outputBuffer = closing.getBuffer();
+				closing.increment();
+				inWindowStartOffset = (int) b;
+			} else
+			if (inWindowEndOffset < 0) {
+				outputBuffer = opening.getBuffer();
+				opening.increment();
+				inWindowEndOffset = (int) d;
+			} else {
+				outputBuffer = complete.getBuffer();
+				complete.increment();
+			}
+			
+			/* If the window is empty, skip it */
+			if (inWindowStartOffset != -1) {
+
+				/* First value */
+				
+				windowTimestamp = 
+						this.timestampReference.eval(inputBuffer, inputSchema, inWindowStartOffset);
+				
+				if (this.aggregationType == AggregationType.CNT) {
+					
+					windowValue = 1;
+					windowTupleCount = 1;
+					
+				} else {
+					
+					windowValue = 
+							this.aggregationAttribute.eval(inputBuffer, inputSchema, inWindowStartOffset);
+					windowTupleCount = 1;
+				}
+								
+				inWindowStartOffset += inputTupleSize;
+
+				/* For all remaining tuples in the window... */
+				while (inWindowStartOffset < inWindowEndOffset)
+				{
+					
+					if (this.aggregationType == AggregationType.CNT) {
+						
+						windowValue++;
+					
+					} else {
+						
+						value = this.aggregationAttribute.eval(inputBuffer, inputSchema, inWindowStartOffset);
+						
+						if (this.aggregationType == AggregationType.MAX) { windowValue = (value <= windowValue) ? windowValue : value; }
+						else
+						if (this.aggregationType == AggregationType.MIN) { windowValue = (value >= windowValue) ? windowValue : value; }
+						else
+						if (this.aggregationType == AggregationType.SUM) { windowValue = windowValue + value; }
+						else
+						if (this.aggregationType == AggregationType.AVG) { windowValue = windowValue + value; }
+					
+					}
+					
+					windowTupleCount++;
+					
+					inWindowStartOffset += inputTupleSize;
+				}
+				
+				if (this.aggregationType == AggregationType.AVG) windowValue = windowValue / (float) windowTupleCount;
+				
+				outputBuffer.putLong(windowTimestamp);
+				outputBuffer.putFloat(windowValue);
+				outputBuffer.put(outputSchema.getDummyContent());
+			}
+		}
+		
+		/* Release old buffer (will return Unbounded Buffers to the pool) */
+		inputBuffer.release();
+		windowBatch.setSchema(outputSchema);
+		
+		/* At the end of processing, set window batch accordingly */
+		if (! closing.isEmpty()) {
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
+						taskId, closing.numberOfWindows()));
+			windowBatch.setClosing (closing);
+		} else {
+			windowBatch.setClosing(null);
+			closing.release();
+		}
+		
+		if (! pending.isEmpty()) {
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
+						taskId, pending.numberOfWindows()));
+			windowBatch.setPending (pending);
+		} else {
+			windowBatch.setPending(null);
+			pending.release();
+		}
+		
+		if (! complete.isEmpty()) {
+			if (debug) 
+				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
+						taskId, complete.numberOfWindows()));
+			windowBatch.setComplete (complete);
+		} else {
+			windowBatch.setComplete(null);
+			complete.release();
+		}
+		
+		if (! opening.isEmpty()) {
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
+						taskId, opening.numberOfWindows()));
+			windowBatch.setOpening (opening);
+		} else {
+			windowBatch.setOpening(null);
+			opening.release();
+		}
+		
+		if (debug)
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 
+					taskId, windowBatch.getFreeOffset()));
+
+		api.outputWindowBatchResult(-1, windowBatch);
 	}
 
 	private void processDataPerWindowIncrementally (WindowBatch windowBatch, IWindowAPI api) {
 
 		assert (
-			this.aggregationType == AggregationType.COUNT || 
+			this.aggregationType == AggregationType.CNT || 
 			this.aggregationType == AggregationType.SUM   || 
 			this.aggregationType == AggregationType.AVG
 		);
@@ -346,7 +568,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		/* At the end of processing, set window batch accordingly */
 		if (! closing.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %2d has closing windows", taskId));
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
+						taskId, closing.numberOfWindows()));
 			windowBatch.setClosing (closing);
 		} else {
 			windowBatch.setClosing(null);
@@ -354,7 +578,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		if (! pending.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %2d has pending windows", taskId));
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
+						taskId, pending.numberOfWindows()));
 			windowBatch.setPending (pending);
 		} else {
 			windowBatch.setPending(null);
@@ -362,7 +588,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		if (! complete.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %2d has complete windows", taskId));
+			if (debug) 
+				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
+						taskId, complete.numberOfWindows()));
 			windowBatch.setComplete (complete);
 		} else {
 			windowBatch.setComplete(null);
@@ -370,7 +598,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		if (! opening.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %2d has opening windows", taskId));
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
+						taskId, opening.numberOfWindows()));
 			windowBatch.setOpening (opening);
 		} else {
 			windowBatch.setOpening(null);
@@ -461,10 +691,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			
 			if (inWindowStartOffset < 0 && inWindowEndOffset < 0)
 				break;
-			/*
+			
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
-			*/
 			
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
@@ -522,7 +751,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 								windowKeys);
 					}
 					
-					if (this.aggregationType == AggregationType.COUNT)
+					if (this.aggregationType == AggregationType.CNT)
 						value = 0;
 					else
 						value = this.aggregationAttribute.eval(inputBuffer, inputSchema, inWindowStartOffset);
@@ -567,27 +796,12 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					inWindowStartOffset += inputTupleSize;
 				}
 				
-				/* Iterate over `windowTuples` and write window results
-				 * to output buffer */
-				
 				/* System.out.println(String.format("[DBG] finished processing window %3d; %d values", currentWindow, windowTuples.size()));
 				windowTuples.getHeap().dump(); */
 				
-				WindowTuple t = windowTuples.getHeap().remove();
-				while (t != null) {
-					/* Write tuple t to output buffer
-					 * 
-					 * The timestamp and key are stored in `windowKeys`. 
-					 * The value is stored in `t`.
-					 */
-					outputBuffer.put(windowKeys, t.offset - 8, t.length + 8);
-					if (this.aggregationType == AggregationType.AVG)
-						outputBuffer.putFloat((t.value / (float) t.count));
-					else
-						outputBuffer.putFloat(t.value);
-					
-					t = windowTuples.getHeap().remove();
-				}
+				/* Iterate over `windowTuples` and write window results
+				 * to output buffer */
+				evaluateWindow (windowKeys, windowTuples, outputBuffer);
 				
 				/* Release hash maps */
 				windowTuples.release();
@@ -603,7 +817,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		/* At the end of processing, set window batch accordingly */
 		if (! closing.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %4d has %4d  closing windows", taskId, closing.numberOfWindows()));
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
+						taskId, closing.numberOfWindows()));
 			windowBatch.setClosing (closing);
 		} else {
 			windowBatch.setClosing(null);
@@ -611,7 +827,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		if (! pending.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %4d has %4d  pending windows", taskId, pending.numberOfWindows()));
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
+						taskId, pending.numberOfWindows()));
 			windowBatch.setPending (pending);
 		} else {
 			windowBatch.setPending(null);
@@ -619,7 +837,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		if (! complete.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %4d has %4d complete windows", taskId, complete.numberOfWindows()));
+			if (debug) 
+				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
+						taskId, complete.numberOfWindows()));
 			windowBatch.setComplete (complete);
 		} else {
 			windowBatch.setComplete(null);
@@ -627,7 +847,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		if (! opening.isEmpty()) {
-			// System.out.println(String.format("[DBG] task %4d has %4d  opening windows", taskId, opening.numberOfWindows()));
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
+						taskId, opening.numberOfWindows()));
 			windowBatch.setOpening (opening);
 		} else {
 			windowBatch.setOpening(null);
@@ -657,6 +879,388 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		System.err.println("Disrupted");
 		System.exit(-1);
 		*/
+	}
+	
+	private void processDataPerWindowIncrementallyWithGroupBy (
+			WindowBatch windowBatch,
+			IWindowAPI api) {
+
+		assert (
+			this.aggregationType == AggregationType.CNT || 
+			this.aggregationType == AggregationType.SUM   || 
+			this.aggregationType == AggregationType.AVG);
+		
+		int workerId = ThreadMap.getInstance().get(Thread.currentThread().getId());
+		
+		int taskId = windowBatch.getTaskId();
+		
+		long b = windowBatch.getBufferStartPointer();
+		long d = windowBatch.getBufferEndPointer();
+		
+		if (debug) {
+			long p = windowBatch.getBatchStartPointer();
+			long q = windowBatch.getBatchEndPointer();
+		
+			System.out.println(String.format("[DBG] MicroAggregation; batch starts at %10d (%10d) ends at %10d (%10d)", 
+					b, p, d, q));
+		}
+		
+		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults pending  = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
+		
+		windowBatch.initPartialWindowPointers();
+		
+		int [] startPointers = windowBatch.getWindowStartPointers();
+		int [] endPointers   = windowBatch.getWindowEndPointers();
+
+		IQueryBuffer inputBuffer  = windowBatch.getBuffer();
+		
+		IQueryBuffer closingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer pendingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer completeOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer openingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		
+		IQueryBuffer outputBuffer;
+		
+		 closing.setBuffer( closingOutputBuffer);
+		 pending.setBuffer( pendingOutputBuffer);
+		complete.setBuffer(completeOutputBuffer);
+		 opening.setBuffer( openingOutputBuffer);
+		
+		ITupleSchema inputSchema = windowBatch.getSchema();
+		int inputTupleSize = inputSchema.getByteSizeOfTuple();
+		
+		/* This is a temporary buffer holding the timestamp and key for each
+		 * unique tuple in a window.
+		 * 
+		 * The buffer is reused as we iterate over windows 
+		 */
+		IQueryBuffer windowKeys = UnboundedQueryBufferFactory.newInstance();
+		
+		int currWindowStartOffset;
+		int currWindowEndOffset;
+
+		int prevWindowStartOffset = -1;
+		int prevWindowEndOffset = -1;
+		
+		WindowMap windowTuples;
+		byte [] tupleKey = new byte [8];
+		
+		windowTuples = WindowMapFactory.newInstance(workerId);
+		
+		windowKeys.clear();
+		
+		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
+			
+			currWindowStartOffset = startPointers[currentWindow];
+			currWindowEndOffset = endPointers[currentWindow];
+			
+			if (currWindowStartOffset < 0 && currWindowEndOffset < 0)
+				break;
+			
+			/*
+			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
+					currentWindow, inWindowStartOffset, inWindowEndOffset));
+			*/
+			
+			if (currWindowStartOffset < 0) {
+				outputBuffer = closing.getBuffer();
+				closing.increment();
+				currWindowStartOffset = (int) b;
+			} else
+			if (currWindowEndOffset < 0) {
+				outputBuffer = opening.getBuffer();
+				opening.increment();
+				currWindowEndOffset = (int) d;
+			} else {
+				outputBuffer = complete.getBuffer();
+				complete.increment();
+			}
+			
+			/* Is the window empty? */
+			if (currWindowStartOffset == -1) {
+				
+				if (prevWindowStartOffset != -1) {
+					
+					for (int i = prevWindowStartOffset; i < currWindowStartOffset; i += inputTupleSize) {
+						
+						exitWindow(
+								inputBuffer, 
+								inputSchema, 
+								i, 
+								windowKeys,
+								windowTuples, 
+								tupleKey);
+					}
+				}
+				
+				evaluateWindow (
+						windowKeys, 
+						windowTuples, 
+						outputBuffer);
+			} else {
+				/*
+				 * Tuples in current window that have not been in the previous
+				 * window
+				 */
+				if (prevWindowStartOffset != -1) {
+					
+					for (int i = prevWindowEndOffset; i < currWindowEndOffset; i += inputTupleSize) {
+						
+						enterWindow (
+								inputBuffer, 
+								inputSchema, 
+								i, 
+								windowKeys,
+								windowTuples, 
+								tupleKey);
+					}
+				} else {
+					
+					for (int i = currWindowStartOffset; i < currWindowEndOffset; i += inputTupleSize) {
+						
+						enterWindow (
+								inputBuffer, 
+								inputSchema, 
+								i, 
+								windowKeys,
+								windowTuples, 
+								tupleKey);
+					}
+				}
+				
+				/*
+				 * Tuples in previous window that are not in current window
+				 */
+				if (prevWindowStartOffset != -1) {
+					
+					for (int i = prevWindowStartOffset; i < currWindowStartOffset; i += inputTupleSize) {
+						
+						exitWindow (
+								inputBuffer, 
+								inputSchema, 
+								i, 
+								windowKeys,
+								windowTuples, 
+								tupleKey);
+					}
+				}
+
+				evaluateWindow (
+						windowKeys, 
+						windowTuples, 
+						outputBuffer);
+
+				prevWindowStartOffset = currWindowStartOffset;
+				prevWindowEndOffset = currWindowEndOffset;
+			}
+		}
+		
+		/*Wrap-up operator */
+		windowKeys.release();
+		
+		/* Release old buffer (will return Unbounded Buffers to the pool) */
+		inputBuffer.release();
+		windowBatch.setSchema(outputSchema);
+		
+		/* At the end of processing, set window batch accordingly */
+		if (! closing.isEmpty()) {
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
+						taskId, closing.numberOfWindows()));
+			windowBatch.setClosing (closing);
+		} else {
+			windowBatch.setClosing(null);
+			closing.release();
+		}
+		
+		if (! pending.isEmpty()) {
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
+						taskId, pending.numberOfWindows()));
+			windowBatch.setPending (pending);
+		} else {
+			windowBatch.setPending(null);
+			pending.release();
+		}
+		
+		if (! complete.isEmpty()) {
+			if (debug) 
+				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
+						taskId, complete.numberOfWindows()));
+			windowBatch.setComplete (complete);
+		} else {
+			windowBatch.setComplete(null);
+			complete.release();
+		}
+		
+		if (! opening.isEmpty()) {
+			if (debug)
+				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
+						taskId, opening.numberOfWindows()));
+			windowBatch.setOpening (opening);
+		} else {
+			windowBatch.setOpening(null);
+			opening.release();
+		}
+		
+		if (debug)
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 
+					taskId, windowBatch.getFreeOffset()));
+		
+		/* Print tuples
+		outBuffer.close();
+		int tid = 1;
+		while (outBuffer.hasRemaining()) {
+			// Each tuple is 16-bytes long
+			System.out.println(String.format("%04d: %2d,%4d,%4.1f", 
+			tid++,
+			outBuffer.getByteBuffer().getLong (),
+			outBuffer.getByteBuffer().getInt  (),
+			outBuffer.getByteBuffer().getFloat()
+			));
+		}
+		*/
+		
+		api.outputWindowBatchResult(-1, windowBatch);
+		/*
+		System.err.println("Disrupted");
+		System.exit(-1);
+		*/
+	}
+	
+	private void exitWindow (
+			IQueryBuffer inputBuffer, 
+			ITupleSchema inputSchema,
+			int exitOffset, 
+			IQueryBuffer windowKeys,
+			WindowMap windowTuples,
+			byte [] tupleKey) {
+		
+		int keyHashCode = getGroupByKey (inputBuffer, inputSchema, exitOffset, tupleKey);
+		
+		int prevPos = windowKeys.position();
+		/* Copy group-by attributes temporarily */
+		for (int i = 0; i < groupByAttributes.length; i++) {
+			this.groupByAttributes[i].appendByteResult(
+					inputBuffer, 
+					inputSchema, 
+					exitOffset, 
+					windowKeys);
+		}
+		int keyOffset = prevPos;
+		WindowTuple t = windowTuples.containsKey (keyHashCode, keyOffset);
+		if (t == null) {
+			throw new IllegalArgumentException
+			("error: attempting to remove a tuple from a window to which it does not belong");
+		}
+		/* Decrement count since we are removing a tuple */
+		t.count -= 1;
+		if (this.aggregationType != AggregationType.CNT) {
+			t.value -= this.aggregationAttribute.eval(inputBuffer, inputSchema, exitOffset);
+		}
+		/* Reset position of window keys */
+		windowKeys.position(prevPos);
+	}
+	
+	private void enterWindow (
+			IQueryBuffer inputBuffer, 
+			ITupleSchema inputSchema,
+			int enterOffset, 
+			IQueryBuffer windowKeys,
+			WindowMap windowTuples,
+			byte[] tupleKey) {
+		
+		int keyHashCode = getGroupByKey(inputBuffer, inputSchema, enterOffset, tupleKey);
+		
+		/* Create new entry for this tuple in temp. byte buffer.
+		 * It will be overwritten if the entry exists.
+		 */
+		
+		int prevPos = windowKeys.position();
+		
+		/* Copy time stamp */
+		this.timestampReference.appendByteResult(
+				inputBuffer, 
+				inputSchema, 
+				enterOffset, 
+				windowKeys);
+		
+		int keyOffset = windowKeys.position();
+		
+		/* Copy group-by attributes */
+		for (int i = 0; i < groupByAttributes.length; i++) {
+			this.groupByAttributes[i].appendByteResult(
+					inputBuffer, 
+					inputSchema, 
+					enterOffset, 
+					windowKeys);
+		}
+		
+		float value;
+		
+		if (this.aggregationType == AggregationType.CNT)
+			value = 0;
+		else
+			value = this.aggregationAttribute.eval(inputBuffer, inputSchema, enterOffset);
+		
+		/* Check whether there is already an entry 
+		 * in `windowTuples` for this key. If not,
+		 * create a new entry */
+		if (! windowTuples.containsKey (keyHashCode)) {
+			
+			/* Create a new entry */
+			windowTuples.put(keyHashCode, windowKeys, keyOffset, this.keyLength, value, 1);
+			
+		} else {
+			/* The key hash code already exists, but the match 
+			 * might be the result of a collision. */
+			
+			WindowTuple t = windowTuples.containsKey(keyHashCode, keyOffset);
+			
+			if (t == null) {
+				
+				/* Create a new entry */
+				windowTuples.put(keyHashCode, windowKeys, keyOffset, this.keyLength, value, 1);
+				
+			} else {
+				
+				/* Update existing entry */
+				t.count += 1;
+				if (this.aggregationType != AggregationType.CNT) {
+					t.value += value;
+				}
+				/* Reset `windowKeys` position */
+				windowKeys.position(prevPos);
+			}
+		}
+	}
+	
+	private void evaluateWindow (
+			IQueryBuffer windowKeys,
+			WindowMap windowTuples, 
+			IQueryBuffer outputBuffer
+			) {
+		
+		/* Write current window results to output buffer */
+		TupleSet heap = windowTuples.getHeap();
+		for (int i = 1; i < heap.next; i++) {
+			WindowTuple t = heap.getTuple(i);
+			if (t.count > 0) {
+				/* Write tuple t to output buffer
+				 * 
+				 * The time stamp and key are stored in `windowKeys`. 
+				 * The value is stored in `t`.
+				 */
+				outputBuffer.put(windowKeys, t.offset - 8, t.length + 8);
+				if (this.aggregationType == AggregationType.AVG)
+					outputBuffer.putFloat((t.value / (float) t.count));
+				else
+					outputBuffer.putFloat(t.value);
+			}
+		}
 	}
 	
 	@Override

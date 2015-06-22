@@ -128,6 +128,7 @@ public class WindowMap {
 	public void release () {
 		
 		clear();
+		heap.reset();
 		WindowMapFactory.free(this);
 	}
 	

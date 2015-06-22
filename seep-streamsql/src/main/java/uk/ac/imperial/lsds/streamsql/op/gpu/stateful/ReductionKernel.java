@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -18,7 +19,6 @@ import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
-import uk.ac.imperial.lsds.streamsql.op.stateful.AggregationType;
 
 public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 

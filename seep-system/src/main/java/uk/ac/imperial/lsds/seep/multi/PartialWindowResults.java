@@ -1,5 +1,7 @@
 package uk.ac.imperial.lsds.seep.multi;
 
+import java.util.Arrays;
+
 public class PartialWindowResults {
 	
 	int pid; /* The worker that requested this object. */
@@ -11,6 +13,10 @@ public class PartialWindowResults {
 	int size;
 	int count;
 	
+	int [] startPointers;
+	
+	private static final int max_windows = 1024; 
+	
 	public PartialWindowResults (int pid) {
 		
 		this.pid = pid;
@@ -18,6 +24,9 @@ public class PartialWindowResults {
 		this.buffer = null;
 		this.size = 0;
 		this.count = 0;
+		
+		startPointers = new int [max_windows];
+		Arrays.fill(startPointers, -1);
 	}
 	
 	public void setBuffer(IQueryBuffer buffer) {
@@ -43,6 +52,8 @@ public class PartialWindowResults {
 		}
 		buffer = null;
 		size = 0;
+		for (int i = 0; i < count; i++)
+			startPointers[i] = -1;
 		count = 0;
 		PartialWindowResultsFactory.free(this.pid, this);
 	}
@@ -53,11 +64,14 @@ public class PartialWindowResults {
 		this.size = 0;
 		this.count = 0;
 	}
-
+	
 	public void increment() {
-		count ++;
+		if (count >= max_windows)
+			throw new IndexOutOfBoundsException ("error: operator exceeded maximum number of partial window results");
+		
+		startPointers[count++] = buffer.position();
 	}
-
+	
 	public Object numberOfWindows() {
 		
 		return count;
