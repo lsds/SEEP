@@ -36,7 +36,7 @@ def main(k,h,query,w,hostname, local_worker_id=1):
 def start_worker(k, h, query, logfilename, sim_env, local_worker_id):
     worker_port = worker_base_port + local_worker_id
     with open('%s%d/%s'%(data_dir_base,local_worker_id,logfilename), 'w') as log:
-        args = ['sudo', '-u', user, 'java',
+        args = ['sudo', '-u', user, 'java', '-verbose:gc', '-XX:+PrintGCDetails', '-XX:+PrintGCTimeStamps',
                 '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query,
                 '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)

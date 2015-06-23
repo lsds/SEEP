@@ -117,9 +117,10 @@ public class IncomingDataHandlerWorker implements Runnable{
 			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
 			
 			while(goOn){
+				long receiveStartTs = System.currentTimeMillis();
 				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
 				long receiveTs = System.currentTimeMillis();
-				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload);
+				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload+",readTime="+(receiveTs-receiveStartTs));
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
 				for(TuplePayload t_payload : batch)
 				{
