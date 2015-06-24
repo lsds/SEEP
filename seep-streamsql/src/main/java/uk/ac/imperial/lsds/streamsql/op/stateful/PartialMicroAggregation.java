@@ -29,7 +29,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IAggregateOperator {
 	
-	private static boolean debug = false;
+	private static boolean debug = true;
 	
 	WindowDefinition windowDefinition;
 	
@@ -102,7 +102,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			WindowDefinition windowDefinition, 
 			AggregationType aggregationType,
 			FloatColumnReference aggregationAttribute,
-			Expression[] groupByAttributes
+			Expression [] groupByAttributes
 		) {
 		
 		this.windowDefinition = windowDefinition;
@@ -251,15 +251,32 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
+			/*
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
+			*/
 			
 			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
-				/* This is a pending window */
-				outputBuffer = pending.getBuffer();
-				pending.increment();
-				inWindowStartOffset = (int) b;
-				inWindowEndOffset = (int) d;
+				
+				if (windowBatch.getBatchStartPointer() == 0) {
+					/* Treat this window as opening; there is no previous batch to open it */
+					outputBuffer = opening.getBuffer();
+					opening.increment();
+					inWindowStartOffset = (int) b;
+					inWindowEndOffset   = (int) d;
+				} else {
+				
+					/* This is a pending window */
+				
+					/* Compute a pending window once */
+					if (pending.numberOfWindows() > 0)
+						continue;
+				
+					outputBuffer = pending.getBuffer();
+					pending.increment();
+					inWindowStartOffset = (int) b;
+					inWindowEndOffset   = (int) d;
+				}
 			} else
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
@@ -341,53 +358,23 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		windowBatch.setSchema(outputSchema);
 		
 		/* At the end of processing, set window batch accordingly */
-		if (! closing.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
-						taskId, closing.numberOfWindows()));
-			windowBatch.setClosing (closing);
-		} else {
-			windowBatch.setClosing(null);
-			closing.release();
-		}
-		
-		if (! pending.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
-						taskId, pending.numberOfWindows()));
-			windowBatch.setPending (pending);
-		} else {
-			windowBatch.setPending(null);
-			pending.release();
-		}
-		
-		if (! complete.isEmpty()) {
-			if (debug) 
-				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
-						taskId, complete.numberOfWindows()));
-			windowBatch.setComplete (complete);
-		} else {
-			windowBatch.setComplete(null);
-			complete.release();
-		}
-		
-		if (! opening.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
-						taskId, opening.numberOfWindows()));
-			windowBatch.setOpening (opening);
-		} else {
-			windowBatch.setOpening(null);
-			opening.release();
-		}
+		windowBatch.setClosing  ( closing);
+		windowBatch.setPending  ( pending);
+		windowBatch.setComplete (complete);
+		windowBatch.setOpening  ( opening);
 		
 		if (debug)
-			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 
-					taskId, windowBatch.getFreeOffset()));
-
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows]", 
+					taskId, 
+					windowBatch.getFreeOffset(),
+					closing.numberOfWindows(),
+					pending.numberOfWindows(),
+					complete.numberOfWindows(),
+					opening.numberOfWindows()));
+		
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
-
+	
 	private void processDataPerWindowIncrementally (WindowBatch windowBatch, IWindowAPI api) {
 
 		assert (
@@ -457,15 +444,32 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
+			/*
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, inWindowStartOffset, inWindowEndOffset));
+			*/
 			
 			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
-				/* This is a pending window */
-				outputBuffer = pending.getBuffer();
-				pending.increment();
-				inWindowStartOffset = (int) b;
-				inWindowEndOffset = (int) d;
+				
+				if (windowBatch.getBatchStartPointer() == 0) {
+					/* Treat this window as opening; there is no previous batch to open it */
+					outputBuffer = opening.getBuffer();
+					opening.increment();
+					inWindowStartOffset = (int) b;
+					inWindowEndOffset   = (int) d;
+				} else {
+				
+					/* This is a pending window */
+				
+					/* Compute a pending window once */
+					if (pending.numberOfWindows() > 0)
+						continue;
+				
+					outputBuffer = pending.getBuffer();
+					pending.increment();
+					inWindowStartOffset = (int) b;
+					inWindowEndOffset   = (int) d;
+				}
 			} else
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
@@ -591,49 +595,19 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		windowBatch.setSchema(outputSchema);
 		
 		/* At the end of processing, set window batch accordingly */
-		if (! closing.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
-						taskId, closing.numberOfWindows()));
-			windowBatch.setClosing (closing);
-		} else {
-			windowBatch.setClosing(null);
-			closing.release();
-		}
-		
-		if (! pending.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
-						taskId, pending.numberOfWindows()));
-			windowBatch.setPending (pending);
-		} else {
-			windowBatch.setPending(null);
-			pending.release();
-		}
-		
-		if (! complete.isEmpty()) {
-			if (debug) 
-				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
-						taskId, complete.numberOfWindows()));
-			windowBatch.setComplete (complete);
-		} else {
-			windowBatch.setComplete(null);
-			complete.release();
-		}
-		
-		if (! opening.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
-						taskId, opening.numberOfWindows()));
-			windowBatch.setOpening (opening);
-		} else {
-			windowBatch.setOpening(null);
-			opening.release();
-		}
+		windowBatch.setClosing  ( closing);
+		windowBatch.setPending  ( pending);
+		windowBatch.setComplete (complete);
+		windowBatch.setOpening  ( opening);
 		
 		if (debug)
-			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 
-					taskId, windowBatch.getFreeOffset()));
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows]", 
+					taskId, 
+					windowBatch.getFreeOffset(),
+					closing.numberOfWindows(),
+					pending.numberOfWindows(),
+					complete.numberOfWindows(),
+					opening.numberOfWindows()));
 
 		api.outputWindowBatchResult(-1, windowBatch);
 	}
@@ -716,15 +690,27 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
-			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
-					currentWindow, inWindowStartOffset, inWindowEndOffset));
-			
 			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
-				/* This is a pending window */
-				outputBuffer = pending.getBuffer();
-				pending.increment();
-				inWindowStartOffset = (int) b;
-				inWindowEndOffset = (int) d;
+				
+				if (windowBatch.getBatchStartPointer() == 0) {
+					/* Treat this window as opening; there is no previous batch to open it */
+					outputBuffer = opening.getBuffer();
+					opening.increment();
+					inWindowStartOffset = (int) b;
+					inWindowEndOffset   = (int) d;
+				} else {
+				
+					/* This is a pending window */
+				
+					/* Compute a pending window once */
+					if (pending.numberOfWindows() > 0)
+						continue;
+				
+					outputBuffer = pending.getBuffer();
+					pending.increment();
+					inWindowStartOffset = (int) b;
+					inWindowEndOffset   = (int) d;
+				}
 			} else
 			if (inWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
@@ -743,6 +729,11 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				outputBuffer = complete.getBuffer();
 				complete.increment();
 			}
+			
+			/*
+			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d (%10d bytes)", 
+					currentWindow, inWindowStartOffset, inWindowEndOffset, inWindowEndOffset - inWindowStartOffset));
+			*/
 			
 			/* If the window is empty, skip it */
 			if (inWindowStartOffset != -1) {
@@ -851,49 +842,19 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		windowBatch.setSchema(outputSchema);
 		
 		/* At the end of processing, set window batch accordingly */
-		if (! closing.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
-						taskId, closing.numberOfWindows()));
-			windowBatch.setClosing (closing);
-		} else {
-			windowBatch.setClosing(null);
-			closing.release();
-		}
-		
-		if (! pending.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
-						taskId, pending.numberOfWindows()));
-			windowBatch.setPending (pending);
-		} else {
-			windowBatch.setPending(null);
-			pending.release();
-		}
-		
-		if (! complete.isEmpty()) {
-			if (debug) 
-				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
-						taskId, complete.numberOfWindows()));
-			windowBatch.setComplete (complete);
-		} else {
-			windowBatch.setComplete(null);
-			complete.release();
-		}
-		
-		if (! opening.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
-						taskId, opening.numberOfWindows()));
-			windowBatch.setOpening (opening);
-		} else {
-			windowBatch.setOpening(null);
-			opening.release();
-		}
+		windowBatch.setClosing  ( closing);
+		windowBatch.setPending  ( pending);
+		windowBatch.setComplete (complete);
+		windowBatch.setOpening  ( opening);
 		
 		if (debug)
-			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 
-					taskId, windowBatch.getFreeOffset()));
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows]", 
+					taskId, 
+					windowBatch.getFreeOffset(),
+					closing.numberOfWindows(),
+					pending.numberOfWindows(),
+					complete.numberOfWindows(),
+					opening.numberOfWindows()));
 		
 		/* Print tuples
 		outBuffer.close();
@@ -911,10 +872,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		api.outputWindowBatchResult(-1, windowBatch);
 		
-		if (taskId == 3) { 
+		/*
 		System.err.println("Disrupted");
 		System.exit(-1);
-		}
+		*/
 	}
 	
 	private void processDataPerWindowIncrementallyWithGroupBy (
@@ -996,15 +957,33 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
 			
+			/*
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d", 
 					currentWindow, currWindowStartOffset, currWindowEndOffset));
+			*/
 			
 			if (currWindowStartOffset < 0 && currWindowEndOffset < 0) {
-				/* This is a pending window */
-				outputBuffer = pending.getBuffer();
-				pending.increment();
-				currWindowStartOffset = (int) b;
-				currWindowEndOffset = (int) d;
+				
+				if (windowBatch.getBatchStartPointer() == 0) {
+					/* Treat this window as opening; there is no previous batch to open it */
+					outputBuffer = opening.getBuffer();
+					opening.increment();
+					currWindowStartOffset = (int) b;
+					currWindowEndOffset   = (int) d;
+				} else {
+				
+					/* This is a pending window */
+				
+					/* Compute a pending window once */
+					if (pending.numberOfWindows() > 0)
+						continue;
+				
+					outputBuffer = pending.getBuffer();
+					pending.increment();
+					currWindowStartOffset = (int) b;
+					currWindowEndOffset   = (int) d;
+				}
+				
 			} else
 			if (currWindowStartOffset < 0) {
 				outputBuffer = closing.getBuffer();
@@ -1111,49 +1090,19 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		windowBatch.setSchema(outputSchema);
 		
 		/* At the end of processing, set window batch accordingly */
-		if (! closing.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  closing windows", 
-						taskId, closing.numberOfWindows()));
-			windowBatch.setClosing (closing);
-		} else {
-			windowBatch.setClosing(null);
-			closing.release();
-		}
-		
-		if (! pending.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  pending windows", 
-						taskId, pending.numberOfWindows()));
-			windowBatch.setPending (pending);
-		} else {
-			windowBatch.setPending(null);
-			pending.release();
-		}
-		
-		if (! complete.isEmpty()) {
-			if (debug) 
-				System.out.println(String.format("[DBG] task %4d has %4d complete windows", 
-						taskId, complete.numberOfWindows()));
-			windowBatch.setComplete (complete);
-		} else {
-			windowBatch.setComplete(null);
-			complete.release();
-		}
-		
-		if (! opening.isEmpty()) {
-			if (debug)
-				System.out.println(String.format("[DBG] task %4d has %4d  opening windows", 
-						taskId, opening.numberOfWindows()));
-			windowBatch.setOpening (opening);
-		} else {
-			windowBatch.setOpening(null);
-			opening.release();
-		}
+		windowBatch.setClosing  ( closing);
+		windowBatch.setPending  ( pending);
+		windowBatch.setComplete (complete);
+		windowBatch.setOpening  ( opening);
 		
 		if (debug)
-			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d", 
-					taskId, windowBatch.getFreeOffset()));
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows]", 
+					taskId, 
+					windowBatch.getFreeOffset(),
+					closing.numberOfWindows(),
+					pending.numberOfWindows(),
+					complete.numberOfWindows(),
+					opening.numberOfWindows()));
 		
 		/* Print tuples
 		outBuffer.close();
@@ -1304,6 +1253,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					outputBuffer.putFloat((t.value / (float) t.count));
 				else
 					outputBuffer.putFloat(t.value);
+				outputBuffer.put(outputSchema.getDummyContent());
 			}
 		}
 	}

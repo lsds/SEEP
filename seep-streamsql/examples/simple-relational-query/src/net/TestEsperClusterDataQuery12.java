@@ -45,16 +45,20 @@ public class TestEsperClusterDataQuery12 extends TestEsper {
 			} else
 			if (args[i].equals("-q")) {
 				if (Integer.parseInt(args[j]) == 1) 
+//					query = ""
+//							+ "select timestamp, category, count(*) as failedEvents "
+//							+ "from input(eventType=3).win:length(100)"
+//							+ "group by category";
 					query = ""
 							+ "select timestamp, category, count(*) as failedEvents "
-							+ "from input(eventType=3).win:length(100)"
+							+ "from input.win:ext_timed(timestamp,60)"
 							+ "group by category";
 				else if (Integer.parseInt(args[j]) == 2) 
 					query = ""
-							+ "select timestamp, jobId, max(cpu) as maxCpu "
+							+ "select timestamp, category, max(cpu) as maxCpu "
 //							+ "from input.win:length(60)"
 							+ "from input.win:ext_timed(timestamp, 60)"
-							+ "group by jobId " ;
+							+ "group by category " ;
 //							+ "having max(cpu) > 1 ";
 				else {
 					System.err.println(String.format("error: unknown query flag %s", args[j]));

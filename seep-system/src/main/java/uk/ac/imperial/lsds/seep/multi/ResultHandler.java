@@ -57,7 +57,7 @@ public class ResultHandler {
 		next = 0;
 		semaphore = new Semaphore(1, false);
 		
-		resultAggregator = new ResultAggregator(SLOTS, freeBuffer, query);
+		resultAggregator = new ResultAggregator(SLOTS, freeBuffer, query, this);
 	}
 	
 	public long getTotalOutputBytes () {

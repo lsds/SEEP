@@ -650,9 +650,6 @@ public class WindowBatch {
 		long _pid = (getTimestamp(bufferStartPointer) / paneSize) - 1; /* _pid is the previous pane id */
 		long pid_;
 		
-		long fp = _pid + 1; /* First pane */
-		long lp = fp;
-		
 		long offset = -1; /* Undefined */
 		
 		long wid, opensAt;
@@ -662,6 +659,8 @@ public class WindowBatch {
 				streamIndex += tupleSize, bufferIndex += tupleSize) {
 			
 			pid = getTimestamp(bufferIndex) / paneSize; /* Current pane */
+			
+			System.out.println(String.format("[DBG] previous pane %6d current pane %6d", _pid, pid));
 			
 			if (_pid < pid) {
 				
@@ -677,10 +676,11 @@ public class WindowBatch {
 						wid = opensAt / windowDefinition.panesPerSlide();
 					
 						if (wid >= 0) {
-						
+							
 							System.out.println(String.format("[DBG] closing %05d; buffer index %10d", 
 								wid, bufferIndex));
-						
+							
+							
 							/* Calculate offset */
 							if (offset < 0) {
 								offset = wid;
@@ -691,6 +691,18 @@ public class WindowBatch {
 							/* Store end pointer */
 							int index = (int) (wid - offset);
 							windowEndPointers[index] = (int) bufferIndex;
+							
+							/*
+							 * Has this window been previously opened? If the start pointer is -1,
+							 * then the window processing starts from the beginning of the batch.
+							 * 
+							 * We characterise this window as "closing" and we expect to find its
+							 * match in the opening set of the previous batch. But if this is the
+							 * first batch, then there will be none.
+							 */
+							if (windowStartPointers[index] < 0 && batchStartPointer == 0)
+								windowStartPointers[index] = 0;
+							
 							lastWindowIndex = (lastWindowIndex < index) ? index : lastWindowIndex;
 						}
 					}
@@ -698,11 +710,10 @@ public class WindowBatch {
 					if (pid_ % windowDefinition.panesPerSlide() == 0) {
 					
 						wid = pid_ / windowDefinition.panesPerSlide();
-					
+						
 						System.out.println(String.format("[DBG] opening %05d; buffer index %10d", 
 								wid, bufferIndex));
-					
-						/* Calculate offset */
+						
 					
 						/* Store start pointer */
 						int index;
@@ -710,6 +721,16 @@ public class WindowBatch {
 							index = (int) wid;
 						} else {
 							index = (int) (wid - offset);
+						}
+						if (index >= windowStartPointers.length) {
+							System.err.println("Error at task " + taskId);
+							for (int mybufferIndex = bufferStartPointer; 
+									mybufferIndex < bufferEndPointer; 
+									mybufferIndex += tupleSize) {
+								System.err.print(getTimestamp(mybufferIndex) + ", ");
+							}
+							System.err.println();
+							System.err.flush();
 						}
 						windowStartPointers[index] = (int) bufferIndex;
 						lastWindowIndex = (lastWindowIndex < index) ? index : lastWindowIndex;
@@ -719,14 +740,6 @@ public class WindowBatch {
 				_pid = pid;
 			}
 		} /* End for */
-		
-		/*
-		lp = pid;
-		
-		if (lp - fp <= windowDefinition.numberOfPanes())
-			hasPending = false;
-		System.out.println(String.format("[DBG] last window index is %6d", lastWindowIndex));
-		*/
 	}
 	
 	public void initPartialCountBasedWindowPointers () {
@@ -740,9 +753,6 @@ public class WindowBatch {
 		long streamIndex, bufferIndex;
 		long pid = 0;
 		long _pid = ((batchStartPointer / tupleSize) / paneSize) - 1; /* _pid is the previous pane id */
-		
-		long fp = _pid + 1; /* First pane */
-		long lp = fp;
 		
 		long offset = -1; /* Undefined */
 		
@@ -765,9 +775,10 @@ public class WindowBatch {
 					wid = opensAt / windowDefinition.panesPerSlide();
 					
 					if (wid >= 0) {
-						
+						/*
 						System.out.println(String.format("[DBG] closing %05d; buffer index %10d", 
 						wid, bufferIndex));
+						*/
 						
 						/* Calculate offset */
 						if (offset < 0) {
@@ -786,17 +797,9 @@ public class WindowBatch {
 				if ( pid % windowDefinition.panesPerSlide() == 0) {
 					
 					wid = pid / windowDefinition.panesPerSlide();
-					
+					/*
 					System.out.println(String.format("[DBG] opening %05d; buffer index %10d", 
 					wid, bufferIndex));
-					
-					/* Calculate offset */
-					/*
-					if (offset < 0) {
-						offset = wid;
-						// System.out.println(String.format("[DBG] window %05d is opening; offset %10d", 
-						// wid, offset));
-					}
 					*/
 					
 					/* Store start pointer */
@@ -812,13 +815,5 @@ public class WindowBatch {
 				_pid = pid;
 			}
 		} /* End for */
-		
-		/*
-		lp = pid;
-		
-		if (lp - fp <= windowDefinition.numberOfPanes())
-			hasPending = false;
-		System.out.println(String.format("[DBG] last window index is %6d", lastWindowIndex));
-		*/
 	}
 }

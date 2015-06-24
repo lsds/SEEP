@@ -63,9 +63,6 @@ public class WindowTuple {
 			if (v1 == v2)
 				continue;
 			
-			if ((v1 != v1) && (v2 != v2))
-				continue;
-			
 			if (v1 < v2)
 				return -1;
 			

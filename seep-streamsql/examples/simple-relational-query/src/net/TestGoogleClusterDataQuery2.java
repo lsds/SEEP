@@ -11,12 +11,14 @@ import java.util.Iterator;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.AggregationType;
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -27,6 +29,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
 import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
@@ -76,14 +79,14 @@ public class TestGoogleClusterDataQuery2 {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 8;
-		QueryConf queryConf = new QueryConf(60, 1024);
+		Utils.THREADS = 1;
+		QueryConf queryConf = new QueryConf(1048576, 1024);
 		/*
 		 * Set up configuration of query
 		 */
 		WindowType windowType = WindowType.fromString("range");
 		long windowRange = 60;
-		long windowSlide =  1;
+		long windowSlide = 8;
 		int numberOfAttributesInSchema = 12;
 		
 		AggregationType aggregationType = AggregationType.fromString("max");
@@ -110,8 +113,22 @@ public class TestGoogleClusterDataQuery2 {
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 		
+		/* 0:undefined 1:int, 2:float, 3:long */
+		schema.setType( 0, 3);
+		schema.setType( 1, 3);
+		schema.setType( 2, 3);
+		schema.setType( 3, 3);
+		schema.setType( 4, 1);
+		schema.setType( 5, 1);
+		schema.setType( 6, 1);
+		schema.setType( 7, 1);
+		schema.setType( 8, 2);
+		schema.setType( 9, 2);
+		schema.setType(10, 2);
+		schema.setType(11, 1);
+		
 		Expression [] groupBy = new Expression [] {
-			new LongColumnReference(1)
+			new IntColumnReference(6)
 		};
 		
 		/*
@@ -120,15 +137,15 @@ public class TestGoogleClusterDataQuery2 {
 		 * 0:timestamp, 1:jobId, 2: maxCpu
 		 *  
 		 */
-		Selection having = new Selection (
-			new FloatComparisonPredicate(
-				FloatComparisonPredicate.GREATER_OP, 
-				new FloatColumnReference(2), 
-				new FloatConstant(100F)
-				)
-			);
+//		Selection having = new Selection (
+//			new FloatComparisonPredicate(
+//				FloatComparisonPredicate.GREATER_OP, 
+//				new FloatColumnReference(2), 
+//				new FloatConstant(100F)
+//				)
+//			);
 		
-		IMicroOperatorCode aggregationCode = new MicroAggregation(
+		IMicroOperatorCode aggregationCode = new PartialMicroAggregation(
 				window,
 				aggregationType,
 				new FloatColumnReference(8), /* cpu */
@@ -136,7 +153,7 @@ public class TestGoogleClusterDataQuery2 {
 				);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 128 * 1048576; /* 1MB */
+		Utils._UNBOUNDED_BUFFER_ = 1 * 1048576; /* 1MB */
 		
 		MicroOperator uoperator;
 		uoperator = new MicroOperator (aggregationCode, null, 1);
@@ -145,9 +162,12 @@ public class TestGoogleClusterDataQuery2 {
 		operators.add(uoperator);
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
+		query.setAggregateOperator((IAggregateOperator) aggregationCode);
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
+		
+		TheCPU.getInstance().bind(0);
 		
 		/* Measurements */
 		long Bytes = 0L;
@@ -202,34 +222,36 @@ public class TestGoogleClusterDataQuery2 {
 						int bytes = 0;
 						if ((bytes = client.read(buffer)) > 0) {
 							
-							/*
-							 * System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
-							 *		bytes, buffer.remaining()));
-							 *
-							 * Make sure the buffer is rewind before reading.
-							 */
-							buffer.rewind();
-							operator.processData (buffer.array(), bytes);
+							if (! buffer.hasRemaining()) {
+								/*
+								 * System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
+								 *		bytes, buffer.remaining()));
+								 *
+								 * Make sure the buffer is rewind before reading.
+								 */
+								buffer.rewind();
+								operator.processData (buffer.array(), buffer.capacity());
 							
-							buffer.clear();
+								buffer.clear();
 							
-							/* Measurements */
-							Bytes += bytes;
-							/*
-							count += 1;
-							if (count % 10000 == 0) {
-								t = System.currentTimeMillis();
-								if (_t > 0 && previous > 0) {
-									dt = ((double) (t - _t)) / 1000.;
-									MB = ((double) (Bytes - previous)) / _1MB;
-									rate = MB / dt;
-									System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
-									MB, dt, rate, ((rate * 8.)/1000.)));
+								/* Measurements */
+								Bytes += bytes;
+								/*
+								count += 1;
+								if (count % 10000 == 0) {
+									t = System.currentTimeMillis();
+									if (_t > 0 && previous > 0) {
+										dt = ((double) (t - _t)) / 1000.;
+										MB = ((double) (Bytes - previous)) / _1MB;
+										rate = MB / dt;
+										System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
+										MB, dt, rate, ((rate * 8.)/1000.)));
+									}
+									_t = t;
+									previous = Bytes;
 								}
-								_t = t;
-								previous = Bytes;
+								*/
 							}
-							*/
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");

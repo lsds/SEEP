@@ -21,7 +21,7 @@ public enum AggregationType {
 		if (s.toLowerCase().contains("max"))
 			return MAX;
 		else 
-			return null;
+			throw new IllegalArgumentException ("error: unknown aggregation type");
 	}
 
 	public String asString (String s) {

@@ -31,10 +31,12 @@ public class TestEsper {
 		configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
 		
 		if (threads > 1) {
-//			configuration.getEngineDefaults().getThreading().setThreadPoolInbound(true);
-//			configuration.getEngineDefaults().getThreading().setThreadPoolInboundNumThreads(2);
+			// configuration.getEngineDefaults().getThreading().setThreadPoolInbound(true);
+			// configuration.getEngineDefaults().getThreading().setThreadPoolInboundNumThreads(1);
 			configuration.getEngineDefaults().getThreading().setThreadPoolRouteExec(true);
 			configuration.getEngineDefaults().getThreading().setThreadPoolRouteExecNumThreads(threads);
+			// configuration.getEngineDefaults().getThreading().setThreadPoolOutbound(true);
+			// configuration.getEngineDefaults().getThreading().setThreadPoolOutboundNumThreads(1);
 		}
 	}
 
