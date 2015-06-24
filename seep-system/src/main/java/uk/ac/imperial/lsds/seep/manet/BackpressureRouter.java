@@ -21,6 +21,7 @@ public class BackpressureRouter implements IRouter {
 	private final static double INITIAL_WEIGHT = 1;
 	private final boolean downIsMultiInput;
 	private final Map<Integer, Double> weights;
+	private final Map<Integer, Long> lastWeightUpdateTimes;
 	private final Map<Integer, Set<Long>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
@@ -30,12 +31,14 @@ public class BackpressureRouter implements IRouter {
 	
 	public BackpressureRouter(OperatorContext opContext) {
 		this.weights = new HashMap<>();
+		this.lastWeightUpdateTimes = new HashMap<>();
 		this.unmatched = new HashMap<>();
 		this.opContext = opContext;
 		ArrayList<Integer> downOps = opContext.getDownstreamOpIdList();
 		for (int downOpId : downOps)
 		{
 			weights.put(downOpId, INITIAL_WEIGHT);
+			lastWeightUpdateTimes.put(downOpId, -1L);
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
 		logger.info("Initial weights: "+weights);
@@ -104,6 +107,13 @@ public class BackpressureRouter implements IRouter {
 				throw new RuntimeException("Logic error?");
 			}
 			logger.debug("BP router handling downup rctrl: "+ downUp);
+			long prevUpdateTs = lastWeightUpdateTimes.get(downUp.getOpId());
+			lastWeightUpdateTimes.put(downUp.getOpId(), System.currentTimeMillis());
+			if (prevUpdateTs > 0) 
+			{ 
+				logger.info("Weight update delay for "+downUp.getOpId()+"="+(System.currentTimeMillis() - prevUpdateTs));
+			}
+			
 			weights.put(downUp.getOpId(), downUp.getWeight());
 			logger.debug("Backpressure router weights= "+weights);
 			Set<Long> newUnmatched = downUp.getUnmatched();
