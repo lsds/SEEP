@@ -35,7 +35,8 @@ public class RoutingController implements Runnable{
 	private final double processingRate = 1; //TODO: Measure/update this dynamically?
 	private final Map<Integer, Double> weights = new HashMap<>(); 
 	private final Query query;
-
+	private final boolean useCostThreshold;
+	
 	private final Object lock = new Object(){};
 	
 	public RoutingController(CoreRE owner) {
@@ -43,8 +44,9 @@ public class RoutingController implements Runnable{
 		this.nodeId = owner.getProcessingUnit().getOperator().getOperatorId();
 		this.query = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
 		//this.inputQueues = inputQueues;
-		this.numLogicalInputs = query.getLogicalInputs(query.getLogicalNodeId(nodeId)).length;  
-
+		this.numLogicalInputs = query.getLogicalInputs(query.getLogicalNodeId(nodeId)).length;
+		
+		this.useCostThreshold = query.getPhysicalNodeIds(query.getLogicalNodeId(nodeId)).size() > 1;
 		this.upstreamNetRates = new HashMap<>();
 		this.upstreamQlens = new HashMap<>();
 
@@ -167,7 +169,7 @@ public class RoutingController implements Runnable{
 				while (iter.hasNext()) {
 					Integer upstreamId = iter.next();
 					Double cost = upstreamCosts.get(upstreamId);
-					if (cost==null || cost > COST_THRESHOLD) {
+					if (cost==null || (useCostThreshold && cost > COST_THRESHOLD)) {
 						cost = new Double(GraphUtil.SUB_INFINITE_DISTANCE);
 					}
 					

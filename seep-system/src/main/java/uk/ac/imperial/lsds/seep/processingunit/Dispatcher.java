@@ -844,6 +844,8 @@ public class Dispatcher implements IRoutingObserver {
 	private class FailureCtrlHandler
 	{
 
+		private final Map<Integer, Long> lastUpdateTimes = new HashMap<>();
+		
 		public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
 		{
 			// Holding lock:
@@ -863,6 +865,14 @@ public class Dispatcher implements IRoutingObserver {
 			//		if aggressive purge
 			//			trim output queue
 
+			long rxTime = System.currentTimeMillis();
+			Long lastRxTime = lastUpdateTimes.get(dsOpId);
+			if (lastRxTime != null)
+			{
+				logger.debug("Failure ctrl update delay for "+dsOpId+"="+(rxTime - lastRxTime));
+			}
+			lastUpdateTimes.put(dsOpId, rxTime);
+			
 			synchronized(lock)
 			{
 				long tStart = System.currentTimeMillis();
