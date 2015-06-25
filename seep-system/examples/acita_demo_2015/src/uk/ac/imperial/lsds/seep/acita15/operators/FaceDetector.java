@@ -18,17 +18,54 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
+import javax.imageio.ImageIO;
+
 public class FaceDetector implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(FaceDetector.class);
 	private int processed = 0;
 	
+	private CascadeClassifier faceDetector = null;
+	
 	public void processData(DataTuple data) {
-		long tupleId = data.getLong("tupleId");
-		String value = data.getString("value") + "," + api.getOperatorId();
 		
-		DataTuple outputTuple = data.setValues(tupleId, value);
+		
+		long tupleId = data.getLong("tupleId");
+		//String value = data.getString("value") + "," + api.getOperatorId();
+		byte[] value = data.getByteArray("value");
+				
+		/*
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ImageIO.write(img, "jpg", baos);
+		byte[] bytes = baos.toByteArray();
+		*/
+
+		ByteArrayInputStream bais = new ByteArrayInputStream(value);
+		Mat frame = Mat.createFrom(ImageIO.read(bais));
+		Rect faceDetections = new Rect();
+		
+		faceDetector.detectMultiScale(source, faceDetections);
+		
+		int numFaces = faceDetections.limit();
+		
+		DataTuple outputTuple = null;
+		
+		if (numFaces > 0)
+		{
+			//Just take the first face for now
+			int x = Rect.position(0).x();
+			int y = Rect.position(0).x();
+			int height = Rect.position(0).height();
+			int width = Rect.position(0).width();
+			outputTuple = data.setValues(tupleId, value, x, y, height, width);
+		}
+		else
+		{
+			outputTuple = data.setValues(tupleId, value, 0, 0, 0, 0);
+		}
+		
+		//DataTuple outputTuple = data.setValues(tupleId, value);
 		processed++;
 		if (processed % 1000 == 0)
 		{
@@ -42,6 +79,7 @@ public class FaceDetector implements StatelessOperator{
 				recordTuple(outputTuple);
 			}
 		}
+		
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -79,6 +117,11 @@ public class FaceDetector implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up FACE_DETECTOR operator with id="+api.getOperatorId());
+		
+        String classifierName = Paths.get(
+                App.class.getResource("/haarcascade_frontalface_default.xml")
+                        .toURI()).toString();
+        faceDetector = new CascadeClassifier(classifierName);
 	}
 
 }

@@ -116,10 +116,14 @@ public class Base implements QueryComposer{
 		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
 		
 		
-		//Declare SpeechRecognizer
+		//Declare FaceDetector
 		ArrayList<String> faceDetectFields = new ArrayList<String>();
 		faceDetectFields.add("tupleId");
 		faceDetectFields.add("value");
+		faceDetectFields.add("x");
+		faceDetectFields.add("y");
+		faceDetectFields.add("height");
+		faceDetectFields.add("width");
 		Connectable faceDetect = QueryBuilder.newStatelessOperator(new FaceDetector(), 0, faceDetectFields);
 		
 		
