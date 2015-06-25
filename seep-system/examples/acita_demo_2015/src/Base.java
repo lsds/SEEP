@@ -113,6 +113,10 @@ public class Base implements QueryComposer{
 		ArrayList<String> srcFields = new ArrayList<String>();
 		srcFields.add("tupleId");
 		srcFields.add("value");
+		srcFields.add("x");
+		srcFields.add("y");
+		srcFields.add("height");
+		srcFields.add("width");
 		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
 		
 		
@@ -131,12 +135,20 @@ public class Base implements QueryComposer{
 		ArrayList<String> faceRecFields = new ArrayList<String>();
 		faceRecFields.add("tupleId");
 		faceRecFields.add("value");
+		faceRecFields.add("x");
+		faceRecFields.add("y");
+		faceRecFields.add("height");
+		faceRecFields.add("width");
 		Connectable faceRec = QueryBuilder.newStatelessOperator(new FaceRecognizer(), 1, faceRecFields);
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
 		snkFields.add("tupleId");
 		snkFields.add("value");
+		snkFields.add("x");
+		snkFields.add("y");
+		snkFields.add("height");
+		snkFields.add("width");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		
 		src.connectTo(faceDetect, true, 0);

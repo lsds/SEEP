@@ -26,11 +26,11 @@ public class FaceRecognizer implements StatelessOperator{
 	
 	public void processData(DataTuple data) {
 		long tupleId = data.getLong("tupleId");
-		byte[] value = data.getString("value");
+		byte[] value = data.getByteArray("value");
 		int x = data.getInt("x");
 		int y = data.getInt("y");
 		int height = data.getInt("height");
-		int widht = data.getInt("width");
+		int width = data.getInt("width");
 		
 		DataTuple outputTuple = data.setValues(tupleId, value, x, y, height, width);
 		processed++;

@@ -137,8 +137,11 @@ public class VideoSource implements StatelessOperator {
 			//ByteArrayOutputStream
 			//ImageIO.read(new File(filepath))
 			// load the face image
-			frameArr[i] = java.nio.file.Files.readAllBytes(imgFile.toPath());
-
+			try
+			{
+				frameArr[i] = java.nio.file.Files.readAllBytes(imgFile.toPath());
+			}
+			catch (IOException e) { throw new RuntimeException(e); }
 			if (frameArr[i] == null) {
 				throw new RuntimeException("Can't load image from " + imgFile.getAbsolutePath());
 			}
@@ -148,7 +151,7 @@ public class VideoSource implements StatelessOperator {
 		return frameArr;
 	}
 	
-	private IplImage[] loadImages(String imgDirname, final String imgSuffix)
+	private IplImage[] loadIplImages(String imgDirname, final String imgSuffix)
 	{
 		File dir = new File(imgDirname);
 		File [] files = dir.listFiles(new FilenameFilter() {

@@ -76,23 +76,16 @@
         <artifactId>commons-collections4</artifactId>
         <version>4.0</version>
     </dependency>
-    <dependency>
-	  <groupId>edu.cmu.sphinx</groupId>
-        <artifactId>sphinx4-core</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  </dependency>
   <dependency>
 	  <groupId>edu.cmu.sphinx</groupId>
 	  <artifactId>sphinx4-data</artifactId>
 	  <version>1.0-SNAPSHOT</version>
   </dependency>  
-  <!--
   <dependency>
 	  <groupId>org.bytedeco</groupId>
 	  <artifactId>javacv</artifactId>
 	  <version>0.11</version>
   </dependency>
-	-->
   </dependencies>
   
   <build>
