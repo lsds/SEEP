@@ -74,8 +74,10 @@ public class VideoSource implements StatelessOperator {
 		logger.info("Source sending started at t="+tStart);
 		logger.info("Source sending started at t="+tStart);
 		
-		String testFramesDir = GLOBALS.valueFor("testFramesDir");
-		String imgFileExt = GLOBALS.valueFor("imgFileExt");
+		//String testFramesDir = GLOBALS.valueFor("testFramesDir");
+		//String imgFileExt = GLOBALS.valueFor("imgFileExt");
+		String testFramesDir = "images";
+		String imgFileExt = "jpg";
 		
 		byte[][] testFrames = loadImages(testFramesDir, imgFileExt);
 		int currentFrame = 0;

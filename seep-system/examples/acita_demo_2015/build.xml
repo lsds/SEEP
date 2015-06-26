@@ -7,6 +7,7 @@
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
   <property name="lib"	location="lib"/>
+  <property name="resources" location="resources"/>
   
 
   <target name="init">
@@ -39,6 +40,7 @@
 		<attribute name="Main-Class" value="Base" />
 	</manifest>
 	<fileset dir="${build}" includes="**/*.class"/>
+	<fileset dir="${resources}" includes="**"/>
     </jar>
   </target>
 

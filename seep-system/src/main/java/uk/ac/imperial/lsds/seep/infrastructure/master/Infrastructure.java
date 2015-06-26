@@ -474,15 +474,24 @@ public class Infrastructure {
 		{
 			return buildNameAssist();
 		}
+		else if (queryType.equals("fr"))
+		{
+			return buildFaceRecognition();
+		}
 		else { throw new RuntimeException("Logic error."); }
 	}
 	
 	private Query buildChainQuery()
 	{
+		int chainLength = Integer.parseInt(GLOBALS.valueFor("chainLength"));
+		return buildChainQuery(chainLength);
+	}
+
+	private Query buildChainQuery(int chainLength)
+	{
 		//TreeMap logicalTopology
 		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
 		//TODO: Generalize this for non-face recognition queries.
-		int chainLength = Integer.parseInt(GLOBALS.valueFor("chainLength"));
 		
 		for (int i = 1; i <= chainLength+2; i++)
 		{
@@ -539,6 +548,10 @@ public class Infrastructure {
 		return new Query(logicalTopology, log2phys, phys2addr);
 	}
 	
+	private Query buildFaceRecognition()
+	{
+		return buildChainQuery(2);
+	}
 	
 	private Query buildJoinQuery()
 	{
@@ -682,6 +695,8 @@ public class Infrastructure {
 		return new Query(logicalTopology, log2phys, phys2addr);	
 	}
 
+
+	
 	private Operator getOp(int opId)
 	{
 		for (Operator op : ops)
