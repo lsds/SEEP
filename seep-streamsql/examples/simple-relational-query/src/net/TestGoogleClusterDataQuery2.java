@@ -86,10 +86,10 @@ public class TestGoogleClusterDataQuery2 {
 		 */
 		WindowType windowType = WindowType.fromString("range");
 		long windowRange = 60;
-		long windowSlide = 8;
+		long windowSlide = 1;
 		int numberOfAttributesInSchema = 12;
 		
-		AggregationType aggregationType = AggregationType.fromString("max");
+		AggregationType aggregationType = AggregationType.fromString("sum");
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);

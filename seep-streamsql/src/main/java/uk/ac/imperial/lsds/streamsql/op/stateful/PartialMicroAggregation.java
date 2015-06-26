@@ -29,7 +29,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IAggregateOperator {
 	
-	private static boolean debug = true;
+	private static boolean debug = false;
 	
 	WindowDefinition windowDefinition;
 	
@@ -47,7 +47,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	private int keyLength;
 	
 	private boolean incremental;
-
+	
 	public PartialMicroAggregation (WindowDefinition windowDefinition) {
 		
 		this.windowDefinition = windowDefinition;
@@ -83,7 +83,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		if (
 			this.aggregationType == AggregationType.CNT || 
-			this.aggregationType == AggregationType.SUM   || 
+			this.aggregationType == AggregationType.SUM || 
 			this.aggregationType == AggregationType.AVG) {
 			
 			this.incremental = (windowDefinition.getSlide() < windowDefinition.getSize() / 2);
@@ -214,7 +214,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers   = windowBatch.getWindowEndPointers();
-
+		
 		IQueryBuffer inputBuffer  = windowBatch.getBuffer();
 		
 		IQueryBuffer closingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
@@ -689,7 +689,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
-			
+			/*
+			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d (%10d bytes)", 
+					currentWindow, inWindowStartOffset, inWindowEndOffset, inWindowEndOffset - inWindowStartOffset));
+			*/
 			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
 				
 				if (windowBatch.getBatchStartPointer() == 0) {
@@ -1240,8 +1243,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		/* Write current window results to output buffer */
 		TupleSet heap = windowTuples.getHeap();
-		for (int i = 1; i < heap.next; i++) {
-			WindowTuple t = heap.getTuple(i);
+		
+		WindowTuple t = heap.remove();
+		while (t != null) {
 			if (t.count > 0) {
 				/* Write tuple t to output buffer
 				 * 
@@ -1255,6 +1259,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					outputBuffer.putFloat(t.value);
 				outputBuffer.put(outputSchema.getDummyContent());
 			}
+			t = heap.remove();
 		}
 	}
 	

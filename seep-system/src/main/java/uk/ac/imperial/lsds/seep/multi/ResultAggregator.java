@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ResultAggregator {
 	
-	private static final boolean debug = true;
+	private static final boolean debug = false;
 	
 	/*
 	 * A ResultAggregatorNode encapsulates the
@@ -115,7 +115,7 @@ public class ResultAggregator {
 				
 				if (! p.closing.isEmpty() && ! p.pending.isEmpty())
 				{
-					System.err.println("error: invalid state in ResultAggregator");
+					System.err.println("error: invalid state in ResultAggregator (1)");
 					System.exit(1);
 				}
 				/*
@@ -138,7 +138,7 @@ public class ResultAggregator {
 			
 			if (p.closing.isEmpty() && p.pending.isEmpty())
 			{
-				System.err.println("error: invalid state in ResultAggregator");
+				System.err.println("error: invalid state in ResultAggregator (2)");
 				System.exit(1);
 			}
 			
@@ -737,10 +737,10 @@ public class ResultAggregator {
 						
 						// lock.unlock();
 						
-						
+						/*
 						System.out.println(String.format("[DBG] %40s aggregate current %s next %s", 
 						Thread.currentThread(), p, q));
-						
+						*/
 						p.aggregate(q, operator);
 						
 						if (p.isReady())

@@ -636,6 +636,8 @@ public class WindowBatch {
 		}
 	}
 	
+	private static final boolean debug = false;
+	
 	public void initPartialRangeBasedWindowPointers () {
 		
 		int tupleSize = schema.getByteSizeOfTuple ();
@@ -646,13 +648,24 @@ public class WindowBatch {
 		
 		long streamIndex;
 		int bufferIndex;
-		long pid = 0;
-		long _pid = (getTimestamp(bufferStartPointer) / paneSize) - 1; /* _pid is the previous pane id */
-		long pid_;
+		long _pid, pid_, pid = 0;
+		
+		long normalisedPaneId; /* Normalised to incl. panes/window */
+		
+		/* Set previous pane id */
+		if (this.batchStartPointer == 0) {
+			_pid = -1;
+		} else {
+			/* Check the last tuple of the previous batch */
+			_pid = (getTimestamp(bufferStartPointer - schema.getByteSizeOfTuple()) / paneSize);
+		}
 		
 		long offset = -1; /* Undefined */
+		if (this.batchStartPointer == 0) {
+			offset = 0;
+		}
 		
-		long wid, opensAt;
+		long wid;
 		
 		for (streamIndex = batchStartPointer, bufferIndex = bufferStartPointer; 
 				streamIndex < batchEndPointer && bufferIndex < bufferEndPointer; 
@@ -660,34 +673,34 @@ public class WindowBatch {
 			
 			pid = getTimestamp(bufferIndex) / paneSize; /* Current pane */
 			
-			System.out.println(String.format("[DBG] previous pane %6d current pane %6d", _pid, pid));
+			if (debug)
+				System.out.println(String.format("[DBG] previous pane %6d current pane %6d", _pid, pid));
 			
 			if (_pid < pid) {
-				
 				/* Pane `_pid` closed; pane `pid` opened */
 				while (_pid < pid) {
 					
 					pid_ = _pid + 1;
 					
-					/* Check if a window closes at `_pid` */
-					if (_pid % windowDefinition.panesPerSlide() == 0) {
+					/* Check if a window closes at this pane */
+					normalisedPaneId = pid_ - windowDefinition.numberOfPanes();
 					
-						opensAt = _pid - windowDefinition.numberOfPanes() + 1;
-						wid = opensAt / windowDefinition.panesPerSlide();
-					
+					if (normalisedPaneId >= 0 && normalisedPaneId % windowDefinition.panesPerSlide() == 0) {
+						
+						wid = normalisedPaneId / windowDefinition.panesPerSlide();
+						
 						if (wid >= 0) {
 							
-							System.out.println(String.format("[DBG] closing %05d; buffer index %10d", 
-								wid, bufferIndex));
-							
+							if (debug)
+								System.out.println(String.format("[DBG] closing %05d at pane %10d buffer index %10d", 
+										wid, pid_, bufferIndex));
 							
 							/* Calculate offset */
 							if (offset < 0) {
 								offset = wid;
-								/* System.out.println(String.format("[DBG] window %05d is closing; offset %10d", 
-								 * wid, offset)); */
+								/* System.out.println(String.format("[DBG] window %05d is closing; offset %10d", wid, offset)); */
 							}
-						
+							
 							/* Store end pointer */
 							int index = (int) (wid - offset);
 							windowEndPointers[index] = (int) bufferIndex;
@@ -706,31 +719,30 @@ public class WindowBatch {
 							lastWindowIndex = (lastWindowIndex < index) ? index : lastWindowIndex;
 						}
 					}
-					/* Check if a window opens at `pid` */
+					
+					/* Check if a window opens at `pid_` */
 					if (pid_ % windowDefinition.panesPerSlide() == 0) {
 					
 						wid = pid_ / windowDefinition.panesPerSlide();
 						
-						System.out.println(String.format("[DBG] opening %05d; buffer index %10d", 
-								wid, bufferIndex));
+						if (debug)
+							System.out.println(String.format("[DBG] opening %05d at pane %10d buffer index %10d", 
+									wid, pid_, bufferIndex));
 						
-					
+						/* Calculate offset */
+						
+						if (offset < 0) {
+							offset = wid - 1;
+							/* System.out.println(String.format("[DBG] window %05d is opening; offset %10d", wid, offset)); */
+						}
+						
+						
 						/* Store start pointer */
 						int index;
 						if (offset < 0) {
 							index = (int) wid;
 						} else {
 							index = (int) (wid - offset);
-						}
-						if (index >= windowStartPointers.length) {
-							System.err.println("Error at task " + taskId);
-							for (int mybufferIndex = bufferStartPointer; 
-									mybufferIndex < bufferEndPointer; 
-									mybufferIndex += tupleSize) {
-								System.err.print(getTimestamp(mybufferIndex) + ", ");
-							}
-							System.err.println();
-							System.err.flush();
 						}
 						windowStartPointers[index] = (int) bufferIndex;
 						lastWindowIndex = (lastWindowIndex < index) ? index : lastWindowIndex;
@@ -753,10 +765,11 @@ public class WindowBatch {
 		long streamIndex, bufferIndex;
 		long pid = 0;
 		long _pid = ((batchStartPointer / tupleSize) / paneSize) - 1; /* _pid is the previous pane id */
+		long __pid; /* Normalised to incl. panes/window */
 		
 		long offset = -1; /* Undefined */
 		
-		long wid, opensAt;
+		long wid;
 		
 		for (streamIndex = batchStartPointer, bufferIndex = bufferStartPointer; 
 				streamIndex < batchEndPointer && bufferIndex < bufferEndPointer; 
@@ -769,16 +782,18 @@ public class WindowBatch {
 				/* Pane `_pid` closed; pane `pid` opened */
 				
 				/* Check if a window closes at `_pid` */
-				if (_pid % windowDefinition.panesPerSlide() == 0) {
+				
+				/* Check if a window closes at `_pid` */
+				__pid =  _pid - windowDefinition.numberOfPanes();
+				if (__pid >= 0 && __pid % windowDefinition.panesPerSlide() == 0) {
 					
-					opensAt = _pid - windowDefinition.numberOfPanes() + 1;
-					wid = opensAt / windowDefinition.panesPerSlide();
+					wid = __pid / windowDefinition.panesPerSlide();
 					
 					if (wid >= 0) {
-						/*
+						
 						System.out.println(String.format("[DBG] closing %05d; buffer index %10d", 
 						wid, bufferIndex));
-						*/
+						
 						
 						/* Calculate offset */
 						if (offset < 0) {
