@@ -21,7 +21,17 @@ public class ExpressionsUtil {
 		bytes[2] = (byte) (value >>>  8);
 		bytes[3] = (byte) (value);	
 	}
-
+	
+	public static int intToByteArray(int value, byte [] bytes, int pivot) {
+		
+		bytes[pivot + 0] = (byte) (value >>> 24);
+		bytes[pivot + 1] = (byte) (value >>> 16);
+		bytes[pivot + 2] = (byte) (value >>>  8);
+		bytes[pivot + 3] = (byte) (value);
+		
+		return (pivot + 4);
+	}
+	
 	public static final byte [] floatToByteArray (float value) {
 		
 		int bits = Float.floatToIntBits(value);
@@ -40,6 +50,18 @@ public class ExpressionsUtil {
 		bytes[3] = (byte) ((bits >> 24) & 0xff);
 	}
 	
+	public static int floatToByteArray (float value, byte [] bytes, int pivot) {
+		
+		int bits = Float.floatToIntBits(value);
+		
+		bytes[pivot + 0] = (byte) ((bits)       & 0xff);
+		bytes[pivot + 1] = (byte) ((bits >>  8) & 0xff);
+		bytes[pivot + 2] = (byte) ((bits >> 16) & 0xff);
+		bytes[pivot + 3] = (byte) ((bits >> 24) & 0xff);
+		
+		return (pivot + 4);
+	}
+	
 	public static final byte [] longToByteArray(long value) {
 		
 		byte [] b = new byte[8];
@@ -51,12 +73,21 @@ public class ExpressionsUtil {
 		return b;
 	}
 	
-	public static void longToByteArray(long value, byte[] bytes) {
+	public static void longToByteArray(long value, byte [] bytes) {
 		
 		for (int i = 0; i < 8; ++i) {
 			
 			bytes[i] = (byte) (value >> (8 - i - 1 << 3));
 		}
+	}
+	
+	public static int longToByteArray(long value, byte [] bytes, int pivot) {
+		
+		for (int i = 0; i < 8; ++i) {
+			
+			bytes[pivot + i] = (byte) (value >> (8 - i - 1 << 3));
+		}
+		return (pivot + 8);
 	}
 
 	public static final ITupleSchema getTupleSchemaForExpressions

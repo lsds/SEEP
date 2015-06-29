@@ -624,6 +624,13 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		return result;
 	}
 	
+	private void setGroupByKey(IQueryBuffer buffer, ITupleSchema schema, int offset, byte [] bytes) {
+		int pivot = 0;
+		for (int i = 0; i < this.groupByAttributes.length; i++) {
+			pivot = this.groupByAttributes[i].evalAsByteArray (buffer, schema, offset, bytes, pivot);
+		}
+	}
+	
 	private void processDataPerWindowWithGroupBy(WindowBatch windowBatch,
 			IWindowAPI api) {
 		
@@ -674,13 +681,12 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		 * 
 		 * The buffer is reused as we iterate over windows 
 		 */
-		IQueryBuffer windowKeys = UnboundedQueryBufferFactory.newInstance();
 		
 		int inWindowStartOffset;
 		int inWindowEndOffset;
 		
 		WindowMap windowTuples;
-		byte [] tupleKey = new byte [8];
+		byte [] tupleKey = new byte [this.keyLength];
 		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			
@@ -689,26 +695,26 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
-			/*
-			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d (%10d bytes)", 
-					currentWindow, inWindowStartOffset, inWindowEndOffset, inWindowEndOffset - inWindowStartOffset));
-			*/
+			
 			if (inWindowStartOffset < 0 && inWindowEndOffset < 0) {
 				
 				if (windowBatch.getBatchStartPointer() == 0) {
+					
 					/* Treat this window as opening; there is no previous batch to open it */
+					
 					outputBuffer = opening.getBuffer();
 					opening.increment();
 					inWindowStartOffset = (int) b;
 					inWindowEndOffset   = (int) d;
+				
 				} else {
 				
 					/* This is a pending window */
 				
-					/* Compute a pending window once */
+					/* As an optimisation, compute a pending window once */
 					if (pending.numberOfWindows() > 0)
 						continue;
-				
+					
 					outputBuffer = pending.getBuffer();
 					pending.increment();
 					inWindowStartOffset = (int) b;
@@ -716,17 +722,21 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				}
 			} else
 			if (inWindowStartOffset < 0) {
+				
 				outputBuffer = closing.getBuffer();
 				closing.increment();
 				inWindowStartOffset = (int) b;
+			
 			} else
 			if (inWindowEndOffset < 0) {
+				
 				outputBuffer = opening.getBuffer();
 				opening.increment();
 				inWindowEndOffset = (int) d;
+			
 			} else {
 				
-				if (inWindowStartOffset == inWindowEndOffset) /* Empty window */
+				if (inWindowStartOffset == inWindowEndOffset) /* Skip empty windows */
 					continue;
 				
 				outputBuffer = complete.getBuffer();
@@ -743,42 +753,14 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				windowTuples = WindowMapFactory.newInstance(workerId);
 				
-				windowKeys.clear();
-				
 				int keyOffset;
 				float value;
-				
-				int prevPos;
 				
 				/* For all the tuples in the window... */
 				while (inWindowStartOffset < inWindowEndOffset) {
 					
 					/* Get the group-by key hash code */
-					int keyHashCode = getGroupByKey (inputBuffer, inputSchema, inWindowStartOffset, tupleKey);
-					
-					/* Create new entry for this tuple in temp. byte buffer.
-					 * It will be overwritten if the entry exists.
-					 */
-					
-					prevPos = windowKeys.position();
-					
-					/* Copy timestamp */
-					this.timestampReference.appendByteResult(
-							inputBuffer, 
-							inputSchema, 
-							inWindowStartOffset, 
-							windowKeys);
-					
-					keyOffset = windowKeys.position();
-					
-					/* Copy group-by attributes */
-					for (int i = 0; i < groupByAttributes.length; i++) {
-						this.groupByAttributes[i].appendByteResult(
-								inputBuffer, 
-								inputSchema, 
-								inWindowStartOffset, 
-								windowKeys);
-					}
+					setGroupByKey (inputBuffer, inputSchema, inWindowStartOffset, tupleKey);
 					
 					if (this.aggregationType == AggregationType.CNT)
 						value = 0;
@@ -788,10 +770,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					/* Check whether there is already an entry 
 					 * in `windowTuples` for this key. If not,
 					 * create a new entry */
-					if (! windowTuples.containsKey (keyHashCode)) {
+					if (! windowTuples.containsKey (tupleKey)) {
 						
 						/* Create a new entry */
-						windowTuples.put(keyHashCode, windowKeys, keyOffset, this.keyLength, value, 1);
+						windowTuples.put(tupleKey, value, 1);
 						
 					} else {
 						/* The key hash code already exists, but the match 
@@ -836,9 +818,6 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				windowTuples.release();
 			}
 		}
-
-		/*Wrap-up operator */
-		windowKeys.release();
 		
 		/* Release old buffer (will return Unbounded Buffers to the pool) */
 		inputBuffer.release();
@@ -880,7 +859,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		System.exit(-1);
 		*/
 	}
-	
+
 	private void processDataPerWindowIncrementallyWithGroupBy (
 			WindowBatch windowBatch,
 			IWindowAPI api) {
@@ -1244,8 +1223,28 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		/* Write current window results to output buffer */
 		TupleSet heap = windowTuples.getHeap();
 		
+		// System.out.println(String.format("[DBG] %10d tuples in heap", heap.next));
+		
 		WindowTuple t = heap.remove();
 		while (t != null) {
+			/*
+			// Print tuple timestamp
+			System.out.print(String.format("| %10d |", windowKeys.getLong(t.offset - 8)));
+			// Print tuple key
+			int offset = t.offset;
+			for (int i = 0; i < this.groupByAttributes.length; i++) {
+				Expression e = this.groupByAttributes[i];
+				if (e instanceof   IntExpression) { System.out.print(String.format(  " %10d |",   windowKeys.getInt(offset))); offset += 4;
+				} else 
+				if (e instanceof  LongExpression) { System.out.print(String.format(  " %10d |",  windowKeys.getLong(offset))); offset += 8;
+				} else 
+				if (e instanceof FloatExpression) { System.out.print(String.format(" %10.1f |", windowKeys.getFloat(offset))); offset += 4;
+				} 
+			}
+			System.out.print(String.format(  " %10d |",   t.count));
+			
+			System.out.println();
+			*/
 			if (t.count > 0) {
 				/* Write tuple t to output buffer
 				 * 
@@ -1268,7 +1267,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		throw new UnsupportedOperationException("MicroAggregation is single input operator and does not operate on two streams");
 	}
-
+	
 	@Override
 	public boolean hasGroupBy() {
 		return this.hasGroupBy;

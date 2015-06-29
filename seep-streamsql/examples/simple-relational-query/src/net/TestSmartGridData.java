@@ -27,6 +27,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.ThetaJoin;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
@@ -44,7 +45,7 @@ public class TestSmartGridData {
 		String hostname = "localhost";
 		int port = 6667;
 		
-		int bundle = 512;
+		int bundle = 1024;
 		int tupleSize = 32;
 		
 		/* Parse command line arguments */
@@ -80,7 +81,7 @@ public class TestSmartGridData {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 16;
+		Utils.THREADS = 1;
 		
 		/*
 		 * Query 1
@@ -88,7 +89,7 @@ public class TestSmartGridData {
 		 * select avg (load)
 		 * from <input stream> [range 3600 seconds slide 1 second]
 		 */
-		QueryConf queryConf1 = new QueryConf(10, 1024);
+		QueryConf queryConf1 = new QueryConf(1048576, 1024);
 		/*
 		 * Set up configuration of query
 		 */
@@ -114,9 +115,9 @@ public class TestSmartGridData {
 		
 		ITupleSchema schema1 = new TupleSchema (offsets1, byteSize1);
 		
-		IMicroOperatorCode q1code = new MicroAggregation (
+		IMicroOperatorCode q1code = new PartialMicroAggregation (
 			window1,
-			AggregationType.fromString("avg"),
+			AggregationType.fromString("sum"),
 			new FloatColumnReference(1) /* value */
 		);
 		System.out.println(String.format("[DBG] %s", q1code));
@@ -128,145 +129,145 @@ public class TestSmartGridData {
 		q1operators.add(q1op);
 		SubQuery q1 = new SubQuery (0, q1operators, schema1, window1, queryConf1);
 		
-		/*
-		 * Query 2
-		 * 
-		 * select avg (value)
-		 * from <input stream> [range 3600 seconds slide 1 second]
-		 * group by house, household, plug
-		 */
-		QueryConf queryConf2 = new QueryConf(10, 1024);
-		/*
-		 * Set up configuration of query
-		 */
-		WindowType windowType2 = WindowType.fromString("range");
-		long windowRange2 = 3600;
-		long windowSlide2 = 1;
-		int numberOfAttributesInSchema2 = 7;
-		
-		WindowDefinition window2 = 
-			new WindowDefinition (windowType2, windowRange2, windowSlide2);
-		
-		int [] offsets2 = new int [numberOfAttributesInSchema2];
-		/* First attribute is timestamp */
-		offsets2[ 0] =  0;
-		offsets2[ 1] =  8; /*     value */
-		offsets2[ 2] = 12; /*  property */
-		offsets2[ 3] = 16; /*      plug */
-		offsets2[ 4] = 20; /* household */
-		offsets2[ 5] = 24; /*     house */
-		offsets2[ 6] = 28; /*   padding */
-		
-		int byteSize2 = 32;
-		
-		ITupleSchema schema2 = new TupleSchema (offsets2, byteSize2);
-		
-		Expression[] groupByAttributes2 = new Expression [] {
-			new IntColumnReference(3),
-			new IntColumnReference(4),
-			new IntColumnReference(5)
-		};
-		
-		IMicroOperatorCode q2code = new MicroAggregation (
-			window2,
-			AggregationType.fromString("avg"),
-			new FloatColumnReference(1), /* value */
-			groupByAttributes2
-		);
-		System.out.println(String.format("[DBG] %s", q1code));
-		
-		MicroOperator q2op;
-		q2op = new MicroOperator (q2code, null, 1);
-		
-		Set<MicroOperator> q2operators = new HashSet<MicroOperator>();
-		q2operators.add(q2op);
-		SubQuery q2 = new SubQuery (1, q2operators, schema2, window2, queryConf2);
-		
-		/*
-		 * Query 3
-		 * 
-		 * select house, count(*)
-		 * from <query 1 output stream> as S1, <query 2 output stream> as S2
-		 * where S2.load > S1.load
-		 */
-		
-		QueryConf queryConf3 = new QueryConf(1024, 1024); /* #tuples in either stream */
-		
-		WindowType __1st_windowType = WindowType.fromString("range");
-		long __1st_windowRange = 1;
-		long __1st_windowSlide = 1;
-		int __1st_numberOfAttributesInSchema  = 1;
-		
-		WindowType __2nd_windowType = WindowType.fromString("range");
-		long __2nd_windowRange = 1;
-		long __2nd_windowSlide = 1;
-		int __2nd_numberOfAttributesInSchema = 1;
-		
-		WindowDefinition __1st_window = new WindowDefinition (__1st_windowType, __1st_windowRange, __1st_windowSlide);
-		WindowDefinition __2nd_window = new WindowDefinition (__2nd_windowType, __2nd_windowRange, __2nd_windowSlide);
-		
-		int [] __1st_offsets = new int[__1st_numberOfAttributesInSchema];
-		__1st_offsets[0] = 0;
-		
-		int __1st_byteSize = 8;
-		
-		ITupleSchema __1st_schema = new TupleSchema (__1st_offsets, __1st_byteSize);
-		
-		int [] __2nd_offsets = new int[__2nd_numberOfAttributesInSchema];
-		__2nd_offsets[0] = 0;
-
-		int __2nd_byteSize = 8;
-		
-		ITupleSchema __2nd_schema = new TupleSchema (__2nd_offsets, __2nd_byteSize);
-
-		IPredicate joinPredicate = null;
-		
-		IMicroOperatorCode q3code1 = new ThetaJoin(joinPredicate);
-		System.out.println(String.format("[DBG] %s", q3code1));
-		
-		MicroOperator q3op1 = new MicroOperator(q3code1, null, 1);
-		
-		/* The second micro-operator is an aggregation over the joined stream */
-		
-		Selection having = new Selection (
-			new FloatComparisonPredicate(
-				FloatComparisonPredicate.GREATER_OP, 
-				new FloatColumnReference(3), 
-				new FloatColumnReference(4)
-				)
-			);
-		
-		IMicroOperatorCode q3code2 = new MicroAggregation (
-			__1st_window,
-			AggregationType.CNT, 
-			new FloatColumnReference(1), /* value */
-			new Expression [] {
-				new IntColumnReference(1)
-			},
-			having
-		);
-		
-		MicroOperator q3op2 = new MicroOperator(q3code2, null, 1);
-		
-		/* Connect micro-operators */
-		q3op1.connectTo(6001, q3op2);
-		Set<MicroOperator> q3operators = new HashSet<>();
-		q3operators.add(q3op1);
-		q3operators.add(q3op2);
-		
-		SubQuery q3 = new SubQuery (2, q3operators, __1st_schema, __1st_window, queryConf3, __2nd_schema, __2nd_window);
-		
+//		/*
+//		 * Query 2
+//		 * 
+//		 * select avg (value)
+//		 * from <input stream> [range 3600 seconds slide 1 second]
+//		 * group by house, household, plug
+//		 */
+//		QueryConf queryConf2 = new QueryConf(10, 1024);
+//		/*
+//		 * Set up configuration of query
+//		 */
+//		WindowType windowType2 = WindowType.fromString("range");
+//		long windowRange2 = 3600;
+//		long windowSlide2 = 1;
+//		int numberOfAttributesInSchema2 = 7;
+//		
+//		WindowDefinition window2 = 
+//			new WindowDefinition (windowType2, windowRange2, windowSlide2);
+//		
+//		int [] offsets2 = new int [numberOfAttributesInSchema2];
+//		/* First attribute is timestamp */
+//		offsets2[ 0] =  0;
+//		offsets2[ 1] =  8; /*     value */
+//		offsets2[ 2] = 12; /*  property */
+//		offsets2[ 3] = 16; /*      plug */
+//		offsets2[ 4] = 20; /* household */
+//		offsets2[ 5] = 24; /*     house */
+//		offsets2[ 6] = 28; /*   padding */
+//		
+//		int byteSize2 = 32;
+//		
+//		ITupleSchema schema2 = new TupleSchema (offsets2, byteSize2);
+//		
+//		Expression[] groupByAttributes2 = new Expression [] {
+//			new IntColumnReference(3),
+//			new IntColumnReference(4),
+//			new IntColumnReference(5)
+//		};
+//		
+//		IMicroOperatorCode q2code = new MicroAggregation (
+//			window2,
+//			AggregationType.fromString("avg"),
+//			new FloatColumnReference(1), /* value */
+//			groupByAttributes2
+//		);
+//		System.out.println(String.format("[DBG] %s", q1code));
+//		
+//		MicroOperator q2op;
+//		q2op = new MicroOperator (q2code, null, 1);
+//		
+//		Set<MicroOperator> q2operators = new HashSet<MicroOperator>();
+//		q2operators.add(q2op);
+//		SubQuery q2 = new SubQuery (1, q2operators, schema2, window2, queryConf2);
+//		
+//		/*
+//		 * Query 3
+//		 * 
+//		 * select house, count(*)
+//		 * from <query 1 output stream> as S1, <query 2 output stream> as S2
+//		 * where S2.load > S1.load
+//		 */
+//		
+//		QueryConf queryConf3 = new QueryConf(1024, 1024); /* #tuples in either stream */
+//		
+//		WindowType __1st_windowType = WindowType.fromString("range");
+//		long __1st_windowRange = 1;
+//		long __1st_windowSlide = 1;
+//		int __1st_numberOfAttributesInSchema  = 1;
+//		
+//		WindowType __2nd_windowType = WindowType.fromString("range");
+//		long __2nd_windowRange = 1;
+//		long __2nd_windowSlide = 1;
+//		int __2nd_numberOfAttributesInSchema = 1;
+//		
+//		WindowDefinition __1st_window = new WindowDefinition (__1st_windowType, __1st_windowRange, __1st_windowSlide);
+//		WindowDefinition __2nd_window = new WindowDefinition (__2nd_windowType, __2nd_windowRange, __2nd_windowSlide);
+//		
+//		int [] __1st_offsets = new int[__1st_numberOfAttributesInSchema];
+//		__1st_offsets[0] = 0;
+//		
+//		int __1st_byteSize = 8;
+//		
+//		ITupleSchema __1st_schema = new TupleSchema (__1st_offsets, __1st_byteSize);
+//		
+//		int [] __2nd_offsets = new int[__2nd_numberOfAttributesInSchema];
+//		__2nd_offsets[0] = 0;
+//
+//		int __2nd_byteSize = 8;
+//		
+//		ITupleSchema __2nd_schema = new TupleSchema (__2nd_offsets, __2nd_byteSize);
+//
+//		IPredicate joinPredicate = null;
+//		
+//		IMicroOperatorCode q3code1 = new ThetaJoin(joinPredicate);
+//		System.out.println(String.format("[DBG] %s", q3code1));
+//		
+//		MicroOperator q3op1 = new MicroOperator(q3code1, null, 1);
+//		
+//		/* The second micro-operator is an aggregation over the joined stream */
+//		
+//		Selection having = new Selection (
+//			new FloatComparisonPredicate(
+//				FloatComparisonPredicate.GREATER_OP, 
+//				new FloatColumnReference(3), 
+//				new FloatColumnReference(4)
+//				)
+//			);
+//		
+//		IMicroOperatorCode q3code2 = new MicroAggregation (
+//			__1st_window,
+//			AggregationType.CNT, 
+//			new FloatColumnReference(1), /* value */
+//			new Expression [] {
+//				new IntColumnReference(1)
+//			},
+//			having
+//		);
+//		
+//		MicroOperator q3op2 = new MicroOperator(q3code2, null, 1);
+//		
+//		/* Connect micro-operators */
+//		q3op1.connectTo(6001, q3op2);
+//		Set<MicroOperator> q3operators = new HashSet<>();
+//		q3operators.add(q3op1);
+//		q3operators.add(q3op2);
+//		
+//		SubQuery q3 = new SubQuery (2, q3operators, __1st_schema, __1st_window, queryConf3, __2nd_schema, __2nd_window);
+//		
 		Utils._CIRCULAR_BUFFER_ = 64 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = 1048576; /* 1MB */
 		
 		/* Connect queries */
-		q1.connectTo(1001, q3);
-		q2.connectTo(1002, q3);
+		// q1.connectTo(1001, q3);
+		// q2.connectTo(1002, q3);
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		queries.add(q1);
-		queries.add(q2);
-		queries.add(q3);
+		// queries.add(q2);
+		// queries.add(q3);
 		
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
@@ -323,16 +324,18 @@ public class TestSmartGridData {
 						
 						int bytes = 0;
 						if ((bytes = client.read(buffer)) > 0) {
-							
-							/*
+							if (! buffer.hasRemaining()) {
+						/*
 							 * System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
 							 *		bytes, buffer.remaining()));
 							 *
 							 * Make sure the buffer is rewind before reading.
 							 */
 							buffer.rewind();
-							operator.processData (buffer.array(), bytes);
-							
+							operator.processData (buffer.array(), buffer.capacity());
+						
+							buffer.clear();
+						
 							/* Measurements */
 							Bytes += bytes;
 							/*
@@ -350,7 +353,7 @@ public class TestSmartGridData {
 								previous = Bytes;
 							}
 							*/
-							buffer.clear();
+							}
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");

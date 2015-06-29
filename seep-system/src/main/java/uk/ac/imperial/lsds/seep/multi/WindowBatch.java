@@ -75,8 +75,8 @@ public class WindowBatch {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
-		this.windowStartPointers = new int [65536];
-		this.windowEndPointers   = new int [65536];
+		this.windowStartPointers = new int [65536 * 2];
+		this.windowEndPointers   = new int [65536 * 2];
 		
 		this.initialised = false;
 		
@@ -636,7 +636,7 @@ public class WindowBatch {
 		}
 	}
 	
-	private static final boolean debug = false;
+	private static final boolean debug = true;
 	
 	public void initPartialRangeBasedWindowPointers () {
 		

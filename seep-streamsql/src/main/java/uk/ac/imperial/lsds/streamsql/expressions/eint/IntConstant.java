@@ -53,6 +53,15 @@ public class IntConstant implements IntExpression {
 	@Override
 	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
 			int offset, byte[] bytes) {
+		
 		System.arraycopy(_constantBytes, 0, bytes, 0, _constantBytes.length);
+	}
+
+	@Override
+	public int evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes, int pivot) {
+		
+		System.arraycopy(_constantBytes, 0, bytes, pivot, _constantBytes.length);
+		return (pivot + _constantBytes.length);
 	}
 }

@@ -17,4 +17,6 @@ public interface Expression {
 	public byte [] evalAsByteArray (IQueryBuffer buffer, ITupleSchema schema, int offset);
 
 	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema, int offset, byte[] bytes);
+
+	public int evalAsByteArray (IQueryBuffer buffer, ITupleSchema schema, int offset, byte[] bytes, int pivot);
 }

@@ -1,0 +1,533 @@
+package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Random;
+
+import uk.ac.imperial.lsds.seep.multi.AggregationType;
+import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
+import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
+import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
+import uk.ac.imperial.lsds.seep.multi.PartialWindowResults;
+import uk.ac.imperial.lsds.seep.multi.PartialWindowResultsFactory;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
+import uk.ac.imperial.lsds.seep.multi.ThreadMap;
+import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.Utils;
+import uk.ac.imperial.lsds.seep.multi.WindowBatch;
+import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.streamsql.expressions.Expression;
+import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
+import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
+import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
+import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
+
+public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
+	
+	private static final int threadsPerGroup = 128;
+	private static final int tuplesPerThread = 2;
+	
+	private static int kdbg = 0;
+	private static boolean debug = false;
+	
+	private static int pipelines = Utils.PIPELINE_DEPTH;
+	private int [] taskIdx;
+	private int [] freeIdx;
+	private int [] markIdx; /* Latency mark */
+	
+	private static final int _hash_functions = 5;
+	
+	private static final float _scale_factor = 1.25F;
+	
+	private static final float _min_space_requirements [] = {
+		Float.MAX_VALUE,
+		Float.MAX_VALUE,
+		2.01F,
+		1.10F,
+		1.03F,
+		1.02F
+	};
+	
+	/* Default stash table size (# tuples) */
+	private static int _stash = 100;
+	
+	private AggregationType type;
+	private FloatColumnReference _the_aggregate;
+	
+	private Expression [] groupBy;
+	
+	private String selectionClause = null;
+	private String havingClause = null;
+	
+	private LongColumnReference timestampReference;
+	
+	private ITupleSchema inputSchema, outputSchema;
+	
+	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/Aggregation.cl";
+	
+	private int qid;
+	
+	private int [] args;
+	
+	private int tuples;
+	
+	private int [] threads;
+	private int [] tgs;
+	
+	private int ngroups;
+	
+	private int batchSize = -1, windowSize = -1;
+
+	/* Global and local memory sizes */
+	private int inputSize = -1, outputSize;
+	private int windowPtrsSize;
+	private int localInputSize;
+	
+	private int outputSize2, outputSize3;
+	
+	private int __stash_x, __stash_y;
+	private int [] _x;
+	private int [] _y;
+	
+	private ByteBuffer x;
+	private ByteBuffer y;
+	
+	private int iterations;
+	
+	private int tableSize, tableSlots;
+	
+	private byte [] startPtrs;
+	private byte [] endPtrs;
+	
+	private int intermediateTupleSize, outputTupleSize;
+	
+	private byte [] contents, stashed, failed, attempts, indices, offsets, partitions;
+	private int contentsLength,
+	             stashedLength, 
+	              failedLength, 
+	            attemptsLength, 
+	             indicesLength, 
+	             offsetsLength, 
+	          partitionsLength;
+	
+	private static boolean isPowerOfTwo (int n) {
+		if (n == 0)
+			return false;
+		while (n != 1) {
+			if (n % 2 != 0)
+				return false;
+			n = n/2;
+		}
+		return true;
+	}
+	
+	private static int computeIterations (int n) {
+		int result = 7;
+		float logn = (float) (Math.log(n) / Math.log(2.0));
+		return (int) (result * logn);
+	}
+	
+	private static void constants (int [] x, int [] y, int [] stash) {
+		Random r = new Random();
+		int prime = 2147483647;
+		assert (x.length == y.length);
+		int i, n = x.length;
+		int t;
+		for (i = 0; i < n; i++) {
+			t = r.nextInt(prime);
+			x[i] = (1 > t ? 1 : t);
+			y[i] = r.nextInt(prime) % prime;
+		}
+		/* Stash hash constants */
+		stash[0] = Math.max(1, r.nextInt(prime)) % prime;
+		stash[1] = r.nextInt(prime) % prime;
+	}
+	
+	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs) {
+		
+		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		int wid = 0;
+		while (b.hasRemaining() && d.hasRemaining()) {
+			System.out.println(String.format("w %02d: starts %10d ends %10d", 
+				wid, b.getInt(), d.getInt()));
+				wid ++;
+		}
+	}
+	
+	public PartialAggregationKernel (
+			AggregationType type, 
+			FloatColumnReference _the_aggregate,
+			Expression [] groupBy,
+			String selectionClause,
+			ITupleSchema inputSchema) {
+		
+		this.type = type;
+		this._the_aggregate = _the_aggregate;
+		
+		this.groupBy = groupBy;
+		
+		this.selectionClause = selectionClause;
+		
+		this.inputSchema = inputSchema;
+		
+		/* Create output schema */
+		this.timestampReference = new LongColumnReference(0);
+		
+		Expression [] outputAttributes = new Expression [this.groupBy.length + 2];
+		/* First attribute is the time stamp */
+		outputAttributes[0] = this.timestampReference;
+		
+		/* Followed by the group-by (composite) key */
+		for (int i = 1; i <= this.groupBy.length; i++) {
+			
+			Expression e = this.groupBy[i - 1];
+			
+			if (e instanceof   IntExpression) { outputAttributes[i] = new   IntColumnReference(i);
+			} else 
+			if (e instanceof  LongExpression) { outputAttributes[i] = new  LongColumnReference(i);
+			} else 
+			if (e instanceof FloatExpression) { outputAttributes[i] = new FloatColumnReference(i);
+			} else {
+				throw new IllegalArgumentException("error: unknown group by expression type");
+			}
+		}
+		/* Last attribute is the aggregate */
+		outputAttributes[this.groupBy.length + 1] = new FloatColumnReference(this.groupBy.length + 1);
+		
+		this.outputSchema = ExpressionsUtil.getTupleSchemaForExpressions(outputAttributes);
+		
+		this.outputTupleSize = outputSchema.getByteSizeOfTuple();
+		System.out.println(String.format("[DBG] output tuple size is %d bytes", this.outputTupleSize));
+		
+		this.intermediateTupleSize = KernelCodeGenerator.getIntermediateStructLength(groupBy);
+		System.out.println(String.format("[DBG] intermediate tuple size is %d bytes", this.intermediateTupleSize));
+		
+		taskIdx = new int [pipelines];
+		freeIdx = new int [pipelines];
+		markIdx = new int [pipelines];
+		for (int i = 0; i < pipelines; i++) {
+			taskIdx[i] = -1;
+			freeIdx[i] = -1;
+			markIdx[i] = -1;
+		}
+	}
+	
+	public void setInputSize (int inputSize) {
+		this.inputSize = inputSize;
+	}
+	
+	public void setBatchSize (int batchSize) {
+		this.batchSize = batchSize;
+	}
+	
+	public void setWindowSize (int windowSize) {
+		this.windowSize = windowSize;
+	}
+	
+	public void setup () {
+		
+		if (windowSize < 0) {
+			System.err.println("error: invalid window size");
+			System.exit(1);
+		}
+		if (batchSize < 0) {
+			System.err.println("error: invalid batch size");
+			System.exit(1);
+		}
+		if (inputSize < 0) {
+			System.err.println("error: invalid input size");
+			System.exit(1);
+		}
+		tuples = inputSize / inputSchema.getByteSizeOfTuple();
+		
+		windowPtrsSize = batchSize * 4;
+		startPtrs = new byte [windowPtrsSize];
+		  endPtrs = new byte [windowPtrsSize];
+		
+		/* Configure hash table constants */
+		_x = new int [_hash_functions];
+		_y = new int [_hash_functions];
+		 x = ByteBuffer.allocate(4 * _hash_functions).order
+			(ByteOrder.LITTLE_ENDIAN);
+		 y = ByteBuffer.allocate(4 * _hash_functions).order
+			(ByteOrder.LITTLE_ENDIAN);
+		int [] stash = new int[2];
+		constants (_x, _y, stash);
+		__stash_x = stash[0];
+		__stash_y = stash[1];
+		for (int i = 0; i < _hash_functions; i++) {
+			x.putInt(_x[i]);
+			y.putInt(_y[i]);
+		}
+		iterations = computeIterations (windowSize);
+		/* Determine an upper bound on # slots/table,
+		 * such that we avoid collisions */
+		System.out.println(String.format("[DBG] %d iterations\n", iterations));
+		float alpha = _scale_factor;
+		if (alpha < _min_space_requirements[_hash_functions])
+		{
+			throw new IllegalArgumentException("error: invalid scale factor");
+		}
+		tableSize  = (int) Math.ceil(windowSize * alpha);
+		tableSlots = tableSize + _stash;
+		System.out.println(String.format("[DBG] # slots (~2) is %4d", tableSlots));
+		while (! isPowerOfTwo(tableSlots)) {
+			tableSlots += 1;
+		}
+		System.out.println(String.format("[DBG] # slots (^2) is %4d", tableSlots));
+		tableSize = tableSlots - _stash;
+		
+		/* Determine #threads */
+		tgs = new int [4];
+		tgs[0] = threadsPerGroup; /* This is a constant; it must be a power of 2 */
+		tgs[1] = threadsPerGroup;
+		tgs[2] = threadsPerGroup;
+		tgs[3] = threadsPerGroup;
+		
+		threads = new int [4];
+		threads[0] = (batchSize * tableSlots); /* Clear `indices` and `offsets` */
+		threads[1] = batchSize * tgs[0];
+		/* Configure scan & compact kernels */
+		threads[2] = (batchSize * tableSlots) / tuplesPerThread;
+		threads[3] = (batchSize * tableSlots) / tuplesPerThread;
+		ngroups    = (batchSize * tableSlots) / tuplesPerThread / tgs[0];
+		
+		/* The output is simply a function of the number of windows 
+ 		 * 
+ 		 * Assume output tuple schema is <long, int key, float value> (16 bytes) 
+ 		 */
+		outputSize = 4 * tuples * outputTupleSize;
+		System.out.println("[DBG] output size is " + outputSize + " bytes");
+		
+		outputSize2 = outputSize;
+		outputSize3 = outputSize;
+		
+		/* Intermediate state */
+		
+		  contentsLength = intermediateTupleSize * batchSize * tableSlots;
+		   stashedLength = 4 * batchSize;
+		    failedLength = 4 * batchSize;
+		  attemptsLength = 4 * batchSize;
+		   indicesLength = 4 * batchSize * tableSlots;
+		   offsetsLength = 4 * batchSize * tableSlots;
+		partitionsLength = 4 *   ngroups;
+		
+		System.out.println(String.format("[DBG] input.length      = %13d", inputSize));
+		System.out.println(String.format("[DBG] contents.length   = %13d", contentsLength));
+		System.out.println(String.format("[DBG] stashed.length    = %13d", stashedLength));
+		System.out.println(String.format("[DBG] failed.length     = %13d", failedLength));
+		System.out.println(String.format("[DBG] attempts.length   = %13d", attemptsLength));
+		System.out.println(String.format("[DBG] indices.length    = %13d", indicesLength));
+		System.out.println(String.format("[DBG] offsets.length    = %13d", offsetsLength));
+		System.out.println(String.format("[DBG] partitions.length = %13d", partitionsLength));
+		System.out.println(String.format("[DBG] output.length     = %13d", outputSize));
+//		
+		if (kdbg > 0) {
+		contents   = new byte [  contentsLength];
+		stashed    = new byte [   stashedLength];
+		failed     = new byte [    failedLength];
+		attempts   = new byte [  attemptsLength];
+		indices    = new byte [   indicesLength];
+		offsets    = new byte [   offsetsLength];
+		partitions = new byte [partitionsLength];
+		}
+		
+		String source = 
+			KernelCodeGenerator.getAggregation(
+					inputSchema, 
+					outputSchema, 
+					filename, 
+					type, 
+					_the_aggregate, 
+					groupBy, 
+					selectionClause,
+					havingClause);
+		System.out.println(source);
+		
+		qid = TheGPU.getInstance().getQuery(source, 4, 5, 10);
+		
+		TheGPU.getInstance().setInput(qid, 0, inputSize);
+		/* Start and end pointers */
+		TheGPU.getInstance().setInput(qid, 1, startPtrs.length);
+		TheGPU.getInstance().setInput(qid, 2,   endPtrs.length);
+		/* Hash function constants, x & y */
+		TheGPU.getInstance().setInput(qid, 3, x.array().length);
+		TheGPU.getInstance().setInput(qid, 4, y.array().length);
+		
+		int move = (kdbg > 0) ? 0 : 1;
+		
+		TheGPU.getInstance().setOutput(qid, 0,   contentsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 1,    stashedLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 2,     failedLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 3,   attemptsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 4,    indicesLength, 0,    0, 1, 0);
+		TheGPU.getInstance().setOutput(qid, 5,    offsetsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 6, partitionsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 7,       outputSize, 1,    0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 8,      outputSize2, 1,    0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 9,      outputSize3, 1,    0, 0, 1);
+		
+		localInputSize = 4 * tgs[0] * tuplesPerThread; 
+		
+		args = new int [8];
+		args[0] = tuples;
+		args[1] = 0; /* bundle_; */
+		args[2] = 0; /* bundles; */
+		args[3] = tableSize;
+		args[4] = __stash_x;
+		args[5] = __stash_y;
+		args[6] = iterations;
+		args[7] = localInputSize;
+		
+		TheGPU.getInstance().setKernelAggregate(qid, args);
+	}
+	
+	@Override
+	public String toString () {
+		final StringBuilder sb = new StringBuilder();
+		sb.append(type.asString(_the_aggregate.toString()));
+		return sb.toString();
+	}
+	
+	@Override
+	public void processData (WindowBatch windowBatch, IWindowAPI api) {
+		
+		int workerId = ThreadMap.getInstance().get(Thread.currentThread().getId());
+		
+		int currentTaskIdx = windowBatch.getTaskId();
+		int currentFreeIdx = windowBatch.getFreeOffset();
+		int currentMarkIdx = windowBatch.getLatencyMark();
+		
+		/* Set input */
+		byte [] inputArray = windowBatch.getBuffer().array();
+		int start = windowBatch.normalise(windowBatch.getBufferStartPointer());
+		int end   = windowBatch.normalise(windowBatch.getBufferEndPointer());
+		
+		if (end > windowBatch.getBuffer().capacity()) {
+			System.err.println(String.format("warning: batch end pointer (%d) is greater than its buffer size (%d)", 
+				end, windowBatch.getBuffer().capacity()));
+			System.exit(1);
+		}
+		
+		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
+		
+		windowBatch.initWindowPointers(startPtrs, endPtrs);
+		if (debug)
+			printWindowPointers (startPtrs, endPtrs);
+		
+		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
+		TheGPU.getInstance().setInputBuffer(qid, 2,   endPtrs);
+		
+		/* Hash table constants */
+		TheGPU.getInstance().setInputBuffer(qid, 3, x.array());
+		TheGPU.getInstance().setInputBuffer(qid, 4, y.array());
+		
+		/* Set output */
+		if (kdbg > 0) {
+		TheGPU.getInstance().setOutputBuffer(qid, 0,   contents);
+		TheGPU.getInstance().setOutputBuffer(qid, 1,    stashed);
+		TheGPU.getInstance().setOutputBuffer(qid, 2,     failed);
+		TheGPU.getInstance().setOutputBuffer(qid, 3,   attempts);
+		TheGPU.getInstance().setOutputBuffer(qid, 4,    indices);
+		TheGPU.getInstance().setOutputBuffer(qid, 5,    offsets);
+		TheGPU.getInstance().setOutputBuffer(qid, 6, partitions);
+		}
+		
+		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults pendingorcomplete  = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
+		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
+		
+		/* The output */
+		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 7, outputBuffer.array());
+		
+		IQueryBuffer outputBuffer2 = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 8, outputBuffer2.array());
+		
+		IQueryBuffer outputBuffer3 = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 9, outputBuffer3.array());
+		
+		closing.setBuffer( outputBuffer);
+		 pendingorcomplete.setBuffer( outputBuffer2);
+		opening.setBuffer( outputBuffer3);
+		
+		TheGPU.getInstance().execute(qid, threads, tgs);
+		
+		/* 
+		 * Set position based on the data size returned from the GPU engine
+		 */
+		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 7));
+		if (debug)
+			System.out.println("[DBG] output buffer position is " + outputBuffer.position());
+		
+		windowBatch.setBuffer(outputBuffer);
+		
+		/* Print tuples
+		outputBuffer.close();
+		int tid = 1;
+		while (outputBuffer.hasRemaining()) {
+			// Each tuple is 16-bytes long
+			System.out.println(String.format("%04d: %2d,%4d,%4.1f", 
+			tid++,
+			outputBuffer.getByteBuffer().getLong (),
+			outputBuffer.getByteBuffer().getInt  (),
+			outputBuffer.getByteBuffer().getFloat()
+			));
+		}
+		*/
+		windowBatch.setTaskId     (taskIdx[0]);
+		windowBatch.setFreeOffset (freeIdx[0]);
+		windowBatch.setLatencyMark(markIdx[0]);
+		
+		for (int i = 0; i < taskIdx.length - 1; i++) {
+			taskIdx[i] = taskIdx [i + 1];
+			freeIdx[i] = freeIdx [i + 1];
+			markIdx[i] = markIdx [i + 1];
+		}
+		taskIdx [taskIdx.length - 1] = currentTaskIdx;
+		freeIdx [freeIdx.length - 1] = currentFreeIdx;
+		markIdx [markIdx.length - 1] = currentMarkIdx;
+		
+		/* At the end of processing, set window batch accordingly */
+		windowBatch.setClosing  ( closing);
+		if (windowBatch.hasPending())
+			windowBatch.setPending(pendingorcomplete);
+		else
+			windowBatch.setComplete(pendingorcomplete);
+		windowBatch.setOpening  (opening);
+		
+		if (debug)
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending/complete; and %4d opening windows]", 
+					windowBatch.getTaskId(), 
+					windowBatch.getFreeOffset(),
+					closing.numberOfWindows(),
+					pendingorcomplete.numberOfWindows(),
+					opening.numberOfWindows()));
+		
+		api.outputWindowBatchResult(-1, windowBatch);
+		
+		api.outputWindowBatchResult(-1, windowBatch);
+		/*
+		System.err.println("Disrupted");
+		System.exit(-1);
+		*/
+	}
+	
+	@Override
+	public void accept(OperatorVisitor visitor) {
+		visitor.visit(this);
+	}
+	
+	@Override
+	public void processData (WindowBatch firstWindowBatch, WindowBatch secondWindowBatch, IWindowAPI api) {
+		throw new UnsupportedOperationException("AggregationKernel operates on a single stream only");
+	}
+}

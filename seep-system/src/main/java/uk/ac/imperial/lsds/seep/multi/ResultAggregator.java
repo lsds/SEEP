@@ -41,6 +41,8 @@ public class ResultAggregator {
 		int latch;
 		int freeOffset;
 		
+		boolean fromGPU = false;
+		
 		ResultAggregatorNode next;
 		
 		AtomicBoolean left, right;
@@ -74,7 +76,8 @@ public class ResultAggregator {
 				PartialWindowResults  pending,
 				PartialWindowResults complete,
 				
-				int freeOffset
+				int freeOffset,
+				boolean fromGPU
 			) {
 			
 			/* Initialize windows */
@@ -86,6 +89,8 @@ public class ResultAggregator {
 			this.freeOffset = freeOffset;
 			
 			this.latch = 0;
+			
+			this.fromGPU = fromGPU;
 			
 			if (this.closing.numberOfWindows() == 0)  left.set(true); else  left.set(false);
 			if (this.opening.numberOfWindows() == 0) right.set(true); else right.set(false);
@@ -654,7 +659,8 @@ public class ResultAggregator {
 			PartialWindowResults  pending,
 			PartialWindowResults complete,
 			int                freeOffset,
-			int               latencyMark
+			int               latencyMark,
+			boolean                   GPU
 			) {
 		
 		if (taskid < 0) { /* Invalid task id */
@@ -673,7 +679,7 @@ public class ResultAggregator {
 		/* Slot `idx` has been reserved for this task id */
 		ResultAggregatorNode node = nodes[idx];
 		
-		node.init (opening, closing, pending, complete, freeOffset);
+		node.init (opening, closing, pending, complete, freeOffset, GPU);
 		/* System.out.println(node); */
 		
 		/* Latency mark */

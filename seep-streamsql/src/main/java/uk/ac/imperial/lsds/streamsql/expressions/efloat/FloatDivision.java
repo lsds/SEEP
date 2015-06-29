@@ -75,4 +75,11 @@ public class FloatDivision implements FloatExpression {
 		
 		ExpressionsUtil.floatToByteArray(eval(buffer, schema, offset), bytes);
 	}
+
+	@Override
+	public int evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes, int pivot) {
+		
+		return ExpressionsUtil.floatToByteArray(eval(buffer, schema, offset), bytes, pivot);
+	}
 }

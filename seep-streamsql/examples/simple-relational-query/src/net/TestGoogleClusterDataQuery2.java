@@ -128,7 +128,7 @@ public class TestGoogleClusterDataQuery2 {
 		schema.setType(11, 1);
 		
 		Expression [] groupBy = new Expression [] {
-			new IntColumnReference(6)
+			new LongColumnReference(1)
 		};
 		
 		/*
@@ -153,7 +153,7 @@ public class TestGoogleClusterDataQuery2 {
 				);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 1 * 1048576; /* 1MB */
+		Utils._UNBOUNDED_BUFFER_ = 4 * 1048576; /* 1MB */
 		
 		MicroOperator uoperator;
 		uoperator = new MicroOperator (aggregationCode, null, 1);

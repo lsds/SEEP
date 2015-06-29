@@ -55,7 +55,14 @@ public class IntColumnReference implements IntExpression {
 	@Override
 	public void evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
 			int offset, byte[] bytes) {
-		ExpressionsUtil.intToByteArray(eval(buffer, schema, offset), bytes);
 		
+		ExpressionsUtil.intToByteArray(eval(buffer, schema, offset), bytes);
+	}
+
+	@Override
+	public int evalAsByteArray(IQueryBuffer buffer, ITupleSchema schema,
+			int offset, byte[] bytes, int pivot) {
+		
+		return ExpressionsUtil.intToByteArray(eval(buffer, schema, offset), bytes, pivot);
 	}
 }

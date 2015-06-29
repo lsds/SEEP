@@ -60,7 +60,8 @@ public class Task extends ITask {
 					this.batch.getPending(), 
 					this.batch.getComplete(), 
 					this.batch.getFreeOffset(),
-					this.batch.getLatencyMark()
+					this.batch.getLatencyMark(),
+					GPU
 					);
 				
 			} else {
@@ -82,7 +83,8 @@ public class Task extends ITask {
 					this.batch.getPending(), 
 					this.batch.getComplete(), 
 					this.batch.getFreeOffset(),
-					this.batch.getLatencyMark()
+					this.batch.getLatencyMark(),
+					GPU
 					);
 				
 			} else {
