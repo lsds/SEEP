@@ -21,14 +21,20 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.Files;
 
 import javax.imageio.ImageIO;
+
+import java.awt.image.BufferedImage;
 
 import static org.bytedeco.javacpp.opencv_contrib.*;
 import static org.bytedeco.javacpp.opencv_core.*;
@@ -106,16 +112,18 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up FACE_RECOGNIZER operator with id="+api.getOperatorId());
-		String trainingDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/training";
+		//String trainingDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/training";
+		String trainingDir = "training";
 		String testImageFilename = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
-		personRecognizer = new PersonRecognizer(trainingDir, testImageFilename);
+		personRecognizer = new PersonRecognizer(api.getOperatorId(), trainingDir, testImageFilename);
 		//recognizer.testSample();
-		personRecognizer.testATT();
+		//personRecognizer.testATT();
 	}
 
 	
 	public static class PersonRecognizer
 	{
+		private final int opId;
 		private final String trainingDir;
 		private final String testImageFilename;
 		private final FaceRecognizer faceRecognizer;
@@ -123,10 +131,14 @@ public class SEEPFaceRecognizer implements StatelessOperator{
         private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
         private final OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
 		
-		public PersonRecognizer(String trainingDir, String testImageFilename)
+		public PersonRecognizer(int opId, String trainingDir, String testImageFilename)
 		{
+			this.opId = opId;
 			this.trainingDir = trainingDir;
 			this.testImageFilename = testImageFilename;
+			String[] imgFormats = ImageIO.getReaderFormatNames();
+			logger.info("Image io supported image formats: ");
+			for (int i = 0; i < imgFormats.length; i++) { logger.info(""+imgFormats[i]); }
 			this.faceRecognizer = trainATT();
 		}
 		
@@ -144,12 +156,14 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		
 		public FaceRecognizer trainATT()
 		{
-			File csv = new File(trainingDir+"/at.txt");
+			//File csv = new File(trainingDir+"/at.txt");
+			logger.info("Loading training list from:"+trainingDir+"/at.txt");
+			InputStream csv = this.getClass().getClassLoader().getResourceAsStream(trainingDir+"/at.txt");
 			Map<String, Integer> trainingFiles = new HashMap<>();
 			
 			try
 			{
-				try (BufferedReader br = new BufferedReader(new FileReader(csv))) {
+				try (BufferedReader br = new BufferedReader(new InputStreamReader(csv))) {
 				    String line;
 				    while ((line = br.readLine()) != null) {
 				    	String[] values = line.split(",");
@@ -158,6 +172,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 				}
 			} catch(Exception e) { throw new RuntimeException(e); }
 			
+			logger.info("Training list contained "+trainingFiles.size()+" training images.");
 			MatVector images = new MatVector(trainingFiles.size());
 			
 			Mat labels = new Mat(trainingFiles.size(), 1, CV_32SC1);
@@ -166,9 +181,10 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			int counter = 0;
 			for (String filename : trainingFiles.keySet())
 			{
-				File imgFile = new File(trainingDir+"/"+filename);
-				Mat img = imread(imgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
-				logger.info("Read training image from "+imgFile.getAbsolutePath());
+				//File imgFile = new File(trainingDir+"/"+filename);
+				//Mat img = imread(imgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
+				Mat img = loadBWMatImage(filename);
+				logger.info("Read training image from "+ filename);
 				images.put(counter, img);
 				int label = trainingFiles.get(filename);
 				
@@ -236,6 +252,27 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			logger.info("Predicted label: " + predictedLabel);
 		}
 		
+		public Mat loadBWMatImage(String filename)
+		{
+			try
+			{
+				String filepath = trainingDir+"/"+filename;
+				logger.info("Loading training image from: "+ filepath);
+				File tmpImgFile = new File("/tmp/resources/"+opId+filepath);
+				tmpImgFile.mkdirs();
+				InputStream fileInJar = this.getClass().getClassLoader().getResourceAsStream(filepath);
+				Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				Mat img = imread(tmpImgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
+				return img;
+				//BufferedImage bufImg = ImageIO.read(this.getClass().getClassLoader().getResourceAsStream(filepath));
+				//logger.info("Loaded "+bufImg.getWidth()+"x"+bufImg.getHeight()+" training image");
+				
+				//IplImage img = iplConverter.convertToIplImage(frameConverter.convert(bufImg));
+				//IplImage bwImg = prepareBWImage(img);
+				//return matConverter.convertToMat(iplConverter.convert(bwImg));
+			} catch (IOException e) { throw new RuntimeException(e); }
+		}
+		
 		public IplImage parseBufferedImage(byte[] bytes)
 		{
 			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
@@ -252,7 +289,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		
 		public IplImage prepareBWImage(IplImage image)
 		{
-			final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
+			IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
 			cvCvtColor(image, imageBW, CV_BGR2GRAY);
 			return imageBW;
 		}
