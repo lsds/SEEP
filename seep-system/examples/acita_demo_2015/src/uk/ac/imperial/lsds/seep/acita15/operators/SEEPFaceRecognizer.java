@@ -108,9 +108,9 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		System.out.println("Setting up FACE_RECOGNIZER operator with id="+api.getOperatorId());
 		String trainingDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/training";
 		String testImageFilename = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
-		PersonRecognizer recognizer = new PersonRecognizer(trainingDir, testImageFilename);
+		personRecognizer = new PersonRecognizer(trainingDir, testImageFilename);
 		//recognizer.testSample();
-		recognizer.testATT();
+		personRecognizer.testATT();
 	}
 
 	
