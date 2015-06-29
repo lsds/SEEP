@@ -8,6 +8,8 @@ public interface IAggregateOperator {
 	
 	public int getKeyLength ();
 	
+	public int getValueLength ();
+	
 	public int numberOfValues ();
 	
 	public AggregationType getAggregateType ();

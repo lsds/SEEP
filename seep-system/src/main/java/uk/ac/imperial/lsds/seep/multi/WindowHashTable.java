@@ -5,23 +5,26 @@ import java.nio.ByteBuffer;
 public class WindowHashTable {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static int WINDOW_MAP_CONTENT_SIZE = 1048576;
+	public static int WINDOW_MAP_CONTENT_SIZE = 2048;
 	
 	ByteBuffer content;
-	
-	int size = 0;
 	
 	int id = -1;
 	
 	long autoIndex = -1;
 	
-	public int size() {
-		return this.size;
+	int keyLength, valueLength, tupleLength = -1;
+
+	int capacity = 0;
+	
+	public int capacity() {
+		
+		return this.capacity;
 	}
 	
-	public boolean isEmpty () {
+	public boolean isInitialised () {
 		
-		return (this.size == 0);
+		return (this.capacity != 0);
 	}
 	
 	public WindowHashTable (int id, long autoIndex) {
@@ -29,10 +32,12 @@ public class WindowHashTable {
 		content = ByteBuffer.allocate(WINDOW_MAP_CONTENT_SIZE);
 		
 		for (int i = 0; i < content.capacity(); i++)
-			content.put((byte) -1);
+			content.put((byte) 0);
 		
 		this.id = id;
 		this.autoIndex = autoIndex;
+		
+		this.keyLength = this.valueLength = -1;
 	}
 	
 	public WindowHashTable () {
@@ -51,78 +56,78 @@ public class WindowHashTable {
 		return autoIndex;
 	}
 	
-	public int getNext (int index) {
+	public void setTupleLength (int keyLength, int valueLength) {
 		
-		return (index + this.tupleLength) & (WINDOW_MAP_CONTENT_SIZE - 1);
+		this.keyLength = keyLength;
+		this.valueLength = valueLength;
+		
+		/* +occupancy (1), +timestamp (8), +count (4) */
+		this.tupleLength = 
+				1 << (32 - Integer.numberOfLeadingZeros((this.keyLength + this.valueLength + 15) - 1));
+		
+		this.capacity = WINDOW_MAP_CONTENT_SIZE / this.tupleLength;
 	}
 	
-	public int containsKey (byte [] tupleKey) {
+	/* Linear scan of the hash table */
+	public int getNext (int h) {
 		
-		int idx = HashCoding.jenkinsHash(tupleKey, 1);
-		idx &= (WINDOW_MAP_CONTENT_SIZE - 1);
-		
-		if (content.get(idx) == -1 || compare (tupleKey, idx) != 0)
-			return -1;
-		
-		return idx;
+		return (h & (this.capacity - 1)) * this.tupleLength;
 	}
 	
-	private int compare(byte[] tupleKey, int offset) {
-		int n = offset + tupleKey.length;
+	public int getIndex (byte [] tupleKey, boolean [] found) {
 		
-		for (int i = offset, j = 0; i < n; i++, j++) {
+		int h = HashCoding.jenkinsHash(tupleKey, 1) & (this.capacity - 1);
+		int idx = h * this.tupleLength;
+		
+		int attempts = 0;
+		while (attempts < capacity) {
 			
+			System.out.println(String.format("[DBG] h %3d index %6d", h, idx));
+			
+			if (content.get(idx) == 1) {
+				if (compare (tupleKey, idx) == 0) {
+					found[0] = true;
+					System.out.println(String.format("[DBG] OK; found", h, idx));
+					return idx;
+				}
+			} else {
+				found[0] = false;
+				System.out.println(String.format("[DBG] OK"));
+				return idx;
+			}
+			attempts ++;
+			idx = getNext (++h);
+		}
+		System.out.println(String.format("[DBG] Error"));
+		return -1;
+	}
+	
+	private int compare (byte [] tupleKey, int offset) {
+		
+		/* The first byte indicates occupancy; the next 8 are the timestamp */
+		int n = (offset + 9) + tupleKey.length;
+		
+		for (int i = (offset + 9), j = 0; i < n; i++, j++) {
 			byte v1 = this.content.get(i);
 			byte v2 = tupleKey[j];
-			
 			if (v1 == v2)
 				continue;
-			
 			if (v1 < v2)
 				return -1;
-			
 			return +1;
 		}
-		
 		return 0;	
 	}
 	
-	public void put (int hashcode, IQueryBuffer buffer, int offset, int length, float value, int count) {
-		
-		WindowTuple t = WindowTupleFactory.newInstance(id, hashcode, buffer, offset, length, value, count, null);
-		
-		WindowTuple current = content[hash(hashcode)];
-		
-		if (current == null) {
-			content[hash(hashcode)] = t;
-		} else {
-			while (current.next != null) current = current.next;
-			current.next = t;
+	public void clear () {
+		capacity = 0;
+		content.clear();
+		for (int i = 0; i < WINDOW_MAP_CONTENT_SIZE; i++) {
+			content.put(i, (byte) 0);
 		}
-		size++;
-		
-		this.heap.add(t);
 	}
 	
-	public int clear() {
-		size = 0;
-		int count = 0;
-		for (int i = 0; i < WINDOW_MAP_CONTENT_SIZE; i++) {
-			if (content[i] != null) {
-				WindowTuple e = content[i];
-				while (e != null) {
-					WindowTuple f = e.next;
-					e.release(id); 
-					count++;
-					e = f;
-				}
-				content[i] = null;
-			}
-		}
-		return count;
-	}
-
-	public ByteBuffer getEntries() {
+	public ByteBuffer getBuffer () {
 		
 		return this.content;
 	}
@@ -135,6 +140,6 @@ public class WindowHashTable {
 	
 	public String toString () {
 		
-		return String.format("[WindowHashTable %03d pool-%02d %6d items] ", autoIndex, id, size);
+		return String.format("[WindowHashTable %03d pool-%02d %6d bytes/tuple %6d items] ", autoIndex, id, tupleLength, capacity);
 	}
 }

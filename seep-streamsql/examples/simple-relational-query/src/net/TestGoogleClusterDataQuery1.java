@@ -17,7 +17,6 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
-import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -25,7 +24,14 @@ import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
-import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
+import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
+import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
+import uk.ac.imperial.lsds.streamsql.predicates.FloatComparisonPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
+import uk.ac.imperial.lsds.streamsql.predicates.IntComparisonPredicate;
 
 public class TestGoogleClusterDataQuery1 {
 	
@@ -72,14 +78,14 @@ public class TestGoogleClusterDataQuery1 {
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 15;
-		QueryConf queryConf = new QueryConf(1048576, 1024);
+		Utils.THREADS = 1;
+		QueryConf queryConf = new QueryConf(1, 1024);
 		/*
 		 * Set up configuration of query
 		 */
-		WindowType windowType = WindowType.fromString("range");
-		long windowRange = 60;
-		long windowSlide =  1;
+		WindowType windowType = WindowType.fromString("row");
+		long windowRange = 100;
+		long windowSlide =  10;
 		int numberOfAttributesInSchema = 12;
 		
 		WindowDefinition window = 
@@ -104,65 +110,46 @@ public class TestGoogleClusterDataQuery1 {
 		
 		ITupleSchema schema = new TupleSchema (offsets, byteSize);
 		
-		/* 0:undefined 1:int, 2:float, 3:long */
-		schema.setType( 0, 3);
-		schema.setType( 1, 3);
-		schema.setType( 2, 3);
-		schema.setType( 3, 3);
-		schema.setType( 4, 1);
-		schema.setType( 5, 1);
-		schema.setType( 6, 1);
-		schema.setType( 7, 1);
-		schema.setType( 8, 2);
-		schema.setType( 9, 2);
-		schema.setType(10, 2);
-		schema.setType(11, 1);
+		IPredicate predicate =  new IntComparisonPredicate(
+			IntComparisonPredicate.EQUAL_OP, 
+			new IntColumnReference(4),
+			new IntConstant(3)); /* FAIL == 3 */
 		
-		
-//		IPredicate predicate =  new IntComparisonPredicate(
-//			IntComparisonPredicate.EQUAL_OP, 
-//			new IntColumnReference(4),
-//			new IntConstant(3)); /* FAIL == 3 */
-//		
-//		IMicroOperatorCode selectionCode = new Selection(predicate);
-//		MicroOperator uoperator1;
-//		uoperator1 = new MicroOperator (selectionCode, null, 1);
+		IMicroOperatorCode selectionCode = new Selection(predicate);
+		MicroOperator uoperator1;
+		uoperator1 = new MicroOperator (selectionCode, null, 1);
 		
 		/* After selection, apply aggregation */
 		
-		AggregationType aggregationType = AggregationType.fromString("cnt");
+		AggregationType aggregationType = AggregationType.fromString("count");
 		
 		Expression [] groupBy = new Expression [] {
 			new IntColumnReference(6)
 		};
 		
-		IMicroOperatorCode aggregationCode = new PartialMicroAggregation (
+		IMicroOperatorCode aggregationCode = new MicroAggregation (
 			window,
 			aggregationType,
 			new FloatColumnReference(8), /* count(*), does not really matter */
 			groupBy
 			);
 		
-		System.out.println(aggregationCode);
-		
 		MicroOperator uoperator2;
 		uoperator2 = new MicroOperator (aggregationCode, null, 1);
 		
-		// uoperator1.connectTo(6001, uoperator2);
+		uoperator1.connectTo(6001, uoperator2);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
-		// operators.add(uoperator1);
+		operators.add(uoperator1);
 		operators.add(uoperator2);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 1 * 1048576; /* 1MB */
+		Utils._UNBOUNDED_BUFFER_ = 128 * 1048576; /* 1MB */
 		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		operator.setup();
-		
-		TheCPU.getInstance().bind(0);
 		
 		/* Measurements */
 		long Bytes = 0L;
@@ -217,36 +204,34 @@ public class TestGoogleClusterDataQuery1 {
 						int bytes = 0;
 						if ((bytes = client.read(buffer)) > 0) {
 							
-							if (! buffer.hasRemaining()) {
-								/*
-								 * System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
-								 *		bytes, buffer.remaining()));
-								 *
-								 * Make sure the buffer is rewind before reading.
-								 */
-								buffer.rewind();
-								operator.processData (buffer.array(), buffer.capacity());
+							/*
+							 * System.out.println(String.format("[DBG] %6d bytes received; %6d bytes remain", 
+							 *		bytes, buffer.remaining()));
+							 *
+							 * Make sure the buffer is rewind before reading.
+							 */
+							buffer.rewind();
+							operator.processData (buffer.array(), bytes);
 							
-								buffer.clear();
+							buffer.clear();
 							
-								/* Measurements */
-								Bytes += bytes;
-								/*
-								count += 1;
-								if (count % 10000 == 0) {
-									t = System.currentTimeMillis();
-									if (_t > 0 && previous > 0) {
-										dt = ((double) (t - _t)) / 1000.;
-										MB = ((double) (Bytes - previous)) / _1MB;
-										rate = MB / dt;
-										System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
-										MB, dt, rate, ((rate * 8.)/1000.)));
-									}
-									_t = t;
-									previous = Bytes;
+							/* Measurements */
+							Bytes += bytes;
+							/*
+							count += 1;
+							if (count % 10000 == 0) {
+								t = System.currentTimeMillis();
+								if (_t > 0 && previous > 0) {
+									dt = ((double) (t - _t)) / 1000.;
+									MB = ((double) (Bytes - previous)) / _1MB;
+									rate = MB / dt;
+									System.out.println(String.format("%10.3f MB %10.3f sec %10.3f MB/s %10.3f Gbps", 
+									MB, dt, rate, ((rate * 8.)/1000.)));
 								}
-								*/
+								_t = t;
+								previous = Bytes;
 							}
+							*/
 						}
 						if (bytes < 0) {
 							System.out.println("[DBG] client connection closed");
