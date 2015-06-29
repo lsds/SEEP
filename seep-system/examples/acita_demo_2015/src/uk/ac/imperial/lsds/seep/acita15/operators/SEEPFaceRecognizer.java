@@ -20,22 +20,30 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.BufferedReader;
 import java.io.FileReader;
-
+import java.io.IOException;
 import java.nio.IntBuffer;
+
+import javax.imageio.ImageIO;
+
 import static org.bytedeco.javacpp.opencv_contrib.*;
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
+import static org.bytedeco.javacpp.opencv_imgproc.*;
 
+import org.bytedeco.javacv.Java2DFrameConverter;
+import org.bytedeco.javacv.OpenCVFrameConverter;
 
 public class SEEPFaceRecognizer implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(SEEPFaceRecognizer.class);
 	private int processed = 0;
+	private PersonRecognizer personRecognizer = null;
 	
 	public void processData(DataTuple data) {
 		long tupleId = data.getLong("tupleId");
@@ -44,6 +52,8 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		int y = data.getInt("y");
 		int height = data.getInt("height");
 		int width = data.getInt("width");
+		
+		int prediction = personRecognizer.recognize(value, x, y, height, width);
 		
 		DataTuple outputTuple = data.setValues(tupleId, value, x, y, height, width);
 		processed++;
@@ -108,13 +118,31 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	{
 		private final String trainingDir;
 		private final String testImageFilename;
+		private final FaceRecognizer faceRecognizer;
+        private final Java2DFrameConverter frameConverter = new Java2DFrameConverter();
+        private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
+        private final OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
+		
 		public PersonRecognizer(String trainingDir, String testImageFilename)
 		{
 			this.trainingDir = trainingDir;
 			this.testImageFilename = testImageFilename;
+			this.faceRecognizer = trainATT();
 		}
 		
-		public void testATT()
+		public int recognize(byte[] value, int x, int y, int width, int height)
+		{
+			IplImage img = parseBufferedImage(value);
+			IplImage imgBW = prepareBWImage(img);
+			//TODO: Resize?
+			Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
+			int predictedLabel = faceRecognizer.predict(imgBWMat);
+			
+			logger.info("Predicted label for received image: " + predictedLabel);
+			return predictedLabel;
+		}
+		
+		public FaceRecognizer trainATT()
 		{
 			File csv = new File(trainingDir+"/at.txt");
 			Map<String, Integer> trainingFiles = new HashMap<>();
@@ -140,7 +168,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			{
 				File imgFile = new File(trainingDir+"/"+filename);
 				Mat img = imread(imgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
-				logger.info("Read test image from "+imgFile.getAbsolutePath());
+				logger.info("Read training image from "+imgFile.getAbsolutePath());
 				images.put(counter, img);
 				int label = trainingFiles.get(filename);
 				
@@ -150,14 +178,18 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			
 			//FaceRecognizer faceRecognizer = createFisherFaceRecognizer();
 			// FaceRecognizer faceRecognizer = createEigenFaceRecognizer();
-			FaceRecognizer faceRecognizer = createLBPHFaceRecognizer();
+			FaceRecognizer lbphRecognizer = createLBPHFaceRecognizer();
 	
-			faceRecognizer.train(images, labels);
-	
+			lbphRecognizer.train(images, labels);
+			return lbphRecognizer;
+		}
+		
+		public void testATT()
+		{
 			Mat testImage = imread(testImageFilename, CV_LOAD_IMAGE_GRAYSCALE);
 			int predictedLabel = faceRecognizer.predict(testImage);
 	
-			logger.info("Predicted label: " + predictedLabel);
+			logger.info("Predicted label for test image: " + predictedLabel);
 		}
 		
 		public void testSample()
@@ -202,6 +234,27 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			int predictedLabel = faceRecognizer.predict(testImage);
 	
 			logger.info("Predicted label: " + predictedLabel);
+		}
+		
+		public IplImage parseBufferedImage(byte[] bytes)
+		{
+			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+			try
+			{
+				IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+				return img;
+			} 
+			catch (IOException e)
+			{
+				throw new RuntimeException(e);
+			}
+		}
+		
+		public IplImage prepareBWImage(IplImage image)
+		{
+			final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
+			cvCvtColor(image, imageBW, CV_BGR2GRAY);
+			return imageBW;
 		}
 	}
 }
