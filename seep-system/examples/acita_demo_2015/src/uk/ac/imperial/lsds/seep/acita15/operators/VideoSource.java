@@ -84,19 +84,21 @@ public class VideoSource implements StatelessOperator {
 		String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
 		
 		logger.info("Loading test images...");
-		//byte[][] testFrames = loadImages(testFramesDir);
-		Mat[] testFrames = loadGreyImages(testFramesDir);
+		byte[][] testFrames = loadImages(testFramesDir);
+		//Mat[] testFrames = loadGreyImages(testFramesDir);
 		
 		logger.info("Loaded "+testFrames.length+" test images.");
 		int currentFrame = 0;
 		
 		while(sendIndefinitely || tupleId < numTuples)
 		{
+			/*
 			Mat img = testFrames[currentFrame];
 			byte[] matBytes = new byte[safeLongToInt(img.total())*img.channels()];
 			img.data().get(matBytes);
 			DataTuple output = data.newTuple(tupleId, matBytes, img.rows(), img.cols(), img.type(), 0, 0, 0, 0);
-			
+			*/
+			DataTuple output = data.newTuple(tupleId, testFrames[currentFrame], 0, 0, 0, 0, 0, 0, 0);
 			output.getPayload().timestamp = tupleId;
 			if (tupleId % 1000 == 0)
 			{

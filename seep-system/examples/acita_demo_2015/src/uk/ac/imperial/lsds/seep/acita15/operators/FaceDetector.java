@@ -56,16 +56,18 @@ public class FaceDetector implements StatelessOperator{
 	private static final Logger logger = LoggerFactory.getLogger(FaceDetector.class);
 	private int processed = 0;
 	
-	private CascadeClassifier faceDetector = null;
+	//private CascadeClassifier faceDetector = null;
+	private CvHaarClassifierCascade faceDetector = null;
 	private Java2DFrameConverter frameConverter = null;
 	private OpenCVFrameConverter matConverter = null;
+	private OpenCVFrameConverter iplConverter = null;
 	
 	private final double SCALE_FACTOR = 1.1;
 	private final double RELATIVE_FACE_SIZE = 0.2;
 	
 	public void processData(DataTuple data) {
 		
-		
+		long tProcessStart = System.currentTimeMillis();
 		long tupleId = data.getLong("tupleId");
 		//String value = data.getString("value") + "," + api.getOperatorId();
 		byte[] value = data.getByteArray("value");
@@ -82,58 +84,20 @@ public class FaceDetector implements StatelessOperator{
 		byte[] bytes = baos.toByteArray();
 		*/
 
-
-		Rect faceDetections = new Rect();
+		IplImage img = parseBufferedImage(value);
+		IplImage imgBW = prepareBWImage(img);
+		int[] bbox = detectFirstFace(imgBW);
 		
-		logger.info("Limit before detection="+faceDetections.limit());
-		
-		ByteArrayInputStream bais = new ByteArrayInputStream(value);
-		
-		try
-		{
-			Mat frameOld = matConverter.convertToMat(frameConverter.convert(ImageIO.read(bais)));
-			//Mat emptyFrame = new Mat(rows, cols, type);
-			//Mat frame = new Mat(value, false); //TODO: Is it really signed?
-			//TODO: Copy could be slow here.
-			Mat frame = new Mat(rows, cols, type, new BytePointer(value));
-			if (frame.rows() != rows) { throw new RuntimeException("Logic error, row mismatch."); }
-			
-			BufferedImage bufImage = frameConverter.convert(matConverter.convert(frame));
-			File imgFile = new File("/tmp/"+tupleId+".jpg");
-			ImageIO.write(bufImage, "jpg", imgFile);
-			
-			logger.info("Frame total size="+frame.total()+",cols="+frame.cols()+",rows="+frame.rows()+",type="+frame.type());
-			faceDetector.detectMultiScale(frame, faceDetections, SCALE_FACTOR, 2, 0, new Size(absoluteFaceSize, absoluteFaceSize), new Size());
-		}
-		catch(IOException e)
-		{
-			throw new RuntimeException("Error reading image: ", e);
-		}
-		int numFaces = faceDetections.limit();
-		
-		logger.info("Num faces detected = "+numFaces);
 		DataTuple outputTuple = null;
 		
-		if (numFaces > 0)
+		if (bbox != null)
 		{
-			//Just take the first face for now
-			
-			int x = faceDetections.position(0).x();
-			int y = faceDetections.position(0).y();
-			int height = faceDetections.position(0).height();
-			int width = faceDetections.position(0).width();
-			/*
-			int x = faceDetections.x();
-			int y = faceDetections.y();
-			int height = faceDetections.height();
-			int width = faceDetections.width();
-			*/
-			logger.info("Detected face: x="+x+",y="+y+",height="+height+",width="+width);
-			outputTuple = data.setValues(tupleId, value, x, y, height, width);
+			logger.info("Found face at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3]);
 		}
-		else
+		else	
 		{
-			outputTuple = data.setValues(tupleId, value, 0, 0, 0, 0);
+			outputTuple = data.setValues(tupleId, value, rows, cols, type, 0, 0, 0, 0);
 		}
 		
 		//DataTuple outputTuple = data.setValues(tupleId, value);
@@ -151,6 +115,7 @@ public class FaceDetector implements StatelessOperator{
 			}
 		}
 		
+		logger.info("Face detector processed tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -191,75 +156,13 @@ public class FaceDetector implements StatelessOperator{
 		testFaceDetection();
 		try
 		{
-			/*
-			String classifierName = Paths.get(
-                FaceDetector.class.getResource("/cascades/haarcascade_frontalface_default.xml")
-                        .toURI()).toString();
-                        */
-			//File classifierFile = new File("file:///homes/dan/")
-			logger.info("Thread cl:");
-			ClassLoader cl = Thread.currentThread().getContextClassLoader();
-
-			URL[] urls = ((URLClassLoader)cl).getURLs();
-
-			for(URL url: urls){
-				System.out.println(url.getFile());
-			}
-			
-		       
-			logger.info("System cl:");
-			cl = ClassLoader.getSystemClassLoader();
-
-			urls = ((URLClassLoader)cl).getURLs();
-
-			for(URL url: urls){
-				System.out.println(url.getFile());
-			}
-			
-			//File classifierFile = new File("file:///home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/cascades/haarcascade_frontalface_alt.xml");
-			//String classifierName = classifierFile.toURI().toString();
-	        //faceDetector = new CascadeClassifier(classifierName);
 			faceDetector = loadFaceCascade();
 		}
 		catch(Exception e) { throw new RuntimeException(e); }
 
         frameConverter = new Java2DFrameConverter();
-        matConverter = new OpenCVFrameConverter.ToMat();
-        
-        
-        //Test it works.
-        String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
-    	File dir = new File(testFramesDir);
-		File [] files = dir.listFiles(new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String name) {
-				return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".pgm");
-			}
-		});	
-		
-		for (int i = 0; i < files.length; i++)
-		{
-			Mat testFrame = imread(
-				files[0].getAbsolutePath(), // filename
-				CV_LOAD_IMAGE_GRAYSCALE); // isColor 
-		
-			int absoluteFaceSize = safeLongToInt(Math.round(testFrame.rows() * RELATIVE_FACE_SIZE));
-			Rect faceDetections = new Rect();
-			
-			faceDetector.detectMultiScale(testFrame, faceDetections, SCALE_FACTOR, 2, 0, new Size(absoluteFaceSize, absoluteFaceSize), new Size());
-			
-			int x = faceDetections.position(0).x();
-			int y = faceDetections.position(0).y();
-			int height = faceDetections.position(0).height();
-			int width = faceDetections.position(0).width();
-			/*
-			int x = faceDetections.x();
-			int y = faceDetections.y();
-			int height = faceDetections.height();
-			int width = faceDetections.width();
-			*/
-			logger.info("Setup detect rectangle: x="+x+",y="+y+",height="+height+",width="+width);
-		}
+        //matConverter = new OpenCVFrameConverter.ToMat();
+        iplConverter = new OpenCVFrameConverter.ToIplImage();
 	}
 
 	
@@ -290,17 +193,58 @@ public class FaceDetector implements StatelessOperator{
 		return classifier;
 	}
 
-	public static IplImage loadImage(File file) throws IOException {
-		// Verify file
-		if (!file.exists()) {
-			throw new FileNotFoundException("Image file does not exist: " + file.getAbsolutePath());
+	public IplImage parseBufferedImage(byte[] bytes)
+	{
+		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+		try
+		{
+			IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+			return img;
+		} 
+		catch (IOException e)
+		{
+			throw new RuntimeException(e);
 		}
-		// Read input image
-		IplImage image = cvLoadImage(file.getAbsolutePath());
-		if (image == null) {
-			throw new IOException("Couldn't load image: " + file.getAbsolutePath());
+	}
+	
+	public IplImage prepareBWImage(IplImage image)
+	{
+		final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
+		cvCvtColor(image, imageBW, CV_BGR2GRAY);
+		return imageBW;
+	}
+
+	public int[] detectFirstFace(IplImage bwImg)
+	{
+		CvMemStorage storage = cvCreateMemStorage(0);
+		cvClearMemStorage(storage);
+		try {
+			double search_scale_factor = 1.1;
+			int flags = CV_HAAR_DO_CANNY_PRUNING;
+			CvSize minFeatureSize = cvSize(40, 40);
+			CvSeq rects = cvHaarDetectObjects(bwImg, faceDetector, storage, search_scale_factor, 2, flags, minFeatureSize, cvSize(0, 0));
+			int nFaces = rects.total();
+			if (nFaces == 0) {
+				return null;
+			}
+			else
+			{
+				logger.info("Detected faces: "+nFaces);
+				BytePointer elem = cvGetSeqElem(rects, 0);
+				CvRect rect = new CvRect(elem);
+				int bbox[] = new int[4];
+				bbox[0] = rect.x();
+				bbox[1] = rect.y();
+				bbox[2] = rect.x() + rect.width();
+				bbox[3] = rect.y() + rect.height();
+				logger.info("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+				return bbox;
+			}
 		}
-		return image;
+		finally 
+		{
+			cvReleaseMemStorage(storage);
+		}
 	}
 	
 	public static void detectFaceInImage(final IplImage orig,
@@ -338,6 +282,8 @@ public class FaceDetector implements StatelessOperator{
 		}
 	}
 	
+
+	
 	public static File[] loadFiles()
 	{
         //Test it works.
@@ -353,6 +299,19 @@ public class FaceDetector implements StatelessOperator{
 		return files;
 	}
 
+	public static IplImage loadImage(File file) throws IOException {
+		// Verify file
+		if (!file.exists()) {
+			throw new FileNotFoundException("Image file does not exist: " + file.getAbsolutePath());
+		}
+		// Read input image
+		IplImage image = cvLoadImage(file.getAbsolutePath());
+		if (image == null) {
+			throw new IOException("Couldn't load image: " + file.getAbsolutePath());
+		}
+		return image;
+	}
+	
 	public static void testFaceDetection()
 	{
 
