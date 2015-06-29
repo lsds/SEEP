@@ -113,17 +113,23 @@ public class Base implements QueryComposer{
 		ArrayList<String> srcFields = new ArrayList<String>();
 		srcFields.add("tupleId");
 		srcFields.add("value");
+		srcFields.add("rows");
+		srcFields.add("cols");
+		srcFields.add("type");
 		srcFields.add("x");
 		srcFields.add("y");
 		srcFields.add("height");
 		srcFields.add("width");
-		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
+		Connectable src = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
 		
 		
 		//Declare FaceDetector
 		ArrayList<String> faceDetectFields = new ArrayList<String>();
 		faceDetectFields.add("tupleId");
 		faceDetectFields.add("value");
+		faceDetectFields.add("rows");
+		faceDetectFields.add("cols");
+		faceDetectFields.add("type");
 		faceDetectFields.add("x");
 		faceDetectFields.add("y");
 		faceDetectFields.add("height");
@@ -135,6 +141,9 @@ public class Base implements QueryComposer{
 		ArrayList<String> faceRecFields = new ArrayList<String>();
 		faceRecFields.add("tupleId");
 		faceRecFields.add("value");
+		faceRecFields.add("rows");
+		faceRecFields.add("cols");
+		faceRecFields.add("type");
 		faceRecFields.add("x");
 		faceRecFields.add("y");
 		faceRecFields.add("height");
@@ -145,6 +154,9 @@ public class Base implements QueryComposer{
 		ArrayList<String> snkFields = new ArrayList<String>();
 		snkFields.add("tupleId");
 		snkFields.add("value");
+		snkFields.add("rows");
+		snkFields.add("cols");
+		snkFields.add("type");
 		snkFields.add("x");
 		snkFields.add("y");
 		snkFields.add("height");
