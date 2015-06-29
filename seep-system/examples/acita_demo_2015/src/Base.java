@@ -15,7 +15,7 @@ import java.util.HashMap;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
-import uk.ac.imperial.lsds.seep.acita15.operators.FaceRecognizer;
+import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
@@ -148,7 +148,7 @@ public class Base implements QueryComposer{
 		faceRecFields.add("y");
 		faceRecFields.add("height");
 		faceRecFields.add("width");
-		Connectable faceRec = QueryBuilder.newStatelessOperator(new FaceRecognizer(), 1, faceRecFields);
+		Connectable faceRec = QueryBuilder.newStatelessOperator(new SEEPFaceRecognizer(), 1, faceRecFields);
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
