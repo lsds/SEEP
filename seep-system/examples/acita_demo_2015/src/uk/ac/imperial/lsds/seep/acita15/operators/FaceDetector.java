@@ -80,7 +80,7 @@ public class FaceDetector implements StatelessOperator{
 			
 		int absoluteFaceSize = safeLongToInt(Math.round(rows * RELATIVE_FACE_SIZE));
 		
-		logger.info("Received "+cols+"x"+rows+" frame of type "+type);
+		logger.debug("Received "+cols+"x"+rows+" frame of type "+type);
 		/*
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ImageIO.write(img, "jpg", baos);
@@ -88,7 +88,7 @@ public class FaceDetector implements StatelessOperator{
 		*/
 
 		IplImage img = parseBufferedImage(value, cols, rows, type);
-		logger.info("Received "+img.width()+"x"+img.height()+" frame.");
+		logger.debug("Received "+img.width()+"x"+img.height()+" frame.");
 		IplImage imgBW = prepareBWImage(img, type);
 		int[] bbox = detectFirstFace(imgBW);
 		
@@ -96,7 +96,7 @@ public class FaceDetector implements StatelessOperator{
 		
 		if (bbox != null)
 		{
-			logger.info("Found face at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+			logger.debug("Found face at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3]);
 			if (recordImages)
 			{
@@ -123,7 +123,7 @@ public class FaceDetector implements StatelessOperator{
 			}
 		}
 		
-		logger.info("Face detector processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		logger.debug("Face detector processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -205,7 +205,7 @@ public class FaceDetector implements StatelessOperator{
         // We can "cast" Pointer objects by instantiating a new object of the desired class.
         CvHaarClassifierCascade classifier = new CvHaarClassifierCascade(cvLoad(classifierName));
         if (classifier.isNull()) {
-            System.err.println("Error loading classifier file \"" + classifierName + "\".");
+            logger.error("Error loading classifier file \"" + classifierName + "\".");
             System.exit(1);
         }
 		return classifier;
@@ -263,7 +263,7 @@ public class FaceDetector implements StatelessOperator{
 			}
 			else
 			{
-				logger.info("Detected faces: "+nFaces);
+				logger.debug("Detected faces: "+nFaces);
 				BytePointer elem = cvGetSeqElem(rects, 0);
 				CvRect rect = new CvRect(elem);
 				int bbox[] = new int[4];
@@ -272,7 +272,7 @@ public class FaceDetector implements StatelessOperator{
 				bbox[2] = rect.x() + rect.width();
 				bbox[3] = rect.y() + rect.height();
 				
-				logger.info("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+				logger.debug("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 				return bbox;
 			}
 		}
@@ -313,7 +313,7 @@ public class FaceDetector implements StatelessOperator{
 			}
 			else
 			{
-				logger.info("Detected faces: "+nFaces);
+				logger.debug("Detected faces: "+nFaces);
 			}
 			for (int iface = 0; iface < nFaces; ++iface) {
 				BytePointer elem = cvGetSeqElem(rects, iface);
@@ -322,7 +322,7 @@ public class FaceDetector implements StatelessOperator{
 				bbox[1] = rect.y();
 				bbox[2] = rect.x() + rect.width();
 				bbox[3] = rect.y() + rect.height();
-				logger.info("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+				logger.debug("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 				// display landmarks
 				cvRectangle(orig, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CV_RGB(255, 0, 0));
 			}
@@ -371,7 +371,7 @@ public class FaceDetector implements StatelessOperator{
 		try {
 			final File[] inputImages = loadFiles();
 			final CvHaarClassifierCascade faceCascade = loadFaceCascade();
-			System.out.println("Count: " + faceCascade.count());
+			logger.debug("Count: " + faceCascade.count());
 			for (File inputImage : inputImages)
 			{
 				final IplImage image = loadImage(inputImage);

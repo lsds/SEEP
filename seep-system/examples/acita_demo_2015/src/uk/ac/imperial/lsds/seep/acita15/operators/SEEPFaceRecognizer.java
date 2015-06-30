@@ -78,7 +78,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			}
 		}
 		
-		logger.info("Face recognizer processed "+width+"x"+height+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		logger.debug("Face recognizer processed "+width+"x"+height+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -158,10 +158,10 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			double confidence[] = new double[1];
 			
 			faceRecognizer.predict(imgBWMat, predictedLabel, confidence);
-			logger.info("Predicted label for received image: " + predictedLabel[0]+ " with confidence "+confidence[0]);
+			logger.debug("Predicted label for received image: " + predictedLabel[0]+ " with confidence "+confidence[0]);
 			if (labelExamples.containsKey(predictedLabel[0]))
 			{
-				logger.info("Example of matching face: "+labelExamples.get(predictedLabel[0]));
+				logger.debug("Example of matching face: "+labelExamples.get(predictedLabel[0]));
 			}
 			return predictedLabel[0];
 		}
@@ -219,7 +219,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			Mat testImage = imread(testImageFilename, CV_LOAD_IMAGE_GRAYSCALE);
 			int predictedLabel = faceRecognizer.predict(testImage);
 	
-			logger.info("Predicted label for test image: " + predictedLabel);
+			logger.debug("Predicted label for test image: " + predictedLabel);
 		}
 		
 		public void testSample()
@@ -263,7 +263,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			Mat testImage = imread(testImageFilename, CV_LOAD_IMAGE_GRAYSCALE);
 			int predictedLabel = faceRecognizer.predict(testImage);
 	
-			logger.info("Predicted label: " + predictedLabel);
+			logger.debug("Predicted label: " + predictedLabel);
 		}
 		
 		public Mat loadBWMatImage(String filename)
@@ -271,7 +271,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			try
 			{
 				String filepath = trainingDir+"/"+filename;
-				logger.info("Loading training image from: "+ filepath);
+				logger.debug("Loading training image from: "+ filepath);
 				File tmpImgFile = new File("/tmp/resources/"+opId+filepath);
 				tmpImgFile.deleteOnExit();
 				tmpImgFile.mkdirs();

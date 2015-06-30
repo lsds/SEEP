@@ -224,7 +224,7 @@ public class VideoSource implements StatelessOperator {
 	    
 		byte[][] frameArr = new byte[filenames.size()][];
 
-		logger.info("Source sending "+filenames.size()+" images.");
+		logger.info("Source loading "+filenames.size()+" images.");
 		int i = 0;
 		for (String filename : filenames)
 		{
