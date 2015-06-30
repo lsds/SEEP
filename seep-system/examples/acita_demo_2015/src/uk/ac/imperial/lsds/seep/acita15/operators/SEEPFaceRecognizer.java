@@ -55,14 +55,15 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		long tProcessStart = System.currentTimeMillis();
 		long tupleId = data.getLong("tupleId");
 		byte[] value = data.getByteArray("value");
+		int type = data.getInt("type");
 		int x = data.getInt("x");
 		int y = data.getInt("y");
 		int height = data.getInt("height");
 		int width = data.getInt("width");
 		
-		int prediction = personRecognizer.recognize(value, x, y, height, width);
+		int prediction = personRecognizer.recognize(value, x, y, height, width, type);
 		
-		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, 0, x, y, height, width);
+		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width);
 		processed++;
 		if (processed % 1000 == 0)
 		{
@@ -129,6 +130,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		private final int opId;
 		private final String trainingDir;
 		private final String testImageFilename;
+		private final Map<Integer, String> labelExamples = new HashMap<>();
 		private final FaceRecognizer faceRecognizer;
         private final Java2DFrameConverter frameConverter = new Java2DFrameConverter();
         private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
@@ -145,16 +147,23 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			this.faceRecognizer = trainATT();
 		}
 		
-		public int recognize(byte[] value, int x, int y, int width, int height)
+		public int recognize(byte[] value, int x, int y, int width, int height, int type)
 		{
 			if (x <= 0 && y <=0 && width <= 0 && height <= 0) { return -1; }
 			IplImage img = parseBufferedImage(value);
-			IplImage imgBW = prepareBWImage(img);
+			IplImage imgBW = prepareBWImage(img, type);
 			cvSetImageROI(imgBW, cvRect(x, y, width, height));
 			Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
-			int predictedLabel = faceRecognizer.predict(imgBWMat);
-			logger.info("Predicted label for received image: " + predictedLabel);
-			return predictedLabel;
+			int predictedLabel[] = new int[1];
+			double confidence[] = new double[1];
+			
+			faceRecognizer.predict(imgBWMat, predictedLabel, confidence);
+			logger.info("Predicted label for received image: " + predictedLabel[0]+ " with confidence "+confidence[0]);
+			if (labelExamples.containsKey(predictedLabel[0]))
+			{
+				logger.info("Example of matching face: "+labelExamples.get(predictedLabel[0]));
+			}
+			return predictedLabel[0];
 		}
 		
 		public FaceRecognizer trainATT()
@@ -170,7 +179,9 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 				    String line;
 				    while ((line = br.readLine()) != null) {
 				    	String[] values = line.split(",");
-				    	trainingFiles.put(values[0], Integer.parseInt(values[1]));
+				    	int label = Integer.parseInt(values[1]);
+				    	trainingFiles.put(values[0], label);
+				    	if (!labelExamples.containsKey(label)) { labelExamples.put(label, values[0]); }
 				    }
 				}
 			} catch(Exception e) { throw new RuntimeException(e); }
@@ -291,11 +302,18 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			}
 		}
 		
-		public IplImage prepareBWImage(IplImage image)
+		public IplImage prepareBWImage(IplImage image, int type)
 		{
-			IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
-			cvCvtColor(image, imageBW, CV_BGR2GRAY);
-			return imageBW;
+			if (type > 0)
+			{
+				IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
+				cvCvtColor(image, imageBW, CV_BGR2GRAY);
+				return imageBW;
+			}
+			else
+			{
+				return image; //Already bw
+			}
 		}
 	}
 }

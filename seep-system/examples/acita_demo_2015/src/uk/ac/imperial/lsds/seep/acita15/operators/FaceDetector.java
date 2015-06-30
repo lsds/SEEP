@@ -87,9 +87,9 @@ public class FaceDetector implements StatelessOperator{
 		byte[] bytes = baos.toByteArray();
 		*/
 
-		IplImage img = parseBufferedImage(value);
+		IplImage img = parseBufferedImage(value, cols, rows, type);
 		logger.info("Received "+img.width()+"x"+img.height()+" frame.");
-		IplImage imgBW = prepareBWImage(img);
+		IplImage imgBW = prepareBWImage(img, type);
 		int[] bbox = detectFirstFace(imgBW);
 		
 		DataTuple outputTuple = null;
@@ -161,7 +161,7 @@ public class FaceDetector implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up FACE_DETECTOR operator with id="+api.getOperatorId());
-		testFaceDetection();
+		//testFaceDetection();
 		try
 		{
 			faceDetector = loadFaceCascade();
@@ -211,25 +211,41 @@ public class FaceDetector implements StatelessOperator{
 		return classifier;
 	}
 
-	public IplImage parseBufferedImage(byte[] bytes)
+	public IplImage parseBufferedImage(byte[] bytes, int cols, int rows, int type)
 	{
-		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-		try
+		if (cols == 0 && rows == 0 && type == 0)
 		{
-			IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
-			return img;
-		} 
-		catch (IOException e)
+			//It's a raw image file, convert to ipl image via buffered image.
+			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+			try
+			{
+				IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+				return img;
+			} 
+			catch (IOException e)
+			{
+				throw new RuntimeException(e);
+			}
+		}
+		else
 		{
-			throw new RuntimeException(e);
+			//It's an ipl image in byte form already.
+			throw new RuntimeException("TODO"); 
 		}
 	}
 	
-	public IplImage prepareBWImage(IplImage image)
+	public IplImage prepareBWImage(IplImage image, int type)
 	{
-		final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
-		cvCvtColor(image, imageBW, CV_BGR2GRAY);
-		return imageBW;
+		if (type > 0)
+		{
+			final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
+			cvCvtColor(image, imageBW, CV_BGR2GRAY);
+			return imageBW;
+		}
+		else
+		{
+			return image;
+		}
 	}
 
 	public int[] detectFirstFace(IplImage bwImg)

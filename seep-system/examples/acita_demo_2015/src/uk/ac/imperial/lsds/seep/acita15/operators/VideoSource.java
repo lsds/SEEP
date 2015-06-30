@@ -16,6 +16,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +56,8 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.opencv_core.Mat;
 
+import java.nio.file.Files;
+
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_legacy.*;
@@ -62,8 +67,19 @@ public class VideoSource implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(VideoSource.class);
 	
+	private IplImage[] testIplFrames = null;
+	private byte[][] testRawFrames = null;
+	private final String testFramesDir = "images";
+	private final String extractedFilesDir = "resources/source";
+	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
+	
 	public void setUp() {
 		System.out.println("Setting up VIDEO_SOURCE operator with id="+api.getOperatorId());
+		
+		//Set<String> jarImageFilenames = getJarImageFilenames(testFramesDir);
+		//Set<File> imgFiles = extractJarImages(jarImageFilenames, extractedFilesDir);
+		//testIplFrames = loadGreyImages(extractedFilesDir);
+		testRawFrames = loadImagesFromJar(testFramesDir);
 	}
 
 	public void processData(DataTuple dt) {
@@ -90,13 +106,13 @@ public class VideoSource implements StatelessOperator {
 		//String testFramesDir = "images";
 		//TODO: Load resources from jar.
 		//String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
-		String testFramesDir = "images";
+		//String testFramesDir = "images";
 		
-		logger.info("Loading test images...");
-		byte[][] testFrames = loadImagesFromJar(testFramesDir);
-		//Mat[] testFrames = loadGreyImages(testFramesDir);
+		//logger.info("Loading test images...");
+		//byte[][] testFrames = loadImagesFromJar(testFramesDir);
+		//IplImage[] testFrames = loadGreyImages(testFramesDir);
 		
-		logger.info("Loaded "+testFrames.length+" test images.");
+		//logger.info("Loaded "+testFrames.length+" test images.");
 		int currentFrame = 0;
 		
 		while(sendIndefinitely || tupleId < numTuples)
@@ -107,7 +123,23 @@ public class VideoSource implements StatelessOperator {
 			img.data().get(matBytes);
 			DataTuple output = data.newTuple(tupleId, matBytes, img.rows(), img.cols(), img.type(), 0, 0, 0, 0);
 			*/
-			DataTuple output = data.newTuple(tupleId, testFrames[currentFrame], 0, 0, 0, 0, 0, 0, 0);
+			DataTuple output = null;
+
+			if (loadIplImages)
+			{
+				IplImage iplImage = testIplFrames[currentFrame];
+				byte[] iplBytes = new byte[iplImage.imageSize()];
+				iplImage.getByteBuffer().get(iplBytes);
+				//TODO: Rows, cols, type?
+				//output = data.newTuple(tupleId, iplBytes, iplImage.rows(), iplImage.cols(), iplImage.type(), 0, 0, 0, 0);
+				currentFrame = (currentFrame + 1) % testIplFrames.length;
+			}
+			else
+			{
+				output = data.newTuple(tupleId, testRawFrames[currentFrame], 0, 0, 0, 0, 0, 0, 0);
+				currentFrame = (currentFrame + 1) % testRawFrames.length;
+			}
+ 
 			output.getPayload().timestamp = tupleId;
 			if (tupleId % 1000 == 0)
 			{
@@ -133,8 +165,6 @@ public class VideoSource implements StatelessOperator {
 					e.printStackTrace();
 				}				
 			}
-			
-			currentFrame = (currentFrame + 1) % testFrames.length;
 		}
 		System.exit(0);
 	}
@@ -144,7 +174,7 @@ public class VideoSource implements StatelessOperator {
 		
 	}
 
-	private byte[][] loadImagesFromJar(String imgDirname)
+	private Set<String> getJarImageFilenames(String imgDirname)
 	{
 		final File jarFile = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath());
 
@@ -156,14 +186,41 @@ public class VideoSource implements StatelessOperator {
 		    while(entries.hasMoreElements()) {
 		        final String name = entries.nextElement().getName();
 		        if (name.startsWith(imgDirname + "/") && 
-		        		(name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".pgm"))) { //filter according to the path
+		        		//(name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".pgm"))) { //filter according to the path
+		        		(name.endsWith(".pgm"))) { //filter according to the path
 		        	logger.info("Source adding filename: "+name);
 		        	filenames.add(name);
 		        }
 		    }
 		    jar.close();
 		} catch (IOException e) { throw new RuntimeException(e); }
-		
+		logger.info("Found the following jar image filenames:"+filenames);
+		return filenames;
+	}
+	
+	private Set<File> extractJarImages(Set<String> jarImagePaths, String extractionDir)
+	{
+		Set<File> extractedImages = new HashSet<>();
+		for (String jarImagePath: jarImagePaths)
+		{
+			try
+			{
+				String imgFilename = new File(jarImagePath).getName();
+				InputStream is = getClass().getClassLoader().getResourceAsStream(jarImagePath);
+				
+				Path dest = Paths.get(extractionDir + "/" + imgFilename);
+				Files.copy(is, dest, StandardCopyOption.REPLACE_EXISTING);
+				extractedImages.add(dest.toFile());
+			}
+			catch (IOException e) { throw new RuntimeException(e); }
+		}
+		return extractedImages;
+	}
+	
+	private byte[][] loadImagesFromJar(String imgDirname)
+	{
+
+		Set<String> filenames = getJarImageFilenames(imgDirname);
 	    
 		byte[][] frameArr = new byte[filenames.size()][];
 
@@ -229,7 +286,7 @@ public class VideoSource implements StatelessOperator {
 		return frameArr;
 	}
 	
-	private Mat[] loadGreyImages(String imgDirname)
+	private IplImage[] loadGreyImages(String imgDirname)
 	{
 		File dir = new File(imgDirname);
 		File [] files = dir.listFiles(new FilenameFilter() {
@@ -240,21 +297,20 @@ public class VideoSource implements StatelessOperator {
 		});	
 
 		// allocate the face-image array and person number matrix
-		Mat[] frameArr = new Mat[files.length];			
+		IplImage[] frameArr = new IplImage[files.length];			
 
 		int i = 0;
 		for (File imgFile : files)
 		{
 			// load the face image
-			/*
-			frameArr[i] = cvLoadImage(
+			IplImage img = cvLoadImage(
 					imgFile.getAbsolutePath(), // filename
 					CV_LOAD_IMAGE_GRAYSCALE); // isColor
-			*/
+			/*
 			Mat img = imread(
 					imgFile.getAbsolutePath(), // filename
 					CV_LOAD_IMAGE_GRAYSCALE); // isColor
-			
+			*/
 
 			if (img == null) {
 				throw new RuntimeException("Can't load image from " + imgFile.getAbsolutePath());
@@ -262,6 +318,10 @@ public class VideoSource implements StatelessOperator {
 			
 			//byte[] data = new byte[safeLongToInt(img.total())*img.channels()];
 			//img.data().get(data);
+
+		    //byte[] iplBytes = new byte[img.imageSize()];
+		    //iplimage.getByteBuffer().get(iplBytes); 
+			
 			frameArr[i] = img;
 			i++;
 		}	 

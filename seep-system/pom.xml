@@ -91,6 +91,11 @@
 	  <artifactId>javacv</artifactId>
 	  <version>0.11</version>
   </dependency>
+  <dependency>
+	<groupId>com.twelvemonkeys.imageio</groupId>
+	<artifactId>imageio-pnm</artifactId>
+	<version>3.1.1</version>
+  </dependency>
   </dependencies>
   
   <build>
