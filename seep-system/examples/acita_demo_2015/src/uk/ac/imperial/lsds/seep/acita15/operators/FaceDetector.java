@@ -15,6 +15,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
@@ -65,6 +66,7 @@ public class FaceDetector implements StatelessOperator{
 	
 	private final double SCALE_FACTOR = 1.1;
 	private final double RELATIVE_FACE_SIZE = 0.2;
+	private boolean recordImages = false;
 	
 	public void processData(DataTuple data) {
 		
@@ -96,6 +98,10 @@ public class FaceDetector implements StatelessOperator{
 		{
 			logger.info("Found face at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3]);
+			if (recordImages)
+			{
+				recordFaceDetection(tupleId, imgBW, bbox);
+			}
 		}
 		else	
 		{
@@ -165,6 +171,7 @@ public class FaceDetector implements StatelessOperator{
         frameConverter = new Java2DFrameConverter();
         //matConverter = new OpenCVFrameConverter.ToMat();
         iplConverter = new OpenCVFrameConverter.ToIplImage();
+        recordImages = Boolean.parseBoolean(GLOBALS.valueFor("recordImages"));
 	}
 
 	
@@ -248,6 +255,7 @@ public class FaceDetector implements StatelessOperator{
 				bbox[1] = rect.y();
 				bbox[2] = rect.x() + rect.width();
 				bbox[3] = rect.y() + rect.height();
+				
 				logger.info("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 				return bbox;
 			}
@@ -256,6 +264,20 @@ public class FaceDetector implements StatelessOperator{
 		{
 			cvReleaseMemStorage(storage);
 		}
+	}
+	
+	public void recordFaceDetection(long tupleId, IplImage bwImg, int[] bbox)
+	{
+		cvRectangle(bwImg, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
+	
+		BufferedImage outputImg = frameConverter.convert(iplConverter.convert(bwImg));
+		File outputFile = new File("imgout/detected/"+tupleId+".jpg");
+		outputFile.mkdirs();
+		try
+		{
+			ImageIO.write(outputImg, "jpg", outputFile);			
+		}
+		catch(IOException e) { throw new RuntimeException(e); }
 	}
 	
 	public static void detectFaceInImage(final IplImage orig,
@@ -345,6 +367,5 @@ public class FaceDetector implements StatelessOperator{
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 }
