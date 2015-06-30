@@ -13,4 +13,6 @@ public interface IAggregateOperator {
 	public int numberOfValues ();
 	
 	public AggregationType getAggregateType ();
+
+	public int getIntermediateTupleLength();
 }

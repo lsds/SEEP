@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 public class WindowHashTable {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static int WINDOW_MAP_CONTENT_SIZE = 2048;
+	public static int WINDOW_MAP_CONTENT_SIZE = 2048 * 2;
 	
 	ByteBuffer content;
 	
@@ -82,23 +82,25 @@ public class WindowHashTable {
 		int attempts = 0;
 		while (attempts < capacity) {
 			
-			System.out.println(String.format("[DBG] h %3d index %6d", h, idx));
+			/* System.out.println(String.format("[DBG] h %3d index %6d", h, idx)); */
 			
-			if (content.get(idx) == 1) {
+			byte mark = content.get(idx);
+			if (mark == 1) {
 				if (compare (tupleKey, idx) == 0) {
 					found[0] = true;
-					System.out.println(String.format("[DBG] OK; found", h, idx));
+					/* System.out.println(String.format("[DBG] OK; found", h, idx)); */
 					return idx;
 				}
-			} else {
+			} else
+			if (mark == 0) { 
 				found[0] = false;
-				System.out.println(String.format("[DBG] OK"));
+				/* System.out.println(String.format("[DBG] OK")); */
 				return idx;
 			}
 			attempts ++;
 			idx = getNext (++h);
 		}
-		System.out.println(String.format("[DBG] Error"));
+		/* System.out.println(String.format("[DBG] Error")); */
 		return -1;
 	}
 	
@@ -120,11 +122,12 @@ public class WindowHashTable {
 	}
 	
 	public void clear () {
-		capacity = 0;
-		content.clear();
-		for (int i = 0; i < WINDOW_MAP_CONTENT_SIZE; i++) {
+		for (int i = 0; i < WINDOW_MAP_CONTENT_SIZE; i += tupleLength) {
 			content.put(i, (byte) 0);
 		}
+		capacity = 0;
+		content.clear();
+		/* System.out.println("[DBG] clear " + this); */
 	}
 	
 	public ByteBuffer getBuffer () {

@@ -29,7 +29,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IAggregateOperator {
 	
-	private static boolean debug = true;
+	private static boolean debug = false;
 	
 	WindowDefinition windowDefinition;
 	
@@ -732,17 +732,19 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				windowTuples = WindowHashTableFactory.newInstance(workerId);
 				windowTuples.setTupleLength(this.keyLength, this.valueLength);
-				System.out.println(windowTuples);
+				/* System.out.println(windowTuples); */
 				
 				float value;
 				
 				/* For all the tuples in the window... */
 				while (inWindowStartOffset < inWindowEndOffset) {
 					
+					/*
 					System.out.println(String.format("[DBG] enter <%06d, %5.1f, %3d>", 
 							inputBuffer.getLong(inWindowStartOffset), 
 							inputBuffer.getFloat(inWindowStartOffset + 8), 
 							inputBuffer.getInt(inWindowStartOffset + 12)));
+					*/
 					
 					/* Get the group-by key hash code */
 					setGroupByKey (inputBuffer, inputSchema, inWindowStartOffset, tupleKey);
@@ -856,20 +858,20 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		long b = windowBatch.getBufferStartPointer();
 		long d = windowBatch.getBufferEndPointer();
 		
+		windowBatch.initPartialWindowPointers();
+		
 		if (debug) {
 			long p = windowBatch.getBatchStartPointer();
 			long q = windowBatch.getBatchEndPointer();
 		
-			System.out.println(String.format("[DBG] MicroAggregation; batch starts at %10d (%10d) ends at %10d (%10d)", 
-					b, p, d, q));
+			System.out.println(String.format("[DBG] MicroAggregation; batch starts at %10d (%10d) ends at %10d (%10d) %10d windows", 
+					b, p, d, q, windowBatch.getLastWindowIndex()));
 		}
 		
 		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults pending  = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
-		
-		windowBatch.initPartialWindowPointers();
 		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers   = windowBatch.getWindowEndPointers();
@@ -944,12 +946,17 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				currWindowEndOffset = (int) d;
 			} else {
 				
-				if (currWindowStartOffset == currWindowEndOffset) /* Empty window */
-					continue;
-				
 				outputBuffer = complete.getBuffer();
 				complete.increment();
 			}
+			
+			if (currWindowStartOffset == currWindowEndOffset) {
+				currWindowStartOffset = -1;
+			}
+			/*
+			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d (%10d bytes)", 
+					currentWindow, currWindowStartOffset, currWindowEndOffset, currWindowEndOffset - currWindowStartOffset));
+			*/
 			
 			/* Is the window empty? */
 			if (currWindowStartOffset == -1) {
@@ -959,7 +966,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					for (int i = prevWindowStartOffset; i < currWindowStartOffset; i += inputTupleSize) {
 						
 						System.out.println(String.format("[DBG] exit <%06d, %5.1f, %3d>", 
-								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getFloat(i + 12)));
+								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getInt(i + 12)));
 						
 						exitWindow(
 								inputBuffer, 
@@ -981,10 +988,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				if (prevWindowStartOffset != -1) {
 					
 					for (int i = prevWindowEndOffset; i < currWindowEndOffset; i += inputTupleSize) {
-						
+						/*
 						System.out.println(String.format("[DBG] enter <%06d, %5.1f, %3d>", 
-								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getFloat(i + 12)));
-						
+								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getInt(i + 12)));
+						*/
 						enterWindow (
 								inputBuffer, 
 								inputSchema, 
@@ -996,10 +1003,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				} else {
 					
 					for (int i = currWindowStartOffset; i < currWindowEndOffset; i += inputTupleSize) {
-						
+						/*
 						System.out.println(String.format("[DBG] enter <%06d, %5.1f, %3d>", 
-								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getFloat(i + 12)));
-						
+								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getInt(i + 12)));
+						*/
 						enterWindow (
 								inputBuffer, 
 								inputSchema, 
@@ -1016,10 +1023,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				if (prevWindowStartOffset != -1) {
 					
 					for (int i = prevWindowStartOffset; i < currWindowStartOffset; i += inputTupleSize) {
-						
+						/*
 						System.out.println(String.format("[DBG] exit <%06d, %5.1f, %3d>", 
-								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getFloat(i + 12)));
-						
+								inputBuffer.getLong(i), inputBuffer.getFloat(i + 8), inputBuffer.getInt(i + 12)));
+						*/
 						exitWindow (
 								inputBuffer, 
 								inputSchema, 
@@ -1029,7 +1036,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 								found);
 					}
 				}
-
+				
 				evaluateWindow (windowTuples, outputBuffer);
 
 				prevWindowStartOffset = currWindowStartOffset;
@@ -1038,6 +1045,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 		
 		/*Wrap-up operator */
+		windowTuples.release();
 		
 		/* Release old buffer (will return Unbounded Buffers to the pool) */
 		inputBuffer.release();
@@ -1094,9 +1102,16 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			
 			/* Decrement tuple count */
 			int count = hashtable.getInt(countOffset);
-			if (--count < 0) {
-				/* Reset hash table entry */
-				hashtable.put(idx, (byte) 0);
+			count--;
+			/*
+			 * If we are linearly probing the hash table to find an
+			 * entry, we cannot simply remove elements because this
+			 * might brake a chain.
+			 * 
+			 * We should rather rely on a `tombstone mark` (2).
+			 */
+			if (count <= 0) {
+				hashtable.put(idx, (byte) 2);
 			} else {
 				/* Update count */
 				hashtable.putInt(countOffset, count);
@@ -1173,6 +1188,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	private void evaluateWindow (WindowHashTable windowTuples, IQueryBuffer outputBuffer) {
 		
 		/* Write current window results to output buffer */
+		ByteBuffer hashtable = windowTuples.getBuffer();
+		hashtable.clear();
 		outputBuffer.getByteBuffer().put(windowTuples.getBuffer());
 	}
 	
@@ -1211,5 +1228,11 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	@Override
 	public AggregationType getAggregateType() {
 		return this.aggregationType[0];
+	}
+
+	@Override
+	public int getIntermediateTupleLength () {
+		
+		return (1 << (32 - Integer.numberOfLeadingZeros((this.keyLength + this.valueLength + 15) - 1)));
 	}
 }
