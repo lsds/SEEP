@@ -86,6 +86,7 @@ public class FaceDetector implements StatelessOperator{
 		*/
 
 		IplImage img = parseBufferedImage(value);
+		logger.info("Received "+img.width()+"x"+img.height()+" frame.");
 		IplImage imgBW = prepareBWImage(img);
 		int[] bbox = detectFirstFace(imgBW);
 		

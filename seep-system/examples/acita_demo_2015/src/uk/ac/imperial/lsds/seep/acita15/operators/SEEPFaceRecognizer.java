@@ -62,7 +62,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		
 		int prediction = personRecognizer.recognize(value, x, y, height, width);
 		
-		DataTuple outputTuple = data.setValues(tupleId, value, x, y, height, width);
+		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, 0, x, y, height, width);
 		processed++;
 		if (processed % 1000 == 0)
 		{
@@ -77,7 +77,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			}
 		}
 		
-		logger.info("Face recognizer processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		logger.info("Face recognizer processed "+width+"x"+height+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -147,12 +147,12 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		
 		public int recognize(byte[] value, int x, int y, int width, int height)
 		{
+			if (x <= 0 && y <=0 && width <= 0 && height <= 0) { return -1; }
 			IplImage img = parseBufferedImage(value);
 			IplImage imgBW = prepareBWImage(img);
-			//TODO: Resize?
+			cvSetImageROI(imgBW, cvRect(x, y, width, height));
 			Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
 			int predictedLabel = faceRecognizer.predict(imgBWMat);
-			
 			logger.info("Predicted label for received image: " + predictedLabel);
 			return predictedLabel;
 		}
