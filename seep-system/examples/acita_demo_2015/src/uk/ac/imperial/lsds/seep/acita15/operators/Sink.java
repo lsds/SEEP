@@ -51,7 +51,7 @@ public class Sink implements StatelessOperator {
 		}
 		
 		tuplesReceived++;
-		totalBytes += dt.getByteArray("value").length();
+		totalBytes += dt.getByteArray("value").length;
 		recordTuple(dt);
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
