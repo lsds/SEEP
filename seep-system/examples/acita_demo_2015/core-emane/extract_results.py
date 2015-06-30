@@ -2,16 +2,19 @@
 import re, pandas as pd
 
 def is_src_log(f):
-    return log_type(f) == 'SOURCE'
+    f_type = log_type(f) 
+    return f_type == 'SOURCE' or f_type == 'VIDEO_SOURCE'
 
 def is_sink_log(f):
     return log_type(f) == 'SINK'
 
 def is_processor_log(f):
-    return log_type(f) == 'PROCESSOR'
+    #return log_type(f) == 'PROCESSOR'
+    f_type = log_type(f) 
+    return f_type == 'PROCESSOR' or f_type == 'FACE_DETECTOR' or f_type == 'FACE_RECOGNIZER'
 
 def log_type(f):
-    regex = re.compile(r'Setting up (\w+) operator with id=(.*)$')
+    regex = re.compile(r'Setting up (.*) operator with id=(.*)$')
     for line in f:
         match = re.search(regex, line)
         if match: return match.group(1)
