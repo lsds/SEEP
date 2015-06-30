@@ -116,7 +116,7 @@ public class FaceDetector implements StatelessOperator{
 			}
 		}
 		
-		logger.info("Face detector processed tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		logger.info("Face detector processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		api.send_highestWeight(outputTuple);
 	}
 

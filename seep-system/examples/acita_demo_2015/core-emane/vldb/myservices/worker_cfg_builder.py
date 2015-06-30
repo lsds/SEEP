@@ -29,9 +29,11 @@ def build_cfg(lwid, cls, node, filename, services):
         if filter(lambda service: service._name == "OLSRETX", services):
             cfg += "cp %s/core-emane/vldb/config/olsrd-net-rates.sh net-rates.sh\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/olsrd-net-topology.sh net-topology.sh\n"%(seep_example_dir)
+            cfg += "cp %s/core-emane/vldb/config/olsrd-all-net-info.sh all-net-info.sh\n"%(seep_example_dir)
         else:
             cfg += "cp %s/core-emane/vldb/config/net-rates.sh net-rates.sh\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/net-topology1.sh net-topology.sh\n"%(seep_example_dir)
+            cfg += "cp %s/core-emane/vldb/config/all-net-info.sh all-net-info.sh\n"%(seep_example_dir)
         #cfg += "cp %s/lib/%s %s\n"%(seep_example_dir, seep_jar, lib_dir)
         cfg += 'echo "Starting MeanderWorker%d on `hostname`(`hostname -i`)"\n'%lwid
         cfg += 'echo "cating /etc/hosts"\n'

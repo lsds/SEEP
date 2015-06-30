@@ -55,6 +55,10 @@ public class NetRateMonitor implements Runnable {
 				Map<Integer, Double> upstreamCosts = null;
 				if (coreDeployment)
 				{
+					if (logger.isDebugEnabled())
+					{
+						logNetInfo(allNetInfo());
+					}
 					upstreamCosts = parseRoutes(readRoutes());
 					//TODO: Add empty routes/costs?
 				}
@@ -150,4 +154,38 @@ public class NetRateMonitor implements Runnable {
 		}
 		return result;
 	}
+	
+	private List<String> allNetInfo()
+	{
+		String cmd = "./all-net-info.sh";
+		ProcessBuilder pb = new ProcessBuilder("/bin/bash", cmd);
+		Process process = null;
+		List<String> result = new LinkedList<>();
+		try {
+			process = pb.start();
+		
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			
+			String line = "";
+			while ((line = reader.readLine()) != null)
+			{
+				result.add(line);
+			}
+		} catch (IOException e) {
+			logger.error("Error reading routes: "+e);
+			System.exit(0);	//TODO: A bit harsh?
+		}
+		return result;
+	}
+	
+	private void logNetInfo(List<String> netInfo)
+	{
+		for (String line : netInfo)
+		{
+			logger.debug(line);
+		}
+	}
+	
+	
+	
 }

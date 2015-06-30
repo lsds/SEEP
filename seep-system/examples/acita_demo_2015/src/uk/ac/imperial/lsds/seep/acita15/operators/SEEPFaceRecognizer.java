@@ -52,6 +52,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	private PersonRecognizer personRecognizer = null;
 	
 	public void processData(DataTuple data) {
+		long tProcessStart = System.currentTimeMillis();
 		long tupleId = data.getLong("tupleId");
 		byte[] value = data.getByteArray("value");
 		int x = data.getInt("x");
@@ -75,6 +76,8 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 				recordTuple(outputTuple);
 			}
 		}
+		
+		logger.info("Face recognizer processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		api.send_highestWeight(outputTuple);
 	}
 
