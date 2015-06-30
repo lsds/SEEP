@@ -259,6 +259,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 				String filepath = trainingDir+"/"+filename;
 				logger.info("Loading training image from: "+ filepath);
 				File tmpImgFile = new File("/tmp/resources/"+opId+filepath);
+				tmpImgFile.deleteOnExit();
 				tmpImgFile.mkdirs();
 				InputStream fileInJar = this.getClass().getClassLoader().getResourceAsStream(filepath);
 				Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);

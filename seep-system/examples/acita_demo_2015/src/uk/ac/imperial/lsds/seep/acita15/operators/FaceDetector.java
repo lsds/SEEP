@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 
 import javax.imageio.ImageIO;
 
@@ -30,17 +31,17 @@ import java.awt.image.BufferedImage;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import org.bytedeco.javacpp.FloatPointer;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.Loader;
-
 import org.bytedeco.javacv.*;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.indexer.*;
-
 
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_objdetect.*;
@@ -176,11 +177,20 @@ public class FaceDetector implements StatelessOperator{
 	
 	
 	public static CvHaarClassifierCascade loadFaceCascade() throws IOException {
-		URL url = new URL("file:///home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/cascades/haarcascade_frontalface_alt.xml");
 		
-        File file = Loader.extractResource(url, null, "classifier", ".xml");
-        file.deleteOnExit();
-        String classifierName = file.getAbsolutePath();
+		String filepath = "cascades/haarcascade_frontalface_alt.xml";
+		File tmpImgFile = new File("resources/"+filepath);
+		tmpImgFile.deleteOnExit();
+		tmpImgFile.mkdirs();
+		InputStream fileInJar = FaceDetector.class.getClassLoader().getResourceAsStream(filepath);
+		Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		
+		//getClass().getClassLoader().getResourceAsStream("cascades/haarcascade_frontalface_alt.xml");
+		//URL url = new URL("file:///home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/cascades/haarcascade_frontalface_alt.xml");
+		
+        //File file = Loader.extractResource(url, null, "classifier", ".xml");
+        //file.deleteOnExit();
+        String classifierName = tmpImgFile.getAbsolutePath();
         // Preload the opencv_objdetect module to work around a known bug.
         Loader.load(opencv_objdetect.class);
 
