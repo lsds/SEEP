@@ -15,8 +15,14 @@ import java.io.FilenameFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.jar.JarFile;
+import java.util.jar.JarEntry;
+import java.util.Enumeration;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -27,6 +33,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 import java.awt.image.BufferedImage;
+
 /*
 import com.googlecode.javacpp.FloatPointer;
 import com.googlecode.javacpp.Pointer;
@@ -45,6 +52,7 @@ import org.bytedeco.javacpp.FloatPointer;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.opencv_core.Mat;
+
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_legacy.*;
@@ -81,10 +89,11 @@ public class VideoSource implements StatelessOperator {
 		//String imgFileExt = GLOBALS.valueFor("imgFileExt");
 		//String testFramesDir = "images";
 		//TODO: Load resources from jar.
-		String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
+		//String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
+		String testFramesDir = "images";
 		
 		logger.info("Loading test images...");
-		byte[][] testFrames = loadImages(testFramesDir);
+		byte[][] testFrames = loadImagesFromJar(testFramesDir);
 		//Mat[] testFrames = loadGreyImages(testFramesDir);
 		
 		logger.info("Loaded "+testFrames.length+" test images.");
@@ -135,8 +144,61 @@ public class VideoSource implements StatelessOperator {
 		
 	}
 
-	private byte[][] loadImages(String imgDirname)
+	private byte[][] loadImagesFromJar(String imgDirname)
 	{
+		final File jarFile = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath());
+
+		Set<String> filenames = new HashSet<>();
+		try
+		{
+		    final JarFile jar = new JarFile(jarFile);
+		    final Enumeration<JarEntry> entries = jar.entries(); //gives ALL entries in jar
+		    while(entries.hasMoreElements()) {
+		        final String name = entries.nextElement().getName();
+		        if (name.startsWith(imgDirname + "/") && 
+		        		(name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".pgm"))) { //filter according to the path
+		        	logger.info("Source adding filename: "+name);
+		        	filenames.add(name);
+		        }
+		    }
+		    jar.close();
+		} catch (IOException e) { throw new RuntimeException(e); }
+		
+	    
+		byte[][] frameArr = new byte[filenames.size()][];
+
+		logger.info("Source sending "+filenames.size()+" images.");
+		int i = 0;
+		for (String filename : filenames)
+		{
+			try
+			{
+				InputStream is = getClass().getClassLoader().getResourceAsStream(filename);
+				ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+	
+				int nRead;
+				byte[] data = new byte[16384];
+	
+				while ((nRead = is.read(data, 0, data.length)) != -1) {
+				  buffer.write(data, 0, nRead);
+				}
+	
+				buffer.flush();
+				frameArr[i] = buffer.toByteArray();
+			}
+			catch (IOException e) { throw new RuntimeException(e); }
+			if (frameArr[i] == null) {
+				throw new RuntimeException("Can't load image from " + filename);
+			}
+			i++;
+		}	 
+		
+		return frameArr;
+
+	}
+	
+	private byte[][] loadImages(String imgDirname)
+	{		
 		File dir = new File(imgDirname);
 		File [] files = dir.listFiles(new FilenameFilter() {
 			@Override
