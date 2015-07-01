@@ -70,7 +70,7 @@ public class ResultAggregator {
 			left  = new AtomicBoolean (false);
 			right = new AtomicBoolean (false);
 			
-			w3 = ByteBuffer.allocate(1048576);
+			w3 = ByteBuffer.allocate(16 * 1048576);
 			
 			hashtable = new WindowHashTableWrapper();
 			found = new boolean[1];
@@ -173,7 +173,7 @@ public class ResultAggregator {
 				
 				if (debug) {
 					System.out.println(
-					String.format("[DBG] %40s aggregate %6d bytes (%3d opening windows) with %6d bytes (%3d closing windows)",
+					String.format("[DBG] %40s aggregate %10d bytes (%4d opening windows) with %10d bytes (%4d closing windows)",
 						Thread.currentThread(), 
 						this.opening.getBuffer().position(),
 						this.opening.count, 
@@ -467,6 +467,7 @@ public class ResultAggregator {
 					w3.put(operator.getOutputSchema().getDummyContent());
 				}	
 			}
+			
 		}
 		
 		private void aggregateBuffers (IQueryBuffer a, int f1, int l1, IQueryBuffer b, int f2, int l2, IAggregateOperator operator) {
@@ -587,7 +588,7 @@ public class ResultAggregator {
 				
 				if (debug) {
 					System.out.println(
-					String.format("[DBG] %40s aggregate %6d bytes (%3d opening windows) with %6d bytes (%3d closing windows)",
+					String.format("[DBG] %40s aggregate %10d bytes (%4d opening windows) with %10d bytes (%4d closing windows)",
 						Thread.currentThread(), 
 						this.opening.getBuffer().position(),
 						this.opening.count, 
@@ -611,8 +612,7 @@ public class ResultAggregator {
 					System.out.println(String.format("[DBG] [%7d,%7d) (+) [%7d,%7d)", f1, l1, f2, l2));
 					*/
 					if (f2 == l2) {
-						
-						//TODO: pack hashtable
+						System.err.println("warning: unhandled window");
 						continue;
 					}
 					
@@ -645,6 +645,14 @@ public class ResultAggregator {
 					System.exit(1);
 				}
 				
+				if (debug) {
+					System.out.println(
+					String.format("[DBG] %40s aggregate %4d opening windows with pending windows",
+						Thread.currentThread(),
+						this.opening.count - w
+					)); 
+				}
+				
 				IQueryBuffer b2 = p.pending.getBuffer();
 				
 				int count = 0;
@@ -665,7 +673,9 @@ public class ResultAggregator {
 					*/
 					
 					/* Aggregate the two windows */
-					aggregateBuffers (b1, f1, l1, b2, f2, l2, operator);
+					/* aggregateBuffers (b1, f1, l1, b2, f2, l2, operator); */
+					
+					aggregateHashTables (b1, f1, l1, b2, f2, l2, operator);
 					
 					/* System.out.println(String.format("[DBG] w3.position() = %10d", w3.position())); */
 					w3.flip();
@@ -1005,7 +1015,11 @@ public class ResultAggregator {
 			 * The assumption is that `buf` is an intermediate buffer and that the start
 			 * position is 0.
 			 */
+			// System.out.println(String.format("[DBG] task %10d output %13d bytes", nextToForward, buf.position()));
 			handler.incTotalOutputBytes(buf.position());
+			
+//			if (nextToForward == 0)
+//				System.exit(1);
 			
 			/* Process (forward and free the current slot) */
 			int offset = nodes[nextToForward].getFreeOffset();

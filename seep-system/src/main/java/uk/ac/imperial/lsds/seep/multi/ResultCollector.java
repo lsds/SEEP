@@ -53,6 +53,11 @@ public class ResultCollector {
 				IQueryBuffer buf = handler.results[handler.next];
 				byte [] arr = buf.array();
 				
+				if (arr == null || buf.position() == 0) {
+					System.err.println("warning: output of task " + handler.next + " is empty");
+					// System.exit(1);
+				} else {
+				
 				/*
 				 * Do the actual result forwarding
 				 */
@@ -76,6 +81,8 @@ public class ResultCollector {
 					}
 				}
 				
+				} // non-empty array
+				
 				/* Forward to the distributed API */
 
 				/* Measure latency */
@@ -89,6 +96,9 @@ public class ResultCollector {
 				 * The assumption is that `buf` is an intermediate buffer and that the start
 				 * position is 0.
 				 */
+				
+				// System.out.println(String.format("[DBG] output %10d bytes", buf.position()));
+				
 				handler.incTotalOutputBytes(buf.position());
 				buf.release();
 

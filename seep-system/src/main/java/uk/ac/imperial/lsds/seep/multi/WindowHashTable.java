@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 public class WindowHashTable {
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static int WINDOW_MAP_CONTENT_SIZE = 2048 * 2;
+	public static int WINDOW_MAP_CONTENT_SIZE = 2048 * 2 * 2 * 2 * 2 * 2;
 	
 	ByteBuffer content;
 	

@@ -46,7 +46,7 @@ public class CircularQueryBuffer implements IQueryBuffer {
 		if (Integer.bitCount(this.size) != 1)
 			throw new IllegalArgumentException("error: buffer size must be a power of 2");
 		
-		System.out.println(String.format("[DBG] %d bytes", size));
+		System.out.println(String.format("[DBG] q %d %d bytes", id, size));
 		
 		/* Also, check if buffer size is a multiple of tuple size */
 		

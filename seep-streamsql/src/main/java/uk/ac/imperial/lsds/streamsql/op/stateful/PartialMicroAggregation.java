@@ -675,6 +675,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		byte [] tupleKey = new byte [this.keyLength];
 		boolean [] found = new boolean[1];
 		
+		boolean pack = false;
+		
 		for (int currentWindow = 0; currentWindow < startPointers.length; currentWindow++) {
 			
 			inWindowStartOffset = startPointers[currentWindow];
@@ -720,6 +722,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				outputBuffer = complete.getBuffer();
 				complete.increment();
+				
+				pack = true;
 			}
 			
 			/*
@@ -808,7 +812,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				/* Iterate over `windowTuples` and write window results
 				 * to output buffer */
-				evaluateWindow (windowTuples, outputBuffer);
+				evaluateWindow (windowTuples, outputBuffer, pack);
 				
 				/* Release hash maps */
 				windowTuples.release();
@@ -903,6 +907,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		byte [] tupleKey = new byte [this.keyLength];
 		boolean [] found = new boolean[1];
 		
+		boolean pack = false;
+		
 		windowTuples = WindowHashTableFactory.newInstance(workerId);
 		windowTuples.setTupleLength(this.keyLength, this.valueLength);
 		
@@ -913,6 +919,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			
 			if (currentWindow > windowBatch.getLastWindowIndex())
 				break;
+			
+			pack = false;
 			
 			if (currWindowStartOffset < 0 && currWindowEndOffset < 0) {
 				
@@ -948,6 +956,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				outputBuffer = complete.getBuffer();
 				complete.increment();
+				
+				pack = true;
 			}
 			
 			if (currWindowStartOffset == currWindowEndOffset) {
@@ -978,7 +988,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					}
 				}
 				
-				evaluateWindow (windowTuples, outputBuffer);
+				evaluateWindow (windowTuples, outputBuffer, pack);
 				
 			} else {
 				/*
@@ -1037,7 +1047,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					}
 				}
 				
-				evaluateWindow (windowTuples, outputBuffer);
+				evaluateWindow (windowTuples, outputBuffer, pack);
 
 				prevWindowStartOffset = currWindowStartOffset;
 				prevWindowEndOffset = currWindowEndOffset;
@@ -1185,12 +1195,48 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		}
 	}
 	
-	private void evaluateWindow (WindowHashTable windowTuples, IQueryBuffer outputBuffer) {
+	private void evaluateWindow (WindowHashTable windowTuples, IQueryBuffer outputBuffer, boolean pack) {
 		
 		/* Write current window results to output buffer */
 		ByteBuffer hashtable = windowTuples.getBuffer();
 		hashtable.clear();
-		outputBuffer.getByteBuffer().put(windowTuples.getBuffer());
+		if (! pack) {
+			outputBuffer.getByteBuffer().put(windowTuples.getBuffer());
+		} else {
+			/* Pack the elements of the buffer */
+			for (int idx = 0; idx < hashtable.capacity(); idx += this.getIntermediateTupleLength()) {
+				
+				if (hashtable.get(idx) != 1) /* Skip empty slots */
+					continue;
+				/*
+				System.out.println(String.format("write-up <%d, %06d, %3d, %5.1f, %3d>",
+						hashtable.get(idx),
+						hashtable.getLong(idx + 1),
+						hashtable.getInt(idx + 9),
+						hashtable.getFloat(idx + 13),
+						hashtable.getInt(idx + 17)
+						));
+				*/
+				
+				/* Append buffer a's tuple to `w3` */
+				if (aggregationType[0] == AggregationType.AVG) {
+					int valueOffset = idx + 9 + keyLength;
+					int countOffset = idx + 9 + keyLength + valueLength;
+					/* Compute average */
+					float value = hashtable.getFloat(valueOffset);
+					float count = hashtable.getInt(countOffset);
+					/* Overwrite value */
+					hashtable.putFloat(valueOffset, value / (float) count);
+					/* Write tuple */
+					outputBuffer.put(hashtable.array(), idx + 1, 8 + keyLength + valueLength);
+					outputBuffer.put(outputSchema.getDummyContent());
+				} else {
+					/* Write tuple */
+					outputBuffer.put(hashtable.array(), idx + 1, 8 + keyLength + valueLength);
+					outputBuffer.put(outputSchema.getDummyContent());
+				}	
+			}
+		}
 	}
 	
 	@Override

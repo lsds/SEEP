@@ -17,6 +17,7 @@ import uk.ac.imperial.lsds.seep.multi.MicroOperator;
 import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
+import uk.ac.imperial.lsds.seep.multi.TheCPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -160,6 +161,9 @@ public class TestGoogleClusterDataQuery1 {
 		double dt, rate, MB;
 		double _1MB = 1000000.0; // Or, MiB 1048576.0;
 		*/
+		
+		TheCPU.getInstance().bind(0);
+		
 		try {
 		
 			ServerSocketChannel server = ServerSocketChannel.open();

@@ -120,9 +120,15 @@ public class TaskDispatcher implements ITaskDispatcher {
 		/* Update free pointer */
 		free -= schema.getByteSizeOfTuple();
 		if (free < 0) {
-			System.err.println("error: negative free pointer");
+			System.err.println(String.format("error: negative free pointer (%d) for query %d", free, parent.getId()));
+			long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+			System.out.println(
+					String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
+							parent.getId(), taskid, p, q, free, t_, _t, size));
 			System.exit(1);
-		}
+		} // else {
+			// System.err.println(String.format("%d: free %d", parent.getId(), free));
+		// }
 		
 		batch = WindowBatchFactory.newInstance(this.batchBytes, taskid, (int) (free), buffer, window, schema, mark);
 		

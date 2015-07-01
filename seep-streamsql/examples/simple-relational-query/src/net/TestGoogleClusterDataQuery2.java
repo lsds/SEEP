@@ -89,7 +89,7 @@ public class TestGoogleClusterDataQuery2 {
 		long windowSlide = 1;
 		int numberOfAttributesInSchema = 12;
 		
-		AggregationType aggregationType = AggregationType.fromString("sum");
+		AggregationType aggregationType = AggregationType.fromString("avg");
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -128,7 +128,7 @@ public class TestGoogleClusterDataQuery2 {
 		schema.setType(11, 1);
 		
 		Expression [] groupBy = new Expression [] {
-			new LongColumnReference(1)
+			new IntColumnReference(6)
 		};
 		
 		/*
@@ -153,7 +153,7 @@ public class TestGoogleClusterDataQuery2 {
 				);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 4 * 1048576; /* 1MB */
+		Utils._UNBOUNDED_BUFFER_ = 256 * 1048576; /* 1MB */
 		
 		MicroOperator uoperator;
 		uoperator = new MicroOperator (aggregationCode, null, 1);
