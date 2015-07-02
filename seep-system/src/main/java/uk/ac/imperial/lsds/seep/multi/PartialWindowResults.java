@@ -16,7 +16,7 @@ public class PartialWindowResults {
 	
 	int [] startPointers;
 	
-	private static final int max_windows = 32768; 
+	private static final int max_windows = 32768 * 2 * 2 * 2 * 2; 
 	
 	public PartialWindowResults (int pid) {
 		
@@ -125,6 +125,12 @@ public class PartialWindowResults {
 		b.clear();
 		b.put(d.array(), offset, length);
 		t.flip();
+		try {
 		b.put(t);
+		} catch (Exception e) {
+			System.err.println("caught...writing " + t.remaining() + " to " + b.remaining());
+			
+			System.exit(1);
+		}
 	}
 }

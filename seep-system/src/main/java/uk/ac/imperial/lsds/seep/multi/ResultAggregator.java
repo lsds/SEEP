@@ -12,6 +12,9 @@ public class ResultAggregator {
 	
 	private static final boolean debug = false;
 	
+	/* The first byte indicates occupancy; the next 8 are the timestamp */
+	public static final int KEY_OFFSET = 9;
+	
 	/*
 	 * A ResultAggregatorNode encapsulates the
 	 * complete and partial state (windows) of
@@ -70,7 +73,7 @@ public class ResultAggregator {
 			left  = new AtomicBoolean (false);
 			right = new AtomicBoolean (false);
 			
-			w3 = ByteBuffer.allocate(1048576);
+			w3 = ByteBuffer.allocate(1048576 * 16);
 			
 			hashtable = new WindowHashTableWrapper();
 			found = new boolean[1];
@@ -126,19 +129,10 @@ public class ResultAggregator {
 				
 				if (! p.closing.isEmpty() && ! p.pending.isEmpty())
 				{
-					System.err.println("error: invalid state in ResultAggregator (1)");
+					System.err.println("error: invalid state in ResultAggregator");
 					System.exit(1);
 				}
-				/*
-				this.opening.release();
-				this.opening = null;
 				
-				p.closing.release();
-				p.closing = null;
-				
-				p.pending.release();
-				p.pending = null;
-				*/
 				this.opening.nullify();
 				
 				p.closing.nullify();
@@ -149,7 +143,7 @@ public class ResultAggregator {
 			
 			if (p.closing.isEmpty() && p.pending.isEmpty())
 			{
-				System.err.println("error: invalid state in ResultAggregator (2)");
+				System.err.println("error: invalid state in ResultAggregator");
 				System.exit(1);
 			}
 			
@@ -217,10 +211,6 @@ public class ResultAggregator {
 				this.complete.getBuffer().put(b2.array(), 0, b2.position());
 				
 				/* Free b2 */
-				/*
-				p.closing.release();
-				p.closing = null;
-				*/
 				p.closing.nullify();
 			}
 			
@@ -242,6 +232,7 @@ public class ResultAggregator {
 					count ++;
 					
 					valueIdx = i + 8;
+					
 					if (
 						operator.getAggregateType() == AggregationType.CNT ||
 						operator.getAggregateType() == AggregationType.SUM) {
@@ -274,12 +265,12 @@ public class ResultAggregator {
 				 * 
 				 * There are `count` new windows, each with a size of `outputTupleSize`.
 				 */
+				
+				/* System.out.println(String.format("[DBG] prepend %d opening windows to %d existing ones", 
+				 * count, p.opening.count)); */
 				p.opening.shiftLeft (count, outputTupleSize);
-				p.opening.prepend(b1.getByteBuffer(), w, b1.position(), w3);
-				/*
-				p.pending.release();
-				p.pending = null;
-				*/
+				p.opening.prepend(b1.getByteBuffer(), w, b1.position() - w, w3);
+				
 				p.pending.nullify();
 			} else {
 				
@@ -294,34 +285,9 @@ public class ResultAggregator {
 			/* Nullify this node's opening windows (the results
 			 * have been stored in p's sets). 
 			 */
-			/*
-			this.opening.release();
-			this.opening = null;
-			*/
 			this.opening.nullify();
 			
 			p.setLeft();
-		}
-		
-		private int compare (IQueryBuffer b1, int offset1, IQueryBuffer b2, int offset2, int length) {
-			
-			int n = offset1 + length;
-			
-			for (int i = offset1, j = offset2; i < n; i++, j++) {
-				
-				byte v1 = b1.getByteBuffer().get(i);
-				byte v2 = b2.getByteBuffer().get(j);
-				
-				if (v1 == v2)
-					continue;
-				
-				if (v1 < v2)
-					return -1;
-				
-				return +1;
-			}
-			
-			return 0;
 		}
 		
 		private void aggregateHashTables (IQueryBuffer a, int f1, int l1, IQueryBuffer b, int f2, int l2, IAggregateOperator operator) {
@@ -470,106 +436,6 @@ public class ResultAggregator {
 			
 		}
 		
-		private void aggregateBuffers (IQueryBuffer a, int f1, int l1, IQueryBuffer b, int f2, int l2, IAggregateOperator operator) {
-			
-			w3.clear();
-			
-			int size = (l1 - f1) + (l2 - f2);
-			
-			if (w3.capacity() < size)
-				throw new IndexOutOfBoundsException("error: insuffiecient buffer space for aggregation");
-			
-			int keyLength = operator.getKeyLength();
-			int tupleSize = operator.getOutputSchema().getByteSizeOfTuple();
-			
-			int k1, k2;
-			int v1, v2;
-			
-			while (true) {
-				
-				if (f1 == l1) {
-					/* Copy remaining elements from buffer b */
-					w3.put(b.array(), f2, l2 - f2);
-					return;
-				}
-				if (f2 == l2) {
-					/* Copy remaining elements from buffer 1 */
-					w3.put(a.array(), f1, l1 - f1);
-					return;
-				}
-				
-				k1 = f1 + 8;
-				k2 = f2 + 8;
-				
-				if (compare(a, k1, b, k2, keyLength) < 0) {
-					/*
-					System.out.println(String.format("[DBG] put %3d", k1));
-					*/
-					w3.put(a.array(), f1, tupleSize);
-					f1 += tupleSize;
-				} else
-				if (compare(a, k1, b, k2, keyLength) > 0) {
-					/*
-					System.out.println(String.format("[DBG] put %3d", k2));
-					 */
-					w3.put(b.array(), f2, tupleSize);
-					f2 += tupleSize;
-				} else
-				{
-					/*
-					System.out.println(String.format("[DBG] put %3d", k1));
-					 */
-					
-					/* Merge the two tuples */
-					w3.put(a.array(), f1, 8 + keyLength);
-					
-					if (operator.numberOfValues() > 1)
-						throw new UnsupportedOperationException
-							("error: aggregation of multiple values is not supported yet in ResultAggregator");
-					
-					v1 = f1 + 8 + keyLength;
-					v2 = f2 + 8 + keyLength;
-					
-					if (
-						operator.getAggregateType() == AggregationType.CNT ||
-						operator.getAggregateType() == AggregationType.SUM) {
-						
-						w3.putFloat((a.getFloat(v1) + b.getFloat(v2)));
-						w3.put(operator.getOutputSchema().getDummyContent());
-							
-					} else
-					if (
-						operator.getAggregateType() == AggregationType.MIN) {
-							
-						if (a.getFloat(v1) > b.getFloat(v2))
-							w3.putFloat(b.getFloat(v2));
-						else
-							w3.putFloat(a.getFloat(v1));
-							
-						w3.put(operator.getOutputSchema().getDummyContent());
-							
-					} else
-					if (operator.getAggregateType() == AggregationType.MAX) {
-							
-						if (a.getFloat(v1) < b.getFloat(v2))
-							w3.putFloat(b.getFloat(v2));
-						else
-							w3.putFloat(a.getFloat(v1));
-							
-						w3.put(operator.getOutputSchema().getDummyContent());
-							
-					} else
-					if (operator.getAggregateType() == AggregationType.AVG) {
-							
-						throw new UnsupportedOperationException
-							("error: AggregationType.AVG is not supported yet in ResultAggregator"); 
-					}
-					
-					f1 += tupleSize; f2 += tupleSize;
-				}
-			}
-		}
-		
 		public void aggregateMultipleKeys (ResultAggregatorNode p, IAggregateOperator operator) {
 			
 			/* Populate this node's complete or opening windows and 
@@ -617,9 +483,6 @@ public class ResultAggregator {
 					}
 					
 					/* Aggregate the two windows */
-					
-					/* aggregateBuffers (b1, f1, l1, b2, f2, l2, operator); */
-					
 					aggregateHashTables (b1, f1, l1, b2, f2, l2, operator);
 					
 					/*
@@ -673,8 +536,6 @@ public class ResultAggregator {
 					*/
 					
 					/* Aggregate the two windows */
-					/* aggregateBuffers (b1, f1, l1, b2, f2, l2, operator); */
-					
 					aggregateHashTables (b1, f1, l1, b2, f2, l2, operator);
 					
 					/* System.out.println(String.format("[DBG] w3.position() = %10d", w3.position())); */
@@ -693,10 +554,7 @@ public class ResultAggregator {
 				int offset = b2.position() - l2;
 				p.opening.shiftLeft (count, offset, p.pending.startPointers);
 				p.opening.prepend(b2.getByteBuffer(), l2, b2.position(), w3);
-				/*
-				p.pending.release();
-				p.pending = null;
-				*/
+				
 				p.pending.nullify();
 				
 			} else {
@@ -943,13 +801,13 @@ public class ResultAggregator {
 					}
 					
 				} else {
-					// System.err.println ("warning: next pointer is not ready for aggregation: " + nextPointer);
+					
 					lock.unlock();
 					break;
 				}
 				
 			} else {
-				// System.err.println ("warning: current pointer is not ready for aggregation: " + nextToAggregate);
+				
 				lock.unlock();
 				break;
 			}
@@ -964,7 +822,7 @@ public class ResultAggregator {
 		
 		/* Is slot `nextToForward` occupied? */
 		if (! slots.compareAndSet(nextToForward, READY, BUSY)) {
-			// System.out.println(nodes[nextToForward]);
+			/* System.out.println(nodes[nextToForward]); */
 			semaphore.release();
 			return ;
 		}
@@ -1023,11 +881,9 @@ public class ResultAggregator {
 			 * The assumption is that `buf` is an intermediate buffer and that the start
 			 * position is 0.
 			 */
-			// System.out.println(String.format("[DBG] task %10d output %13d bytes", nextToForward, buf.position()));
-			handler.incTotalOutputBytes(buf.position());
 			
-//			if (nextToForward == 0)
-//				System.exit(1);
+			/* System.out.println(String.format("[DBG] task %10d output %13d bytes", nextToForward, buf.position())); */
+			handler.incTotalOutputBytes(buf.position());
 			
 			/* Process (forward and free the current slot) */
 			int offset = nodes[nextToForward].getFreeOffset();
