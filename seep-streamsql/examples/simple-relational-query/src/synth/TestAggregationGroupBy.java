@@ -206,7 +206,7 @@ public class TestAggregationGroupBy {
 		/* Fill the buffer */
 		Random r = new Random();
 		int g = 1;
-		long count = 1;
+		long count = 0;
 		while (b.hasRemaining()) {
 			b.putLong(count++); // time stamp
 			// if (count == 5)

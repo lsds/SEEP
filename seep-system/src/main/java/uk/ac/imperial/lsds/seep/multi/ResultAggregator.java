@@ -70,7 +70,7 @@ public class ResultAggregator {
 			left  = new AtomicBoolean (false);
 			right = new AtomicBoolean (false);
 			
-			w3 = ByteBuffer.allocate(16 * 1048576);
+			w3 = ByteBuffer.allocate(1048576);
 			
 			hashtable = new WindowHashTableWrapper();
 			found = new boolean[1];
@@ -756,14 +756,16 @@ public class ResultAggregator {
 		public String toString () {
 			StringBuilder s = new StringBuilder();
 			s.append(String.format("%010d [", index));
-			s.append(   "opening: "); s.append(   opening.count);
-			s.append( ", closing: "); s.append(   closing.count);
-			s.append( ", pending: "); s.append(   pending.count);
-			s.append(", complete: "); s.append(  complete.count);
-			s.append(    ", free: "); s.append(freeOffset);
-			s.append("]");
-			s.append(String.format( " left: %5s", left.get()));
+			s.append(String.format("%6d/", opening.count));
+			s.append(String.format("%6d/",complete.count));
+			s.append(String.format("%6d/", pending.count));
+			s.append(String.format("%6d]", closing.count));
+			
+			s.append(String.format(" free %13d", freeOffset));
+			
+			s.append(String.format( " left: %5s",  left.get()));
 			s.append(String.format(" right: %5s", right.get()));
+			
 			return s.toString();
 		}
 
@@ -917,6 +919,7 @@ public class ResultAggregator {
 						System.out.println(String.format("[DBG] %40s aggregate current %s next %s", 
 						Thread.currentThread(), p, q));
 						*/
+						
 						p.aggregate(q, operator);
 						
 						if (p.isReady())
@@ -940,11 +943,13 @@ public class ResultAggregator {
 					}
 					
 				} else {
+					// System.err.println ("warning: next pointer is not ready for aggregation: " + nextPointer);
 					lock.unlock();
 					break;
 				}
 				
 			} else {
+				// System.err.println ("warning: current pointer is not ready for aggregation: " + nextToAggregate);
 				lock.unlock();
 				break;
 			}
@@ -959,7 +964,7 @@ public class ResultAggregator {
 		
 		/* Is slot `nextToForward` occupied? */
 		if (! slots.compareAndSet(nextToForward, READY, BUSY)) {
-			/* System.out.println(nodes[nextToForward]); */
+			// System.out.println(nodes[nextToForward]);
 			semaphore.release();
 			return ;
 		}
@@ -990,6 +995,9 @@ public class ResultAggregator {
 							result = query.getDownstreamSubQuery(i).getTaskDispatcher().tryDispatchSecond(arr, buf.position());
 						}
 						if (! result) {
+							
+							/* */
+							System.out.println(String.format("[DBG] failed to forward result (slot is %d)", nextToForward));
 							
 							nodes[nextToForward].latch = i;
 							/* Back to ready state */

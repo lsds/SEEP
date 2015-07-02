@@ -74,7 +74,8 @@ public class ResultCollector {
 							if (! result) {
 								handler.latch[handler.next] = i;
 								handler.slots.set(handler.next, 1);
-								
+								/* We need to release the semaphore as well, right? */
+								handler.semaphore.release();
 								return;
 							}
 						}
