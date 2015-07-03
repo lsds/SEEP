@@ -70,7 +70,7 @@ public class ResultAggregator {
 			left  = new AtomicBoolean (false);
 			right = new AtomicBoolean (false);
 			
-			w3 = ByteBuffer.allocate(16 * 1048576);
+			w3 = ByteBuffer.allocate(1048576);
 			
 			hashtable = new WindowHashTableWrapper();
 			found = new boolean[1];
@@ -168,6 +168,7 @@ public class ResultAggregator {
 			IQueryBuffer b1 = this.opening.getBuffer();
 			int outputTupleSize = operator.getOutputSchema().getByteSizeOfTuple();
 			int valueIdx;
+			int countIdx;
 			
 			if (p.closing != null) {
 				
@@ -186,7 +187,8 @@ public class ResultAggregator {
 				
 				for (w = 0; w < b2.position(); w += outputTupleSize)
 				{
-					valueIdx = w + 8;
+					valueIdx = w +  8;
+					countIdx = w + 12;
 					
 					if (
 						operator.getAggregateType() == AggregationType.CNT ||
@@ -208,8 +210,18 @@ public class ResultAggregator {
 					} else
 					if (operator.getAggregateType() == AggregationType.AVG) {
 						
-						throw new UnsupportedOperationException 
-							("error: AggregationType.AVG is not supported yet in ResultAggregator"); 
+						/* Given <value1, count1> and <value2, count2>, then
+						 * the average value is:
+						 * 
+						 * ((value1 x count2) + (value2 x count1)) / (count1 + count2)
+						 * 
+						 */
+						float value1 = b1.getFloat(valueIdx); 
+						int   count1 = b1.getInt  (countIdx);
+						float value2 = b2.getFloat(valueIdx);
+						int   count2 = b2.getInt  (countIdx);
+						
+						b2.putFloat(valueIdx, ((value1 * count2) + (value2 * count1)) / ((float) (count1 + count2)));
 					}
 				}
 				
@@ -241,7 +253,9 @@ public class ResultAggregator {
 				{
 					count ++;
 					
-					valueIdx = i + 8;
+					valueIdx = i +  8;
+					countIdx = i + 12;
+					
 					if (
 						operator.getAggregateType() == AggregationType.CNT ||
 						operator.getAggregateType() == AggregationType.SUM) {
@@ -263,8 +277,19 @@ public class ResultAggregator {
 					} else
 					if (operator.getAggregateType() == AggregationType.AVG) {
 						
-						throw new UnsupportedOperationException
-							("error: AggregationType.AVG is not supported yet in ResultAggregator"); 
+						/* Given <value1, count1> and <value2, count2>, then
+						 * the average value is:
+						 * 
+						 * ((value1 x count2) + (value2 x count1)) / (count1 + count2)
+						 * 
+						 */
+						float value1 = b1.getFloat(valueIdx); 
+						int   count1 = b1.getInt  (countIdx);
+						
+						float value2 = b2.getFloat( 8);
+						int   count2 = b2.getInt  (12);
+						
+						b2.putFloat(valueIdx, ((value1 * count2) + (value2 * count1)) / ((float) (count1 + count2)));
 					}
 				}
 				/* Prepend opening windows of this node (starting from w until b1.position()) to 

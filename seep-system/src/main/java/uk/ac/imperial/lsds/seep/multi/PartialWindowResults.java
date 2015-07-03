@@ -16,7 +16,7 @@ public class PartialWindowResults {
 	
 	int [] startPointers;
 	
-	private static final int max_windows = 32768; 
+	private static final int max_windows = 8192;
 	
 	public PartialWindowResults (int pid) {
 		

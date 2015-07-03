@@ -359,7 +359,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				outputBuffer.putLong(windowTimestamp);
 				outputBuffer.putFloat(windowValue);
-				outputBuffer.put(outputSchema.getDummyContent());
+				outputBuffer.putInt(windowTupleCount);
+				/* outputBuffer.put(outputSchema.getDummyContent()); */
 			}
 		}
 		
@@ -585,7 +586,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					windowValue = windowValue / windowTupleCount;
 				
 				outputBuffer.putFloat(windowValue);
-				outputBuffer.put(outputSchema.getDummyContent());
+				outputBuffer.putInt(windowTupleCount);
+				/* outputBuffer.put(outputSchema.getDummyContent()); */
 				
 				/* endPointers[currentWindow] = outputBuffer.position() - 1; */
 

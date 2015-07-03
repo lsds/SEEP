@@ -5,6 +5,7 @@ import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.AggregationType;
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
@@ -142,12 +143,15 @@ public class TestAggregationType {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_  = 1024 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_  = 64 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = 512 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();
+		
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf, timestampReference);
+		query.setAggregateOperator((IAggregateOperator) cpuAggCode);
+		
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		
