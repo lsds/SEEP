@@ -236,6 +236,30 @@ int gpu_query_setKernel (gpuQueryP q, int ndx, const char * name,
 	return 0;
 }
 
+int gpu_query_setKernel_another (gpuQueryP q, int ndx, const char * name,
+		void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
+	if (! q)
+		return -1;
+	if (ndx < 0 || ndx > q->contexts[0]->kernel.count)
+		return -1;
+	int i;
+	for (i = 0; i < NCONTEXTS; i++)
+		gpu_context_setKernel_another (q->contexts[i], ndx, name, callback, intargs, longargs);
+	return 0;
+}
+
+int gpu_query_configureKernel (gpuQueryP q, int ndx, const char * name,
+		void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
+	if (! q)
+		return -1;
+	if (ndx < 0 || ndx > q->contexts[0]->kernel.count)
+		return -1;
+	int i;
+	for (i = 0; i < NCONTEXTS; i++)
+		gpu_context_configureKernel (q->contexts[i], ndx, name, callback, intargs, longargs);
+	return 0;
+}
+
 gpuContextP gpu_context_switch (gpuQueryP p) {
 	if (! p) {
 		fprintf (stderr, "error: null query\n");

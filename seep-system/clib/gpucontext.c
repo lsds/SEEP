@@ -104,6 +104,38 @@ void gpu_context_setKernel (gpuContextP q, int ndx,
 	return;
 }
 
+void gpu_context_setKernel_another (gpuContextP q, int ndx,
+		const char *name, void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
+	if (ndx < 0 || ndx >= q->kernel.count)
+		return;
+	int error = 0;
+	int i;
+	q->kernel.kernels[ndx] = (aKernelP) malloc (sizeof(a_kernel_t));
+	for (i = 0; i < 2; i++) {
+		q->kernel.kernels[ndx]->kernel[i] = clCreateKernel (q->program, name, &error);
+		if (! q->kernel.kernels[ndx]->kernel[i]) {
+			fprintf(stderr, "opencl error (%d): %s (%s)\n",
+				error, getErrorMessage(error), __FUNCTION__);
+			exit (1);
+		} else {
+			(*callback) (q->kernel.kernels[ndx]->kernel[i], q, intargs, longargs);
+		}
+	}
+	return;
+}
+
+void gpu_context_configureKernel (gpuContextP q, int ndx,
+		const char *name, void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
+	if (ndx < 0 || ndx >= q->kernel.count)
+		return;
+	int i;
+	for (i = 0; i < 2; i++) {
+		// fprintf(stderr, "[DBG] long arguments are %10ld %15ld\n", longargs[0], longargs[1]);
+		(*callback) (q->kernel.kernels[ndx]->kernel[i], q, intargs, longargs);
+	}
+	return;
+}
+
 void gpu_context_setInput (gpuContextP q, int ndx, void *buffer, int size) {
 	if (ndx < 0 || ndx >= q->kernelInput.count)
 		return;

@@ -125,6 +125,12 @@ public class PartialWindowResults {
 		b.clear();
 		b.put(d.array(), offset, length);
 		t.flip();
+		try {
 		b.put(t);
+		} catch (Exception e) {
+			System.err.println("caught...writing " + t.remaining() + " to " + b.remaining());
+			
+			System.exit(1);
+		}
 	}
 }

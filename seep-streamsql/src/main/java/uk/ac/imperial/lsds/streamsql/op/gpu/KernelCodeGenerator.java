@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import uk.ac.imperial.lsds.seep.multi.AggregationType;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
+import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
@@ -56,6 +57,37 @@ public class KernelCodeGenerator {
 		return b.toString();
 	}
 	
+	public static String getPartialReduction (ITupleSchema input, ITupleSchema output, 
+			String filename, AggregationType type, FloatColumnReference _the_aggregate, WindowDefinition windowDefinition) {
+		
+		StringBuilder b = new StringBuilder ();
+		b.append(getHeader (input, output));
+		b.append("\n");
+		b.append(getReductionFunctors(type, _the_aggregate));
+		b.append("\n");
+		b.append(getWindowDefinition(windowDefinition));
+		b.append("\n");
+		b.append(getReductionKernel(filename));
+		b.append("\n");
+		return b.toString();
+	}
+	
+	private static String getWindowDefinition(WindowDefinition windowDefinition) {
+		
+		StringBuilder b = new StringBuilder();
+		
+		if (windowDefinition.isRangeBased())
+			b.append("#define RANGE_BASED\n");
+		else
+			b.append("#define COUNT_BASED\n");
+		
+		b.append(String.format("#define PANES_PER_WINDOW %dL\n", windowDefinition.numberOfPanes()));
+		b.append(String.format("#define PANES_PER_SLIDE  %dL\n", windowDefinition.panesPerSlide()));
+		b.append(String.format("#define PANE_SIZE        %dL\n", windowDefinition.getPaneSize()));
+		
+		return b.toString();
+	}
+
 	public static String getAggregation(
 			ITupleSchema inputSchema,
 			ITupleSchema outputSchema, 
@@ -190,6 +222,7 @@ public class KernelCodeGenerator {
 		StringBuilder b = new StringBuilder ();
 		b.append("#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable\n");
+		b.append("#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics: enable\n");
 		b.append("\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_byte_addressable_store: enable\n");
 		b.append("\n");

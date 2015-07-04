@@ -4,8 +4,10 @@ import java.nio.ByteBuffer;
 
 public class WindowHashTable {
 	
+	public static final int KEY_OFFSET = 9;
+	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static int WINDOW_MAP_CONTENT_SIZE = 2048 * 2 * 2 * 2 * 2 * 2;
+	public static final int WINDOW_MAP_CONTENT_SIZE = 2048 * 2 * 2 * 2;
 	
 	ByteBuffer content;
 	
@@ -107,9 +109,9 @@ public class WindowHashTable {
 	private int compare (byte [] tupleKey, int offset) {
 		
 		/* The first byte indicates occupancy; the next 8 are the timestamp */
-		int n = (offset + 9) + tupleKey.length;
+		int n = (offset + KEY_OFFSET) + tupleKey.length;
 		
-		for (int i = (offset + 9), j = 0; i < n; i++, j++) {
+		for (int i = (offset + KEY_OFFSET), j = 0; i < n; i++, j++) {
 			byte v1 = this.content.get(i);
 			byte v2 = tupleKey[j];
 			if (v1 == v2)

@@ -4,6 +4,9 @@ import java.nio.ByteBuffer;
 
 public class WindowHashTableWrapper {
 	
+	/* The first byte indicates occupancy; the next 8 are the timestamp */
+	public static final int KEY_OFFSET = 9;
+	
 	ByteBuffer content;
 	int start, end;
 	int tupleLength;
@@ -38,6 +41,7 @@ public class WindowHashTableWrapper {
 	}
 	
 	public int getIndex (byte [] array, int offset, int length, boolean [] found) {
+		
 		int h = HashCoding.jenkinsHash(array, offset, length, 1) & (this.capacity - 1);
 		int idx = start + h * this.tupleLength;
 		
@@ -66,10 +70,9 @@ public class WindowHashTableWrapper {
 	
 	private int compare (byte [] array, int offset, int length, int index) {
 		
-		/* The first byte indicates occupancy; the next 8 are the timestamp */
-		int n = (index + 9) + length;
+		int n = (index + KEY_OFFSET) + length;
 		
-		for (int i = (index + 9), j = offset; i < n; i++, j++) {
+		for (int i = (index + KEY_OFFSET), j = offset; i < n; i++, j++) {
 			byte v1 = this.content.get(i);
 			byte v2 = array[j];
 			if (v1 == v2)

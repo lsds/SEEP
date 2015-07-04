@@ -29,6 +29,8 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IAggregateOperator {
 	
+	public static final int KEY_OFFSET = 9;
+	
 	private static boolean debug = false;
 	
 	WindowDefinition windowDefinition;
@@ -786,7 +788,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 						} else {
 							/* Update existing entry */
 							
-							int valueOffset = idx + 1 + 8 + this.keyLength;
+							int valueOffset = idx + KEY_OFFSET + this.keyLength;
 							int countOffset = valueOffset + this.valueLength;
 							
 							float prevValue = hashtable.getFloat(valueOffset);
@@ -1079,6 +1081,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					opening.numberOfWindows()));
 		
 		api.outputWindowBatchResult(-1, windowBatch);
+		
 		/*
 		System.err.println("Disrupted");
 		System.exit(-1);
@@ -1109,7 +1112,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			ByteBuffer hashtable = windowTuples.getBuffer();
 			/* Update existing entry */
 			
-			int valueOffset = idx + 1 + 8 + this.keyLength;
+			int valueOffset = idx + KEY_OFFSET + this.keyLength;
 			int countOffset = valueOffset + this.valueLength;
 			
 			/* Decrement tuple count */
@@ -1181,7 +1184,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				hashtable.putInt(1);
 			} else {
 				/* Update existing entry */
-				int valueOffset = idx + 1 + 8 + this.keyLength;
+				int valueOffset = idx + KEY_OFFSET + this.keyLength;
 				int countOffset = valueOffset + this.valueLength;
 				
 				float prevValue = hashtable.getFloat(valueOffset);
@@ -1222,8 +1225,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				
 				/* Append buffer a's tuple to `w3` */
 				if (aggregationType[0] == AggregationType.AVG) {
-					int valueOffset = idx + 9 + keyLength;
-					int countOffset = idx + 9 + keyLength + valueLength;
+					int valueOffset = idx + KEY_OFFSET + keyLength;
+					int countOffset = idx + KEY_OFFSET + keyLength + valueLength;
 					/* Compute average */
 					float value = hashtable.getFloat(valueOffset);
 					float count = hashtable.getInt(countOffset);

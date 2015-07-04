@@ -19,6 +19,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.PartialReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
@@ -122,18 +123,15 @@ public class TestAggregationType {
 		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
-		ReductionKernel gpuAggCode = null;
-//		new ReductionKernel (
-//				aggregationType,
-//				new FloatColumnReference(1),
-//				schema
-//				);
-//		
-//		gpuAggCode.setBatchSize(nwindows);
-//		gpuAggCode.setInputSize (inputSize);
-//		gpuAggCode.setWindowSize ((int) window.getSize());
-//		gpuAggCode.setWindowSlide ((int) window.getSlide());
-//		gpuAggCode.setup();
+		PartialReductionKernel gpuAggCode =
+		new PartialReductionKernel (
+				aggregationType,
+				new FloatColumnReference(1),
+				schema
+				);
+		gpuAggCode.setBatchSize(batchSize);
+		gpuAggCode.setWindowDefinition(window);
+		gpuAggCode.setup();
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)

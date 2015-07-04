@@ -4,8 +4,8 @@
 #undef GPU_VERBOSE
 // #define GPU_VERBOSE
 
-// #undef GPU_PROFILE
-#define GPU_PROFILE
+#undef GPU_PROFILE
+// #define GPU_PROFILE
 
 /* Parallel data movement */
 // #undef GPU_IIDMVMT
