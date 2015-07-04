@@ -31,6 +31,10 @@ int gpu_setOutput (int, int, void *, int, int, int, int, int);
 
 int gpu_setKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *), int *);
 
+int gpu_setKernel_another (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *, long *), int *, long *);
+
+int gpu_configureKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *, long *), int *, long *);
+
 /* Execute task */
 int gpu_exec (int, size_t *, size_t *, queryOperatorP, JNIEnv *, jobject);
 

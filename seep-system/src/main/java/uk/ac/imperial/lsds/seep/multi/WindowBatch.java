@@ -75,8 +75,8 @@ public class WindowBatch {
 		this.batchStartPointer = -1;
 		this.batchEndPointer = -1;
 		
-		this.windowStartPointers = new int [65536 * 2];
-		this.windowEndPointers   = new int [65536 * 2];
+		this.windowStartPointers = new int [65536];
+		this.windowEndPointers   = new int [65536];
 		
 		this.initialised = false;
 		
@@ -587,7 +587,7 @@ public class WindowBatch {
 		this.complete = complete;
 	}
 	
-	private long getTimestamp (int index) {
+	public long getTimestamp (int index) {
 		long value = this.buffer.getLong(index);
 		if (Utils.LATENCY_ON)
 			return (long) Utils.unpack(1, value);
@@ -973,6 +973,8 @@ public class WindowBatch {
 			}
 		} /* End for */
 		
+		System.out.println(String.format("[DBG] batch %10d starts @ %15d window offset is %d", taskId, batchStartPointer, offset));
+		
 		if (debugCountBasedComputation)
 			System.out.println(String.format("[DBG] %d opening windows; %d closing windows; last window index is %d", 
 					nopening, nclosing, lastWindowIndex));
@@ -996,6 +998,25 @@ public class WindowBatch {
 		if (nopening == 0 && nclosing == 0) {
 			/* There are only pending windows in the batch */
 			lastWindowIndex = 0;
+		}
+	}
+
+	public void initPartialWindowPointers(byte [] startPtrs, byte [] endPtrs) {
+		
+		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
+		
+		for (int i = 0; i <= lastWindowIndex; i++) {
+			
+			if (windowStartPointers[i] < 0)
+				b.putInt(0);
+			else
+				b.putInt(windowStartPointers[i] - bufferStartPointer);
+			
+			if (windowEndPointers[i] < 0)
+				d.putInt(bufferEndPointer - bufferStartPointer);
+			else
+				d.putInt(windowEndPointers[i] - bufferStartPointer);
 		}
 	}
 }

@@ -175,6 +175,8 @@ public class TheGPU {
 	public native int setKernelAggregate (int queryId, int [] args);
 	public native int setKernelThetaJoin (int queryId, int [] args);
 	
+	public native int setKernelPartialReduce (int queryId, int [] intArgs, long [] longArgs);
+	
 	/* LRB UDF */
 	public native int setKernelAggregateIStream (int queryId, int [] args);
 	
@@ -203,4 +205,6 @@ public class TheGPU {
 	 */
 	public native int executeDirect (int queryId, int [] threads, int [] threadsPerGroup, 
 		int [] start, int [] end);
+
+	public native int configurePartialReduce(int qid, long[] longArgs);
 }

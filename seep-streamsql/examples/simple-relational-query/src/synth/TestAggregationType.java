@@ -5,6 +5,7 @@ import java.util.Random;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.multi.AggregationType;
+import uk.ac.imperial.lsds.seep.multi.IAggregateOperator;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
 import uk.ac.imperial.lsds.seep.multi.MicroOperator;
@@ -18,6 +19,7 @@ import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition.WindowType;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.PartialReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
@@ -121,18 +123,15 @@ public class TestAggregationType {
 		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
-		ReductionKernel gpuAggCode = null;
-//		new ReductionKernel (
-//				aggregationType,
-//				new FloatColumnReference(1),
-//				schema
-//				);
-//		
-//		gpuAggCode.setBatchSize(nwindows);
-//		gpuAggCode.setInputSize (inputSize);
-//		gpuAggCode.setWindowSize ((int) window.getSize());
-//		gpuAggCode.setWindowSlide ((int) window.getSlide());
-//		gpuAggCode.setup();
+		PartialReductionKernel gpuAggCode =
+		new PartialReductionKernel (
+				aggregationType,
+				new FloatColumnReference(1),
+				schema
+				);
+		gpuAggCode.setBatchSize(batchSize);
+		gpuAggCode.setWindowDefinition(window);
+		gpuAggCode.setup();
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
@@ -143,11 +142,13 @@ public class TestAggregationType {
 		operators.add(uoperator);
 		
 		Utils._CIRCULAR_BUFFER_  = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 512 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf, timestampReference);
+		query.setAggregateOperator((IAggregateOperator) cpuAggCode);
+		
 		queries.add(query);
 		MultiOperator operator = new MultiOperator(queries, 0);
 		

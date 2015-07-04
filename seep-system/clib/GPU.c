@@ -50,6 +50,11 @@ void callback_setKernelCompact   (cl_kernel, gpuContextP, int *);
 void callback_setKernelAggregate (cl_kernel, gpuContextP, int *);
 void callback_setKernelThetaJoin (cl_kernel, gpuContextP, int *);
 
+/* Partial window computation */
+void callback_setKernelPartialReduce (cl_kernel, gpuContextP, int *, long *);
+
+void callback_configurePartialReduce (cl_kernel, gpuContextP, int *, long *);
+
 /* UDFs */
 void callback_setKernelAggregateIStream (cl_kernel, gpuContextP, int *);
 
@@ -217,6 +222,22 @@ int gpu_setKernel (int qid, int ndx, const char *name,
 		return -1;
 	gpuQueryP p = queries[qid];
 	return gpu_query_setKernel (p, ndx, name, callback, args);
+}
+
+int gpu_setKernel_another (int qid, int ndx, const char *name,
+		void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
+	if (qid < 0 || qid >= Q)
+		return -1;
+	gpuQueryP p = queries[qid];
+	return gpu_query_setKernel_another (p, ndx, name, callback, intargs, longargs);
+}
+
+int gpu_configureKernel (int qid, int ndx, const char *name,
+		void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
+	if (qid < 0 || qid >= Q)
+		return -1;
+	gpuQueryP p = queries[qid];
+	return gpu_query_configureKernel (p, ndx, name, callback, intargs, longargs);
 }
 
 int gpu_exec (int qid, size_t *threads, size_t *threadsPerGroup,
@@ -510,6 +531,39 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelReduc
 	return 0;
 }
 
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelPartialReduce
+(JNIEnv *env, jobject obj, jint qid, jintArray _intArgs, jlongArray _longArgs) {
+
+	(void) obj;
+
+	jint *intArgs = (*env)->GetIntArrayElements(env, _intArgs, 0);
+	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
+
+	/* Object `int []` pinned */
+	gpu_setKernel_another (qid, 0,  "clearKernel",        &callback_setKernelPartialReduce, intArgs, longArgs);
+	gpu_setKernel_another (qid, 1, "partialReduceKernel", &callback_setKernelPartialReduce, intArgs, longArgs);
+
+
+	(*env)->ReleaseIntArrayElements(env, _intArgs, intArgs, 0);
+	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
+	/* Object `int []` released */
+	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_configurePartialReduce
+(JNIEnv *env, jobject obj, jint qid, jlongArray _longArgs) {
+
+	(void) obj;
+
+	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
+
+	gpu_configureKernel (qid, 0, "partialReduceKernel", &callback_configurePartialReduce, NULL, longArgs);
+
+	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
+
+	return 0;
+}
+
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelThetaJoin
 (JNIEnv *env, jobject obj, jint qid, jintArray _args) {
 
@@ -747,6 +801,76 @@ void callback_setKernelReduce (cl_kernel kernel, gpuContextP context, int *const
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
+	return;
+}
+
+void callback_setKernelPartialReduce (cl_kernel kernel, gpuContextP context, int *iconstants, long *lconstants) {
+
+	/* Get all constants */
+	int         tuples = iconstants[0];
+	int          bytes = iconstants[1];
+	long           pane = lconstants[0];
+	long         offset = lconstants[1];
+	long   windowOffset = lconstants[2];
+	int  _scratch_size = iconstants[2]; /* Local buffer memory size */
+
+	int error = 0;
+	/* Set constant arguments */
+	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *) &tuples);
+	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *) &bytes);
+	error |= clSetKernelArg (kernel, 2, sizeof(long), (void *) &pane);
+	error |= clSetKernelArg (kernel, 3, sizeof(long), (void *) &offset);
+	error |= clSetKernelArg (kernel, 4, sizeof(long), (void *) &windowOffset);
+	/* Set I/O byte buffers */
+	error |= clSetKernelArg (
+		kernel,
+		5, /* 3rd argument */
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[0]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		6, /* 6th argument */
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[0]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		7, /* 6th argument */
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[1]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		8, /* 6th argument */
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[2]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		9, /* 6th argument */
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[3]->device_buffer));
+	/* Set local memory */
+	error |= clSetKernelArg (kernel, 10, (size_t)  _scratch_size, (void *) NULL);
+
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+	return;
+}
+
+void callback_configurePartialReduce (cl_kernel kernel, gpuContextP context, int *iconstants, long *lconstants) {
+
+	/* Get all constants */
+
+	long           pane = lconstants[0];
+	long         offset = lconstants[1];
+
+	int error = 0;
+
+	/* Set constant arguments */
+	error |= clSetKernelArg (kernel, 2, sizeof(long), (void *) &pane);
+	error |= clSetKernelArg (kernel, 3, sizeof(long), (void *) &offset);
+	error |= clSetKernelArg (kernel, 4, sizeof(long), (void *) &offset);
+
 	return;
 }
 
@@ -1162,8 +1286,8 @@ void callback_writeInput (gpuContextP context,
 void callback_readOutput (gpuContextP context,
 		JNIEnv *env, jobject obj, int qid, int ndx, int mark) {
 	
-	if (! context->kernelOutput.outputs[ndx]->writeOnly)
-	 	return ;
+	// if (! context->kernelOutput.outputs[ndx]->writeOnly)
+	 // 	return ;
 	
 	jclass class = (*env)->GetObjectClass (env, obj);
 	jmethodID method = (*env)->GetMethodID (env, class,

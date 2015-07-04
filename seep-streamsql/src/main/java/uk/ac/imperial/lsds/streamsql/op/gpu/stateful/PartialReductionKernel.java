@@ -12,6 +12,7 @@ import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.IWindowAPI;
+import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.streamsql.expressions.Expression;
 import uk.ac.imperial.lsds.streamsql.expressions.ExpressionsUtil;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
@@ -20,7 +21,7 @@ import uk.ac.imperial.lsds.streamsql.op.IStreamSQLOperator;
 import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 
-public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
+public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 
 	private static final int threadsPerGroup = 256;
 	
@@ -36,8 +37,7 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private int batchSize = -1;
 	
-	private int windowSize = -1;
-	private int windowSlide = -1;
+	private WindowDefinition windowDefinition = null;
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
@@ -45,27 +45,28 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private int qid;
 	
-	private int [] args;
+	private int [] intArgs;
+	private long [] longArgs;
 	
 	private int tuples;
 	
 	private int [] threads;
 	private int [] tgs;
 	
-	private int ngroups;
-	
 	/* Local memory sizes */
 	private int  inputSize = -1, outputSize;
 	
 	private int windowPtrsSize;
-	private int localOutputSize;
 	
 	private byte [] startPtrs;
 	private byte [] endPtrs;
 	
+	byte [] offsetVal;
+	
 	private int outputTupleSize;
 	
-	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs) {
+	@SuppressWarnings("unused")
+	private void printWindowPointers (byte [] startPtrs, byte [] endPtrs, int count) {
 		
 		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
@@ -74,10 +75,12 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 			System.out.println(String.format("w %02d: starts %10d ends %10d", 
 				wid, b.getInt(), d.getInt()));
 				wid ++;
+				if (wid > count)
+					break;
 		}
 	}
 	
-	public ReductionKernel (AggregationType type, FloatColumnReference _the_aggregate, 
+	public PartialReductionKernel (AggregationType type, FloatColumnReference _the_aggregate, 
 			ITupleSchema inputSchema) {
 		
 		this.type = type;
@@ -107,20 +110,12 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		}
 	}
 	
-	public void setInputSize (int inputSize) {
-		this.inputSize = inputSize;
-	}
-	
 	public void setBatchSize (int batchSize) {
 		this.batchSize = batchSize;
 	}
 	
-	public void setWindowSize (int windowSize) {
-		this.windowSize = windowSize;
-	}
-	
-	public void setWindowSlide (int windowSlide) {
-		this.windowSlide = windowSlide;
+	public void setWindowDefinition (WindowDefinition windowDefinition) {
+		this.windowDefinition = windowDefinition;
 	}
 	
 	public void setup () {
@@ -129,62 +124,54 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 			System.err.println("error: invalid batch size");
 			System.exit(1);
 		}
-		if (windowSize < 0) {
-			System.err.println("error: invalid window size");
-			System.exit(1);
-		}
-		if (windowSlide < 0) {
-			System.err.println("error: invalid window slide");
-			System.exit(1);
-		}
-		if (inputSize < 0) {
-			System.err.println("error: invalid input size");
-			System.exit(1);
-		}
-		this.tuples = inputSize / inputSchema.getByteSizeOfTuple();
 		
-		/* We assign 1 group per window */
-		this.ngroups = this.batchSize;
+		this.inputSize = batchSize;
 		
-		tgs = new int [1];
+		this.tuples = batchSize / inputSchema.getByteSizeOfTuple();
+		
+		tgs = new int [2];
 		tgs[0] = threadsPerGroup; /* This is a constant */
+		tgs[1] = threadsPerGroup; /* This is a constant */
 		
-		threads = new int [1];
-		threads[0] = ngroups * tgs[0]; // not tuples;
+		threads = new int [2];
+		threads[0] = this.tuples;
+		threads[1] = this.tuples;
 		
-		this.outputSize = ngroups * outputSchema.getByteSizeOfTuple();
+		this.outputSize = 32 * 16; /* Another 1MB */
 		
-		// this.windowPtrsSize = 4 * ngroups;
+		intArgs = new int [5];
+		intArgs[0] = tuples;
+		intArgs[1] = batchSize;
+		intArgs[2] = inputSchema.getByteSizeOfTuple() * tgs[0]; // localInputSize
 		
-		this.localOutputSize = 4 * tgs[0];
+		longArgs = new long [2];
+		longArgs[0] = 0; /* Previous pane id */
+		longArgs[1] = 0; /* Batch start offset */
 		
-		args = new int [7];
-		args[0] = tuples;
-		args[1] = inputSize;
-		args[2] = batchSize;
-		args[3] = windowSize;
-		args[4] = windowSlide;
-		args[5] = inputSchema.getByteSizeOfTuple() * tgs[0]; // localInputSize
-		args[6] = localOutputSize;
+		this.windowPtrsSize = 65536;
 		
-		// startPtrs = new byte [windowPtrsSize];
-		// endPtrs   = new byte [windowPtrsSize];
+		startPtrs = new byte [windowPtrsSize];
+		endPtrs   = new byte [windowPtrsSize];
 		
 		String source = 
-			KernelCodeGenerator.getReduction (inputSchema, outputSchema, filename, type, _the_aggregate);
+			KernelCodeGenerator.getPartialReduction (inputSchema, outputSchema, filename, type, _the_aggregate, windowDefinition);
 		System.out.println(source);
 		
-		// qid = TheGPU.getInstance().getQuery(source, 1, 3, 1);
-		qid = TheGPU.getInstance().getQuery(source, 1, 1, 1);
+		qid = TheGPU.getInstance().getQuery(source, 2, 1, 4);
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
 		/* Start and end pointers are also inputs */
 		// TheGPU.getInstance().setInput(qid, 1, startPtrs.length);
 		// TheGPU.getInstance().setInput(qid, 2,   endPtrs.length);
 		
-		TheGPU.getInstance().setOutput(qid, 0, outputSize, 1, 0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 0, windowPtrsSize, 0, 1, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 1, windowPtrsSize, 0, 1, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 2,             16, 1, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 3,     outputSize, 1, 0, 0, 1);
 		
-		TheGPU.getInstance().setKernelReduce(qid, args);
+		offsetVal = new byte [16];
+		
+		TheGPU.getInstance().setKernelPartialReduce(qid, intArgs, longArgs);
 	}
 	
 	@Override
@@ -209,24 +196,55 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
 		/* Create the other two input buffers */
-		
-		// windowBatch.initWindowPointers(startPtrs, endPtrs);
+		// windowBatch.initPartialWindowPointers();
+		// windowBatch.initPartialWindowPointers(startPtrs, endPtrs);
 		/* The start and end pointers are normalised */
-		// printWindowPointers(startPtrs, endPtrs);
+		// printWindowPointers(startPtrs, endPtrs, windowBatch.getLastWindowIndex());
 		
 		// TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
 		// TheGPU.getInstance().setInputBuffer(qid, 2,   endPtrs);
 		
 		/* Set output */
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 0, outputBuffer.array());
+		TheGPU.getInstance().setOutputBuffer(qid, 3, outputBuffer.array());
 		
+		TheGPU.getInstance().setOutputBuffer(qid, 2, offsetVal);
+		
+		// threads[0] = tgs[0] * (windowBatch.getLastWindowIndex() + 1); 
+		
+		/* Set previous pane id */
+		if (windowBatch.getWindowDefinition().isRangeBased()) {
+			if (windowBatch.getBatchStartPointer() == 0) {
+				longArgs[0] = -1;
+			} else {
+				/* Check the last tuple of the previous batch */
+				longArgs[0] = (windowBatch.getTimestamp(windowBatch.getBufferStartPointer() - inputSchema.getByteSizeOfTuple()) / windowBatch.getWindowDefinition().getPaneSize());
+			}
+		} else {
+			if (windowBatch.getBatchStartPointer() == 0) {
+				longArgs[0] = -1;
+			} else {
+				/* Check the last tuple of the previous batch */
+				longArgs[0] = ((windowBatch.getBatchStartPointer() / inputSchema.getByteSizeOfTuple()) / windowBatch.getWindowDefinition().getPaneSize()) - 1;
+			}
+		}
+ 		longArgs[1] = windowBatch.getBatchStartPointer();
+ 		System.out.println("[DBG] previous pane is " + longArgs[0]);
+		TheGPU.getInstance().configurePartialReduce(qid, longArgs);
+		System.out.println("[DBG] execute");
 		TheGPU.getInstance().execute(qid, threads, tgs);
+		
+		ByteBuffer tmp = ByteBuffer.wrap(offsetVal).order(ByteOrder.LITTLE_ENDIAN);
+		System.out.println(String.format("[DBG] batch %10d starts @ %15d: %10d, %10d", taskIdx[0], windowBatch.getBatchStartPointer(), tmp.getLong(),  tmp.getLong()));
 		
 		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
-		outputBuffer.position(outputSize);
+		
+		// outputBuffer.position(windowBatch.getLastWindowIndex() * 16);
+		outputBuffer.position(32 * 16);
+		// outputBuffer.position(TheGPU.getInstance().getPosition(qid, 0));
+		// System.out.println("[DBG] output buffer position is " + outputBuffer.position());
 		
 		windowBatch.setBuffer(outputBuffer);
 		
@@ -265,6 +283,6 @@ public class ReductionKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	@Override
 	public void processData (WindowBatch firstWindowBatch, WindowBatch secondWindowBatch, IWindowAPI api) {
-		throw new UnsupportedOperationException("ReductionKernel operates on a single stream only");
+		throw new UnsupportedOperationException("PartialReductionKernel operates on a single stream only");
 	}
 }

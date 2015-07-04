@@ -3,6 +3,7 @@ package uk.ac.imperial.lsds.streamsql.visitors;
 import uk.ac.imperial.lsds.streamsql.op.gpu.deprecated.stateful.MicroAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.AggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.PartialAggregationKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.PartialReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ReductionKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.SimpleThetaJoinKernel;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.ThetaJoinKernel;
@@ -56,4 +57,6 @@ public interface OperatorVisitor {
 	public void visit(PartialMicroAggregation partialMicroAggregation);
 
 	public void visit(PartialAggregationKernel partialAggregationKernel);
+
+	public void visit(PartialReductionKernel partialReductionKernel);
 }
