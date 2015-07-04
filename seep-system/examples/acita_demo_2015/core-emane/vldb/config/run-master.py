@@ -68,8 +68,10 @@ def run_query(master):
     print 'Started query'
 
 def start_master(k, h, query, logfilename, sim_env):
+    extra_java_params=map(lambda line: '-D'+line, read_extra_params())
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java','-Dplatform.dependencies=true','-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h, '-DqueryType=%s'%query, '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
+        args = ['java','-Dplatform.dependencies=true','-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,
+                '-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -96,6 +98,13 @@ def read_query():
     with open('../query.txt', 'rb') as f:
         for line in f:
             return line.strip()
+
+def read_extra_params():
+    extra_params=[]
+    with open('../extra_params.txt', 'rb') as f:
+        for line in f:
+            extra_params.append(line.strip()) 
+    return extra_params
 
 def wait_for_deploy(master):
     while not os.path.exists("deployComplete.txt"):

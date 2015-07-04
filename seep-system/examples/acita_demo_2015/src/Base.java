@@ -12,23 +12,31 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
 import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
+import uk.ac.imperial.lsds.seep.acita15.operators.HeatMapJoin;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
 import uk.ac.imperial.lsds.seep.acita15.operators.AudioSource;
 import uk.ac.imperial.lsds.seep.acita15.operators.VideoSource;
+import uk.ac.imperial.lsds.seep.acita15.operators.LocationSource;
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
 import uk.ac.imperial.lsds.seep.api.QueryComposer;
 import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.operator.Connectable;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
 public class Base implements QueryComposer{
+	private final static Logger logger = LoggerFactory.getLogger(Base.class);
 	private int CHAIN_LENGTH;
 	private int REPLICATION_FACTOR;
 	private final boolean AUTO_SCALEOUT = true;
@@ -62,6 +70,10 @@ public class Base implements QueryComposer{
 		else if (queryType.equals("debsGC13"))
 		{
 			throw new RuntimeException("TODO");
+		}
+		else if (queryType.equals("heatMap"))
+		{
+			return composeHeatMap();
 		}
 		else { throw new RuntimeException("Logic error - unknown query type: "+GLOBALS.valueFor("queryType")); }
 	}
@@ -215,6 +227,122 @@ public class Base implements QueryComposer{
 		}
 		
 		return QueryBuilder.build();
+	}
+	
+	private QueryPlan composeHeatMap()
+	{
+		int nSources = Integer.parseInt(GLOBALS.valueFor("sources"));
+		int nSinks = Integer.parseInt(GLOBALS.valueFor("sinks"));
+		int maxFanIn = Integer.parseInt(GLOBALS.valueFor("fanin"));
+		
+		if (nSinks != 1) { throw new RuntimeException("TODO"); }
+		int[] tree = computeJoinTree(nSources, maxFanIn);
+		
+		Connectable[] sources = new Connectable[nSources];
+		Connectable[][] opsTree = new Connectable[tree.length][];
+		Connectable[] sinks = new Connectable[nSinks];
+		
+		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("tupleId");
+		srcFields.add("value");
+		for (int i = 0; i < nSources; i++)
+		{
+			sources[i] = QueryBuilder.newStatelessSource(new LocationSource(), -(i+1), srcFields);
+		}
+		
+		ArrayList<String> heatMapFields = new ArrayList<String>();
+		heatMapFields.add("tupleId");
+		heatMapFields.add("value");
+		int opId = 0;
+		for (int h = 0; h < tree.length; h++)
+		{
+			opsTree[h] = new Connectable[tree[h]];
+			
+			for (int i = 0; i < tree[h]; i++)
+			{
+				opsTree[h][i] = QueryBuilder.newStatelessOperator(new HeatMapJoin(), opId, heatMapFields);
+				opId++;
+			}
+		}
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		for (int i = 0; i < nSinks; i++)
+		{
+			sinks[i] = QueryBuilder.newStatelessSink(new Sink(), -(nSources+i+1), snkFields);
+		}
+		
+		//Now connect everything up
+		int streamId = 0;
+		for (int i = 0; i < nSources; i++)
+		{
+			int parentIndex = i / maxFanIn;
+			sources[i].connectTo(opsTree[0][parentIndex], InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, streamId);
+			streamId++;
+		}
+		
+		for (int h = 0; h < opsTree.length-1; h++)
+		{
+			for (int i = 0; i < opsTree[h].length; i++)
+			{
+				int parentIndex = i / maxFanIn;
+				opsTree[h][i].connectTo(opsTree[h+1][parentIndex], InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, streamId);
+				streamId++;
+			}
+		}
+		
+		for (int i = 0; i < opsTree[opsTree.length-1].length; i++)
+		{
+			for (int s = 0; s < sinks.length; s++)
+			{
+				opsTree[opsTree.length-1][i].connectTo(sinks[s], true, streamId);
+				streamId++;
+			}
+		}
+		
+		if (REPLICATION_FACTOR > 1)
+		{
+			//Finally, scale out the operators.
+			for (int h = 0; h < opsTree.length; h++)
+			{
+				for (int i = 0; i < opsTree[h].length; i++)
+				{
+					QueryBuilder.scaleOut(opsTree[h][i].getOperatorId(), REPLICATION_FACTOR);
+				}
+			}
+		}
+		
+		return QueryBuilder.build();
+	}
+	
+	private int[] computeJoinTree(int sources, int maxFanIn)
+	{
+
+		
+		logger.debug("Composing join with "+sources+" sources and max fan-in "+maxFanIn);
+		
+		//Compute the number of levels needed in the join tree given the number
+		//of sources and the max join fan in.
+		int height = (int)Math.ceil(Math.log(sources) / Math.log(maxFanIn));
+		logger.debug("Computed query height="+height);
+		
+		//Compute the number of '1st level' join ops.
+		int[] levelOps = new int[height];
+		levelOps[0] = sources / maxFanIn; 
+		if (sources % maxFanIn > 0) { levelOps[0]++; }
+		logger.debug("Number of ops at level 0="+levelOps[0]);
+		
+		//Compute the number of higher level join ops.
+		for (int i = 1; i < height; i++)
+		{
+			levelOps[i] = levelOps[i-1] / maxFanIn;
+			if (levelOps[i-1] % maxFanIn > 0) { levelOps[i]++; }
+			logger.debug("Number of ops at level "+i+"="+levelOps[i]);
+		}
+		
+		return levelOps;
 	}
 	
 	private QueryPlan composeNameAssist()

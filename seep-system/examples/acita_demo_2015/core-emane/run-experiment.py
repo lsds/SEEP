@@ -173,6 +173,11 @@ if __name__ == "__main__":
     parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
     parser.add_argument('--user', dest='user', default='dan', help='Non-root user to start processes with')
     parser.add_argument('--duration', dest='duration', default='100000', help='Mobility params duration')
+    parser.add_argument('--maxFanIn', dest='max_fan_in', default='2', help='Max fan-in for join operators')
+    parser.add_argument('--sources', dest='sources', default='2', help='Number of unreplicated sources (for join operators)')
+    parser.add_argument('--sinks', dest='sinks', default='1', help='Number of unreplicated sinks')
+
+    
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -197,6 +202,9 @@ if __name__ == "__main__":
     params['placement']=args.placement
     params['user']=args.user
     params['duration']=args.duration
+    params['sources']=args.sources
+    params['sinks']=args.sinks
+    params['fanin']=args.max_fan_in
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

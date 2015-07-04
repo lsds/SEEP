@@ -51,6 +51,9 @@ public class GLOBALS {
 			globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
 			globals.put("chainLength", System.getProperty("chainLength", "1"));
 			globals.put("queryType", System.getProperty("queryType", "chain"));
+			globals.put("sources", System.getProperty("sources"));
+			globals.put("sinks", System.getProperty("sinks"));
+			globals.put("fanin", System.getProperty("fanin"));
 			LOG.info("Loaded global properties="+propsToString());
 		}
 		catch (FileNotFoundException e1) {

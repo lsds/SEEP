@@ -96,6 +96,7 @@ def run_session(time_str, k, mob, exp_session, params):
         write_replication_factor(k, session.sessiondir)
         write_chain_length(params['h'], session.sessiondir)
         write_query_type(params['query'], session.sessiondir)
+        write_extra_params(params, session.sessiondir)
 
         copy_seep_jar(session.sessiondir)
         trace_file = None
@@ -266,6 +267,23 @@ def get_num_workers(k, params):
 
     elif q == 'nameAssist':
         num_workers = [2]+([1]*(1+ (k*3))) 
+    elif q == 'heatMap':
+        sources =  int(params['sources'])
+        sinks = int(params['sinks'])
+        fan_in = int(params['fanin'])
+        height = int(math.ceil(math.log(sources, fan_in)))
+        children = sources
+        join_ops = 0 
+        for i in range(0, height):
+            parents = children / fan_in
+            if children % fan_in > 0: parents += 1
+            join_ops += parents
+            children = parents
+        print 'height=%d, join_ops=%d'%(height, join_ops)
+        num_workers = [1] * (sources + (k*join_ops) + sinks)
+    else: 
+        raise Exception('Unknown query type: %s'%q)
+
     return num_workers
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
@@ -346,6 +364,12 @@ def write_chain_length(h, session_dir):
 def write_query_type(query, session_dir):
     with open('%s/query.txt'%session_dir, 'w') as f:
         f.write(str(query))
+
+def write_extra_params(params, session_dir):
+    with open('%s/extra_params.txt'%session_dir, 'w') as f:
+        f.write('sources=%s\n'%str(params['sources']))
+        f.write('sinks=%s\n'%str(params['sinks']))
+        f.write('fanin=%s\n'%str(params['fanin']))
 
 def copy_seep_jar(session_dir):
     dest = '%s/lib'%session_dir

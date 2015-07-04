@@ -478,7 +478,11 @@ public class Infrastructure {
 		{
 			return buildFaceRecognition();
 		}
-		else { throw new RuntimeException("Logic error."); }
+		else if (queryType.equals("heatMap"))
+		{
+			return buildHeatMap();
+		}
+		else { throw new RuntimeException("Logic error, unknown query type."); }
 	}
 	
 	private Query buildChainQuery()
@@ -551,6 +555,129 @@ public class Infrastructure {
 	private Query buildFaceRecognition()
 	{
 		return buildChainQuery(2);
+	}
+	
+	private Query buildHeatMap()
+	{
+		//TreeMap logicalTopology
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		int nSources = Integer.parseInt(GLOBALS.valueFor("sources"));
+		int maxFanIn = Integer.parseInt(GLOBALS.valueFor("fanin"));
+		int nSinks = Integer.parseInt(GLOBALS.valueFor("sinks"));
+		
+		int lid = 0;
+		for (; lid < nSources+1; lid++)
+		{
+			logicalTopology.put(lid+1, new Integer[]{});
+		}
+		
+		Map<Integer, Integer> downstreamLogicalIds = new HashMap<>();
+		int height = (int) (Math.log(nSources) / Math.log(maxFanIn));
+		int[] levelOps = new int[height+1];
+		levelOps[0] = nSources;
+		int nextChild = 1;
+		int nOps = 0;
+		for (int h = 1; h < height+1; h++)
+		{
+			levelOps[h] = levelOps[h-1] / maxFanIn;
+			if (levelOps[h-1] % maxFanIn > 0) { levelOps[h]++; }
+			int levelStart = lid;
+			for (; lid < levelStart + levelOps[h]; lid++)
+			{
+				int numChildren = levelOps[h-1] / levelOps[h];
+				int remainder = levelOps[h-1] % levelOps[h];
+				if (remainder > 0 && remainder < lid - levelStart) { numChildren++; }
+				
+				Integer[] children = new Integer[numChildren];
+				for (int childIndex = 0; childIndex < numChildren; childIndex++)
+				{
+					LOG.debug("Setting "+lid+"(level="+h+") as parent of "+nextChild);
+					children[childIndex] = nextChild;
+					downstreamLogicalIds.put(nextChild, lid);
+					nextChild++;
+				}
+				LOG.debug("Logical op "+lid+ " children="+numChildren);
+				logicalTopology.put(lid, children);
+				nOps++;
+			}
+		}
+				
+		int sinkStart = lid;
+		for (; lid < sinkStart+nSinks; lid++)
+		{
+			if (levelOps[height] != 1) { throw new RuntimeException("Logic error."); }
+			//if (nSinks > 1) { throw new RuntimeException("TODO: nSinks > 1"); }
+			logicalTopology.put(lid, new Integer[]{sinkStart-1});
+			downstreamLogicalIds.put(sinkStart-1, lid);
+		}
+		
+		int totalLogicalOps = nSources+nSinks+nOps;
+		LOG.info("Created logical topology: "+logicalTopology);
+		if (lid != totalLogicalOps+1) { throw new RuntimeException("Logic error: lid="+lid+", total logical ops="+ totalLogicalOps); }
+		if (logicalTopology.size() != totalLogicalOps) 
+		{ 
+			throw new RuntimeException("Logic error: log.top.sz="+logicalTopology.size()+", total logical ops="+totalLogicalOps);
+		}
+		
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<>();
+		
+		Operator currentSrc = null;
+		//Walk the ops, starting at the source.
+		Map<Integer, Operator> log2origOp = new HashMap<>();
+		for (int i = 0; i < nSources; i++)
+		{
+			Set<Integer> srcPhys = new HashSet<>();
+			currentSrc = src.get(i);
+			srcPhys.add(currentSrc.getOperatorId());
+			log2phys.put(i+1, srcPhys);
+			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(currentSrc.getOperatorId())+",logicalId="+(i+1));
+			
+			log2origOp.put(i+1, currentSrc);
+		}
+		
+		LOG.debug("Source logical ids: "+log2origOp.keySet());
+		//For each logical op id in downstreamLogicalIds,
+		//get its logical downstream (if any) and save the mapping to the
+		//corresponding set of replicas. In addition, store a mapping
+		//from the downstream logical id to one of the replicated operators
+		//so it can in turn create the log2phys mapping for its logical downstream
+		Map<Integer, Operator> nextLog2OrigOp = new HashMap<>();
+		while (!log2origOp.isEmpty())
+		{
+			LOG.debug("Getting downstreams of "+log2origOp.keySet());
+			for (Integer currentLogId : log2origOp.keySet())
+			{
+				Operator current = log2origOp.get(currentLogId);
+				Operator nextDownstream = null;
+				Set<Integer> downstreamPhys = new HashSet<Integer>();
+				
+				for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)
+				{
+					boolean initialReplica = nextDownstream == null;
+					downstreamPhys.add(downstreamPlacement.opID());
+					nextDownstream = getOp(downstreamPlacement.opID());
+					if (initialReplica)
+					{
+						nextLog2OrigOp.put(downstreamLogicalIds.get(currentLogId), nextDownstream);
+					}
+					phys2addr.put(downstreamPlacement.opID(), nextDownstream.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+					LOG.info("Added op "+ current.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+				}
+				if (downstreamLogicalIds.get(currentLogId) != null)
+				{
+					LOG.debug("Adding logical id "+downstreamLogicalIds.get(currentLogId)+" phys nodes: "+ downstreamPhys);
+					log2phys.put(downstreamLogicalIds.get(currentLogId), downstreamPhys);
+				}
+			}
+			log2origOp.clear();
+			LOG.debug("Next log2origOp ids: "+nextLog2OrigOp.keySet());
+			log2origOp.putAll(nextLog2OrigOp);
+			nextLog2OrigOp.clear();
+		}
+		
+		return new Query(logicalTopology, log2phys, phys2addr);
 	}
 	
 	private Query buildJoinQuery()

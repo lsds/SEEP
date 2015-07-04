@@ -35,12 +35,12 @@ def main(k,h,query,w,hostname, local_worker_id=1):
 
 def start_worker(k, h, query, logfilename, sim_env, local_worker_id):
     worker_port = worker_base_port + local_worker_id
+    extra_java_params=map(lambda line: '-D'+line, read_extra_params())
     with open('%s%d/%s'%(data_dir_base,local_worker_id,logfilename), 'w') as log:
         args = ['sudo', '-u', user, 'java', '-verbose:gc',
                 '-XX:+PrintGCDetails', '-XX:+PrintGCTimeStamps',
                 '-Dplatform.dependencies=true',
-                '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query,
-                '-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]
+                '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -68,6 +68,13 @@ def read_query():
     with open('../query.txt', 'rb') as f:
         for line in f:
             return line.strip()
+
+def read_extra_params():
+    extra_params=[]
+    with open('../extra_params.txt', 'rb') as f:
+        for line in f:
+            extra_params.append(line.strip()) 
+    return extra_params
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
