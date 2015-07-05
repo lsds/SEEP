@@ -82,6 +82,7 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
     try:
+
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1'} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
@@ -97,6 +98,7 @@ def run_session(time_str, k, mob, exp_session, params):
         write_chain_length(params['h'], session.sessiondir)
         write_query_type(params['query'], session.sessiondir)
         write_extra_params(params, session.sessiondir)
+        write_session_params(params, session.sessiondir)
 
         copy_seep_jar(session.sessiondir)
         trace_file = None
@@ -370,6 +372,11 @@ def write_extra_params(params, session_dir):
         f.write('sources=%s\n'%str(params['sources']))
         f.write('sinks=%s\n'%str(params['sinks']))
         f.write('fanin=%s\n'%str(params['fanin']))
+
+def write_session_params(params, session_dir):
+    with open('%s/session_params.txt'%session_dir, 'w') as f:
+        for k in params:
+            f.write('%s=%s\n'%(k,str(params[k])))
 
 def copy_seep_jar(session_dir):
     dest = '%s/lib'%session_dir

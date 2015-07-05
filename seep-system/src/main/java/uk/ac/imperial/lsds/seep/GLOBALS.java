@@ -11,6 +11,7 @@
 package uk.ac.imperial.lsds.seep;
 
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -54,6 +55,8 @@ public class GLOBALS {
 			globals.put("sources", System.getProperty("sources"));
 			globals.put("sinks", System.getProperty("sinks"));
 			globals.put("fanin", System.getProperty("fanin"));
+			
+			globals.load(new FileReader("../session_params.txt"));
 			LOG.info("Loaded global properties="+propsToString());
 		}
 		catch (FileNotFoundException e1) {

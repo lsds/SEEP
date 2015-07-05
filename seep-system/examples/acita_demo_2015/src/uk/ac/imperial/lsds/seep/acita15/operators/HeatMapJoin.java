@@ -11,12 +11,15 @@
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.util.List;
+import java.util.LinkedList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+
+import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
 public class HeatMapJoin implements StatelessOperator{
 
@@ -51,7 +54,12 @@ public class HeatMapJoin implements StatelessOperator{
 		}
 	
 		long tupleId = data.getLong("tupleId");
-		String value = data.getString("value") + "," + api.getOperatorId();
+		
+		String value = mergeHeatMaps(getHeatMaps(arg0)).toString();
+		
+		//String value = data.getString("value") + "," + api.getOperatorId();
+		//String value = data.getString("value");
+		
 		
 		DataTuple outputTuple = data.setValues(tupleId, value);
 		processed++;
@@ -81,4 +89,25 @@ public class HeatMapJoin implements StatelessOperator{
 		System.out.println("Setting up HEATMAP_JOIN operator with id="+api.getOperatorId());
 	}
 
+	public List<HeatMap> getHeatMaps(List<DataTuple> tuples)
+	{
+		List<HeatMap> result = new LinkedList<>();
+		for (DataTuple tuple : tuples)
+		{
+			result.add(new HeatMap(tuple.getString("value")));
+		}
+		return result;
+	}
+	
+	public HeatMap mergeHeatMaps(List<HeatMap> heatMaps)
+	{
+		HeatMap result = null;
+		for (HeatMap heatMap : heatMaps)
+		{
+			if (result == null) { result = heatMap; }
+			else { result.add(heatMap); }
+		}
+		
+		return result;
+	}
 }
