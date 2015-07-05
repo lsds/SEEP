@@ -154,7 +154,8 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		endPtrs   = new byte [windowPtrsSize];
 		
 		String source = 
-			KernelCodeGenerator.getPartialReduction (inputSchema, outputSchema, filename, type, _the_aggregate, windowDefinition);
+			KernelCodeGenerator.getPartialReduction (inputSchema, outputSchema, filename, type, _the_aggregate, 
+					windowDefinition);
 		System.out.println(source);
 		
 		qid = TheGPU.getInstance().getQuery(source, 2, 1, 4);
@@ -228,6 +229,7 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 				longArgs[0] = ((windowBatch.getBatchStartPointer() / inputSchema.getByteSizeOfTuple()) / windowBatch.getWindowDefinition().getPaneSize()) - 1;
 			}
 		}
+		longArgs[0] = 100;
  		longArgs[1] = windowBatch.getBatchStartPointer();
  		System.out.println("[DBG] previous pane is " + longArgs[0]);
 		TheGPU.getInstance().configurePartialReduce(qid, longArgs);

@@ -221,6 +221,7 @@ public class KernelCodeGenerator {
 	public static String getHeader (ITupleSchema input, ITupleSchema output) {
 		StringBuilder b = new StringBuilder ();
 		b.append("#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics: enable\n");
+		b.append("#pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics: enable\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable\n");
 		b.append("#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics: enable\n");
 		b.append("\n");

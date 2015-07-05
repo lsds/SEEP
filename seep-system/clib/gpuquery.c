@@ -51,13 +51,14 @@ static void *output_handler (void *args) {
 	int qid = handler->qid;
 	
 	(*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
-	/* Pin this thread to a particular core: 0 is the dispatcher, 1 is the GPU. */
 	int core = 2;
+#ifndef __APPLE__	
+	/* Pin this thread to a particular core: 0 is the dispatcher, 1 is the GPU. */
 	cpu_set_t set;
 	CPU_ZERO (&set);
 	CPU_SET (core, &set);
 	sched_setaffinity (0, sizeof(set), &set);
-	
+#endif
 	fprintf(stderr, "[GPU] output handler attached (%s, core=%02d)\n", __FUNCTION__, core);
 	fflush (stderr);
 	

@@ -10,15 +10,15 @@ __kernel void clearKernel (
 	__global uchar *output,
 	__local float *scratch
 ) {
-	int tid = (int) get_global_id  (0);
-	int lid = (int) get_local_id   (0);
-	int gid = (int) get_group_id   (0);
-	int lgs = (int) get_local_size (0); /* Local group size */
+	//int tid = (int) get_global_id  (0);
+	// int lid = (int) get_local_id   (0);
+	// int gid = (int) get_group_id   (0);
+	// int lgs = (int) get_local_size (0); /* Local group size */
 
-	if (tid == 0) {
-		offset[0] = 0;
-		offset[1] = 0;
-	}
+//	if (tid == 0) {
+//		offset[0] = 1;
+//		offset[1] = 1;
+//	}
 }
 
 __kernel void partialReduceKernel (
@@ -34,9 +34,9 @@ __kernel void partialReduceKernel (
 	__local float *scratch
 ) {
 	int tid = (int) get_global_id  (0);
-	int lid = (int) get_local_id   (0);
-	int gid = (int) get_group_id   (0);
-	int lgs = (int) get_local_size (0); /* Local group size */
+	// int lid = (int) get_local_id   (0);
+	// int gid = (int) get_group_id   (0);
+	// int lgs = (int) get_local_size (0); /* Local group size */
 	
 	long wid;
 	long paneId, normalisedPaneId;
@@ -44,16 +44,16 @@ __kernel void partialReduceKernel (
 	long currPaneId;
 	long prevPaneId;
 	/* Every thread is assigned a tuple */
-	__global input_t *curr = (__global input_t *) &input[tid * sizeof(input_t)];
 #ifdef RANGE_BASED
+	__global input_t *curr = (__global input_t *) &input[tid * sizeof(input_t)];
 	currPaneId = curr->tuple.t / PANE_SIZE;
 #else
 	currPaneId = ((batchOffset + (tid * sizeof(input_t))) / sizeof(input_t)) / PANE_SIZE;
 #endif
 	/* It also reads the previous tuple */
 	if (tid > 0) {
-		__global input_t *prev = (__global input_t *) &input[(tid - 1) * sizeof(input_t)];
 #ifdef RANGE_BASED
+		__global input_t *prev = (__global input_t *) &input[(tid - 1) * sizeof(input_t)];
 		prevPaneId = prev->tuple.t / PANE_SIZE;
 #else
 		prevPaneId = ((batchOffset + ((tid - 1) * sizeof(input_t))) / sizeof(input_t)) / PANE_SIZE;
@@ -62,25 +62,26 @@ __kernel void partialReduceKernel (
 		prevPaneId = previousPaneId; // currPaneId - 1; // previousPaneId;
 	}
 //	if (tid == 0) {
-//		offset[0] = prevPaneId; // prevPaneId;
-//		offset[1] = currPaneId;
+//		offset[0] = batchOffset; // 100; // previousPaneId; // prevPaneId;
+//		offset[1] = 100; // batchOffset;
 //	}
 
 	if (prevPaneId < currPaneId) {
 		/* Compute offset based on the first closing window */
-		// while (prevPaneId < currPaneId) {
+		while (prevPaneId < currPaneId) {
 			paneId = prevPaneId + 1;
 			normalisedPaneId = paneId - PANES_PER_WINDOW;
 			if (normalisedPaneId >= 0 && normalisedPaneId % PANES_PER_SLIDE == 0) {
 				wid = normalisedPaneId / PANES_PER_SLIDE;
 				if (wid >= 0) {
-					// atom_min(&offset[0], wid); // convert_int_sat(wid));
-					offset[0] = wid;
-					// break;
+					// atom_add(&offset[0], wid); // convert_int_sat(wid));
+					// offset[0] = wid;
+					atomic_add(&offset[0], 0); // window_ptrs_[0], 0);
+					break;
 				}
 			}
-			// prevPaneId += 1;
-		// }
+			prevPaneId += 1;
+		}
 	}
 
 	return ;
