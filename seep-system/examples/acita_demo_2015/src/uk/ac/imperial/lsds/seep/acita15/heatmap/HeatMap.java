@@ -18,13 +18,13 @@ import org.slf4j.LoggerFactory;
 public class HeatMap implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(HeatMap.class);
-	private final int tileWidth;
-	private final int tileHeight;
+	private final double tileWidth;
+	private final double tileHeight;
 	private final int xTiles;
 	private final int yTiles;
 	private int[][] posCounts;
 
-	public HeatMap(int tileWidth, int tileHeight, int xTiles, int yTiles)
+	public HeatMap(double tileWidth, double tileHeight, int xTiles, int yTiles)
 	{
 		this.tileWidth = tileWidth;
 		this.tileHeight = tileHeight;
@@ -37,8 +37,8 @@ public class HeatMap implements Serializable {
 	{
 		String[] parts = serialized.split(";");
 		String[] metadata = parts[0].split(",");
-		this.tileWidth = Integer.parseInt(metadata[0]);
-		this.tileHeight = Integer.parseInt(metadata[1]);
+		this.tileWidth = Double.parseDouble(metadata[0]);
+		this.tileHeight = Double.parseDouble(metadata[1]);
 		this.xTiles = Integer.parseInt(metadata[2]);
 		this.yTiles = Integer.parseInt(metadata[3]);
 		this.posCounts = new int[xTiles][yTiles];
@@ -92,8 +92,9 @@ public class HeatMap implements Serializable {
 		if (currentLoc.getX() > xTiles * tileWidth) { throw new RuntimeException("Logic error: current="+currentLoc.getX()+",xTiles="+xTiles+",tw="+tileWidth); }
 		if (currentLoc.getY() > yTiles * tileHeight) { throw new RuntimeException("Logic error: current="+currentLoc.getY()+",yTiles="+yTiles+",th="+tileHeight); }
 
-		int xTile = currentLoc.getX() / tileWidth;
-		int yTile = currentLoc.getY() / tileHeight;
+		//TODO: Fix cast
+		int xTile = (int) (currentLoc.getX() / tileWidth);
+		int yTile = (int) (currentLoc.getY() / tileHeight);
 		//In case on the border.
 		if (xTile == xTiles) { xTile--; }
 		if (yTile == yTiles) { yTile--; }
