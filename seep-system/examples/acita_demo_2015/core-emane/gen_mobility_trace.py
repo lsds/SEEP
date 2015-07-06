@@ -90,11 +90,15 @@ def parse_sftaxi_file(trace_file, node, output_file):
         updates = list(sftaxi_trace)
         # Trace updates seem to be in reverse order.
         updates.reverse()
+        raw_movements = []
+
         x,y,occupied,t = parse_sftaxi_line(updates[0])
         utm_coords = utm.from_latlon(x,y)
-        write_ns2_initial_movement(node, utm_coords[0], utm_coords[1], output_file)
+        #write_ns2_initial_movement(node, utm_coords[0], utm_coords[1], output_file)
         src_coords = utm_coords
         src_time = t 
+
+        raw_movements.append((src_time, t, utm_coords[0], utm_coords[1], 0))
 
         min_time = t
         max_time = t
@@ -107,7 +111,8 @@ def parse_sftaxi_file(trace_file, node, output_file):
             x,y,occupied,t = parse_sftaxi_line(line)
             utm_coords = utm.from_latlon(x,y)
             speed = compute_speed(src_coords, utm_coords, src_time, t)
-            write_ns2_waypoint(src_time, node, utm_coords[0], utm_coords[1], speed, output_file)
+            raw_movements.append((src_time, t, utm_coords[0], utm_coords[1], speed))
+            #write_ns2_waypoint(src_time, node, utm_coords[0], utm_coords[1], speed, output_file)
 
             src_coords = utm_coords
             src_time = t 
@@ -120,8 +125,48 @@ def parse_sftaxi_file(trace_file, node, output_file):
             max_y = max(max_y, utm_coords[1])
             #output_file.write("%d,%s,%s,%s\n"%(node,str(t),str(utm_coords[0]),str(utm_coords[1])))
 
+        dim_x = max_x - min_x
+        dim_y = max_y - min_y
+
+        print '#min_t=%d, max_t=%d, duration=%d\n'%(min_time,max_time, max_time - min_time)
+        print '#min_x=%s, min_y=%s, max_x=%s, max_y=%s\n'%(str(min_x),str(min_y),str(max_x),str(max_y))
+        print '#dims=%sx%s\n'%(str(dim_x),str(dim_y))
+
+        # Normalize the times to start at 0, and also the waypoints to be wrt
+        # 0,0 (and have x,y < 65535)
+        found_initial = False
+        for (src_time, t, x, y, speed) in raw_movements:
+            if t < min_time: raise Exception('Logic error, t=%s < min_time=%s'%(str(t),str(min_time)))
+            norm_x = x-min_x
+            norm_y = y-min_y
+            #Ignore positions to big for CORE to handle (annoying!).
+            if norm_x < 65535 and norm_y < 65535:
+                if found_initial:
+                    norm_t = src_time - min_time
+                    write_ns2_waypoint(norm_t, node, norm_x, norm_y, speed, output_file)
+                else:
+                    print 'Found initial'
+                    write_ns2_initial_movement(node, norm_x, norm_y, output_file)
+                    min_time = t
+                    found_initial = True
+            else:
+                print 'Position outside area: (%d,%d), norm=(%d,%d)'%(x,y, norm_x,norm_y)
+                norm_x = min(norm_x, 65534)
+                norm_y = min(norm_y, 65534)
+                if found_initial:
+                    norm_t = src_time - min_time
+                    write_ns2_waypoint(norm_t, node, norm_x, norm_y, speed, output_file)
+                else:
+                    print 'Found initial'
+                    write_ns2_initial_movement(node, norm_x, norm_y, output_file)
+                    min_time = t
+                    found_initial = True
+
+        
         output_file.write('#min_t=%d, max_t=%d, duration=%d\n'%(min_time,max_time, max_time - min_time))
         output_file.write('#min_x=%s, min_y=%s, max_x=%s, max_y=%s\n'%(str(min_x),str(min_y),str(max_x),str(max_y)))
+        output_file.write('#dims=%sx%s\n'%(str(dim_x),str(dim_y)))
+        print 'dims=%sx%s\n'%(str(dim_x),str(dim_y))
 
 def write_ns2_initial_movement(node, x, y, f):
      f.write("$node_(%d) set X_ %s\n"%(node, str(x)))
