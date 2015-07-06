@@ -24,12 +24,12 @@ public class HeatMap implements Serializable {
 	private final int yTiles;
 	private int[][] posCounts;
 
-	public HeatMap(double tileWidth, double tileHeight, int xTiles, int yTiles)
+	public HeatMap(double maxX, double maxY, int xTiles, int yTiles)
 	{
-		this.tileWidth = tileWidth;
-		this.tileHeight = tileHeight;
 		this.xTiles = xTiles;
 		this.yTiles = yTiles;
+		this.tileWidth = maxX / xTiles;
+		this.tileHeight = maxY / yTiles;
 		this.posCounts = new int[xTiles][yTiles];
 	}
 

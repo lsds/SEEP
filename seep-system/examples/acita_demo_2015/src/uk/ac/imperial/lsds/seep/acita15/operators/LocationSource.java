@@ -62,12 +62,10 @@ public class LocationSource implements StatelessOperator {
 		//int yTiles = Integer.parseInt(GLOBALS.valueFor("yTiles"));
 		int xTiles = 10;
 		int yTiles = 10;
-		double tileWidth = x / xTiles;
-		double tileHeight = y / yTiles;
 
 		long interLocDelay = interFrameDelay;
 		long heatMapInterval = 10 * interFrameDelay;
-		final HeatMapThread localHeatMapper = new HeatMapThread(tileWidth, tileHeight, xTiles, yTiles, interLocDelay, heatMapInterval);
+		final HeatMapThread localHeatMapper = new HeatMapThread(x, y, xTiles, yTiles, interLocDelay, heatMapInterval);
 		new Thread(localHeatMapper).start();
 		
 		//final String value = generateFrame(tupleSizeChars);
