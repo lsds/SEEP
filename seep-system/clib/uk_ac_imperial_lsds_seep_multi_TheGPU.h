@@ -109,6 +109,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelTheta
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    executePartialReduce
+ * Signature: (I[I[I[J)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executePartialReduce
+  (JNIEnv *, jobject, jint, jintArray, jintArray, jlongArray);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    setKernelPartialReduce
  * Signature: (I[I[J)I
  */

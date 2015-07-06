@@ -41,7 +41,8 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/PartialReduction.cl";
+	private static String filename = Utils.SEEP_HOME + 
+			"/seep-system/clib/templates/PartialReduction.cl";
 	
 	private int qid;
 	
@@ -96,7 +97,8 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 				ExpressionsUtil.getTupleSchemaForExpressions(outputAttributes);
 		
 		this.outputTupleSize = outputSchema.getByteSizeOfTuple();
-		System.out.println(String.format("[DBG] output tuple size is %d bytes", this.outputTupleSize));
+		System.out.println(String.format("[DBG] output tuple size is %d bytes", 
+				this.outputTupleSize));
 		
 		/* Task pipelining internal state */
 		
@@ -129,19 +131,21 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		
 		this.tuples = batchSize / inputSchema.getByteSizeOfTuple();
 		
-		tgs = new int [3];
+		tgs = new int [4];
 		tgs[0] = threadsPerGroup; /* This is a constant */
 		tgs[1] = threadsPerGroup; /* This is a constant */
 		tgs[2] = threadsPerGroup; /* This is a constant */
+		tgs[3] = threadsPerGroup; /* This is a constant */
 		
-		threads = new int [3];
+		threads = new int [4];
 		threads[0] = this.tuples;
 		threads[1] = this.tuples;
 		threads[2] = this.tuples;
+		threads[3] = this.tuples;
 		
-		this.outputSize = 32 * 16; /* Another 1MB */
+		this.outputSize = 1048576; // 64 * 16; /* Another 1MB */
 		
-		intArgs = new int [5];
+		intArgs = new int [3];
 		intArgs[0] = tuples;
 		intArgs[1] = batchSize;
 		intArgs[2] = inputSchema.getByteSizeOfTuple() * tgs[0]; // localInputSize
@@ -150,7 +154,7 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		longArgs[0] = 0; /* Previous pane id */
 		longArgs[1] = 0; /* Batch start offset */
 		
-		this.windowPtrsSize = 65536;
+		this.windowPtrsSize = this.tuples;
 		
 		startPtrs = new byte [windowPtrsSize];
 		endPtrs   = new byte [windowPtrsSize];
@@ -160,7 +164,7 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 					windowDefinition);
 		System.out.println(source);
 		
-		qid = TheGPU.getInstance().getQuery(source, 3, 1, 4);
+		qid = TheGPU.getInstance().getQuery(source, 4, 1, 5);
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
 		/* Start and end pointers are also inputs */
@@ -170,7 +174,8 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		TheGPU.getInstance().setOutput(qid, 0, windowPtrsSize, 1, 0, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 1, windowPtrsSize, 1, 0, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 2,             16, 1, 0, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 3,     outputSize, 1, 0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 3,             16, 1, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 4,     outputSize, 1, 0, 0, 1);
 		
 		offsetVal = new byte [16];
 		
@@ -209,12 +214,15 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		
 		/* Set output */
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 3, outputBuffer.array());
+		TheGPU.getInstance().setOutputBuffer(qid, 4, outputBuffer.array());
 		
 		TheGPU.getInstance().setOutputBuffer(qid, 2, offsetVal);
 		
 		TheGPU.getInstance().setOutputBuffer(qid, 0, startPtrs);
 		TheGPU.getInstance().setOutputBuffer(qid, 1,   endPtrs);
+		
+		byte [] windowCounts = new byte [16];
+		TheGPU.getInstance().setOutputBuffer(qid, 3, windowCounts);
 		
 		
 		// threads[0] = tgs[0] * (windowBatch.getLastWindowIndex() + 1); 
@@ -238,14 +246,17 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		// longArgs[0] = 100;
  		longArgs[1] = windowBatch.getBatchStartPointer();
  		// System.out.println("[DBG] previous pane is " + longArgs[0]);
-		TheGPU.getInstance().configurePartialReduce(qid, longArgs);
+		// TheGPU.getInstance().configurePartialReduce(qid, longArgs);
 		// System.out.println("[DBG] execute");
-		TheGPU.getInstance().execute(qid, threads, tgs);
+		TheGPU.getInstance().executePartialReduce(qid, threads, tgs, longArgs);
 		
-		// ByteBuffer tmp = ByteBuffer.wrap(offsetVal).order(ByteOrder.LITTLE_ENDIAN);
-		// System.out.println(String.format("[DBG] batch %10d starts @ %15d: %10d, %10d", taskIdx[0], windowBatch.getBatchStartPointer(), tmp.getLong(),  tmp.getLong()));
-		
-		printWindowPointers(startPtrs, endPtrs, 32); // windowBatch.getLastWindowIndex());
+//		ByteBuffer tmp = ByteBuffer.wrap(offsetVal).order(ByteOrder.LITTLE_ENDIAN);
+//		System.out.println(String.format("[DBG] batch %10d starts @ %15d: %10d, %10d", taskIdx[0], windowBatch.getBatchStartPointer(), tmp.getLong(),  tmp.getLong()));
+//		
+//		ByteBuffer tmp2 = ByteBuffer.wrap(windowCounts).order(ByteOrder.LITTLE_ENDIAN);
+//		System.out.println(String.format("[DBG] windows %d/%d/%d/%d", 
+//				tmp2.getInt(),  tmp2.getInt(), tmp2.getInt(), tmp2.getInt()));
+//		printWindowPointers(startPtrs, endPtrs, 32); // windowBatch.getLastWindowIndex());
 		
 		/* 
 		 * Set position based on the data size returned from the GPU engine

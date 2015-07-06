@@ -175,6 +175,9 @@ public class TheGPU {
 	public native int setKernelAggregate (int queryId, int [] args);
 	public native int setKernelThetaJoin (int queryId, int [] args);
 	
+	public native int executePartialReduce 
+		(int queryId, int [] threads, int [] threadsPerGroup, long [] args);
+	
 	public native int setKernelPartialReduce (int queryId, int [] intArgs, long [] longArgs);
 	
 	/* LRB UDF */

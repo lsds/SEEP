@@ -226,26 +226,14 @@ int gpu_query_setOutput (gpuQueryP q, int ndx, void *buffer, int size,
 }
 
 int gpu_query_setKernel (gpuQueryP q, int ndx, const char * name,
-		void (*callback)(cl_kernel, gpuContextP, int *), int *args) {
+		void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intArgs, long *longArgs) {
 	if (! q)
 		return -1;
 	if (ndx < 0 || ndx > q->contexts[0]->kernel.count)
 		return -1;
 	int i;
 	for (i = 0; i < NCONTEXTS; i++)
-		gpu_context_setKernel (q->contexts[i], ndx, name, callback, args);
-	return 0;
-}
-
-int gpu_query_setKernel_another (gpuQueryP q, int ndx, const char * name,
-		void (*callback)(cl_kernel, gpuContextP, int *, long *), int *intargs, long *longargs) {
-	if (! q)
-		return -1;
-	if (ndx < 0 || ndx > q->contexts[0]->kernel.count)
-		return -1;
-	int i;
-	for (i = 0; i < NCONTEXTS; i++)
-		gpu_context_setKernel_another (q->contexts[i], ndx, name, callback, intargs, longargs);
+		gpu_context_setKernel (q->contexts[i], ndx, name, callback, intArgs, longArgs);
 	return 0;
 }
 
@@ -466,7 +454,7 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	}
 	
 	/* Wait for write event */
- 	// gpu_context_waitForWriteEvent (p);
+ 	/* gpu_context_waitForWriteEvent (p); */
 
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
@@ -483,7 +471,9 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 #endif
 
 	gpu_context_moveInputBuffers (p);
-
+	
+	if (operator->configArgs != NULL)
+		gpu_context_configArgs (p, operator->configArgs, operator->intArgs,operator->longArgs);
 	gpu_context_submitKernel (p, threads, threadsPerGroup);
 	
 	gpu_context_moveOutputBuffers (p);

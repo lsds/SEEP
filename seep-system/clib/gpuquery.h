@@ -45,9 +45,6 @@ int gpu_query_setInput (gpuQueryP, int, void *, int);
 int gpu_query_setOutput (gpuQueryP, int, void *, int, int, int, int, int);
 
 int gpu_query_setKernel (gpuQueryP, int,
-		const char *, void (*callback)(cl_kernel, gpuContextP, int *), int *);
-
-int gpu_query_setKernel_another (gpuQueryP, int,
 		const char *, void (*callback)(cl_kernel, gpuContextP, int *, long *), int *, long *);
 
 int gpu_query_configureKernel (gpuQueryP, int,

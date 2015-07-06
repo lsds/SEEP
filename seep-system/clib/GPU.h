@@ -10,9 +10,12 @@
 
 typedef struct query_operator *queryOperatorP;
 typedef struct query_operator {
+	int *intArgs;
+	long *longArgs;
 	/* void (*setKernels) (cl_kernel, gpuContextP, int *); */
 	void (*writeInput) (gpuContextP, JNIEnv *, jobject, int, int, int);
 	void (*readOutput) (gpuContextP, JNIEnv *, jobject, int, int, int);
+	void (*configArgs) (cl_kernel, gpuContextP, int *, long *);
 	gpuContextP (*execKernel) (gpuContextP);
 } query_operator_t;
 
@@ -29,9 +32,7 @@ int gpu_setInput (int, int, void *, int);
 
 int gpu_setOutput (int, int, void *, int, int, int, int, int);
 
-int gpu_setKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *), int *);
-
-int gpu_setKernel_another (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *, long *), int *, long *);
+int gpu_setKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *, long *), int *, long *);
 
 int gpu_configureKernel (int, int, const char *, void (*callback) (cl_kernel, gpuContextP, int *, long *), int *, long *);
 
