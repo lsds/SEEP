@@ -54,6 +54,8 @@ void callback_setKernelThetaJoin (cl_kernel, gpuContextP, int *, long *);
 void callback_setKernelPartialReduce (cl_kernel, gpuContextP, int *, long *);
 void callback_configurePartialReduce (cl_kernel, gpuContextP, int *, long *);
 
+void callback_setKernelPartialAggregate (cl_kernel, gpuContextP, int *, long *);
+
 /* UDFs */
 void callback_setKernelAggregateIStream (cl_kernel, gpuContextP, int *, long *);
 
@@ -159,7 +161,7 @@ void gpu_init (int _queries) { /* Initialise `n` queries */
 
 void gpu_free () {
 	int i;
-	int error;
+	int error = 0;
 	for (i = 0; i < MAX_QUERIES; i++)
 		if (queries[i])
 			gpu_query_free (queries[i]);
@@ -558,6 +560,20 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggre
 
 	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
 	/* Object `int []` released */
+	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelPartialAggregate
+(JNIEnv *env, jobject obj, jint qid, jintArray _args) {
+
+	(void) obj;
+
+	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
+
+	gpu_setKernel (qid, 0,  "clearKernel",     &callback_setKernelPartialAggregate, args, NULL);
+	gpu_setKernel (qid, 1,  "aggregateKernel", &callback_setKernelPartialAggregate, args, NULL);
+
+	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
 	return 0;
 }
 
@@ -1193,6 +1209,61 @@ void callback_setKernelAggregate (cl_kernel kernel, gpuContextP context, int *co
 		exit (1);
 	}
 	
+	return;
+}
+
+void callback_setKernelPartialAggregate (cl_kernel kernel, gpuContextP context, int *constants, long *dummy) {
+
+	(void) dummy;
+
+	 /* Get all constants */
+	int tuples = constants[0];
+	int bytes = constants[1];
+	int _table_ = constants[2];
+
+	int error = 0;
+	/* Set constant arguments */
+	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *)         &tuples);
+	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)          &bytes);
+	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *)        &_table_);
+	/* Set input buffers */
+	error |= clSetKernelArg (
+		kernel,
+		3,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[0]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		4,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[1]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		5,
+		sizeof(cl_mem),
+		(void *) &(context->kernelInput.inputs[2]->device_buffer));
+	/* Set output buffers */
+	error |= clSetKernelArg (
+        kernel,
+        6,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[0]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        7,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[1]->device_buffer));
+	error |= clSetKernelArg (
+        kernel,
+        8,
+        sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[2]->device_buffer));
+
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+
 	return;
 }
 

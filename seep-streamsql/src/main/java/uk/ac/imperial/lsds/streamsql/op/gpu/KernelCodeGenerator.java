@@ -87,6 +87,32 @@ public class KernelCodeGenerator {
 		
 		return b.toString();
 	}
+	
+	public static String getPartialAggregation(
+			ITupleSchema inputSchema,
+			ITupleSchema outputSchema, 
+			String filename, 
+			AggregationType type,
+			FloatColumnReference _the_aggregate, 
+			Expression[] groupBy,
+			String where) {
+		
+		StringBuilder b = new StringBuilder ();
+		b.append(getHeader (inputSchema, outputSchema));
+		b.append(getPartialIntermediateStruct (groupBy));
+		b.append("\n");
+		b.append(getAggregationFunctors(outputSchema, type, _the_aggregate, groupBy));
+		b.append("\n");
+		if (where != null) {
+			b.append("#define WHERE_CLAUSE");
+			b.append("\n");
+			b.append(getSelectionAggregationFunctor(where));
+			b.append("\n");
+		}
+		b.append(getAggregationKernel(filename));
+		b.append("\n");
+		return b.toString();
+	}
 
 	public static String getAggregation(
 			ITupleSchema inputSchema,
@@ -158,6 +184,51 @@ public class KernelCodeGenerator {
 		/* The first attribute is always a timestamp */
 		b.append("\tlong t;\n");
 		int byteSize = 8;
+		for (int i = 1; i <= groupBy.length; i++) {
+			if (groupBy[i-1] instanceof IntExpression) { 
+				b.append(String.format("\tint key_%d;\n", i));
+				byteSize += 4;
+			} else
+			if (groupBy[i-1] instanceof FloatExpression) { 
+				b.append(String.format("\tfloat key_%d;\n", i));
+				byteSize += 4;
+			} else
+			if (groupBy[i-1] instanceof LongExpression) { 
+				b.append(String.format("\tlong key_%d;\n", i));
+				byteSize += 8;
+			}
+		}
+		b.append("\tint val;\n");
+		b.append("\tint cnt;\n");
+		byteSize += 8;
+		int byteSize_ = byteSize;
+		/* Ensure output tuple size is a power of two */
+		while ((byteSize_ & (byteSize_ - 1)) != 0) {
+			byteSize_ ++;
+		}
+		if (byteSize_ > byteSize) {
+			/* Add padding */
+			b.append(String.format("\tuchar padding[%d];\n", (byteSize_ - byteSize)));
+		}
+		b.append("} intermediate_tuple_t __attribute__((aligned(1)));\n");
+		b.append("\n");
+		
+		b.append("typedef union {\n");
+		b.append("\tintermediate_tuple_t tuple;\n");
+		b.append(String.format("\tuchar16 vectors[%d];\n", getVectorSize(byteSize_)));
+		b.append("} intermediate_t;\n");
+		return b.toString();
+	}
+	
+private static String getPartialIntermediateStruct (Expression [] groupBy) {
+		
+		StringBuilder b = new StringBuilder ();
+		
+		b.append("typedef struct {\n");
+		b.append("\tuchar mark;\n");
+		/* The first attribute is always a timestamp */
+		b.append("\tlong t;\n");
+		int byteSize = 9;
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 
 				b.append(String.format("\tint key_%d;\n", i));

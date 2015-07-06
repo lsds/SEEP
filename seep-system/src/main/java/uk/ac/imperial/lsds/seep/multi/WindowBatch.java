@@ -973,7 +973,10 @@ public class WindowBatch {
 			}
 		} /* End for */
 		
-		System.out.println(String.format("[DBG] batch %10d starts @ %15d window offset is %d", taskId, batchStartPointer, offset));
+		/*
+		 * System.out.println(String.format("[DBG] batch %10d starts @ %15d window offset is %d", 
+		 * taskId, batchStartPointer, offset));
+		 */
 		
 		if (debugCountBasedComputation)
 			System.out.println(String.format("[DBG] %d opening windows; %d closing windows; last window index is %d", 

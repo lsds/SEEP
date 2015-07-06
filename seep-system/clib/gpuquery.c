@@ -471,9 +471,9 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 #endif
 
 	gpu_context_moveInputBuffers (p);
-	
-	if (operator->configArgs != NULL)
+	if (operator->configArgs != NULL) {
 		gpu_context_configArgs (p, operator->configArgs, operator->intArgs,operator->longArgs);
+	}
 	gpu_context_submitKernel (p, threads, threadsPerGroup);
 	
 	gpu_context_moveOutputBuffers (p);

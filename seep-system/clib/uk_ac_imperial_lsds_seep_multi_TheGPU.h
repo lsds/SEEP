@@ -125,6 +125,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelParti
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    setKernelPartialAggregate
+ * Signature: (I[I)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelPartialAggregate
+  (JNIEnv *, jobject, jint, jintArray);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    setKernelAggregateIStream
  * Signature: (I[I)I
  */

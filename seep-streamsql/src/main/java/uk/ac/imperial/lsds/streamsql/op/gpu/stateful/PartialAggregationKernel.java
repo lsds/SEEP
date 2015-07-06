@@ -31,31 +31,14 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
 	private static final int threadsPerGroup = 128;
-	private static final int tuplesPerThread = 2;
 	
 	private static int kdbg = 0;
-	private static boolean debug = false;
+	private static boolean debug = true;
 	
 	private static int pipelines = Utils.PIPELINE_DEPTH;
 	private int [] taskIdx;
 	private int [] freeIdx;
 	private int [] markIdx; /* Latency mark */
-	
-	private static final int _hash_functions = 5;
-	
-	private static final float _scale_factor = 1.25F;
-	
-	private static final float _min_space_requirements [] = {
-		Float.MAX_VALUE,
-		Float.MAX_VALUE,
-		2.01F,
-		1.10F,
-		1.03F,
-		1.02F
-	};
-	
-	/* Default stash table size (# tuples) */
-	private static int _stash = 100;
 	
 	private AggregationType type;
 	private FloatColumnReference _the_aggregate;
@@ -63,13 +46,13 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 	private Expression [] groupBy;
 	
 	private String selectionClause = null;
-	private String havingClause = null;
 	
 	private LongColumnReference timestampReference;
 	
 	private ITupleSchema inputSchema, outputSchema;
 	
-	private static String filename = Utils.SEEP_HOME + "/seep-system/clib/templates/Aggregation.cl";
+	private static String filename = Utils.SEEP_HOME + 
+			"/seep-system/clib/templates/PartialAggregation.cl";
 	
 	private int qid;
 	
@@ -80,41 +63,24 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 	private int [] threads;
 	private int [] tgs;
 	
-	private int ngroups;
-	
-	private int batchSize = -1, windowSize = -1;
+	private int batchSize = -1;
 
 	/* Global and local memory sizes */
 	private int inputSize = -1, outputSize;
 	private int windowPtrsSize;
-	private int localInputSize;
 	
-	private int outputSize2, outputSize3;
-	
-	private int __stash_x, __stash_y;
-	private int [] _x;
-	private int [] _y;
-	
-	private ByteBuffer x;
-	private ByteBuffer y;
-	
-	private int iterations;
-	
-	private int tableSize, tableSlots;
+	private int tableSize;
 	
 	private byte [] startPtrs;
 	private byte [] endPtrs;
 	
 	private int intermediateTupleSize, outputTupleSize;
 	
-	private byte [] contents, stashed, failed, attempts, indices, offsets, partitions;
-	private int contentsLength,
-	             stashedLength, 
+	private byte [] failed, attempts;
+	
+	private int contentsLength, 
 	              failedLength, 
-	            attemptsLength, 
-	             indicesLength, 
-	             offsetsLength, 
-	          partitionsLength;
+	            attemptsLength;
 	
 	private static boolean isPowerOfTwo (int n) {
 		if (n == 0)
@@ -127,34 +93,12 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		return true;
 	}
 	
-	private static int computeIterations (int n) {
-		int result = 7;
-		float logn = (float) (Math.log(n) / Math.log(2.0));
-		return (int) (result * logn);
-	}
-	
-	private static void constants (int [] x, int [] y, int [] stash) {
-		Random r = new Random();
-		int prime = 2147483647;
-		assert (x.length == y.length);
-		int i, n = x.length;
-		int t;
-		for (i = 0; i < n; i++) {
-			t = r.nextInt(prime);
-			x[i] = (1 > t ? 1 : t);
-			y[i] = r.nextInt(prime) % prime;
-		}
-		/* Stash hash constants */
-		stash[0] = Math.max(1, r.nextInt(prime)) % prime;
-		stash[1] = r.nextInt(prime) % prime;
-	}
-	
-	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs) {
+	private void printWindowPointers(byte [] startPtrs, byte [] endPtrs, int count) {
 		
 		ByteBuffer b = ByteBuffer.wrap(startPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		ByteBuffer d = ByteBuffer.wrap(  endPtrs).order(ByteOrder.LITTLE_ENDIAN);
 		int wid = 0;
-		while (b.hasRemaining() && d.hasRemaining()) {
+		while (b.hasRemaining() && d.hasRemaining() && wid < count) {
 			System.out.println(String.format("w %02d: starts %10d ends %10d", 
 				wid, b.getInt(), d.getInt()));
 				wid ++;
@@ -219,174 +163,85 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		}
 	}
 	
-	public void setInputSize (int inputSize) {
-		this.inputSize = inputSize;
-	}
-	
 	public void setBatchSize (int batchSize) {
 		this.batchSize = batchSize;
 	}
 	
-	public void setWindowSize (int windowSize) {
-		this.windowSize = windowSize;
-	}
-	
 	public void setup () {
 		
-		if (windowSize < 0) {
-			System.err.println("error: invalid window size");
-			System.exit(1);
-		}
 		if (batchSize < 0) {
 			System.err.println("error: invalid batch size");
 			System.exit(1);
 		}
-		if (inputSize < 0) {
-			System.err.println("error: invalid input size");
-			System.exit(1);
-		}
+		
+		inputSize = batchSize;
+		
 		tuples = inputSize / inputSchema.getByteSizeOfTuple();
 		
-		windowPtrsSize = batchSize * 4;
+		windowPtrsSize = 32768 * 4;
+		
 		startPtrs = new byte [windowPtrsSize];
 		  endPtrs = new byte [windowPtrsSize];
 		
-		/* Configure hash table constants */
-		_x = new int [_hash_functions];
-		_y = new int [_hash_functions];
-		 x = ByteBuffer.allocate(4 * _hash_functions).order
-			(ByteOrder.LITTLE_ENDIAN);
-		 y = ByteBuffer.allocate(4 * _hash_functions).order
-			(ByteOrder.LITTLE_ENDIAN);
-		int [] stash = new int[2];
-		constants (_x, _y, stash);
-		__stash_x = stash[0];
-		__stash_y = stash[1];
-		for (int i = 0; i < _hash_functions; i++) {
-			x.putInt(_x[i]);
-			y.putInt(_y[i]);
-		}
-		iterations = computeIterations (windowSize);
-		/* Determine an upper bound on # slots/table,
-		 * such that we avoid collisions */
-		System.out.println(String.format("[DBG] %d iterations\n", iterations));
-		float alpha = _scale_factor;
-		if (alpha < _min_space_requirements[_hash_functions])
-		{
-			throw new IllegalArgumentException("error: invalid scale factor");
-		}
-		tableSize  = (int) Math.ceil(windowSize * alpha);
-		tableSlots = tableSize + _stash;
-		System.out.println(String.format("[DBG] # slots (~2) is %4d", tableSlots));
-		while (! isPowerOfTwo(tableSlots)) {
-			tableSlots += 1;
-		}
-		System.out.println(String.format("[DBG] # slots (^2) is %4d", tableSlots));
-		tableSize = tableSlots - _stash;
+		tableSize  = 2048;
 		
 		/* Determine #threads */
-		tgs = new int [4];
+		tgs = new int [2];
 		tgs[0] = threadsPerGroup; /* This is a constant; it must be a power of 2 */
 		tgs[1] = threadsPerGroup;
-		tgs[2] = threadsPerGroup;
-		tgs[3] = threadsPerGroup;
 		
-		threads = new int [4];
-		threads[0] = (batchSize * tableSlots); /* Clear `indices` and `offsets` */
-		threads[1] = batchSize * tgs[0];
-		/* Configure scan & compact kernels */
-		threads[2] = (batchSize * tableSlots) / tuplesPerThread;
-		threads[3] = (batchSize * tableSlots) / tuplesPerThread;
-		ngroups    = (batchSize * tableSlots) / tuplesPerThread / tgs[0];
+		threads = new int [2];
+		threads[0] = tuples; /* Clear `indices` and `offsets` */
+		threads[1] = tuples;
 		
-		/* The output is simply a function of the number of windows 
- 		 * 
- 		 * Assume output tuple schema is <long, int key, float value> (16 bytes) 
- 		 */
-		outputSize = 4 * tuples * outputTupleSize;
+		outputSize = 1048576;
 		System.out.println("[DBG] output size is " + outputSize + " bytes");
 		
-		outputSize2 = outputSize;
-		outputSize3 = outputSize;
-		
 		/* Intermediate state */
-		
-		  contentsLength = intermediateTupleSize * batchSize * tableSlots;
-		   stashedLength = 4 * batchSize;
-		    failedLength = 4 * batchSize;
-		  attemptsLength = 4 * batchSize;
-		   indicesLength = 4 * batchSize * tableSlots;
-		   offsetsLength = 4 * batchSize * tableSlots;
-		partitionsLength = 4 *   ngroups;
+		contentsLength = outputSize;
+		failedLength = 4 * tuples;
+		attemptsLength = 4 * tuples;
 		
 		System.out.println(String.format("[DBG] input.length      = %13d", inputSize));
 		System.out.println(String.format("[DBG] contents.length   = %13d", contentsLength));
-		System.out.println(String.format("[DBG] stashed.length    = %13d", stashedLength));
 		System.out.println(String.format("[DBG] failed.length     = %13d", failedLength));
 		System.out.println(String.format("[DBG] attempts.length   = %13d", attemptsLength));
-		System.out.println(String.format("[DBG] indices.length    = %13d", indicesLength));
-		System.out.println(String.format("[DBG] offsets.length    = %13d", offsetsLength));
-		System.out.println(String.format("[DBG] partitions.length = %13d", partitionsLength));
-		System.out.println(String.format("[DBG] output.length     = %13d", outputSize));
-//		
+		
 		if (kdbg > 0) {
-		contents   = new byte [  contentsLength];
-		stashed    = new byte [   stashedLength];
 		failed     = new byte [    failedLength];
 		attempts   = new byte [  attemptsLength];
-		indices    = new byte [   indicesLength];
-		offsets    = new byte [   offsetsLength];
-		partitions = new byte [partitionsLength];
 		}
 		
 		String source = 
-			KernelCodeGenerator.getAggregation(
+			KernelCodeGenerator.getPartialAggregation(
 					inputSchema, 
 					outputSchema, 
 					filename, 
 					type, 
 					_the_aggregate, 
 					groupBy, 
-					selectionClause,
-					havingClause);
+					selectionClause);
 		System.out.println(source);
 		
-		qid = TheGPU.getInstance().getQuery(source, 4, 5, 10);
+		qid = TheGPU.getInstance().getQuery(source, 2, 3, 3);
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
 		/* Start and end pointers */
 		TheGPU.getInstance().setInput(qid, 1, startPtrs.length);
 		TheGPU.getInstance().setInput(qid, 2,   endPtrs.length);
-		/* Hash function constants, x & y */
-		TheGPU.getInstance().setInput(qid, 3, x.array().length);
-		TheGPU.getInstance().setInput(qid, 4, y.array().length);
 		
 		int move = (kdbg > 0) ? 0 : 1;
 		
-		TheGPU.getInstance().setOutput(qid, 0,   contentsLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 1,    stashedLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 2,     failedLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 3,   attemptsLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 4,    indicesLength, 0,    0, 1, 0);
-		TheGPU.getInstance().setOutput(qid, 5,    offsetsLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 6, partitionsLength, 0, move, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 7,       outputSize, 1,    0, 0, 1);
-		TheGPU.getInstance().setOutput(qid, 8,      outputSize2, 1,    0, 0, 1);
-		TheGPU.getInstance().setOutput(qid, 9,      outputSize3, 1,    0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 0,     failedLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 1,   attemptsLength, 0, move, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 2,   contentsLength, 1, move, 0, 1);
 		
-		localInputSize = 4 * tgs[0] * tuplesPerThread; 
-		
-		args = new int [8];
+		args = new int [3];
 		args[0] = tuples;
-		args[1] = 0; /* bundle_; */
-		args[2] = 0; /* bundles; */
-		args[3] = tableSize;
-		args[4] = __stash_x;
-		args[5] = __stash_y;
-		args[6] = iterations;
-		args[7] = localInputSize;
+		args[1] = batchSize;
+		args[2] = tableSize;
 		
-		TheGPU.getInstance().setKernelAggregate(qid, args);
+		TheGPU.getInstance().setKernelPartialAggregate(qid, args);
 	}
 	
 	@Override
@@ -418,53 +273,30 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
-		windowBatch.initWindowPointers(startPtrs, endPtrs);
+		windowBatch.initPartialWindowPointers();
+		windowBatch.initPartialWindowPointers(startPtrs, endPtrs);
 		if (debug)
-			printWindowPointers (startPtrs, endPtrs);
+			printWindowPointers (startPtrs, endPtrs, windowBatch.getLastWindowIndex() + 1);
 		
 		TheGPU.getInstance().setInputBuffer(qid, 1, startPtrs);
 		TheGPU.getInstance().setInputBuffer(qid, 2,   endPtrs);
 		
-		/* Hash table constants */
-		TheGPU.getInstance().setInputBuffer(qid, 3, x.array());
-		TheGPU.getInstance().setInputBuffer(qid, 4, y.array());
-		
 		/* Set output */
 		if (kdbg > 0) {
-		TheGPU.getInstance().setOutputBuffer(qid, 0,   contents);
-		TheGPU.getInstance().setOutputBuffer(qid, 1,    stashed);
-		TheGPU.getInstance().setOutputBuffer(qid, 2,     failed);
-		TheGPU.getInstance().setOutputBuffer(qid, 3,   attempts);
-		TheGPU.getInstance().setOutputBuffer(qid, 4,    indices);
-		TheGPU.getInstance().setOutputBuffer(qid, 5,    offsets);
-		TheGPU.getInstance().setOutputBuffer(qid, 6, partitions);
+		TheGPU.getInstance().setOutputBuffer(qid, 0,     failed);
+		TheGPU.getInstance().setOutputBuffer(qid, 1,   attempts);
 		}
-		
-		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
-		PartialWindowResults pendingorcomplete  = PartialWindowResultsFactory.newInstance(workerId);
-		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
-		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
 		
 		/* The output */
 		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 7, outputBuffer.array());
-		
-		IQueryBuffer outputBuffer2 = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 8, outputBuffer2.array());
-		
-		IQueryBuffer outputBuffer3 = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 9, outputBuffer3.array());
-		
-		closing.setBuffer( outputBuffer);
-		 pendingorcomplete.setBuffer( outputBuffer2);
-		opening.setBuffer( outputBuffer3);
+		TheGPU.getInstance().setOutputBuffer(qid, 2, outputBuffer.array());
 		
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
 		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
-		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 7));
+		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 2));
 		if (debug)
 			System.out.println("[DBG] output buffer position is " + outputBuffer.position());
 		
@@ -495,24 +327,6 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		taskIdx [taskIdx.length - 1] = currentTaskIdx;
 		freeIdx [freeIdx.length - 1] = currentFreeIdx;
 		markIdx [markIdx.length - 1] = currentMarkIdx;
-		
-		/* At the end of processing, set window batch accordingly */
-		windowBatch.setClosing  ( closing);
-		if (windowBatch.hasPending())
-			windowBatch.setPending(pendingorcomplete);
-		else
-			windowBatch.setComplete(pendingorcomplete);
-		windowBatch.setOpening  (opening);
-		
-		if (debug)
-			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending/complete; and %4d opening windows]", 
-					windowBatch.getTaskId(), 
-					windowBatch.getFreeOffset(),
-					closing.numberOfWindows(),
-					pendingorcomplete.numberOfWindows(),
-					opening.numberOfWindows()));
-		
-		api.outputWindowBatchResult(-1, windowBatch);
 		
 		api.outputWindowBatchResult(-1, windowBatch);
 		/*

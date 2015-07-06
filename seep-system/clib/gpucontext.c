@@ -651,8 +651,8 @@ void gpu_context_submitKernel (gpuContextP q, size_t *threads, size_t *threadsPe
 
 	/* Execute */
 	for (i = 0; i < q->kernel.count; i++) {
-		/* dbg("[DBG] submit kernel %d: %10zu threads %10zu threads/group\n", 
-			i, threads[i], threadsPerGroup[i]); */
+		dbg("[DBG] submit kernel %d: %10zu threads %10zu threads/group\n", 
+			i, threads[i], threadsPerGroup[i]);
 #ifdef GPU_PROFILE
 		error |= clEnqueueNDRangeKernel (
 			q->queue[0],

@@ -24,6 +24,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.AggregationKernel;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.PartialAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
@@ -153,22 +154,21 @@ public class TestAggregationGroupBy {
 		
 		System.out.println(String.format("[DBG] %s", cpuAggCode));
 		
-		IMicroOperatorCode gpuAggCode = null;
-//		new AggregationKernel
-//			(
-//				aggregationType,
-//				new FloatColumnReference(1), 
-//				groupBy, 
-//				null,
-//				null, 
-//				schema
-//			);
+		IMicroOperatorCode gpuAggCode =
+		new PartialAggregationKernel
+			(
+				aggregationType,
+				new FloatColumnReference(1), 
+				groupBy, 
+				null,
+				schema
+			);
 //		
 //		((AggregationKernel) gpuAggCode).setInputSize(inputSize);
-//		((AggregationKernel) gpuAggCode).setBatchSize(nwindows);
+		((PartialAggregationKernel) gpuAggCode).setBatchSize(batchSize);
 //		// ((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());
 //		((AggregationKernel) gpuAggCode).setWindowSize(64);
-//		((AggregationKernel) gpuAggCode).setup();
+		((PartialAggregationKernel) gpuAggCode).setup();
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
