@@ -89,8 +89,8 @@ public class HeatMap implements Serializable {
 
 	public void updatePos(Location currentLoc)
 	{
-		if (currentLoc.getX() > xTiles * tileWidth) { throw new RuntimeException("Logic error."); }
-		if (currentLoc.getY() > yTiles * tileHeight) { throw new RuntimeException("Logic error."); }
+		if (currentLoc.getX() > xTiles * tileWidth) { throw new RuntimeException("Logic error: current="+currentLoc.getX()+",xTiles="+xTiles+",tw="+tileWidth); }
+		if (currentLoc.getY() > yTiles * tileHeight) { throw new RuntimeException("Logic error: current="+currentLoc.getY()+",yTiles="+yTiles+",th="+tileHeight); }
 
 		int xTile = currentLoc.getX() / tileWidth;
 		int yTile = currentLoc.getY() / tileHeight;
