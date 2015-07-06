@@ -123,7 +123,7 @@ public class TestSelectionPredComp {
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
 		
-		Utils._CIRCULAR_BUFFER_ = 256 * 1024 * 1024; // inputSize * Utils.THREADS * 2; // 64 * 1024 * 1024;
+		Utils._CIRCULAR_BUFFER_ = 16 * 1024 * 1024; // inputSize * Utils.THREADS * 2; // 64 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = inputSize; // (int) window.getSize() * schema.getByteSizeOfTuple() * nwindows; // * 1024; // inputSize; // 4 * 1024 * 1024; // inputSize;
 		
 		long timestampReference = System.nanoTime();
@@ -139,8 +139,8 @@ public class TestSelectionPredComp {
 		/*
 		 * Set up the stream
 		 */
-		// int tuplesPerInsert = 32768;
-		int tuplesPerInsert = 1024; // 32768 * 2;
+		int tuplesPerInsert = 32768;
+		// int tuplesPerInsert = 1024; // 32768 * 2;
 		int tupleSize = schema.getByteSizeOfTuple();
 		int bufferBundle = tupleSize * tuplesPerInsert;
 		byte [] data = new byte [bufferBundle];

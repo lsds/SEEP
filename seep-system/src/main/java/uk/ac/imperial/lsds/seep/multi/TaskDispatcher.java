@@ -1,6 +1,8 @@
 package uk.ac.imperial.lsds.seep.multi;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 
 public class TaskDispatcher implements ITaskDispatcher {
 	
@@ -29,7 +31,9 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	int remainder = 0;
 	
-	private ArrayList<Integer> marks;
+	private int [] marks;
+	private int setMark = 0;
+	private int getMark = 0;
 	
 	long accumulated = 0;
 	
@@ -58,9 +62,23 @@ public class TaskDispatcher implements ITaskDispatcher {
 		
 		tupleSize = schema.getByteSizeOfTuple();
 		
-		marks = new ArrayList<Integer>();
+		marks = new int [1024];
+		Arrays.fill(marks, -1);
+		setMark = getMark = 0;
 		
 		nextBatchEndPointer = batchBytes;
+	}
+	
+	private void incSetMark () {
+		setMark ++;
+		if (setMark >= marks.length)
+			setMark = 0;
+	}
+	
+	private void incGetMark () {
+		getMark ++;
+		if (getMark >= marks.length)
+			getMark = 0;
 	}
 	
 	@Override
@@ -109,12 +127,20 @@ public class TaskDispatcher implements ITaskDispatcher {
 		/* Find latency mark */
 		int mark = -1;
 		if (Utils.LATENCY_ON) {
-			for (int i = 0; i < marks.size(); i++) {
-				if (marks.get(i) >= ((int) p) && marks.get(i) < ((int) free)) {
-					mark = marks.remove(i);
-					break;
-				}
+			mark = marks[getMark];
+			marks[getMark] = -1;
+			incGetMark();
+			while (marks[getMark] >= ((int) p) && marks[getMark] < ((int) free)) {
+				marks[getMark] = -1;
+				incGetMark();
 			}
+			if (! (mark >= ((int) p) && mark < ((int) free))) {
+				System.err.println("fatal error: invalid latency mark");
+				System.exit(1);
+			}
+			/* System.out.println(String.format("[DBG] mark %d next index is %d", 
+			 * mark, getMark));
+			 */
 		}
 		
 		/* Update free pointer */
@@ -126,9 +152,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 					String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
 							parent.getId(), taskid, p, q, free, t_, _t, size));
 			System.exit(1);
-		} // else {
-			// System.err.println(String.format("%d: free %d", parent.getId(), free));
-		// }
+		}
 		
 		batch = WindowBatchFactory.newInstance(this.batchBytes, taskid, (int) (free), buffer, window, schema, mark);
 		
@@ -149,8 +173,11 @@ public class TaskDispatcher implements ITaskDispatcher {
 	
 	private void assemble (int index, int length) {
 		
-		if (Utils.LATENCY_ON)
-			marks.add(index);
+		if (Utils.LATENCY_ON) {
+			/* System.out.println(String.format("[BG] new mark at %d", index)); */
+			marks[setMark] = index;
+			incSetMark();
+		}
 		
 		/* Number of rows added */
 		int rows = length / tupleSize;

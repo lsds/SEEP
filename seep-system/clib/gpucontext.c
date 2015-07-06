@@ -130,7 +130,7 @@ void gpu_context_configureKernel (gpuContextP q, int ndx,
 		return;
 	int i;
 	for (i = 0; i < 2; i++) {
-		fprintf(stderr, "[DBG] long arguments are %10ld %15ld\n", longargs[0], longargs[1]);
+		// fprintf(stderr, "[DBG] long arguments are %10ld %15ld\n", longargs[0], longargs[1]);
 		(*callback) (q->kernel.kernels[ndx]->kernel[i], q, intargs, longargs);
 	}
 	return;

@@ -129,13 +129,15 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		
 		this.tuples = batchSize / inputSchema.getByteSizeOfTuple();
 		
-		tgs = new int [2];
+		tgs = new int [3];
 		tgs[0] = threadsPerGroup; /* This is a constant */
 		tgs[1] = threadsPerGroup; /* This is a constant */
+		tgs[2] = threadsPerGroup; /* This is a constant */
 		
-		threads = new int [2];
+		threads = new int [3];
 		threads[0] = this.tuples;
 		threads[1] = this.tuples;
+		threads[2] = this.tuples;
 		
 		this.outputSize = 32 * 16; /* Another 1MB */
 		
@@ -158,15 +160,15 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 					windowDefinition);
 		System.out.println(source);
 		
-		qid = TheGPU.getInstance().getQuery(source, 2, 1, 4);
+		qid = TheGPU.getInstance().getQuery(source, 3, 1, 4);
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
 		/* Start and end pointers are also inputs */
 		// TheGPU.getInstance().setInput(qid, 1, startPtrs.length);
 		// TheGPU.getInstance().setInput(qid, 2,   endPtrs.length);
 		
-		TheGPU.getInstance().setOutput(qid, 0, windowPtrsSize, 0, 1, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 1, windowPtrsSize, 0, 1, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 0, windowPtrsSize, 1, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 1, windowPtrsSize, 1, 0, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 2,             16, 1, 0, 0, 0);
 		TheGPU.getInstance().setOutput(qid, 3,     outputSize, 1, 0, 0, 1);
 		
@@ -211,6 +213,10 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 		
 		TheGPU.getInstance().setOutputBuffer(qid, 2, offsetVal);
 		
+		TheGPU.getInstance().setOutputBuffer(qid, 0, startPtrs);
+		TheGPU.getInstance().setOutputBuffer(qid, 1,   endPtrs);
+		
+		
 		// threads[0] = tgs[0] * (windowBatch.getLastWindowIndex() + 1); 
 		
 		/* Set previous pane id */
@@ -229,15 +235,17 @@ public class PartialReductionKernel implements IStreamSQLOperator, IMicroOperato
 				longArgs[0] = ((windowBatch.getBatchStartPointer() / inputSchema.getByteSizeOfTuple()) / windowBatch.getWindowDefinition().getPaneSize()) - 1;
 			}
 		}
-		longArgs[0] = 100;
+		// longArgs[0] = 100;
  		longArgs[1] = windowBatch.getBatchStartPointer();
- 		System.out.println("[DBG] previous pane is " + longArgs[0]);
+ 		// System.out.println("[DBG] previous pane is " + longArgs[0]);
 		TheGPU.getInstance().configurePartialReduce(qid, longArgs);
-		System.out.println("[DBG] execute");
+		// System.out.println("[DBG] execute");
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
-		ByteBuffer tmp = ByteBuffer.wrap(offsetVal).order(ByteOrder.LITTLE_ENDIAN);
-		System.out.println(String.format("[DBG] batch %10d starts @ %15d: %10d, %10d", taskIdx[0], windowBatch.getBatchStartPointer(), tmp.getLong(),  tmp.getLong()));
+		// ByteBuffer tmp = ByteBuffer.wrap(offsetVal).order(ByteOrder.LITTLE_ENDIAN);
+		// System.out.println(String.format("[DBG] batch %10d starts @ %15d: %10d, %10d", taskIdx[0], windowBatch.getBatchStartPointer(), tmp.getLong(),  tmp.getLong()));
+		
+		printWindowPointers(startPtrs, endPtrs, 32); // windowBatch.getLastWindowIndex());
 		
 		/* 
 		 * Set position based on the data size returned from the GPU engine

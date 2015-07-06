@@ -29,7 +29,7 @@
 #include <errno.h>
 
 static cl_platform_id platform = NULL;
-static cl_device_id device[2]; // = NULL;
+static cl_device_id device = NULL;
 static cl_context context = NULL;
 static cl_command_queue theQueue = NULL;
 
@@ -73,21 +73,21 @@ static void setPlatform () {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	// dbg("Obtained 1/%u platforms available\n", count);
-	printf("Obtained 1/%u platforms available\n", count);
+	dbg("Obtained 1/%u platforms available\n", count);
+	// printf("Obtained 1/%u platforms available\n", count);
 	return;
 }
 
 static void setDevice () {
 	int error = 0;
 	cl_uint count = 0;
-	error = clGetDeviceIDs (platform, CL_DEVICE_TYPE_GPU, 2, &device[0], &count);
+	error = clGetDeviceIDs (platform, CL_DEVICE_TYPE_GPU, 2, &device, &count);
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
 	}
-	// dbg("Obtained 1/%u devices available\n", count);
-	printf("Obtained 1/%u devices available\n", count);
+	dbg("Obtained 1/%u devices available\n", count);
+	// printf("Obtained 1/%u devices available\n", count);
 	return;
 }
 
@@ -96,7 +96,7 @@ static void setContext () {
 	context = clCreateContext (
 		0,
 		1,
-		&device[1],
+		&device,
 		NULL,
 		NULL,
 		&error);
@@ -111,7 +111,7 @@ static void setQueue () {
 	int error;
 	theQueue = clCreateCommandQueue (
 		context,
-		device[1],
+		device,
 		CL_QUEUE_PROFILING_ENABLE,
 		&error);
 	if (! theQueue) {
@@ -124,7 +124,7 @@ static void setQueue () {
 static void getDeviceInfo () {
 	cl_int error = 0;
 	cl_uint value = 0;
-	error = clGetDeviceInfo (device[1], CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof (cl_uint), &value, NULL);
+	error = clGetDeviceInfo (device, CL_DEVICE_MEM_BASE_ADDR_ALIGN, sizeof (cl_uint), &value, NULL);
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
@@ -182,7 +182,7 @@ JNIEnv *env) {
 	int ndx = freeIndex++;
 	if (ndx < 0 || ndx >= Q)
 		return -1;
-	queries[ndx] = gpu_query_new (device[1], context,
+	queries[ndx] = gpu_query_new (device, context,
 			source, _kernels, _inputs, _outputs);
 
 	gpu_query_init (queries[ndx], env, ndx);
@@ -541,8 +541,9 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelParti
 	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
 
 	/* Object `int []` pinned */
-	gpu_setKernel_another (qid, 0,  "clearKernel",        &callback_setKernelPartialReduce, intArgs, longArgs);
-	gpu_setKernel_another (qid, 1, "partialReduceKernel", &callback_setKernelPartialReduce, intArgs, longArgs);
+	gpu_setKernel_another (qid, 0,  "clearKernel",          &callback_setKernelPartialReduce, intArgs, longArgs);
+	gpu_setKernel_another (qid, 1, "computeOffsetKernel",   &callback_setKernelPartialReduce, intArgs, longArgs);
+	gpu_setKernel_another (qid, 2, "computePointersKernel", &callback_setKernelPartialReduce, intArgs, longArgs);
 
 
 	(*env)->ReleaseIntArrayElements(env, _intArgs, intArgs, 0);
@@ -558,7 +559,8 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_configureParti
 
 	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
 
-	gpu_configureKernel (qid, 1, "partialReduceKernel", &callback_configurePartialReduce, NULL, longArgs);
+	gpu_configureKernel (qid, 1, "computeOffsetKernel",   &callback_configurePartialReduce, NULL, longArgs);
+	gpu_configureKernel (qid, 2, "computePointersKernel", &callback_configurePartialReduce, NULL, longArgs);
 
 	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
 
