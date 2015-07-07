@@ -137,7 +137,15 @@ public class LocationSource implements StatelessOperator {
 			while(true)
 			{
 				Location loc = getCurrentLocation();
-				current.updatePos(loc);
+				if (loc != null)
+				{
+					current.updatePos(loc);
+				}
+				else
+				{
+					logger.warn("Got null location.");
+				}
+				
 				try {
 					Thread.sleep(locUpdateInterval);
 				} 
@@ -166,7 +174,8 @@ public class LocationSource implements StatelessOperator {
 			}
 			catch(IOException e) { throw new RuntimeException(e); }
 			
-			throw new RuntimeException("No location found!");
+			return null;
+			//throw new RuntimeException("No location found!");
 		}
 	}
 }
