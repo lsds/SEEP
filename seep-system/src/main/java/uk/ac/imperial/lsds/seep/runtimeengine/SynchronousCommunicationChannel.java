@@ -198,7 +198,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					try { tmpSocket.close(); } 
 					catch (IOException e1) {} 
 				}
-				if (numReconnects < 1 || numReconnects % 100 == 0)
+				if (numReconnects < 1 || numReconnects % 10000 == 0)
 				{
 					logger.error("Data connection "+ numReconnects+" to "+ip+" failed: "+e);					
 				}
