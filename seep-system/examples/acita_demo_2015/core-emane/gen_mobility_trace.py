@@ -70,16 +70,16 @@ def gen_trace(session_dir, session_id, params):
 
 def parse_trace(session_dir, params):
     ns2_file = 'r_waypoints.ns_movements'
-    convert_to_cartesian(session_dir, ns2_file, trace_dirs[params['trace']])
+    convert_to_cartesian(session_dir, ns2_file, trace_dirs[params['trace']], params['nodes'])
     return ns2_file 
 
-def convert_to_cartesian(session_dir, ns2_file, trace_dir):
+def convert_to_cartesian(session_dir, ns2_file, trace_dir, nodes):
     with open(os.path.join(session_dir, ns2_file), 'w') as utm_trace: 
         node = 0
         abs_trace_dir = os.path.abspath(trace_dir)
         print 'Trace dir=%s'%abs_trace_dir
         sftaxi_files = glob.glob(abs_trace_dir+ '/new_*.txt')
-        for sftaxi_file in sftaxi_files[0:20]:
+        for sftaxi_file in sftaxi_files[0:nodes]:
             parse_sftaxi_file(sftaxi_file, node, utm_trace)
             node += 1
 
