@@ -168,6 +168,7 @@ public class TestAggregationGroupBy {
 		((PartialAggregationKernel) gpuAggCode).setBatchSize(batchSize);
 //		// ((AggregationKernel) gpuAggCode).setWindowSize((int) window.getSize());
 //		((AggregationKernel) gpuAggCode).setWindowSize(64);
+		((PartialAggregationKernel) gpuAggCode).setWindowDefinition(window);
 		((PartialAggregationKernel) gpuAggCode).setup();
 		
 		MicroOperator uoperator;
@@ -179,7 +180,7 @@ public class TestAggregationGroupBy {
 		operators.add(uoperator);
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 64 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 1 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();

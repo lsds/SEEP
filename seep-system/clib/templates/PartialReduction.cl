@@ -182,13 +182,13 @@ __kernel void reduceKernel (
 		int  offset_ =  window_ptrs_ [wid]; /* Window start and end pointers */
 		int _offset  = _window_ptrs  [wid];
 		/* Check if a window is closing, opening, pending, or complete. */
-		if (offset_ < 0 && _offset > 0) {
+		if (offset_ < 0 && _offset >= 0) {
 			/* A closing window; set start offset */
 			offset_ = 0;
 			if (lid == 0)
 				atomic_inc(&windowCounts[0]);
 		} else
-		if (offset_ > 0 && _offset < 0) {
+		if (offset_ >= 0 && _offset < 0) {
 			/* An opening window; set end offset */
 			_offset = bytes;
 			if (lid == 0)

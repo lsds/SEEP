@@ -178,8 +178,11 @@ public class TheGPU {
 	public native int executePartialReduce 
 		(int queryId, int [] threads, int [] threadsPerGroup, long [] args);
 	
+	public native int executePartialAggregate 
+		(int queryId, int [] threads, int [] threadsPerGroup, long [] args);
+	
 	public native int setKernelPartialReduce    (int queryId, int [] intArgs, long [] longArgs);
-	public native int setKernelPartialAggregate (int queryId, int [] intArgs);
+	public native int setKernelPartialAggregate (int queryId, int [] intArgs, long [] longArgs);
 	
 	/* LRB UDF */
 	public native int setKernelAggregateIStream (int queryId, int [] args);
@@ -210,5 +213,6 @@ public class TheGPU {
 	public native int executeDirect (int queryId, int [] threads, int [] threadsPerGroup, 
 		int [] start, int [] end);
 
-	public native int configurePartialReduce(int qid, long[] longArgs);
+	public native int configurePartialReduce    (int qid, long[] longArgs);
+	public native int configurePartialAggregate (int qid, long[] longArgs);
 }

@@ -2,7 +2,7 @@
 #define __GPU_DEBUG_H_
 
 #undef GPU_VERBOSE
-//#define GPU_VERBOSE
+// #define GPU_VERBOSE
 
 #undef GPU_PROFILE
 // #define GPU_PROFILE

@@ -117,6 +117,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executePartial
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    executePartialAggregate
+ * Signature: (I[I[I[J)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executePartialAggregate
+  (JNIEnv *, jobject, jint, jintArray, jintArray, jlongArray);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    setKernelPartialReduce
  * Signature: (I[I[J)I
  */
@@ -126,10 +134,10 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelParti
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
  * Method:    setKernelPartialAggregate
- * Signature: (I[I)I
+ * Signature: (I[I[J)I
  */
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelPartialAggregate
-  (JNIEnv *, jobject, jint, jintArray);
+  (JNIEnv *, jobject, jint, jintArray, jlongArray);
 
 /*
  * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
@@ -185,6 +193,14 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executeDirect
  * Signature: (I[J)I
  */
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_configurePartialReduce
+  (JNIEnv *, jobject, jint, jlongArray);
+
+/*
+ * Class:     uk_ac_imperial_lsds_seep_multi_TheGPU
+ * Method:    configurePartialAggregate
+ * Signature: (I[J)I
+ */
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_configurePartialAggregate
   (JNIEnv *, jobject, jint, jlongArray);
 
 #ifdef __cplusplus

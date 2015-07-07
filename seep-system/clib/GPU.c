@@ -55,6 +55,7 @@ void callback_setKernelPartialReduce (cl_kernel, gpuContextP, int *, long *);
 void callback_configurePartialReduce (cl_kernel, gpuContextP, int *, long *);
 
 void callback_setKernelPartialAggregate (cl_kernel, gpuContextP, int *, long *);
+void callback_configurePartialAggregate (cl_kernel, gpuContextP, int *, long *);
 
 /* UDFs */
 void callback_setKernelAggregateIStream (cl_kernel, gpuContextP, int *, long *);
@@ -389,6 +390,59 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executePartial
 	return 0;
 }
 
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_executePartialAggregate
+(JNIEnv *env, jobject obj, jint qid, jintArray _threads, jintArray _threadsPerGroup, jlongArray _longArgs) {
+
+	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
+
+	/* Create operator */
+	queryOperatorP operator = (queryOperatorP) malloc (sizeof(query_operator_t));
+	if (! operator) {
+		fprintf(stderr, "fatal error: out of memory\n");
+		exit(1);
+	}
+	jsize argc = (*env)->GetArrayLength(env, _threads);
+	jint *threads = (*env)->GetIntArrayElements(env, _threads, 0);
+	jint *threadsPerGroup = (*env)->GetIntArrayElements(env, _threadsPerGroup, 0);
+
+	int i;
+	for (i = 0; i < argc; i++) {
+		dbg("[DBG] kernel %d: %10d threads %10d threads/group\n",
+			i, threads[i], threadsPerGroup[i]);
+	}
+	size_t *__threads = (size_t *) malloc (argc * sizeof(size_t));
+	size_t *__threadsPerGroup = (size_t *) malloc (argc * sizeof(size_t));
+	for (i = 0; i < argc; i++) {
+		__threads[i] = (size_t) threads[i];
+		__threadsPerGroup[i] = (size_t) threadsPerGroup[i];
+	}
+
+	/* Currently, we assume the same execution pattern for all queries */
+	operator->intArgs    = NULL;
+	operator->longArgs   = longArgs;
+
+	operator->configArgs = callback_configurePartialAggregate;
+	operator->writeInput = callback_writeInput;
+	operator->readOutput = callback_readOutput;
+	operator->execKernel = callback_execKernel;
+	gpu_exec (qid, __threads, __threadsPerGroup, operator, env, obj);
+	/* Free operator */
+	if (operator)
+		free (operator);
+	/* Release Java arrays */
+	(*env)->ReleaseIntArrayElements(env, _threads, threads, 0);
+	(*env)->ReleaseIntArrayElements(env, _threadsPerGroup, threadsPerGroup, 0);
+
+	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
+
+	/* Free memory */
+	if (__threads)
+		free (__threads);
+	if (__threadsPerGroup)
+		free (__threadsPerGroup);
+	return 0;
+}
+
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_execute
 (JNIEnv *env, jobject obj, jint qid, jintArray _threads, jintArray _threadsPerGroup) {
 
@@ -564,16 +618,20 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelAggre
 }
 
 JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelPartialAggregate
-(JNIEnv *env, jobject obj, jint qid, jintArray _args) {
+(JNIEnv *env, jobject obj, jint qid, jintArray _intArgs, jlongArray _longArgs) {
 
 	(void) obj;
 
-	jint *args = (*env)->GetIntArrayElements(env, _args, 0);
+	jint   *intArgs = (*env)->GetIntArrayElements (env,  _intArgs, 0);
+	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
 
-	gpu_setKernel (qid, 0,  "clearKernel",     &callback_setKernelPartialAggregate, args, NULL);
-	gpu_setKernel (qid, 1,  "aggregateKernel", &callback_setKernelPartialAggregate, args, NULL);
+	gpu_setKernel (qid, 0, "clearKernel",           &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 1, "computeOffsetKernel",   &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 2, "computePointersKernel", &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 3, "aggregateKernel",       &callback_setKernelPartialAggregate, intArgs, longArgs);
 
-	(*env)->ReleaseIntArrayElements(env, _args, args, 0);
+	(*env)->ReleaseIntArrayElements (env,  _intArgs,  intArgs, 0);
+	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
 	return 0;
 }
 
@@ -602,7 +660,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelParti
 	jint   *intArgs = (*env)->GetIntArrayElements (env,  _intArgs, 0);
 	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
 
-	gpu_setKernel (qid, 0,  "clearKernel",          &callback_setKernelPartialReduce, intArgs, longArgs);
+	gpu_setKernel (qid, 0, "clearKernel",           &callback_setKernelPartialReduce, intArgs, longArgs);
 	gpu_setKernel (qid, 1, "computeOffsetKernel",   &callback_setKernelPartialReduce, intArgs, longArgs);
 	gpu_setKernel (qid, 2, "computePointersKernel", &callback_setKernelPartialReduce, intArgs, longArgs);
 	gpu_setKernel (qid, 3, "reduceKernel",          &callback_setKernelPartialReduce, intArgs, longArgs);
@@ -622,6 +680,20 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_configureParti
 
 	gpu_configureKernel (qid, 1, "computeOffsetKernel",   &callback_configurePartialReduce, NULL, longArgs);
 	gpu_configureKernel (qid, 2, "computePointersKernel", &callback_configurePartialReduce, NULL, longArgs);
+
+	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
+	return 0;
+}
+
+JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_configurePartialAggregate
+(JNIEnv *env, jobject obj, jint qid, jlongArray _longArgs) {
+
+	(void) obj;
+
+	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
+
+	gpu_configureKernel (qid, 1, "computeOffsetKernel",   &callback_configurePartialAggregate, NULL, longArgs);
+	gpu_configureKernel (qid, 2, "computePointersKernel", &callback_configurePartialAggregate, NULL, longArgs);
 
 	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
 	return 0;
@@ -947,6 +1019,27 @@ void callback_configurePartialReduce (cl_kernel kernel, gpuContextP context, int
 	return;
 }
 
+void callback_configurePartialAggregate (cl_kernel kernel, gpuContextP context, int *intArgs, long *longArgs) {
+
+	(void) intArgs;
+	(void) context;
+
+	long pane = longArgs[0];
+	long offset = longArgs[1];
+
+	/* fprintf(stderr, "[DBG] configure partial aggregate: <%10ld, %10ld>\n", pane, offset); */
+
+	int error = 0;
+
+	error |= clSetKernelArg (kernel, 4, sizeof(long), (void *)   &pane);
+	error |= clSetKernelArg (kernel, 5, sizeof(long), (void *) &offset);
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
+		exit (1);
+	}
+	return;
+}
+
 void callback_setKernelThetaJoin (cl_kernel kernel, gpuContextP context, int *constants, long *dummy) {
 
 	/*
@@ -1212,52 +1305,73 @@ void callback_setKernelAggregate (cl_kernel kernel, gpuContextP context, int *co
 	return;
 }
 
-void callback_setKernelPartialAggregate (cl_kernel kernel, gpuContextP context, int *constants, long *dummy) {
-
-	(void) dummy;
+void callback_setKernelPartialAggregate (cl_kernel kernel, gpuContextP context, int *intArgs, long *longArgs) {
 
 	 /* Get all constants */
-	int tuples = constants[0];
-	int bytes = constants[1];
-	int _table_ = constants[2];
+	int tuples = intArgs[0];
+	int input_bytes = intArgs[1];
+	int output_bytes = intArgs[2];
+	int _table_ = intArgs[3];
+	int scratch_size = intArgs[4];
+
+	long pane = longArgs[0];
+	long offset = longArgs[1];
 
 	int error = 0;
 	/* Set constant arguments */
 	error |= clSetKernelArg (kernel, 0, sizeof(int), (void *)         &tuples);
-	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)          &bytes);
-	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *)        &_table_);
+	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)    &input_bytes);
+	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *)   &output_bytes);
+	error |= clSetKernelArg (kernel, 3, sizeof(int), (void *)        &_table_);
+
+	error |= clSetKernelArg (kernel, 4, sizeof(long), (void *)          &pane);
+	error |= clSetKernelArg (kernel, 5, sizeof(long), (void *)        &offset);
+
 	/* Set input buffers */
 	error |= clSetKernelArg (
 		kernel,
-		3,
+		6,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[0]->device_buffer));
-	error |= clSetKernelArg (
-		kernel,
-		4,
-		sizeof(cl_mem),
-		(void *) &(context->kernelInput.inputs[1]->device_buffer));
-	error |= clSetKernelArg (
-		kernel,
-		5,
-		sizeof(cl_mem),
-		(void *) &(context->kernelInput.inputs[2]->device_buffer));
 	/* Set output buffers */
-	error |= clSetKernelArg (
-        kernel,
-        6,
-        sizeof(cl_mem),
-        (void *) &(context->kernelOutput.outputs[0]->device_buffer));
 	error |= clSetKernelArg (
         kernel,
         7,
         sizeof(cl_mem),
-        (void *) &(context->kernelOutput.outputs[1]->device_buffer));
+        (void *) &(context->kernelOutput.outputs[0]->device_buffer));
 	error |= clSetKernelArg (
         kernel,
         8,
         sizeof(cl_mem),
+        (void *) &(context->kernelOutput.outputs[1]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+        9,
+        sizeof(cl_mem),
         (void *) &(context->kernelOutput.outputs[2]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		10,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[3]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		11,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[4]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		12,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[5]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		13,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[6]->device_buffer));
+
+	/* Set local memory */
+	error |= clSetKernelArg (kernel, 14, (size_t) scratch_size, (void *) NULL);
 
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
@@ -1434,7 +1548,7 @@ void callback_readOutput (gpuContextP context,
 		exit(1);
 	}
 	
-	/* printf("[GPU] read  %10d bytes of output\n", theSize); */
+	// printf("[GPU] read  %10d bytes of output\n", theSize);
 	
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
