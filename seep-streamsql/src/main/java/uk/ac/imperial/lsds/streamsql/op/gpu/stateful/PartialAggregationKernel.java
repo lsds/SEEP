@@ -2,10 +2,8 @@ package uk.ac.imperial.lsds.streamsql.op.gpu.stateful;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Random;
 
 import uk.ac.imperial.lsds.seep.multi.AggregationType;
-import uk.ac.imperial.lsds.seep.multi.HashCoding;
 import uk.ac.imperial.lsds.seep.multi.IMicroOperatorCode;
 import uk.ac.imperial.lsds.seep.multi.IQueryBuffer;
 import uk.ac.imperial.lsds.seep.multi.ITupleSchema;
@@ -32,9 +30,9 @@ import uk.ac.imperial.lsds.streamsql.op.gpu.KernelCodeGenerator;
 
 public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOperatorCode {
 	
-	private static final int threadsPerGroup = 128;
+	private static final int threadsPerGroup = 256;
 	
-	private static int kdbg = 1;
+	private static int kdbg = 0;
 	private static boolean debug = true;
 	
 	private static int pipelines = Utils.PIPELINE_DEPTH;
@@ -74,19 +72,21 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 	private int inputSize = -1, outputSize;
 	private int windowPtrsSize;
 	
-	private int tableSize;
+	private int tableSize; /* The size of a hash table (1 per window) in bytes */
 	
+	/* Read/write state that may be moved or not */
 	private byte [] startPtrs;
 	private byte [] endPtrs;
-	
-	private int intermediateTupleSize, outputTupleSize;
-	private int keyLength;
 	
 	private byte [] failed, attempts;
 	private byte [] offset, windowCounts;
 	
+	private int intermediateTupleSize, outputTupleSize;
+	private int keyLength;
+	
 	private int failedLength, attemptsLength, offsetLength, windowCntLength;
 	
+	@SuppressWarnings("unused")
 	private static boolean isPowerOfTwo (int n) {
 		if (n == 0)
 			return false;
@@ -185,14 +185,39 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 			System.err.println("error: invalid batch size");
 			System.exit(1);
 		}
+		if (windowDefinition == null) {
+			System.err.println("error: unspecified window definition");
+			System.exit(1);
+		}
 		
 		inputSize = batchSize;
-		
 		tuples = inputSize / inputSchema.getByteSizeOfTuple();
 		
-		windowPtrsSize = 32768 * 4;
+		windowPtrsSize = tuples * 4; /* `tuples` windows x sizeof(int) */
 		
-		tableSize  = 2048;
+		tableSize  = Utils.HASH_TABLE_SIZE;
+		
+		outputSize = Utils._UNBOUNDED_BUFFER_;
+		
+		int tuplesPerTable  =  tableSize / intermediateTupleSize;
+		int tablesPerOutput = outputSize / tableSize;
+		System.out.println(String.format("[DBG] %10d tuples/table",   tuplesPerTable));
+		System.out.println(String.format("[DBG] %10d tables/output", tablesPerOutput));
+		
+		/* Intermediate state */
+		failedLength    =  4 * tuples; /* x sizeof(int) */
+		attemptsLength  =  4 * tuples; /* x sizeof(int) */
+		offsetLength    = 16;          /* 2 longs       */
+		windowCntLength = 16;          /* 4 integers    */
+		
+		System.out.println(String.format("[DBG]         input.length = %13d",       inputSize));
+		System.out.println(String.format("[DBG] startPointers.length = %13d",  windowPtrsSize));
+		System.out.println(String.format("[DBG]   endPointers.length = %13d",  windowPtrsSize));
+		System.out.println(String.format("[DBG]        failed.length = %13d",    failedLength));
+		System.out.println(String.format("[DBG]      attempts.length = %13d",  attemptsLength));
+		System.out.println(String.format("[DBG]        offset.length = %13d",    offsetLength));
+		System.out.println(String.format("[DBG]  windowCounts.length = %13d", windowCntLength));
+		System.out.println(String.format("[DBG]        output.length = %13d",      outputSize));
 		
 		/* Determine #threads */
 		tgs = new int [4];
@@ -202,25 +227,10 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		tgs[3] = threadsPerGroup;
 		
 		threads = new int [4];
-		threads[0] = tuples; /* First kernel clears state */
+		threads[0] = tuples;
 		threads[1] = tuples;
 		threads[2] = tuples;
 		threads[3] = tuples;
-		
-		outputSize = 1048576;
-		System.out.println("[DBG] output size is " + outputSize + " bytes");
-		
-		/* Intermediate state */
-		failedLength   = 4 * tuples;
-		attemptsLength = 4 * tuples;
-		
-		offsetLength = 16;
-		windowCntLength = 16;
-		
-		System.out.println(String.format("[DBG] input.length      = %13d", inputSize));
-		System.out.println(String.format("[DBG] failed.length     = %13d", failedLength));
-		System.out.println(String.format("[DBG] attempts.length   = %13d", attemptsLength));
-		System.out.println(String.format("[DBG] output.length     = %13d", outputSize));
 		
 		if (kdbg > 0) {
 			startPtrs    = new byte [ windowPtrsSize];
@@ -229,18 +239,20 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 			attempts     = new byte [ attemptsLength];
 			offset       = new byte [   offsetLength];
 		}
+		
+		/* This state is necessary to parse the output of a query task */
 		windowCounts = new byte [windowCntLength];
 		
 		String source = 
 			KernelCodeGenerator.getPartialAggregation(
-					inputSchema, 
-					outputSchema, 
-					filename, 
-					type, 
-					_the_aggregate, 
-					groupBy, 
-					selectionClause,
-					windowDefinition);
+				inputSchema, 
+				outputSchema, 
+				filename, 
+				type, 
+				_the_aggregate, 
+				groupBy, 
+				selectionClause,
+				windowDefinition);
 		
 		System.out.println(source);
 		
@@ -248,10 +260,9 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
 		
-		/* The output */
+		/* Configure the output */
 		
-		/* Start and end pointers */
-		TheGPU.getInstance().setOutput(qid, 0,   windowPtrsSize, 0, 1, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 0,   windowPtrsSize, 0, 1, 0, 0); /* Start and end pointers */
 		TheGPU.getInstance().setOutput(qid, 1,   windowPtrsSize, 0, 1, 0, 0);
 		
 		TheGPU.getInstance().setOutput(qid, 2,     failedLength, 0, 1, 0, 0);
@@ -263,12 +274,15 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		TheGPU.getInstance().setOutput(qid, 6,       outputSize, 1, 0, 0, 1);
 		
 		intArgs = new int [5];
-		intArgs[0] = tuples;
-		intArgs[1] = inputSize;
-		intArgs[2] = outputSize;
-		intArgs[3] = tableSize;
-		intArgs[4] = tgs[0] * keyLength; /* local memory */
 		
+		intArgs[0] =     tuples;
+		intArgs[1] =  inputSize;
+		intArgs[2] = outputSize;
+		intArgs[3] =  tableSize;
+		/* Set local memory */
+		intArgs[4] = tgs[0] * keyLength; 
+		
+		/* These arguments are set in real-time */
 		longArgs = new long [2];
 		longArgs[0] = 0;
 		longArgs[1] = 0;
@@ -305,9 +319,12 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
+		/* Set output */
+		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 6, outputBuffer.array());
+		
 		TheGPU.getInstance().setOutputBuffer(qid, 5, windowCounts);
 		
-		/* Set output */
 		if (kdbg > 0) {
 			TheGPU.getInstance().setOutputBuffer(qid, 0,    startPtrs);
 			TheGPU.getInstance().setOutputBuffer(qid, 1,      endPtrs);
@@ -315,9 +332,6 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 			TheGPU.getInstance().setOutputBuffer(qid, 3,     attempts);
 			TheGPU.getInstance().setOutputBuffer(qid, 4,       offset);
 		}
-		/* The output */
-		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 6, outputBuffer.array());
 		
 		/* Set previous pane id */
 		if (windowBatch.getWindowDefinition().isRangeBased()) {
@@ -373,8 +387,9 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		int  npending = b2.getInt();
 		int ncomplete = b2.getInt();
 		int  nopening = b2.getInt();
-//		System.out.println(String.format("[DBG] offset %6d/%6d/%6d/%6d", 
-//				nclosing, npending, ncomplete, nopening));
+		if (debug)
+			System.out.println(String.format("[DBG] offset %6d/%6d/%6d/%6d", 
+				nclosing, npending, ncomplete, nopening));
 		
 		/* 
 		 * Set position based on the data size returned from the GPU engine
@@ -392,10 +407,10 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
 		
-		IQueryBuffer closingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
-		IQueryBuffer pendingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer  closingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer  pendingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
 		IQueryBuffer completeOutputBuffer = UnboundedQueryBufferFactory.newInstance();
-		IQueryBuffer openingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
+		IQueryBuffer  openingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
 		
 		 closing.setBuffer( closingOutputBuffer);
 		 pending.setBuffer( pendingOutputBuffer);
@@ -417,6 +432,12 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		}
 		/* Copy complete windows */		
 		for (int i = 0; i < ncomplete; i++) {
+			if (i == 0) {
+				System.out.println("[DBG] offset is " + offset);
+				for (int idx = offset; idx < offset + tableSize; idx += intermediateTupleSize) {
+					System.out.println(String.format("[DBG] %7d: %d...", idx, outputBuffer.getInt(idx)));
+				}
+			}
 			complete.increment();
 			completeOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
 			offset += tableSize;
@@ -446,7 +467,6 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		windowBatch.setFreeOffset (freeIdx[0]);
 		windowBatch.setLatencyMark(markIdx[0]);
 		
-		/* Release old buffer (will return Unbounded Buffers to the pool) */
 		windowBatch.setSchema(outputSchema);
 		
 		/* At the end of processing, set window batch accordingly */
@@ -468,10 +488,12 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		
 		api.outputWindowBatchResult(-1, windowBatch);
 		
-//		if (windowBatch.getTaskId() == 10) {
-//			System.err.println("Disrupted");
-//			System.exit(-1);
-//		}
+		/*
+		if (windowBatch.getTaskId() == 1) {
+			System.err.println("Disrupted");
+			System.exit(-1);
+		}
+		*/
 	}
 	
 	@Override

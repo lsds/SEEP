@@ -112,6 +112,9 @@ public class TestAggregationGroupBy {
 		
 //		int nwindows = ((int) (panesPerBatch - window.numberOfPanes()) / (int) window.panesPerSlide()) + 1;
 		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 1 * 1024 * 1024;
+		
 		TheGPU.getInstance().init(1);
 				
 		Expression[] groupBy = new Expression [] {
@@ -178,9 +181,6 @@ public class TestAggregationGroupBy {
 			uoperator = new MicroOperator (cpuAggCode, gpuAggCode, 1);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
-		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 1 * 1024 * 1024;
 		
 		long timestampReference = System.nanoTime();
 		Set<SubQuery> queries = new HashSet<SubQuery>();

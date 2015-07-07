@@ -1524,8 +1524,11 @@ void callback_writeInput (gpuContextP context,
 void callback_readOutput (gpuContextP context,
 		JNIEnv *env, jobject obj, int qid, int ndx, int mark) {
 	
-	if (! context->kernelOutput.outputs[ndx]->writeOnly)
-		return ;
+	/* if (! context->kernelOutput.outputs[ndx]->writeOnly)
+		return; */
+	
+	if (context->kernelOutput.outputs[ndx]->doNotMove)
+		return;
 	
 	jclass class = (*env)->GetObjectClass (env, obj);
 	jmethodID method = (*env)->GetMethodID (env, class,

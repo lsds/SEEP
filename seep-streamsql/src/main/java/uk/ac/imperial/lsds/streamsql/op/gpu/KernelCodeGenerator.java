@@ -211,7 +211,7 @@ public class KernelCodeGenerator {
 		}
 		if (byteSize_ > byteSize) {
 			/* Add padding */
-			b.append(String.format("\tuchar padding[%d];\n", (byteSize_ - byteSize)));
+			b.append(String.format("\tuchar%d padding;\n", (byteSize_ - byteSize)));
 		}
 		b.append("} intermediate_tuple_t __attribute__((aligned(1)));\n");
 		b.append("\n");
@@ -255,10 +255,17 @@ private static String getPartialIntermediateStruct (Expression [] groupBy) {
 			byteSize_ ++;
 		}
 		if (byteSize_ > byteSize) {
+			int k = 1;
+			while (byteSize < byteSize_) {
+				b.append(String.format("\tint padding%d;\n", k)); // (byteSize_ - byteSize)));
+				byteSize += 4;
+				k++;
+			}
 			/* Add padding */
-			b.append(String.format("\tuchar padding[%d];\n", (byteSize_ - byteSize)));
+			// b.append(String.format("\tuchar%d padding;\n", (byteSize_ - byteSize)));
 		}
 		b.append("} intermediate_tuple_t __attribute__((aligned(1)));\n");
+		// b.append("} intermediate_tuple_t __attribute__((packed));\n");
 		b.append("\n");
 		
 		b.append("typedef union {\n");
@@ -775,6 +782,27 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 			}
 		}
 		b.append("\treturn;\n");
+		b.append ("}\n");
+		b.append("\n");
+		b.append("inline int comparef (__local key_t *q, __global input_t *p) {\n");
+		b.append("\tint value = 1;\n");
+		b.append("\tvalue = value & ");
+		for (int i = 1; i <= groupBy.length; i++) {
+			if (groupBy[i-1] instanceof IntExpression) {
+				b.append(String.format("(q->key_%d == p->tuple._%d)%s",
+					i, ((IntColumnReference) groupBy[i-1]).getColumn(), (i < groupBy.length) ? " & " : ";"));
+			} else
+			if (groupBy[i-1] instanceof FloatExpression) { 
+				b.append(String.format("(q->key_%d == p->tuple._%d)%s", 
+					i, ((FloatColumnReference) groupBy[i-1]).getColumn(), (i < groupBy.length) ? " & " : ";"));
+			} else
+			if (groupBy[i-1] instanceof LongExpression) { 
+				b.append(String.format("(q->key_%d == p->tuple._%d)%s", 
+					i, ((FloatColumnReference) groupBy[i-1]).getColumn(), (i < groupBy.length) ? " & " : ";"));
+			}
+		}
+		b.append("\n");
+		b.append("\treturn value;\n");
 		b.append ("}\n");
 		b.append("\n");
 		b.append("inline void storef (__global intermediate_t *out, __global input_t *p) {\n");

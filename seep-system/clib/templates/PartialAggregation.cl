@@ -103,6 +103,8 @@ __kernel void aggregateKernel (
 
 	int group_offset = lgs * sizeof(input_t);
 
+	int table_capacity = _table_ / sizeof(intermediate_t);
+
 	int wid = gid;
 	/* A group may process more than one windows */
 	while (wid <= num_windows) {
@@ -157,29 +159,35 @@ __kernel void aggregateKernel (
 			__local key_t    *k = (__local  key_t   *) &scratch[lidx];
 			pack_key (k, p);
 			int h = jenkinsHash(&scratch[lidx], sizeof(key_t), 1);
-
+			h %= table_capacity;
+			int outputIndex = h * sizeof(intermediate_tuple_t) + table_offset;
 			/* Insert */
 			bool success = false;
-			int outputIndex;
 			for (unsigned attempt = 1 ; attempt <= 20; ++attempt) {
-				h %= _table_;
-				outputIndex = h * sizeof(intermediate_tuple_t) + table_offset;
 				__global intermediate_t *t = (__global intermediate_t *) &contents[outputIndex];
 				__global int *mark = (__global int *) &t[0];
-				int old = atomic_cmpxchg(mark, 0, 1);
+				int old = atomic_cmpxchg(mark, 0, __bswap32(1));
 				if (old == 0) {
 					storef (t, p);
 					success = true;
 					break;
+				} else {
+					if (comparef(k, p) != 1) {
+						/* Conflict */
+						outputIndex += 32;
+						if (outputIndex >= (table_offset + _table_))
+							outputIndex = table_offset;
+					} else {
+						success = true;
+						break;
+					}
 				}
-				outputIndex += 1;
 			}
 			if (! success) {
 				atomic_inc(&failed[tid]);
 			}
 			idx += group_offset;
 		}
-
 		wid += nlg; /* try next window */
 	}
 	return ;
@@ -203,20 +211,36 @@ __kernel void clearKernel (
 	__local uchar *scratch
 ) {
 	int tid = (int) get_global_id (0);
-		if (tid == 0) {
-			offset[0] = LONG_MAX;
-			offset[1] = 0;
-		}
-		/* The maximum number of window pointers is as many as the tuples */
-		 window_ptrs_[tid] = -1;
-		_window_ptrs [tid] = -1;
+	if (tid == 0) {
+		offset[0] = LONG_MAX;
+		offset[1] = 0;
+	}
+	/* The maximum number of window pointers is as many as the tuples */
+	 window_ptrs_[tid] = -1;
+	_window_ptrs [tid] = -1;
 
-		failed  [tid] = 0;
-		attempts[tid] = 0;
+	failed  [tid] = 0;
+	attempts[tid] = 0;
 
-		/* Initialise window counters: closing, pending, complete, opening */
-		if (tid < 4)
-			windowCounts[tid] = 0;
+	/* Initialise window counters: closing, pending, complete, opening */
+	if (tid < 4)
+		windowCounts[tid] = 0;
+
+	int outputIndex = tid * sizeof(input_tuple_t);
+	// while (outputIndex < outputBytes) {
+		/* Clear mark */
+		// __global intermediate_tuple_t *t = (__global intermediate_tuple_t *) &contents[outputIndex];
+		// t->mark = __bswap32(sizeof(input_tuple_t));
+		/* Assumes that #threads = #tuples */
+		// outputIndex += tuples * sizeof(intermediate_tuple_t);
+	// }
+//	if (tid == 0) {
+//	for (int k = 0; k < outputBytes; k++) {
+//		contents[k] = 0;
+//	}
+//	}
+	__global intermediate_tuple_t *t = (__global intermediate_tuple_t *) &contents[outputIndex];
+	t->mark = __bswap32(0);
 
 	return;
 }

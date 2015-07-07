@@ -2,6 +2,8 @@ package uk.ac.imperial.lsds.seep.multi;
 
 public class Utils {
 	
+	public static final int HASH_TABLE_SIZE = 2048;
+
 	public static int PIPELINE_DEPTH = 4;
 
 	public static int BATCH = 32;

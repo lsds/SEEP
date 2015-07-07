@@ -7,7 +7,7 @@ public class WindowHashTable {
 	public static final int KEY_OFFSET = 9;
 	
 	/* Note that the following value must be a power of two (see `hash`). */
-	public static final int WINDOW_MAP_CONTENT_SIZE = 2048 * 2 * 2 * 2;
+	public static final int WINDOW_MAP_CONTENT_SIZE = Utils.HASH_TABLE_SIZE;
 	
 	ByteBuffer content;
 	
