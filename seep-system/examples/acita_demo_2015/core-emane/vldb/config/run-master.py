@@ -10,7 +10,10 @@ data_dir = '%s/log'%eg_dir
 
 def main(k, h, query, plot_time_str, run_master):
     sim_env = os.environ.copy()
-       
+    session_params = read_session_params()
+   
+    master_postdelay = int(session_params.get('master_postdelay', '5'))
+    
     if plot_time_str:
         time_str = plot_time_str
     else:
@@ -23,7 +26,7 @@ def main(k, h, query, plot_time_str, run_master):
                 master_logfilename = mlog(k, query, time_str) 
                 master = start_master(k,h, query, master_logfilename, sim_env)
 
-                time.sleep(5)
+                time.sleep(master_postdelay)
 
             print 'Waiting for workers.'
             time.sleep(10)
@@ -105,6 +108,14 @@ def read_extra_params():
         for line in f:
             extra_params.append(line.strip()) 
     return extra_params
+
+def read_session_params():
+    session_params={}
+    with open('../session_params.txt', 'rb') as f:
+        for line in f:
+            kv = line.strip().split('=')
+            session_params[kv[0]]=kv[1] 
+    return session_params
 
 def wait_for_deploy(master):
     while not os.path.exists("deployComplete.txt"):

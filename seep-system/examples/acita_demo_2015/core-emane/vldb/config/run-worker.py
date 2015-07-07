@@ -14,10 +14,12 @@ user = 'root'
 def main(k,h,query,w,hostname, local_worker_id=1):
     sim_env = os.environ.copy()
     time_str = time.strftime('%H-%M-%a%d%m%y')
+    session_params = read_session_params()
 
+    worker_predelay = int(session_params.get('worker_predelay', '5'))
     try:
         print 'Waiting 5 seconds to start worker.'
-        time.sleep(5)
+        time.sleep(worker_predelay)
         worker_logfilename = wlog(w, k, query, hostname,local_worker_id, time_str) 
         print 'Starting worker with logfile %s'%worker_logfilename
         worker = start_worker(k, h, query, worker_logfilename, sim_env, local_worker_id)
@@ -75,6 +77,14 @@ def read_extra_params():
         for line in f:
             extra_params.append(line.strip()) 
     return extra_params
+
+def read_session_params():
+    session_params={}
+    with open('../session_params.txt', 'rb') as f:
+        for line in f:
+            kv = line.strip().split('=')
+            session_params[kv[0]]=kv[1] 
+    return session_params
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')
