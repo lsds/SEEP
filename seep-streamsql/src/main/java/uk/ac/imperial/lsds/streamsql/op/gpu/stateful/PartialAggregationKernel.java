@@ -207,8 +207,8 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		/* Intermediate state */
 		failedLength    =  4 * tuples; /* x sizeof(int) */
 		attemptsLength  =  4 * tuples; /* x sizeof(int) */
-		offsetLength    = 16;          /* 2 longs       */
-		windowCntLength = 16;          /* 4 integers    */
+		offsetLength    = 16;          /* 2 longs */
+		windowCntLength = 16 + 4;      /* 4 integers, +1 that is the mark */
 		
 		System.out.println(String.format("[DBG]         input.length = %13d",       inputSize));
 		System.out.println(String.format("[DBG] startPointers.length = %13d",  windowPtrsSize));
@@ -269,7 +269,7 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		TheGPU.getInstance().setOutput(qid, 3,   attemptsLength, 0, 1, 0, 0);
 		
 		TheGPU.getInstance().setOutput(qid, 4,     offsetLength, 0, 1, 0, 0);
-		TheGPU.getInstance().setOutput(qid, 5,  windowCntLength, 1, 0, 0, 0);
+		TheGPU.getInstance().setOutput(qid, 5,  windowCntLength, 1, 0, 1, 0); /* Bears mark for output size */
 		
 		TheGPU.getInstance().setOutput(qid, 6,       outputSize, 1, 0, 0, 1);
 		

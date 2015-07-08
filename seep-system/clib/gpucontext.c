@@ -24,7 +24,7 @@ gpuContextP gpu_context (
 	gpuContextP q = (gpuContextP) malloc (sizeof(gpu_context_t));
 	if (! q) {
 		fprintf(stderr, "fatal error: out of memory\n");
-		exit(1);	
+		exit(1);
 	}
 	/* Initialise OpenCL execution context */
 	q->device = device;

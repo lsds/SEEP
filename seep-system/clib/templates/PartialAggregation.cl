@@ -99,7 +99,12 @@ __kernel void aggregateKernel (
 	int lgs = (int) get_local_size (0); /* Local group size */
 	int nlg = (int) get_num_groups (0);
 
-	int num_windows = convert_int_sat(offset[1]);
+	__local int num_windows;
+	if (lid == 0)
+		convert_int_sat(offset[1]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (tid == 0)
+		windowCounts[4] = num_windows * _table_;
 
 	int group_offset = lgs * sizeof(input_t);
 
@@ -227,18 +232,7 @@ __kernel void clearKernel (
 		windowCounts[tid] = 0;
 
 	int outputIndex = tid * sizeof(input_tuple_t);
-	// while (outputIndex < outputBytes) {
-		/* Clear mark */
-		// __global intermediate_tuple_t *t = (__global intermediate_tuple_t *) &contents[outputIndex];
-		// t->mark = __bswap32(sizeof(input_tuple_t));
-		/* Assumes that #threads = #tuples */
-		// outputIndex += tuples * sizeof(intermediate_tuple_t);
-	// }
-//	if (tid == 0) {
-//	for (int k = 0; k < outputBytes; k++) {
-//		contents[k] = 0;
-//	}
-//	}
+
 	__global intermediate_tuple_t *t = (__global intermediate_tuple_t *) &contents[outputIndex];
 	t->mark = __bswap32(0);
 
