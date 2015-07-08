@@ -27,6 +27,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateless.ASelectionKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Selection;
@@ -75,11 +76,11 @@ public class TestGoogleClusterDataQuery1 {
 		 * Set up configuration of system
 		 */
 		Utils.CPU =  true;
-		Utils.GPU = false;
+		Utils.GPU =  true;
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 1;
+		Utils.THREADS = 2;
 		QueryConf queryConf = new QueryConf(1, 1024);
 		/*
 		 * Set up configuration of query
@@ -116,9 +117,21 @@ public class TestGoogleClusterDataQuery1 {
 			new IntColumnReference(4),
 			new IntConstant(3)); /* FAIL == 3 */
 		
-		IMicroOperatorCode selectionCode = new Selection(predicate);
+		IMicroOperatorCode cpuSelectionCode = new Selection(predicate);
+		
+		IMicroOperatorCode gpuSelectionCode = // null; // cpuSelectionCode;
+				new ASelectionKernel(predicate, schema);
+		
+		((ASelectionKernel) gpuSelectionCode).setInputSize(1048576);
+		((ASelectionKernel) gpuSelectionCode).setup();
+		
 		MicroOperator uoperator1;
-		uoperator1 = new MicroOperator (selectionCode, null, 1);
+		if (Utils.GPU && ! Utils.HYBRID)
+			uoperator1 = new MicroOperator (gpuSelectionCode, cpuSelectionCode, 1);
+		else
+			uoperator1 = new MicroOperator (cpuSelectionCode, gpuSelectionCode, 1);
+		
+		// uoperator1 = new MicroOperator (cpuSelectionCode, null, 1);
 		
 		/* After selection, apply aggregation */
 		
@@ -128,7 +141,7 @@ public class TestGoogleClusterDataQuery1 {
 			new IntColumnReference(6)
 		};
 		
-		IMicroOperatorCode aggregationCode = new MicroAggregation (
+		IMicroOperatorCode cpuAggregationCode = new MicroAggregation (
 			window,
 			aggregationType,
 			new FloatColumnReference(8), /* count(*), does not really matter */
@@ -136,7 +149,7 @@ public class TestGoogleClusterDataQuery1 {
 			);
 		
 		MicroOperator uoperator2;
-		uoperator2 = new MicroOperator (aggregationCode, null, 1);
+		uoperator2 = new MicroOperator (cpuAggregationCode, null, 1);
 		
 		uoperator1.connectTo(6001, uoperator2);
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();

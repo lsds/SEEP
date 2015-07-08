@@ -228,9 +228,9 @@ private static String getPartialIntermediateStruct (Expression [] groupBy) {
 		StringBuilder b = new StringBuilder ();
 		
 		b.append("typedef struct {\n");
-		b.append("\tint mark;\n");
 		/* The first attribute is always a timestamp */
 		b.append("\tlong t;\n");
+		b.append("\tint mark;\n");
 		int byteSize = 12;
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 
@@ -265,7 +265,6 @@ private static String getPartialIntermediateStruct (Expression [] groupBy) {
 			// b.append(String.format("\tuchar%d padding;\n", (byteSize_ - byteSize)));
 		}
 		b.append("} intermediate_tuple_t __attribute__((aligned(1)));\n");
-		// b.append("} intermediate_tuple_t __attribute__((packed));\n");
 		b.append("\n");
 		
 		b.append("typedef union {\n");

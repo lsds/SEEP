@@ -1530,6 +1530,10 @@ void callback_readOutput (gpuContextP context,
 	if (context->kernelOutput.outputs[ndx]->doNotMove)
 		return;
 	
+	char useMark = 0;
+	if (context->kernelOutput.outputs[ndx]->writeOnly)
+		useMark = 1;
+	
 	jclass class = (*env)->GetObjectClass (env, obj);
 	jmethodID method = (*env)->GetMethodID (env, class,
 			"outputDataMovementCallback", "(IIJII)V");
@@ -1540,7 +1544,7 @@ void callback_readOutput (gpuContextP context,
 	
 	/* Use the mark */
 	 int theSize;
-	 if (mark > 0)
+	 if (mark > 0 && useMark == 1)
 	 	theSize = mark;
 	else
 		theSize = context->kernelOutput.outputs[ndx]->size;

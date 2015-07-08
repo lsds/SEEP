@@ -209,14 +209,16 @@ public class TestAggregationGroupBy {
 		int g = 1;
 		long count = 0;
 		while (b.hasRemaining()) {
-			b.putLong(count++); // time stamp
+			// b.putLong(count++); // time stamp
+			b.putLong(1234);
 			// if (count == 5)
 			// 	count += 5;
 			b.putFloat(r.nextFloat()); // the aggregate
-			b.putInt(g++); // group by attribute
-			g = g % ngroups;
-			if (g == 0)
-				g = 1;
+			b.putInt(g);
+//			b.putInt(g++); // group by attribute
+//			g = g % ngroups;
+//			if (g == 0)
+//				g = 1;
 			for (int i = 16; i < tupleSize; i += 4)
 				b.putInt(1);
 		}

@@ -19,6 +19,7 @@ import uk.ac.imperial.lsds.seep.multi.MultiOperator;
 import uk.ac.imperial.lsds.seep.multi.QueryConf;
 import uk.ac.imperial.lsds.seep.multi.SubQuery;
 import uk.ac.imperial.lsds.seep.multi.TheCPU;
+import uk.ac.imperial.lsds.seep.multi.TheGPU;
 import uk.ac.imperial.lsds.seep.multi.TupleSchema;
 import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
@@ -28,6 +29,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatConstant;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
+import uk.ac.imperial.lsds.streamsql.op.gpu.stateful.PartialAggregationKernel;
 import uk.ac.imperial.lsds.streamsql.op.stateful.MicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateful.PartialMicroAggregation;
 import uk.ac.imperial.lsds.streamsql.op.stateless.Projection;
@@ -75,12 +77,19 @@ public class TestGoogleClusterDataQuery2 {
 		 * Set up configuration of system
 		 */
 		Utils.CPU =  true;
-		Utils.GPU = false;
+		Utils.GPU =  true;
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 1;
+		Utils.THREADS = 2;
+		
+		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
+		Utils._UNBOUNDED_BUFFER_ = 4 * 1048576; /* 1MB */
+		
 		QueryConf queryConf = new QueryConf(1048576, 1024);
+		
+		TheGPU.getInstance().init(1);
+		
 		/*
 		 * Set up configuration of query
 		 */
@@ -89,7 +98,7 @@ public class TestGoogleClusterDataQuery2 {
 		long windowSlide = 1;
 		int numberOfAttributesInSchema = 12;
 		
-		AggregationType aggregationType = AggregationType.fromString("avg");
+		AggregationType aggregationType = AggregationType.fromString("cnt");
 		
 		WindowDefinition window = 
 			new WindowDefinition (windowType, windowRange, windowSlide);
@@ -152,11 +161,25 @@ public class TestGoogleClusterDataQuery2 {
 				groupBy
 				);
 		
-		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
-		Utils._UNBOUNDED_BUFFER_ = 256 * 1048576; /* 1MB */
+		IMicroOperatorCode gpuAggCode =
+				new PartialAggregationKernel
+					(
+						aggregationType,
+						new FloatColumnReference(8), 
+						groupBy, 
+						null,
+						schema
+					);
+
+		((PartialAggregationKernel) gpuAggCode).setBatchSize(1048576);
+		((PartialAggregationKernel) gpuAggCode).setWindowDefinition(window);
+		((PartialAggregationKernel) gpuAggCode).setup();
 		
 		MicroOperator uoperator;
-		uoperator = new MicroOperator (aggregationCode, null, 1);
+		if (Utils.GPU && ! Utils.HYBRID)
+			uoperator = new MicroOperator (gpuAggCode, aggregationCode, 1);
+		else 
+			uoperator = new MicroOperator (aggregationCode, gpuAggCode, 1);
 		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);

@@ -174,10 +174,11 @@ __kernel void reduceKernel (
 	
 	__local int num_windows;
 	if (lid == 0)
-		convert_int_sat(offset[1]);
+		num_windows = convert_int_sat(offset[1]);
 	barrier(CLK_LOCAL_MEM_FENCE);
+
 	if (tid == 0)
-		windowCounts[4] = num_windows * sizeof(output_t);
+		windowCounts[4] = (num_windows + 1) * sizeof(output_t);
 	
 	int group_offset = lgs * sizeof(input_t);
 	

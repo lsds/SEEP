@@ -101,60 +101,76 @@ __kernel void aggregateKernel (
 
 	__local int num_windows;
 	if (lid == 0)
-		convert_int_sat(offset[1]);
+		num_windows = convert_int_sat(offset[1]);
+
 	barrier(CLK_LOCAL_MEM_FENCE);
+
 	if (tid == 0)
-		windowCounts[4] = num_windows * _table_;
+		windowCounts[4] = (num_windows + 1) * _table_;
 
 	int group_offset = lgs * sizeof(input_t);
 
 	int table_capacity = _table_ / sizeof(intermediate_t);
 
 	int wid = gid;
+
+	if (wid > num_windows)
+		return;
+
 	/* A group may process more than one windows */
-	while (wid <= num_windows) {
+	// while (wid <= num_windows) {
+	if (wid == 0 || wid == 1) {
 
 		int table_offset = wid * (_table_);
 
 		int  offset_ =  window_ptrs_ [wid]; /* Window start and end pointers */
 		int _offset  = _window_ptrs  [wid];
-		/* Check if a window is closing, opening, pending, or complete. */
-		if (offset_ < 0 && _offset >= 0) {
-			/* A closing window; set start offset */
-			offset_ = 0;
-			if (lid == 0)
-				atomic_inc(&windowCounts[0]);
-		} else
-		if (offset_ >= 0 && _offset < 0) {
-			/* An opening window; set end offset */
-			_offset = inputBytes;
-			if (lid == 0)
-				atomic_inc(&windowCounts[3]);
-		} else
-		if (offset_ < 0 && _offset < 0) {
-			/* A pending window */
-			int old = atomic_cmpxchg(&windowCounts[1], 0, 1);
-			if (old > 0) {
-				wid += nlg;
-				continue;
-			}
-			_offset  = 0;
-			offset_ = inputBytes;
-		} else
-		if (offset_ == 0 && _offset == 0) {
-			/* A closing window */
-			if (lid == 0)
-				atomic_inc(&windowCounts[0]);
-		} else {
-			/* A complete window */
-			if (lid == 0)
-				atomic_inc(&windowCounts[2]);
-		}
 
-		if (offset_ == _offset) {
-			wid += nlg;
-			continue;
-		}
+		if (offset_ < 0)
+			offset_ = 0;
+		if (_offset < 0)
+			_offset = inputBytes;
+
+		if (lid == 0)
+			atomic_inc(&windowCounts[2]);
+
+		/* Check if a window is closing, opening, pending, or complete. */
+//		if (offset_ < 0 && _offset >= 0) {
+//			/* A closing window; set start offset */
+//			offset_ = 0;
+//			if (lid == 0)
+//				atomic_inc(&windowCounts[0]);
+//		} else
+//		if (offset_ >= 0 && _offset < 0) {
+//			/* An opening window; set end offset */
+//			_offset = inputBytes;
+//			if (lid == 0)
+//				atomic_inc(&windowCounts[3]);
+//		} else
+//		if (offset_ < 0 && _offset < 0) {
+//			/* A pending window */
+//			int old = atomic_cmpxchg(&windowCounts[1], 0, 1);
+//			if (old > 0) {
+//				wid += nlg;
+//				continue;
+//			}
+//			_offset  = 0;
+//			offset_ = inputBytes;
+//		} else
+//		if (offset_ == 0 && _offset == 0) {
+//			/* A closing window */
+//			if (lid == 0)
+//				atomic_inc(&windowCounts[0]);
+//		} else {
+//			/* A complete window */
+//			if (lid == 0)
+//				atomic_inc(&windowCounts[2]);
+//		}
+//
+//		if (offset_ == _offset) {
+//		 	wid += nlg;
+//			continue;
+//		}
 
 		int idx = lid * sizeof(input_t) + offset_;
 
@@ -163,33 +179,45 @@ __kernel void aggregateKernel (
 			__global input_t *p = (__global input_t *)   &input[ idx];
 			__local key_t    *k = (__local  key_t   *) &scratch[lidx];
 			pack_key (k, p);
-			int h = jenkinsHash(&scratch[lidx], sizeof(key_t), 1);
-			h %= table_capacity;
-			int outputIndex = h * sizeof(intermediate_tuple_t) + table_offset;
+			int h = jenkinsHash(&scratch[lidx], sizeof(key_t), 1) & (table_capacity - 1);
+			int tableIndex = h * sizeof(intermediate_tuple_t) + table_offset;
+
+			int tupleId = idx / 32;
+			failed[tupleId] = h;
+
 			/* Insert */
 			bool success = false;
-			for (unsigned attempt = 1 ; attempt <= 20; ++attempt) {
-				__global intermediate_t *t = (__global intermediate_t *) &contents[outputIndex];
-				__global int *mark = (__global int *) &t[0];
-				int old = atomic_cmpxchg(mark, 0, __bswap32(1));
+			for (unsigned int attempt = 1; attempt <= table_capacity; ++attempt) {
+				__global intermediate_t *t = (__global intermediate_t *) &contents[tableIndex];
+				int ONE = 1;
+				int old;
+				old = atomic_cmpxchg((global int *) &(t->tuple.mark), 0, __bswap32(ONE));
 				if (old == 0) {
-					storef (t, p);
+					t->tuple.t     = p->tuple.t;
+					t->tuple.key_1 = __bswap32(1); // __bswap32(k->key_1);
+					t->tuple.val   = 666; // __bswap32(100);
+					atomic_inc ((global int *) &(t->tuple.cnt)); //    = atomic_inc();
+					t->tuple.padding1 = __bswap32(idx);
+					t->tuple.padding2 = 1;
 					success = true;
 					break;
-				} else {
-					if (comparef(k, p) != 1) {
-						/* Conflict */
-						outputIndex += 32;
-						if (outputIndex >= (table_offset + _table_))
-							outputIndex = table_offset;
-					} else {
+				} else if (old == __bswap32(ONE)) {
+					// if (__bswap32(t->tuple.key_1) == __bswap32(ONE)) { // p->tuple._2) { // key_1) {
+					if (t->tuple.val == 666){ // __bswap32(100)) {
+					// if (comparef(k, p) == 1) {
+						atomic_inc ((global int *) &(t->tuple.cnt));
 						success = true;
 						break;
 					}
 				}
+				// failed[tupleId] = t->tuple.val; // __bswap32(t->tuple.val); // t->tuple.key_1; // p->tuple._2;
+				break;
+				/* Conflict */
+				// ++h;
+				// tableIndex = (h & (table_capacity - 1)) * sizeof(intermediate_tuple_t) + table_offset;
 			}
 			if (! success) {
-				atomic_inc(&failed[tid]);
+				// atomic_inc(&failed[0]);
 			}
 			idx += group_offset;
 		}
@@ -231,10 +259,18 @@ __kernel void clearKernel (
 	if (tid < 4)
 		windowCounts[tid] = 0;
 
-	int outputIndex = tid * sizeof(input_tuple_t);
+	int outputIndex = tid * sizeof(intermediate_tuple_t); // sizeof(32); // intermediate_tuple_t);
+	if (outputIndex >= outputBytes)
+		return;
 
-	__global intermediate_tuple_t *t = (__global intermediate_tuple_t *) &contents[outputIndex];
-	t->mark = __bswap32(0);
+	__global intermediate_t *tuple = (__global intermediate_tuple_t *) &contents[outputIndex];
+	tuple->vectors[0] = 0;
+	tuple->vectors[1] = 0;
+//	tupl->tuple.mark = __bswap32(0);
+//	tupl->tuple.t = __bswap64(0L);
+//	tupl->tuple.key_1 = __bswap32(0);
+//	tupl->tuple.val = __bswap32(0);
+//	tupl->tuple.cnt = __bswap32(1);
 
 	return;
 }
@@ -267,14 +303,14 @@ __kernel void computeOffsetKernel (
 	/* Every thread is assigned a tuple */
 #ifdef RANGE_BASED
 	__global input_t *curr = (__global input_t *) &input[tid * sizeof(input_t)];
-	currPaneId = curr->tuple.t / PANE_SIZE;
+	currPaneId = __bswap64(curr->tuple.t) / PANE_SIZE;
 #else
 	currPaneId = ((batchOffset + (tid * sizeof(input_t))) / sizeof(input_t)) / PANE_SIZE;
 #endif
 	if (tid > 0) {
 #ifdef RANGE_BASED
 		__global input_t *prev = (__global input_t *) &input[(tid - 1) * sizeof(input_t)];
-		prevPaneId = prev->tuple.t / PANE_SIZE;
+		prevPaneId = __bswap64(prev->tuple.t) / PANE_SIZE;
 #else
 		prevPaneId = ((batchOffset + ((tid - 1) * sizeof(input_t))) / sizeof(input_t)) / PANE_SIZE;
 #endif
@@ -329,14 +365,14 @@ __kernel void computePointersKernel (
 	/* Every thread is assigned a tuple */
 #ifdef RANGE_BASED
 	__global input_t *curr = (__global input_t *) &input[tid * sizeof(input_t)];
-	currPaneId = curr->tuple.t / PANE_SIZE;
+	currPaneId = __bswap64(curr->tuple.t) / PANE_SIZE;
 #else
 	currPaneId = ((batchOffset + (tid * sizeof(input_t))) / sizeof(input_t)) / PANE_SIZE;
 #endif
 	if (tid > 0) {
 #ifdef RANGE_BASED
 		__global input_t *prev = (__global input_t *) &input[(tid - 1) * sizeof(input_t)];
-		prevPaneId = prev->tuple.t / PANE_SIZE;
+		prevPaneId = __bswap64(prev->tuple.t) / PANE_SIZE;
 #else
 		prevPaneId = ((batchOffset + ((tid - 1) * sizeof(input_t))) / sizeof(input_t)) / PANE_SIZE;
 #endif
