@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import subprocess,argparse,utm,os,glob,math
+import pandas as pd
+import matplotlib.pyplot as mpl
 
 default_model = 'SteadyStateRandomWaypoint'
 default_duration = '100000'
@@ -189,11 +191,119 @@ def parse_sftaxi_line(line):
     vals = line.split()
     return (float(vals[0]), float(vals[1]), int(vals[2]), int(vals[3]))
 
+def gen_heatmap(session_dir, params):
+    # Get a list of locations as utm coords
+    # 
+    trace_dir = trace_dirs[params['trace']]
+    abs_trace_dir = os.path.abspath(trace_dir)
+    sftaxi_files = glob.glob(abs_trace_dir+ '/new_*.txt')
+
+    max_files = len(sftaxi_files) 
+
+    raw_cols = ['lat', 'long', 'occupied', 't']
+
+    min_x = -1.0
+    min_y = -1.0
+    max_x = 0.0
+    max_y = 0.0
+    dim_x = 0.0
+    dim_y = 0.0
+
+    
+    for (node, sftaxi_file) in enumerate(sftaxi_files[:max_files]):
+        raw_locs = pd.read_csv(sftaxi_file, sep=' ', names=raw_cols, usecols=range(2)) 
+        utm_loc_series = raw_locs.apply(lambda latlon: utm.from_latlon(latlon[0],latlon[1]), axis=1)
+        utm_locs = pd.DataFrame(utm_loc_series.tolist(), columns=['x','y','zone_num','zone_letter'], index= utm_loc_series.index)
+        utm_coords = utm_locs[['x','y']]
+
+        node_min_x = utm_locs['x'].min()
+        node_min_y = utm_locs['y'].min()
+        node_max_x = utm_locs['x'].max()
+        node_max_y = utm_locs['y'].max()
+
+        if min_x < 0 or node_min_x < min_x: min_x = node_min_x
+        if min_y < 0 or node_min_y < min_y: min_y = node_min_y
+        max_x = max(max_x, node_max_x)
+        max_y = max(max_y, node_max_y)
+        dim_x = max_x - min_x
+        dim_y = max_y - min_y
+
+        print utm_coords.dtypes
+        print utm_coords.head()
+        print ''
+        print min_x,min_y,max_x,max_y
+        print ''
+        print dim_x,dim_y
+
+
+    """
+    x_tiles = 100.0
+    tile_width = dim_x / x_tiles
+    y_tiles = dim_y / tile_width
+    tile_height = dim_y / y_tiles
+    x_tiles = int(math.floor(x_tiles))+1
+    y_tiles = int(math.floor(y_tiles))+1
+    """
+    tile_width = 1000.0
+    tile_height = 1000.0
+    x_tiles = int(math.floor(dim_x / tile_width))+1
+    y_tiles = int(math.floor(dim_y / tile_height))+1
+  
+    print 'x_tiles=%d, y_tiles=%d, tile_width=%.2f, tile_height=%.2f'%(x_tiles, y_tiles, tile_width, tile_height)
+    heatmap = pd.DataFrame(index=range(0,x_tiles), columns=range(0,y_tiles)).fillna(0)
+
+    for (node, sftaxi_file) in enumerate(sftaxi_files[:max_files]):
+        raw_locs = pd.read_csv(sftaxi_file, sep=' ', names=raw_cols, usecols=range(2)) 
+        utm_loc_series = raw_locs.apply(lambda latlon: utm.from_latlon(latlon[0],latlon[1]), axis=1)
+        utm_locs = pd.DataFrame(utm_loc_series.tolist(), columns=['x','y','zone_num','zone_letter'], index= utm_loc_series.index)
+        utm_coords = utm_locs[['x','y']]
+        
+        tile_series = utm_coords.apply(lambda xy: get_tile(xy[0], xy[1], tile_width, tile_height, min_x, min_y), axis=1)
+        print tile_series.head()
+
+        for x,y in tile_series:
+            heatmap.set_value(x, y, heatmap.iloc[x,y]+1)
+
+        #tiles = pd.DataFrame(tile_series.tolist(), columns=['tx', 'ty'], index=tile_series.index)
+
+        print '' 
+        #tile_counts = tiles.groupby(lambda tile: tile).count()
+        #print tile_counts.head()
+        #print tile_counts.dtypes 
+        #print heatmap.iloc[20:50, 50:80]
+    outfile = os.path.join(session_dir, 'heatmap.csv')
+    heatmap.to_csv(outfile, sep=' ')
+    metadata = pd.Series({'min_x':min_x,'min_y':min_y,
+        'max_x':max_x,'max_y':max_y,
+        'dim_x':dim_x,'dim_y':dim_y,
+        'x_tiles':x_tiles,'y_tiles':y_tiles,
+        'twidth':tile_width,'theight':tile_height})
+    metafile = os.path.join(session_dir, 'heatmap.metadata')
+    metadata.to_csv(metafile, sep=' ')
+
+    plot_heatmap(heatmap, min_x, min_y, tile_width, tile_height, session_dir)
+    
+def plot_heatmap(heatmap, min_x, min_y, tile_width, tile_height, session_dir):
+    mpl.pcolor(heatmap.transpose())
+    mpl.savefig(os.path.join(session_dir, 'heatmap.pdf'), bbox_inches='tight')
+    mpl.show()
+
+def get_tile(x, y, twidth, theight, min_x, min_y):
+    xtile = int(math.floor((x - min_x) / twidth))
+    ytile = int(math.floor((y - min_y) / theight))
+
+    return (xtile, ytile)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate ns2 mobility trace using BonnMotion.')
     parser.add_argument('--sessionDir', dest='session_dir', default='/tmp', help='dir name (/tmp)')
     parser.add_argument('--nodes', dest='nodes', default='9', help = '# nodes (9)')
     parser.add_argument('--sessionid', dest='session_id', default='0', help = 'session id (random seed = 0)')
+    parser.add_argument('--trace', dest='trace', default=None, help='Analyse trace')
+    parser.add_argument('--heatmap', dest='heatmap', action='store_true', help='Generate a heatmap (requires trace)')
     args=parser.parse_args()
 
-    gen_trace(args.session_dir, args.session_id, {'nodes':int(args.nodes)+1})
+    if args.heatmap:
+        gen_heatmap(args.session_dir, {'nodes':int(args.nodes)+1, 'trace':args.trace}) 
+    else:
+        gen_trace(args.session_dir, args.session_id, {'nodes':int(args.nodes)+1})
