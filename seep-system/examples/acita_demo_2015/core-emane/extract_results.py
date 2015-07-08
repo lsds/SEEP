@@ -3,7 +3,7 @@ import re, pandas as pd
 
 def is_src_log(f):
     f_type = log_type(f) 
-    return f_type == 'SOURCE' or f_type == 'VIDEO_SOURCE'
+    return f_type in ['SOURCE', 'VIDEO_SOURCE', 'LOCATION_SOURCE']
 
 def is_sink_log(f):
     return log_type(f) == 'SINK'
@@ -11,7 +11,7 @@ def is_sink_log(f):
 def is_processor_log(f):
     #return log_type(f) == 'PROCESSOR'
     f_type = log_type(f) 
-    return f_type == 'PROCESSOR' or f_type == 'FACE_DETECTOR' or f_type == 'FACE_RECOGNIZER'
+    return f_type in ['PROCESSOR', 'FACE_DETECTOR', 'FACE_RECOGNIZER', 'JOIN', 'HEATMAP_JOIN']
 
 def log_type(f):
     regex = re.compile(r'Setting up (.*) operator with id=(.*)$')
