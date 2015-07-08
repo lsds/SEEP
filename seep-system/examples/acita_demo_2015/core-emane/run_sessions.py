@@ -183,6 +183,7 @@ def run_session(time_str, k, mob, exp_session, params):
         """
 
         placements = get_initial_placements(params['placement'], mob)
+        print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
             if placements:
                 pos = placements[i]
@@ -192,6 +193,7 @@ def run_session(time_str, k, mob, exp_session, params):
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
        
         routers = []
+        print 'Creating routers.'
         # Create auxiliary 'router' nodes if any left
         for i in range(3+len(num_workers), 2+params['nodes']):
             if placements:
@@ -290,16 +292,22 @@ def get_num_workers(k, params):
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
 #def create_node(i, session, services_str, wlan, pos, ip_offset=8):
+    tstart = time.time() 
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
+    taddobj = time.time() - tstart
     n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
+    taddservices = time.time() - tstart
     n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
+    taddnetif = time.time() - tstart
     n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
+    tcmd = time.time() - tstart
     #n.cmd([SYSCTL_BIN, "net.ipv4.ip_forward=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.forwarding=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv6.conf.all.forwarding=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.rp_filter=0"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.default.rp_filter=0"])
+    print 'taddobj=%.3f,taddserv=%.3f,taddnet=%.3f,tcmd=%.3f'%(taddobj,taddservices,taddnetif,tcmd)
     return n
 
 def create_node_map(ns_nums, nodes):
