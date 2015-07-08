@@ -180,6 +180,7 @@ if __name__ == "__main__":
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     parser.add_argument('--masterPostDelay', dest='master_postdelay', default=None, help='Time to wait after starting master service before deploying query')
     parser.add_argument('--workerPreDelay', dest='worker_predelay', default=None, help='Time to wait before starting worker')
+    parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -211,6 +212,7 @@ if __name__ == "__main__":
     if args.verbose: params['verbose']='true'
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
+    if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
 
     main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
 

@@ -149,7 +149,7 @@ def run_session(time_str, k, mob, exp_session, params):
             wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
             model_cfg = list(BasicRangeModel.getdefaultvalues())
-            model_cfg[0] = '500' #Similar to default effective emane range.
+            model_cfg[0] = '5000' #Similar to default effective emane range.
             model_cfg[1] = '11000' #Similar to default emane bandwidth.
             print 'Basic Range configured values: %s'%(str(model_cfg))
             wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
@@ -208,6 +208,8 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Node map=%s'%node_map
             mobility_params[4] = ('map', node_map)
             mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
+            refresh_ms = int(params.get('refresh_ms', 500))
+            mobility_params[1] = ('refresh_ms', refresh_ms)
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
