@@ -67,6 +67,7 @@ public class HeatMapSink implements StatelessOperator {
 		if (tupleId != tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
+			logger.info("Current heatmap="+result.toString());
 		}
 		
 		if (tuplesReceived >= numTuples)
