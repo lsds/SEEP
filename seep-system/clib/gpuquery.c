@@ -123,7 +123,7 @@ void gpu_query_init (gpuQueryP q, JNIEnv *env, int qid) {
 }
 
 gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
-	const char *source, int _kernels, int _inputs, int _outputs) {
+	const char *source, int _kernels, int _inputs, int _outputs, int qid) {
 	
 	int i;
 	int error = 0;
@@ -184,7 +184,7 @@ gpuQueryP gpu_query_new (cl_device_id device, cl_context context,
 	p->phase = 0;
 	for (i = 0; i < NCONTEXTS; i++) {
 		p->contexts[i] =
-			gpu_context (p->device, p->context, p->program, _kernels, _inputs, _outputs);
+			gpu_context (p->device, p->context, p->program, _kernels, _inputs, _outputs, qid);
 	}
 	return p;
 }
@@ -330,22 +330,22 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	timer_start(timer);
 #endif
 	/* Wait for write event */
-	// gpu_context_waitForWriteEvent (p);
 
 	/* Write input */
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 
+	gpu_context_flush (p);
+
 	if (theOther) {
 
 		/* Wait for read event from previous query */
-		// gpu_context_waitForReadEvent (theOther);
 		gpu_context_finish(theOther);
 		
 #ifdef GPU_PROFILE
 		gpu_context_profileQuery (theOther);
 #endif
 		/* Read output */
-		gpu_context_readOutput (theOther, operator->readOutput, env, obj, qid);
+		gpu_context_readOutput (theOther, operator->readOutput, env, obj, theOther->qid);
 	}
 
 #ifdef GPU_TMSRMNT
@@ -354,6 +354,10 @@ static int gpu_query_exec_2 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 #endif
 	
 	gpu_context_moveInputBuffers (p);
+	
+	if (operator->configArgs != NULL) {
+		gpu_context_configArgs (p, operator->configArgs, operator->intArgs,operator->longArgs);
+	}
 	
 	gpu_context_submitKernel (p, threads, threadsPerGroup);
 	
@@ -441,7 +445,6 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	__obj = obj;
 	if (theOther) {
 		/* Wait for read event from previous query */
- 		// gpu_context_waitForReadEvent (theOther);
 		gpu_context_finish(theOther);
 #ifdef GPU_PROFILE
 		gpu_context_profileQuery (theOther);
@@ -471,6 +474,7 @@ static int gpu_query_exec_5 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 #endif
 
 	gpu_context_moveInputBuffers (p);
+	
 	if (operator->configArgs != NULL) {
 		gpu_context_configArgs (p, operator->configArgs, operator->intArgs,operator->longArgs);
 	}

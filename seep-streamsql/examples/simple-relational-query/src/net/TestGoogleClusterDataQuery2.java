@@ -76,12 +76,12 @@ public class TestGoogleClusterDataQuery2 {
 		/*
 		 * Set up configuration of system
 		 */
-		Utils.CPU =  true;
+		Utils.CPU =  false;
 		Utils.GPU =  true;
 		
 		Utils.HYBRID = Utils.CPU && Utils.GPU;
 		
-		Utils.THREADS = 2;
+		Utils.THREADS = 1;
 		
 		Utils._CIRCULAR_BUFFER_ = 1024 * 1024 * 1024;
 		Utils._UNBOUNDED_BUFFER_ = 4 * 1048576; /* 1MB */
@@ -93,15 +93,15 @@ public class TestGoogleClusterDataQuery2 {
 		/*
 		 * Set up configuration of query
 		 */
+		
 		WindowType windowType = WindowType.fromString("range");
 		long windowRange = 60;
 		long windowSlide = 1;
-		int numberOfAttributesInSchema = 12;
-		
-		AggregationType aggregationType = AggregationType.fromString("cnt");
 		
 		WindowDefinition window = 
-			new WindowDefinition (windowType, windowRange, windowSlide);
+				new WindowDefinition (windowType, windowRange, windowSlide);
+		
+		int numberOfAttributesInSchema = 12;
 		
 		int [] offsets = new int [numberOfAttributesInSchema];
 		/* First attribute is timestamp */
@@ -136,30 +136,20 @@ public class TestGoogleClusterDataQuery2 {
 		schema.setType(10, 2);
 		schema.setType(11, 1);
 		
+		AggregationType aggregationType = AggregationType.fromString("avg");
+		
 		Expression [] groupBy = new Expression [] {
 			new IntColumnReference(6)
 		};
 		
-		/*
-		 * The output of the aggregation is:
-		 * 
-		 * 0:timestamp, 1:jobId, 2: maxCpu
-		 *  
-		 */
-//		Selection having = new Selection (
-//			new FloatComparisonPredicate(
-//				FloatComparisonPredicate.GREATER_OP, 
-//				new FloatColumnReference(2), 
-//				new FloatConstant(100F)
-//				)
-//			);
-		
-		IMicroOperatorCode aggregationCode = new PartialMicroAggregation(
-				window,
-				aggregationType,
-				new FloatColumnReference(8), /* cpu */
-				groupBy
-				);
+		IMicroOperatorCode cpuAggCode = 
+				new PartialMicroAggregation
+					(
+						window,
+						aggregationType,
+						new FloatColumnReference(8), /* cpu */
+						groupBy
+					);
 		
 		IMicroOperatorCode gpuAggCode =
 				new PartialAggregationKernel
@@ -170,24 +160,29 @@ public class TestGoogleClusterDataQuery2 {
 						null,
 						schema
 					);
-
+		
 		((PartialAggregationKernel) gpuAggCode).setBatchSize(1048576);
 		((PartialAggregationKernel) gpuAggCode).setWindowDefinition(window);
 		((PartialAggregationKernel) gpuAggCode).setup();
 		
 		MicroOperator uoperator;
 		if (Utils.GPU && ! Utils.HYBRID)
-			uoperator = new MicroOperator (gpuAggCode, aggregationCode, 1);
+			uoperator = new MicroOperator (gpuAggCode, cpuAggCode, 1);
 		else 
-			uoperator = new MicroOperator (aggregationCode, gpuAggCode, 1);
+			uoperator = new MicroOperator (cpuAggCode, gpuAggCode, 1);
 		
 		Set<MicroOperator> operators = new HashSet<MicroOperator>();
 		operators.add(uoperator);
+		
 		Set<SubQuery> queries = new HashSet<SubQuery>();
+		
 		SubQuery query = new SubQuery (0, operators, schema, window, queryConf);
-		query.setAggregateOperator((IAggregateOperator) aggregationCode);
+		query.setAggregateOperator((IAggregateOperator) cpuAggCode);
+		
 		queries.add(query);
+		
 		MultiOperator operator = new MultiOperator(queries, 0);
+		
 		operator.setup();
 		
 		TheCPU.getInstance().bind(0);

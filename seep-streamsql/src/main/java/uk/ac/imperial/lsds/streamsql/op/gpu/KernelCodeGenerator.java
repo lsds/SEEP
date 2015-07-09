@@ -14,6 +14,7 @@ import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.efloat.FloatExpression;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.eint.IntExpression;
+import uk.ac.imperial.lsds.streamsql.expressions.elong.LongColumnReference;
 import uk.ac.imperial.lsds.streamsql.expressions.elong.LongExpression;
 import uk.ac.imperial.lsds.streamsql.predicates.IPredicate;
 
@@ -228,10 +229,11 @@ private static String getPartialIntermediateStruct (Expression [] groupBy) {
 		StringBuilder b = new StringBuilder ();
 		
 		b.append("typedef struct {\n");
+		b.append("\tint mark;\n");
+		b.append("\tint pad0;\n"); /* For alignment purposes (64-bit) */
 		/* The first attribute is always a timestamp */
 		b.append("\tlong t;\n");
-		b.append("\tint mark;\n");
-		int byteSize = 12;
+		int byteSize = 16;
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 
 				b.append(String.format("\tint key_%d;\n", i));
@@ -255,14 +257,17 @@ private static String getPartialIntermediateStruct (Expression [] groupBy) {
 			byteSize_ ++;
 		}
 		if (byteSize_ > byteSize) {
+			/* Add padding */
 			int k = 1;
 			while (byteSize < byteSize_) {
-				b.append(String.format("\tint padding%d;\n", k)); // (byteSize_ - byteSize)));
+				if ((byteSize_ - byteSize) != 4) {
+					System.err.println("error: invalid struct");
+					System.exit(1);
+				}
+				b.append(String.format("\tint pad%d;\n", k));
 				byteSize += 4;
 				k++;
 			}
-			/* Add padding */
-			// b.append(String.format("\tuchar%d padding;\n", (byteSize_ - byteSize)));
 		}
 		b.append("} intermediate_tuple_t __attribute__((aligned(1)));\n");
 		b.append("\n");
@@ -272,6 +277,30 @@ private static String getPartialIntermediateStruct (Expression [] groupBy) {
 		b.append(String.format("\tuchar16 vectors[%d];\n", getVectorSize(byteSize_)));
 		b.append("} intermediate_t;\n");
 		return b.toString();
+	}
+
+	public static int getPartialIntermediateStructLength (Expression [] groupBy) {
+	
+		/* The first attribute is always a timestamp */
+		int byteSize_, byteSize = 16;
+		for (int i = 1; i <= groupBy.length; i++) {
+			if (groupBy[i-1] instanceof IntExpression) { 
+				byteSize += 4;
+			} else
+			if (groupBy[i-1] instanceof FloatExpression) { 
+				byteSize += 4;
+			} else
+			if (groupBy[i-1] instanceof LongExpression) { 
+				byteSize += 8;
+			}
+		}
+		byteSize += 8;
+		byteSize_ = byteSize;
+		/* Ensure output tuple size is a power of two */
+		while ((byteSize_ & (byteSize_ - 1)) != 0) {
+			byteSize_ ++;
+		}
+		return byteSize_;
 	}
 	
 	public static int getIntermediateStructLength (Expression [] groupBy) {
@@ -777,7 +806,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
 				b.append(String.format("\tq->key_%d = p->tuple._%d;\n", 
-					i, ((FloatColumnReference) groupBy[i-1]).getColumn()));
+					i, ((LongColumnReference) groupBy[i-1]).getColumn()));
 			}
 		}
 		b.append("\treturn;\n");
@@ -797,7 +826,7 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
 				b.append(String.format("(q->key_%d == p->tuple._%d)%s", 
-					i, ((FloatColumnReference) groupBy[i-1]).getColumn(), (i < groupBy.length) ? " & " : ";"));
+					i, ((LongColumnReference) groupBy[i-1]).getColumn(), (i < groupBy.length) ? " & " : ";"));
 			}
 		}
 		b.append("\n");
@@ -806,22 +835,55 @@ private static String getJoinInputHeader (ITupleSchema schema, int vectors, Stri
 		b.append("\n");
 		b.append("inline void storef (__global intermediate_t *out, __global input_t *p) {\n");
 		/* Store the timestamp */
-		b.append("\tout->tuple.t = __bswap64(p->tuple.t);\n");
+		/* b.append("\tout->tuple.t = __bswap64(p->tuple.t);\n"); */
+		b.append("\tout->tuple.t = p->tuple.t;\n");
 		/* Store the (composite) key */
 		for (int i = 1; i <= groupBy.length; i++) {
 			if (groupBy[i-1] instanceof IntExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = __bswap32(p->tuple._%d);\n", 
-					i, ((IntColumnReference) groupBy[i-1]).getColumn())));
+				/* b.append(String.format(String.format("\tout->tuple.key_%d = __bswap32(p->tuple._%d);\n", 
+					i, ((IntColumnReference) groupBy[i-1]).getColumn()))); */
+				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
+						i, ((IntColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof FloatExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = __bswapfp(p->tuple._%d);\n", 
-					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
+				/* b.append(String.format(String.format("\tout->tuple.key_%d = __bswapfp(p->tuple._%d);\n", 
+					i, ((FloatColumnReference) groupBy[i-1]).getColumn()))); */
+				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
+						i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
 			} else
 			if (groupBy[i-1] instanceof LongExpression) { 
-				b.append(String.format(String.format("\tout->tuple.key_%d = __bswap64(p->tuple._%d);\n", 
-					i, ((FloatColumnReference) groupBy[i-1]).getColumn())));
+				/* b.append(String.format(String.format("\tout->tuple.key_%d = __bswap64(p->tuple._%d);\n", 
+					i, ((FloatColumnReference) groupBy[i-1]).getColumn()))); */
+				b.append(String.format(String.format("\tout->tuple.key_%d = p->tuple._%d;\n", 
+						i, ((LongColumnReference) groupBy[i-1]).getColumn())));
 			}
 		}
+		/* Update the value */
+		switch (type) {
+		case CNT:
+			b.append ("\tatomic_inc ((global int *) &(out->tuple.val));\n");
+		case SUM:
+		case AVG:
+			b.append (String.format("\tatomic_add ((global int *) &(out->tuple.val), convert_int_rtp(__bswapfp(p->tuple._%d)));\n",
+				_the_aggregate.getColumn()));
+			break;
+		case MAX:
+			b.append (String.format("\tatomic_max ((global int *) &(out->tuple.val), convert_int_rtp(__bswapfp(p->tuple._%d)));\n",
+				_the_aggregate.getColumn()));
+			break;
+		case MIN:
+			b.append (String.format("\tatomic_min ((global int *) &(out->tuple.val), convert_int_rtp(__bswapfp(p->tuple._%d)));\n",
+				_the_aggregate.getColumn()));
+			break;
+		default:
+			b.append("\treturn -1;\n");
+			break;
+		}
+		/* Update the count */
+		b.append ("\tatomic_inc ((global int *) &(out->tuple.cnt));\n");
+		b.append ("}\n");
+		b.append("\n");
+		b.append("inline void updatef (__global intermediate_t *out, __global input_t *p) {\n");
 		/* Update the value */
 		switch (type) {
 		case CNT:

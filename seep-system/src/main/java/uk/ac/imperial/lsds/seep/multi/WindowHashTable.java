@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 public class WindowHashTable {
 	
-	public static final int KEY_OFFSET = 9;
+	public static final int KEY_OFFSET = 16;
 	
 	/* Note that the following value must be a power of two (see `hash`). */
 	public static final int WINDOW_MAP_CONTENT_SIZE = Utils.HASH_TABLE_SIZE;
@@ -63,11 +63,13 @@ public class WindowHashTable {
 		this.keyLength = keyLength;
 		this.valueLength = valueLength;
 		
-		/* +occupancy (1), +timestamp (8), +count (4) */
+		/* +occupancy (8), +timestamp (8), +count (4) */
 		this.tupleLength = 
-				1 << (32 - Integer.numberOfLeadingZeros((this.keyLength + this.valueLength + 15) - 1));
+				1 << (32 - Integer.numberOfLeadingZeros((this.keyLength + this.valueLength + 20) - 1));
 		
 		this.capacity = WINDOW_MAP_CONTENT_SIZE / this.tupleLength;
+		
+		/* System.out.println(String.format("[DBG] [WindowHashTable] tuple is %d bytes long; %d slots", tupleLength, capacity)); */
 	}
 	
 	/* Linear scan of the hash table */
@@ -108,8 +110,10 @@ public class WindowHashTable {
 	
 	private int compare (byte [] tupleKey, int offset) {
 		
-		/* The first byte indicates occupancy; the next 8 are the timestamp */
+		/* The first 8 bytes indicate occupancy; the next 8 are the timestamp */
 		int n = (offset + KEY_OFFSET) + tupleKey.length;
+		
+		/* System.out.println("[DBG] compare: offset = " + offset); */
 		
 		for (int i = (offset + KEY_OFFSET), j = 0; i < n; i++, j++) {
 			byte v1 = this.content.get(i);

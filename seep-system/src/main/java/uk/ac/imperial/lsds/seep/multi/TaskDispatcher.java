@@ -111,10 +111,12 @@ public class TaskDispatcher implements ITaskDispatcher {
 		WindowBatch batch;
 		int taskid;
 		
+		long size = 0;
+		
 		taskid = this.getTaskNumber();
 		
 		/*
-		long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+		size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 		System.out.println(
 			String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
 					parent.getId(), taskid, p, q, free, t_, _t, size));
@@ -147,7 +149,7 @@ public class TaskDispatcher implements ITaskDispatcher {
 		free -= schema.getByteSizeOfTuple();
 		if (free < 0) {
 			System.err.println(String.format("error: negative free pointer (%d) for query %d", free, parent.getId()));
-			long size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
+			size = (q <= p) ? (q + buffer.capacity()) - p : q - p;
 			System.out.println(
 					String.format("[DBG] Query %d Task %6d [%10d, %10d), free %10d, [%6d, %6d] size %10d", 
 							parent.getId(), taskid, p, q, free, t_, _t, size));

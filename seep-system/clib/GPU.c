@@ -179,14 +179,13 @@ void gpu_free () {
 	return;
 }
 
-int gpu_getQuery (const char *source, int _kernels, int _inputs, int _outputs, 
-JNIEnv *env) {
+int gpu_getQuery (const char *source, int _kernels, int _inputs, int _outputs, JNIEnv *env) {
 	
 	int ndx = freeIndex++;
 	if (ndx < 0 || ndx >= Q)
 		return -1;
 	queries[ndx] = gpu_query_new (device, context,
-			source, _kernels, _inputs, _outputs);
+			source, _kernels, _inputs, _outputs, ndx);
 
 	gpu_query_init (queries[ndx], env, ndx);
 
@@ -629,6 +628,7 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelParti
 	gpu_setKernel (qid, 1, "computeOffsetKernel",   &callback_setKernelPartialAggregate, intArgs, longArgs);
 	gpu_setKernel (qid, 2, "computePointersKernel", &callback_setKernelPartialAggregate, intArgs, longArgs);
 	gpu_setKernel (qid, 3, "aggregateKernel",       &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 4, "packKernel",            &callback_setKernelPartialAggregate, intArgs, longArgs);
 
 	(*env)->ReleaseIntArrayElements (env,  _intArgs,  intArgs, 0);
 	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
@@ -1555,7 +1555,7 @@ void callback_readOutput (gpuContextP context,
 		exit(1);
 	}
 	
-	// printf("[GPU] read  %10d bytes of output\n", theSize);
+	/* printf("[GPU] read %10d bytes of output\n", theSize); */
 	
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (
@@ -1572,12 +1572,19 @@ void callback_readOutput (gpuContextP context,
 
 gpuContextP callback_execKernel (gpuContextP context) {
 	gpuContextP p = previousQuery[0];
+/*
 #ifdef GPU_VERBOSE
 	if (! p)
-		dbg("[DBG] (null) callback_execKernel(%p)\n", context);
+		dbg("[DBG] (null) callback_execKernel(%p) \n", context);
 	else
 		dbg("[DBG] %p callback_execKernel(%p)\n", p, context);
 #endif
+*/
+	if (! p)
+		printf("[DBG] (null) callback_execKernel(%p); U => %d\n", context, context->qid);
+	else
+		printf("[DBG] %p callback_execKernel(%p); %d => %d\n", p, context, p->qid, context->qid);
+
 	/* Shift */
 	int i;
 	for (i = 0; i < DEPTH - 1; i++) {

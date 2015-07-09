@@ -131,7 +131,7 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
 		
-		TheGPU.getInstance().setOutput(qid, 0, 4 * tuples_, 0, 0, 1, 0); /* flags     */
+		TheGPU.getInstance().setOutput(qid, 0, 4 * tuples_, 0, 1, 1, 0); /* flags     */
 		TheGPU.getInstance().setOutput(qid, 1, 4 * tuples_, 0, 1, 0, 0); /* offsets   */
 		TheGPU.getInstance().setOutput(qid, 2, 4 * ngroups, 0, 1, 0, 0); /* partitions */
 		TheGPU.getInstance().setOutput(qid, 3,  outputSize, 1, 0, 0, 1);

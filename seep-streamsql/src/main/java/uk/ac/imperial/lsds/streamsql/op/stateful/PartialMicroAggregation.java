@@ -29,7 +29,7 @@ import uk.ac.imperial.lsds.streamsql.visitors.OperatorVisitor;
 
 public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperatorCode, IAggregateOperator {
 	
-	public static final int KEY_OFFSET = 9;
+	public static final int KEY_OFFSET = 16;
 	
 	private static boolean debug = false;
 	
@@ -654,7 +654,11 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers   = windowBatch.getWindowEndPointers();
-
+		/*
+		for (int i = 0; i <= windowBatch.getLastWindowIndex(); i++) {
+			System.out.println(String.format("[DBG] window %6d start %10d end %10d", i, startPointers[i], endPointers[i]));
+		}
+		*/
 		IQueryBuffer inputBuffer  = windowBatch.getBuffer();
 		
 		IQueryBuffer closingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
@@ -779,6 +783,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 							/* Create a new entry */
 							hashtable.position(idx);
 							hashtable.put((byte) 1);
+							/* Skip 7 bytes */
+							hashtable.position(idx + 8);
 							/* Copy timestamp */
 							hashtable.putLong(inputBuffer.getLong(inWindowStartOffset));
 							hashtable.put(tupleKey);
@@ -883,7 +889,11 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		int [] startPointers = windowBatch.getWindowStartPointers();
 		int [] endPointers   = windowBatch.getWindowEndPointers();
-
+		/*
+		for (int i = 0; i <= windowBatch.getLastWindowIndex(); i++) {
+			System.out.println(String.format("[DBG] window %6d start %10d end %10d", i, startPointers[i], endPointers[i]));
+		}
+		*/
 		IQueryBuffer inputBuffer  = windowBatch.getBuffer();
 		
 		IQueryBuffer closingOutputBuffer  = UnboundedQueryBufferFactory.newInstance();
@@ -1176,6 +1186,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				/* Create a new entry */
 				hashtable.position(idx);
 				hashtable.put((byte) 1);
+				/* Skip 7 bytes */
+				hashtable.position(idx + 8);
 				/* Copy time stamp */
 				hashtable.putLong(inputBuffer.getLong(enterOffset));
 				hashtable.put(tupleKey);
@@ -1216,10 +1228,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 				/*
 				System.out.println(String.format("write-up <%d, %06d, %3d, %5.1f, %3d>",
 						hashtable.get(idx),
-						hashtable.getLong(idx + 1),
-						hashtable.getInt(idx + 9),
-						hashtable.getFloat(idx + 13),
-						hashtable.getInt(idx + 17)
+						hashtable.getLong(idx + 8),
+						hashtable.getInt(idx + 16),
+						hashtable.getFloat(idx + 20),
+						hashtable.getInt(idx + 24)
 						));
 				*/
 				
@@ -1233,11 +1245,11 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					/* Overwrite value */
 					hashtable.putFloat(valueOffset, value / (float) count);
 					/* Write tuple */
-					outputBuffer.put(hashtable.array(), idx + 1, 8 + keyLength + valueLength);
+					outputBuffer.put(hashtable.array(), idx + 8, 8 + keyLength + valueLength);
 					outputBuffer.put(outputSchema.getDummyContent());
 				} else {
 					/* Write tuple */
-					outputBuffer.put(hashtable.array(), idx + 1, 8 + keyLength + valueLength);
+					outputBuffer.put(hashtable.array(), idx + 8, 8 + keyLength + valueLength);
 					outputBuffer.put(outputSchema.getDummyContent());
 				}	
 			}
@@ -1284,6 +1296,6 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 	@Override
 	public int getIntermediateTupleLength () {
 		
-		return (1 << (32 - Integer.numberOfLeadingZeros((this.keyLength + this.valueLength + 15) - 1)));
+		return (1 << (32 - Integer.numberOfLeadingZeros((this.keyLength + this.valueLength + 20) - 1)));
 	}
 }

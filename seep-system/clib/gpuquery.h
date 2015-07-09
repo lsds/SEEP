@@ -31,7 +31,7 @@ typedef struct gpu_query {
 } gpu_query_t;
 
 /* Constractor */
-gpuQueryP gpu_query_new (cl_device_id, cl_context, const char *, int, int, int);
+gpuQueryP gpu_query_new (cl_device_id, cl_context, const char *, int, int, int, int);
 
 void gpu_query_init (gpuQueryP, JNIEnv *, int);
 

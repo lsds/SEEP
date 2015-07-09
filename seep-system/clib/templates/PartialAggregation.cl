@@ -118,106 +118,103 @@ __kernel void aggregateKernel (
 		return;
 
 	/* A group may process more than one windows */
-	// while (wid <= num_windows) {
-	if (wid == 0 || wid == 1) {
+	while (wid <= num_windows) {
 
 		int table_offset = wid * (_table_);
 
 		int  offset_ =  window_ptrs_ [wid]; /* Window start and end pointers */
 		int _offset  = _window_ptrs  [wid];
 
-		if (offset_ < 0)
-			offset_ = 0;
-		if (_offset < 0)
-			_offset = inputBytes;
-
-		if (lid == 0)
-			atomic_inc(&windowCounts[2]);
-
 		/* Check if a window is closing, opening, pending, or complete. */
-//		if (offset_ < 0 && _offset >= 0) {
-//			/* A closing window; set start offset */
-//			offset_ = 0;
-//			if (lid == 0)
-//				atomic_inc(&windowCounts[0]);
-//		} else
-//		if (offset_ >= 0 && _offset < 0) {
-//			/* An opening window; set end offset */
-//			_offset = inputBytes;
-//			if (lid == 0)
-//				atomic_inc(&windowCounts[3]);
-//		} else
-//		if (offset_ < 0 && _offset < 0) {
-//			/* A pending window */
-//			int old = atomic_cmpxchg(&windowCounts[1], 0, 1);
-//			if (old > 0) {
-//				wid += nlg;
-//				continue;
-//			}
-//			_offset  = 0;
-//			offset_ = inputBytes;
-//		} else
-//		if (offset_ == 0 && _offset == 0) {
-//			/* A closing window */
-//			if (lid == 0)
-//				atomic_inc(&windowCounts[0]);
-//		} else {
-//			/* A complete window */
-//			if (lid == 0)
-//				atomic_inc(&windowCounts[2]);
-//		}
-//
-//		if (offset_ == _offset) {
-//		 	wid += nlg;
-//			continue;
-//		}
+		if (offset_ < 0 && _offset >= 0) {
+			/* A closing window; set start offset */
+			offset_ = 0;
+			if (lid == 0)
+				atomic_inc(&windowCounts[0]);
+		} else
+		if (offset_ >= 0 && _offset < 0) {
+			/* An opening window; set end offset */
+			_offset = inputBytes;
+			if (lid == 0)
+				atomic_inc(&windowCounts[3]);
+		} else
+		if (offset_ < 0 && _offset < 0) {
+			/* A pending window */
+			int old = atomic_cmpxchg(&windowCounts[1], 0, 1);
+			if (old > 0) {
+				wid += nlg;
+				continue;
+			}
+			_offset  = 0;
+			offset_ = inputBytes;
+		} else
+		if (offset_ == 0 && _offset == 0) {
+			/* A closing window */
+			if (lid == 0)
+				atomic_inc(&windowCounts[0]);
+		} else {
+			/* A complete window */
+			if (lid == 0)
+				atomic_inc(&windowCounts[2]);
+		}
+
+		if (offset_ == _offset) {
+		 	wid += nlg;
+			continue;
+		}
 
 		int idx = lid * sizeof(input_t) + offset_;
 
 		while (idx < _offset) {
+
 			int lidx = lid * sizeof(key_t);
+
 			__global input_t *p = (__global input_t *)   &input[ idx];
 			__local key_t    *k = (__local  key_t   *) &scratch[lidx];
-			pack_key (k, p);
-			int h = jenkinsHash(&scratch[lidx], sizeof(key_t), 1) & (table_capacity - 1);
-			int tableIndex = h * sizeof(intermediate_tuple_t) + table_offset;
 
-			int tupleId = idx / 32;
-			failed[tupleId] = h;
+			pack_key (k, p);
+
+			int h = jenkinsHash(&scratch[lidx], sizeof(key_t), 1) & (table_capacity - 1);
+
+			int tableIndex = h * sizeof(intermediate_tuple_t) + table_offset;
 
 			/* Insert */
 			bool success = false;
-			for (unsigned int attempt = 1; attempt <= table_capacity; ++attempt) {
+
+			for (int attempt = 1; attempt <= table_capacity; ++attempt) {
+
 				__global intermediate_t *t = (__global intermediate_t *) &contents[tableIndex];
-				int ONE = 1;
-				int old;
-				old = atomic_cmpxchg((global int *) &(t->tuple.mark), 0, __bswap32(ONE));
-				if (old == 0) {
-					t->tuple.t     = p->tuple.t;
-					t->tuple.key_1 = __bswap32(1); // __bswap32(k->key_1);
-					t->tuple.val   = 666; // __bswap32(100);
-					atomic_inc ((global int *) &(t->tuple.cnt)); //    = atomic_inc();
-					t->tuple.padding1 = __bswap32(idx);
-					t->tuple.padding2 = 1;
+
+				int old = atomic_cmpxchg((global int *) &(t->tuple.mark), -1, idx);
+				if (old == -1) {
+
+					/* Insert new tuple (to be replaced by generic function) */
+					storef (t, p);
+
 					success = true;
 					break;
-				} else if (old == __bswap32(ONE)) {
-					// if (__bswap32(t->tuple.key_1) == __bswap32(ONE)) { // p->tuple._2) { // key_1) {
-					if (t->tuple.val == 666){ // __bswap32(100)) {
-					// if (comparef(k, p) == 1) {
-						atomic_inc ((global int *) &(t->tuple.cnt));
+
+				} else {
+
+					/* Check tuple at position `old` */
+					__global input_t *theOther = (__global input_t *) &input[old];
+
+					/* Compare keys */
+					if (comparef(k, theOther) == 1) {
+						/* Update value and count */
+						updatef(t, p);
+
 						success = true;
 						break;
+
 					}
 				}
-				// failed[tupleId] = t->tuple.val; // __bswap32(t->tuple.val); // t->tuple.key_1; // p->tuple._2;
-				break;
-				/* Conflict */
-				// ++h;
-				// tableIndex = (h & (table_capacity - 1)) * sizeof(intermediate_tuple_t) + table_offset;
+				/* Conflict; try next slot */
+				++h;
+				tableIndex = (h & (table_capacity - 1)) * sizeof(intermediate_tuple_t) + table_offset;
 			}
 			if (! success) {
-				// atomic_inc(&failed[0]);
+				atomic_inc(&failed[0]);
 			}
 			idx += group_offset;
 		}
@@ -243,34 +240,40 @@ __kernel void clearKernel (
 	__global uchar* contents,
 	__local uchar *scratch
 ) {
+
 	int tid = (int) get_global_id (0);
-	if (tid == 0) {
-		offset[0] = LONG_MAX;
-		offset[1] = 0;
-	}
-	/* The maximum number of window pointers is as many as the tuples */
-	 window_ptrs_[tid] = -1;
-	_window_ptrs [tid] = -1;
 
-	failed  [tid] = 0;
-	attempts[tid] = 0;
-
-	/* Initialise window counters: closing, pending, complete, opening */
-	if (tid < 4)
-		windowCounts[tid] = 0;
-
-	int outputIndex = tid * sizeof(intermediate_tuple_t); // sizeof(32); // intermediate_tuple_t);
+	int outputIndex = tid * sizeof(intermediate_tuple_t);
 	if (outputIndex >= outputBytes)
 		return;
 
-	__global intermediate_t *tuple = (__global intermediate_tuple_t *) &contents[outputIndex];
-	tuple->vectors[0] = 0;
-	tuple->vectors[1] = 0;
-//	tupl->tuple.mark = __bswap32(0);
-//	tupl->tuple.t = __bswap64(0L);
-//	tupl->tuple.key_1 = __bswap32(0);
-//	tupl->tuple.val = __bswap32(0);
-//	tupl->tuple.cnt = __bswap32(1);
+	__global intermediate_t *t = (__global intermediate_t *) &contents[outputIndex];
+	t->vectors[0] =  0;
+	t->vectors[1] =  0;
+	t->tuple.mark = -1;
+
+	if (tid < tuples) {
+
+		/* The maximum number of window pointers is as many as the input tuples */
+		 window_ptrs_[tid] = -1;
+		_window_ptrs [tid] = -1;
+
+		failed  [tid] = 0;
+		attempts[tid] = 0;
+
+		if (tid < 5) {
+
+			/* Initialise window counters: closing, pending, complete, opening.
+			 *
+			 * The last slot is reserved for output size */
+			windowCounts[tid] = 0;
+
+			if (tid == 0) {
+				offset[0] = LONG_MAX;
+				offset[1] = 0;
+			}
+		}
+	}
 
 	return;
 }
@@ -408,4 +411,46 @@ __kernel void computePointersKernel (
 	}
 
 	return ;
+}
+
+__kernel void packKernel (
+	const int tuples,
+	const int inputBytes,
+	const int outputBytes,
+	const int _table_,
+	const long previousPaneId,
+	const long batchOffset,
+	__global const uchar* input,
+	__global int* window_ptrs_,
+	__global int* _window_ptrs,
+	__global int *failed,
+	__global int *attempts,
+	__global long *offset, /* Temp. variable holding the window pointer offset and window counts */
+	__global int *windowCounts,
+	__global uchar* contents,
+	__local uchar *scratch
+) {
+
+	int tid = (int) get_global_id (0);
+
+	int outputIndex = tid * sizeof(intermediate_tuple_t);
+	if (outputIndex >= outputBytes)
+		return;
+
+	__global intermediate_t *t = (__global intermediate_t *) &contents[outputIndex];
+
+	if (t->tuple.mark == -1)
+		return;
+
+	/* Set mark's first byte to 1 */
+	t->tuple.mark = 0;
+	t->tuple.pad0 = 0;
+	contents[outputIndex] = 1;
+
+	/* No need to update the timestamp or the key */
+
+	t->tuple.val = __bswap32(t->tuple.val);
+	t->tuple.cnt = __bswap32(t->tuple.cnt);
+
+	return;
 }

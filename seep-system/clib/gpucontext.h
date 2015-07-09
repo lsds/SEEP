@@ -40,6 +40,7 @@ typedef struct gpu_kernel {
 
 typedef struct gpu_context *gpuContextP;
 typedef struct gpu_context {
+	int qid;
 	cl_device_id device;
 	cl_context context;
 	cl_program program;
@@ -58,7 +59,7 @@ typedef struct gpu_context {
 
 } gpu_context_t;
 
-gpuContextP gpu_context (cl_device_id, cl_context, cl_program, int, int, int);
+gpuContextP gpu_context (cl_device_id, cl_context, cl_program, int, int, int, int);
 
 void gpu_context_free (gpuContextP);
 

@@ -19,13 +19,15 @@ gpuContextP gpu_context (
 	cl_program  program,
 	int        _kernels,
 	int         _inputs,
-	int        _outputs) 
+	int        _outputs,
+	int             qid)
 {
 	gpuContextP q = (gpuContextP) malloc (sizeof(gpu_context_t));
 	if (! q) {
 		fprintf(stderr, "fatal error: out of memory\n");
 		exit(1);
 	}
+	q->qid = qid;
 	/* Initialise OpenCL execution context */
 	q->device = device;
 	q->context = context;
@@ -121,6 +123,7 @@ void gpu_context_configureKernel (gpuContextP q, int ndx,
 
 void gpu_context_configArgs (gpuContextP q, void (*callback) (cl_kernel, gpuContextP, int *, long *), int *intArgs, long *longArgs) {
 	int i = 0;
+	dbg("[DBG] configure %d kernels\n", q->kernel.count);
 	for (i = 0; i < q->kernel.count; i++)
 		(*callback) (q->kernel.kernels[i]->kernel[0], q, intArgs, longArgs);
 	return;
@@ -359,8 +362,8 @@ void gpu_context_finish (gpuContextP q) {
 	error |= clFinish (q->queue[0]);
 	error |= clFinish (q->queue[1]);
 	if (error != CL_SUCCESS) {
-		fprintf(stderr, "opencl error (%d): %s (%s)\n", 
-			error, getErrorMessage(error), __FUNCTION__);
+		fprintf(stderr, "opencl error (%d): %s (%s), %d %p\n",
+			error, getErrorMessage(error), __FUNCTION__, q->qid, q);
 		exit (1);
 	}
 }
@@ -605,7 +608,7 @@ void gpu_context_moveOutputBuffers (gpuContextP q) {
 	/* Read */
 	for (i = 0; i < q->kernelOutput.count; i++) {
 		
-		if (q->kernelOutput.outputs[i]->doNotMove)
+		if (q->kernelOutput.outputs[i]->doNotMove && (! q->kernelOutput.outputs[i]->bearsMark))
 			continue;
 		
 		/* printf("[GPU] move %10d byte out\n", q->kernelOutput.outputs[i]->size); */

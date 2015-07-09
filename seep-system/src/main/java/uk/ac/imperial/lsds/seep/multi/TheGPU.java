@@ -133,6 +133,9 @@ public class TheGPU {
 	}
 	
 	public void outputDataMovementCallback (int qid, int ndx, long address, int size, int offset) {
+		System.out.println(String.format("[DBG] copy output: q %d ndx %d size %d offset %d", 
+				qid, ndx, size, offset));
+		
 		/* Check bounds */
 		if (qid < 0 || qid >= maxQueries)
 			throw new IllegalArgumentException ("error: invalid query id");

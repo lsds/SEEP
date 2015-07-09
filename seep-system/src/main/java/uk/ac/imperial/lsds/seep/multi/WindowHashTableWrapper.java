@@ -4,8 +4,8 @@ import java.nio.ByteBuffer;
 
 public class WindowHashTableWrapper {
 	
-	/* The first byte indicates occupancy; the next 8 are the timestamp */
-	public static final int KEY_OFFSET = 9;
+	/* The first 8 bytes indicate occupancy; the next 8 are the timestamp */
+	public static final int KEY_OFFSET = 16;
 	
 	ByteBuffer content;
 	int start, end;
@@ -64,7 +64,7 @@ public class WindowHashTableWrapper {
 			attempts ++;
 			idx = getNext (++h);
 		}
-		System.out.println(String.format("[DBG] Error"));
+		/* System.out.println(String.format("[DBG] Error")); */
 		return -1;
 	}
 	

@@ -123,8 +123,10 @@ public class Selection implements IStreamSQLOperator, IMicroOperatorCode {
 		
 		if (selectivity) {
 			if (invoked > 0) {
-				System.out.println(String.format("[DBG] [Selection] batch selectivity is %4.1f%%", 
-						((double) matched) * 100D / ((double) invoked)));
+				System.out.println(String.format("[DBG] [Selection] task %6d batch selectivity is %4.1f%% (%d/%d)", 
+						windowBatch.getTaskId(), ((double) matched) * 100D / ((double) invoked), matched, invoked));
+			} else {
+				System.out.println(String.format("[DBG] [Selection] task %d is empty", windowBatch.getTaskId()));
 			}
 		}
 		

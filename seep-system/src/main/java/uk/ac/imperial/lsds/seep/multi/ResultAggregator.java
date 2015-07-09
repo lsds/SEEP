@@ -12,8 +12,8 @@ public class ResultAggregator {
 	
 	private static final boolean debug = false;
 	
-	/* The first byte indicates occupancy; the next 8 are the timestamp */
-	public static final int KEY_OFFSET = 9;
+	/* The first 8 bytes indicate occupancy; the next 8 are the timestamp */
+	public static final int KEY_OFFSET = 16;
 	
 	/*
 	 * A ResultAggregatorNode encapsulates the
@@ -73,7 +73,7 @@ public class ResultAggregator {
 			left  = new AtomicBoolean (false);
 			right = new AtomicBoolean (false);
 			
-			w3 = ByteBuffer.allocate(1048576);
+			w3 = ByteBuffer.allocate(1048576 * 8);
 			
 			hashtable = new WindowHashTableWrapper();
 			found = new boolean[1];
@@ -353,72 +353,72 @@ public class ResultAggregator {
 				
 				/* Look-up second table */
 				found[0] = false;
-				int pos = hashtable.getIndex(a.array(), idx + 9, operator.getKeyLength(), found);
+				int pos = hashtable.getIndex(a.array(), idx + KEY_OFFSET, operator.getKeyLength(), found);
 				if (! found[0]) {
 					/* Append buffer a's tuple to `w3` */
 					if (operator.getAggregateType() == AggregationType.AVG) {
-						int valueOffset = idx + 9 + operator.getKeyLength();
-						int countOffset = idx + 9 + operator.getKeyLength() + operator.getValueLength();
+						int valueOffset = idx + KEY_OFFSET + operator.getKeyLength();
+						int countOffset = idx + KEY_OFFSET + operator.getKeyLength() + operator.getValueLength();
 						/* Compute average */
 						float value = a.getFloat(valueOffset);
 						float count = a.getInt(countOffset);
 						/* Overwrite value */
 						a.putFloat(valueOffset, value / (float) count);
 						/* Write tuple */
-						w3.put(a.array(), idx + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+						w3.put(a.array(), idx + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 						w3.put(operator.getOutputSchema().getDummyContent());
 					} else {
 						/* Write tuple */
-						w3.put(a.array(), idx + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+						w3.put(a.array(), idx + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 						w3.put(operator.getOutputSchema().getDummyContent());
 					}
 				} else {
 					/* Set mark in the hash table */
 					b.getByteBuffer().put(pos, (byte) 0);
 					/* Merge tuples and append them to `w3` */
-					float value1 = a.getFloat(idx + 9 + operator.getKeyLength());
-					float value2 = b.getFloat(pos + 9 + operator.getKeyLength());
+					float value1 = a.getFloat(idx + KEY_OFFSET + operator.getKeyLength());
+					float value2 = b.getFloat(pos + KEY_OFFSET + operator.getKeyLength());
 					
 					if (operator.getAggregateType() == AggregationType.AVG) {
 						
-						int count1 = a.getInt(idx + 9 + operator.getKeyLength() + operator.getKeyLength());
-						int count2 = b.getInt(pos + 9 + operator.getKeyLength() + operator.getKeyLength());
+						int count1 = a.getInt(idx + KEY_OFFSET + operator.getKeyLength() + operator.getKeyLength());
+						int count2 = b.getInt(pos + KEY_OFFSET + operator.getKeyLength() + operator.getKeyLength());
 						
 						/* Compute average */
 						float value = (value1 + value2) / (count1 + count2); 
 						
 						/* Write tuple */
-						w3.put(a.array(), idx + 1, 8 + operator.getKeyLength());
+						w3.put(a.array(), idx + 8, 8 + operator.getKeyLength());
 						w3.putFloat(value);
 						w3.put(operator.getOutputSchema().getDummyContent());
 					} else
 					if (operator.getAggregateType() == AggregationType.MIN) {
 						if (value1 < value2) {
 							/* Write a's tuple */
-							w3.put(a.array(), idx + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+							w3.put(a.array(), idx + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 						} else {
 							/* Write b's tuple */
-							w3.put(b.array(), pos + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+							w3.put(b.array(), pos + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 						}
 						w3.put(operator.getOutputSchema().getDummyContent());
 					} else
 					if (operator.getAggregateType() == AggregationType.MAX) {
 						if (value1 > value2) {
 							/* Write a's tuple */
-							w3.put(a.array(), idx + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+							w3.put(a.array(), idx + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 						} else {
 							/* Write b's tuple */
-							w3.put(b.array(), pos + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+							w3.put(b.array(), pos + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 						}
 						w3.put(operator.getOutputSchema().getDummyContent());
 					} else
 					if (operator.getAggregateType() == AggregationType.SUM) {
-						w3.put(a.array(), idx + 1, 8 + operator.getKeyLength());
+						w3.put(a.array(), idx + 8, 8 + operator.getKeyLength());
 						w3.putFloat(value1 + value2);
 						w3.put(operator.getOutputSchema().getDummyContent());
 					} else
 					if (operator.getAggregateType() == AggregationType.CNT) {
-						w3.put(a.array(), idx + 1, 8 + operator.getKeyLength());
+						w3.put(a.array(), idx + 8, 8 + operator.getKeyLength());
 						w3.putFloat(value1 + value2);
 						w3.put(operator.getOutputSchema().getDummyContent());
 					}
@@ -441,19 +441,19 @@ public class ResultAggregator {
 				
 				/* Append buffer a's tuple to `w3` */
 				if (operator.getAggregateType() == AggregationType.AVG) {
-					int valueOffset = idx + 9 + operator.getKeyLength();
-					int countOffset = idx + 9 + operator.getKeyLength() + operator.getValueLength();
+					int valueOffset = idx + KEY_OFFSET + operator.getKeyLength();
+					int countOffset = idx + KEY_OFFSET + operator.getKeyLength() + operator.getValueLength();
 					/* Compute average */
 					float value = a.getFloat(valueOffset);
 					float count = a.getInt(countOffset);
 					/* Overwrite value */
 					b.putFloat(valueOffset, value / (float) count);
 					/* Write tuple */
-					w3.put(b.array(), idx + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+					w3.put(b.array(), idx + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 					w3.put(operator.getOutputSchema().getDummyContent());
 				} else {
 					/* Write tuple */
-					w3.put(b.array(), idx + 1, 8 + operator.getKeyLength() + operator.getValueLength());
+					w3.put(b.array(), idx + 8, 8 + operator.getKeyLength() + operator.getValueLength());
 					w3.put(operator.getOutputSchema().getDummyContent());
 				}	
 			}
