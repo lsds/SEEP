@@ -25,7 +25,7 @@ import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
 public class HeatMapSink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(Sink.class);
+	private static final Logger logger = LoggerFactory.getLogger(HeatMapSink.class);
 	private long numTuples;
 	private long tupleSize;
 	private long tuplesReceived = 0;
@@ -62,12 +62,12 @@ public class HeatMapSink implements StatelessOperator {
 		HeatMap update = new HeatMap(value);
 		if (result == null) { result = update; }
 		else { result.add(update); }
+		logger.info("Current heatmap="+result.toString());
 		
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
-			logger.info("Current heatmap="+result.toString());
 		}
 		
 		if (tuplesReceived >= numTuples)
