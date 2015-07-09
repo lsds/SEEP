@@ -21,6 +21,7 @@ import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.HeatMapJoin;
+import uk.ac.imperial.lsds.seep.acita15.operators.HeatMapSink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
 import uk.ac.imperial.lsds.seep.acita15.operators.AudioSource;
@@ -271,7 +272,7 @@ public class Base implements QueryComposer{
 		snkFields.add("value");
 		for (int i = 0; i < nSinks; i++)
 		{
-			sinks[i] = QueryBuilder.newStatelessSink(new Sink(), -(nSources+i+1), snkFields);
+			sinks[i] = QueryBuilder.newStatelessSink(new HeatMapSink(), -(nSources+i+1), snkFields);
 		}
 		
 		//Now connect everything up
