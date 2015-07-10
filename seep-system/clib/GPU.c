@@ -37,6 +37,8 @@ static int Q; /* Number of queries */
 static int freeIndex;
 static gpuQueryP queries [MAX_QUERIES];
 
+static int initialised = 0;
+
 static int bufferIndex;
 static directBufferP buffers [MAX_BUFFERS];
 
@@ -186,8 +188,18 @@ int gpu_getQuery (const char *source, int _kernels, int _inputs, int _outputs, J
 		return -1;
 	queries[ndx] = gpu_query_new (device, context,
 			source, _kernels, _inputs, _outputs, ndx);
-
-	gpu_query_init (queries[ndx], env, ndx);
+	
+	/*
+	 * NOTE:
+	 * 
+	 * The data movement thread should be initialised once for all
+	 * queries. Data movement is multiplexed: given two queries Q1
+	 * and Q2, Q1 may output results from Q2 and vice versa.
+	 */
+	if (! initialised) {
+		gpu_query_init (queries[ndx], env, ndx);
+		initialised = 1;
+	}
 
 	fprintf(stderr, "[GPU] _getQuery returns %d (%d/%d)\n", ndx, freeIndex, Q);
 	return ndx;

@@ -48,7 +48,7 @@ static void *output_handler (void *args) {
 	handler_t *handler = (handler_t *) args;
 	JNIEnv *env = handler->env;
 	JavaVM *jvm = handler->jvm;
-	int qid = handler->qid;
+	/* int qid = handler->qid; */
 	
 	(*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
 	int core = 2;
@@ -69,7 +69,7 @@ static void *output_handler (void *args) {
 		pthread_mutex_lock (mutex);
 		while (count != 1)
 			pthread_cond_wait(waiting, mutex);
-		gpu_context_readOutput (__ctx, __op_->readOutput, env, __obj, qid);
+		gpu_context_readOutput (__ctx, __op_->readOutput, env, __obj, __ctx->qid);
 		/* Block again */
 		count -= 1;
 		pthread_mutex_unlock (mutex);
@@ -100,7 +100,7 @@ void gpu_query_init (gpuQueryP q, JNIEnv *env, int qid) {
 	handler_t handler;
 	(*env)->GetJavaVM(env, &handler.jvm);
 	handler.env = env;
-	handler.qid = qid;
+	/* handler.qid = qid; */
 
 	/* Initialise mutex and conditions */
 	count = 0;
