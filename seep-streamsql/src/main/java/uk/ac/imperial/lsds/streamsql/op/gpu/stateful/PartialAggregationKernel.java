@@ -195,7 +195,7 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		inputSize = batchSize;
 		tuples = inputSize / inputSchema.getByteSizeOfTuple();
 		
-		int maxWindows = 8192;
+		int maxWindows = 8192 * 2;
 		
 		windowPtrsSize = maxWindows * 4; /* `tuples` windows x sizeof(int) */
 		
@@ -227,19 +227,27 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		System.out.println(String.format("[DBG]   (4x) output.length = %13d",      outputSize));
 		
 		/* Determine #threads */
-		tgs = new int [5];
+		tgs = new int [9];
 		tgs[0] = threadsPerGroup; /* This is a constant; it must be a power of 2 */
 		tgs[1] = threadsPerGroup;
 		tgs[2] = threadsPerGroup;
 		tgs[3] = threadsPerGroup;
 		tgs[4] = threadsPerGroup;
+		tgs[5] = threadsPerGroup;
+		tgs[6] = threadsPerGroup;
+		tgs[7] = threadsPerGroup;
+		tgs[8] = threadsPerGroup;
 		
-		threads = new int [5];
-		threads[0] = clearThreads;
+		threads = new int [9];
+		threads[0] = clearThreads; /* Clear */
 		threads[1] = tuples;
 		threads[2] = tuples;
 		threads[3] = tuples;
-		threads[4] = clearThreads;
+		threads[4] = tuples;
+		threads[5] = tuples;
+		threads[6] = tuples;
+		threads[7] = tuples;
+		threads[8] = clearThreads;
 		
 		if (kdbg > 0) {
 			startPtrs    = new byte [ windowPtrsSize];
@@ -265,7 +273,7 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		
 		System.out.println(source);
 		
-		qid = TheGPU.getInstance().getQuery(source, 5, 1, 7);
+		qid = TheGPU.getInstance().getQuery(source, 9, 1, 10);
 		System.out.println("[DBG] GPU query id is " + qid);
 		
 		TheGPU.getInstance().setInput(qid, 0, inputSize);
@@ -281,6 +289,9 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		TheGPU.getInstance().setOutput(qid, 5,  windowCntLength, 0, 0, 1, 0); /* Bears mark for output size */
 
 		TheGPU.getInstance().setOutput(qid, 6,       outputSize, 1, 0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 7,       outputSize, 1, 0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 8,       outputSize, 1, 0, 0, 1);
+		TheGPU.getInstance().setOutput(qid, 9,       outputSize, 1, 0, 0, 1);
 		
 		intArgs = new int [6];
 		
@@ -330,8 +341,20 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		TheGPU.getInstance().setInputBuffer(qid, 0, inputArray, start, end);
 		
 		/* Set output */
-		IQueryBuffer outputBuffer = UnboundedQueryBufferFactory.newInstance();
-		TheGPU.getInstance().setOutputBuffer(qid, 6, outputBuffer.array());
+		IQueryBuffer closingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 6, closingOutputBuffer.array());
+		
+		/* Set output */
+		IQueryBuffer pendingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 7, pendingOutputBuffer.array());
+		
+		/* Set output */
+		IQueryBuffer completeOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 8, completeOutputBuffer.array());
+		
+		/* Set output */
+		IQueryBuffer openingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		TheGPU.getInstance().setOutputBuffer(qid, 9, openingOutputBuffer.array());
 		
 		TheGPU.getInstance().setOutputBuffer(qid, 5, windowCounts);
 		
@@ -387,25 +410,21 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		 * qid, TheGPU.getInstance().getLastQuery()));
 		 */
 		
-		/*
-		ByteBuffer b0 = ByteBuffer.wrap(failed).order(ByteOrder.LITTLE_ENDIAN);
-		int eventCounter = 0;
-		while (b0.hasRemaining() && eventCounter < 1024) {
-			System.out.println(String.format("[DBG] idx %10d failed = %15d", eventCounter, b0.getInt()));
-			eventCounter++;
-		}
-		*/
+//		ByteBuffer b0 = ByteBuffer.wrap(failed).order(ByteOrder.LITTLE_ENDIAN);
+//		int eventCounter = 0;
+//		while (b0.hasRemaining() && eventCounter < 1024) {
+//			System.out.println(String.format("[DBG] idx %10d failed = %15d", eventCounter, b0.getInt()));
+//			eventCounter++;
+//		}
 		
-		/*
-		ByteBuffer b1 = ByteBuffer.wrap(offset).order(ByteOrder.LITTLE_ENDIAN);
-		if (debug)
-			System.out.println(String.format("[DBG] offsets %6d/%6d", 
-				b1.getLong(), b1.getLong()));
-		*/
+//		ByteBuffer b1 = ByteBuffer.wrap(offset).order(ByteOrder.LITTLE_ENDIAN);
+//		if (debug)
+//			System.out.println(String.format("[DBG] offsets %6d/%6d", 
+//				b1.getLong(), b1.getLong()));
 		
-		/*
-		printWindowPointers(startPtrs, endPtrs, 32);
-		*/
+		
+//		printWindowPointers(startPtrs, endPtrs, 32);
+		
 		
 		ByteBuffer b2 = ByteBuffer.wrap(windowCounts).order(ByteOrder.LITTLE_ENDIAN);
 		int  nclosing = b2.getInt();
@@ -420,12 +439,12 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */
-		outputBuffer.position(TheGPU.getInstance().getPosition(qid, 6));
+		// outputBuffer.position(TheGPU.getInstance().getPosition(qid, 6));
 		
-		if (debug)
-			System.out.println("[DBG] output buffer position is " + outputBuffer.position());
+//		if (debug)
+//			System.out.println("[DBG] output buffer position is " + outputBuffer.position());
 		
-		outputBuffer.close();
+		// outputBuffer.close();
 		
 		/* Split output buffer into partial results */
 		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
@@ -433,65 +452,86 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		PartialWindowResults complete = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults opening  = PartialWindowResultsFactory.newInstance(workerId);
 		
-		IQueryBuffer  closingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
-		IQueryBuffer  pendingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
-		IQueryBuffer completeOutputBuffer = UnboundedQueryBufferFactory.newInstance();
-		IQueryBuffer  openingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		if (nclosing > 0)
+			closingOutputBuffer.position(TheGPU.getInstance().getPosition(qid, 6));
+		if (npending > 0)
+			pendingOutputBuffer.position(TheGPU.getInstance().getPosition(qid, 7));
+		if (ncomplete > 0)
+			completeOutputBuffer.position(TheGPU.getInstance().getPosition(qid, 8));
+		if (nopening > 0)
+			openingOutputBuffer.position(TheGPU.getInstance().getPosition(qid, 9));
+		
+		// IQueryBuffer  closingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		// IQueryBuffer  pendingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		// IQueryBuffer completeOutputBuffer = UnboundedQueryBufferFactory.newInstance();
+		// IQueryBuffer  openingOutputBuffer = UnboundedQueryBufferFactory.newInstance();
 		
 		 closing.setBuffer( closingOutputBuffer);
 		 pending.setBuffer( pendingOutputBuffer);
 		complete.setBuffer(completeOutputBuffer);
 		 opening.setBuffer( openingOutputBuffer);
+		 
+		 if (nclosing > 0)
+			 for (int i = 0; i < nclosing; i++)
+				 closing.increment(i * tableSize);
+		 if (npending > 0)
+			 pending.increment(0);
+		 if (ncomplete > 0)
+			 for (int i = 0; i < ncomplete; i++)
+				 complete.increment(i * 32);
+		 if (nopening > 0)
+			 for (int i = 0; i < nopening; i++)
+				 opening.increment(i * tableSize);
 		
-		/* Copy closing  windows */
-		int offset = 0;
-		for (int i = 0; i < nclosing; i++) {
-			// closing.increment();
-			// closingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
-			offset += tableSize;
-		}
-		/* Copy pending  windows */
-		if (npending  > 0) {
-			// pending.increment();
-			// pendingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
-			int skip = (npending / threadsPerGroup) - 1;
-			offset += (skip * tableSize);
-		}
-		/* Copy complete windows */		
-		for (int i = 0; i < 1/* ncomplete */; i++) {
-			/*
-			if (i == 0) {
-				
-				System.out.println("[DBG] offset is " + offset);
-				
-				for (int idx = offset; idx < offset + tableSize; idx += intermediateTupleSize) {
-					
-					byte mark = outputBuffer.getByteBuffer().get(idx);
-					long timestamp = outputBuffer.getLong(idx + 8);
-					
-					if (mark != 1)
-						System.out.println(String.format("[DBG] %7d: %7d...", idx, mark));
-					else
-						System.out.println(String.format("[DBG] %7d: %7d <%4d, %3d, %3d, %3d [, %3d]>...", 
-							idx, mark, timestamp, 
-							outputBuffer.getInt(idx + 16), 
-							outputBuffer.getInt(idx + 20),
-							outputBuffer.getInt(idx + 24),
-							outputBuffer.getInt(idx + 28)
-							));
-				}
-			}
-			*/
-			complete.increment();
-			completeOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
-			offset += tableSize;
-		}
-		/* Copy opening  windows */	
-		for (int i = 0; i < nopening; i++) {
-			// opening.increment();
-			// openingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
-			offset += tableSize;
-		}
+//		/* Copy closing  windows */
+//		int offset = 0;
+//		for (int i = 0; i < nclosing; i++) {
+//			// closing.increment();
+//			// closingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+//			offset += tableSize;
+//		}
+//		/* Copy pending  windows */
+//		if (npending  > 0) {
+//			// pending.increment();
+//			// pendingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+//			int skip = (npending / threadsPerGroup) - 1;
+//			offset += (skip * tableSize);
+//		}
+//		/* Copy complete windows */		
+//		for (int i = 0; i < 1/* ncomplete */; i++) {
+//			/*
+//			if (i == 0) {
+//				
+//				System.out.println("[DBG] offset is " + offset);
+//				
+//				for (int idx = offset; idx < offset + tableSize; idx += intermediateTupleSize) {
+//					
+//					byte mark = outputBuffer.getByteBuffer().get(idx);
+//					long timestamp = outputBuffer.getLong(idx + 8);
+//					
+//					if (mark != 1)
+//						System.out.println(String.format("[DBG] %7d: %7d...", idx, mark));
+//					else
+//						System.out.println(String.format("[DBG] %7d: %7d <%4d, %3d, %3d, %3d [, %3d]>...", 
+//							idx, mark, timestamp, 
+//							outputBuffer.getInt(idx + 16), 
+//							outputBuffer.getInt(idx + 20),
+//							outputBuffer.getInt(idx + 24),
+//							outputBuffer.getInt(idx + 28)
+//							));
+//				}
+//			}
+//			*/
+//			complete.increment();
+//			completeOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+//			offset += tableSize;
+//		}
+//		/* Copy opening  windows */	
+//		for (int i = 0; i < nopening; i++) {
+//			// opening.increment();
+//			// openingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+//			offset += tableSize;
+//		}
 		
 		windowBatch.setTaskId     (taskIdx[0]);
 		windowBatch.setFreeOffset (freeIdx[0]);
@@ -505,7 +545,7 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		windowBatch.setComplete (complete);
 		windowBatch.setOpening  ( opening);
 		
-		outputBuffer.release();
+		// outputBuffer.release();
 		
 		for (int i = 0; i < taskIdx.length - 1; i++) {
 			taskIdx[i] = taskIdx [i + 1];

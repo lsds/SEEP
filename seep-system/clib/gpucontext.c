@@ -485,7 +485,7 @@ void gpu_context_readOutput (gpuContextP q,
 		int mark = 0;
 		for (idx = 0; idx < q->kernelOutput.count; idx++) {
 			if (q->kernelOutput.outputs[idx]->bearsMark) {
-				dbg("[DBG] output %d bears mark\n", idx);
+				// dbg("[DBG] output %d bears mark\n", idx);
 				int N = q->kernelOutput.outputs[idx]->size / sizeof(int);
 				int *values = (int *) (q->kernelOutput.outputs[idx]->mapped_buffer);
 				int j;
@@ -495,7 +495,7 @@ void gpu_context_readOutput (gpuContextP q,
 						break;
 					}
 				}
-				dbg("[DBG] mark is %d\n", mark);
+				// dbg("[DBG] mark is %d\n", mark);
 				break;
 			}
 		}
@@ -503,8 +503,42 @@ void gpu_context_readOutput (gpuContextP q,
 		for (idx = 0; idx < q->kernelOutput.count; idx++)
 			(*callback) (q, env, obj, qid, idx, mark);
 	} else {
-		/* Do nothing */
-		// fprintf(stderr, "[DBG] do nothing...\n");
+		int idx;
+		/* Find mark */
+		int mark1 = 0;
+		int mark2 = 0;
+		int mark3 = 0;
+		int mark4 = 0;
+		for (idx = 0; idx < q->kernelOutput.count; idx++) {
+			if (q->kernelOutput.outputs[idx]->bearsMark) {
+				// dbg("[DBG] output %d bears marks\n", idx);
+				// printf("[DBG] output %d bears marks\n", idx);
+				int N = q->kernelOutput.outputs[idx]->size / sizeof(int);
+				int *values = (int *) (q->kernelOutput.outputs[idx]->mapped_buffer);
+				mark1 = values[0];
+				mark2 = values[1];
+				mark3 = values[2];
+				mark4 = values[3];
+				// printf("[DBG] marks are %d/%d/%d/%d\n", mark1, mark2, mark3, mark4);
+				break;
+			}
+		}
+		int tableSize = 65536;
+		(*callback) (q, env, obj, qid, 5, 0);
+		if (mark1 > 0)
+			(*callback) (q, env, obj, qid, 6, mark1 * tableSize); /* Closing */
+		if (mark2 > 0)
+			(*callback) (q, env, obj, qid, 7, tableSize);
+		if (mark3 > 0) {
+			if (mark3 * 32 > q->kernelOutput.outputs[8]->size)
+				(*callback) (q, env, obj, qid, 8, q->kernelOutput.outputs[8]->size);
+			else
+				(*callback) (q, env, obj, qid, 8, mark3 * 32);
+		}
+		if (mark4 > 0)
+			(*callback) (q, env, obj, qid, 9, mark4 * tableSize);
+		
+		
 	}
 	return;
 }

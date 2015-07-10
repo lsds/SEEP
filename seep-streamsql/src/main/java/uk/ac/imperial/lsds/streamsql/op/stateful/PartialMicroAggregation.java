@@ -1130,7 +1130,7 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 //		if (pending.numberOfWindows() > 0)
 //			System.err.println(String.format("[DBG] there exist pending windows (%3d windows skipped)", skippedPendingWindows));
 		
-//		if (debug)
+		if (debug)
 			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows] requires %10d bytes", 
 					taskId, 
 					windowBatch.getFreeOffset(),

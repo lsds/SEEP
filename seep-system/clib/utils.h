@@ -1,10 +1,10 @@
 #ifndef __GPU_UTILS_H_
 #define __GPU_UTILS_H_
 
-#define MAX_KERNELS   5
-#define MAX__INPUTS   6
-#define MAX_OUTPUTS  10
-#define MAX_QUERIES   2
+#define MAX_KERNELS   10
+#define MAX__INPUTS    6
+#define MAX_OUTPUTS   10
+#define MAX_QUERIES    2
 
 #define MAX_BUFFERS  20
 

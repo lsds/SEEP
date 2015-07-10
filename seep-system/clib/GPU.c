@@ -638,11 +638,15 @@ JNIEXPORT jint JNICALL Java_uk_ac_imperial_lsds_seep_multi_TheGPU_setKernelParti
 	jint   *intArgs = (*env)->GetIntArrayElements (env,  _intArgs, 0);
 	jlong *longArgs = (*env)->GetLongArrayElements(env, _longArgs, 0);
 
-	gpu_setKernel (qid, 0, "clearKernel",           &callback_setKernelPartialAggregate, intArgs, longArgs);
-	gpu_setKernel (qid, 1, "computeOffsetKernel",   &callback_setKernelPartialAggregate, intArgs, longArgs);
-	gpu_setKernel (qid, 2, "computePointersKernel", &callback_setKernelPartialAggregate, intArgs, longArgs);
-	gpu_setKernel (qid, 3, "aggregateKernel",       &callback_setKernelPartialAggregate, intArgs, longArgs);
-	gpu_setKernel (qid, 4, "packKernel",            &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 0, "clearKernel",                    &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 1, "computeOffsetKernel",            &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 2, "computePointersKernel",          &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 3, "countWindowsKernel",             &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 4, "aggregateClosingWindowsKernel",  &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 5, "aggregateCompleteWindowsKernel", &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 6, "aggregateOpeningWindowsKernel",  &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 7, "aggregatePendingWindowsKernel",  &callback_setKernelPartialAggregate, intArgs, longArgs);
+	gpu_setKernel (qid, 8, "packKernel",                     &callback_setKernelPartialAggregate, intArgs, longArgs);
 
 	(*env)->ReleaseIntArrayElements (env,  _intArgs,  intArgs, 0);
 	(*env)->ReleaseLongArrayElements(env, _longArgs, longArgs, 0);
@@ -1385,9 +1389,24 @@ void callback_setKernelPartialAggregate (cl_kernel kernel, gpuContextP context, 
 		14,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[6]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		15,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[7]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		16,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[8]->device_buffer));
+	error |= clSetKernelArg (
+		kernel,
+		17,
+		sizeof(cl_mem),
+		(void *) &(context->kernelOutput.outputs[9]->device_buffer));
 
 	/* Set local memory */
-	error |= clSetKernelArg (kernel, 15, (size_t) scratch_size, (void *) NULL);
+	error |= clSetKernelArg (kernel, 18, (size_t) scratch_size, (void *) NULL);
 
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
@@ -1571,7 +1590,7 @@ void callback_readOutput (gpuContextP context,
 		exit(1);
 	}
 	
-	/* printf("[GPU] read %10d bytes of output\n", theSize); */
+	// printf("[GPU] read %10d bytes of output[%d][%d]\n", theSize, qid, ndx);
 	
 	/* Copy data across the JNI boundary */
 	(*env)->CallVoidMethod (

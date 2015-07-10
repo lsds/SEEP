@@ -80,6 +80,16 @@ public class PartialWindowResults {
 		startPointers[count++] = buffer.position();
 	}
 	
+	public void increment(int index) {
+		if (count >= max_windows)
+			throw new IndexOutOfBoundsException ("error: operator exceeded maximum number of partial window results");
+		
+		if (index >= buffer.position())
+			throw new IndexOutOfBoundsException ("error: invalid window index in partial window results");
+		
+		startPointers[count++] = index;
+	}
+	
 	public int numberOfWindows() {
 		
 		return count;
