@@ -42,7 +42,7 @@ static int initialised = 0;
 static int bufferIndex;
 static directBufferP buffers [MAX_BUFFERS];
 
-static gpuContextP previousQuery [DEPTH];
+static gpuContextP previousQuery [MAX_QUERIES][DEPTH];
 
 void callback_setKernelDummy     (cl_kernel, gpuContextP, int *, long *);
 void callback_setKernelProject   (cl_kernel, gpuContextP, int *, long *);
@@ -139,7 +139,8 @@ static void getDeviceInfo () {
 }
 
 void gpu_init (int _queries) { /* Initialise `n` queries */
-	int i;
+
+	int i, j;
 
 	setPlatform ();
 	setDevice ();
@@ -153,8 +154,9 @@ void gpu_init (int _queries) { /* Initialise `n` queries */
 	for (i = 0; i < MAX_QUERIES; i++)
 		queries[i] = NULL;
 
-	for (i = 0; i < DEPTH; i++)
-		previousQuery[i] = NULL;
+	for (i = 0; i < MAX_QUERIES; i++)
+		for (j = 0; j < DEPTH; j++)
+			previousQuery[i][j] = NULL;
 
 	bufferIndex = 0;
 	for (i = 0; i < MAX_BUFFERS; i++)
@@ -1043,8 +1045,8 @@ void callback_configurePartialAggregate (cl_kernel kernel, gpuContextP context, 
 
 	int error = 0;
 
-	error |= clSetKernelArg (kernel, 4, sizeof(long), (void *)   &pane);
-	error |= clSetKernelArg (kernel, 5, sizeof(long), (void *) &offset);
+	error |= clSetKernelArg (kernel, 5, sizeof(long), (void *)   &pane);
+	error |= clSetKernelArg (kernel, 6, sizeof(long), (void *) &offset);
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
 		exit (1);
@@ -1324,7 +1326,8 @@ void callback_setKernelPartialAggregate (cl_kernel kernel, gpuContextP context, 
 	int input_bytes = intArgs[1];
 	int output_bytes = intArgs[2];
 	int _table_ = intArgs[3];
-	int scratch_size = intArgs[4];
+	int maxWindows = intArgs[4];
+	int scratch_size = intArgs[5];
 
 	long pane = longArgs[0];
 	long offset = longArgs[1];
@@ -1335,55 +1338,56 @@ void callback_setKernelPartialAggregate (cl_kernel kernel, gpuContextP context, 
 	error |= clSetKernelArg (kernel, 1, sizeof(int), (void *)    &input_bytes);
 	error |= clSetKernelArg (kernel, 2, sizeof(int), (void *)   &output_bytes);
 	error |= clSetKernelArg (kernel, 3, sizeof(int), (void *)        &_table_);
+	error |= clSetKernelArg (kernel, 4, sizeof(int), (void *)     &maxWindows);
 
-	error |= clSetKernelArg (kernel, 4, sizeof(long), (void *)          &pane);
-	error |= clSetKernelArg (kernel, 5, sizeof(long), (void *)        &offset);
+	error |= clSetKernelArg (kernel, 5, sizeof(long), (void *)          &pane);
+	error |= clSetKernelArg (kernel, 6, sizeof(long), (void *)        &offset);
 
 	/* Set input buffers */
 	error |= clSetKernelArg (
 		kernel,
-		6,
+		7,
 		sizeof(cl_mem),
 		(void *) &(context->kernelInput.inputs[0]->device_buffer));
 	/* Set output buffers */
 	error |= clSetKernelArg (
         kernel,
-        7,
+        8,
         sizeof(cl_mem),
         (void *) &(context->kernelOutput.outputs[0]->device_buffer));
 	error |= clSetKernelArg (
         kernel,
-        8,
+        9,
         sizeof(cl_mem),
         (void *) &(context->kernelOutput.outputs[1]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-        9,
+        10,
         sizeof(cl_mem),
         (void *) &(context->kernelOutput.outputs[2]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		10,
+		11,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[3]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		11,
+		12,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[4]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		12,
+		13,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[5]->device_buffer));
 	error |= clSetKernelArg (
 		kernel,
-		13,
+		14,
 		sizeof(cl_mem),
 		(void *) &(context->kernelOutput.outputs[6]->device_buffer));
 
 	/* Set local memory */
-	error |= clSetKernelArg (kernel, 14, (size_t) scratch_size, (void *) NULL);
+	error |= clSetKernelArg (kernel, 15, (size_t) scratch_size, (void *) NULL);
 
 	if (error != CL_SUCCESS) {
 		fprintf(stderr, "opencl error (%d): %s\n", error, getErrorMessage(error));
@@ -1583,7 +1587,10 @@ void callback_readOutput (gpuContextP context,
 }
 
 gpuContextP callback_execKernel (gpuContextP context) {
-	gpuContextP p = previousQuery[0];
+
+	int qid = context->qid;
+
+	gpuContextP p = previousQuery[qid][0];
 /*
 #ifdef GPU_VERBOSE
 	if (! p)
@@ -1592,16 +1599,18 @@ gpuContextP callback_execKernel (gpuContextP context) {
 		dbg("[DBG] %p callback_execKernel(%p)\n", p, context);
 #endif
 */
+/*
 	if (! p)
-		printf("[DBG] (null) callback_execKernel(%p); U => %d\n", context, context->qid);
+		printf("[DBG] (null) callback_execKernel(%p); [previous -1 current %2d]\n", context, context->qid);
 	else
-		printf("[DBG] %p callback_execKernel(%p); %d => %d\n", p, context, p->qid, context->qid);
+		printf("[DBG] %p callback_execKernel(%p); [previous %2d current %2d]\n", p, context, p->qid, context->qid);
+*/
 
 	/* Shift */
 	int i;
 	for (i = 0; i < DEPTH - 1; i++) {
-		previousQuery[i] = previousQuery [i + 1];
+		previousQuery[qid][i] = previousQuery [qid][i + 1];
 	}
-	previousQuery[DEPTH - 1] = context;
+	previousQuery[qid][DEPTH - 1] = context;
 	return p;
 }

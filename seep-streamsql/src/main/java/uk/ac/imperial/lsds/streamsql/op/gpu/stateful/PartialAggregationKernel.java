@@ -195,7 +195,9 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		inputSize = batchSize;
 		tuples = inputSize / inputSchema.getByteSizeOfTuple();
 		
-		windowPtrsSize = tuples * 4; /* `tuples` windows x sizeof(int) */
+		int maxWindows = 8192;
+		
+		windowPtrsSize = maxWindows * 4; /* `tuples` windows x sizeof(int) */
 		
 		tableSize  = Utils.HASH_TABLE_SIZE;
 		
@@ -222,7 +224,7 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		System.out.println(String.format("[DBG]      attempts.length = %13d",  attemptsLength));
 		System.out.println(String.format("[DBG]        offset.length = %13d",    offsetLength));
 		System.out.println(String.format("[DBG]  windowCounts.length = %13d", windowCntLength));
-		System.out.println(String.format("[DBG]        output.length = %13d",      outputSize));
+		System.out.println(String.format("[DBG]   (4x) output.length = %13d",      outputSize));
 		
 		/* Determine #threads */
 		tgs = new int [5];
@@ -280,22 +282,22 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 
 		TheGPU.getInstance().setOutput(qid, 6,       outputSize, 1, 0, 0, 1);
 		
-		intArgs = new int [5];
+		intArgs = new int [6];
 		
 		intArgs[0] =     tuples;
 		intArgs[1] =  inputSize;
 		intArgs[2] = outputSize;
 		intArgs[3] =  tableSize;
+		intArgs[4] = maxWindows;
 		/* Set local memory */
-		intArgs[4] = tgs[0] * keyLength; 
+		intArgs[5] = tgs[0] * keyLength; 
 		
 		/* These arguments are set in real-time */
 		longArgs = new long [2];
 		longArgs[0] = 0;
 		longArgs[1] = 0;
-		System.out.println("@7");
+		
 		TheGPU.getInstance().setKernelPartialAggregate(qid, intArgs, longArgs);
-		System.out.println("@8");
 	}
 	
 	@Override
@@ -341,6 +343,16 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 			TheGPU.getInstance().setOutputBuffer(qid, 4,       offset);
 		}
 		
+		/*
+		 * Deep dive
+		 * 
+		for (int i = 0; i < 10; i++) {
+			System.out.println(String.format("[DBG] batch %10d tuple timestamp %20d", 
+					windowBatch.getTaskId(), 
+					windowBatch.getTimestamp(windowBatch.getBufferStartPointer() + (i * windowBatch.getSchema().getByteSizeOfTuple()))));
+		}
+		*/
+		
 		/* Set previous pane id */
 		if (windowBatch.getWindowDefinition().isRangeBased()) {
 			if (windowBatch.getBatchStartPointer() == 0) {
@@ -371,6 +383,10 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		
 		TheGPU.getInstance().executePartialAggregate(qid, threads, tgs, longArgs);
 		
+		/* System.err.println(String.format("[ERR] executed GPU query %d; output belongs to query %d", 
+		 * qid, TheGPU.getInstance().getLastQuery()));
+		 */
+		
 		/*
 		ByteBuffer b0 = ByteBuffer.wrap(failed).order(ByteOrder.LITTLE_ENDIAN);
 		int eventCounter = 0;
@@ -396,9 +412,10 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		int  npending = b2.getInt();
 		int ncomplete = b2.getInt();
 		int  nopening = b2.getInt();
+		
 		if (debug)
-			System.out.println(String.format("[DBG] window counts: %6d/%6d/%6d/%6d", 
-				nclosing, npending, ncomplete, nopening));
+			System.out.println(String.format("[DBG] Task id %4d window counts: %6d/%6d/%6d/%6d", 
+				taskIdx[0], nclosing, npending, ncomplete, nopening));
 		
 		/* 
 		 * Set position based on the data size returned from the GPU engine
@@ -429,18 +446,19 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		/* Copy closing  windows */
 		int offset = 0;
 		for (int i = 0; i < nclosing; i++) {
-			closing.increment();
-			closingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+			// closing.increment();
+			// closingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
 			offset += tableSize;
 		}
 		/* Copy pending  windows */
 		if (npending  > 0) {
-			pending.increment();
-			pendingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
-			offset += tableSize;
+			// pending.increment();
+			// pendingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+			int skip = (npending / threadsPerGroup) - 1;
+			offset += (skip * tableSize);
 		}
 		/* Copy complete windows */		
-		for (int i = 0; i < ncomplete; i++) {
+		for (int i = 0; i < 1/* ncomplete */; i++) {
 			/*
 			if (i == 0) {
 				
@@ -470,8 +488,8 @@ public class PartialAggregationKernel implements IStreamSQLOperator, IMicroOpera
 		}
 		/* Copy opening  windows */	
 		for (int i = 0; i < nopening; i++) {
-			opening.increment();
-			openingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
+			// opening.increment();
+			// openingOutputBuffer.getByteBuffer().put(outputBuffer.array(), offset, tableSize);
 			offset += tableSize;
 		}
 		

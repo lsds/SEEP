@@ -18,6 +18,8 @@ public class TheGPU {
 	
 	private static Unsafe theUnsafe;
 	
+	private int lastQuery = -1;
+	
 	private static Unsafe getUnsafeMemory () {
 		try {
 			Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
@@ -132,9 +134,15 @@ public class TheGPU {
 		}
 	}
 	
+	public int getLastQuery () { return lastQuery; }
+	
 	public void outputDataMovementCallback (int qid, int ndx, long address, int size, int offset) {
-		System.out.println(String.format("[DBG] copy output: q %d ndx %d size %d offset %d", 
+		
+		/*
+		System.out.println(String.format("[DBG] copy output: q %2d ndx %2d size %10d offset %d", 
 				qid, ndx, size, offset));
+		*/
+		lastQuery = qid;
 		
 		/* Check bounds */
 		if (qid < 0 || qid >= maxQueries)

@@ -81,6 +81,7 @@ __kernel void aggregateKernel (
 	const int inputBytes,
 	const int outputBytes,
 	const int _table_,
+	const int maxWindows,
 	const long previousPaneId,
 	const long batchOffset,
 	__global const uchar* input,
@@ -140,8 +141,9 @@ __kernel void aggregateKernel (
 		} else
 		if (offset_ < 0 && _offset < 0) {
 			/* A pending window */
-			int old = atomic_cmpxchg(&windowCounts[1], 0, 1);
-			if (old > 0) {
+			int old = atomic_inc(&windowCounts[1]);
+			if (old > lgs) {
+				// atomic_inc(&windowCounts[1], 0, 1);
 				wid += nlg;
 				continue;
 			}
@@ -228,6 +230,7 @@ __kernel void clearKernel (
 	const int inputBytes,
 	const int outputBytes,
 	const int _table_,
+	const int maxWindows,
 	const long previousPaneId,
 	const long batchOffset,
 	__global const uchar* input,
@@ -254,9 +257,11 @@ __kernel void clearKernel (
 
 	if (tid < tuples) {
 
-		/* The maximum number of window pointers is as many as the input tuples */
-		 window_ptrs_[tid] = -1;
-		_window_ptrs [tid] = -1;
+		/* The maximum number of window pointers is ... */
+		if (tid < maxWindows) {
+			window_ptrs_[tid] = -1;
+			_window_ptrs [tid] = -1;
+		}
 
 		failed  [tid] = 0;
 		attempts[tid] = 0;
@@ -283,6 +288,7 @@ __kernel void computeOffsetKernel (
 	const int inputBytes,
 	const int outputBytes,
 	const int _table_,
+	const int maxWindows,
 	const long previousPaneId,
 	const long batchOffset,
 	__global const uchar* input,
@@ -345,6 +351,7 @@ __kernel void computePointersKernel (
 	const int inputBytes,
 	const int outputBytes,
 	const int _table_,
+	const int maxWindows,
 	const long previousPaneId,
 	const long batchOffset,
 	__global const uchar* input,
@@ -418,6 +425,7 @@ __kernel void packKernel (
 	const int inputBytes,
 	const int outputBytes,
 	const int _table_,
+	const int maxWindows,
 	const long previousPaneId,
 	const long batchOffset,
 	__global const uchar* input,

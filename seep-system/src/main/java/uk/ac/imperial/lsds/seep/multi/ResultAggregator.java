@@ -129,7 +129,7 @@ public class ResultAggregator {
 				
 				if (! p.closing.isEmpty() && ! p.pending.isEmpty())
 				{
-					System.err.println("error: invalid state in ResultAggregator");
+					System.err.println("error: invalid state in ResultAggregator (1)");
 					System.exit(1);
 				}
 				
@@ -143,7 +143,7 @@ public class ResultAggregator {
 			
 			if (p.closing.isEmpty() && p.pending.isEmpty())
 			{
-				System.err.println("error: invalid state in ResultAggregator");
+				System.err.println(String.format("error: invalid state in ResultAggregator: %s %s", this, p));
 				System.exit(1);
 			}
 			
@@ -862,6 +862,15 @@ public class ResultAggregator {
 			 * Do the actual result forwarding
 			 */
 			if (query.getNumberOfDownstreamSubQueries() > 0) {
+				
+				/* Forward the latency mark to the downstream query */
+				if (handler.mark[nextToForward] != -1) {
+					/* Unpack */
+					long t1 = (long) Utils.unpack(0, buf.getLong(handler.mark[nextToForward]));
+					/* Pack */
+					buf.putLong(0, Utils.pack(t1, buf.getLong(0)));
+				}
+				
 				int pos = nodes[nextToForward].latch;
 				for (int i = pos; i < query.getNumberOfDownstreamSubQueries(); i++)
 				{
@@ -890,13 +899,14 @@ public class ResultAggregator {
 						}
 					}
 				}
+			} else {
+			
+				/* Forward to the distributed API */
+			
+				/* Measure latency */
+				if (handler.mark[nextToForward] != -1)
+					query.getLatencyMonitor().monitor(freeBuffer, handler.mark[nextToForward]);
 			}
-			
-			/* Forward to the distributed API */
-			
-			/* Measure latency */
-			if (handler.mark[nextToForward] != -1)
-				query.getLatencyMonitor().monitor(freeBuffer, handler.mark[nextToForward]);
 			
 			/* Before releasing the buffer, count how many bytes are in the output.
 			 * 

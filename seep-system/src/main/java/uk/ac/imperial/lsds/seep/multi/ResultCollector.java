@@ -200,6 +200,15 @@ public class ResultCollector {
 				 * Do the actual result forwarding
 				 */
 				if (query.getNumberOfDownstreamSubQueries() > 0) {
+					
+					/* Forward the latency mark to the downstream query */
+					if (handler.mark[handler.next] != -1) {
+						/* Unpack */
+						long t1 = (long) Utils.unpack(0, buf.getLong(handler.mark[handler.next]));
+						/* Pack */
+						buf.putLong(0, Utils.pack(t1, buf.getLong(0)));
+					}
+					
 					int pos = handler.latch[handler.next];
 					for (int i = pos; i < query.getNumberOfDownstreamSubQueries(); i++) {
 						if (query.getDownstreamSubQuery(i) != null) {
@@ -217,13 +226,14 @@ public class ResultCollector {
 							}
 						}
 					}
-				}
+				} else {
 				
-				/* Forward to the distributed API */
+					/* Forward to the distributed API */
 
-				/* Measure latency */
-				if (handler.mark[handler.next] != -1)
-					query.getLatencyMonitor().monitor(handler.firstFreeBuffer, handler.mark[handler.next]);
+					/* Measure latency */
+					if (handler.mark[handler.next] != -1)
+						query.getLatencyMonitor().monitor(handler.firstFreeBuffer, handler.mark[handler.next]);
+				}
 				
 				/* Before releasing the buffer, count how many bytes are in the output.
 				 * 

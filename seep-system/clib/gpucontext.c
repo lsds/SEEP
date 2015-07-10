@@ -478,28 +478,34 @@ void gpu_context_writeInput (gpuContextP q,
 void gpu_context_readOutput (gpuContextP q,
 		void (*callback)(gpuContextP, JNIEnv *, jobject, int, int, int),
 		JNIEnv *env, jobject obj, int qid) {
-	int idx;
-	/* Find mark */
-	int mark = 0;
-	for (idx = 0; idx < q->kernelOutput.count; idx++) {
-		if (q->kernelOutput.outputs[idx]->bearsMark) {
-			dbg("[DBG] output %d bears mark\n", idx);
-			int N = q->kernelOutput.outputs[idx]->size / sizeof(int);
-			int *values = (int *) (q->kernelOutput.outputs[idx]->mapped_buffer);
-			int j;
-			for (j = N - 1; j >= 0; j--) {
-				if (values[j] != 0) {
-					mark = values[j];
-					break;
+	
+	if (qid != 1) {
+		int idx;
+		/* Find mark */
+		int mark = 0;
+		for (idx = 0; idx < q->kernelOutput.count; idx++) {
+			if (q->kernelOutput.outputs[idx]->bearsMark) {
+				dbg("[DBG] output %d bears mark\n", idx);
+				int N = q->kernelOutput.outputs[idx]->size / sizeof(int);
+				int *values = (int *) (q->kernelOutput.outputs[idx]->mapped_buffer);
+				int j;
+				for (j = N - 1; j >= 0; j--) {
+					if (values[j] != 0) {
+						mark = values[j];
+						break;
+					}
 				}
+				dbg("[DBG] mark is %d\n", mark);
+				break;
 			}
-			dbg("[DBG] mark is %d\n", mark);
-			break;
 		}
+		/* mark = 0; */
+		for (idx = 0; idx < q->kernelOutput.count; idx++)
+			(*callback) (q, env, obj, qid, idx, mark);
+	} else {
+		/* Do nothing */
+		// fprintf(stderr, "[DBG] do nothing...\n");
 	}
-	/* mark = 0; */
-	for (idx = 0; idx < q->kernelOutput.count; idx++)
-		(*callback) (q, env, obj, qid, idx, mark);
 	return;
 }
 

@@ -159,6 +159,10 @@ public class ASelectionKernel implements IStreamSQLOperator, IMicroOperatorCode 
 		
 		TheGPU.getInstance().execute(qid, threads, tgs);
 		
+		/* System.err.println(String.format("[ERR] executed GPU query %d; output belongs to query %d", 
+		 * qid, TheGPU.getInstance().getLastQuery()));
+		 */
+		
 		/* 
 		 * Set position based on the data size returned from the GPU engine
 		 */

@@ -297,6 +297,10 @@ static int gpu_query_exec_1 (gpuQueryP q, size_t *threads, size_t *threadsPerGro
 	gpu_context_writeInput (p, operator->writeInput, env, obj, qid);
 
 	gpu_context_moveInputBuffers (p);
+	
+	if (operator->configArgs != NULL) {
+		gpu_context_configArgs (p, operator->configArgs, operator->intArgs,operator->longArgs);
+	}
 
 	gpu_context_submitKernel (p, threads, threadsPerGroup);
 

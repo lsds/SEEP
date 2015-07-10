@@ -12,6 +12,7 @@ import uk.ac.imperial.lsds.seep.multi.PartialWindowResults;
 import uk.ac.imperial.lsds.seep.multi.PartialWindowResultsFactory;
 import uk.ac.imperial.lsds.seep.multi.ThreadMap;
 import uk.ac.imperial.lsds.seep.multi.UnboundedQueryBufferFactory;
+import uk.ac.imperial.lsds.seep.multi.Utils;
 import uk.ac.imperial.lsds.seep.multi.WindowBatch;
 import uk.ac.imperial.lsds.seep.multi.WindowDefinition;
 import uk.ac.imperial.lsds.seep.multi.WindowHashTable;
@@ -874,6 +875,8 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		
 		windowBatch.initPartialWindowPointers();
 		
+		int skippedPendingWindows = 0;
+		
 		if (debug) {
 			long p = windowBatch.getBatchStartPointer();
 			long q = windowBatch.getBatchEndPointer();
@@ -881,6 +884,46 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			System.out.println(String.format("[DBG] MicroAggregation; batch starts at %10d (%10d) ends at %10d (%10d) %10d windows", 
 					b, p, d, q, windowBatch.getLastWindowIndex()));
 		}
+		
+		/*
+		 * 
+		 * Deep dive in order to compare the results of this CPU operator
+		 * with the equivalent GPU implementation.
+		 * 
+		
+		long [] longArgs = new long [2];
+		
+		for (int i = 0; i < 10; i++) {
+			System.out.println(String.format("[DBG] batch %10d tuple timestamp %20d", 
+					windowBatch.getTaskId(), 
+					windowBatch.getTimestamp(windowBatch.getBufferStartPointer() + (i * windowBatch.getSchema().getByteSizeOfTuple()))));
+		}
+		
+		if (windowBatch.getWindowDefinition().isRangeBased()) {
+			if (windowBatch.getBatchStartPointer() == 0) {
+				longArgs[0] = -1;
+			} else {
+				longArgs[0] = 
+						(
+						windowBatch.getTimestamp(windowBatch.getBufferStartPointer() - windowBatch.getSchema().getByteSizeOfTuple()) / 
+						windowBatch.getWindowDefinition().getPaneSize()
+						);
+			}
+		} else {
+			if (windowBatch.getBatchStartPointer() == 0) {
+				longArgs[0] = -1;
+			} else {
+				longArgs[0] = 
+						(
+						((windowBatch.getBatchStartPointer() - windowBatch.getSchema().getByteSizeOfTuple()) / windowBatch.getSchema().getByteSizeOfTuple()) / 
+						windowBatch.getWindowDefinition().getPaneSize());
+			}
+		}
+ 		longArgs[1] = windowBatch.getBatchStartPointer();
+ 		
+ 		if (debug)
+ 			System.out.println(String.format("[DBG] args[0] = %d args[1] = %d", longArgs[0], longArgs[1]));
+		*/
 		
 		PartialWindowResults closing  = PartialWindowResultsFactory.newInstance(workerId);
 		PartialWindowResults pending  = PartialWindowResultsFactory.newInstance(workerId);
@@ -948,8 +991,10 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 					/* This is a pending window */
 				
 					/* Compute a pending window once */
-					if (pending.numberOfWindows() > 0)
+					if (pending.numberOfWindows() > 0) {
+						skippedPendingWindows ++;
 						continue;
+					}
 				
 					outputBuffer = pending.getBuffer();
 					pending.increment();
@@ -975,8 +1020,9 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 			}
 			
 			if (currWindowStartOffset == currWindowEndOffset) {
-				currWindowStartOffset = -1;
+				currWindowStartOffset = -1; 
 			}
+			
 			/*
 			System.out.println(String.format("[DBG] current window is %6d start %13d end %13d (%10d bytes)", 
 					currentWindow, currWindowStartOffset, currWindowEndOffset, currWindowEndOffset - currWindowStartOffset));
@@ -1081,14 +1127,24 @@ public class PartialMicroAggregation implements IStreamSQLOperator, IMicroOperat
 		windowBatch.setComplete (complete);
 		windowBatch.setOpening  ( opening);
 		
-		if (debug)
-			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows]", 
+//		if (pending.numberOfWindows() > 0)
+//			System.err.println(String.format("[DBG] there exist pending windows (%3d windows skipped)", skippedPendingWindows));
+		
+//		if (debug)
+			System.out.println(String.format("[DBG] Task %10d finished free pointer %10d [%4d closing; %4d pending; %4d complete; and %4d opening windows] requires %10d bytes", 
 					taskId, 
 					windowBatch.getFreeOffset(),
 					closing.numberOfWindows(),
 					pending.numberOfWindows(),
 					complete.numberOfWindows(),
-					opening.numberOfWindows()));
+					opening.numberOfWindows(),
+					(
+						closing.numberOfWindows()  +
+						pending.numberOfWindows()  +
+						complete.numberOfWindows() +
+						opening.numberOfWindows() 
+					) * Utils.HASH_TABLE_SIZE
+					));
 		
 		api.outputWindowBatchResult(-1, windowBatch);
 		
