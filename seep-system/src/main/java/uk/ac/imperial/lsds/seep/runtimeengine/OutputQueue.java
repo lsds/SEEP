@@ -10,22 +10,11 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.ByteBufferOutput;
+import com.esotericsoftware.kryo.io.Output;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.Buffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
@@ -37,8 +26,15 @@ import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializ
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class OutputQueue {
 	
@@ -158,10 +154,10 @@ public class OutputQueue {
                     kryoOutput.clear();
 					k.writeObject(kryoOutput, msg);
 					//Actually since the Kryo Output we use is a ByteBufferOutput without any output stream, so flush() here doesn't cause anything
-                    //kryoOutput.flush();
-
+                    kryoOutput.flush();
+		
                     byte[] serialisedData = kryoOutput.toBytes();
-
+                    kryoOutput.clear();
                     //System.out.println("Send at " + msg.batch.get(0).timestamp + " with "+ serialisedData.length + "bytes");
 
                     // (2) SEND VIA OUTPUT-STREAM OF THE SOCKET
