@@ -97,8 +97,8 @@ public class HeatMap implements Serializable {
 		int xTile = (int) (currentLoc.getX() / tileWidth);
 		int yTile = (int) (currentLoc.getY() / tileHeight);
 		//In case on the border.
-		if (xTile == xTiles) { xTile--; }
-		if (yTile == yTiles) { yTile--; }
+		if (xTile >= xTiles) { xTile = xTiles-1; }
+		if (yTile >= yTiles) { yTile = yTiles-1; }
 
 		posCounts[xTile][yTile]++;
 	}
