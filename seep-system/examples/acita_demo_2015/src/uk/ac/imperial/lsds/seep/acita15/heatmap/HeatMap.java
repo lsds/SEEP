@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 public class HeatMap implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(HeatMap.class);
+	private final double errorMargin = 5.0;
 	private final double tileWidth;
 	private final double tileHeight;
 	private final int xTiles;
@@ -89,8 +90,8 @@ public class HeatMap implements Serializable {
 
 	public void updatePos(Location currentLoc)
 	{
-		if (currentLoc.getX() > xTiles * tileWidth) { throw new RuntimeException("Logic error: current="+currentLoc.getX()+",xTiles="+xTiles+",tw="+tileWidth); }
-		if (currentLoc.getY() > yTiles * tileHeight) { throw new RuntimeException("Logic error: current="+currentLoc.getY()+",yTiles="+yTiles+",th="+tileHeight); }
+		if (currentLoc.getX() > (xTiles * tileWidth) + errorMargin) { throw new RuntimeException("Logic error: current="+currentLoc.getX()+",xTiles="+xTiles+",tw="+tileWidth); }
+		if (currentLoc.getY() > (yTiles * tileHeight) + errorMargin) { throw new RuntimeException("Logic error: current="+currentLoc.getY()+",yTiles="+yTiles+",th="+tileHeight); }
 
 		//TODO: Fix cast
 		int xTile = (int) (currentLoc.getX() / tileWidth);
