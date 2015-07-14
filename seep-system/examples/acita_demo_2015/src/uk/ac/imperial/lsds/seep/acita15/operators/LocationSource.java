@@ -64,7 +64,8 @@ public class LocationSource implements StatelessOperator {
 		int yTiles = 10;
 
 		long interLocDelay = interFrameDelay;
-		long heatMapInterval = 10 * interFrameDelay;
+		//long heatMapInterval = 10 * interFrameDelay;
+		long heatMapInterval = interFrameDelay;
 		final HeatMapThread localHeatMapper = new HeatMapThread(x, y, xTiles, yTiles, interLocDelay, heatMapInterval);
 		new Thread(localHeatMapper).start();
 		
@@ -155,6 +156,7 @@ public class LocationSource implements StatelessOperator {
 				long tNow = System.currentTimeMillis();
 				if (tNow - tStart > heatMapInterval)
 				{
+					logger.info("Heat map queue size="+heatMapQueue.size());
 					heatMapQueue.add(current.toString());
 					current.reset();
 					tStart = tNow;
