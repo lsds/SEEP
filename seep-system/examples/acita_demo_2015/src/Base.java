@@ -246,6 +246,7 @@ public class Base implements QueryComposer{
 		ArrayList<String> srcFields = new ArrayList<String>();
 		srcFields.add("tupleId");
 		srcFields.add("value");
+		srcFields.add("padding");
 		for (int i = 0; i < nSources; i++)
 		{
 			sources[i] = QueryBuilder.newStatelessSource(new LocationSource(), -(i+1), srcFields);
@@ -254,6 +255,7 @@ public class Base implements QueryComposer{
 		ArrayList<String> heatMapFields = new ArrayList<String>();
 		heatMapFields.add("tupleId");
 		heatMapFields.add("value");
+		heatMapFields.add("padding");
 		int opId = 0;
 		for (int h = 0; h < tree.length; h++)
 		{
@@ -270,6 +272,7 @@ public class Base implements QueryComposer{
 		ArrayList<String> snkFields = new ArrayList<String>();
 		snkFields.add("tupleId");
 		snkFields.add("value");
+		snkFields.add("padding");
 		for (int i = 0; i < nSinks; i++)
 		{
 			sinks[i] = QueryBuilder.newStatelessSink(new HeatMapSink(), -(nSources+i+1), snkFields);

@@ -28,7 +28,6 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-
 import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
 public class LocationSource implements StatelessOperator {
@@ -82,7 +81,8 @@ public class LocationSource implements StatelessOperator {
 			{
 				value = heatMapQueue.take();
 			} catch (InterruptedException e) { throw new RuntimeException(e); }
-			DataTuple output = data.newTuple(tupleId, value);
+			String padding = generatePadding(tupleSizeChars - value.length());
+			DataTuple output = data.newTuple(tupleId, value, padding);
 			output.getPayload().timestamp = tupleId;
 			if (tupleId % 1000 == 0)
 			{
@@ -179,5 +179,15 @@ public class LocationSource implements StatelessOperator {
 			return null;
 			//throw new RuntimeException("No location found!");
 		}
+	}
+	
+	private String generatePadding(int tupleSizeChars)
+	{
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < tupleSizeChars; i++)
+		{
+			builder.append('x');
+		}
+		return builder.toString();
 	}
 }

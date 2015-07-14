@@ -56,7 +56,9 @@ public class HeatMapSink implements StatelessOperator {
 		tuplesReceived++;
 		//totalBytes += dt.getByteArray("value").length;
 		String value = dt.getString("value");
+		String padding = dt.getString("padding");
 		totalBytes += value.length();
+		totalBytes += padding.length();
 		recordTuple(dt);
 		
 		HeatMap update = new HeatMap(value);

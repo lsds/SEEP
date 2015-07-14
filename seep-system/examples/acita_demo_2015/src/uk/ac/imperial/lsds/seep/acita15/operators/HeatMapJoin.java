@@ -16,9 +16,9 @@ import java.util.LinkedList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-
 import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
 public class HeatMapJoin implements StatelessOperator{
@@ -55,13 +55,16 @@ public class HeatMapJoin implements StatelessOperator{
 	
 		long tupleId = data.getLong("tupleId");
 		
+		
 		String value = mergeHeatMaps(getHeatMaps(arg0)).toString();
+		int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
+		String padding = generatePadding(tupleSizeChars - value.length());
 		
 		//String value = data.getString("value") + "," + api.getOperatorId();
 		//String value = data.getString("value");
 		
 		
-		DataTuple outputTuple = data.setValues(tupleId, value);
+		DataTuple outputTuple = data.setValues(tupleId, value, padding);
 		processed++;
 		if (processed % 1000 == 0)
 		{
@@ -109,5 +112,15 @@ public class HeatMapJoin implements StatelessOperator{
 		}
 		
 		return result;
+	}
+	
+	private String generatePadding(int tupleSizeChars)
+	{
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < tupleSizeChars; i++)
+		{
+			builder.append('x');
+		}
+		return builder.toString();
 	}
 }
