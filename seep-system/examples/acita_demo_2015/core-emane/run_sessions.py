@@ -286,7 +286,14 @@ def get_num_workers(k, params):
             join_ops += parents
             children = parents
         print 'height=%d, join_ops=%d'%(height, join_ops)
-        num_workers = [1] * (sources + (k*join_ops) + sinks)
+        worker_nodes = params['nodes'] - 2
+        if worker_nodes >= sources + (k*join_ops) + sinks:
+            num_workers = [1] * (sources + (k*join_ops) + sinks)
+        else:
+            #Need to have multiple workers on some nodes.
+            #N.B. Don't want to colocate replicas of the
+            #same operator or the source.
+            raise Exception("TODO")
     else: 
         raise Exception('Unknown query type: %s'%q)
 
