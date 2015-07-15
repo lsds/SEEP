@@ -321,7 +321,7 @@ public class Base implements QueryComposer{
 			{
 				for (int i = 0; i < sinks.length; i++)
 				{
-					QueryBuilder.scaleOut(sinks[i], REPLICATION_FACTOR);
+					QueryBuilder.scaleOut(sinks[i].getOperatorId(), REPLICATION_FACTOR);
 				}
 			}
 		}

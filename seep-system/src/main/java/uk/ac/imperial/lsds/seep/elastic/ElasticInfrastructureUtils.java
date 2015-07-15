@@ -577,13 +577,16 @@ public class ElasticInfrastructureUtils {
 		}
 		Operator op = null;
 		List<String> attributes = inf.getOperatorById(opId).getOpContext().getDeclaredWorkingAttributes();
+		boolean isSink = inf.getOperatorById(opId).getOpContext().isSink();
 		if(opCode instanceof StatefulOperator){
 			StateWrapper copyOfState = (StateWrapper) inf.getOperatorById(opId).getStateWrapper().clone();
 			copyOfState.setOwnerId(newOpId);
 			op = Operator.getStatefulOperator(newOpId, opCode, copyOfState, attributes);
+			op.getOpContext().setIsSink(isSink);
 		}
 		else if(opCode instanceof StatelessOperator){
 			op = Operator.getStatelessOperator(newOpId, opCode, attributes);
+			op.getOpContext().setIsSink(isSink);
 		}
 		inf.addOperator(op);
 		return op;
