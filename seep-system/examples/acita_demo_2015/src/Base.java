@@ -316,6 +316,14 @@ public class Base implements QueryComposer{
 					QueryBuilder.scaleOut(opsTree[h][i].getOperatorId(), REPLICATION_FACTOR);
 				}
 			}
+			
+			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+			{
+				for (int i = 0; i < sinks.length; i++)
+				{
+					QueryBuilder.scaleOut(sinks[i], REPLICATION_FACTOR);
+				}
+			}
 		}
 		
 		return QueryBuilder.build();
