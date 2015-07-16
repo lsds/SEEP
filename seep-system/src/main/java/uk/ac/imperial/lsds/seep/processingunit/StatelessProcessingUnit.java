@@ -551,11 +551,14 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		
 		Query meanderQuery = getOperator().getOpContext().getMeanderQuery();
 		int logicalId = meanderQuery.getLogicalNodeId(getOperator().getOperatorId());
-		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
-		if (meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1)
+		if (!meanderQuery.isSink(logicalId))
 		{
-			//Downstream is a replicated sink, send combined failure ctrl *downstream* too.
-			owner.writeDownstreamFailureCtrls(getOperator().getOpContext().getListOfDownstreamIndexes(), nodeFctrl);
+			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
+			if (meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1)
+			{
+				//Downstream is a replicated sink, send combined failure ctrl *downstream* too.
+				owner.writeDownstreamFailureCtrls(getOperator().getOpContext().getListOfDownstreamIndexes(), nodeFctrl);
+			}
 		}
 	}
 
