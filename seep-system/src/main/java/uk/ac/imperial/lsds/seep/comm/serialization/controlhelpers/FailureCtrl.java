@@ -114,6 +114,14 @@ public class FailureCtrl {
 					if (!other.acks().contains(nxtAck)) { changed = true; }
 				}
 			}
+			
+			while(acks.contains(lw+1))
+			{
+				changed = true;
+				acks.remove(lw);
+				lw++;
+			}
+			
 			long prevAlivesSize = alives.size();
 			alives.addAll(other.alives());
 			iter = alives.iterator();
@@ -173,6 +181,13 @@ public class FailureCtrl {
 				}
 			}
 			
+			while(acks.contains(lw+1))
+			{
+				changed = true;
+				acks.remove(lw);
+				lw++;
+			}
+			
 			int prevAlivesSize = alives.size();
 			if (newAlives != null) {  
 				alives.addAll(newAlives);
@@ -192,6 +207,42 @@ public class FailureCtrl {
 			return changed || prevAcksSize != acks.size() || prevAlivesSize != alives.size();
 		}
 	}
+	
+	/*
+	public boolean merge(long otherLw, Set<Long> otherAcks)
+	{
+		boolean changed = false;
+		synchronized(lock)
+		{
+			if (!alives.isEmpty()) { throw new RuntimeException("Logic error: merge only for sinks:"+alives); }
+			if (otherLw > lw) { changed = true; }
+			lw = Math.max(lw, otherLw);
+			
+			int prevAcksSize = acks.size();
+			acks.addAll(otherAcks);
+			
+			Iterator<Long> iter = acks.iterator();
+			while (iter.hasNext())
+			{
+				long nxtAck = iter.next();
+				if (nxtAck <= lw) 
+				{ 
+					iter.remove();
+					if (! otherAcks.contains(nxtAck)) { changed = true; }
+				}
+			}
+			
+			while(acks.contains(lw+1))
+			{
+				changed = true;
+				acks.remove(lw);
+				lw++;
+			}
+			
+			return changed || prevAcksSize != acks.size();
+		}
+	}
+	*/
 	
 	public boolean updateAlives(long newAlive)
 	{

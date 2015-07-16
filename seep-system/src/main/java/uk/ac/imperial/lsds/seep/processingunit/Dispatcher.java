@@ -256,7 +256,9 @@ public class Dispatcher implements IRoutingObserver {
 			throw new RuntimeException("Logic error - best effort or not a sink."); 
 		}
 		fctrlHandler.handleUpstreamFailureCtrl(fctrl, upOpId);
-		return getCombinedDownFailureCtrl();
+		FailureCtrl result = getCombinedDownFailureCtrl();
+		logger.debug("Handled upstream failure ctrl: upFctrl="+fctrl+",updated="+result);
+		return result;
 	}
 	
 	/*
