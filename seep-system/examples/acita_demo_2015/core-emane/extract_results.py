@@ -72,22 +72,25 @@ def sink_rx_latencies(f):
 
 def unfinished_sink_tuples(f, t_end):
     tuple_records = sink_rx_tuples(f)
+    print 'Found %d tuple records'%(len(tuple_records))
     filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
-            int(rxts) > int(t_end), tuple_records)
-    total_bytes = reduce(lambda (cnt, tid, ts, txts, rxts, latency, bytez),
-            total: bytez+total, 0, filtered_tuple_records)
-    return (len(filtered_tuples), total_bytes)
+            int(rxts) <= int(t_end), tuple_records)
+    print 'Left with %d tuple records after filtering'%(len(filtered_tuple_records))
+    #total_bytes = reduce(lambda total, (cnt, tid, ts, txts, rxts, latency, bytez): int(bytez)+total, filtered_tuple_records)
+    total_bytes = reduce(lambda total, el: int(el[6])+total, filtered_tuple_records, 0)
+    return (len(filtered_tuple_records), total_bytes)
 
 
-def unfinished_sink_rx_latencies(f):
+def unfinished_sink_rx_latencies(f, t_end):
     tuple_records = sink_rx_tuples(f)
     filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
-            int(rxts) > int(t_end), tuple_records)
+            int(rxts) <= int(t_end), tuple_records)
     latencies = map(lambda tuple_record: int(tuple_record[5]), filtered_tuple_records)
+    return pd.Series(latencies)
 
 def sink_rx_tuples(f):
     results = []
-    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+)$')
+    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+)$')
     for line in f:
         match = re.search(regex, line)
         if match:
