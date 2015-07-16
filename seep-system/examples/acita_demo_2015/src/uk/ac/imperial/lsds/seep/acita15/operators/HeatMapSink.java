@@ -59,7 +59,7 @@ public class HeatMapSink implements StatelessOperator {
 		String padding = dt.getString("padding");
 		totalBytes += value.length();
 		totalBytes += padding.length();
-		recordTuple(dt);
+		recordTuple(dt, value.length() + padding.length());
 		
 		HeatMap update = new HeatMap(value);
 		if (result == null) { result = update; }
@@ -86,7 +86,7 @@ public class HeatMapSink implements StatelessOperator {
 		api.ack(dt);
 	}
 	
-	private void recordTuple(DataTuple dt)
+	private void recordTuple(DataTuple dt, int bytes)
 	{
 		long rxts = System.currentTimeMillis();
 		logger.info("SNK: Received tuple with cnt="+tuplesReceived 
@@ -94,7 +94,8 @@ public class HeatMapSink implements StatelessOperator {
 				+",ts="+dt.getPayload().timestamp
 				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
-				+",latency="+ (rxts - dt.getPayload().instrumentation_ts));
+				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
+				+",bytes="+ bytes);
 	}
 	
 	public void processData(List<DataTuple> arg0) {

@@ -8,6 +8,13 @@ def is_src_log(f):
 def is_sink_log(f):
     return log_type(f) == 'SINK'
 
+def is_finished_sink_log(f):
+    regex = re.compile(r'SNK: FINISHED with total tuples=(\d+),total bytes=(\d+),t=(\d+)')
+    for line in f:
+        match = re.search(regex, line)
+        if match: return True 
+    return False
+
 def is_processor_log(f):
     #return log_type(f) == 'PROCESSOR'
     f_type = log_type(f) 
@@ -62,6 +69,21 @@ def sink_rx_latencies(f):
     tuple_records = sink_rx_tuples(f)
     latencies = map(lambda tuple_record: int(tuple_record[5]), tuple_records)
     return pd.Series(latencies)
+
+def unfinished_sink_tuples(f, t_end):
+    tuple_records = sink_rx_tuples(f)
+    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
+            int(rxts) > int(t_end), tuple_records)
+    total_bytes = reduce(lambda (cnt, tid, ts, txts, rxts, latency, bytez),
+            total: bytez+total, 0, filtered_tuple_records)
+    return (len(filtered_tuples), total_bytes)
+
+
+def unfinished_sink_rx_latencies(f):
+    tuple_records = sink_rx_tuples(f)
+    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
+            int(rxts) > int(t_end), tuple_records)
+    latencies = map(lambda tuple_record: int(tuple_record[5]), filtered_tuple_records)
 
 def sink_rx_tuples(f):
     results = []

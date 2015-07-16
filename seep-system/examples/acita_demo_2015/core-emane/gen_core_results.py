@@ -14,9 +14,13 @@ def main(exp_dir):
     src_log = get_src_logfile(exp_dir) 
 
     # Get sink logfilename
-    sink_log = get_sink_logfile(exp_dir)
+    #sink_log = get_sink_logfile(exp_dir)
+
+    finished_sink_log = get_finished_sink_logfile(exp_dir)
+    print 'Found finished sink log: ', finished_sink_log
 
     sink_logs = get_sink_logfiles(exp_dir)
+    print 'Found sink logs: ', sink_logs
 
     op_logs = get_processor_logfiles(exp_dir)
 
@@ -27,41 +31,39 @@ def main(exp_dir):
         #if not t_src_begin: raise Exception("Could not find t_src_begin.")
         if not t_src_begin: "WARNING: Could not find t_src_begin."
 
-    if len(sink_logs) == 1:
+    with open(finished_sink_log, 'r') as sink:
+        # Get time sink received first message
+        t_finished_sink_begin = sink_rx_begin(sink)
+        if not t_finished_sink_begin: raise Exception("Could not find t_sink_begin.")
+    with open(finished_sink_log, 'r') as sink:
+        (total_tuples, total_bytes, t_sink_end) = sink_rx_end(sink)
+        if not t_finished_sink_end: raise Exception("Could not find t_sink_end.")
+    with open(finished_sink_log, 'r') as sink:
+        rx_latencies = sink_rx_latencies(sink)
+        #if not rx_latencies: raise Exception("Could not find any latencies.")
+
+    #If there are replicated sinks, need to treat the sinks that didn't finish
+    #first differently.
+    min_t_sink_begin = t_finished_sink_begin 
+    for sink_log in filter(lambda log: log != finished_sink_log, sink_logs):
         with open(sink_log, 'r') as sink:
             # Get time sink received first message
             t_sink_begin = sink_rx_begin(sink)
             if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
+            if t_sink_begin < min_t_sink_begin 
+                min_t_sink_begin = t_sink_begin
         with open(sink_log, 'r') as sink:
-            (tuples, total_bytes, t_sink_end) = sink_rx_end(sink)
-            if not t_sink_end: raise Exception("Could not find t_sink_end.")
+            (tuples, bytez) = unfinished_sink_tuples(sink, t_finished_sink_end)
+
+            #TODO: This will fail for sinks that didn't finish.
+            #(tuples, sink_total_bytes, t_sink_end) = sink_rx_end(sink)
+            #if not t_sink_end: raise Exception("Could not find t_sink_end.")
+            total_bytes += bytez 
+            total_tuples += tuples
+            #max_t_sink_end = max(max_t_sink_end, t_sink_end)
         with open(sink_log, 'r') as sink:
-            rx_latencies = sink_rx_latencies(sink)
+            rx_latencies += unfinished_sink_rx_latencies(sink, t_finished_sink_end)
             #if not rx_latencies: raise Exception("Could not find any latencies.")
-    else:
-       
-        min_t_sink_begin = -1
-        max_t_sink_end = 0
-        total_bytes = 0
-        total_tuples = 0
-        rx_latencies = []
-        for (i, sink_log) in enumerate(sink_logs):
-            with open(sink_log, 'r') as sink:
-                # Get time sink received first message
-                t_sink_begin = sink_rx_begin(sink)
-                if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
-                if min_t_sink_begin < 0 or min_t_sink_begin > t_sink_begin:
-                    min_t_sink_begin = t_sink_begin
-            with open(sink_log, 'r') as sink:
-                #TODO: This will fail for sinks that didn't finish.
-                (tuples, sink_total_bytes, t_sink_end) = sink_rx_end(sink)
-                if not t_sink_end: raise Exception("Could not find t_sink_end.")
-                total_bytes += sink_total_bytes
-                total_tuples += tuples
-                max_t_sink_end = max(max_t_sink_end, t_sink_end)
-            with open(sink_log, 'r') as sink:
-                rx_latencies += sink_rx_latencies(sink)
-                #if not rx_latencies: raise Exception("Could not find any latencies.")
 
     op_tputs = {}
     for op_log in op_logs:
@@ -75,14 +77,11 @@ def main(exp_dir):
     if t_src_begin: 
         src_sink_mean_tput = mean_tput(t_src_begin, t_sink_end, total_bytes)
         record_stat('%s/tput.txt'%exp_dir, {'src_sink_mean_tput':src_sink_mean_tput})
-        src_sink_frame_rate = frame_rate(t_src_begin, t_sink_end, tuples) 
+        src_sink_frame_rate = frame_rate(t_src_begin, t_sink_end, total_tuples) 
         record_stat('%s/tput.txt'%exp_dir, {'src_sink_frame_rate':src_sink_frame_rate}, 'a')
 
 
-    if len(sink_logs) == 1:
-        record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, rx_latencies, exp_dir)
-    else:
-        record_sink_sink_stats(min_t_sink_begin, max_t_sink_end, total_bytes, total_tuples, rx_latencies, exp_dir)
+    record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, rx_latencies, exp_dir)
     """
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
@@ -108,6 +107,9 @@ def get_src_logfile(exp_dir):
 
 def get_sink_logfile(exp_dir):
     return get_logfile(exp_dir, is_sink_log)
+
+def get_finished_sink_logfile(exp_dir):
+    return get_logfile(exp_dir, is_finished_sink_log)
 
 def get_logfile(exp_dir, type_fn):
     files = glob.glob("%s/*worker*.log"%exp_dir)

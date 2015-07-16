@@ -52,7 +52,7 @@ public class VideoSink implements StatelessOperator {
 		
 		tuplesReceived++;
 		totalBytes += dt.getString("value").length();
-		recordTuple(dt);
+		recordTuple(dt, dt.getString("value").length());
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
 		{
@@ -71,7 +71,7 @@ public class VideoSink implements StatelessOperator {
 		api.ack(dt);
 	}
 	
-	private void recordTuple(DataTuple dt)
+	private void recordTuple(DataTuple dt, int bytes)
 	{
 		long rxts = System.currentTimeMillis();
 		logger.info("SNK: Received tuple with cnt="+tuplesReceived 
@@ -79,7 +79,8 @@ public class VideoSink implements StatelessOperator {
 				+",ts="+dt.getPayload().timestamp
 				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
-				+",latency="+ (rxts - dt.getPayload().instrumentation_ts));
+				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
+				+",bytes="+ bytes);
 	}
 	
 	public void processData(List<DataTuple> arg0) {
