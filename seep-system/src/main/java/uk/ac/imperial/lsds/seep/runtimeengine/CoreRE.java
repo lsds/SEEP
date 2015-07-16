@@ -920,7 +920,7 @@ public class CoreRE {
 			LOG.debug("Writing failure ctrl to down op id="+downOpId+",fctrl="+nodeFctrl);
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId, nodeFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
-			controlDispatcher.sendUpstream(ct, downOpIndex, !bestEffortAcks);
+			controlDispatcher.sendDownstream(ct, downOpIndex, !bestEffortAcks);
 		}	
 	}
 	
