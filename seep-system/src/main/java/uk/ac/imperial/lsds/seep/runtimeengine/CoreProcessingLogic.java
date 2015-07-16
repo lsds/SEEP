@@ -214,7 +214,7 @@ public class CoreProcessingLogic implements Serializable{
 		}
 	}
 	
-	public void processFailureCtrl(FailureCtrl fctrl, int downOpId)
+	public void processFailureCtrl(FailureCtrl fctrl, int fctrlSenderOpId)
 	{
 		//TODO: Effectively this implements the defaultFailureCtrlHandler.
 		//Presuming it won't block then should be ok to just do it in this
@@ -228,13 +228,23 @@ public class CoreProcessingLogic implements Serializable{
 		//6) TODO: Forward the ack upstream if different.
 		if (pu != null && pu.getDispatcher() != null)
 		{
-			FailureCtrl updatedFctrl = pu.getDispatcher().handleFailureCtrl(fctrl, downOpId);
-			
-			//Now trim the input data structures + trigger the fctrl writer to write 
-			//a new fctrl.
-			if (!pu.getOperator().getOpContext().isSource())
+			if (!pu.getOperator().getOpContext().isSink())
 			{
-				owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
+				FailureCtrl updatedFctrl = pu.getDispatcher().handleFailureCtrl(fctrl, fctrlSenderOpId);
+				
+				//Now trim the input data structures + trigger the fctrl writer to write 
+				//a new fctrl.
+				if (!pu.getOperator().getOpContext().isSource())
+				{
+					owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
+				}
+			}
+			else
+			{
+				if (!fctrl.alives().isEmpty()) { throw new RuntimeException("Logic error, upstream fctrl alives non-empty."); }
+				//Probably a replicated sink, need to handle an upstream failure ctrl from another sink.
+				pu.getDispatcher().handleUpstreamFailureCtrl(fctrl, fctrlSenderOpId);
+
 			}
 		}
 	}

@@ -13,6 +13,7 @@
 package uk.ac.imperial.lsds.seep.processingunit;
 
 import com.codahale.metrics.Timer;
+
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import static uk.ac.imperial.lsds.seep.infrastructure.monitor.slave.reader.DefaultMetricsNotifier.notifyThat;
 import uk.ac.imperial.lsds.seep.manet.BackpressureRouter;
+import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.manet.RoundRobinRouter;
 import uk.ac.imperial.lsds.seep.manet.ShortestPathRouter;
 import uk.ac.imperial.lsds.seep.manet.WeightedRoundRobinRouter;
@@ -545,6 +548,15 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	public void emitFailureCtrl(FailureCtrl nodeFctrl)
 	{	
 		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl);
+		
+		Query meanderQuery = getOperator().getOpContext().getMeanderQuery();
+		int logicalId = meanderQuery.getLogicalNodeId(getOperator().getOperatorId());
+		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
+		if (meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1)
+		{
+			//Downstream is a replicated sink, send combined failure ctrl *downstream* too.
+			owner.writeDownstreamFailureCtrls(getOperator().getOpContext().getListOfDownstreamIndexes(), nodeFctrl);
+		}
 	}
 
 	public ArrayList<Integer> getRouterIndexesInformation(int opId){

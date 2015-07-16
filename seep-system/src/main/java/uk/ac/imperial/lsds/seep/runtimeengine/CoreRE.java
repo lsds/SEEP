@@ -511,14 +511,21 @@ public class CoreRE {
 		else if (ctt.equals(ControlTupleType.FAILURE_CTRL))
 		{
 			FailureCtrl fctrl = ct.getOpFailureCtrl().getFailureCtrl();
-			int downOpId = ct.getOpFailureCtrl().getOpId();
+			int fctrlSenderOpId = ct.getOpFailureCtrl().getOpId();
+			
+			/*
 			if (processingUnit.getOperator().getOpContext().isSink())
 			{
-				throw new RuntimeException("Logic error?");
+		
 			}
+			else
+			{
+				//TODO: Check whether dupe?
+				coreProcessLogic.processFailureCtrl(fctrl, fctrlSenderOpId);
+			}
+			*/
 			
-			//TODO: Check whether dupe?
-			coreProcessLogic.processFailureCtrl(fctrl, downOpId);
+			coreProcessLogic.processFailureCtrl(fctrl, fctrlSenderOpId);
 		}
 		
 		else if (ctt.equals(ControlTupleType.DOWN_UP_RCTRL))
@@ -901,6 +908,20 @@ public class CoreRE {
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
 		}
+	}
+	
+	public void writeDownstreamFailureCtrls(ArrayList<Integer> downOpIndexes, FailureCtrl nodeFctrl)
+	{
+		LOG.debug("Writing failure ctrl to down op indices:"+downOpIndexes.toString());
+		int opId = processingUnit.getOperator().getOperatorId();
+		for (int downOpIndex : downOpIndexes)
+		{
+			int downOpId = processingUnit.getOperator().getOpContext().getDownOpIdFromIndex(downOpIndex);
+			LOG.debug("Writing failure ctrl to down op id="+downOpId+",fctrl="+nodeFctrl);
+			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId, nodeFctrl);
+			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
+			controlDispatcher.sendUpstream(ct, downOpIndex, !bestEffortAcks);
+		}	
 	}
 	
 	public void signalOpenBackupSession(int totalSizeST){

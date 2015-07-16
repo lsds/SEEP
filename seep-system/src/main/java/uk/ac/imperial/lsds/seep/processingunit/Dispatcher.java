@@ -250,6 +250,15 @@ public class Dispatcher implements IRoutingObserver {
 		return getCombinedDownFailureCtrl();
 	}
 	
+	public FailureCtrl handleUpstreamFailureCtrl(FailureCtrl fctrl, int upOpId)
+	{
+		if (bestEffort || !owner.getOperator().getOpContext().isSink()) { 
+			throw new RuntimeException("Logic error - best effort or not a sink."); 
+		}
+		fctrlHandler.handleUpstreamFailureCtrl(fctrl, upOpId);
+		return getCombinedDownFailureCtrl();
+	}
+	
 	/*
 	public void routingChanged()
 	{
@@ -905,7 +914,14 @@ public class Dispatcher implements IRoutingObserver {
 				lock.notifyAll();
 				logger.debug("Handled failure ctrl in duration(s)="+ ((System.currentTimeMillis() - tStart)/1000));
 			}
-			
+		}
+		
+		public void handleUpstreamFailureCtrl(FailureCtrl fctrl, int upOpId)
+		{
+			synchronized(lock)
+			{
+				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+			}
 		}
 		
 		//Lock should be held
