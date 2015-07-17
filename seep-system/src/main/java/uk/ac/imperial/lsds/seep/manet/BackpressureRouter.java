@@ -102,6 +102,11 @@ public class BackpressureRouter implements IRouter {
 	
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp)
 	{
+		return handleDownUp(downUp, true);
+	}
+
+	private Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
+	{
 		Map<Integer, Set<Long>> newConstraints = null;
 		synchronized(lock)
 		{
@@ -112,13 +117,27 @@ public class BackpressureRouter implements IRouter {
 			logger.debug("BP router handling downup rctrl: "+ downUp);
 			long prevUpdateTs = lastWeightUpdateTimes.get(downUp.getOpId());
 			lastWeightUpdateTimes.put(downUp.getOpId(), System.currentTimeMillis());
-			weightExpiryMonitor.reset(downUp.getOpId());
+			if (resetExpiryTimer)
+			{
+				weightExpiryMonitor.reset(downUp.getOpId());
+			}
+			
 			if (prevUpdateTs > 0) 
 			{ 
 				logger.info("Weight update delay for "+downUp.getOpId()+"="+(System.currentTimeMillis() - prevUpdateTs));
 			}
 			
 			weights.put(downUp.getOpId(), downUp.getWeight());
+			
+			if (!resetExpiryTimer)
+			{
+				Integer newMaxWeightOpId = maxWeightOpId();
+				if (maxWeightOpId() != null)
+				{
+					logger.info("Downstream timed out with alternative max weight downstream="+newMaxWeightOpId);
+				}
+			}
+			
 			logger.debug("Backpressure router weights= "+weights);
 			Set<Long> newUnmatched = downUp.getUnmatched();
 			if (newUnmatched != null)
