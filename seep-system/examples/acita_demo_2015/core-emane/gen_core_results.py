@@ -41,6 +41,8 @@ def main(exp_dir):
     with open(finished_sink_log, 'r') as sink:
         rx_latencies = sink_rx_latencies(sink)
         #if not rx_latencies: raise Exception("Could not find any latencies.")
+    with open(finished_sink_log, 'r') as sink:
+        tuple_ids = sink_rx_tuple_ids(sink)
 
     #If there are replicated sinks, need to treat the sinks that didn't finish
     #first differently.
@@ -54,7 +56,7 @@ def main(exp_dir):
 	    if t_sink_begin < t_min_sink_begin:
 		t_min_sink_begin = t_sink_begin
 	with open(sink_log, 'r') as sink:
-	    (tuples, bytez) = unfinished_sink_tuples(sink, t_finished_sink_end)
+	    (tuples, bytez) = unfinished_sink_tuples(sink, t_finished_sink_end, tuple_ids)
 
 	    #TODO: This will fail for sinks that didn't finish.
 	    #(tuples, sink_total_bytes, t_sink_end) = sink_rx_end(sink)

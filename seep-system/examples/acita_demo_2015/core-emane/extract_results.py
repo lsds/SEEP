@@ -70,11 +70,15 @@ def sink_rx_latencies(f):
     latencies = map(lambda tuple_record: int(tuple_record[5]), tuple_records)
     return pd.Series(latencies)
 
-def unfinished_sink_tuples(f, t_end):
+def sink_rx_tuple_ids(f):
+    tuple_records = sink_rx_tuples(f)
+    return set(map(lambda record: int(record[2]), tuple_records))
+
+def unfinished_sink_tuples(f, t_end, prev_tuples):
     tuple_records = sink_rx_tuples(f)
     print 'Found %d tuple records'%(len(tuple_records))
     filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
-            int(rxts) <= int(t_end), tuple_records)
+            int(rxts) <= int(t_end) and not int(ts) in prev_tuples, tuple_records)
     print 'Left with %d tuple records after filtering'%(len(filtered_tuple_records))
     #total_bytes = reduce(lambda total, (cnt, tid, ts, txts, rxts, latency, bytez): int(bytez)+total, filtered_tuple_records)
     total_bytes = reduce(lambda total, el: int(el[6])+total, filtered_tuple_records, 0)
