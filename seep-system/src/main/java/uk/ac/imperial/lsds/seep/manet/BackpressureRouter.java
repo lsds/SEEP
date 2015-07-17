@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +29,7 @@ public class BackpressureRouter implements IRouter {
 	private Integer lastRouted = null;
 	private int switchCount = 0;
 	private final Object lock = new Object(){};
+	private final WeightExpiryMonitor weightExpiryMonitor = new WeightExpiryMonitor();
 
 	
 	public BackpressureRouter(OperatorContext opContext) {
@@ -109,6 +112,7 @@ public class BackpressureRouter implements IRouter {
 			logger.debug("BP router handling downup rctrl: "+ downUp);
 			long prevUpdateTs = lastWeightUpdateTimes.get(downUp.getOpId());
 			lastWeightUpdateTimes.put(downUp.getOpId(), System.currentTimeMillis());
+			weightExpiryMonitor.reset(downUp.getOpId());
 			if (prevUpdateTs > 0) 
 			{ 
 				logger.info("Weight update delay for "+downUp.getOpId()+"="+(System.currentTimeMillis() - prevUpdateTs));
@@ -194,5 +198,32 @@ public class BackpressureRouter implements IRouter {
 			if (!newUnmatched.contains(unmatched)) { return false; }
 		}
 		return true;
+	}
+	
+	private class WeightExpiryMonitor
+	{
+		final static long DOWNSTREAM_MAX_WEIGHT_DELAY = 2 * 1000;
+		final static long WEIGHT_TIMEOUT = 2 * DOWNSTREAM_MAX_WEIGHT_DELAY;
+		final Timer timer = new Timer(true);
+		final Map<Integer, TimerTask> currentTasks = new HashMap<>();
+		public void reset(final int opId)
+		{
+			if (currentTasks.containsKey(opId))
+			{
+				currentTasks.remove(opId).cancel();
+			}
+			TimerTask timeoutTask = new TimerTask() 
+			{ 
+				public void run() 
+				{  
+					//TODO: Bit wary about causing some kind of deadlock here.
+					//Also, never actually notify the dispatcher about the change.
+					handleDownUp(new DownUpRCtrl(opId, -1.0, null));
+				} 
+			};
+			
+			currentTasks.put(opId, timeoutTask);
+			timer.schedule(timeoutTask, WEIGHT_TIMEOUT);
+		}
 	}
 }
