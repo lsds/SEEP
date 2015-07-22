@@ -165,12 +165,14 @@ def run_session(time_str, k, mob, exp_session, params):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
-        services_str = "IPForward|SSH|%s"%params['net-routing']
+        #services_str = "IPForward|SSH|%s"%params['net-routing']
+        services_str = "IPForward|SSH"
 
 
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
-                gen_grid_position(2+params['nodes'], params['nodes'] - 1))
+                gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False)
 
+        services_str += "|%s"%params['net-routing']
         workers = []
         num_workers = get_num_workers(k, params)
         print 'num_workers=', num_workers
@@ -299,7 +301,7 @@ def get_num_workers(k, params):
 
     return num_workers
 
-def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
+def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
 #def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     tstart = time.time() 
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
@@ -307,16 +309,22 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1):
     n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
     taddservices = time.time() - tstart
-    n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(i+ip_offset)], ifindex=0)
-    taddnetif = time.time() - tstart
-    n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
-    tcmd = time.time() - tstart
+    if addinf:
+        ip = i + ip_offset 
+        n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+        taddnetif = time.time() - tstart
+        n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
+        tcmd = time.time() - tstart
+        print 'taddobj=%.3f,taddserv=%.3f,taddnet=%.3f,tcmd=%.3f'%(taddobj,taddservices,taddnetif,tcmd)
+        print 'Created node n%d (10.0.0.%d) with initial pos=(%.1f,%.1f)'%(i,ip,pos[0], pos[1])
+    else:
+        print 'Created node n%d (no inf) with initial pos=(%.1f,%.1f)'%(i,pos[0], pos[1])
     #n.cmd([SYSCTL_BIN, "net.ipv4.ip_forward=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.forwarding=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv6.conf.all.forwarding=1"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.all.rp_filter=0"])
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.default.rp_filter=0"])
-    print 'taddobj=%.3f,taddserv=%.3f,taddnet=%.3f,tcmd=%.3f'%(taddobj,taddservices,taddnetif,tcmd)
+
     return n
 
 def create_node_map(ns_nums, nodes):
