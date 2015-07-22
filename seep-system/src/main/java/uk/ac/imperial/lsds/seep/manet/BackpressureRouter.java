@@ -136,6 +136,7 @@ public class BackpressureRouter implements IRouter {
 				{
 					logger.info("Downstream timed out with alternative max weight downstream="+newMaxWeightOpId);
 				}
+				else { logger.info("Downstream timed out with no alternative downstream."); }
 			}
 			
 			logger.debug("Backpressure router weights= "+weights);
