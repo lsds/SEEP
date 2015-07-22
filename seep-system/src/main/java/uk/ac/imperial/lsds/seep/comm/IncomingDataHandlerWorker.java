@@ -120,7 +120,8 @@ public class IncomingDataHandlerWorker implements Runnable{
 				long receiveStartTs = System.currentTimeMillis();
 				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
 				long receiveTs = System.currentTimeMillis();
-				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload+",readTime="+(receiveTs-receiveStartTs));
+				long readTime = (receiveTs-receiveStartTs);
+				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload+",readTime="+readTime);
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
 				for(TuplePayload t_payload : batch)
 				{
@@ -142,7 +143,9 @@ public class IncomingDataHandlerWorker implements Runnable{
 					//Put data in inputQueue
 					if(owner.checkSystemStatus()){
 						long latency = receiveTs - t_payload.instrumentation_ts;
-						LOG.debug("icdhw for "+opId+",ts="+t_payload.timestamp+",its="+t_payload.instrumentation_ts+",rx latency="+latency);
+						long socketLatency = receiveTs - t_payload.local_ts;
+						t_payload.local_ts = receiveTs;
+						LOG.debug("icdhw for "+opId+",ts="+t_payload.timestamp+",its="+t_payload.instrumentation_ts+",rx latency="+latency+", socket latency="+socketLatency+", readTime="+readTime);
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
 						LOG.debug("Adding batch to dso.");
 						if (dso instanceof OutOfOrderBufferedBarrier)

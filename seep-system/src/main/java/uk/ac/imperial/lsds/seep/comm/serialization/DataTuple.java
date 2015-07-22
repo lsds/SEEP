@@ -68,6 +68,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = this.payload.timestamp;
 		tp.instrumentation_ts = this.payload.instrumentation_ts;
+		tp.local_ts = this.payload.local_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}
@@ -79,6 +80,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = this.payload.timestamp;
 		tp.instrumentation_ts = this.payload.instrumentation_ts;
+		tp.local_ts = this.payload.local_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}
@@ -88,6 +90,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = System.currentTimeMillis();
 		tp.instrumentation_ts =  tp.timestamp;
+		tp.local_ts = tp.instrumentation_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}
@@ -99,6 +102,7 @@ public class DataTuple implements DataTupleI, Serializable{
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = System.currentTimeMillis();
 		tp.instrumentation_ts =  tp.timestamp;
+		tp.local_ts = tp.instrumentation_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
 	}

@@ -112,10 +112,14 @@ public class OutputQueue {
 				{
 					tp.timestamp = System.currentTimeMillis(); // assign local ack
 				}
-				channelRecord.addDataToBatch(tp);
+				
 				long currentTime = System.currentTimeMillis();
 				long latency = currentTime - tp.instrumentation_ts;
-				LOG.debug("oq.sync sending"+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency);
+				long oqLatency = currentTime - tp.local_ts;
+				tp.local_ts = currentTime;
+				channelRecord.addDataToBatch(tp);
+				
+				LOG.debug("oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency);
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();

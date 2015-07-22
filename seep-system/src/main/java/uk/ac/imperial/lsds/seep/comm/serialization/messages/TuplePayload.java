@@ -19,6 +19,7 @@ public class TuplePayload implements Serializable{
 	public int schemaId;
 	public Payload attrValues;
 	public long instrumentation_ts;
+	public long local_ts;
 	
 	public TuplePayload(){
 		

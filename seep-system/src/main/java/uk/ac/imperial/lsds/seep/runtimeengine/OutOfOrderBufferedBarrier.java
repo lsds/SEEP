@@ -90,6 +90,18 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 				if (i == logicalInputIndex) { readyBatches.add(dt); }
 				else { readyBatches.add(pending.get(i).remove(ts)); }
 			}
+			
+			long readyTime = System.currentTimeMillis();
+			String msg  = "Pending latencies, ";
+			for (int i = 0; i < readyBatches.size(); i++)
+			{
+				long latency = readyTime - readyBatches.get(i).getPayload().instrumentation_ts;
+				long pendingLatency = readyTime - readyBatches.get(i).getPayload().local_ts;
+				readyBatches.get(i).getPayload().local_ts = readyTime;
+				msg += "idx="+i+";latency="+latency+";pending="+pendingLatency;
+				if (i < readyBatches.size() - 1) { msg += ","; }
+			}
+			logger.info(msg);
 			ready.put(ts, readyBatches);
 			this.notifyAll();
 		}
@@ -97,6 +109,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	
 	@Override
 	public synchronized ArrayList<DataTuple> pull_from_barrier() {
+		long pullStart = System.currentTimeMillis();
 		while(ready.isEmpty())
 		{
 			logger.debug("Waiting for ready batches.");
@@ -108,6 +121,15 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		}
 		logger.debug("Pulling batches with ts="+ready.firstKey());
 		ArrayList<DataTuple> dts = ready.remove(ready.firstKey());
+		
+		long pullEnd = System.currentTimeMillis();
+		long ts = dts.get(0).getPayload().timestamp;
+		long latency = pullEnd - dts.get(0).getPayload().instrumentation_ts;
+		long pullLatency = pullEnd - dts.get(0).getPayload().local_ts;
+		long pullReadTime = pullEnd - pullStart;
+		
+		logger.info("Pulled tuple with ts="+ts+",latency="+latency+",pullLatency="+pullLatency+",pullReadTime="+pullReadTime);
+		for (DataTuple dt : dts) { dt.getPayload().local_ts = pullEnd; }
 		this.notifyAll();
 		return dts;
 	}

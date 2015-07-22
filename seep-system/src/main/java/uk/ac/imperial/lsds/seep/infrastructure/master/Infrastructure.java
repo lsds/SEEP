@@ -487,6 +487,7 @@ public class Infrastructure {
 	
 	private Query buildChainQuery()
 	{
+		LOG.info("Building chain query.");
 		int chainLength = Integer.parseInt(GLOBALS.valueFor("chainLength"));
 		return buildChainQuery(chainLength);
 	}
