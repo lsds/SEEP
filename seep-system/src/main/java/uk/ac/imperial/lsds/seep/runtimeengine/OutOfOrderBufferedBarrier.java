@@ -92,7 +92,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			}
 			
 			long readyTime = System.currentTimeMillis();
-			String msg  = "Pending latencies, ";
+			String msg  = "Pending latencies for ts="+ts+":";
 			for (int i = 0; i < readyBatches.size(); i++)
 			{
 				long latency = readyTime - readyBatches.get(i).getPayload().instrumentation_ts;
