@@ -28,11 +28,12 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	private final Query meanderQuery;
 	private final int numLogicalInputs;
 	private final ArrayList<TreeMap<Long, DataTuple>> pending;	//Unbounded
-	private final TreeMap<Long, ArrayList<DataTuple>> ready = new TreeMap<Long, ArrayList<DataTuple>>(); //Unbounded
+	private final TreeMap<Long, ArrayList<DataTuple>> ready = new TreeMap<Long, ArrayList<DataTuple>>();
 	private final ArrayList<FailureCtrl> inputFctrls;
 	private final boolean optimizeReplay;
 	private final boolean bestEffort;
 	private final boolean reprocessNonLocals;
+	private final int maxReadyQueueSize;
 	
 	public OutOfOrderBufferedBarrier(Query meanderQuery, int opId)
 	{
@@ -42,6 +43,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		this.optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
+		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
 		
 		if (numLogicalInputs != 2) { throw new RuntimeException("TODO"); }
 		inputFctrls = new ArrayList<>(numLogicalInputs);	//TODO: Bit redundant to have per input fctrls?
@@ -56,54 +58,63 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	//TODO: Note the incoming data handler worker
 	//could tell us both the upOpId, the upOpOriginalId
 	//or even the meander query index.
-	public synchronized void push(DataTuple dt, int upOpId)
+	public void push(DataTuple dt, int upOpId)
 	{
-		long ts = dt.getPayload().timestamp;
-		int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
-		FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
-		if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
+		synchronized(this)
 		{
-			logger.debug("Ignoring tuple with ts="+ts);
-			return; 
-		}
-		
-		boolean tsReady = true;
-		for (int i = 0; i < numLogicalInputs; i++)
-		{
-			if (i == logicalInputIndex) { continue; }
-			if (!pending.get(i).containsKey(ts))
+			long ts = dt.getPayload().timestamp;
+			int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
+			FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
+			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
 			{
-				tsReady = false;
-				logger.debug("Adding "+ts+" to pending queue "+logicalInputIndex);
-				pending.get(logicalInputIndex).put(ts, dt);
-				break;
-			}
-		}
-		
-		if (tsReady)
-		{
-			logger.debug("Tuple "+ts+" ready."); 
-			ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
-			for (int i = 0; i < numLogicalInputs; i++)
-			{
-				inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
-				if (i == logicalInputIndex) { readyBatches.add(dt); }
-				else { readyBatches.add(pending.get(i).remove(ts)); }
+				logger.debug("Ignoring tuple with ts="+ts);
+				return; 
 			}
 			
-			long readyTime = System.currentTimeMillis();
-			String msg  = "Pending latencies for ts="+ts+":";
-			for (int i = 0; i < readyBatches.size(); i++)
+			boolean tsReady = true;
+			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				long latency = readyTime - readyBatches.get(i).getPayload().instrumentation_ts;
-				long pendingLatency = readyTime - readyBatches.get(i).getPayload().local_ts;
-				readyBatches.get(i).getPayload().local_ts = readyTime;
-				msg += "idx="+i+";latency="+latency+";pending="+pendingLatency;
-				if (i < readyBatches.size() - 1) { msg += ","; }
+				if (i == logicalInputIndex) { continue; }
+				if (!pending.get(i).containsKey(ts))
+				{
+					tsReady = false;
+					logger.debug("Adding "+ts+" to pending queue "+logicalInputIndex);
+					pending.get(logicalInputIndex).put(ts, dt);
+					break;
+				}
 			}
-			logger.info(msg);
-			ready.put(ts, readyBatches);
-			this.notifyAll();
+			
+			if (tsReady)
+			{
+				logger.debug("Tuple "+ts+" ready."); 
+				ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
+				for (int i = 0; i < numLogicalInputs; i++)
+				{
+					inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
+					if (i == logicalInputIndex) { readyBatches.add(dt); }
+					else { readyBatches.add(pending.get(i).remove(ts)); }
+				}
+				
+				long readyTime = System.currentTimeMillis();
+				String msg  = "Pending latencies for ts="+ts+":";
+				for (int i = 0; i < readyBatches.size(); i++)
+				{
+					long latency = readyTime - readyBatches.get(i).getPayload().instrumentation_ts;
+					long pendingLatency = readyTime - readyBatches.get(i).getPayload().local_ts;
+					readyBatches.get(i).getPayload().local_ts = readyTime;
+					msg += "idx="+i+";latency="+latency+";pending="+pendingLatency;
+					if (i < readyBatches.size() - 1) { msg += ","; }
+				}
+				logger.info(msg);
+				ready.put(ts, readyBatches);
+				this.notifyAll();
+				while (ready.size() > maxReadyQueueSize)
+				{
+					try {
+						this.wait();
+					} catch (InterruptedException e) {}
+				}
+			}
 		}
 	}
 	
