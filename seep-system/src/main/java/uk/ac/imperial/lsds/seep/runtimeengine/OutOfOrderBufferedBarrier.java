@@ -196,13 +196,17 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	//Could alternatively go for ready plus the avg of all the pendings.
 	public synchronized Map<Integer, Integer> sizes() {
 		Map<Integer, Integer> sizes = new HashMap<>();
+		Map<Integer, Integer> pendingSizes = new HashMap<>();
 		sizes.put(-1, ready.size());
+		pendingSizes.put(-1,  ready.size());
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
 			sizes.put(i, ready.size() + pending.get(i).size());
 			sizes.put(-1, sizes.get(-1) + pending.get(i).size());
+			
+			pendingSizes.put(i,  pending.get(i).size());
 		}
-		logger.debug("Sizes="+sizes);
+		logger.debug("Sizes="+sizes+", pendingSizes="+pendingSizes);
 		return sizes;
 	}
 	
