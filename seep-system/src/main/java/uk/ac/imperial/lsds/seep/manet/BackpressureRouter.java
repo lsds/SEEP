@@ -235,9 +235,10 @@ public class BackpressureRouter implements IRouter {
 			{ 
 				public void run() 
 				{  
+					logger.warn("Down op weight "+opId+" expired.");
 					//TODO: Bit wary about causing some kind of deadlock here.
 					//Also, never actually notify the dispatcher about the change.
-					handleDownUp(new DownUpRCtrl(opId, -1.0, null));
+					handleDownUp(new DownUpRCtrl(opId, -1.0, null), false);
 				} 
 			};
 			

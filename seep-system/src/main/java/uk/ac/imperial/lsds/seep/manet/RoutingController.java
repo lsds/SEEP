@@ -52,7 +52,8 @@ public class RoutingController implements Runnable{
 
 		if (numLogicalInputs > 1)
 		{
-			this.MAX_WEIGHT_DELAY = 10 * 1000;
+			//this.MAX_WEIGHT_DELAY = 10 * 1000;
+			this.MAX_WEIGHT_DELAY = 2 * 1000;
 			weights.put(nodeId, INITIAL_WEIGHT);
 		}
 		else

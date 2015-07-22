@@ -87,7 +87,7 @@ public class Dispatcher implements IRoutingObserver {
 		downIsMultiInput = true;
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
-		boundedOpQueue = GLOBALS.valueFor("meanderRouting").equals("backpressure");
+		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues"));
 		
 		if (owner.getOperator().getOpContext().isSource())
 		{
