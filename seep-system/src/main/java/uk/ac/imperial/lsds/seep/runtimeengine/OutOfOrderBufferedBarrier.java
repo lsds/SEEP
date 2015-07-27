@@ -179,7 +179,10 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			
 			logger.info("Pulled tuple with ts="+ts+",latency="+latency+",pullLatency="+pullLatency+",pullReadTime="+pullReadTime);
 		}
-		for (DataTuple dt : dts) { dt.getPayload().local_ts = pullEnd; }
+		for (DataTuple dt : dts) 
+		{ 
+			if (dt != null) { dt.getPayload().local_ts = pullEnd; }
+		}	
 		this.notifyAll();
 		return dts;
 	}
