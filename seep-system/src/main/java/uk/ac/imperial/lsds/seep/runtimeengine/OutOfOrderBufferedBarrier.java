@@ -168,12 +168,16 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		ArrayList<DataTuple> dts = ready.remove(ready.firstKey());
 		
 		long pullEnd = System.currentTimeMillis();
-		long ts = dts.get(0).getPayload().timestamp;
-		long latency = pullEnd - dts.get(0).getPayload().instrumentation_ts;
-		long pullLatency = pullEnd - dts.get(0).getPayload().local_ts;
-		long pullReadTime = pullEnd - pullStart;
-		
-		logger.info("Pulled tuple with ts="+ts+",latency="+latency+",pullLatency="+pullLatency+",pullReadTime="+pullReadTime);
+		for (int i = 0; i < dts.size(); i++)
+		{
+			if (dts.get(i) == null) { continue; }
+			long ts = dts.get(i).getPayload().timestamp;
+			long latency = pullEnd - dts.get(i).getPayload().instrumentation_ts;
+			long pullLatency = pullEnd - dts.get(i).getPayload().local_ts;
+			long pullReadTime = pullEnd - pullStart;
+			
+			logger.info("Pulled tuple with ts="+ts+",latency="+latency+",pullLatency="+pullLatency+",pullReadTime="+pullReadTime);
+		}
 		for (DataTuple dt : dts) { dt.getPayload().local_ts = pullEnd; }
 		this.notifyAll();
 		return dts;
