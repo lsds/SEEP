@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -18,6 +20,7 @@ import com.google.common.collect.TreeRangeSet;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.manet.Query;
 
@@ -34,6 +37,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	private final boolean bestEffort;
 	private final boolean reprocessNonLocals;
 	private final int maxReadyQueueSize;
+	private final long barrierTimeout;
+	private final BarrierTimeoutMonitor barrierTimeoutMonitor;
 	
 	public OutOfOrderBufferedBarrier(Query meanderQuery, int opId)
 	{
@@ -44,6 +49,12 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
 		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
+		this.barrierTimeout = Long.parseLong(GLOBALS.valueFor("barrierTimeout"));
+		if (barrierTimeout > 0)  
+		{ 
+			barrierTimeoutMonitor = new BarrierTimeoutMonitor(); 
+		} 
+		else { barrierTimeoutMonitor = null; } 
 		
 		if (numLogicalInputs != 2) { throw new RuntimeException("TODO"); }
 		inputFctrls = new ArrayList<>(numLogicalInputs);	//TODO: Bit redundant to have per input fctrls?
@@ -72,6 +83,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			}
 			
 			boolean tsReady = true;
+			pending.get(logicalInputIndex).put(ts, dt);
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
 				if (i == logicalInputIndex) { continue; }
@@ -79,35 +91,17 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 				{
 					tsReady = false;
 					logger.debug("Adding "+ts+" to pending queue "+logicalInputIndex);
-					pending.get(logicalInputIndex).put(ts, dt);
+					//pending.get(logicalInputIndex).put(ts, dt);
 					break;
 				}
 			}
 			
 			if (tsReady)
 			{
-				logger.debug("Tuple "+ts+" ready."); 
-				ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
-				for (int i = 0; i < numLogicalInputs; i++)
-				{
-					inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
-					if (i == logicalInputIndex) { readyBatches.add(dt); }
-					else { readyBatches.add(pending.get(i).remove(ts)); }
-				}
+				logger.debug("Tuple "+ts+" all ready."); 
+				addReady(ts);
+				if (barrierTimeoutMonitor != null) { barrierTimeoutMonitor.clear(ts); }
 				
-				long readyTime = System.currentTimeMillis();
-				String msg  = "Pending latencies for ts="+ts+":";
-				for (int i = 0; i < readyBatches.size(); i++)
-				{
-					long latency = readyTime - readyBatches.get(i).getPayload().instrumentation_ts;
-					long pendingLatency = readyTime - readyBatches.get(i).getPayload().local_ts;
-					readyBatches.get(i).getPayload().local_ts = readyTime;
-					msg += "idx="+i+";latency="+latency+";pending="+pendingLatency;
-					if (i < readyBatches.size() - 1) { msg += ","; }
-				}
-				logger.info(msg);
-				ready.put(ts, readyBatches);
-				this.notifyAll();
 				while (ready.size() > maxReadyQueueSize)
 				{
 					try {
@@ -115,7 +109,47 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 					} catch (InterruptedException e) {}
 				}
 			}
+			else if (barrierTimeoutMonitor != null)
+			{
+				//TODO: Should perhaps timeout earlier depending on distance to sink? 
+				long delay = dt.getPayload().instrumentation_ts + barrierTimeout - System.currentTimeMillis();
+				delay = delay > 0 ? delay : 1;
+				barrierTimeoutMonitor.set(ts, delay);
+			}
 		}
+	}
+	
+	//Assumes lock held
+	private void addReady(long ts)
+	{
+		ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
+		for (int i = 0; i < numLogicalInputs; i++)
+		{
+			inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
+			readyBatches.add(pending.get(i).remove(ts));
+			/*
+			if (i == logicalInputIndex) { readyBatches.add(dt); }
+			else { readyBatches.add(pending.get(i).remove(ts)); }
+			*/
+		}
+		
+		long readyTime = System.currentTimeMillis();
+		String msg  = "Pending latencies for ts="+ts+":";
+		for (int i = 0; i < readyBatches.size(); i++)
+		{
+			if (readyBatches.get(i) == null) { continue; }
+			long latency = readyTime - readyBatches.get(i).getPayload().instrumentation_ts;
+			long pendingLatency = readyTime - readyBatches.get(i).getPayload().local_ts;
+			readyBatches.get(i).getPayload().local_ts = readyTime;
+			msg += "idx="+i+";latency="+latency+";pending="+pendingLatency;
+			if (i < readyBatches.size() - 1) { msg += ","; }
+		}
+		logger.info(msg);
+		
+		//TODO: Clear any timers for this ts
+		
+		ready.put(ts, readyBatches);
+		this.notifyAll();
 	}
 	
 	@Override
@@ -195,6 +229,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 					|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
 			{
 				qIter.remove();
+				if (barrierTimeoutMonitor != null) { barrierTimeoutMonitor.clear(ts); }
 			}
 		}
 	}
@@ -298,4 +333,39 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		throw new RuntimeException("Logic error - use pull_from_barrier()");
 	}
 
+	private class BarrierTimeoutMonitor
+	{
+		private final Map<Long, TimerTask> timeoutTasks = new HashMap<>();
+		private final Timer timer = new Timer(true);
+		
+		public void set(final long ts, long delay)
+		{
+			if (timeoutTasks.containsKey(ts)) { throw new RuntimeException("Logic error - timeout task already exists: "+ts); }
+			TimerTask timeoutTask = new TimerTask() 
+			{ 
+				public void run() 
+				{  
+
+					logger.warn("Nonblocking join "+ts+" timed out."); 
+					synchronized(OutOfOrderBufferedBarrier.this)
+					{					
+						timeoutTasks.remove(ts);
+						addReady(ts);
+					}
+					//TODO:
+				} 
+			};
+			
+			timeoutTasks.put(ts, timeoutTask);
+			timer.schedule(timeoutTask, delay);
+		}
+		
+		public void clear(final long ts)
+		{
+			if (timeoutTasks.containsKey(ts))
+			{
+				timeoutTasks.remove(ts).cancel();
+			}			
+		}
+	}
 }
