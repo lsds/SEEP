@@ -353,8 +353,10 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 					logger.warn("Nonblocking join "+ts+" timed out."); 
 					synchronized(OutOfOrderBufferedBarrier.this)
 					{					
-						timeoutTasks.remove(ts);
-						addReady(ts);
+						if (timeoutTasks.remove(ts) != null)
+						{
+							addReady(ts);
+						}
 					}
 					//TODO:
 				} 
