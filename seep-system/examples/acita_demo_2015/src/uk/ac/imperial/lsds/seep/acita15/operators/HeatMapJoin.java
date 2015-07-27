@@ -37,20 +37,21 @@ public class HeatMapJoin implements StatelessOperator{
 		if (arg0.size() != 2) { throw new RuntimeException("Logic error - should be 2 tuples, 1 tuple per input for a binary join."); }
 		
 		logger.debug("Processing tuples: "+arg0);
-		if (arg0.get(0).getPayload().timestamp != arg0.get(1).getPayload().timestamp)
-		{
-			// We expect sync'd batch timestamps.
-			throw new RuntimeException("Logic error: timestamp mismatch");
-		}
 		
 		//Generate the output batch from the earlier of the two batches (in terms of real world timestamp).
-		recordTuple(arg0.get(0));
-		recordTuple(arg0.get(1));
-		
-		DataTuple data = arg0.get(1);
-		if (arg0.get(1).getPayload().instrumentation_ts < data.getPayload().instrumentation_ts)
+		DataTuple data = null;
+		for (DataTuple dt : arg0)
 		{
-			data = arg0.get(0);
+			if (dt != null) 
+			{ 
+				recordTuple(dt);
+				if (data == null || 
+						data.getPayload().instrumentation_ts < dt.getPayload().instrumentation_ts)
+				{
+					data = dt;
+				}
+			}
+			else { logger.info("Null tuple"); }
 		}
 	
 		long tupleId = data.getLong("tupleId");
@@ -97,7 +98,10 @@ public class HeatMapJoin implements StatelessOperator{
 		List<HeatMap> result = new LinkedList<>();
 		for (DataTuple tuple : tuples)
 		{
-			result.add(new HeatMap(tuple.getString("value")));
+			if (tuple != null)
+			{
+				result.add(new HeatMap(tuple.getString("value")));
+			}
 		}
 		return result;
 	}
