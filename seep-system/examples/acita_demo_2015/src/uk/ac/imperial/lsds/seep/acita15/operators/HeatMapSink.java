@@ -32,12 +32,15 @@ public class HeatMapSink implements StatelessOperator {
 	private long totalBytes = 0;
 	private Stats stats = null;
 	private HeatMap result = null;
+	private int numSources;
+	private double averageCoverage = 0.0;
 	
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
+		numSources = Integer.parseInt(GLOBALS.valueFor("sources"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
 	}
 	
@@ -63,7 +66,15 @@ public class HeatMapSink implements StatelessOperator {
 		
 		HeatMap update = new HeatMap(value);
 		if (result == null) { result = update; }
-		else { result.add(update); }
+		else 
+		{
+			int sourceIdCount = update.getSourceIds().size();
+			double updateCoverage = (100 * sourceIdCount) / numSources;
+			averageCoverage += (updateCoverage - averageCoverage) / tuplesReceived;
+			logger.info("Coverage, update="+updateCoverage+",cumavg="+averageCoverage);
+			
+			result.add(update); 
+		}
 		logger.info("Current heatmap="+result.toString());
 		
 		long tupleId = dt.getLong("tupleId");
@@ -77,7 +88,8 @@ public class HeatMapSink implements StatelessOperator {
 			logger.info("SNK: FINISHED with total tuples="+tuplesReceived
 					+",total bytes="+totalBytes
 					+",t="+System.currentTimeMillis()
-					+",tuple size bytes="+tupleSize);
+					+",tuple size bytes="+tupleSize
+					+",average coverage="+averageCoverage);
 			
 			logger.info("Recording final heatmap: "+result.toString());
 			System.exit(0);

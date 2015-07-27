@@ -11,9 +11,13 @@
 package uk.ac.imperial.lsds.seep.acita15.heatmap;
 
 import java.io.Serializable;
+import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Set;
+import java.util.HashSet;
 
 public class HeatMap implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -24,14 +28,16 @@ public class HeatMap implements Serializable {
 	private final int xTiles;
 	private final int yTiles;
 	private int[][] posCounts;
+	private final Set<Integer> sourceIds = new HashSet<>();
 
-	public HeatMap(double maxX, double maxY, int xTiles, int yTiles)
+	public HeatMap(double maxX, double maxY, int xTiles, int yTiles, int sourceId)
 	{
 		this.xTiles = xTiles;
 		this.yTiles = yTiles;
 		this.tileWidth = maxX / xTiles;
 		this.tileHeight = maxY / yTiles;
 		this.posCounts = new int[xTiles][yTiles];
+		this.sourceIds.add(sourceId);
 	}
 
 	public HeatMap(String serialized)
@@ -42,6 +48,13 @@ public class HeatMap implements Serializable {
 		this.tileHeight = Double.parseDouble(metadata[1]);
 		this.xTiles = Integer.parseInt(metadata[2]);
 		this.yTiles = Integer.parseInt(metadata[3]);
+		
+		
+		for (int m = 4; m < metadata.length; m++)
+		{
+			this.sourceIds.add(Integer.parseInt(metadata[m]));
+		}
+		
 		this.posCounts = new int[xTiles][yTiles];
 
 		for (int pos = 1; pos < parts.length; pos++)
@@ -56,7 +69,7 @@ public class HeatMap implements Serializable {
 	}
 
 	public int[][] getPosCounts() { return posCounts; }
-
+	public Set<Integer> getSourceIds() { return Collections.unmodifiableSet(sourceIds); }
 	public void reset() { posCounts = new int[xTiles][yTiles]; }
 
 	public String toString()
@@ -80,6 +93,12 @@ public class HeatMap implements Serializable {
 		}
 
 		String result = metaData;
+		
+		for (Integer sourceId : sourceIds)
+		{
+			result += ","+sourceId;
+		}
+		
 		if (!occupiedTiles.isEmpty())
 		{
 			result += ";" + occupiedTiles;
@@ -124,5 +143,7 @@ public class HeatMap implements Serializable {
 				posCounts[x][y] += other.posCounts[x][y];
 			}
 		}
+		
+		sourceIds.addAll(other.sourceIds);
 	}
 }

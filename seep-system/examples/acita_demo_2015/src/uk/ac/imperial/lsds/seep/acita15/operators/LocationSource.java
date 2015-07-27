@@ -125,7 +125,7 @@ public class LocationSource implements StatelessOperator {
 		
 		public HeatMapThread(double tileWidth, double tileHeight, int xTiles, int yTiles, long locUpdateInterval, long heatMapInterval)
 		{
-			this.current = new HeatMap(tileWidth, tileHeight, xTiles, yTiles);
+			this.current = new HeatMap(tileWidth, tileHeight, xTiles, yTiles, api.getOperatorId());
 			this.locUpdateInterval = locUpdateInterval;
 			this.heatMapInterval = heatMapInterval;
 		}
