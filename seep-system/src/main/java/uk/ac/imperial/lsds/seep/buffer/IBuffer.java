@@ -15,6 +15,8 @@ public interface IBuffer {
 	public abstract Iterator<OutputLogEntry> iterator();
 
 	public abstract int size();
+	
+	public abstract boolean contains(long ts);
 
 	public abstract BackupOperatorState getBackupState();
 

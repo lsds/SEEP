@@ -93,6 +93,8 @@ public class OutputQueue {
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		IBuffer buffer = channelRecord.getBuffer();
+		
+		if (buffer.contains(tuple.getPayload().timestamp)) { return true; } 
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
 		//Output for this socket
