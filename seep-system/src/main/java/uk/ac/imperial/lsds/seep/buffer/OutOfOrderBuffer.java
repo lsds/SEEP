@@ -64,6 +64,12 @@ public class OutOfOrderBuffer implements IBuffer {
 		//throw new RuntimeException("Need to handle (SEEP) batch sending properly here!");		
 	} 
 	
+	public synchronized TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl)
+	{
+		//TODO: Just return those in fctrl that haven't been acknowledged without deleting anything.
+		return trim(null);
+	}
+	
 	@Override
 	public synchronized int size() {
 		return log.size();

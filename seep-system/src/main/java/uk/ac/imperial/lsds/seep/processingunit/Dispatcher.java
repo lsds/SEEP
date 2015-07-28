@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -56,6 +58,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
 	private final Set<RoutingControlWorker> rctrlWorkers = new HashSet<>();
 	private final FailureCtrlHandler fctrlHandler = new FailureCtrlHandler();
+	private final FailureCtrlWatchdog failureCtrlWatchdog;
 	
 	private ArrayList<OutputQueue> outputQueues;
 	private final OperatorOutputQueue opQueue;
@@ -107,6 +110,13 @@ public class Dispatcher implements IRoutingObserver {
 		for(int i = 0; i<owner.getOperator().getOpContext().getDeclaredWorkingAttributes().size(); i++){
 			idxMapper.put(owner.getOperator().getOpContext().getDeclaredWorkingAttributes().get(i), i);
 		}
+		
+		if (Boolean.parseBoolean(GLOBALS.valueFor("enableFailureCtrlWatchdog")) && 
+				!owner.getOperator().getOpContext().isSink())
+		{
+			failureCtrlWatchdog = new FailureCtrlWatchdog();
+		}
+		else { failureCtrlWatchdog = null; }		
 	}
 	
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
@@ -695,6 +705,8 @@ public class Dispatcher implements IRoutingObserver {
 					synchronized(lock)
 					{
 						dataConnected = false;
+						if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dest.getOperatorId()); }
+						
 						//holding the lock
 						//1) compute the new joint alives
 						//2) Do a combined.set alives
@@ -853,8 +865,7 @@ public class Dispatcher implements IRoutingObserver {
 	}
 	
 	private class FailureCtrlHandler
-	{
-
+	{		
 		private final Map<Integer, Long> lastUpdateTimes = new HashMap<>();
 		
 		public void handleFailureCtrl(FailureCtrl fctrl, int dsOpId) 
@@ -913,6 +924,8 @@ public class Dispatcher implements IRoutingObserver {
 					if (eagerPurgeOpQueue) { purgeOpOutputQueue(); }
 				}
 				
+				//TODO: Get an appropriate value for this timeout.
+				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.reset(dsOpId, 2 * 2000); }
 				lock.notifyAll();
 				logger.debug("Handled failure ctrl in duration(s)="+ ((System.currentTimeMillis() - tStart)/1000));
 			}
@@ -958,6 +971,65 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
 			opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
+		}
+	}
+	
+	private class FailureCtrlWatchdog
+	{
+		final Timer timer = new Timer(true);
+		final Map<Integer, TimerTask> currentTasks = new HashMap<>();
+		
+		
+		public void reset(final int downOpId, long delay)
+		{
+			clear(downOpId);
+			
+			TimerTask timeoutTask = new TimerTask() 
+			{ 
+				public void run() 
+				{  
+					logger.warn("Down op failure ctrl watchdog for "+downOpId+" expired.");
+					synchronized(lock)
+					{
+						clear(downOpId);
+						//TODO: What to do when a failure ctrl times out?
+						//TODO: In theory this could fail to include the current
+						//SEEP batch if it is multi-tuple and the dispatcher sends
+						//tuples at a time - although it shouldn't really.
+
+						//Should also clear fctrl?
+						//Should get the current alives for this downstream
+						//Or should it be the current combined alives?
+						/*
+						FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
+						int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
+						SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
+						if (cci != null)
+						{
+							logger.debug("Found channel for "+downOpIndex+" to purge.");
+							IBuffer buffer = cci.getBuffer();
+							TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
+							//TODO: Should clear routing info for op perhaps?
+							//Readd to output queue (N.B. While 'get' is actually 'trim' temporarily, must be careful not
+							//to lose tuples here!)
+							//TODO: Can perhaps reuse requeueTuples code here.
+							
+						}
+						*/
+					}
+				} 
+			};
+			
+			currentTasks.put(downOpId, timeoutTask);
+			timer.schedule(timeoutTask, delay);
+		}
+		
+		public void clear(int downOpId)
+		{
+			if (currentTasks.containsKey(downOpId))
+			{
+				currentTasks.remove(downOpId).cancel();
+			}
 		}
 	}
 	

@@ -28,6 +28,8 @@ public interface IBuffer {
 	public abstract TimestampTracker trim(long ts);
 
 	public abstract TreeMap<Long, BatchTuplePayload> trim(FailureCtrl fctrl);
+	
+	public abstract TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl);
 
 	///fixme{just for testing, do binary search on structure}
 	public abstract TimestampTracker getInputVTsForOutputTs(long output_ts);

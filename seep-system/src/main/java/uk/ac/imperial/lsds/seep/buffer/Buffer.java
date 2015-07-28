@@ -186,6 +186,11 @@ public class Buffer implements Serializable, IBuffer{
 		
 	}
 	
+	public TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl)
+	{
+		throw new RuntimeException("Logic error.");
+	}
+	
 	///fixme{just for testing, do binary search on structure}
 	/* (non-Javadoc)
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#getInputVTsForOutputTs(long)
