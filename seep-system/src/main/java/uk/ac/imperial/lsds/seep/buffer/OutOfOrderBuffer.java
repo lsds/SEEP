@@ -66,8 +66,17 @@ public class OutOfOrderBuffer implements IBuffer {
 	
 	public synchronized TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl)
 	{
-		//TODO: Just return those in fctrl that haven't been acknowledged without deleting anything.
-		return trim(null);
+		TreeMap<Long, BatchTuplePayload> delayed = new TreeMap<>();
+		for (Long ts : log.keySet())
+		{
+			//TODO: Might as well trim any acked from log too.
+			if (ts > fctrl.lw() && !fctrl.acks().contains(ts) && !fctrl.alives().contains(ts))
+			{
+				delayed.put(ts,  log.get(ts));
+			}
+		}
+
+		return delayed;
 	}
 	
 	@Override

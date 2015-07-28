@@ -988,7 +988,7 @@ public class Dispatcher implements IRoutingObserver {
 			{ 
 				public void run() 
 				{  
-					logger.warn("Down op failure ctrl watchdog for "+downOpId+" expired.");
+					logger.warn("Failure ctrl watchdog of "+owner.getOperator().getOperatorId() + " for "+downOpId+" expired.");
 					synchronized(lock)
 					{
 						clear(downOpId);
@@ -1000,22 +1000,37 @@ public class Dispatcher implements IRoutingObserver {
 						//Should also clear fctrl?
 						//Should get the current alives for this downstream
 						//Or should it be the current combined alives?
-						/*
+						
 						FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
 						int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 						SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
 						if (cci != null)
 						{
-							logger.debug("Found channel for "+downOpIndex+" to purge.");
 							IBuffer buffer = cci.getBuffer();
 							TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
+							logger.debug("Watchdog requeueing "+delayedBatches.size()+" tuples sent to "+downOpId);
+							for (Map.Entry<Long, BatchTuplePayload> e : delayedBatches.entrySet())
+							{
+								long ts = e.getKey();
+								TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
+
+								if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
+								{	
+									//TODO: what if acked already?
+									DataTuple dt = new DataTuple(idxMapper, p);
+									if (!optimizeReplay || !combinedDownFctrl.alives().contains(ts))
+									{
+										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with timestamp="+p.timestamp);
+										opQueue.forceAdd(dt);
+									}
+								}
+							}
 							//TODO: Should clear routing info for op perhaps?
 							//Readd to output queue (N.B. While 'get' is actually 'trim' temporarily, must be careful not
 							//to lose tuples here!)
 							//TODO: Can perhaps reuse requeueTuples code here.
 							
 						}
-						*/
 					}
 				} 
 			};
