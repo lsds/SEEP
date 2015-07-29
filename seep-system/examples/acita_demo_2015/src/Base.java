@@ -101,6 +101,10 @@ public class Base implements QueryComposer{
 			Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, 1); 
 			connectToOneDownstream(src, snk, ops);
 			autoScaleout(ops);
+			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+			{
+				QueryBuilder.scaleOut(snk.getOperatorId(), REPLICATION_FACTOR);
+			}
 		}
 		else
 		{
@@ -184,6 +188,11 @@ public class Base implements QueryComposer{
 		{
 			QueryBuilder.scaleOut(faceDetect.getOperatorId(), REPLICATION_FACTOR);
 			QueryBuilder.scaleOut(faceRec.getOperatorId(), REPLICATION_FACTOR);
+			
+			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+			{
+				QueryBuilder.scaleOut(snk.getOperatorId(), REPLICATION_FACTOR);
+			}
 		}
 		
 		return QueryBuilder.build();

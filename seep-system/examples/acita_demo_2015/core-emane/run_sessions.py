@@ -250,8 +250,9 @@ def run_session(time_str, k, mob, exp_session, params):
 
 def get_num_workers(k, params):
     q = params['query']
+    sink_scale_factor = k if params['scaleOutSinks'] else 1
     if q == 'chain' or q == 'fr' or q == 'join': 
-        num_workers = [1] * (2 + (k * params['h']))
+        num_workers = [1] * (1 + sink_scale_factor + (k * params['h']))
         if params['query'] == 'join':
             if params['h'] != 1: raise Exception('Only support query of height 1 for join')
             num_workers.append(1)
@@ -289,8 +290,8 @@ def get_num_workers(k, params):
             children = parents
         print 'height=%d, join_ops=%d'%(height, join_ops)
         worker_nodes = params['nodes'] - 2
-        if worker_nodes >= sources + k*(join_ops + sinks):
-            num_workers = [1] * (sources + k*(join_ops + sinks))
+        if worker_nodes >= sources + k*(join_ops) + (sink_scale_factor * sinks):
+            num_workers = [1] * (sources + k*(join_ops) + (sink_scale_factor * sinks))
         else:
             #Need to have multiple workers on some nodes.
             #N.B. Don't want to colocate replicas of the
