@@ -68,6 +68,7 @@ def main(exp_dir):
 	    rx_latencies += unfinished_sink_rx_latencies(sink, t_finished_sink_end)
 	    #if not rx_latencies: raise Exception("Could not find any latencies.")
 
+    deduped_latencies = dedup_latencies(rx_latencies)
     op_tputs = {}
     for op_log in op_logs:
         with open(op_log, 'r') as f:
@@ -84,7 +85,7 @@ def main(exp_dir):
         record_stat('%s/tput.txt'%exp_dir, {'src_sink_frame_rate':src_sink_frame_rate}, 'a')
 
 
-    record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, rx_latencies, exp_dir)
+    record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_latencies, exp_dir)
     """
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
@@ -97,12 +98,12 @@ def main(exp_dir):
 
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
 
-def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, rx_latencies, exp_dir):
+def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
     sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_frame_rate':sink_sink_frame_rate}, 'a')
-    lstats = latency_stats(rx_latencies)
+    lstats = latency_stats(deduped_latencies)
     record_stat('%s/latency.txt'%exp_dir, lstats)
 
 def get_src_logfile(exp_dir):

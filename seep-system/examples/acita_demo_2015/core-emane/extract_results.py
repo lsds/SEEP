@@ -67,8 +67,9 @@ def sink_rx_latencies(f):
     returns a list of (tsrx, latency)
     """
     tuple_records = sink_rx_tuples(f)
-    latencies = map(lambda tuple_record: int(tuple_record[5]), tuple_records)
-    return pd.Series(latencies)
+    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5])), tuple_records)
+    #return pd.Series(latencies)
+    return latencies
 
 def sink_rx_tuple_ids(f):
     tuple_records = sink_rx_tuples(f)
@@ -89,8 +90,19 @@ def unfinished_sink_rx_latencies(f, t_end):
     tuple_records = sink_rx_tuples(f)
     filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
             int(rxts) <= int(t_end), tuple_records)
-    latencies = map(lambda tuple_record: int(tuple_record[5]), filtered_tuple_records)
-    return pd.Series(latencies)
+    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5])), filtered_tuple_records)
+    #return pd.Series(latencies)
+    return latencies
+
+def dedup_latencies(latencies):
+    deduped = {}
+    for (ts, latency) in latencies:
+        if ts in deduped:
+            print 'Found dupe latency'
+            deduped[ts] = min(deduped[ts], latency)
+        else:
+            deduped[ts] = latency
+    return pd.Series(deduped.values())
 
 def sink_rx_tuples(f):
     results = []
