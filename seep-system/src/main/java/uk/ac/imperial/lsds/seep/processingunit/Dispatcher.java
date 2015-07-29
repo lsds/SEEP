@@ -74,20 +74,7 @@ public class Dispatcher implements IRoutingObserver {
 	public Dispatcher(IProcessingUnit owner)
 	{
 		this.owner = owner;
-		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
-		
-		if (bestEffort)
-		{
-			Query meanderQuery = owner.getOperator().getOpContext().getMeanderQuery(); 
-			int logicalId = meanderQuery.getLogicalNodeId(owner.getOperator().getOperatorId());
-			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
-			if (meanderQuery.getLogicalInputs(downLogicalId).length > 1)
-			{
-				throw new RuntimeException("TODO");
-			}
-		}
-		
-		downIsMultiInput = true;
+		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");		
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
 		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues"));
@@ -111,12 +98,38 @@ public class Dispatcher implements IRoutingObserver {
 			idxMapper.put(owner.getOperator().getOpContext().getDeclaredWorkingAttributes().get(i), i);
 		}
 		
-		if (Boolean.parseBoolean(GLOBALS.valueFor("enableFailureCtrlWatchdog")) && 
-				!owner.getOperator().getOpContext().isSink())
+		
+		Query meanderQuery = owner.getOperator().getOpContext().getMeanderQuery(); 
+		int logicalId = meanderQuery.getLogicalNodeId(owner.getOperator().getOperatorId());
+		
+		if (owner.getOperator().getOpContext().isSink())
 		{
-			failureCtrlWatchdog = new FailureCtrlWatchdog();
+			downIsMultiInput = false;
+			failureCtrlWatchdog = null;
 		}
-		else { failureCtrlWatchdog = null; }		
+		else
+		{
+			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
+			if (bestEffort)
+			{
+				if (meanderQuery.getLogicalInputs(downLogicalId).length > 1)
+				{
+					throw new RuntimeException("TODO");
+				}
+			}
+			
+			downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+			int numDownstreamReplicas = meanderQuery.getPhysicalNodeIds(downLogicalId).size();
+			if (Boolean.parseBoolean(GLOBALS.valueFor("enableFailureCtrlWatchdog")) && 
+					numDownstreamReplicas > 1)
+			{
+				failureCtrlWatchdog = new FailureCtrlWatchdog();
+			}
+			else 
+			{ 
+				failureCtrlWatchdog = null; 
+			}	
+		}
 	}
 	
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
