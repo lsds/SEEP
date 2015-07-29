@@ -105,6 +105,11 @@ public class BackpressureRouter implements IRouter {
 		return handleDownUp(downUp, true);
 	}
 
+	public void handleDownFailed(int downOpId)
+	{
+		handleDownUp(new DownUpRCtrl(downOpId, -1.0, null), false);
+	}
+	
 	private Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
 	{
 		Map<Integer, Set<Long>> newConstraints = null;

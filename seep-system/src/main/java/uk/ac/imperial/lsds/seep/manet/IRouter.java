@@ -11,6 +11,7 @@ public interface IRouter {
 
 	public ArrayList<Integer> route(long batchId);
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp);
+	public void handleDownFailed(int downOpId);
 	public void updateNetTopology(
 			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState);
 	public Set<Long> areConstrained(Set<Long> queued);

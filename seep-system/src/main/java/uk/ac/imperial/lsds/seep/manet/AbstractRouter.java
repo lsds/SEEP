@@ -32,4 +32,9 @@ public class AbstractRouter implements IRouter {
 	{
 		return null;
 	}
+	
+	public void handleDownFailed(int downOpId)
+	{
+		throw new RuntimeException("TODO"); 
+	}
 }

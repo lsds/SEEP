@@ -745,7 +745,7 @@ public class Dispatcher implements IRoutingObserver {
 					//TODO: Double check the downstream operator id you're using here is the same as the routing control worker
 					//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
 					//Should you actually force close the control connection?
-					owner.getOperator().getRouter().update_highestWeight(new DownUpRCtrl(dest.getOperatorId(), -1.0, null));
+					owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
 					//TODO: Interrupt the dispatcher thread
 					
 					//Reconnect synchronously (might need to add a helper method to the output queue).
@@ -872,7 +872,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (!flushSuccess)
 			{
 				logger.warn("Failed to send control tuple, clearing routing ctrl.");
-				owner.getOperator().getRouter().update_highestWeight(new DownUpRCtrl(downId, -1.0, null));
+				owner.getOperator().getRouter().update_downFailed(downId);
 			}
 		}
 	}
@@ -1002,6 +1002,7 @@ public class Dispatcher implements IRoutingObserver {
 				public void run() 
 				{  
 					logger.warn("Failure ctrl watchdog of "+owner.getOperator().getOperatorId() + " for "+downOpId+" expired.");
+					owner.getOperator().getRouter().update_downFailed(downOpId);
 					synchronized(lock)
 					{
 						clear(downOpId);

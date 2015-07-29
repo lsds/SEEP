@@ -265,6 +265,18 @@ public class Router implements Serializable{
 		}
 	}
 	
+	public void update_downFailed(int downOpId)
+	{
+		if (meanderRouter == null) 
+		{ 
+			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
+			return;
+		}
+		
+		meanderRouter.handleDownFailed(downOpId);
+		notifyObservers(null);
+	}
+	
 	public void addObserver(IRoutingObserver o)
 	{
 		observers.add(o);
