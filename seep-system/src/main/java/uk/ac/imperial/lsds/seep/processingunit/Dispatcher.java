@@ -1023,6 +1023,7 @@ public class Dispatcher implements IRoutingObserver {
 							IBuffer buffer = cci.getBuffer();
 							TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
 							logger.debug("Watchdog requeueing "+delayedBatches.size()+" tuples sent to "+downOpId);
+							long now = System.currentTimeMillis();
 							for (Map.Entry<Long, BatchTuplePayload> e : delayedBatches.entrySet())
 							{
 								long ts = e.getKey();
@@ -1032,9 +1033,10 @@ public class Dispatcher implements IRoutingObserver {
 								{	
 									//TODO: what if acked already?
 									DataTuple dt = new DataTuple(idxMapper, p);
+									long latency = now - dt.getPayload().instrumentation_ts;
 									if (!optimizeReplay || !combinedDownFctrl.alives().contains(ts))
 									{
-										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with timestamp="+p.timestamp);
+										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with timestamp="+p.timestamp+",latency="+latency);
 										opQueue.forceAdd(dt);
 									}
 								}

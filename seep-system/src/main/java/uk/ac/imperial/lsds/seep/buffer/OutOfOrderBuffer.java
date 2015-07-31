@@ -76,6 +76,7 @@ public class OutOfOrderBuffer implements IBuffer {
 			}
 		}
 
+		logger.info("Returning "+delayed.size()+ " of "+log.size()+" tuples");
 		return delayed;
 	}
 	
