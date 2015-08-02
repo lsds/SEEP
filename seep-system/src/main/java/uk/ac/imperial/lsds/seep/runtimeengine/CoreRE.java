@@ -356,17 +356,19 @@ public class CoreRE {
 						
 					}
 					
-					if (GLOBALS.valueFor("net-routing").equals("OLSRETX"))
-					{
+					//if (GLOBALS.valueFor("net-routing").equals("OLSRETX"))
+					//{
 						LOG.info("Starting OLSRETX net rate monitor.");
 						netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
 						nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
-						nrMonT.start();					
+						nrMonT.start();		
+					/*
 					}
 					else
 					{
 						LOG.warn("Net rate monitor disabled for net-routing:"+GLOBALS.valueFor("net-routing"));
 					}
+					*/
 				}
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
