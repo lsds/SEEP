@@ -145,11 +145,9 @@ public class NetRateMonitor implements Runnable {
 		return upstreamCosts;
 	}
 	
-	
 	private Map<Integer, Double> parseOLSRRoutes(List<String> routes)
 	{
-		logger.info("Read routes: "+routes);
-		return null;
+		return parseOLSRETXRoutes(routes);
 	}
 	
 	//Find ids of all operators/workers located on a particular host.
