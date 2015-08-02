@@ -59,7 +59,21 @@ public class NetRateMonitor implements Runnable {
 					{
 						logNetInfo(allNetInfo());
 					}
-					upstreamCosts = parseRoutes(readRoutes());
+					
+					List<String> routes = readRoutes();
+					if (GLOBALS.valueFor("net-routing").equals("OLSRETX"))
+					{
+						upstreamCosts = parseOLSRETXRoutes(routes);
+					}
+					else if (GLOBALS.valueFor("net-routing").equals("OLSR"))
+					{
+						upstreamCosts = parseOLSRRoutes(routes); 
+					}
+					else if (GLOBALS.valueFor("net-routing").equals("OSPFv3MDR"))
+					{
+						throw new RuntimeException("TODO"); 
+					}
+					else { throw new RuntimeException("Unknown routing alg: "+GLOBALS.valueFor("net-routing")); }
 					//TODO: Add empty routes/costs?
 				}
 				else
@@ -108,7 +122,7 @@ public class NetRateMonitor implements Runnable {
 		return result;
 	}
 	
-	private Map<Integer, Double> parseRoutes(List<String> routes)
+	private Map<Integer, Double> parseOLSRETXRoutes(List<String> routes)
 	{
 		logger.info("Read routes: "+routes);
 		Map<Integer, Double> upstreamCosts = new HashMap<>();
@@ -129,6 +143,13 @@ public class NetRateMonitor implements Runnable {
 		
 		logger.info("Up op costs: "+ upstreamCosts);
 		return upstreamCosts;
+	}
+	
+	
+	private Map<Integer, Double> parseOLSRRoutes(List<String> routes)
+	{
+		logger.info("Read routes: "+routes);
+		return null;
 	}
 	
 	//Find ids of all operators/workers located on a particular host.
