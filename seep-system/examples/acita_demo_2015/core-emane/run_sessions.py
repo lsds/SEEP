@@ -173,6 +173,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False)
 
         services_str += "|%s"%params['net-routing']
+        if params['quagga']: services_str += "|zebra|vtysh"
         workers = []
         num_workers = get_num_workers(k, params)
         print 'num_workers=', num_workers
@@ -428,7 +429,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
     parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSRETX',
-            help='Net layer routing alg (OLSR, OLSRETX)')
+            help='Net layer routing alg (OLSR, OLSRETX, OSPFv3MDR)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
     parser.add_argument('--constraints', dest='constraints', default='', help='Export the session configuration to an XML file')

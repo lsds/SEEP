@@ -182,6 +182,7 @@ if __name__ == "__main__":
     parser.add_argument('--workerPreDelay', dest='worker_predelay', default=None, help='Time to wait before starting worker')
     parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
+    parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -210,6 +211,7 @@ if __name__ == "__main__":
     params['sinks']=args.sinks
     params['fanin']=args.max_fan_in
     params['scaleOutSinks']=args.scale_sinks
+    params['quagga']=args.quagga
     if args.trace: params['trace']=args.trace
     if args.verbose: params['verbose']='true'
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
