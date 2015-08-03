@@ -71,7 +71,7 @@ public class NetRateMonitor implements Runnable {
 					}
 					else if (GLOBALS.valueFor("net-routing").equals("OSPFv3MDR"))
 					{
-						throw new RuntimeException("TODO"); 
+						upstreamCosts = null; 
 					}
 					else { throw new RuntimeException("Unknown routing alg: "+GLOBALS.valueFor("net-routing")); }
 					//TODO: Add empty routes/costs?
@@ -119,12 +119,13 @@ public class NetRateMonitor implements Runnable {
 			logger.error("Error reading routes: "+e);
 			System.exit(0);	//TODO: A bit harsh?
 		}
+		
+		logger.info("Read routes: "+result);
 		return result;
 	}
 	
 	private Map<Integer, Double> parseOLSRETXRoutes(List<String> routes)
 	{
-		logger.info("Read routes: "+routes);
 		Map<Integer, Double> upstreamCosts = new HashMap<>();
 		logger.info("Checking routes against upOpIds: "+upOpIds);
 		for (String route : routes)
