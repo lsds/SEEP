@@ -42,11 +42,14 @@ public class OutputQueue {
 	private AtomicInteger replaySemaphore = new AtomicInteger(0);
 	private Kryo k = null;
 	private final boolean bestEffort;
+	private final boolean outputQueueTimestamps;
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
 		this.k = initializeKryo();
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
+		boolean isSource = owner.getProcessingUnit().getOperator().getOpContext().isSource();
+		outputQueueTimestamps = isSource && Boolean.parseBoolean(GLOBALS.valueFor("srcOutputQueueTimestamps"));
 	}
 	
 	private Kryo initializeKryo(){
@@ -114,8 +117,8 @@ public class OutputQueue {
 				{
 					tp.timestamp = System.currentTimeMillis(); // assign local ack
 				}
-				
 				long currentTime = System.currentTimeMillis();
+				if (outputQueueTimestamps) { tp.instrumentation_ts = currentTime; }
 				long latency = currentTime - tp.instrumentation_ts;
 				long oqLatency = currentTime - tp.local_ts;
 				tp.local_ts = currentTime;
