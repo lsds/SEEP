@@ -115,10 +115,14 @@ public class ControlHandlerWorker implements Runnable{
 			Input i = new Input(is, 100000);
 			//Read the connection to get the data
 			while(goOn){
+				long readStart = System.currentTimeMillis();
 				tuple = k.readObject(i, ControlTuple.class);
+				long readEnd = System.currentTimeMillis();
+				LOG.info("Read control tuple in "+ (readEnd-readStart) + " ms");
 				if(tuple != null){
 					InetAddress ip = incomingSocket.getInetAddress();
 					owner.processControlTuple(tuple, os, ip);
+					LOG.info("Processed control tuple in "+(System.currentTimeMillis()-readEnd) + " ms");
 				}
 				else{
 					LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
