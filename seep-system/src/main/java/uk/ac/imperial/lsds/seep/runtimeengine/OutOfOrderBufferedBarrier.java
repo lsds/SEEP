@@ -52,6 +52,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.barrierTimeout = Long.parseLong(GLOBALS.valueFor("barrierTimeout"));
 		if (barrierTimeout > 0)  
 		{ 
+			logger.info("Setting up barrier timeout monitor with delay="+barrierTimeout);
 			barrierTimeoutMonitor = new BarrierTimeoutMonitor(); 
 		} 
 		else { barrierTimeoutMonitor = null; } 
@@ -283,7 +284,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			}
 			constraintRanges.add(toRangeSet(constraints.get(i)));
 		}
-		logger.debug("Constraints: "+constraintRanges);
+		logger.debug("Constraint ranges: "+constraintRanges+", constraints:"+constraints);
 		return constraintRanges;
 	}
 	
