@@ -41,6 +41,7 @@ def build_cfg(lwid, cls, node, filename, services):
         cfg += "ip route > rt.log\n"
         cfg += "ifconfig > if.log\n"
         cfg += "/sbin/route > rts.log\n"
+        cfg += 'echo "0.0,0.0,0.0" > node.xyz\n'
         cfg += "./net-rates.sh\n"
         cfg += "./run-worker.py --id %d\n"%lwid
         cfg += "/sbin/route > rts-end.log\n"

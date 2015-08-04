@@ -186,6 +186,7 @@ def run_session(time_str, k, mob, exp_session, params):
         """
 
         placements = get_initial_placements(params['placement'], mob)
+	print 'Initial placements=',placements
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
             if placements:
@@ -198,7 +199,7 @@ def run_session(time_str, k, mob, exp_session, params):
         routers = []
         print 'Creating routers.'
         # Create auxiliary 'router' nodes if any left
-        for i in range(3+len(num_workers), 2+params['nodes']):
+        for i in range(3+len(num_workers), 1+params['nodes']):
             if placements:
                 pos = placements[i]
             else:
@@ -207,7 +208,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         if trace_file:
             #node_map = create_node_map(range(0,6), workers)
-            node_map = create_node_map(range(0,params['nodes']-1), workers+routers)
+            node_map = create_node_map(range(0,params['nodes']-2), workers+routers)
             print 'Node map=%s'%node_map
             mobility_params[4] = ('map', node_map)
             mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
@@ -217,7 +218,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
-        session.node_count="%d"%(1+params['nodes'])
+        session.node_count="%d"%(params['nodes'])
         if params['saveconfig']:
             print 'Saving session config.'
             savesessionxml(session, '%s/session.xml'%session.sessiondir)

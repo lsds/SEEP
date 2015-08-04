@@ -26,7 +26,8 @@ public class RoutingController implements Runnable{
 	private final static Logger logger = LoggerFactory.getLogger(RoutingController.class);
 	private final static double INITIAL_WEIGHT = -1;
 	//private final static double COST_THRESHOLD = 3.9;
-	private final static double COST_THRESHOLD = 4.5;
+	//private final static double COST_THRESHOLD = 4.5;
+	private final static double COST_THRESHOLD = 5.5;
 	private final long MAX_WEIGHT_DELAY;// = 1 * 1000;
 	private final CoreRE owner;
 	private final Integer nodeId;

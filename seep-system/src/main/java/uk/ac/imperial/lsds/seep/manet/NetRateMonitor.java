@@ -71,7 +71,7 @@ public class NetRateMonitor implements Runnable {
 					}
 					else if (GLOBALS.valueFor("net-routing").equals("OSPFv3MDR"))
 					{
-						upstreamCosts = null; 
+						upstreamCosts = parseOLSRRoutes(routes); 
 					}
 					else { throw new RuntimeException("Unknown routing alg: "+GLOBALS.valueFor("net-routing")); }
 					//TODO: Add empty routes/costs?
