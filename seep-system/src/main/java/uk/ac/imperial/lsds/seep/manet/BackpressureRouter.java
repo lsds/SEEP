@@ -215,15 +215,16 @@ public class BackpressureRouter implements IRouter {
 	
 	private boolean unmatchedChanged(Set<Long> oldUnmatched, Set<Long> newUnmatched)
 	{
-		if (oldUnmatched == null && newUnmatched == null) { return true;}		
-		if (oldUnmatched == null || newUnmatched == null) { return false;}
-		if (oldUnmatched.size() != newUnmatched.size()) { return false; }
+		if (oldUnmatched == null && newUnmatched == null) { return false;}		
+		if ((oldUnmatched == null && !newUnmatched.isEmpty()) || 
+				(newUnmatched == null && !oldUnmatched.isEmpty())) { return true;}
+		if (oldUnmatched.size() != newUnmatched.size()) { return true; }
 		
 		for (Long unmatched : oldUnmatched) 
 		{ 
-			if (!newUnmatched.contains(unmatched)) { return false; }
+			if (!newUnmatched.contains(unmatched)) { return true; }
 		}
-		return true;
+		return false;
 	}
 	
 	private class WeightExpiryMonitor
