@@ -153,6 +153,7 @@ public class BackpressureRouter implements IRouter {
 				//clean it up to perhaps use a different method.
 				Set<Long> oldUnmatched = unmatched.get(downUp.getOpId());
 				boolean changed = unmatchedChanged(oldUnmatched, newUnmatched);
+				logger.debug("Unmatched changed for "+downUp.getOpId()+"="+changed+", old="+oldUnmatched+",new="+newUnmatched);
 				unmatched.put(downUp.getOpId(), newUnmatched);
 				
 				if (changed) {
