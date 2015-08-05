@@ -321,8 +321,13 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			else
 			{
 				result.add(Range.closed(rangeStart, rangeEnd));
-				rangeStart = null;
-				rangeEnd = null;
+				rangeStart = next;
+				rangeEnd = next;
+				if (!iter.hasNext())
+				{
+					result.add(Range.closed(rangeStart, rangeEnd));
+					break;
+				}
 			}
 		}
 		return result;
