@@ -898,6 +898,7 @@ public class CoreRE {
 	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
 	{
 		if (controlDispatcher == null || upOpIndexes.isEmpty()) { return; }
+		long tStart = System.currentTimeMillis();
 		LOG.debug("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		DataStructureI dso = dsa.getUniqueDso();
 		if (dso == null) { throw new RuntimeException("TODO"); }
@@ -918,6 +919,7 @@ public class CoreRE {
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
 		}
+		LOG.info("Wrote failure ctrl in "+ (System.currentTimeMillis() - tStart) + " ms");
 	}
 	
 	public void writeDownstreamFailureCtrls(ArrayList<Integer> downOpIndexes, FailureCtrl nodeFctrl)

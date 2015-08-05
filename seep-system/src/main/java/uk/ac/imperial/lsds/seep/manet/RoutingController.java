@@ -97,6 +97,7 @@ public class RoutingController implements Runnable{
 			
 			logger.info("Routing controller sending weights upstream: "+weightsCopy);
 			
+			long tSendBegin = System.currentTimeMillis();
 			if (numLogicalInputs > 1)
 			{
 				ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
@@ -121,7 +122,7 @@ public class RoutingController implements Runnable{
 					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
 				}
 			}
-			
+			logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms");
 			long tStart = System.currentTimeMillis();
 			long tNow = tStart;
 			while (tNow - tStart < MAX_WEIGHT_DELAY)
