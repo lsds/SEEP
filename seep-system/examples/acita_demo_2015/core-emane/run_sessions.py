@@ -154,6 +154,10 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Basic Range configured values: %s'%(str(model_cfg))
             wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
 
+        if params['iperf']:
+            run_iperf_test(session, wlan1, mob, trace_file, params)
+            return
+
         #Copy appropriate mapping constraints.
         exp_results_dir = '%s/log/%s'%(script_dir, time_str)
         session_constraints = '%s/session%dsMappingRecord.txt'%(exp_results_dir, exp_session)
@@ -165,9 +169,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
-        #services_str = "IPForward|SSH|%s"%params['net-routing']
         services_str = "IPForward|SSH"
-
 
         master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False)
@@ -177,16 +179,8 @@ def run_session(time_str, k, mob, exp_session, params):
         workers = []
         num_workers = get_num_workers(k, params)
         print 'num_workers=', num_workers
-        """
-        Num_workers = 2 + (k * params['h'])
-        if params['query'] == 'join':
-            if params['h'] != 1: raise Exception('Only support query of height 1 for join')
-            num_workers += 1
-        else: raise Exception("Temp.")
-        """
-
         placements = get_initial_placements(params['placement'], mob)
-	print 'Initial placements=',placements
+        print 'Initial placements=',placements
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
             if placements:
@@ -331,10 +325,10 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     return n
 
 def create_node_map(ns_nums, nodes):
-    if len(ns_nums) != len(nodes): 
-        raise Exception("Invalid node mapping.")
     print 'ns_nums=%s'%str(ns_nums)
     print 'nodes=%s'%str(nodes)
+    if len(ns_nums) != len(nodes): 
+        raise Exception("Invalid node mapping, %d != %d"%(len(ns_nums), len(nodes)))
     return ",".join(map(lambda (ns_num, node) : "%d:%d"%(ns_num,node.objid), zip(ns_nums, nodes)))
 
 def get_initial_placements(placements, mobility):
@@ -416,6 +410,42 @@ def copy_seep_jar(session_dir):
 
 def regen_sessions(time_str):
     raise Exception("TODO")
+
+def run_iperf_test(session, wlan1, mob, trace_file, params):
+    services_str = "IPForward|SSH"
+    services_str += "|%s"%params['net-routing']
+
+    placements = get_initial_placements(params['placement'], mob)
+    pos = placements[2] if placements else gen_grid_position(2, params['nodes']-1, 2, spacing=400)
+    src = create_node(2, session, "%s|IPerfSrc"%(services_str), wlan1, pos) 
+    
+    pos = placements[3] if placements else gen_grid_position(3, params['nodes']-1, 2, spacing=400)
+    sink = create_node(3, session, "%s|IPerfSink"%(services_str), wlan1, pos) 
+   
+    routers = []
+    print 'Creating routers.'
+    # Create auxiliary 'router' nodes if any left
+    for i in range(4, params['nodes']+1):
+        if placements:
+            pos = placements[i]
+        else:
+            pos = gen_grid_position(i, params['nodes']-1, 2, spacing=400)
+        routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
+
+    if trace_file:
+        #node_map = create_node_map(range(0,6), workers)
+        node_map = create_node_map(range(0,params['nodes']-1), [src, sink]+routers)
+        print 'Node map=%s'%node_map
+        mobility_params[4] = ('map', node_map)
+        mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
+        refresh_ms = int(params.get('refresh_ms', 500))
+        mobility_params[1] = ('refresh_ms', refresh_ms)
+        session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
+
+
+    session.node_count="%d"%(params['nodes'])
+    session.instantiate()
+    time.sleep(1000000)
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')

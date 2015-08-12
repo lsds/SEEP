@@ -22,22 +22,23 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
         run_experiment(ks, mobilities, session_ids, params, time_str, data_dir )
 
-    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
-    record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
+    if not params['iperf']:
+        record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
+        record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
 
-    if len(mobilities) > 1:
-        for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
-            'latency_vs_mobility', 'tput_vs_mobility_stddev', 
-            'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
-            'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
-            plot(p, time_str, script_dir, data_dir)
-    else:
-        plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-        plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-        plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-        plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+        if len(mobilities) > 1:
+            for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
+                'latency_vs_mobility', 'tput_vs_mobility_stddev', 
+                'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
+                'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
+                plot(p, time_str, script_dir, data_dir)
+        else:
+            plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+            plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+            plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+            plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
 
-    chmod_dir('%s/%s'%(data_dir, time_str))
+        chmod_dir('%s/%s'%(data_dir, time_str))
 
 def get_session_dir(k, mob, session, time_str, data_dir):
     return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
@@ -183,6 +184,7 @@ if __name__ == "__main__":
     parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
+    parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -212,6 +214,7 @@ if __name__ == "__main__":
     params['fanin']=args.max_fan_in
     params['scaleOutSinks']=args.scale_sinks
     params['quagga']=args.quagga
+    params['iperf']=args.iperf
     if args.trace: params['trace']=args.trace
     if args.verbose: params['verbose']='true'
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
