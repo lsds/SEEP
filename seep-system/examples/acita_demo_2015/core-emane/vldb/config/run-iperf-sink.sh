@@ -1,3 +1,4 @@
 #!/bin/bash
 
-iperf -s
+#iperf -s -u -i 1
+iperf -s -i 1

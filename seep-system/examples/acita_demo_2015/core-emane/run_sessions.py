@@ -106,6 +106,7 @@ def run_session(time_str, k, mob, exp_session, params):
             trace_params = dict(params)
             trace_params['h'] = mob + 1.0
             trace_params['l'] = mob - 1.0
+            trace_params['o'] = mob
             trace_file = gen_trace(session.sessiondir, exp_session, trace_params)
             print 'Trace file=',trace_file
 
@@ -133,6 +134,7 @@ def run_session(time_str, k, mob, exp_session, params):
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('mode') ] = '3'
             values[ names.index('propagationmodel') ] = '2ray'
+            #values[ names.index('propagationmodel') ] = 'freespace'
             #values[ names.index('pathlossmode') ] = '2ray'
             #values[ names.index('multicastrate') ] = '12'
             values[ names.index('multicastrate') ] = '4'
@@ -208,6 +210,7 @@ def run_session(time_str, k, mob, exp_session, params):
             mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
             refresh_ms = int(params.get('refresh_ms', 500))
             mobility_params[1] = ('refresh_ms', refresh_ms)
+            mobility_params[2] = ('loop', 0)
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
@@ -414,8 +417,10 @@ def regen_sessions(time_str):
 def run_iperf_test(session, wlan1, mob, trace_file, params):
     services_str = "IPForward|SSH"
     services_str += "|%s"%params['net-routing']
+    if params['quagga']: services_str += "|zebra|vtysh"
 
     placements = get_initial_placements(params['placement'], mob)
+    print placements
     pos = placements[2] if placements else gen_grid_position(2, params['nodes']-1, 2, spacing=400)
     src = create_node(2, session, "%s|IPerfSrc"%(services_str), wlan1, pos) 
     
