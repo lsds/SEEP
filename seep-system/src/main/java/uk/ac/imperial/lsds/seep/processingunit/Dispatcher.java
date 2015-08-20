@@ -348,10 +348,9 @@ public class Dispatcher implements IRoutingObserver {
 					}
 				}
 			}
-			
-			synchronized(lock) { lock.notifyAll(); }
-			logger.debug("Finished handling routing change, duration=" + ((System.currentTimeMillis() - tStart)/1000));
-		}
+		}	
+		synchronized(lock) { lock.notifyAll(); }
+		logger.debug("Finished handling routing change, duration=" + ((System.currentTimeMillis() - tStart)/1000));
 	}
 	
 	private boolean isDownAlive(int downOpId, long ts)
