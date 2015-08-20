@@ -259,7 +259,14 @@ public class ShortestPathRouter implements IRouter {
 	
 	public void handleDownFailed(int downOpId)
 	{
-		throw new RuntimeException("TODO"); 
+		int nextHopIndex = opContext.getDownOpIndexFromOpId(downOpId);
+		synchronized(lock)
+		{
+			if (nextHopIndex == currentNextHop)
+			{
+				currentNextHop = null;
+			}	
+		} 
 	}
 }
 
