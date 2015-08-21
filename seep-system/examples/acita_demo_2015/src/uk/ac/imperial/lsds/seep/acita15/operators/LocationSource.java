@@ -34,7 +34,12 @@ public class LocationSource implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Source.class);
-	private final BlockingQueue<String> heatMapQueue = new LinkedBlockingQueue<>();
+	boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
+	long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+	int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
+	boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
+	long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
+	private final BlockingQueue<String> heatMapQueue = new LinkedBlockingQueue<>(rateLimitSrc ? Integer.MAX_VALUE : 50);;
 	
 	public void setUp() {
 		System.out.println("Setting up LOCATION_SOURCE operator with id="+api.getOperatorId());
@@ -46,11 +51,6 @@ public class LocationSource implements StatelessOperator {
 		
 		long tupleId = 0;
 		
-		boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
-		long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
-		int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
-		boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
-		long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
 		long interFrameDelay = 1000 / frameRate;
 		logger.info("Source inter-frame delay="+interFrameDelay);
 		
@@ -147,14 +147,18 @@ public class LocationSource implements StatelessOperator {
 					logger.warn("Got null location.");
 				}
 				
-				try {
-					Thread.sleep(locUpdateInterval);
-				} 
-				catch (InterruptedException e) {
-					e.printStackTrace();
-				}	
+				if (rateLimitSrc)
+				{
+					try {
+						Thread.sleep(locUpdateInterval);
+					}
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}	
+				}
+				
 				long tNow = System.currentTimeMillis();
-				if (tNow - tStart > heatMapInterval)
+				if (tNow - tStart > heatMapInterval || !rateLimitSrc)
 				{
 					logger.info("Heat map queue size="+heatMapQueue.size());
 					heatMapQueue.add(current.toString());
