@@ -234,9 +234,9 @@ public class CoreProcessingLogic implements Serializable{
 				
 				//Now trim the input data structures + trigger the fctrl writer to write 
 				//a new fctrl.
-				if (!pu.getOperator().getOpContext().isSource())
+				if (!pu.getOperator().getOpContext().isSource() && !Boolean.parseBoolean(GLOBALS.valueFor("perodicFctrlsOnly")))
 				{
-					owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
+					//owner.writeFailureCtrls(pu.getOperator().getOpContext().getListOfUpstreamIndexes(), updatedFctrl);
 				}
 			}
 			else

@@ -46,6 +46,11 @@ public class LocationSource implements StatelessOperator {
 	}
 
 	public void processData(DataTuple dt) {
+		//Initial sleep to give control connections
+		//time to establish.
+		try { Thread.sleep(15000); }
+		catch(InterruptedException e) {}
+
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
 		
