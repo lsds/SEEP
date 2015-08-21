@@ -15,6 +15,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
@@ -25,6 +26,7 @@ public class Processor implements StatelessOperator{
 	private static final Logger logger = LoggerFactory.getLogger(Processor.class);
 	private int processed = 0;
 	private Stats stats;
+	private final long processingDelay = Long.parseLong(GLOBALS.valueFor("defaultProcessingDelay"));
 	
 	public void processData(DataTuple data) {
 		long tupleId = data.getLong("tupleId");
@@ -44,6 +46,8 @@ public class Processor implements StatelessOperator{
 				recordTuple(outputTuple);
 			}
 		}
+		
+		doProcessing();
 		
 		stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
 		api.send_highestWeight(outputTuple);
@@ -86,4 +90,11 @@ public class Processor implements StatelessOperator{
 		stats = new Stats(api.getOperatorId());
 	}
 
+	private void doProcessing()
+	{
+		if (processingDelay > 0)
+		{
+			Thread.sleep(processingDelay);
+		}
+	}
 }
