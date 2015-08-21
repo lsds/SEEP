@@ -93,8 +93,9 @@ public class Processor implements StatelessOperator{
 	private void doProcessing()
 	{
 		if (processingDelay > 0)
-		{
-			Thread.sleep(processingDelay);
+		{	
+			try { Thread.sleep(processingDelay); }
+			catch (InterruptedException e) { }
 		}
 	}
 }
