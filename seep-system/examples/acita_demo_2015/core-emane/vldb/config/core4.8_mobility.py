@@ -557,10 +557,12 @@ class WayPointMobility(WirelessModel):
                     self.session.evq.add_event(0.001 * self.refresh_ms, self.runround)
                     return
                 if not self.loopwaypoints():
-                    return self.stop(move_initial=False)
+                    #return self.stop(move_initial=False)
+                    raise Exception("Mobility script expired (1)!")
                 if not len(self.queue):
                     # prevent busy loop
-                    return
+                    #return
+                    raise Exception("Mobility script expired (2)!")
                 return self.run()
         
         # only move netifs attached to self.wlan, or all nodenum in script?

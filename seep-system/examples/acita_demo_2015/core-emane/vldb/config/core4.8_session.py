@@ -703,6 +703,7 @@ class Session(object):
         self.addremovectrlif(node=None, netidx=2, remove=True)
         self.addremovectrlif(node=None, netidx=3, remove=True)
 
+        self.setstate(coreapi.CORE_EVENT_DATACOLLECT_STATE, info=True, sendevent=True)
         # self.checkshutdown() is currently invoked from node delete handler
 
     def checkshutdown(self):

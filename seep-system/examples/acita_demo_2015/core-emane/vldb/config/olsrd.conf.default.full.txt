@@ -326,7 +326,7 @@
 # change during the uptime of olsrd.
 # (default is 0.0.0.0, which triggers usage of the IP of the first interface)
 
-MainIp 192.168.181.102
+#MainIp 192.168.181.102
 
 # The fixed willingness to use (0-7)
 # If not set willingness will be calculated
@@ -488,6 +488,9 @@ LoadPlugin "olsrd_jsoninfo.so.0.0" {
 LoadPlugin "olsrd_httpinfo.so.0.1" {
 }
 
+LoadPlugin "olsrd_txtinfo.so.0.1" {
+}
+
 #############################################
 ### OLSRD default interface configuration ###
 #############################################
@@ -497,6 +500,14 @@ LoadPlugin "olsrd_httpinfo.so.0.1" {
 
 InterfaceDefaults
 {
+    # HelloInterval       2.0
+    HelloInterval       1.0
+
+    # HelloValidityTime   20.0
+    HelloValidityTime   10.0
+
+    # TcInterval          5.0
+    # TcValidityTime      300.0
 }
 
 ######################################
