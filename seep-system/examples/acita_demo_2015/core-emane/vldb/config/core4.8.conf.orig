@@ -21,11 +21,11 @@ quagga_sbin_search = "/usr/local/sbin /usr/sbin /usr/lib/quagga"
 # uncomment the following line to load custom services from the specified dir
 #   this may be a comma-separated list, and directory names should be unique
 #   and not named 'services'
-#custom_services_dir = /home/username/.core/myservices
+custom_services_dir = /home/dokeeffe/.core/myservices
 #
 # uncomment to  establish a standalone control backchannel for accessing nodes 
 # (overriden by the session option of the same name)
-#controlnet = 172.16.0.0/24 
+controlnet = 172.16.0.0/24 
 # 
 #
 # uncomment and edit to establish a distributed control backchannel
