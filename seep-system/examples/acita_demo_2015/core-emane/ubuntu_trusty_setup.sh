@@ -106,9 +106,10 @@ sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
 echo "Installing pip + python packages."
 #For 14.04 can just install olsrd from apt-get directly.
 sudo apt-get install python-pip
+sudp apt-get install python-dev
 
 #python pandas
-#sudo pip install pandas
+sudo pip install pandas
 
 #python matplotlib
 #sudo pip install matplotlib
