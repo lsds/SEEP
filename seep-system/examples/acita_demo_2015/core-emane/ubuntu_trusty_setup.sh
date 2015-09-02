@@ -98,6 +98,7 @@ pushd olsrd-0.9.0.2
 make
 sudo make install
 popd
+
 #Update olsrd config.
 sudo cp /etc/olsrd/olsrd.conf /etc/olsrd/olsrd.conf.orig
 sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
@@ -125,7 +126,7 @@ sudo cp vldb/config/core4.8_mobility.py /usr/lib/python2.7/dist-packages/core/mo
 
 #Then need to update /etc/hosts.
 sudo cp /etc/hosts /etc/hosts.orig
-sudo cat vldb/config/etc-hosts-additions >> /etc/hosts
+sudo bash -c "cat vldb/config/etc-hosts-additions >> /etc/hosts"
 
 #Then need to update core config (e.g. for control net).
 sudo cp /etc/core/core.conf /etc/core/core.conf.orig
