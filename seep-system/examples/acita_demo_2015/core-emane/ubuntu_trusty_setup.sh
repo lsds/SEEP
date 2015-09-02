@@ -106,13 +106,14 @@ sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
 echo "Installing pip + python packages."
 #For 14.04 can just install olsrd from apt-get directly.
 sudo apt-get install python-pip
-sudp apt-get install python-dev
+sudo apt-get install python-dev
+sudo apt-get install libpng12-dev libfreetype6-dev pkg-config
 
 #python pandas
 sudo pip install pandas
 
 #python matplotlib
-#sudo pip install matplotlib
+sudo pip install matplotlib
 
 #python utm
 sudo pip install utm
@@ -135,4 +136,16 @@ sudo cp vldb/config/core4.8.conf.orig /etc/core/core.conf
 
 #Then need to point core config to acita config dir.
 ln -s `pwd`/vldb /home/dokeeffe/.core
+
+# Install tun_flowctl
+popd
+git clone https://github.com/adjacentlink/tun_flowctl.git
+
+pushd tun_flowctl
+cp -r 3.13.0-35-generic `uname -r`
+make
+make install
+popd
+popd
+
 popd

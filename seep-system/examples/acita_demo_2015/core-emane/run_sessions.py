@@ -6,7 +6,8 @@ from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
-from core.misc.xmlutils import savesessionxml
+#from core.misc.xmlutils import savesessionxml
+from core.misc.xmlsession import savesessionxml
 from util import chmod_dir
 
 script_dir = os.path.dirname(os.path.realpath(__file__))

@@ -482,11 +482,11 @@ IpcConnect
 # Check whether a plugin is available for your operating system.
 # Each plugin should have a README file in it's lib subfolder.
 
-LoadPlugin "olsrd_jsoninfo.so.0.0" {
-}
+#LoadPlugin "olsrd_jsoninfo.so.0.0" {
+#}
 
-LoadPlugin "olsrd_httpinfo.so.0.1" {
-}
+#LoadPlugin "olsrd_httpinfo.so.0.1" {
+#}
 
 LoadPlugin "olsrd_txtinfo.so.0.1" {
 }
