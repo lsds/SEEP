@@ -98,6 +98,9 @@ pushd olsrd-0.9.0.2
 make
 sudo make install
 popd
+#Update olsrd config.
+sudo cp /etc/olsrd/olsrd.conf /etc/olsrd/olsrd.conf.orig
+sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
 
 echo "Installing pip + python packages."
 #For 14.04 can just install olsrd from apt-get directly.
@@ -112,9 +115,22 @@ sudo apt-get install python-pip
 #python utm
 sudo pip install utm
 
+pushd ..
 #Then apply diff to core.
+sudo cp vldb/config/core4.8_session.py /usr/lib/python2.7/dist-packages/core/session.py
+sudo cp vldb/config/core4.8_mobility.py /usr/lib/python2.7/dist-packages/core/mobility.py
+
 #Then apply diff to emane?
-#Then update olsrd config?
-#Then need to point core config to acita config dir.
+#TODO: Don't think I need to do anything for 9.2.
+
 #Then need to update /etc/hosts.
+sudo cp /etc/hosts /etc/hosts.orig
+sudo cat vldb/config/etc-hosts-additions >> /etc/hosts
+
 #Then need to update core config (e.g. for control net).
+sudo cp /etc/core/core.conf /etc/core/core.conf.orig
+sudo cp vldb/config/core4.8.conf.orig /etc/core/core.conf
+
+#Then need to point core config to acita config dir.
+ln -s `pwd`/vldb /home/dokeeffe/.core
+popd
