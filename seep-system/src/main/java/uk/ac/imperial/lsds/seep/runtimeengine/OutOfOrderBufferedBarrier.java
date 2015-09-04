@@ -113,7 +113,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			else if (barrierTimeoutMonitor != null)
 			{
 				//TODO: Should perhaps timeout earlier depending on distance to sink? 
-				long delay = dt.getPayload().instrumentation_ts + barrierTimeout - System.currentTimeMillis();
+				//long delay = dt.getPayload().instrumentation_ts + barrierTimeout - System.currentTimeMillis();
+				long delay = barrierTimeout;
 				delay = delay > 0 ? delay : 1;
 				barrierTimeoutMonitor.set(ts, delay);
 			}
