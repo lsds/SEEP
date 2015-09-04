@@ -61,8 +61,10 @@ def gen_trace(session_dir, session_id, params):
                     '-y', str(params.get('y', default_y)),
                     '-o', str(params.get('o', default_speed)),
                     '-p', "1.0",
-                    '-k', default_p,
-                    '-l', "0.5"]
+                    #'-k', default_p,
+                    #'-l', "0.5"]
+                    '-k', "15.0",
+                    '-l', "15.0"]
 
         print 'Generating mobility trace with cmd=%s'%str(bm_raw_params)
         # call bonn_motion to generate trace
