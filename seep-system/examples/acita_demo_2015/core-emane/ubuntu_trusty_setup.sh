@@ -99,6 +99,19 @@ make
 sudo make install
 popd
 
+
+#git clone http://olsr.org/git/olsrd.git (to download source repo)
+#pushd olsrd
+#make
+#sudo make install
+#pushd lib/txtinfo
+#make
+#sudo make install
+#popd
+#popd
+
+#sudo apt-get install olsrd (installs 0.6.6 on trusty)
+
 #Update olsrd config.
 sudo cp /etc/olsrd/olsrd.conf /etc/olsrd/olsrd.conf.orig
 sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
@@ -149,3 +162,5 @@ popd
 popd
 
 popd
+
+sudo apt-get install gnuplot
