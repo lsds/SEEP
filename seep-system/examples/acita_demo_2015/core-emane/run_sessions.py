@@ -8,13 +8,13 @@ from core.mobility import Ns2ScriptedMobility
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
 #from core.misc.xmlutils import savesessionxml
 from core.misc.xmlsession import savesessionxml
-from util import chmod_dir
 
-script_dir = os.path.dirname(os.path.realpath(__file__))
-#script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
+#script_dir = os.path.dirname(os.path.realpath(__file__))
+script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
 
 print 'Appending script_dir to path'
-#sys.path.append(script_dir)
+sys.path.append(script_dir)
+from util import chmod_dir
 from gen_mobility_trace import gen_trace
 
 #repo_dir = '%s/../../../..'
@@ -219,7 +219,7 @@ def run_session(time_str, k, mob, exp_session, params):
         session.node_count="%d"%(params['nodes'])
         if params['saveconfig']:
             print 'Saving session config.'
-            savesessionxml(session, '%s/session.xml'%session.sessiondir)
+            savesessionxml(session, '%s/session.xml'%session.sessiondir, '1.0')
             #savesessionxml(session, '/tmp/session.xml')
 
         print 'Instantiating session:',exp_session
@@ -454,10 +454,14 @@ def run_iperf_test(session, wlan1, mob, trace_file, params):
     time.sleep(1000000)
 
 if __name__ == "__main__" or __name__ == "__builtin__":
+    print 'Hello world'
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--k', dest='k', default='2', help='replication factors (2)')
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join')
+    parser.add_argument('--sources', dest='sources', default='1', help='Sources')
+    parser.add_argument('--sinks', dest='sinks', default='1', help='Sinks (non-replicated)')
+    parser.add_argument('--fanin', dest='fanin', default='2', help='Join fan-in')
     parser.add_argument('--pausetime', dest='pt', default='2.0', help='pause time (2.0)')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
@@ -471,6 +475,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
     parser.add_argument('--constraints', dest='constraints', default='', help='Export the session configuration to an XML file')
     parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
+    parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
+    parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
+    parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -487,6 +494,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
     params['placement']=args.placement
+    params['sources']=args.sources
+    params['sinks']=args.sinks
+    params['fanin']=args.fanin
+    params['iperf']=args.iperf
+    params['scaleOutSinks']=args.scale_sinks
+    params['quagga']=args.quagga
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)
