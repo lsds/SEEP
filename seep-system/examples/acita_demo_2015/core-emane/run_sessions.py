@@ -246,7 +246,11 @@ def run_session(time_str, k, mob, exp_session, params):
     finally:
         print 'Shutting down session.'
         if session:
+            if 'server' in globals():
+                print 'Removing session from core daemon server'
+                server.delsession(session)
             session.shutdown()
+
 
 def get_num_workers(k, params):
     q = params['query']
