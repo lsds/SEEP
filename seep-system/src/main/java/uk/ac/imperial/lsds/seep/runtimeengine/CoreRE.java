@@ -41,6 +41,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.infrastructure.WorkerNodeDescription;
 import uk.ac.imperial.lsds.seep.infrastructure.dynamiccodedeployer.RuntimeClassLoader;
 import uk.ac.imperial.lsds.seep.infrastructure.master.Node;
+import uk.ac.imperial.lsds.seep.manet.CoreGUIUtil;
 import uk.ac.imperial.lsds.seep.manet.CostHandler;
 import uk.ac.imperial.lsds.seep.manet.NetRateMonitor;
 import uk.ac.imperial.lsds.seep.manet.NetTopologyMonitor;
@@ -292,10 +293,30 @@ public class CoreRE {
 				LOG.debug("-> State Worker working on {}", nodeDescr.getNodeId());
 			}
 		}
-		LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
+
 		
 		setUpFaultTolerance();
 		setUpRouting();
+		setUpGUI();
+		
+		LOG.info("-> Node "+nodeDescr.getNodeId()+" comm initialized");
+	}
+	
+	private void setUpGUI()
+	{	
+		//TODO: This won't work if more than one worker per host!
+		if (processingUnit.getOperator().getOpContext().isSink())
+		{
+			CoreGUIUtil.setSinkIcon();
+		}
+		else if (processingUnit.getOperator().getOpContext().isSource())
+		{
+			CoreGUIUtil.setSourceIcon();
+		}
+		else
+		{
+			CoreGUIUtil.setOpIcon();
+		}
 	}
 	
 	private void setUpFaultTolerance()

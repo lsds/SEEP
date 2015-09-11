@@ -28,6 +28,7 @@ import uk.ac.imperial.lsds.seep.api.QueryPlan;
 import uk.ac.imperial.lsds.seep.elastic.ElasticInfrastructureUtils;
 import uk.ac.imperial.lsds.seep.elastic.NodePoolEmptyException;
 import uk.ac.imperial.lsds.seep.infrastructure.OperatorDeploymentException;
+import uk.ac.imperial.lsds.seep.manet.CoreGUIUtil;
 
 
 public class MasterController {
@@ -55,6 +56,7 @@ public class MasterController {
 		inf.setEiu(eiu);
 		inf.startInfrastructure();
 		LOG.debug("-> Initializing Master Controller...DONE");
+		CoreGUIUtil.setMasterIcon();
 	}
 	
 	public void submitQuery(QueryPlan qp){
