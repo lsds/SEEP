@@ -6,12 +6,12 @@ cd install
 echo "Installing prerequisites."
 
 # First update and install prerequisite packages for CORE
-#sudo apt-get update
-#sudo apt-get install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
+sudo apt-get update
+sudo apt-get install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
 
 # Install EMANE prerequisites
-#sudo apt-get install libxml2 libprotobuf7 python-protobuf libpcap0.8 libpcre3 \
-#	libuuid1 libace-6.0.1 python-lxml python-setuptools
+sudo apt-get install libxml2 libprotobuf7 python-protobuf libpcap0.8 libpcre3 \
+	libuuid1 libace-6.0.1 python-lxml python-setuptools
 
 echo "Downloading quagga, CORE and EMANE."
 #Then download:
@@ -49,32 +49,61 @@ echo "Downloading BonnMotion."
 wget http://sys.cs.uos.de/bonnmotion/src/bonnmotion-2.1.3.zip
 
 # TODO: Automate bm install.
-
+#pushd bonnmotion-2.1.3
+#./install
+# TODO: Requires manual intervention to confirm java location
+#sudo ln -s `pwd`/bin/bm /usr/bin/bm
+#popd
 
 echo "Installing maven"
 #Maven (you'll perhaps need to manually install soot-framework-2.5.0.jar into the local mvn repository
 # libs/soot/soot-framework/2.5.0/soot-2.5.0.jar
 sudo apt-get install maven
 
-#TODO: using the suggested mvn install ... when mvn clean compile assembly:single fails).
+pushd ../../../../..
+mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.5.0 -Dpackaging=jar -Dfile=libs/soot/soot-framework/2.5.0/soot-2.5.0.jar
+./meander-bld.sh
+popd
 
 echo "Downloading NRL OLSR"
 #Nrlolsr (optional)
 wget http://downloads.pf.itd.nrl.navy.mil/olsr/nrlolsrdv7.8.1.tgz
 
-#TODO: Install nrlolsr
+tar -xzvf nrlolsrdv7.8.1.tgz
+sudo apt-get install libpcap-dev
+pushd nrlolsr/unix
+make -f Makefile.linux
+sudo ln -s `pwd`/nrlolsrd /usr/bin/nrlolsrd
+popd
 
 #olsrd 0.6.3 from ppa at https://launchpad.net/~guardianproject/+archive/ubuntu/commotion (Don't forget to update before installing!).
-echo "Downloading OLSRD"
-export OLSRD_PKG=olsrd-0.9.0.2.tar.gz
-wget "http://www.olsr.org/releases/0.9/$OLSRD_PKG"
-tar -xzvf $OLSRD_PKG  
+#echo "Downloading OLSRD"
+#export OLSRD_PKG=olsrd-0.9.0.2.tar.gz
+#wget "http://www.olsr.org/releases/0.9/$OLSRD_PKG"
+#tar -xzvf $OLSRD_PKG  
 
 #TODO: Install OLSRD
+#(to download and install from source repo)
+git clone http://olsr.org/git/olsrd.git 
+sudo apt-get install bison flex
+pushd olsrd
+make
+sudo make install
+pushd lib/txtinfo
+make
+sudo make install
+popd
+popd
 
+#Update olsrd config.
+sudo cp /etc/olsrd/olsrd.conf /etc/olsrd/olsrd.conf.orig
+sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
 echo "Installing pip + python packages."
+
 #For 14.04 can just install olsrd from apt-get directly.
 sudo apt-get install python-pip
+sudo apt-get install python-dev
+sudo apt-get install libpng12-dev libfreetype6-dev pkg-config
 
 #python pandas
 sudo pip install pandas
@@ -85,9 +114,23 @@ sudo pip install matplotlib
 #python utm
 sudo pip install utm
 
+pushd ..
 #Then apply diff to core.
+sudo cp vldb/config/core4.8_session.py /usr/lib/python2.7/dist-packages/core/session.py
+sudo cp vldb/config/core4.8_mobility.py /usr/lib/python2.7/dist-packages/core/mobility.py
+
 #Then apply diff to emane?
-#Then update olsrd config?
-#Then need to point core config to acita config dir.
+#TODO: Don't think I need to do anything for 9.2.
+
 #Then need to update /etc/hosts.
+sudo cp /etc/hosts /etc/hosts.orig
+sudo bash -c "cat vldb/config/etc-hosts-additions >> /etc/hosts"
+
 #Then need to update core config (e.g. for control net).
+sudo cp /etc/core/core.conf /etc/core/core.conf.orig
+sudo cp vldb/config/core4.8.conf.orig /etc/core/core.conf
+
+#Then need to point core config to acita config dir.
+ln -s `pwd`/vldb /home/dokeeffe/.core
+
+sudo apt-get install gnuplot
