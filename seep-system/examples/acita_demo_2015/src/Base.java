@@ -26,6 +26,7 @@ import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
 import uk.ac.imperial.lsds.seep.acita15.operators.AudioSource;
 import uk.ac.imperial.lsds.seep.acita15.operators.VideoSource;
+import uk.ac.imperial.lsds.seep.acita15.operators.VideoSink;
 import uk.ac.imperial.lsds.seep.acita15.operators.LocationSource;
 import uk.ac.imperial.lsds.seep.api.QueryBuilder;
 import uk.ac.imperial.lsds.seep.api.QueryComposer;
@@ -178,7 +179,8 @@ public class Base implements QueryComposer{
 		snkFields.add("y");
 		snkFields.add("height");
 		snkFields.add("width");
-		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -2, snkFields);
 		
 		src.connectTo(faceDetect, true, 0);
 		faceDetect.connectTo(faceRec, true, 1);

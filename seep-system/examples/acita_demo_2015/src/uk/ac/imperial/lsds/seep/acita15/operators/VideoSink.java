@@ -51,8 +51,8 @@ public class VideoSink implements StatelessOperator {
 		}
 		
 		tuplesReceived++;
-		totalBytes += dt.getString("value").length();
-		recordTuple(dt, dt.getString("value").length());
+		totalBytes += dt.getByteArray("value").length;
+		recordTuple(dt, dt.getByteArray("value").length);
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
 		{
@@ -65,7 +65,7 @@ public class VideoSink implements StatelessOperator {
 					+",total bytes="+totalBytes
 					+",t="+System.currentTimeMillis()
 					+",tuple size bytes="+tupleSize);
-			System.exit(0);
+			//System.exit(0);
 		}
 		stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
 		api.ack(dt);
