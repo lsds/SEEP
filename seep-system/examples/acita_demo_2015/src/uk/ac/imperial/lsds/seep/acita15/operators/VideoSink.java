@@ -11,7 +11,18 @@
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.util.List;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.ObjectOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
+import java.net.Socket;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.WindowConstants;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +32,11 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
 
+import org.bytedeco.javacv.Java2DFrameConverter;
+import org.bytedeco.javacv.OpenCVFrameConverter;
+
+import static org.bytedeco.javacpp.opencv_core.*;
+
 public class VideoSink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Sink.class);
@@ -28,14 +44,25 @@ public class VideoSink implements StatelessOperator {
 	private long tupleSize;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
+	private final int displayPort = 20150;
+	private final String displayAddr = "172.16.0.254";
+	private final boolean enableSinkDisplay = true; //Boolean.parseBoolean(GLOBALS.valueFor("enableSinkDisplay"));
+	private Socket displaySocket = null;
+	private ObjectOutputStream output = null;
 	private Stats stats = null;
-	
+	private boolean recordImages = false;
+    private Java2DFrameConverter frameConverter = null;
+    private OpenCVFrameConverter iplConverter = null; 
+    
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
+		frameConverter = new Java2DFrameConverter();
+		iplConverter = new OpenCVFrameConverter.ToIplImage();
+		connectToDisplay();
 	}
 	
 	public void processData(DataTuple dt) {
@@ -51,13 +78,21 @@ public class VideoSink implements StatelessOperator {
 		}
 		
 		tuplesReceived++;
-		totalBytes += dt.getByteArray("value").length;
-		recordTuple(dt, dt.getByteArray("value").length);
+		byte[] value = dt.getByteArray("value");
+		totalBytes += value.length;
+		recordTuple(dt, value.length);
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}
+		
+		if (recordImages)
+		{
+			recordImage(tupleId, value);
+		}
+		
+		displayImage(value);
 		
 		if (tuplesReceived >= numTuples)
 		{
@@ -85,5 +120,82 @@ public class VideoSink implements StatelessOperator {
 	
 	public void processData(List<DataTuple> arg0) {
 		throw new RuntimeException("TODO");
+	}
+	
+	private void connectToDisplay()
+	{
+		if (!enableSinkDisplay) { return; }
+		try
+		{
+			displaySocket = new Socket(displayAddr, displayPort);
+			output = new ObjectOutputStream(displaySocket.getOutputStream());
+		}
+		catch(IOException e)
+		{
+			throw new RuntimeException(e);
+		}
+	}
+	
+	//TODO: Do this in the background.
+	private void displayImage(byte[] value)
+	{	
+		if (enableSinkDisplay)
+		{
+			
+			BufferedImage img = bytesToBufferedImage(value);
+			byte[] imgBytes = bufferedImageToBytes(img);
+			
+			try
+			{
+				output.writeObject(imgBytes);
+			}
+			catch(IOException e)
+			{
+				throw new RuntimeException(e);
+			}
+		}
+	}
+	
+	private void recordImage(long tupleId, byte[] bytes)
+	{
+		//cvRectangle(bwImg, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
+		//ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+		BufferedImage outputImg = bytesToBufferedImage(bytes);
+		try
+		{
+			//IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+			//BufferedImage outputImg = frameConverter.convert(iplConverter.convert(img));
+			//BufferedImage outputImg = ImageIO.read(bais);
+			File outputFile = new File("imgout/detected/"+tupleId+".jpg");
+			outputFile.mkdirs();
+			ImageIO.write(outputImg, "jpg", outputFile);			
+		}
+		catch(IOException e) { throw new RuntimeException(e); }
+	}
+	
+	private BufferedImage bytesToBufferedImage(byte[] value)
+	{
+		try
+		{
+			ByteArrayInputStream bais = new ByteArrayInputStream(value);
+			IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+			BufferedImage outputImg = frameConverter.convert(iplConverter.convert(img));
+			return outputImg;
+		}
+		catch(IOException e) { throw new RuntimeException(e); }
+	}
+		
+	private byte[] bufferedImageToBytes(BufferedImage img)
+	{
+		try
+		{
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write(img, "jpg", baos);
+			baos.flush();
+			byte[] bytes = baos.toByteArray();
+			baos.close();
+			return bytes;
+		}
+		catch(IOException e) { throw new RuntimeException(e); }
 	}
 }
