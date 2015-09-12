@@ -36,6 +36,7 @@ import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
 
 import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 public class VideoSink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
@@ -82,6 +83,7 @@ public class VideoSink implements StatelessOperator {
 		totalBytes += value.length;
 		recordTuple(dt, value.length);
 		long tupleId = dt.getLong("tupleId");
+		int[] bbox = new int[]{dt.getInt("x"), dt.getInt("y"), dt.getInt("height"), dt.getInt("width")};
 		if (tupleId != tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
@@ -89,10 +91,10 @@ public class VideoSink implements StatelessOperator {
 		
 		if (recordImages)
 		{
-			recordImage(tupleId, value);
+			recordImage(tupleId, value, bbox);
 		}
 		
-		displayImage(value);
+		displayImage(value, bbox);
 		
 		if (tuplesReceived >= numTuples)
 		{
@@ -137,12 +139,12 @@ public class VideoSink implements StatelessOperator {
 	}
 	
 	//TODO: Do this in the background.
-	private void displayImage(byte[] value)
+	private void displayImage(byte[] value, int[] bbox)
 	{	
 		if (enableSinkDisplay)
 		{
 			
-			BufferedImage img = bytesToBufferedImage(value);
+			BufferedImage img = bytesToBufferedImage(value, bbox);
 			byte[] imgBytes = bufferedImageToBytes(img);
 			
 			try
@@ -156,11 +158,11 @@ public class VideoSink implements StatelessOperator {
 		}
 	}
 	
-	private void recordImage(long tupleId, byte[] bytes)
+	private void recordImage(long tupleId, byte[] bytes, int[] bbox)
 	{
 		//cvRectangle(bwImg, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
 		//ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-		BufferedImage outputImg = bytesToBufferedImage(bytes);
+		BufferedImage outputImg = bytesToBufferedImage(bytes, bbox);
 		try
 		{
 			//IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
@@ -173,12 +175,16 @@ public class VideoSink implements StatelessOperator {
 		catch(IOException e) { throw new RuntimeException(e); }
 	}
 	
-	private BufferedImage bytesToBufferedImage(byte[] value)
+	private BufferedImage bytesToBufferedImage(byte[] value, int[] bbox)
 	{
 		try
 		{
 			ByteArrayInputStream bais = new ByteArrayInputStream(value);
 			IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+			if (bbox != null)
+			{
+				cvRectangle(img, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
+			}
 			BufferedImage outputImg = frameConverter.convert(iplConverter.convert(img));
 			return outputImg;
 		}
