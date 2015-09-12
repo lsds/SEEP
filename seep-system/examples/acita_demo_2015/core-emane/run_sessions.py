@@ -217,12 +217,12 @@ def run_session(time_str, k, mob, exp_session, params):
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(params['nodes'])
+
         if params['saveconfig']:
             print 'Saving session config.'
             savesessionxml(session, '%s/session.xml'%session.sessiondir, '1.0')
-            #savesessionxml(session, '/tmp/session.xml')
 
-        print 'Instantiating session:',exp_session
+        print 'Instantiating session ',exp_session, ' with CORE session id', session.sessionid
         session.instantiate()
 
         chmod_dir(session.sessiondir)
@@ -237,6 +237,8 @@ def run_session(time_str, k, mob, exp_session, params):
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
             range(2,3 + sum(num_workers))))
+
+
         #time.sleep(30)
         print 'Collecting data'
         session.datacollect()
@@ -462,11 +464,13 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
     parser.add_argument('--k', dest='k', default='2', help='replication factors (2)')
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
+    parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
+    parser.add_argument('--y', dest='y', default='1200', help='Grid y dimension (1200)')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join')
     parser.add_argument('--sources', dest='sources', default='1', help='Sources')
     parser.add_argument('--sinks', dest='sinks', default='1', help='Sinks (non-replicated)')
     parser.add_argument('--fanin', dest='fanin', default='2', help='Join fan-in')
-    parser.add_argument('--pausetime', dest='pt', default='2.0', help='pause time (2.0)')
+    parser.add_argument('--pausetime', dest='pt', default='5.0', help='pause time (5.0)')
     parser.add_argument('--sessions', dest='sessions', default='1', help='number of sessions to run')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
@@ -482,6 +486,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
+    parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -494,6 +499,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['specific']=args.specific
     params['preserve']=args.preserve
     params['h']=int(args.h)
+    params['x']=int(args.x)
+    params['y']=int(args.y)
     params['query']=args.query
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
@@ -504,6 +511,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['iperf']=args.iperf
     params['scaleOutSinks']=args.scale_sinks
     params['quagga']=args.quagga
+    if args.verbose: params['verbose']='true'
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)
