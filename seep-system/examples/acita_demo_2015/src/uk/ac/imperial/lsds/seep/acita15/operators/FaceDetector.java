@@ -196,7 +196,8 @@ public class FaceDetector implements StatelessOperator{
 
 	public IplImage parseBufferedImage(byte[] bytes, int cols, int rows, int type)
 	{
-		if (cols == 0 && rows == 0 && type == 0)
+		//if (cols == 0 && rows == 0 && type == 0)
+		if (cols == 0 && rows == 0)
 		{
 			//It's a raw image file, convert to ipl image via buffered image.
 			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);

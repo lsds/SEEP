@@ -382,6 +382,7 @@ def get_tile(x, y, twidth, theight, min_x, min_y):
 
     return (xtile, ytile)
 
+"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate ns2 mobility trace using BonnMotion.')
     parser.add_argument('--sessionDir', dest='session_dir', default='/tmp', help='dir name (/tmp)')
@@ -397,3 +398,4 @@ if __name__ == "__main__":
         params = {'nodes':int(args.nodes)+1}
         if args.trace: params['trace'] = args.trace
         gen_trace(args.session_dir, args.session_id, params)
+"""

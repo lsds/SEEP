@@ -7,7 +7,7 @@ echo "Installing prerequisites."
 
 # First update and install prerequisite packages for CORE
 sudo apt-get update
-sudo apt-get install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
+sudo apt-get install bash bridge-utils ebtables iproute libev-dev python tcl tk tcl8.5 tk8.5 libtk-img
 
 # Install EMANE prerequisites
 sudo apt-get install libxml2 libprotobuf7 python-protobuf libpcap0.8 libpcre3 \
@@ -47,6 +47,7 @@ popd
 echo "Downloading BonnMotion."
 #BonnMotion
 wget http://sys.cs.uos.de/bonnmotion/src/bonnmotion-2.1.3.zip
+unzip bonnmotion-2.1.3.zip
 
 # TODO: Automate bm install.
 #pushd bonnmotion-2.1.3

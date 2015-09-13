@@ -13,7 +13,7 @@ import java.awt.*;
 import javax.swing.*;
 import java.awt.Graphics;
 
-public class DemoFrameHandler {
+public class FaceRecognitionDemo {
 	private final static int PORT = 20150;
 
 	public static void main(String args[]){
@@ -72,7 +72,7 @@ public class DemoFrameHandler {
 			//frame.pack();
 			//myFrame.setVisible(true);
 
-			boolean writeImage = true;
+			boolean writeImage = false;
 			while (true)
 			{
 				try
