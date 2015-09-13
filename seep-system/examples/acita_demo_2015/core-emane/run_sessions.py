@@ -84,11 +84,13 @@ def run_sessions(time_str, k, mob, sessions, params):
 def run_session(time_str, k, mob, exp_session, params):
     try:
 
-        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1', 'verbose':params.get('verbose', "False")} 
+        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1',
+                'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
+        session.master=True
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
 
         if not add_to_server(session): 
