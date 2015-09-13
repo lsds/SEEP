@@ -1,0 +1,36 @@
+
+
+Balls: 
+- 1st Half: 4, 8, 10
+- 2nd Half: 4, 8, 10, 12
+
+
+Team A:
+
+
+Nick Gertje (Left Leg: 13, Right Leg: 14, Left Arm: 97, Right Arm: 98)
+Dennis Dotterweich (Left Leg: 47, Right Leg:16)
+Niklas Waelzlein (Left Leg: 49, Right Leg: 88)
+Wili Sommer (Left Leg: 19, Right Leg: 52)
+Philipp Harlass (Left Leg: 53, Right Leg: 54)
+Roman Hartleb (Left Leg: 23, Right Leg: 24)
+Erik Engelhardt (Left Leg: 57, Right Leg: 58)
+Sandro Schneider (Left Leg: 59, Right Leg: 28)
+
+
+
+Team B:
+
+
+Leon Krapf (Left Leg: 61, Right Leg: 62, Left Arm: 99, Right Arm: 100)
+Kevin Baer (Left Leg: 63, Right Leg: 64)
+Luca Ziegler (Left Leg: 65, Right Leg: 66)
+Ben Mueller (Left Leg: 67, Right Leg: 68)
+Vale Reitstetter (Left Leg: 69, Right Leg: 38)
+Christopher Lee (Left Leg: 71, Right Leg: 40)
+Leon Heinze (Left Leg: 73, Right Leg: 74)
+Leo Langhans (Left Leg: 75, Right Leg: 44)
+
+
+Referee (Left Leg: 105, Right Leg: 106)
+
