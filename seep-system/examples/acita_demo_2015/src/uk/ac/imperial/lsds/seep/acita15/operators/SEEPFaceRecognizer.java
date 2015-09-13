@@ -104,8 +104,10 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		System.out.println("Setting up FACE_RECOGNIZER operator with id="+api.getOperatorId());
 		//String trainingDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/training";
 		String trainingDir = "training";
+		//String trainingList = "at.txt"
+		String trainingList = "chokepoint.txt";
 		String testImageFilename = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
-		personRecognizer = new PersonRecognizer(api.getOperatorId(), trainingDir, testImageFilename);
+		personRecognizer = new PersonRecognizer(api.getOperatorId(), trainingDir, trainingList, testImageFilename);
 		//recognizer.testSample();
 		//personRecognizer.testATT();
 	}
@@ -115,6 +117,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	{
 		private final int opId;
 		private final String trainingDir;
+		private final String trainingList;
 		private final String testImageFilename;
 		private final Map<Integer, String> labelExamples = new HashMap<>();
 		private final FaceRecognizer faceRecognizer;
@@ -122,15 +125,16 @@ public class SEEPFaceRecognizer implements StatelessOperator{
         private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
         private final OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
 		
-		public PersonRecognizer(int opId, String trainingDir, String testImageFilename)
+		public PersonRecognizer(int opId, String trainingDir, String trainingList, String testImageFilename)
 		{
 			this.opId = opId;
 			this.trainingDir = trainingDir;
+			this.trainingList = trainingList;
 			this.testImageFilename = testImageFilename;
 			String[] imgFormats = ImageIO.getReaderFormatNames();
 			logger.info("Image io supported image formats: ");
 			for (int i = 0; i < imgFormats.length; i++) { logger.info(""+imgFormats[i]); }
-			this.faceRecognizer = trainATT();
+			this.faceRecognizer = trainRecognizer();
 		}
 		
 		public int recognize(byte[] value, int x, int y, int width, int height, int type)
@@ -157,11 +161,11 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			if (labelExamples.containsKey(label)) { return labelExamples.get(label); }
 			else { return ""; }
 		}
-		public FaceRecognizer trainATT()
+		public FaceRecognizer trainRecognizer()
 		{
 			//File csv = new File(trainingDir+"/at.txt");
-			logger.info("Loading training list from:"+trainingDir+"/at.txt");
-			InputStream csv = this.getClass().getClassLoader().getResourceAsStream(trainingDir+"/at.txt");
+			logger.info("Loading training list from:"+trainingDir+"/"+trainingList);
+			InputStream csv = this.getClass().getClassLoader().getResourceAsStream(trainingDir+"/"+trainingList);
 			Map<String, Integer> trainingFiles = new HashMap<>();
 			
 			try

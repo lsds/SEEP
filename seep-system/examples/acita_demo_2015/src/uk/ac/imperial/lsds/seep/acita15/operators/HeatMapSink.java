@@ -11,7 +11,10 @@
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.util.List;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.Socket;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +23,6 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
-
 import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
 public class HeatMapSink implements StatelessOperator {
@@ -34,6 +36,11 @@ public class HeatMapSink implements StatelessOperator {
 	private HeatMap result = null;
 	private int numSources;
 	private double averageCoverage = 0.0;
+	private boolean enableSinkDisplay = true;
+	private final int displayPort = 20150;
+	private final String displayAddr = "172.16.0.254";
+	private Socket displaySocket = null;
+	private ObjectOutputStream output = null;
 	
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
@@ -42,6 +49,8 @@ public class HeatMapSink implements StatelessOperator {
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		numSources = Integer.parseInt(GLOBALS.valueFor("sources"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
+		
+		connectToDisplay();
 	}
 	
 	public void processData(DataTuple dt) {
@@ -73,7 +82,9 @@ public class HeatMapSink implements StatelessOperator {
 			averageCoverage += (updateCoverage - averageCoverage) / tuplesReceived;
 			logger.info("Coverage, update="+updateCoverage+",cumavg="+averageCoverage);
 			
-			result.add(update); 
+			result.add(update);
+			//TODO: Might want to have some kind of window here.
+			displayHeatMap(result.getPosCounts());
 		}
 		logger.info("Current heatmap="+result.toString());
 		
@@ -112,5 +123,34 @@ public class HeatMapSink implements StatelessOperator {
 	
 	public void processData(List<DataTuple> arg0) {
 		throw new RuntimeException("TODO");
+	}
+	
+	private void connectToDisplay()
+	{
+		if (!enableSinkDisplay) { return; }
+		try
+		{
+			displaySocket = new Socket(displayAddr, displayPort);
+			output = new ObjectOutputStream(displaySocket.getOutputStream());
+		}
+		catch(IOException e)
+		{
+			throw new RuntimeException(e);
+		}
+	}
+	
+	private void displayHeatMap(int[][] posCounts)
+	{
+		if (enableSinkDisplay)
+		{
+			try
+			{
+				output.writeObject(posCounts);
+			}
+			catch(IOException e)
+			{
+				throw new RuntimeException(e);
+			}
+		}
 	}
 }

@@ -69,7 +69,8 @@ public class VideoSource implements StatelessOperator {
 	
 	private IplImage[] testIplFrames = null;
 	private byte[][] testRawFrames = null;
-	private final String testFramesDir = "images";
+	//private final String testFramesDir = "images";
+	private final String testFramesDir = "images/chokepoint";
 	private final String extractedFilesDir = "resources/source";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
 	
@@ -187,7 +188,8 @@ public class VideoSource implements StatelessOperator {
 		        final String name = entries.nextElement().getName();
 		        if (name.startsWith(imgDirname + "/") && 
 		        		//(name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".pgm"))) { //filter according to the path
-		        		(name.endsWith(".pgm"))) { //filter according to the path
+		        		
+		        		(name.endsWith(".jpg") || name.endsWith(".pgm"))) { //filter according to the path
 		        	logger.info("Source adding filename: "+name);
 		        	filenames.add(name);
 		        }
