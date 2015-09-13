@@ -138,6 +138,7 @@ public class Base implements QueryComposer{
 		srcFields.add("y");
 		srcFields.add("height");
 		srcFields.add("width");
+		srcFields.add("label");
 		Connectable src = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
 		
 		
@@ -152,6 +153,7 @@ public class Base implements QueryComposer{
 		faceDetectFields.add("y");
 		faceDetectFields.add("height");
 		faceDetectFields.add("width");
+		faceDetectFields.add("label");
 		Connectable faceDetect = QueryBuilder.newStatelessOperator(new FaceDetector(), 0, faceDetectFields);
 		
 		
@@ -166,6 +168,7 @@ public class Base implements QueryComposer{
 		faceRecFields.add("y");
 		faceRecFields.add("height");
 		faceRecFields.add("width");
+		faceRecFields.add("label");
 		Connectable faceRec = QueryBuilder.newStatelessOperator(new SEEPFaceRecognizer(), 1, faceRecFields);
 		
 		// Declare sink
@@ -179,6 +182,7 @@ public class Base implements QueryComposer{
 		snkFields.add("y");
 		snkFields.add("height");
 		snkFields.add("width");
+		snkFields.add("label");
 		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -2, snkFields);
 		

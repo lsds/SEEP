@@ -97,7 +97,7 @@ public class FaceDetector implements StatelessOperator{
 		if (bbox != null)
 		{
 			logger.debug("Found face at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
-			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3]);
+			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3], "");
 			if (recordImages)
 			{
 				recordFaceDetection(tupleId, imgBW, bbox);
@@ -105,7 +105,7 @@ public class FaceDetector implements StatelessOperator{
 		}
 		else	
 		{
-			outputTuple = data.setValues(tupleId, value, rows, cols, type, 0, 0, 0, 0);
+			outputTuple = data.setValues(tupleId, value, rows, cols, type, 0, 0, 0, 0, "");
 		}
 		
 		//DataTuple outputTuple = data.setValues(tupleId, value);
@@ -129,23 +129,6 @@ public class FaceDetector implements StatelessOperator{
 
 	
 	public void processData(List<DataTuple> arg0) {
-		for (DataTuple data : arg0)
-		{
-			long tupleId = data.getLong("tupleId");
-			String value = data.getString("value") + "," + api.getOperatorId();
-			
-			DataTuple outputTuple = data.setValues(tupleId, value);
-			processed++;
-			if (processed % 1000 == 0)
-			{
-				logger.info("Face detector "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-			}
-			else
-			{
-				logger.debug("Face detector "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-				recordTuple(outputTuple);
-			}
-		}
 		throw new RuntimeException("TODO"); 
 	}
 

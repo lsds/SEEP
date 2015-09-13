@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 import java.io.ByteArrayInputStream;
@@ -62,8 +63,10 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		int width = data.getInt("width");
 		
 		int prediction = personRecognizer.recognize(value, x, y, height, width, type);
+		String labelExample = personRecognizer.getLabelExample(prediction);
 		
-		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width);
+		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width, labelExample);
+			
 		processed++;
 		if (processed % 1000 == 0)
 		{
@@ -84,23 +87,6 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 
 	
 	public void processData(List<DataTuple> arg0) {
-		for (DataTuple data : arg0)
-		{
-			long tupleId = data.getLong("tupleId");
-			String value = data.getString("value") + "," + api.getOperatorId();
-			
-			DataTuple outputTuple = data.setValues(tupleId, value);
-			processed++;
-			if (processed % 1000 == 0)
-			{
-				logger.info("Face recognizer "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-			}
-			else
-			{
-				logger.debug("Face recognizer "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-				recordTuple(outputTuple);
-			}
-		}
 		throw new RuntimeException("TODO"); 
 	}
 
@@ -166,6 +152,11 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			return predictedLabel[0];
 		}
 		
+		public String getLabelExample(int label)
+		{
+			if (labelExamples.containsKey(label)) { return labelExamples.get(label); }
+			else { return ""; }
+		}
 		public FaceRecognizer trainATT()
 		{
 			//File csv = new File(trainingDir+"/at.txt");

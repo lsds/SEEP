@@ -53,13 +53,15 @@ public class DemoFrameHandler {
 		{
 
 			//Create a ser
-			JFrame myFrame = new JFrame("This is my frame");
+			JFrame myFrame = new JFrame("Face Recognition Demo");
 			myFrame.setSize(300,400);
 			myFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-			BufferedImage img = readBufferedImageFromFile("vldb/config/master.png");
+			BufferedImage img = readBufferedImageFromFile("vldb/config/sink.png");
 			ImageIcon icon = new ImageIcon(img);
-			JLabel label = new JLabel(icon);
+			JLabel label = new JLabel("Waiting for first tuple...", icon, JLabel.CENTER);
+			label.setVerticalTextPosition(JLabel.BOTTOM);
+			label.setHorizontalTextPosition(JLabel.CENTER);
 			myFrame.getContentPane().add(label);
 			myFrame.pack();
 			myFrame.setVisible(true);
@@ -77,7 +79,8 @@ public class DemoFrameHandler {
 				{
 					//Read incoming images.		
 					byte[] frameBytes = (byte[])input.readObject();
-					System.out.println("Read "+frameBytes.length+" byte frame.");
+					String name = (String)input.readObject();
+					System.out.println("Read "+frameBytes.length+" byte frame, recognized: "+name);
 					BufferedImage newImg = readBufferedImage(frameBytes);
 					if (writeImage)
 					{
@@ -87,6 +90,8 @@ public class DemoFrameHandler {
 
 					ImageIcon newIcon = new ImageIcon(newImg);
 					label.setIcon(newIcon);
+					label.setText("Recognized: "+ (name.isEmpty() ? "Unknown" : name));
+					myFrame.pack();
 					label.repaint();
 				}
 				catch(Exception e) { throw new RuntimeException(e); }

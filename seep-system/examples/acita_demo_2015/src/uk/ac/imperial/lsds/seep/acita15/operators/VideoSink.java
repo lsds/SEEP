@@ -94,7 +94,7 @@ public class VideoSink implements StatelessOperator {
 			recordImage(tupleId, value, bbox);
 		}
 		
-		displayImage(value, bbox);
+		displayImage(value, bbox, dt.getString("label"));
 		
 		if (tuplesReceived >= numTuples)
 		{
@@ -139,7 +139,7 @@ public class VideoSink implements StatelessOperator {
 	}
 	
 	//TODO: Do this in the background.
-	private void displayImage(byte[] value, int[] bbox)
+	private void displayImage(byte[] value, int[] bbox, String label)
 	{	
 		if (enableSinkDisplay)
 		{
@@ -150,6 +150,7 @@ public class VideoSink implements StatelessOperator {
 			try
 			{
 				output.writeObject(imgBytes);
+				output.writeObject(label);
 			}
 			catch(IOException e)
 			{
