@@ -91,7 +91,7 @@ def run_session(time_str, k, mob, exp_session, params):
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         session.master=True
-        session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg.gif}} {size {3000 3000}}")
+        session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
 
         if not add_to_server(session): 
