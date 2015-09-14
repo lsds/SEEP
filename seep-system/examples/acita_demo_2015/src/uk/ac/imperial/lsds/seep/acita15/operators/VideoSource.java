@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.jar.JarFile;
 import java.util.jar.JarEntry;
 import java.util.Enumeration;
@@ -179,7 +180,7 @@ public class VideoSource implements StatelessOperator {
 	{
 		final File jarFile = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath());
 
-		Set<String> filenames = new HashSet<>();
+		Set<String> filenames = new TreeSet<>();
 		try
 		{
 		    final JarFile jar = new JarFile(jarFile);
