@@ -54,7 +54,7 @@ public class AcitaDemo {
 
 			//Create a ser
 			JFrame myFrame = new JFrame("Face Recognition Demo");
-			myFrame.setSize(300,400);
+			myFrame.setSize(500,750);
 			myFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
 			
@@ -70,8 +70,9 @@ public class AcitaDemo {
 			//FacePanel panel = new FacePanel();
 			//Panel heatMapPanel = new HeatMap(data, useGraphicsYAxis, Gradient.GRADIENT_BLACK_TO_WHITE);
 			//double[][] data = HeatMap.generateSinCosData(200);
-			double[][] data = HeatMap.generateBlankTestData();
-			HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_BLACK_TO_WHITE);
+			double[][] data = HeatMap.generateBlankTestData(100);
+			//HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_BLACK_TO_WHITE);
+			HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_GREEN_YELLOW_ORANGE_RED);
 			pane.add(heatMapPanel);
 			//myFrame.add(panel);
 			myFrame.pack();
@@ -83,9 +84,15 @@ public class AcitaDemo {
 				try
 				{
 					//Read incoming images.		
+					/*
 					int[][] heatMap = (int[][])input.readObject();
-					System.out.println("Read heatmap.");
+					System.out.println("Read heatmap: "+posCountsToString(heatMap));
 					heatMapPanel.updateData(intMapToDouble(heatMap), true);
+					*/
+					String serializedHeatMap = input.readObject().toString();
+					System.out.println("Read heatmap: "+serializedHeatMap);
+					heatMapPanel.updateData(heatMapToImgData(serializedHeatMap), true);
+					//System.out.println(input.readObject().toString());
 				}
 				catch(Exception e) { throw new RuntimeException(e); }
 			}
@@ -160,6 +167,52 @@ public class AcitaDemo {
 					g2d.drawImage(currentFrame, null, currentFrame.getWidth(), currentFrame.getHeight());
 				}
 			}
+		}
+
+		private String posCountsToString(int[][] posCounts)
+		{
+			String occupiedTiles = "";
+
+			for (int x = 0; x < posCounts.length; x++)
+			{
+				for (int y = 0; y < posCounts[0].length; y++)
+				{
+					if (posCounts[x][y] > 0)
+					{
+						String tileCount = "" + x + "," + y + "," + posCounts[x][y];
+
+						if (!occupiedTiles.isEmpty()) { occupiedTiles += ";"; }
+						occupiedTiles += tileCount;
+					}
+				}
+			}
+			return occupiedTiles;
+		}
+
+		private double[][] heatMapToImgData(String serialized)
+		{
+
+			String[] parts = serialized.split(";");
+			String[] metadata = parts[0].split(",");
+			double tileWidth = Double.parseDouble(metadata[0]);
+			double tileHeight = Double.parseDouble(metadata[1]);
+			int xTiles = Integer.parseInt(metadata[2]);
+			int yTiles = Integer.parseInt(metadata[3]);
+
+
+			double[][] posCounts = new double[xTiles][yTiles];
+
+			for (int pos = 1; pos < parts.length; pos++)
+			{
+				String[] posCount = parts[pos].split(",");
+				if (posCount.length != 3) { throw new RuntimeException("Logic error, invalid pos."); }
+				int x = Integer.parseInt(posCount[0]);
+				int y = Integer.parseInt(posCount[1]);
+				int count = Integer.parseInt(posCount[2]);
+				posCounts[x][y] = count;
+			}
+
+			return posCounts;
 		}
 	}
 }

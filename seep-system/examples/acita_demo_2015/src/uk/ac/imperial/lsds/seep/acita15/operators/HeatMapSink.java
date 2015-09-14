@@ -84,7 +84,7 @@ public class HeatMapSink implements StatelessOperator {
 			
 			result.add(update);
 			//TODO: Might want to have some kind of window here.
-			displayHeatMap(result.getPosCounts());
+			displayHeatMap(result.toString());
 		}
 		logger.info("Current heatmap="+result.toString());
 		
@@ -139,13 +139,15 @@ public class HeatMapSink implements StatelessOperator {
 		}
 	}
 	
-	private void displayHeatMap(int[][] posCounts)
+	private void displayHeatMap(String heatMapStr)
 	{
 		if (enableSinkDisplay)
 		{
 			try
 			{
-				output.writeObject(posCounts);
+				logger.info("Sending heatMap to display: "+ heatMapStr);
+				output.writeObject(heatMapStr);
+				output.flush();
 			}
 			catch(IOException e)
 			{
@@ -153,4 +155,25 @@ public class HeatMapSink implements StatelessOperator {
 			}
 		}
 	}
+	
+    private String posCountsToString(int[][] posCounts)
+    { 
+      String occupiedTiles = "";
+
+      for (int x = 0; x < posCounts.length; x++)
+      { 
+        for (int y = 0; y < posCounts[0].length; y++)
+        { 
+          if (posCounts[x][y] > 0)
+          { 
+            String tileCount = "" + x + "," + y + "," + posCounts[x][y];
+
+            if (!occupiedTiles.isEmpty()) { occupiedTiles += ";"; }
+            occupiedTiles += tileCount;
+          }
+        }
+      }
+      return occupiedTiles;
+    }
+
 }

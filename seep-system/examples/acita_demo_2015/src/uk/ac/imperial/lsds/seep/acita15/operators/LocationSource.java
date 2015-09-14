@@ -64,8 +64,8 @@ public class LocationSource implements StatelessOperator {
 		
 		//int xTiles = Integer.parseInt(GLOBALS.valueFor("xTiles"));
 		//int yTiles = Integer.parseInt(GLOBALS.valueFor("yTiles"));
-		int xTiles = 10;
-		int yTiles = 10;
+		int xTiles = 50;
+		int yTiles = 50;
 
 		long interLocDelay = interFrameDelay;
 		long heatMapInterval = 10 * interFrameDelay;
