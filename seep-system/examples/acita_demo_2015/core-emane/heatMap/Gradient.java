@@ -67,6 +67,8 @@ public class Gradient
      */
     public final static Color[] GRADIENT_RAINBOW = createMultiGradient(new Color[]{new Color(181, 32, 255), Color.blue, Color.green, Color.yellow, Color.orange, Color.red}, 500);
 
+    public final static Color[] GRADIENT_MATPLOTLIB = createMultiGradient(new Color[]{Color.blue, Color.green, Color.yellow, Color.orange, Color.red}, 500);
+
     /**
      *Produces a gradient for hot things (black, red, orange, yellow, white)
      */

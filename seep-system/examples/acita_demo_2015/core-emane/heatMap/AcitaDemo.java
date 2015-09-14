@@ -53,7 +53,7 @@ public class AcitaDemo {
 		{
 
 			//Create a ser
-			JFrame myFrame = new JFrame("Face Recognition Demo");
+			JFrame myFrame = new JFrame("Heat Map Demo");
 			myFrame.setSize(500,750);
 			myFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
@@ -72,7 +72,9 @@ public class AcitaDemo {
 			//double[][] data = HeatMap.generateSinCosData(200);
 			double[][] data = HeatMap.generateBlankTestData(100);
 			//HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_BLACK_TO_WHITE);
-			HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_GREEN_YELLOW_ORANGE_RED);
+			//HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_GREEN_YELLOW_ORANGE_RED);
+			//HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_RAINBOW);
+			HeatMap heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_MATPLOTLIB);
 			pane.add(heatMapPanel);
 			//myFrame.add(panel);
 			myFrame.pack();
