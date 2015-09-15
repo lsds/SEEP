@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys,os,time,re,argparse,math,shutil
+import sys,os,time,re,argparse,math,shutil,subprocess
 from core import pycore
 from core.constants import *
 from core.mobility import BasicRangeModel
@@ -96,6 +96,9 @@ def run_session(time_str, k, mob, exp_session, params):
 
         if not add_to_server(session): 
             print 'Could not add to server'
+
+        gui = start_query_gui("gui.log", session.sessiondir, params)
+        print 'Started query gui ', gui
 
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
@@ -255,6 +258,10 @@ def run_session(time_str, k, mob, exp_session, params):
                 print 'Removing session from core daemon server'
                 server.delsession(session)
             session.shutdown()
+        if gui:
+            print 'Shutting down query gui ',gui
+            gui.stdin.close()
+            gui.terminate()
 
 
 def get_num_workers(k, params):
@@ -461,6 +468,26 @@ def run_iperf_test(session, wlan1, mob, trace_file, params):
     session.node_count="%d"%(params['nodes'])
     session.instantiate()
     time.sleep(1000000)
+
+def start_query_gui(logfile, logdir, params):
+
+    if params['query'] == 'fr':   
+        args = ['java', 'FaceRecognitionDemo']
+    elif params['query'] == 'heatMap':   
+        args = ['java', 'AcitaDemo']
+    else: return None
+
+    #os.mkdir(logdir)
+    with open(logdir + "/" + logfile, 'w') as log:
+        p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=os.environ.copy())
+
+    return p
+
+"""
+def stop_query_gui(p):
+    if p:
+        p.kill()
+"""
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     print 'Hello world'
