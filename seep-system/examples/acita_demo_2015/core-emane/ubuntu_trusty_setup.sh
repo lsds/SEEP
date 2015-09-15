@@ -44,16 +44,16 @@ popd
 
 #N.B. You need to install Oracle Java 1.7 manually first!
 #TODO: Automate java install
-if [ ! -f jdk-7u79-linux-x64.tar.gz ]; then
-    echo "JDK not found"
-    tar -xzvf jdk-7u79-linux-x64.tar.gz 
-    sudo cp -r jdk1.7.0_79 /usr/lib/jvm
-    sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.7.0_79/bin/java" 1
-    sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.7.0_79/bin/javac" 1
-    sudo update-alternatives --install "/usr/bin/jar" "jar" "/usr/lib/jvm/jdk1.7.0_79/bin/jar" 1
-    echo "Installed JDK, manual configuration of alternatives required, exiting."
-    exit 1
-fi
+#if [ ! -f jdk-7u79-linux-x64.tar.gz ]; then
+#    echo "JDK not found"
+#    tar -xzvf jdk-7u79-linux-x64.tar.gz 
+#    sudo cp -r jdk1.7.0_79 /usr/lib/jvm
+#    sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.7.0_79/bin/java" 1
+#    sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.7.0_79/bin/javac" 1
+#    sudo update-alternatives --install "/usr/bin/jar" "jar" "/usr/lib/jvm/jdk1.7.0_79/bin/jar" 1
+#    echo "Installed JDK, manual configuration of alternatives required, exiting."
+#    exit 1
+#fi
 
 echo "Downloading BonnMotion."
 #BonnMotion
@@ -88,27 +88,27 @@ popd
 
 #olsrd 0.6.3 from ppa at https://launchpad.net/~guardianproject/+archive/ubuntu/commotion (Don't forget to update before installing!).
 echo "Downloading OLSRD"
-export OLSRD_PKG=olsrd-0.9.0.2.tar.gz
-wget "http://www.olsr.org/releases/0.9/$OLSRD_PKG"
-tar -xzvf $OLSRD_PKG  
+#export OLSRD_PKG=olsrd-0.9.0.2.tar.gz
+#wget "http://www.olsr.org/releases/0.9/$OLSRD_PKG"
+#tar -xzvf $OLSRD_PKG  
 
 #TODO: Install OLSRD
 sudo apt-get install bison flex
-pushd olsrd-0.9.0.2
+#pushd olsrd-0.9.0.2
+#make
+#sudo make install
+#popd
+
+#(to download source repo)
+git clone http://olsr.org/git/olsrd.git 
+pushd olsrd
+make
+sudo make install
+pushd lib/txtinfo
 make
 sudo make install
 popd
-
-
-#git clone http://olsr.org/git/olsrd.git (to download source repo)
-#pushd olsrd
-#make
-#sudo make install
-#pushd lib/txtinfo
-#make
-#sudo make install
-#popd
-#popd
+popd
 
 #sudo apt-get install olsrd (installs 0.6.6 on trusty)
 
@@ -151,16 +151,16 @@ sudo cp vldb/config/core4.8.conf.orig /etc/core/core.conf
 ln -s `pwd`/vldb /home/dokeeffe/.core
 
 # Install tun_flowctl
-popd
-git clone https://github.com/adjacentlink/tun_flowctl.git
+#popd
+#git clone https://github.com/adjacentlink/tun_flowctl.git
 
-pushd tun_flowctl
-cp -r 3.13.0-35-generic `uname -r`
-make
-make install
-popd
-popd
+#pushd tun_flowctl
+#cp -r 3.13.0-35-generic `uname -r`
+#make
+#make install
+#popd
+#popd
 
-popd
+#popd
 
 sudo apt-get install gnuplot
