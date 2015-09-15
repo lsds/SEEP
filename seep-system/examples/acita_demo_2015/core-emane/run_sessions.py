@@ -97,8 +97,10 @@ def run_session(time_str, k, mob, exp_session, params):
         if not add_to_server(session): 
             print 'Could not add to server'
 
+        """
         gui = start_query_gui("gui.log", session.sessiondir, params)
         print 'Started query gui ', gui
+        """
 
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
@@ -258,10 +260,12 @@ def run_session(time_str, k, mob, exp_session, params):
                 print 'Removing session from core daemon server'
                 server.delsession(session)
             session.shutdown()
+        """
         if gui:
             print 'Shutting down query gui ',gui
             gui.stdin.close()
             gui.terminate()
+        """
 
 
 def get_num_workers(k, params):
@@ -473,13 +477,15 @@ def start_query_gui(logfile, logdir, params):
 
     if params['query'] == 'fr':   
         args = ['java', 'FaceRecognitionDemo']
+        cwd = script_dir 
     elif params['query'] == 'heatMap':   
         args = ['java', 'AcitaDemo']
+        cwd = script_dir + '/heatMap'
     else: return None
 
     #os.mkdir(logdir)
     with open(logdir + "/" + logfile, 'w') as log:
-        p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=os.environ.copy())
+        p = subprocess.Popen(args, stdout=log, cwd=cwd, stderr=subprocess.STDOUT, env=os.environ.copy())
 
     return p
 
