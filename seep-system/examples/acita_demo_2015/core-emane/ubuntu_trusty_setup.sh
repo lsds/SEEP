@@ -164,3 +164,10 @@ ln -s `pwd`/vldb /home/dokeeffe/.core
 #popd
 
 sudo apt-get install gnuplot
+
+#Need to install a more recent libstdc++ for face recognition query
+sudo apt-get install software-properties-common python-software-properties
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt-get update
+sudo apt-get install gcc g++
+#sudo apt-get install libstdc++6
