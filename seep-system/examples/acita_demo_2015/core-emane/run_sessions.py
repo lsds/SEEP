@@ -11,6 +11,7 @@ from core.misc.xmlsession import savesessionxml
 
 #script_dir = os.path.dirname(os.path.realpath(__file__))
 script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
+#script_dir = '/home/dan/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
 
 print 'Appending script_dir to path'
 sys.path.append(script_dir)
@@ -97,10 +98,9 @@ def run_session(time_str, k, mob, exp_session, params):
         if not add_to_server(session): 
             print 'Could not add to server'
 
-        """
-        gui = start_query_gui("gui.log", session.sessiondir, params)
-        print 'Started query gui ', gui
-        """
+        if params['gui']:
+            gui = start_query_gui("gui.log", session.sessiondir, params)
+            print 'Started query gui ', gui
 
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
@@ -260,12 +260,11 @@ def run_session(time_str, k, mob, exp_session, params):
                 print 'Removing session from core daemon server'
                 server.delsession(session)
             session.shutdown()
-        """
-        if gui:
+
+        if params['gui'] and gui:
             print 'Shutting down query gui ',gui
             gui.stdin.close()
             gui.terminate()
-        """
 
 
 def get_num_workers(k, params):
@@ -489,12 +488,6 @@ def start_query_gui(logfile, logdir, params):
 
     return p
 
-"""
-def stop_query_gui(p):
-    if p:
-        p.kill()
-"""
-
 if __name__ == "__main__" or __name__ == "__builtin__":
     print 'Hello world'
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
@@ -523,6 +516,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
+    parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Start a gui for query output')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -547,6 +541,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['iperf']=args.iperf
     params['scaleOutSinks']=args.scale_sinks
     params['quagga']=args.quagga
+    params['gui']=args.gui
+
     if args.verbose: params['verbose']='true'
 
     sessions = int(args.sessions)
