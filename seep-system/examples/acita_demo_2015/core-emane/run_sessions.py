@@ -371,7 +371,7 @@ def get_initial_placements(placements, mobility):
 def gen_linear_position(i):
     return (50 * i, 100)
 
-def gen_grid_position(i, nodes, offset=3, spacing=600):
+def gen_grid_position(i, nodes, offset=3, spacing=400):
     if i < offset: raise Exception("Invalid offset for %d: %d"%(i,offset))
     dim = math.ceil(math.sqrt(nodes))
     num_x = (i-offset) % dim 
@@ -489,7 +489,7 @@ def start_query_gui(logfile, logdir, params):
 
     return p
 
-def get_repo_dir()
+def get_repo_dir():
     regex = re.compile('(.*)/seep-system')
     return re.search(regex, script_dir).groups()[0]
 
