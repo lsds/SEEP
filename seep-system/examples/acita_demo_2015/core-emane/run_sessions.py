@@ -373,9 +373,10 @@ def gen_linear_position(i):
 
 def gen_grid_position(i, nodes, offset=3, spacing=400):
     if i < offset: raise Exception("Invalid offset for %d: %d"%(i,offset))
-    dim = math.ceil(math.sqrt(nodes))
+    dim = max(1.0, math.floor(math.sqrt(nodes)))
     num_x = (i-offset) % dim 
     num_y = math.floor((i-offset) / dim)
+    print 'i=',i, 'nodes=',nodes,'offset=',offset,'dim=',dim,'num_x=',num_x,'num_y=',num_y
     return (int(spacing * num_x), int(spacing * num_y)) 
 
 def add_to_server(session):
