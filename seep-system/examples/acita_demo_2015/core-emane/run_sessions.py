@@ -9,9 +9,8 @@ from core.emane.ieee80211abg import EmaneIeee80211abgModel
 #from core.misc.xmlutils import savesessionxml
 from core.misc.xmlsession import savesessionxml
 
-#script_dir = os.path.dirname(os.path.realpath(__file__))
-script_dir = '/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
-#script_dir = '/home/dan/seep-ita/seep-system/examples/acita_demo_2015/core-emane'
+script_dir = os.path.dirname(os.path.realpath(__file__))
+#script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
 
 print 'Appending script_dir to path'
 sys.path.append(script_dir)
@@ -83,8 +82,8 @@ def run_sessions(time_str, k, mob, sessions, params):
         run_session(time_str, k, mob, session, params)
 
 def run_session(time_str, k, mob, exp_session, params):
-    try:
 
+    try:
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1',
                 'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 

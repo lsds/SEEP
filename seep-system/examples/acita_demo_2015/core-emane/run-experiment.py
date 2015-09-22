@@ -186,6 +186,7 @@ if __name__ == "__main__":
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
+    parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Start a gui for query output')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -216,6 +217,7 @@ if __name__ == "__main__":
     params['scaleOutSinks']=args.scale_sinks
     params['quagga']=args.quagga
     params['iperf']=args.iperf
+    params['gui']=args.gui
     if args.trace: params['trace']=args.trace
     if args.verbose: params['verbose']='true'
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
