@@ -4,7 +4,7 @@ import subprocess,os,time,re,argparse
 
 from compute_stats import compute_stats,median,compute_relative_raw_vals
 from run_sessions import run_sessions
-from util import chmod_dir
+from util import chmod_dir, pybool_to_javastr
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
@@ -201,7 +201,8 @@ if __name__ == "__main__":
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
-    parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Start a gui for query output')
+    parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a gui for query output')
+    parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -229,10 +230,13 @@ if __name__ == "__main__":
     params['sources']=args.sources
     params['sinks']=args.sinks
     params['fanin']=args.max_fan_in
-    params['scaleOutSinks']=args.scale_sinks
+    params['pyScaleOutSinks']=args.scale_sinks
+    params['scaleOutSinks']=pybool_to_javastr(args.scale_sinks)
     params['quagga']=args.quagga
     params['iperf']=args.iperf
-    params['gui']=args.gui
+    params['sinkDisplay']=args.sink_display
+    params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
+    params['enableGUI']= "true" if args.gui else "false"
     if args.trace: params['trace']=args.trace
     if args.verbose: params['verbose']='true'
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay

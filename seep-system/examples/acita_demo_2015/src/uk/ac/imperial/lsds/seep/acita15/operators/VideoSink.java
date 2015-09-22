@@ -47,7 +47,7 @@ public class VideoSink implements StatelessOperator {
 	private long totalBytes = 0;
 	private final int displayPort = 20150;
 	private final String displayAddr = "172.16.0.254";
-	private final boolean enableSinkDisplay = Boolean.parseBoolean(GLOBALS.valueFor("enableGUI")); //Boolean.parseBoolean(GLOBALS.valueFor("enableSinkDisplay"));
+	private final boolean enableSinkDisplay = Boolean.parseBoolean(GLOBALS.valueFor("enableSinkDisplay"));
 	private Socket displaySocket = null;
 	private ObjectOutputStream output = null;
 	private Stats stats = null;

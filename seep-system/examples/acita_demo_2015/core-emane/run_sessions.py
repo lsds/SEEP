@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import sys,os,time,re,argparse,math,shutil,subprocess
+
+
 from core import pycore
 from core.constants import *
 from core.mobility import BasicRangeModel
@@ -14,7 +16,7 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 
 print 'Appending script_dir to path'
 sys.path.append(script_dir)
-from util import chmod_dir
+from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
 
 #repo_dir = '%s/../../../..'
@@ -97,11 +99,11 @@ def run_session(time_str, k, mob, exp_session, params):
         if not add_to_server(session): 
             print 'Could not add to server'
 
-        if params['gui']:
-            gui = start_query_gui("gui.log", session.sessiondir, params)
-            print 'Started query gui ', gui
+        if params['sinkDisplay']:
+            sink_display = start_query_sink_display("sinkDisplay.log", session.sessiondir, params)
+            print 'Started query sink display ', sink_display 
 
-        params['repo_dir'] = get_repo_dir()
+        params['repoDir'] = get_repo_dir()
         #This is so broken, should find a better way...
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
@@ -262,15 +264,15 @@ def run_session(time_str, k, mob, exp_session, params):
                 server.delsession(session)
             session.shutdown()
 
-        if params['gui'] and gui:
-            print 'Shutting down query gui ',gui
-            gui.stdin.close()
-            gui.terminate()
+        if params['sinkDisplay'] and sink_display:
+            print 'Shutting down query sink display ', sink_display
+            sink_display.stdin.close()
+            sink_display.terminate()
 
 
 def get_num_workers(k, params):
     q = params['query']
-    sink_scale_factor = k if params['scaleOutSinks'] else 1
+    sink_scale_factor = k if params['pyScaleOutSinks'] else 1
     if q == 'chain' or q == 'fr' or q == 'join': 
         num_workers = [1] * (1 + sink_scale_factor + (k * params['h']))
         if params['query'] == 'join':
@@ -474,7 +476,7 @@ def run_iperf_test(session, wlan1, mob, trace_file, params):
     session.instantiate()
     time.sleep(1000000)
 
-def start_query_gui(logfile, logdir, params):
+def start_query_sink_display(logfile, logdir, params):
 
     if params['query'] == 'fr':   
         args = ['java', 'FaceRecognitionDemo']
@@ -501,6 +503,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
     parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
     parser.add_argument('--y', dest='y', default='1200', help='Grid y dimension (1200)')
+    parser.add_argument('--duration', dest='duration', default='100000', help='Mobility params duration')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join')
     parser.add_argument('--sources', dest='sources', default='1', help='Sources')
     parser.add_argument('--sinks', dest='sinks', default='1', help='Sinks (non-replicated)')
@@ -522,7 +525,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
-    parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Start a gui for query output')
+    parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
+    parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -537,6 +541,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['h']=int(args.h)
     params['x']=int(args.x)
     params['y']=int(args.y)
+    params['duration']=args.duration
     params['query']=args.query
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
@@ -545,9 +550,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['sinks']=args.sinks
     params['fanin']=args.fanin
     params['iperf']=args.iperf
-    params['scaleOutSinks']=args.scale_sinks
+    params['pyScaleOutSinks']=args.scale_sinks
+    params['scaleOutSinks']=pybool_to_javastr(args.scale_sinks)
     params['quagga']=args.quagga
-    params['gui']=args.gui
+    params['sinkDisplay']=args.sink_display
+    params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
+    params['enableGUI']= "true" if args.gui else "false"
 
     if args.verbose: params['verbose']='true'
 

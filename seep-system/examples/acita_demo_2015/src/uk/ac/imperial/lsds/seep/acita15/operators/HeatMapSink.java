@@ -36,7 +36,7 @@ public class HeatMapSink implements StatelessOperator {
 	private HeatMap result = null;
 	private int numSources;
 	private double averageCoverage = 0.0;
-	private final boolean enableSinkDisplay = Boolean.parseBoolean(GLOBALS.valueFor("enableGUI")); //Boolean.parseBoolean(GLOBALS.valueFor("enableSinkDisplay"));
+	private final boolean enableSinkDisplay = Boolean.parseBoolean(GLOBALS.valueFor("enableSinkDisplay"));
 	private final int displayPort = 20150;
 	private final String displayAddr = "172.16.0.254";
 	private Socket displaySocket = null;
