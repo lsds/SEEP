@@ -38,6 +38,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
             plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
             plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
             plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+            #latex_plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
 
         chmod_dir('%s/%s'%(data_dir, time_str))
 
@@ -142,14 +143,28 @@ def get_latency(logdir):
             
     raise Exception("Could not find %s% latency in %s"%(latency_percentile, logfilename))
 
-def plot(p, time_str, script_dir, data_dir):
+def plot(p, time_str, script_dir, data_dir, term='pdf'):
     exp_dir = '%s/%s'%(data_dir,time_str)
     print exp_dir
     tmpl_dir = '%s/vldb/config'%script_dir
     tmpl_file = '%s/%s.plt'%(tmpl_dir,p)
-    plot_proc = subprocess.Popen(['gnuplot', '-e',
-'timestr=\'%s\';outputdir=\'%s\';tmpldir=\'%s\''%(time_str,data_dir,tmpl_dir), tmpl_file], cwd=exp_dir)
+
+    if term == 'pdf': 
+        term_ext = '.pdf'
+    elif term == 'latex' or term == 'epslatex': 
+        term_ext = '.tex'
+    else: raise Exception('Unknown gnuplot terminal type: '+term)
+
+    envstr = 'timestr=\'%s\';outputdir=\'%s\';tmpldir=\'%s\';term=\'%s\';termext=\'%s\''%(time_str,data_dir,tmpl_dir, term, term_ext)
+    plot_proc = subprocess.Popen(['gnuplot', '-e', envstr, tmpl_file], cwd=exp_dir)
     plot_proc.wait()
+
+def latex_plot(p, time_str, script_dir, data_dir):
+    plot(p, time_str, script_dir, data_dir, term='epslatex')
+    # rm p.pdf
+    # ps2pdf -dEPSCrop p.eps p.pdf
+    # replace p.tex.tmpl p-text.tex 'input=p, text=todo'
+    # pdflatex p-text.tex
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')

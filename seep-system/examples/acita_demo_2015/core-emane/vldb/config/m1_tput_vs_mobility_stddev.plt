@@ -1,8 +1,8 @@
 #load "gp-style.plt"
 load sprintf("%s/colours.plt",tmpldir)
 #set output plotname
-set terminal pdf 
-set output sprintf("%s/%s/tput_vs_mobility_stddev.pdf",outputdir,timestr)
+set terminal term 
+set output sprintf("%s/%s/tput_vs_mobility_stddev%s",outputdir,timestr,termext)
 
 set xlabel "Replication factor (k)" font ", 16"
 set ylabel "Throughput (Kb/s)" font ", 16" offset -2

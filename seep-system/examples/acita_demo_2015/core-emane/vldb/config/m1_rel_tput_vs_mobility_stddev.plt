@@ -1,6 +1,6 @@
 load sprintf("%s/colours.plt",tmpldir)
-set terminal pdf 
-set output sprintf("%s/%s/rel_tput_vs_mobility_stddev.pdf",outputdir,timestr)
+set terminal term 
+set output sprintf("%s/%s/rel_tput_vs_mobility_stddev%s",outputdir,timestr,termext)
 
 set title "Relative throughput for different replication factors (k)"
 set xlabel "Replication factor (k)"

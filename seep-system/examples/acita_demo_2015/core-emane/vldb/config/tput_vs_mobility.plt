@@ -1,5 +1,5 @@
-set terminal pdf 
-set output sprintf("%s/%s/tput_vs_mobility.pdf",outputdir,timestr)
+set terminal term 
+set output sprintf("%s/%s/tput_vs_mobility%s",outputdir,timestr,termext)
 
 set title "Throughput vs mobility for different replication factors (k)"
 set xlabel "Node speed (m/s)"

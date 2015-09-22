@@ -1,5 +1,5 @@
-set terminal pdf 
-set output sprintf("%s/%s/latency_vs_mobility_stddev.pdf",outputdir,timestr)
+set terminal term 
+set output sprintf("%s/%s/latency_vs_mobility_stddev%s",outputdir,timestr,termext)
 
 set xlabel "Node speed (m/s)" font ", 16"
 set ylabel "95% Latency (ms)" font ", 16" offset -3
