@@ -42,8 +42,7 @@ public class CoreGUIUtil {
 		{
 			String nodeId = InetAddress.getLocalHost().getHostName();
 
-			//String iconsDir = GLOBALS.valueFor("iconsDir");
-			String iconsDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config";
+			String iconsDir = GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/core-emane/vldb/config";
 			String iconPath = iconsDir + "/" + iconName;
 			int nodeNumber = nodeId2NodeNumber(nodeId);
 			

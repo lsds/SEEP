@@ -56,7 +56,10 @@ public class MasterController {
 		inf.setEiu(eiu);
 		inf.startInfrastructure();
 		LOG.debug("-> Initializing Master Controller...DONE");
-		CoreGUIUtil.setMasterIcon();
+		if (Boolean.parseBoolean(GLOBALS.valueFor("enableGUI")))
+		{
+			CoreGUIUtil.setMasterIcon();
+		}
 	}
 	
 	public void submitQuery(QueryPlan qp){

@@ -102,6 +102,8 @@ def run_session(time_str, k, mob, exp_session, params):
             gui = start_query_gui("gui.log", session.sessiondir, params)
             print 'Started query gui ', gui
 
+        params['repo_dir'] = get_repo_dir()
+        #This is so broken, should find a better way...
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
         write_chain_length(params['h'], session.sessiondir)
@@ -487,6 +489,10 @@ def start_query_gui(logfile, logdir, params):
         p = subprocess.Popen(args, stdout=log, cwd=cwd, stderr=subprocess.STDOUT, env=os.environ.copy())
 
     return p
+
+def get_repo_dir()
+    regex = re.compile('(.*)/seep-system')
+    return re.search(regex, script_dir).groups()[0]
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     print 'Hello world'

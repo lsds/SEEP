@@ -304,18 +304,21 @@ public class CoreRE {
 	
 	private void setUpGUI()
 	{	
-		//TODO: This won't work if more than one worker per host!
-		if (processingUnit.getOperator().getOpContext().isSink())
+		if (Boolean.parseBoolean(GLOBALS.valueFor("enableGUI")))
 		{
-			CoreGUIUtil.setSinkIcon();
-		}
-		else if (processingUnit.getOperator().getOpContext().isSource())
-		{
-			CoreGUIUtil.setSourceIcon();
-		}
-		else
-		{
-			CoreGUIUtil.setOpIcon();
+			//TODO: This won't work if more than one worker per host!
+			if (processingUnit.getOperator().getOpContext().isSink())
+			{
+				CoreGUIUtil.setSinkIcon();
+			}
+			else if (processingUnit.getOperator().getOpContext().isSource())
+			{
+				CoreGUIUtil.setSourceIcon();
+			}
+			else
+			{
+				CoreGUIUtil.setOpIcon();
+			}
 		}
 	}
 	
