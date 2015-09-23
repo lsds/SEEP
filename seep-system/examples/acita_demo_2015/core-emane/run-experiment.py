@@ -2,7 +2,7 @@
 
 import subprocess,os,time,re,argparse
 
-from compute_stats import compute_stats,median,compute_relative_raw_vals
+from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles
 from run_sessions import run_sessions
 from util import chmod_dir, pybool_to_javastr
 
@@ -40,6 +40,12 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
             plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
             #latex_plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
 
+	# Do any plots that summarize all sessions for fixed k and mob.
+
+        for k in ks:
+            for mob in mobilities:
+                plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, time_str, script_dir, data_dir, params)
+
         chmod_dir('%s/%s'%(data_dir, time_str))
 
 def get_session_dir(k, mob, session, time_str, data_dir):
@@ -71,6 +77,11 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffi
         for (i_mob, mob) in enumerate(mobilities):
             writeHeader = i_mob == 0
             metrics = get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn)
+
+            #First record any cumulative stats for fixed kmob
+            record_fixed_kmob_statistics(k, mob, metrics.values(), time_str, data_dir, metric_suffix)
+
+            #Now record any aggregate stats across all kmob 
             raw_vals[k][mob] = metrics 
             meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
@@ -112,6 +123,19 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffi
             for line in all_loglines:
                all_rel_rx_vs_mob_plotdata.write(line) 
 
+def record_fixed_kmob_statistics(k, mob, values, time_str, data_dir, metric_suffix):
+
+    #First sort the metrics in ascending order
+    #Then get the total number of metrics
+    #Then get the x increment per value 
+    cum_distribution = compute_cumulative_percentiles(values) 
+
+    with open('%s/%s/%dk/%.2fm/cum-%s.data'%(data_dir,time_str,k,mob,metric_suffix),'w') as cum_fixed_kmob_plotdata:
+	cum_fixed_kmob_plotdata.write('#p %s\n'%metric_suffix)
+	for (p, value) in cum_distribution: 
+            logline = '%.2f %d\n'%(p,value)
+            cum_fixed_kmob_plotdata.write(logline)
+
 def get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn):
     metrics = {} 
     for session in sessions:
@@ -143,7 +167,7 @@ def get_latency(logdir):
             
     raise Exception("Could not find %s% latency in %s"%(latency_percentile, logfilename))
 
-def plot(p, time_str, script_dir, data_dir, term='pdf'):
+def plot(p, time_str, script_dir, data_dir, term='pdf', add_to_envstr=''):
     exp_dir = '%s/%s'%(data_dir,time_str)
     print exp_dir
     tmpl_dir = '%s/vldb/config'%script_dir
@@ -156,6 +180,8 @@ def plot(p, time_str, script_dir, data_dir, term='pdf'):
     else: raise Exception('Unknown gnuplot terminal type: '+term)
 
     envstr = 'timestr=\'%s\';outputdir=\'%s\';tmpldir=\'%s\';term=\'%s\';termext=\'%s\''%(time_str,data_dir,tmpl_dir, term, term_ext)
+    envstr += add_to_envstr 
+
     plot_proc = subprocess.Popen(['gnuplot', '-e', envstr, tmpl_file], cwd=exp_dir)
     plot_proc.wait()
 
@@ -165,6 +191,10 @@ def latex_plot(p, time_str, script_dir, data_dir):
     # ps2pdf -dEPSCrop p.eps p.pdf
     # replace p.tex.tmpl p-text.tex 'input=p, text=todo'
     # pdflatex p-text.tex
+
+def plot_fixed_kmob(p, k, mob, time_str, script_dir, data_dir, params, term='pdf'):
+    kmob_envstr = ';k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\''%(k,mob,params['query'],params['duration'])
+    plot(p, time_str, script_dir, data_dir, term, kmob_envstr)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run simulations.')

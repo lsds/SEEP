@@ -118,11 +118,11 @@ public class ControlHandlerWorker implements Runnable{
 				long readStart = System.currentTimeMillis();
 				tuple = k.readObject(i, ControlTuple.class);
 				long readEnd = System.currentTimeMillis();
-				LOG.info("Read control tuple in "+ (readEnd-readStart) + " ms");
+				LOG.debug("Read control tuple in "+ (readEnd-readStart) + " ms");
 				if(tuple != null){
 					InetAddress ip = incomingSocket.getInetAddress();
 					owner.processControlTuple(tuple, os, ip);
-					LOG.info("Processed control tuple in "+(System.currentTimeMillis()-readEnd) + " ms");
+					LOG.debug("Processed control tuple in "+(System.currentTimeMillis()-readEnd) + " ms");
 				}
 				else{
 					LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
