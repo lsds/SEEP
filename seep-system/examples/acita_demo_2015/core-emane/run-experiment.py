@@ -44,7 +44,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
 
         for k in ks:
             for mob in mobilities:
-                plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, time_str, script_dir, data_dir, params)
+                plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
 
         chmod_dir('%s/%s'%(data_dir, time_str))
 
@@ -192,8 +192,8 @@ def latex_plot(p, time_str, script_dir, data_dir):
     # replace p.tex.tmpl p-text.tex 'input=p, text=todo'
     # pdflatex p-text.tex
 
-def plot_fixed_kmob(p, k, mob, time_str, script_dir, data_dir, params, term='pdf'):
-    kmob_envstr = ';k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\''%(k,mob,params['query'],params['duration'])
+def plot_fixed_kmob(p, k, mob, sessions, time_str, script_dir, data_dir, params, term='pdf'):
+    kmob_envstr = ';k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';runs=\'%d\''%(k,mob,params['query'],params['duration'],sessions)
     plot(p, time_str, script_dir, data_dir, term, kmob_envstr)
 
 if __name__ == "__main__":
