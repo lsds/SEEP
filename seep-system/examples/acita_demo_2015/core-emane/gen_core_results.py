@@ -3,6 +3,7 @@
 import subprocess,os,time,re,argparse,glob, pandas
 
 from extract_results import *
+from compute_stats import compute_cumulative_percentiles
 
 
 def main(exp_dir):
@@ -105,6 +106,8 @@ def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, dedupe
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_frame_rate':sink_sink_frame_rate}, 'a')
     lstats = latency_stats(deduped_latencies)
     record_stat('%s/latency.txt'%exp_dir, lstats)
+    lpercentiles = compute_cumulative_percentiles(deduped_latencies.tolist())
+    record_percentiles(lpercentiles, 'lat', exp_dir)
 
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
@@ -160,6 +163,13 @@ def record_stat(stat_file, stats, mode='w'):
             line = '%s=%s\n'%(str(stat), str(stats[stat]))
             print line
             sf.write(line)
+
+def record_percentiles(percentiles, metric_suffix, exp_dir):
+    with open('%s/cum-%s.data'%(exp_dir,metric_suffix),'w') as cum_fixed_kmobsession_plotdata:
+        cum_fixed_kmobsession_plotdata.write('#p %s\n'%metric_suffix)
+        for (p, value) in percentiles: 
+            logline = '%.2f %d\n'%(p,value)
+            cum_fixed_kmobsession_plotdata.write(logline)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')
