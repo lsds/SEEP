@@ -165,7 +165,7 @@ public class LocationSource implements StatelessOperator {
 				long tNow = System.currentTimeMillis();
 				if (tNow - tStart > heatMapInterval || !rateLimitSrc)
 				{
-					logger.info("Heat map queue size="+heatMapQueue.size());
+					logger.debug("Heat map queue size="+heatMapQueue.size());
 					try{
 						heatMapQueue.put(current.toString());
 					}catch(InterruptedException e) { throw new RuntimeException(e); }

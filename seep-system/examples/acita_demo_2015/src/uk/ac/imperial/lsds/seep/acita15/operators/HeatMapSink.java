@@ -80,13 +80,13 @@ public class HeatMapSink implements StatelessOperator {
 			int sourceIdCount = update.getSourceIds().size();
 			double updateCoverage = (100 * sourceIdCount) / numSources;
 			averageCoverage += (updateCoverage - averageCoverage) / tuplesReceived;
-			logger.info("Coverage, update="+updateCoverage+",cumavg="+averageCoverage);
+			logger.debug("Coverage, update="+updateCoverage+",cumavg="+averageCoverage);
 			
 			result.add(update);
 			//TODO: Might want to have some kind of window here.
 			displayHeatMap(result.toString());
 		}
-		logger.info("Current heatmap="+result.toString());
+		logger.debug("Current heatmap="+result.toString());
 		
 		long tupleId = dt.getLong("tupleId");
 		if (tupleId != tuplesReceived -1)
