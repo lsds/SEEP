@@ -2,7 +2,7 @@ set terminal term
 set output sprintf("%s/%s/latency_vs_mobility_stddev%s",outputdir,timestr,termext)
 
 set xlabel "Node speed (m/s)" font ", 16"
-set ylabel "95% Latency (ms)" font ", 16" offset -3
+set ylabel sprintf("%s Latency (ms)",percentile) font ", 16" offset -3
 set yrange [0:5000]
 set tics font ", 10"
 #set xtics 0,5,15

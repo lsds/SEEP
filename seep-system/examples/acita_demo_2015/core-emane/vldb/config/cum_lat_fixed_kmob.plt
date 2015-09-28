@@ -1,7 +1,7 @@
 set terminal term 
 set output sprintf("%s/%s/%sk/%sm/cum_latency_fixed_kmob_%s%s",outputdir,timestr,k,mob,timestr,termext)
 
-set title sprintf("Cumulative distribution of 95th percentile latency for %s runs\nk=%s, mob=%s, query=%s, duration=%s",runs,k,mob,query,duration)
+set title sprintf("Cumulative distribution of %s latency for %s runs\nk=%s, mob=%s, query=%s, duration=%s",percentile,runs,k,mob,query,duration)
 set xlabel "Latency (ms)"
 set ylabel "Percentage of runs with latency < x"
 set yrange [0:100]

@@ -8,7 +8,10 @@ from util import chmod_dir, pybool_to_javastr
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
-latency_percentile = '95'
+#latency_percentile = '95%'
+#latency_regex = re.compile('%s%%_lat=(\d+)'%(latency_percentile))
+latency_percentile = 'max'
+latency_regex = re.compile('max_lat=(\d+)')
 
 def main(ks,mobilities,sessions,params,plot_time_str=None):
 
@@ -160,7 +163,7 @@ def get_tput(logdir):
 
 def get_latency(logdir):
     #TODO: Handle float for latency in regex!
-    regex = re.compile('%s%%_lat=(\d+)'%(latency_percentile))
+    regex = latency_regex
     with open('%s/latency.txt'%logdir, 'r') as latency_log:
         for line in latency_log:
             match = re.search(regex, line)
@@ -181,7 +184,7 @@ def plot(p, time_str, script_dir, data_dir, term='pdf', add_to_envstr=''):
         term_ext = '.tex'
     else: raise Exception('Unknown gnuplot terminal type: '+term)
 
-    envstr = 'timestr=\'%s\';outputdir=\'%s\';tmpldir=\'%s\';term=\'%s\';termext=\'%s\''%(time_str,data_dir,tmpl_dir, term, term_ext)
+    envstr = 'timestr=\'%s\';outputdir=\'%s\';tmpldir=\'%s\';term=\'%s\';termext=\'%s\';percentile=\'%s\''%(time_str,data_dir,tmpl_dir, term, term_ext,latency_percentile)
     envstr += add_to_envstr 
 
     plot_proc = subprocess.Popen(['gnuplot', '-e', envstr, tmpl_file], cwd=exp_dir)
