@@ -39,7 +39,7 @@ def gen_script(nid, g):
     
     script = "#!/bin/sh\n"
     script += "# auto-generated script for fixed routes\n"
-    script += "\n".join(gw_cmds)
+    script += "\n".join(gw_cmds) + "\n"
     script += "\n".join(multihop_cmds)
     return script
 
