@@ -18,6 +18,7 @@ print 'Appending script_dir to path'
 sys.path.append(script_dir)
 from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
+from gen_fixed_routes import create_static_routes
 
 #repo_dir = '%s/../../../..'
 #svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'

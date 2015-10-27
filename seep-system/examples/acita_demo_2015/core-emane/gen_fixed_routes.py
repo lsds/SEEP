@@ -1,4 +1,4 @@
-import os
+import os,math
 import networkx as nx
 
 from util import chmod_dir
@@ -16,12 +16,12 @@ def gen_topology(placements, tx_range):
     for src in placements.keys():
         for dest in placements.keys():
             if src != dest and dist(placements[src], placements[dest]) <= tx_range:
-                nx.add_edge(src, dest)
+                g.add_edge(src, dest)
 
     return g
 
 def dist(src_xy, dest_xy):
-    return sqrt((src_xy[0] - dest_xy[0])**2 + (src_xy[1] - dest_xy[1])**2)
+    return math.sqrt((src_xy[0] - dest_xy[0])**2 + (src_xy[1] - dest_xy[1])**2)
 
 def gen_script(nid, g):
     paths = nx.shortest_path(g, nid)
