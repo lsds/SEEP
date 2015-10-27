@@ -67,6 +67,9 @@ class FixedRoutes(CoreService):
         rt_table = ";".join(["%d,%d"%(dest,paths[dest][1]) for dest in paths if dest != node.objid])
         cfg += "echo '%s' > fixed_routes.txt\n"%rt_table
 
+        gw_cmds, multihop_cmds = cls.generate_cmds(node, paths)
+        cfg += "".join(gw_cmds)
+        cfg += "".join(multihop_cmds)
         return cfg
 
     @classmethod
@@ -93,6 +96,26 @@ class FixedRoutes(CoreService):
 
         #raise Exception("Computed paths: "+str(paths))
         return paths
+
+    @classmethod
+    def generate_cmds(cls, node, paths):
+        # First get gateways
+        gws = [dest for dest in paths if len(paths[dest]) == 2]
+        
+        inf = "eth0"
+        gw_cmds = ["ip route add %s dev %s\n"%(cls.nid2ip(gw), inf) for gw in gws]
+
+        # Next get multihop destinations
+        multihop_dests = [(dest, paths[dest][1]) for dest in paths if len(paths[dest]) > 2]
+
+        multihop_cmds = ["ip route add %s/32 via %s dev %s\n"%(cls.nid2ip(dest),cls.nid2ip(gw),inf) for (dest, gw) in multihop_dests]
+
+        return (gw_cmds, multihop_cmds)
+
+    @classmethod
+    def nid2ip(cls, nid):
+        return "10.0.0.%d"%(nid-1)
+
 
 # this line is required to add the above class to the list of available services
 addservice(FixedRoutes)
