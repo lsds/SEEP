@@ -124,6 +124,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
 
         model = params.get('model', None)
+        tx_range = 500 #TODO: How to apply to emane?
         print 'Model=', model
         if not model:
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
@@ -163,10 +164,11 @@ def run_session(time_str, k, mob, exp_session, params):
             wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
             model_cfg = list(BasicRangeModel.getdefaultvalues())
-            model_cfg[0] = '500' #Similar to default effective emane range.
+            model_cfg[0] = str(tx_range) #Similar to default effective emane range.
             model_cfg[1] = '11000' #Similar to default emane bandwidth.
             print 'Basic Range configured values: %s'%(str(model_cfg))
             wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
+
 
         if params['iperf']:
             run_iperf_test(session, wlan1, mob, trace_file, params)
@@ -195,6 +197,7 @@ def run_session(time_str, k, mob, exp_session, params):
         print 'num_workers=', num_workers
         placements = get_initial_placements(params['placement'], mob)
         print 'Initial placements=',placements
+        if placements: create_static_routes(placements, tx_range, session.sessiondir)
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
             if placements:
