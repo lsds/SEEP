@@ -30,12 +30,12 @@ def gen_script(nid, g):
     gws = [dest for dest in paths if len(paths[dest]) == 2]
     
     inf = "eth0"
-    gw_cmds = ["ip route add %s dev %s"%(nid2ip(gw), inf) for gw in gws]
+    gw_cmds = ["ip route add %s dev %s metric 1"%(nid2ip(gw), inf) for gw in gws]
 
     # Next get multihop destinations
-    multihop_dests = [(dest, paths[dest][1]) for dest in paths if len(paths[dest]) > 2]
+    multihop_dests = [(dest, paths[dest][1], len(paths[dest])-1) for dest in paths if len(paths[dest]) > 2]
 
-    multihop_cmds = ["ip route add %s/32 via %s dev %s"%(nid2ip(dest),nid2ip(gw),inf) for (dest, gw) in multihop_dests]
+    multihop_cmds = ["ip route add %s/32 via %s dev %s metric %d"%(nid2ip(dest),nid2ip(gw),inf, metric) for (dest, gw, metric) in multihop_dests]
     
     script = "#!/bin/sh\n"
     script += "# auto-generated script for fixed routes\n"

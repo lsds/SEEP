@@ -73,6 +73,10 @@ public class NetRateMonitor implements Runnable {
 					{
 						upstreamCosts = parseOLSRRoutes(routes); 
 					}
+					else if (GLOBALS.valueFor("net-routing").equals("FixedRoutes"))
+					{
+						upstreamCosts = parseFixedRoutes(routes); 
+					}
 					else { throw new RuntimeException("Unknown routing alg: "+GLOBALS.valueFor("net-routing")); }
 					//TODO: Add empty routes/costs?
 				}
@@ -151,6 +155,11 @@ public class NetRateMonitor implements Runnable {
 		return parseOLSRETXRoutes(routes);
 	}
 	
+	private Map<Integer, Double> parseFixedRoutes(List<String> routes)
+	{
+		return parseOLSRETXRoutes(routes);
+	}
+
 	//Find ids of all operators/workers located on a particular host.
 	private Set<Integer> getHostUpOpIds(String hostname)
 	{
