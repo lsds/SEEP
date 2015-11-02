@@ -53,7 +53,8 @@ def main(exp_dir):
 	with open(sink_log, 'r') as sink:
 	    # Get time sink received first message
 	    t_sink_begin = sink_rx_begin(sink)
-	    if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
+	    #if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
+	    continue
 	    if t_sink_begin < t_min_sink_begin:
 		t_min_sink_begin = t_sink_begin
 	with open(sink_log, 'r') as sink:
@@ -70,6 +71,7 @@ def main(exp_dir):
 	    #if not rx_latencies: raise Exception("Could not find any latencies.")
 
     deduped_latencies = dedup_latencies(rx_latencies)
+
     op_tputs = {}
     for op_log in op_logs:
         with open(op_log, 'r') as f:
@@ -170,6 +172,12 @@ def record_percentiles(percentiles, metric_suffix, exp_dir):
         for (p, value) in percentiles: 
             logline = '%.2f %d\n'%(p,value)
             cum_fixed_kmobsession_plotdata.write(logline)
+
+def record_latencies(latencies, latencies_file):
+    with open(latencies_file,'w') as lf:
+        lf.write('# latency')
+        for latency in latencies: 
+            lf.write('%d\n'%latency)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

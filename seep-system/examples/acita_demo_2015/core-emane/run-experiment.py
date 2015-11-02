@@ -48,6 +48,8 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         for k in ks:
             for mob in mobilities:
                 plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+                plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+
                 for session in session_ids:
                     plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
 
@@ -85,6 +87,11 @@ def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffi
 
             #First record any cumulative stats for fixed kmob
             record_fixed_kmob_statistics(k, mob, metrics.values(), time_str, data_dir, metric_suffix)
+
+	    #Next record cumulative stats for raw  latencies for fixed kmob (if recording latency stats)
+	    if metric_suffix == 'lat': 
+                raw_latencies = [lat for session_lats in get_metrics(k, mob, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
+                record_fixed_kmob_statistics(k, mob, raw_latencies, time_str, data_dir, 'raw-lat')
 
             #Now record any aggregate stats across all kmob 
             raw_vals[k][mob] = metrics 
@@ -172,9 +179,17 @@ def get_latency(logdir):
             
     raise Exception("Could not find %s% latency in %s"%(latency_percentile, logfilename))
 
+def get_raw_latencies(logdir):
+    result = []
+    with open('%s/cum-lat.data'%logdir, 'r') as latency_log:
+        for line in latency_log:
+            if not line.startswith('#'):
+                result.append(int(line.split()[1]))
+
+    return result
+
 def plot(p, time_str, script_dir, data_dir, term='pdf', add_to_envstr=''):
     exp_dir = '%s/%s'%(data_dir,time_str)
-    print exp_dir
     tmpl_dir = '%s/vldb/config'%script_dir
     tmpl_file = '%s/%s.plt'%(tmpl_dir,p)
 
@@ -239,6 +254,9 @@ if __name__ == "__main__":
     parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
+    parser.add_argument('--pcap', dest='pcap', default=False, action='store_true', help='Start pcap service for workers.')
+    parser.add_argument('--emanestats', dest='emanestats', default=False, action='store_true', help='Start emanestats service on master')
+    parser.add_argument('--dstat', dest='dstat', default=False, action='store_true', help='Start dstat service on master.')
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a gui for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
@@ -272,6 +290,9 @@ if __name__ == "__main__":
     params['pyScaleOutSinks']=args.scale_sinks
     params['scaleOutSinks']=pybool_to_javastr(args.scale_sinks)
     params['quagga']=args.quagga
+    params['pcap']=args.pcap
+    params['emanestats']=args.emanestats
+    params['dstat']=args.dstat
     params['iperf']=args.iperf
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)

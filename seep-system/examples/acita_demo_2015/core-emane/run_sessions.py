@@ -187,8 +187,10 @@ def run_session(time_str, k, mob, exp_session, params):
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         services_str = "IPForward|SSH"
-
-        master = create_node(2, session, "%s|MeanderMaster"%services_str, wlan1,
+        master_services = services_str
+        if params['dstat']: master_services += "|Dstat" 
+ 
+        master = create_node(2, session, "%s|MeanderMaster"%master_services, wlan1,
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False)
 
         services_str += "|%s"%params['net-routing']
@@ -206,6 +208,7 @@ def run_session(time_str, k, mob, exp_session, params):
             else:
                 pos = gen_grid_position(i, params['nodes']-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
+            if params['pcap']: worker_services += "|pcap"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
        
         routers = []
@@ -528,6 +531,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
+    parser.add_argument('--pcap', dest='pcap', default=False, action='store_true', help='Start pcap service for workers.')
+    parser.add_argument('--emanestats', dest='emanestats', default=False, action='store_true', help='Start emanestats service on master')
+    parser.add_argument('--dstat', dest='dstat', default=False, action='store_true', help='Start dstat service on master.')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
@@ -557,6 +563,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['pyScaleOutSinks']=args.scale_sinks
     params['scaleOutSinks']=pybool_to_javastr(args.scale_sinks)
     params['quagga']=args.quagga
+    params['pcap']=args.pcap
+    params['emanestats']=args.emanestats
+    params['dstat']=args.dstat
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"
