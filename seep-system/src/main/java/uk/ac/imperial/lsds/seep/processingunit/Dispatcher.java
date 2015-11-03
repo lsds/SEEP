@@ -32,7 +32,9 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.manet.FixedRateLimiter;
 import uk.ac.imperial.lsds.seep.manet.Query;
+import uk.ac.imperial.lsds.seep.manet.RateLimiter;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
@@ -642,11 +644,13 @@ public class Dispatcher implements IRoutingObserver {
 		private final OutputQueue outputQueue;
 		private final EndPoint dest;
 		private boolean dataConnected = false;
+		private final RateLimiter rateLimiter = new FixedRateLimiter();
 		
 		public DispatcherWorker(OutputQueue outputQueue, EndPoint dest)
 		{
 			this.outputQueue = outputQueue;
 			this.dest = dest;
+			rateLimiter.setLimit(50);
 		}
 		
 		public boolean isConnected()
@@ -699,6 +703,8 @@ public class Dispatcher implements IRoutingObserver {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
 				logger.debug("Dispatcher worker sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+				
+				rateLimiter.limit();
 
 				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
 				boolean success = outputQueue.sendToDownstream(nextTuple, dest);
