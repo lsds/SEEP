@@ -52,6 +52,15 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
 
                 for session in session_ids:
                     plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                    plot_fixed_kmobsession('tx_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                    if params['dstat']:
+                        plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmobsession('page_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmobsession('io_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmobsession('disk_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                    if params['emanestats']:
+                        plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
 
         chmod_dir('%s/%s'%(data_dir, time_str))
 

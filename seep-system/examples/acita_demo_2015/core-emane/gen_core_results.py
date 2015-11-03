@@ -70,7 +70,7 @@ def main(exp_dir):
 	    rx_latencies += unfinished_sink_rx_latencies(sink, t_finished_sink_end)
 	    #if not rx_latencies: raise Exception("Could not find any latencies.")
 
-    deduped_latencies = dedup_latencies(rx_latencies)
+    deduped_tx_latencies = dedup_latencies(rx_latencies)
 
     op_tputs = {}
     for op_log in op_logs:
@@ -88,7 +88,7 @@ def main(exp_dir):
         record_stat('%s/tput.txt'%exp_dir, {'src_sink_frame_rate':src_sink_frame_rate}, 'a')
 
 
-    record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_latencies, exp_dir)
+    record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_tx_latencies, exp_dir)
     """
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
@@ -101,15 +101,17 @@ def main(exp_dir):
 
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
 
-def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_latencies, exp_dir):
+def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
     sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_frame_rate':sink_sink_frame_rate}, 'a')
-    lstats = latency_stats(deduped_latencies)
+    deduped_latencies = map(lambda (latency, txts): latency, deduped_tx_latencies.values())
+    lstats = latency_stats(pd.Series(deduped_latencies))
     record_stat('%s/latency.txt'%exp_dir, lstats)
-    lpercentiles = compute_cumulative_percentiles(deduped_latencies.tolist())
+    lpercentiles = compute_cumulative_percentiles(deduped_latencies)
     record_percentiles(lpercentiles, 'lat', exp_dir)
+    record_latencies(deduped_tx_latencies, '%s/tx_latencies.txt'%exp_dir)
 
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
@@ -176,8 +178,11 @@ def record_percentiles(percentiles, metric_suffix, exp_dir):
 def record_latencies(latencies, latencies_file):
     with open(latencies_file,'w') as lf:
         lf.write('# latency')
-        for latency in latencies: 
-            lf.write('%d\n'%latency)
+        tx_sorted = [] 
+        for ts in latencies: 
+            tx_sorted.append((latencies[ts][1], latencies[ts][0]))
+        for (tx, latency) in sorted(tx_sorted): 
+            lf.write('%d %d\n'%(tx/1000, latency))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

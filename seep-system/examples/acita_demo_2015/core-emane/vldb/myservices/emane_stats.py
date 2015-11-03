@@ -1,0 +1,43 @@
+import os
+
+from core.service import CoreService, addservice
+
+class EmaneStats(CoreService):
+    ''' Record emane statistics.
+    '''
+    _name = "EmaneStats"
+    _group = "SEEP"
+    _depends = ()
+    _configs = ("emane-stats.sh", )
+    _startindex = 81
+    _startup = ("sh emane-stats.sh start",)
+    _shutdown = ("sh emane-stats.sh stop",)
+    _validate = ()
+    _meta = "records emanesh statistics"
+
+    @classmethod
+    def generateconfig(cls, node, filename, services):
+        ''' Generate an emane-stats.sh logging script.
+        '''
+        cfg = """
+#!/bin/sh
+
+if [ "x$1" = "xstart" ]; then
+
+"""
+        repo_dir = "%s/../../../../../.."%os.path.dirname(os.path.realpath(__file__))
+        seep_example_dir = "%s/seep-system/examples/acita_demo_2015"%repo_dir
+
+        cfg += "cp %s/core-emane/vldb/config/watch-emane-stats.sh .\n"%(seep_example_dir)
+        cfg += 'echo "Starting emane stats watcher."\n'
+        cfg += "./watch-emane-stats.sh %s < /dev/null &\n"%node.name
+        cfg += """
+
+elif [ "x$1" = "xstop" ]; then
+    mkdir -p ${SESSION_DIR}/emane-stats
+    mv *emane-stats.txt ${SESSION_DIR}/emane-stats
+fi;
+"""
+        return cfg
+
+addservice(EmaneStats)

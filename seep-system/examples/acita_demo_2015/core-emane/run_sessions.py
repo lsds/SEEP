@@ -73,6 +73,16 @@ done
 #Copy mobility params if they exist
 cp r_waypoints.params $resultsDir
 
+#Copy dstat trace if exists 
+cp dstat/*.csv $resultsDir
+
+#Copy any emane stats
+if [ -d emane-stats ];
+then
+	mkdir -p $resultsDir/emane-stats
+	cp emane-stats/*.txt $resultsDir/emane-stats
+fi
+
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
 ./gen_core_results.py --expDir $resultsDir
@@ -188,13 +198,14 @@ def run_session(time_str, k, mob, exp_session, params):
 
         services_str = "IPForward|SSH"
         master_services = services_str
-        if params['dstat']: master_services += "|Dstat" 
+        if params['dstat']: master_services += "|dstat" 
  
         master = create_node(2, session, "%s|MeanderMaster"%master_services, wlan1,
                 gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False)
 
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
+        if params['emanestats']: services_str += "|EmaneStats"
         workers = []
         num_workers = get_num_workers(k, params)
         print 'num_workers=', num_workers
