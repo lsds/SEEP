@@ -650,7 +650,7 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			this.outputQueue = outputQueue;
 			this.dest = dest;
-			rateLimiter.setLimit(50);
+			rateLimiter.setLimit(60);
 		}
 		
 		public boolean isConnected()

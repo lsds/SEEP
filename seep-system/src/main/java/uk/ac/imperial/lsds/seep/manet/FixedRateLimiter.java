@@ -1,7 +1,10 @@
 package uk.ac.imperial.lsds.seep.manet;
 
-public class FixedRateLimiter implements RateLimiter {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+public class FixedRateLimiter implements RateLimiter {
+	private static final Logger logger = LoggerFactory.getLogger(FixedRateLimiter.class);
 	private long limit;
 	private long minDelayMillis;
 	private long tLast;
@@ -18,6 +21,7 @@ public class FixedRateLimiter implements RateLimiter {
 	{
 		limit = tuplesPerSecond;
 		minDelayMillis = 1000/limit;
+		logger.info("Set limit to "+tuplesPerSecond+" tuples/s, minDelay="+minDelayMillis);
 	}
 	
 	public void limit() {
@@ -28,12 +32,17 @@ public class FixedRateLimiter implements RateLimiter {
 			if (tNow - tLast < minDelayMillis)
 			{
 				try {
-					Thread.sleep(tNow - tLast);
+					Thread.sleep(minDelayMillis - (tNow - tLast));
 				} catch (InterruptedException e) {
 					throw new RuntimeException("Logic error.");
 				}
-				tLast = System.currentTimeMillis();
+				logger.debug("Fixed rate limiter waited for t="+(minDelayMillis - (tNow - tLast)));
 			}
+			else
+			{
+				logger.trace("Fixed rate limiter no delay, tnow-tlast="+(tNow - tLast));
+			}
+			tLast = System.currentTimeMillis();
 		}
 	}
 }
