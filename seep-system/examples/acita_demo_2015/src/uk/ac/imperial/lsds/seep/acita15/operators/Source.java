@@ -37,7 +37,7 @@ public class Source implements StatelessOperator {
 	public void processData(DataTuple dt) {
 		Map<String, Integer> mapper = api.getDataMapper();
 		DataTuple data = new DataTuple(mapper, new TuplePayload());
-		
+		logger.info("Source using mapper="+mapper);			
 		long tupleId = 0;
 		
 		boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
@@ -49,13 +49,14 @@ public class Source implements StatelessOperator {
 		logger.info("Source inter-frame delay="+interFrameDelay);
 		
 		final String value = generateFrame(tupleSizeChars);
+		final long[] latencyBreakdown = new long[0];
 		final long tStart = System.currentTimeMillis();
 		logger.info("Source sending started at t="+tStart);
 		logger.info("Source sending started at t="+tStart);
 		logger.info("Source sending started at t="+tStart);
 		while(sendIndefinitely || tupleId < numTuples){
 			
-			DataTuple output = data.newTuple(tupleId, value);
+			DataTuple output = data.newTuple(tupleId, value, latencyBreakdown);
 			output.getPayload().timestamp = tupleId;
 			if (tupleId % 1000 == 0)
 			{

@@ -205,7 +205,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
-        if params['emanestats']: services_str += "|EmaneStats"
+        #if params['emanestats']: services_str += "|EmaneStats"
         workers = []
         num_workers = get_num_workers(k, params)
         print 'num_workers=', num_workers
@@ -220,6 +220,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 pos = gen_grid_position(i, params['nodes']-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|pcap"
+            if params['emanestats']: worker_services += "|EmaneStats"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
        
         routers = []

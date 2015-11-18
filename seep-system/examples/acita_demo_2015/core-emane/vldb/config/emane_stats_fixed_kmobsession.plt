@@ -1,9 +1,9 @@
 set terminal term 
-set output sprintf("%s/%s/%sk/%sm/%ss/emane_stats_fixed_kmobsession_%s%s",outputdir,timestr,k,mob,session,timestr,termext)
+set output sprintf("%s/%s/%sk/%sm/%ss/emane-stats/%s_emane_stats_fixed_kmobsession_%s%s",outputdir,timestr,k,mob,session,stat,timestr,termext)
 
-set title sprintf("Avg. timed event latency ratio \nk=%s, mob=%s, query=%s, duration=%s, session=%s",k,mob,query,duration,session)
+set title sprintf("%s \nk=%s, mob=%s, query=%s, duration=%s, session=%s",stat,k,mob,query,duration,session)
 set xlabel "Seconds since epoch"
-set ylabel "Avg. timed event latency ratio"
+set ylabel sprintf("%s",stat)
 set yrange [0:*]
 set xtics font ",4"
 set xdata time
@@ -17,4 +17,4 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 #set boxwidth 0.1
 set style fill empty 
 
-plot for [i=3:27] sprintf("%s/%s/%sk/%sm/%ss/emane-stats/n%d-emane-stats.txt",outputdir,timestr,k,mob,session,i) using 1:7 title "n=".i w lines linestyle i
+plot for [i=3:27] sprintf("%s/%s/%sk/%sm/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,mob,session,i,stat) using 1:7 title "n=".i w lines linestyle i

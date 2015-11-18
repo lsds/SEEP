@@ -110,7 +110,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			//Get inputStream of incoming connection
 			InputStream is = upstreamSocket.getInputStream();
 			BufferedInputStream bis = new BufferedInputStream(is);
-			Input i = new Input(bis);
+			Input in = new Input(bis);
 			BatchTuplePayload batchTuplePayload = null;
 
 			long lastIncomingTs = -1;
@@ -118,7 +118,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			
 			while(goOn){
 				long receiveStartTs = System.currentTimeMillis();
-				batchTuplePayload = k.readObject(i, BatchTuplePayload.class);
+				batchTuplePayload = k.readObject(in, BatchTuplePayload.class);
 				long receiveTs = System.currentTimeMillis();
 				long readTime = (receiveTs-receiveStartTs);
 				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload+",readTime="+readTime);
@@ -147,6 +147,16 @@ public class IncomingDataHandlerWorker implements Runnable{
 						t_payload.local_ts = receiveTs;
 						LOG.debug("icdhw for "+opId+",ts="+t_payload.timestamp+",its="+t_payload.instrumentation_ts+",rx latency="+latency+", socket latency="+socketLatency+", readTime="+readTime);
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
+						if (reg.getMap().containsKey("latencyBreakdown"))
+						{
+							long[] latencies = reg.getLongArray("latencyBreakdown");
+							long[] newLatencies = new long[latencies.length+2];
+							for (int i=0; i < latencies.length; i++) { newLatencies[i] = latencies[i]; }
+							newLatencies[latencies.length] = socketLatency;
+							newLatencies[latencies.length+1] = readTime;
+							reg.getPayload().attrValues.set(reg.getMap().get("latencyBreakdown"), newLatencies);
+						}
+
 						LOG.debug("Adding batch to dso.");
 						if (dso instanceof OutOfOrderBufferedBarrier)
 						{

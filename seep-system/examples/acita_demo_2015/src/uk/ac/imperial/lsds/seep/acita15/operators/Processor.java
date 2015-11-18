@@ -32,7 +32,7 @@ public class Processor implements StatelessOperator{
 		long tupleId = data.getLong("tupleId");
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
-		DataTuple outputTuple = data.setValues(tupleId, value);
+		DataTuple outputTuple = data.setValues(tupleId, value, data.getLongArray("latencyBreakdown"));
 		processed++;
 		if (processed % 1000 == 0)
 		{

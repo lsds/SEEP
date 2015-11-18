@@ -158,6 +158,11 @@ public class DataTuple implements DataTupleI, Serializable{
 	}
 
 	@Override
+	public long[] getLongArray(String attribute) {
+		return (long[])payload.attrValues.get(idxMapper.get(attribute));
+	}
+
+	@Override
 	public Short getShort(String attribute) {
 		return (Short)payload.attrValues.get(idxMapper.get(attribute));
 	}

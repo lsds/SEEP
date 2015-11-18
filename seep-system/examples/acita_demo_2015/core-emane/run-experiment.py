@@ -60,7 +60,8 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
                         plot_fixed_kmobsession('io_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                         plot_fixed_kmobsession('disk_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                     if params['emanestats']:
-                        plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+			for stat in get_emane_mac_stats(script_dir):
+				plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
 
         chmod_dir('%s/%s'%(data_dir, time_str))
 
@@ -197,6 +198,12 @@ def get_raw_latencies(logdir):
 
     return result
 
+def get_emane_mac_stats(script_dir):
+    result = []
+    for line in open('%s/vldb/config/emane-mac-stats.txt'%script_dir, 'r'):
+        result.append(line.strip())
+    return result
+
 def plot(p, time_str, script_dir, data_dir, term='pdf', add_to_envstr=''):
     exp_dir = '%s/%s'%(data_dir,time_str)
     tmpl_dir = '%s/vldb/config'%script_dir
@@ -225,8 +232,8 @@ def plot_fixed_kmob(p, k, mob, sessions, time_str, script_dir, data_dir, params,
     kmob_envstr = ';k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';runs=\'%d\''%(k,mob,params['query'],params['duration'],sessions)
     plot(p, time_str, script_dir, data_dir, term, kmob_envstr)
 
-def plot_fixed_kmobsession(p, k, mob, session, time_str, script_dir, data_dir, params, term='pdf'):
-    kmobsession_envstr = ';k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';session=\'%d\''%(k,mob,params['query'],params['duration'],session)
+def plot_fixed_kmobsession(p, k, mob, session, time_str, script_dir, data_dir, params, term='pdf', add_to_envstr=''):
+    kmobsession_envstr = '%s;k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';session=\'%d\''%(add_to_envstr,k,mob,params['query'],params['duration'],session)
     plot(p, time_str, script_dir, data_dir, term, kmobsession_envstr)
 
 if __name__ == "__main__":

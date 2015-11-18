@@ -86,6 +86,7 @@ public class Base implements QueryComposer{
 		ArrayList<String> srcFields = new ArrayList<String>();
 		srcFields.add("tupleId");
 		srcFields.add("value");
+		srcFields.add("latencyBreakdown");
 		Connectable src = QueryBuilder.newStatelessSource(new Source(), -1, srcFields);
 		
 		
@@ -94,6 +95,7 @@ public class Base implements QueryComposer{
 		ArrayList<String> snkFields = new ArrayList<String>();
 		snkFields.add("tupleId");
 		snkFields.add("value");
+		snkFields.add("latencyBreakdown");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		
 		
@@ -440,6 +442,7 @@ public class Base implements QueryComposer{
 				ArrayList<String> pFields = new ArrayList<String>();
 				pFields.add("tupleId");
 				pFields.add("value");
+				pFields.add("latencyBreakdown");
 				Connectable p = QueryBuilder.newStatelessOperator(new Processor(), (i*replicationFactor)+j, pFields);
 				ops.get(i).put(j, p);
 			}

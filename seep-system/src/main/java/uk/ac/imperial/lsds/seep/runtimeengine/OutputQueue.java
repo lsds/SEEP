@@ -122,6 +122,16 @@ public class OutputQueue {
 				long latency = currentTime - tp.instrumentation_ts;
 				long oqLatency = currentTime - tp.local_ts;
 				tp.local_ts = currentTime;
+
+				if (tuple.getMap().containsKey("latencyBreakdown"))
+				{
+					long[] latencies = tuple.getLongArray("latencyBreakdown");
+					long[] newLatencies = new long[latencies.length+1];
+					for (int i=0; i < latencies.length; i++) { newLatencies[i] = latencies[i]; }
+					newLatencies[latencies.length] = oqLatency;
+					tuple.getPayload().attrValues.set(tuple.getMap().get("latencyBreakdown"), newLatencies);
+				}
+
 				channelRecord.addDataToBatch(tp);
 				
 				LOG.debug("oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency);

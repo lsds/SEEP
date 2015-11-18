@@ -26,6 +26,7 @@ public interface DataTupleI {
 	public int[] getIntArray(String attribute);
 	public Short getShort(String attribute);
 	public Long getLong(String attribute);
+	public long[] getLongArray(String attribute);
 	public Float getFloat(String attribute);
 	public Double getDouble(String attribute);
 	public double[] getDoubleArray(String attribute);

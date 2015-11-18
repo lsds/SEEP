@@ -78,7 +78,7 @@ def sink_rx_tuple_ids(f):
 def unfinished_sink_tuples(f, t_end, prev_tuples):
     tuple_records = sink_rx_tuples(f)
     print 'Found %d tuple records'%(len(tuple_records))
-    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
+    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez, opLats, sockLats):
             int(rxts) <= int(t_end) and not int(ts) in prev_tuples, tuple_records)
     print 'Left with %d tuple records after filtering'%(len(filtered_tuple_records))
     #total_bytes = reduce(lambda total, (cnt, tid, ts, txts, rxts, latency, bytez): int(bytez)+total, filtered_tuple_records)
@@ -108,7 +108,7 @@ def dedup_latencies(latencies):
 
 def sink_rx_tuples(f):
     results = []
-    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+)$')
+    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+),latencyBreakdown=(\d+);(\d+)$')
     for line in f:
         match = re.search(regex, line)
         if match:

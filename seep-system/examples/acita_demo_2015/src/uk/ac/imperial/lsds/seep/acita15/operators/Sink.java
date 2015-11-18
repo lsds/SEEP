@@ -81,10 +81,37 @@ public class Sink implements StatelessOperator {
 				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
 				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
-				+",bytes="+ bytes);
+				+",bytes="+ bytes
+				+",latencyBreakdown="+getLatencyBreakdown(dt));
 	}
 	
 	public void processData(List<DataTuple> arg0) {
 		throw new RuntimeException("TODO");
+	}
+	
+	private String getLatencyBreakdown(DataTuple dt)
+	{
+		if (dt.getMap().containsKey("latencyBreakdown"))
+		{
+			long[] latencies = dt.getLongArray("latencyBreakdown");
+			String result = "";
+
+			long opLatency = 0;
+			long socketLatency = 0;
+			logger.info("latency breakdown length="+latencies.length);
+			for (int i = 0; i < latencies.length; i=i+3)
+			{
+				opLatency += latencies[i];
+				socketLatency += Math.min(latencies[i+1], latencies[i+2]);
+				//result += ""+ latencies[i] + ";"+ latencies[i+1] + ";" + latencies[i+2];
+				//if (i < latencies.length - 1) { result += ":"; }
+			}	
+			result += ""+opLatency+";"+socketLatency;	
+			return result;
+		}
+		else
+		{
+			return "null";
+		}
 	}
 }
