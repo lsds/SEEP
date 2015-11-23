@@ -950,11 +950,12 @@ public class CoreRE {
 	{
 		LOG.debug("Writing failure ctrl to down op indices:"+downOpIndexes.toString());
 		int opId = processingUnit.getOperator().getOperatorId();
+		FailureCtrl noAlives = new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
 		for (int downOpIndex : downOpIndexes)
 		{
 			int downOpId = processingUnit.getOperator().getOpContext().getDownOpIdFromIndex(downOpIndex);
-			LOG.debug("Writing failure ctrl to down op id="+downOpId+",fctrl="+nodeFctrl);
-			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId, nodeFctrl);
+			LOG.debug("Writing failure ctrl to down op id="+downOpId+",fctrl="+noAlives);
+			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId, noAlives);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendDownstream(ct, downOpIndex, !bestEffortAcks);
 		}	
