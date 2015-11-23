@@ -5,7 +5,11 @@ import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class OpFailureCtrl implements Serializable {
+	private static final Logger logger = LoggerFactory.getLogger(OpFailureCtrl.class);
 	private int opId;
 	private long lw;
 	private BitSet acks;
@@ -67,9 +71,10 @@ public class OpFailureCtrl implements Serializable {
 		for (Long id : ids)
 		{
 			long offset = id - low;
-			if (offset > Integer.MAX_VALUE) { throw new RuntimeException("Logic error"); }
+			if (offset > Integer.MAX_VALUE || offset < 0) { throw new RuntimeException("Logic error"); }
 			bits.set((int)offset);
 		}
+		//logger.trace("Converted "+low+","+ids+" to bitset "+bits);
 		return bits;
 	}
 	
@@ -81,6 +86,7 @@ public class OpFailureCtrl implements Serializable {
 		{
 			ids.add(low + i);
 		}
+		//logger.trace("Converted bitset "+low+","+bits+" to ids "+ids);
 		return ids;
 	}
 	

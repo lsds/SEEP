@@ -128,6 +128,7 @@ public class QueryPlan {
 	
 	public Operator newStatelessOperator(OperatorCode opCode, int opId, List<String> attributes){
 		// Configure operator
+		LOG.info("Creating operator "+ opId + " with attributes: "+attributes);
 		Operator op = Operator.getStatelessOperator(opId, opCode, attributes);
 		this.addOperator(op);
 		try {
