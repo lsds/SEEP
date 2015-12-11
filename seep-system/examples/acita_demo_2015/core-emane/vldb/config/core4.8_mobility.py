@@ -821,6 +821,8 @@ class Ns2ScriptedMobility(WayPointMobility):
         if self.verbose:
             self.session.info("reading ns-2 script file: %s" % filename)
         ln = 0
+        #dokeeffe: hack
+        altitude = 1.0
         ix = iy = iz = None
         inodenum = None
         for line in f:
@@ -830,7 +832,8 @@ class Ns2ScriptedMobility(WayPointMobility):
             try:
                 if line[:8] == "$ns_ at ":
                     if ix is not None and iy is not None:
-                        self.addinitial(self.map(inodenum), ix, iy, iz)
+                        #self.addinitial(self.map(inodenum), ix, iy, iz)
+                        self.addinitial(self.map(inodenum), ix, iy, altitude)
                         ix = iy = iz = None
                     # waypoints:
                     #    $ns_ at 1.00 "$node_(6) setdest 500.0 178.0 25.0"
@@ -839,7 +842,8 @@ class Ns2ScriptedMobility(WayPointMobility):
                     nodenum = parts[3][1+parts[3].index('('):parts[3].index(')')]
                     x = float(parts[5])
                     y = float(parts[6])
-                    z = None
+                    #z = None
+                    z = altitude 
                     speed = float(parts[7].strip('"'))
                     self.addwaypoint(time, self.map(nodenum), x, y, z, speed)
                 elif line[:7] == "$node_(":
@@ -850,14 +854,16 @@ class Ns2ScriptedMobility(WayPointMobility):
                     nodenum = parts[0][1+parts[0].index('('):parts[0].index(')')]
                     if parts[2] == 'X_':
                         if ix is not None and iy is not None:
-                            self.addinitial(self.map(inodenum), ix, iy, iz)
+                            #self.addinitial(self.map(inodenum), ix, iy, iz)
+                            self.addinitial(self.map(inodenum), ix, iy, altitude)
                             ix = iy = iz = None
                         ix = float(parts[3])
                     elif parts[2] == 'Y_':
                         iy = float(parts[3])
                     elif parts[2] == 'Z_':
                         iz = float(parts[3])
-                        self.addinitial(self.map(nodenum), ix, iy, iz)
+                        #self.addinitial(self.map(nodenum), ix, iy, iz)
+                        self.addinitial(self.map(nodenum), ix, iy, altitude)
                         ix = iy = iz = None
                     inodenum = nodenum
                 else:
@@ -867,7 +873,8 @@ class Ns2ScriptedMobility(WayPointMobility):
                                   (ln, self.file, line, e))
                 continue
         if ix is not None and iy is not None:
-            self.addinitial(self.map(inodenum), ix, iy, iz)
+            #self.addinitial(self.map(inodenum), ix, iy, iz)
+            self.addinitial(self.map(inodenum), ix, iy, altitude)
     
     def findfile(self, fn):
         ''' Locate a script file. If the specified file doesn't exist, look in the

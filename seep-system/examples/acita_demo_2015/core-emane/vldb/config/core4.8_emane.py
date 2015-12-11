@@ -906,7 +906,19 @@ class Emane(ConfigurableManager):
                 node.cmd(cmd, wait=True)
 
             try:
-                cmd = ["taskset", "-c", "%d"%max(0, n-3)] + emanecmd + ["-f", os.path.join(path, "emane%d.log" % n),
+                #cmd = ["taskset", "-c", "%d"%max(0, n-3)] + emanecmd + ["-f", os.path.join(path, "emane%d.log" % n),
+                #cmd = ["taskset", "-c", "0-24"] + emanecmd + ["-f", os.path.join(path, "emane%d.log" % n),
+                #emane_processors = "0-24"
+                #emane_processors = ",".join(map(str, range(0,64,4) + range(1,64,4) + range(2,64,4)))
+                #taskset_params = ["taskset", "-c", emane_processors]
+                taskset_params = []
+                #cset_params = ["cset", "proc", "--set=node%d"%n, "--threads", "--exec"]
+                #cset_exec_args= ["--"]
+                cset_params= []
+                cset_exec_args= []
+
+                #cmd =  taskset_params + emanecmd + ["-f", os.path.join(path, "emane%d.log" % n),
+                cmd =  cset_params + cset_exec_args + emanecmd + ["-f", os.path.join(path, "emane%d.log" % n),
                                   os.path.join(path, "platform%d.xml" % n)]
                 if self.verbose:
                     self.info("Emane.startdaemons2() running %s" % str(cmd))

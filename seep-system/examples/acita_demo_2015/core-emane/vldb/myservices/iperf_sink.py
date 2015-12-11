@@ -55,7 +55,7 @@ class IPerfSink(CoreService):
             cfg += 'ip route\n'
             cfg += '/sbin/route\n'
             cfg += 'ifconfig\n'
-            cfg += "./run-iperf-sink.sh &> iperf-sink.log\n"
+            cfg += "./run-iperf-sink.sh >iperf-sink.log 2>&1\n"
             cfg += 'echo "iperf sink finished."\n'
             return cfg
 

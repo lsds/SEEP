@@ -135,7 +135,9 @@ def run_session(time_str, k, mob, exp_session, params):
 
 
         model = params.get('model', None)
-        tx_range = 500 #TODO: How to apply to emane?
+        tx_range = 499 #TODO: How to apply to emane?
+        #tx_range = 599 #TODO: How to apply to emane?
+        #tx_range = 250 #TODO: How to apply to emane?
         print 'Model=', model
         if not model:
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
@@ -157,17 +159,21 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Emane Model default values: %s'%(str(values))
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('mode') ] = '3'
+            #values[ names.index('rtsthreshold') ] = '1024'
+            values[ names.index('retrylimit') ] = '0:1'
             values[ names.index('propagationmodel') ] = '2ray'
             #values[ names.index('propagationmodel') ] = 'freespace'
             #values[ names.index('pathlossmode') ] = '2ray'
             #values[ names.index('multicastrate') ] = '12'
             values[ names.index('multicastrate') ] = '4'
+            #values[ names.index('multicastrate') ] = '1'
             #values[ names.index('unicastrate') ] = '12'
             #values[ names.index('distance') ] = '500'
             values[ names.index('unicastrate') ] = '4'
             values[ names.index('txpower') ] = '-10.0'
             values[ names.index('flowcontrolenable') ] = 'on'
-            #values[ names.index('flowcontroltokens') ] = '1'
+            #values[ names.index('flowcontrolenable') ] = 'off'
+            values[ names.index('flowcontroltokens') ] = '10'
             print 'Emane Model overridden values: %s'%(str(list(values)))
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
         else:
@@ -182,7 +188,8 @@ def run_session(time_str, k, mob, exp_session, params):
 
 
         if params['iperf']:
-            run_iperf_test(session, wlan1, mob, trace_file, params)
+            #run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
+            run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
             return
 
         #Copy appropriate mapping constraints.
@@ -205,13 +212,15 @@ def run_session(time_str, k, mob, exp_session, params):
 
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
-        #if params['emanestats']: services_str += "|EmaneStats"
+        if params['emanestats']: services_str += "|EmaneStats"
         workers = []
         num_workers = get_num_workers(k, params)
         print 'num_workers=', num_workers
         placements = get_initial_placements(params['placement'], mob)
         print 'Initial placements=',placements
-        if placements: create_static_routes(placements, tx_range, session.sessiondir)
+        if placements: 
+            create_static_routes(placements, tx_range, session.sessiondir)
+
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
             if placements:
@@ -220,7 +229,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 pos = gen_grid_position(i, params['nodes']-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|pcap"
-            if params['emanestats']: worker_services += "|EmaneStats"
+            #if params['emanestats']: worker_services += "|EmaneStats"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
        
         routers = []
@@ -348,7 +357,7 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     tstart = time.time() 
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
     taddobj = time.time() - tstart
-    n.setposition(x=pos[0], y=pos[1])
+    n.setposition(x=pos[0], y=pos[1], z=1.0)
     session.services.addservicestonode(n, "", services_str, verbose=False)
     taddservices = time.time() - tstart
     if addinf:
@@ -457,18 +466,25 @@ def copy_seep_jar(session_dir):
 def regen_sessions(time_str):
     raise Exception("TODO")
 
-def run_iperf_test(session, wlan1, mob, trace_file, params):
+def run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
     services_str = "IPForward|SSH"
     services_str += "|%s"%params['net-routing']
     if params['quagga']: services_str += "|zebra|vtysh"
+    if params['emanestats']: services_str += "|EmaneStats"
+    if params['dstat']: services_str += "|dstat"
 
     placements = get_initial_placements(params['placement'], mob)
+    if placements: create_static_routes(placements, tx_range, session.sessiondir)
     print placements
     pos = placements[2] if placements else gen_grid_position(2, params['nodes']-1, 2, spacing=400)
-    src = create_node(2, session, "%s|IPerfSrc"%(services_str), wlan1, pos) 
+    src_services = "%s|IPerfSrc"%(services_str)
+    if params['duplex']: src_services += "|IPerfSink"
+    src = create_node(2, session, src_services, wlan1, pos) 
     
     pos = placements[3] if placements else gen_grid_position(3, params['nodes']-1, 2, spacing=400)
-    sink = create_node(3, session, "%s|IPerfSink"%(services_str), wlan1, pos) 
+    sink_services = "%s|IPerfSink"%(services_str)
+    if params['duplex']: sink_services += "|IPerfSrc"
+    sink = create_node(3, session, sink_services, wlan1, pos) 
    
     routers = []
     print 'Creating routers.'
@@ -494,6 +510,61 @@ def run_iperf_test(session, wlan1, mob, trace_file, params):
     session.node_count="%d"%(params['nodes'])
     session.instantiate()
     time.sleep(1000000)
+
+def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
+    services_str = "IPForward|SSH"
+    services_str += "|%s"%params['net-routing']
+    if params['quagga']: services_str += "|zebra|vtysh"
+    if params['emanestats']: services_str += "|EmaneStats"
+    if params['dstat']: services_str += "|dstat"
+
+    placements = get_initial_placements(params['placement'], mob)
+    if placements: create_static_routes(placements, tx_range, session.sessiondir)
+
+    iperf_cxns = read_iperf_cxns(params)
+    copy_iperf_cxns(session.sessiondir, params)
+
+    for i in range(2, params['nodes']+1):
+        i_services_str = services_str
+        # Check if src or sink			
+        if has_iperf_src(i, iperf_cxns):
+            i_services_str += "|IPerfSrc"
+        if has_iperf_dest(i, iperf_cxns):
+            i_services_str += "|IPerfSink"
+
+        if placements:
+            pos = placements[i]
+        else:
+            raise Exception("TODO")
+
+        create_node(i, session, "%s"%i_services_str, wlan1, pos)
+		
+    print placements
+
+    session.node_count="%d"%(params['nodes'])
+    session.instantiate()
+    time.sleep(1000000)
+
+def read_iperf_cxns(params):
+    cxns = []
+    with open("%s/static/%s"%(script_dir, params['iperfcxns']), 'r') as cxns_file:
+        for line in cxns_file:
+            cxns.append(line.split(","))
+
+    return cxns 
+
+def copy_iperf_cxns(sessiondir, params):
+    shutil.copy("%s/static/%s"%(script_dir, params['iperfcxns']), '%s/iperf_connections.txt'%sessiondir)
+
+def has_iperf_src(node, cxns):
+    for [src, dest] in cxns:
+        if int(src) == int(node):
+            return True
+
+def has_iperf_dest(node, cxns):
+    for [src, dest] in cxns:
+        if int(dest) == int(node):
+            return True
 
 def start_query_sink_display(logfile, logdir, params):
 
@@ -541,11 +612,13 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--constraints', dest='constraints', default='', help='Export the session configuration to an XML file')
     parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
+    parser.add_argument('--iperfcxns', dest='iperfcxns', default=None, help='Do an iperf test')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--pcap', dest='pcap', default=False, action='store_true', help='Start pcap service for workers.')
     parser.add_argument('--emanestats', dest='emanestats', default=False, action='store_true', help='Start emanestats service on master')
     parser.add_argument('--dstat', dest='dstat', default=False, action='store_true', help='Start dstat service on master.')
+    parser.add_argument('--duplex', dest='duplex', default=False, action='store_true', help='Send in both directions for iperf tests')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
@@ -572,12 +645,14 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['sinks']=args.sinks
     params['fanin']=args.fanin
     params['iperf']=args.iperf
+    params['iperfcxns']=args.iperfcxns
     params['pyScaleOutSinks']=args.scale_sinks
     params['scaleOutSinks']=pybool_to_javastr(args.scale_sinks)
     params['quagga']=args.quagga
     params['pcap']=args.pcap
     params['emanestats']=args.emanestats
     params['dstat']=args.dstat
+    params['duplex']=args.duplex
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"

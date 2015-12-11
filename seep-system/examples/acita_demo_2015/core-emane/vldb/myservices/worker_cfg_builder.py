@@ -43,6 +43,9 @@ def build_cfg(lwid, cls, node, filename, services):
         cfg += "/sbin/route > rts.log\n"
         cfg += 'echo "0.0,0.0,0.0" > node.xyz\n'
         cfg += "./net-rates.sh\n"
+        worker_processors = ",".join(map(str, range(3,64,4)))
+        #cfg += "taskset -c %s ./run-worker.py --id %d\n"%(worker_processors, lwid)
+        #cfg += "taskset -c 25-31 ./run-worker.py --id %d\n"%lwid
         cfg += "./run-worker.py --id %d\n"%lwid
         cfg += "/sbin/route > rts-end.log\n"
         cfg += "touch worker%d.shutdown\n"%lwid

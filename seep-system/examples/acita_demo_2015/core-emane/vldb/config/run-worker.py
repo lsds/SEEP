@@ -38,8 +38,12 @@ def main(k,h,query,w,hostname, local_worker_id=1):
 def start_worker(k, h, query, logfilename, sim_env, local_worker_id):
     worker_port = worker_base_port + local_worker_id
     extra_java_params=map(lambda line: '-D'+line, read_extra_params())
+    worker_processors = ",".join(map(str, range(3,64,4)))
+    #worker_processors = "25-31"
+    #taskset_params = ['taskset', '-ac', worker_processors]
+    taskset_params = []
     with open('%s%d/%s'%(data_dir_base,local_worker_id,logfilename), 'w') as log:
-        args = ['sudo', '-u', user, 'java', '-verbose:gc',
+        args = ['sudo', '-u', user] + taskset_params + ['java', '-verbose:gc',
                 '-XX:+PrintGCDetails', '-XX:+PrintGCTimeStamps',
                 '-Dplatform.dependencies=true',
                 '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]

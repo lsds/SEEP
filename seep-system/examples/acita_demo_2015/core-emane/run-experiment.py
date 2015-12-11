@@ -273,7 +273,9 @@ if __name__ == "__main__":
     parser.add_argument('--pcap', dest='pcap', default=False, action='store_true', help='Start pcap service for workers.')
     parser.add_argument('--emanestats', dest='emanestats', default=False, action='store_true', help='Start emanestats service on master')
     parser.add_argument('--dstat', dest='dstat', default=False, action='store_true', help='Start dstat service on master.')
+    parser.add_argument('--duplex', dest='duplex', default=False, action='store_true', help='Send in both directions for iperf tests')
     parser.add_argument('--iperf', dest='iperf', default=False, action='store_true', help='Do an iperf test')
+    parser.add_argument('--iperfcxns', dest='iperfcxns', default=None, help='Do an iperf test')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a gui for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
 
@@ -309,7 +311,9 @@ if __name__ == "__main__":
     params['pcap']=args.pcap
     params['emanestats']=args.emanestats
     params['dstat']=args.dstat
+    params['duplex']=args.duplex
     params['iperf']=args.iperf
+    params['iperfcxns']=args.iperfcxns
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"

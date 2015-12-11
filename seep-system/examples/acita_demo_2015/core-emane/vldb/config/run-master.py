@@ -72,8 +72,13 @@ def run_query(master):
 
 def start_master(k, h, query, logfilename, sim_env):
     extra_java_params=map(lambda line: '-D'+line, read_extra_params())
+    master_processors = ",".join(map(str, range(3,64,4)))
+    #master_processors = "25-31"
+    #taskset_params = ['taskset', '-ac', master_processors]
+    taskset_params = []
+
     with open(data_dir+'/'+logfilename, 'w') as log:
-        args = ['java','-Dplatform.dependencies=true','-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,
+        args = taskset_params + ['java','-Dplatform.dependencies=true','-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,
                 '-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p

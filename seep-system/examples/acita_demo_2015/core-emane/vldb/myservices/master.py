@@ -60,6 +60,9 @@ class MeanderMaster(CoreService):
         cfg += "ip route > rt.log\n"
         cfg += "ifconfig > if.log\n"
         cfg += "/sbin/route > rts.log\n"
+        master_processors = ",".join(map(str, range(3,64,4)))
+        #cfg += "taskset -c 25-31 ./run-master.py\n"
+        #cfg += "taskset -c %s ./run-master.py\n"%master_processors
         cfg += "./run-master.py\n"
         cfg += "/sbin/route > rts-end.log\n"
         cfg += "touch master.shutdown"
