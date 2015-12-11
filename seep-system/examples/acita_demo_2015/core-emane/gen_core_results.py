@@ -54,7 +54,8 @@ def main(exp_dir):
 	    # Get time sink received first message
 	    t_sink_begin = sink_rx_begin(sink)
 	    #if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
-	    continue
+	    if not t_sink_begin: t_min_sink_begin 
+
 	    if t_sink_begin < t_min_sink_begin:
 		t_min_sink_begin = t_sink_begin
 	with open(sink_log, 'r') as sink:

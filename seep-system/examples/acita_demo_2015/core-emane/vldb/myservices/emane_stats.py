@@ -29,7 +29,11 @@ if [ "x$1" = "xstart" ]; then
         seep_example_dir = "%s/seep-system/examples/acita_demo_2015"%repo_dir
 
         cfg += "cp %s/core-emane/vldb/config/watch-emane-stats.sh .\n"%(seep_example_dir)
+        cfg += "cp %s/core-emane/vldb/config/emane-mac-stats.txt emane-required-stats.txt\n"%(seep_example_dir)
         cfg += 'echo "Starting emane stats watcher."\n'
+        emanestat_processors = ",".join(map(str, range(3,64,4)))
+        #cfg += "taskset -c 25-30 ./watch-emane-stats.sh %s < /dev/null &\n"%node.name
+        #cfg += "taskset -c %s ./watch-emane-stats.sh %s < /dev/null &\n"%(emanestat_processors, node.name)
         cfg += "./watch-emane-stats.sh %s < /dev/null &\n"%node.name
         cfg += """
 

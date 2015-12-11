@@ -88,7 +88,7 @@ def unfinished_sink_tuples(f, t_end, prev_tuples):
 
 def unfinished_sink_rx_latencies(f, t_end):
     tuple_records = sink_rx_tuples(f)
-    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez):
+    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez, opLats, sockLats):
             int(rxts) <= int(t_end), tuple_records)
     latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3])), filtered_tuple_records)
     #return pd.Series(latencies)
