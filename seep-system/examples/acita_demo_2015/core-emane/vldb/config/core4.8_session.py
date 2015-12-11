@@ -57,6 +57,7 @@ class Session(object):
             sessionid &= 0xffff
         self.sessionid = sessionid
         self.sessiondir = os.path.join(tempfile.gettempdir(),
+        #self.sessiondir = os.path.join('/home/dokeeffe/tmp',
                                        "pycore.%s" % self.sessionid)
         if mkdir:
             os.mkdir(self.sessiondir)
