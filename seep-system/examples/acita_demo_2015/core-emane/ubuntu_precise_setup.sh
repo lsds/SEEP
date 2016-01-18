@@ -110,7 +110,8 @@ sudo apt-get install libpng12-dev libfreetype6-dev pkg-config
 sudo pip install pandas
 
 #python matplotlib
-sudo pip install matplotlib
+#sudo pip install matplotlib
+sudo apt-get install python-matplotlib
 
 #python utm
 sudo pip install utm
