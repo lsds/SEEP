@@ -93,7 +93,7 @@ public class Sink implements StatelessOperator {
 	
 	private String getLatencyBreakdown(DataTuple dt, long latency)
 	{
-		if (!enableLatencyBreakdown) { return "disabled"; }
+		if (!enableLatencyBreakdown) { return "0;0"; }
 		if (dt.getMap().containsKey("latencyBreakdown"))
 		{
 			long[] latencies = dt.getLongArray("latencyBreakdown");
