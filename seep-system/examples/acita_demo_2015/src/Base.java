@@ -18,13 +18,13 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
 import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizer;
-import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
+//import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.HeatMapJoin;
 import uk.ac.imperial.lsds.seep.acita15.operators.HeatMapSink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Sink;
 import uk.ac.imperial.lsds.seep.acita15.operators.Source;
-import uk.ac.imperial.lsds.seep.acita15.operators.AudioSource;
+//import uk.ac.imperial.lsds.seep.acita15.operators.AudioSource;
 import uk.ac.imperial.lsds.seep.acita15.operators.VideoSource;
 import uk.ac.imperial.lsds.seep.acita15.operators.VideoSink;
 import uk.ac.imperial.lsds.seep.acita15.operators.LocationSource;
@@ -376,6 +376,8 @@ public class Base implements QueryComposer{
 	
 	private QueryPlan composeNameAssist()
 	{
+		throw new RuntimeException("Commented out due to temporary build failure.");
+		/*
 		// Declare Source 1
 		ArrayList<String> src1Fields = new ArrayList<String>();
 		src1Fields.add("tupleId");
@@ -428,6 +430,7 @@ public class Base implements QueryComposer{
 		}
 		
 		return QueryBuilder.build();
+		*/
 	}
 	
 	private Map<Integer, Map<Integer, Connectable>> createChainOps(int chainLength, int replicationFactor)
