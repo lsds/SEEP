@@ -28,6 +28,7 @@ public class Sink implements StatelessOperator {
 	private long tupleSize;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
+	private boolean enableLatencyBreakdown = false;
 	private Stats stats = null;
 	
 	public void setUp() {
@@ -35,6 +36,7 @@ public class Sink implements StatelessOperator {
 		stats = new Stats(api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
+		enableLatencyBreakdown = Boolean.parseBoolean(GLOBALS.valueFor("enableLatencyBreakdown"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
 	}
 	
@@ -82,15 +84,16 @@ public class Sink implements StatelessOperator {
 				+",rxts="+rxts
 				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
 				+",bytes="+ bytes
-				+",latencyBreakdown="+getLatencyBreakdown(dt));
+				+",latencyBreakdown="+getLatencyBreakdown(dt, rxts-dt.getPayload().instrumentation_ts));
 	}
 	
 	public void processData(List<DataTuple> arg0) {
 		throw new RuntimeException("TODO");
 	}
 	
-	private String getLatencyBreakdown(DataTuple dt)
+	private String getLatencyBreakdown(DataTuple dt, long latency)
 	{
+		if (!enableLatencyBreakdown) { return "disabled"; }
 		if (dt.getMap().containsKey("latencyBreakdown"))
 		{
 			long[] latencies = dt.getLongArray("latencyBreakdown");
@@ -106,6 +109,7 @@ public class Sink implements StatelessOperator {
 				//result += ""+ latencies[i] + ";"+ latencies[i+1] + ";" + latencies[i+2];
 				//if (i < latencies.length - 1) { result += ":"; }
 			}	
+			//result += ""+opLatency+";"+socketLatency+";"+(100 * opLatency / latency);	
 			result += ""+opLatency+";"+socketLatency;	
 			return result;
 		}
