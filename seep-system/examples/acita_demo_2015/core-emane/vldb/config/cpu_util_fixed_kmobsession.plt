@@ -18,6 +18,7 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 set style fill empty 
 set datafile separator ","
 
+#plot for [i=0:24] sprintf("%s/%s/%sk/%sm/%ss/cpu-util.csv",outputdir,timestr,k,mob,session) using 151:(100-column(3+(i*6))) notitle w lines linestyle i+1
 plot for [i=0:31] sprintf("%s/%s/%sk/%sm/%ss/cpu-util.csv",outputdir,timestr,k,mob,session) using 193:(100-column(3+(i*6))) notitle w lines linestyle i+1
 #plot sprintf("%s/%s/%sk/%sm/%ss/cpu-util.csv",outputdir,timestr,k,mob,session) using 193:(100-$3) notitle w lines linestyle 1, \
 #	sprintf("%s/%s/%sk/%sm/%ss/cpu-util.csv",outputdir,timestr,k,mob,session) using 193:9 notitle w lines linestyle 2, \

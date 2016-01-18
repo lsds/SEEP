@@ -26,7 +26,7 @@ svc_dir='%s/vldb/myservices'%script_dir
 #conf_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/config'
 conf_dir='%s/vldb/config'%script_dir
 seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
-mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',500),
+mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',1000),
         ('loop',1),('autostart',1.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
 
 datacollect_template = '''#!/bin/bash
@@ -67,7 +67,16 @@ do
         cp $d/log2/*.log $resultsDir	
     fi
 	cp $d/mappingRecordOut.txt $resultsDir	
+    mkdir $resultsDir/positions
+	cp $d/*.xyz $resultsDir/positions	
 	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
+
+    #Copy any emane stats
+    if [ -d emane-stats ];
+    then
+        mkdir -p $resultsDir/emane-tables
+        cp $d/emane-tables*.txt $resultsDir/emane-tables
+    fi
 done
 
 #Copy mobility params if they exist
@@ -86,6 +95,7 @@ fi
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
 ./gen_core_results.py --expDir $resultsDir
+#./move_analysis.py --nodes 10 --expDir $resultsDir/positions
 chmod -R go+rw $resultsDir
 cd $expDir
 '''
@@ -134,12 +144,21 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Trace file=',trace_file
 
 
-        model = params.get('model', None)
-        tx_range = 499 #TODO: How to apply to emane?
+        model = params.get('model')
+        #tx_range = 499 #TODO: How to apply to emane?
+        #tx_range = 399 #TODO: How to apply to emane?
         #tx_range = 599 #TODO: How to apply to emane?
+        #tx_range = 525 #TODO: How to apply to emane?
+        #tx_range = 1250 #TODO: How to apply to emane?
         #tx_range = 250 #TODO: How to apply to emane?
+        #tx_range = 300 #TODO: How to apply to emane?
+        #tx_range = 450 #TODO: How to apply to emane?
+        #tx_range = 750 #TODO: How to apply to emane?
+        #tx_range = 410 #TODO: How to apply to emane?
+        tx_range = 410 #TODO: How to apply to emane?
+        #tx_range = 260 #TODO: How to apply to emane?
         print 'Model=', model
-        if not model:
+        if model == "Emane":
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
             session.master = True
@@ -160,7 +179,10 @@ def run_session(time_str, k, mob, exp_session, params):
             # TODO: change any of the EMANE 802.11 parameter values here
             values[ names.index('mode') ] = '3'
             #values[ names.index('rtsthreshold') ] = '1024'
-            values[ names.index('retrylimit') ] = '0:1'
+            values[ names.index('retrylimit') ] = '0:7'
+            #values[ names.index('retrylimit') ] = '0:3'
+            #values[ names.index('cwmin') ] = '0:16'
+            #values[ names.index('cwmax') ] = '0:2048'
             values[ names.index('propagationmodel') ] = '2ray'
             #values[ names.index('propagationmodel') ] = 'freespace'
             #values[ names.index('pathlossmode') ] = '2ray'
@@ -171,12 +193,13 @@ def run_session(time_str, k, mob, exp_session, params):
             #values[ names.index('distance') ] = '500'
             values[ names.index('unicastrate') ] = '4'
             values[ names.index('txpower') ] = '-10.0'
+            #values[ names.index('txpower') ] = '-1.0'
             values[ names.index('flowcontrolenable') ] = 'on'
             #values[ names.index('flowcontrolenable') ] = 'off'
             values[ names.index('flowcontroltokens') ] = '10'
             print 'Emane Model overridden values: %s'%(str(list(values)))
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
-        else:
+        elif model == "Basic":
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
             wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
@@ -185,6 +208,8 @@ def run_session(time_str, k, mob, exp_session, params):
             model_cfg[1] = '11000' #Similar to default emane bandwidth.
             print 'Basic Range configured values: %s'%(str(model_cfg))
             wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
+        else:
+            raise Exception("Unknown model: "+model)
 
 
         if params['iperf']:
@@ -228,7 +253,7 @@ def run_session(time_str, k, mob, exp_session, params):
             else:
                 pos = gen_grid_position(i, params['nodes']-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
-            if params['pcap']: worker_services += "|pcap"
+            if params['pcap']: worker_services += "|PcapSrc"
             #if params['emanestats']: worker_services += "|EmaneStats"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
        
@@ -248,7 +273,7 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Node map=%s'%node_map
             mobility_params[4] = ('map', node_map)
             mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
-            refresh_ms = int(params.get('refresh_ms', 500))
+            refresh_ms = int(params.get('refresh_ms', 1000))
             mobility_params[1] = ('refresh_ms', refresh_ms)
             mobility_params[2] = ('loop', 0)
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
@@ -277,6 +302,9 @@ def run_session(time_str, k, mob, exp_session, params):
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
             range(2,3 + sum(num_workers))))
 
+
+        if model == "Emane" and params['emanestats']:
+            record_emanesh_tables(session.sessiondir, range(3, params['nodes']+1), params)
 
         #time.sleep(30)
         print 'Collecting data'
@@ -502,7 +530,7 @@ def run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
         print 'Node map=%s'%node_map
         mobility_params[4] = ('map', node_map)
         mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
-        refresh_ms = int(params.get('refresh_ms', 500))
+        refresh_ms = int(params.get('refresh_ms', 1000))
         mobility_params[1] = ('refresh_ms', refresh_ms)
         session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
 
@@ -586,6 +614,13 @@ def get_repo_dir():
     regex = re.compile('(.*)/seep-system')
     return re.search(regex, script_dir).groups()[0]
 
+def record_emanesh_tables(sessiondir, nodes, params):
+    for node in nodes:
+        args = ['/usr/sbin/vcmd', '-c', '%s/n%d'%(sessiondir, node), './record-emane-tables.sh', str(node)]
+        with open('%s/n%d.conf/emane-tables-n%d.txt'%(sessiondir, node, node), 'w') as log:
+            p = subprocess.Popen(args, stdout=log, cwd='%s/n%d.conf'%(sessiondir,node), stderr=subprocess.STDOUT, env=os.environ.copy())
+            p.wait()
+
 if __name__ == "__main__" or __name__ == "__builtin__":
     print 'Hello world'
     parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
@@ -604,7 +639,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
     parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
-    parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
+    parser.add_argument('--model', dest='model', default="Emane", help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSRETX',
             help='Net layer routing alg (OLSR, OLSRETX, OSPFv3MDR)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')

@@ -62,6 +62,10 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
                     if params['emanestats']:
 			for stat in get_emane_mac_stats(script_dir):
 				plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
+            
+            # Uncomment this and tweak params when plotting movement analysis.
+            #for node in range(3,10):
+            #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
 
         chmod_dir('%s/%s'%(data_dir, time_str))
 
@@ -251,7 +255,7 @@ if __name__ == "__main__":
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
     parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
-    parser.add_argument('--model', dest='model', default=None, help='Wireless model (Basic, Emane)')
+    parser.add_argument('--model', dest='model', default="Emane", help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSRETX',
             help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')

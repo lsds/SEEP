@@ -17,4 +17,8 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 #set boxwidth 0.1
 set style fill empty 
 
+delta_v(x) = ( vD = x - old_v, old_v = x, vD)
+old_v = NaN
+
+#plot for [i=3:27] sprintf("%s/%s/%sk/%sm/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,mob,session,i,stat) using 1:(delta_v($7)) title "n=".i w lines linestyle i
 plot for [i=3:27] sprintf("%s/%s/%sk/%sm/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,mob,session,i,stat) using 1:7 title "n=".i w lines linestyle i
