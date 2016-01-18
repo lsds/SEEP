@@ -115,6 +115,8 @@ sudo pip install matplotlib
 #python utm
 sudo pip install utm
 
+sudo pip install networkx
+
 pushd ..
 #Then apply diff to core.
 sudo cp vldb/config/core4.8_session.py /usr/lib/python2.7/dist-packages/core/session.py
