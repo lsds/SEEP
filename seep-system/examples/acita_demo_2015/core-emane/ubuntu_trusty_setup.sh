@@ -51,6 +51,9 @@ popd
 #    sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.7.0_79/bin/java" 1
 #    sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.7.0_79/bin/javac" 1
 #    sudo update-alternatives --install "/usr/bin/jar" "jar" "/usr/lib/jvm/jdk1.7.0_79/bin/jar" 1
+## then manually do:
+##    sudo update-alternatives --config java
+##  and select the oracle jdk from the list.
 #    echo "Installed JDK, manual configuration of alternatives required, exiting."
 #    exit 1
 #fi
