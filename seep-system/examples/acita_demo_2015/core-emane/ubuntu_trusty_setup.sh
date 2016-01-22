@@ -1,18 +1,18 @@
 #!/bin/bash
-
+set -o errexit ; set -o nounset
 echo "Making directory."
-mkdir install
+mkdir -p install
 cd install
 
 echo "Installing prerequisites."
 
 # First update and install prerequisite packages for CORE
 sudo apt-get update
-sudo apt-get install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
+sudo apt-get -y install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
 
 echo "Installing Core from main repo."
 #Install EMANE prerequisites
-sudo apt-get install libxml2 libprotobuf8 python-protobuf libpcap0.8 libpcre3 \
+sudo apt-get -y install libxml2 libprotobuf8 python-protobuf libpcap0.8 libpcre3 \
 libuuid1 libace-6.0.3 python-lxml python-setuptools
 
 echo "Downloading quagga, CORE and EMANE."
@@ -70,7 +70,7 @@ unzip bonnmotion-2.1.3.zip
 echo "Installing maven"
 #Maven (you'll perhaps need to manually install soot-framework-2.5.0.jar into the local mvn repository
 # libs/soot/soot-framework/2.5.0/soot-2.5.0.jar
-sudo apt-get install maven
+sudo apt-get -y install maven
 pushd ../../../../..
 mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.5.0 -Dpackaging=jar -Dfile=libs/soot/soot-framework/2.5.0/soot-2.5.0.jar
 ./meander-bld.sh
@@ -80,7 +80,7 @@ echo "Downloading NRL OLSR"
 #Nrlolsr (optional)
 wget http://downloads.pf.itd.nrl.navy.mil/olsr/nrlolsrdv7.8.1.tgz
 tar -xzvf nrlolsrdv7.8.1.tgz
-sudo apt-get install libpcap-dev
+sudo apt-get -y install libpcap-dev
 pushd nrlolsr/unix
 make -f Makefile.linux
 sudo ln -s `pwd`/nrlolsrd /usr/bin/nrlolsrd
@@ -93,7 +93,7 @@ echo "Downloading OLSRD"
 #tar -xzvf $OLSRD_PKG  
 
 #TODO: Install OLSRD
-sudo apt-get install bison flex
+sudo apt-get -y install bison flex
 #pushd olsrd-0.9.0.2
 #make
 #sudo make install
@@ -118,9 +118,9 @@ sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
 
 echo "Installing pip + python packages."
 #For 14.04 can just install olsrd from apt-get directly.
-sudo apt-get install python-pip
-sudo apt-get install python-dev
-sudo apt-get install libpng12-dev libfreetype6-dev pkg-config
+sudo apt-get -y install python-pip
+sudo apt-get -y install python-dev
+sudo apt-get -y install libpng12-dev libfreetype6-dev pkg-config
 
 #python pandas
 sudo pip install pandas
@@ -130,6 +130,8 @@ sudo pip install matplotlib
 
 #python utm
 sudo pip install utm
+
+sudo pip install networkx
 
 pushd ..
 #Then apply diff to core.
@@ -163,11 +165,11 @@ ln -s `pwd`/vldb /home/dokeeffe/.core
 
 #popd
 
-sudo apt-get install gnuplot
+sudo apt-get -y install gnuplot
 
 #Need to install a more recent libstdc++ for face recognition query
-sudo apt-get install software-properties-common python-software-properties
+sudo apt-get -y install software-properties-common python-software-properties
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
-sudo apt-get install gcc g++
+sudo apt-get -y install gcc g++
 #sudo apt-get install libstdc++6
