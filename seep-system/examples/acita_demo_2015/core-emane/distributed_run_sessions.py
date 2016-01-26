@@ -271,7 +271,8 @@ def run_session(time_str, k, mob, exp_session, params):
                 pos = placements[i]
             else:
                 pos = gen_grid_position(i, params['nodes']-1)
-            routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
+            #routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
+            routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos))
 
         if trace_file:
             #node_map = create_node_map(range(0,6), workers)
@@ -434,6 +435,15 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.default.rp_filter=0"])
 
     return n
+
+def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1, addinf=True):
+        n = pycore.nodes.CoreNode(session = session, objid = i,
+                                    name = "n%d" % i, start=False)
+        n.setposition(x=150*i,y=150)
+        n.server = slave
+        session.services.addservicestonode(n, "", services_str, verbose=False)
+	# TODO: addinf
+        session.broker.handlerawmsg(n.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG))
 
 def create_node_map(ns_nums, nodes):
     print 'ns_nums=%s'%str(ns_nums)
