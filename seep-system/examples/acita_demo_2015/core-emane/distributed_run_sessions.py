@@ -9,8 +9,10 @@ from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
+from core.emane.emane import EmaneGlobalModel
 #from core.misc.xmlutils import savesessionxml
 from core.misc.xmlsession import savesessionxml
+from core.misc import ipaddr
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
@@ -112,19 +114,21 @@ def run_session(time_str, k, mob, exp_session, params):
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1',
                 'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
-        if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
+        #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
+        #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
+	#session_cfg['controlnet'] = "koala1:172.16.1.0/24 koala2:172.16.2.0/24"
+	session_cfg['controlnet'] = "koala1:172.16.0.0/24 146.179.131.161:172.16.2.0/24"
+	session_cfg['controlnet1'] = "koala1:172.17.1.0/24 146.179.131.161:172.17.2.0/24"
+	session_cfg['controlnetif1'] = "eth1"
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         session.master=True
         session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
 
-	slave =  '146.179.131.161' # koala2
-	#slave =  'koala2' # koala2
-	remote_configure(session, slave)
-
-        if not add_to_server(session): 
-            print 'Could not add to server'
+	slave =  'koala2' # koala2
+	slaveip =  '146.179.131.161' # koala2
+	remote_configure(session, slave, slaveip)
 
         if params['sinkDisplay']:
             sink_display = start_query_sink_display("sinkDisplay.log", session.sessiondir, params)
@@ -173,11 +177,26 @@ def run_session(time_str, k, mob, exp_session, params):
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
             session.emane.loadmodels()
 
+            """
+            global_names = EmaneGlobalModel.getnames()
+            global_values = list(EmaneGlobalModel.getdefaultvalues())
+            global_values[ global_names.index('otamanagerdevice') ] = 'ctrl1'
+            msg = EmaneGlobalModel.toconfmsg(flags=0, nodenum=1,
+                                             typeflags=coreapi.CONF_TYPE_FLAGS_NONE, values=global_values)
+
+            session.broker.handlerawmsg(msg)
+            session.emane.setconfig(1, EmaneGlobalModel._name, global_values)
+            """
             #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
             #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
             # set increasing Z coordinates
-            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=False)
+            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
             wlan1.setposition(x=80,y=50)
+            session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG))
+            for servername in session.broker.getserverlist():
+                session.broker.addnodemap(servername, wlan1.objid)
+            #msg = session.emane.emane_config.toconfmsg(coreapi.CORE_API_CONF_MSG, wlan1, todo, values)
+            #session.emane.configure(session, msg)
             names = EmaneIeee80211abgModel.getnames()
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
             print 'Emane Model default names: %s'%(str(names))
@@ -204,7 +223,12 @@ def run_session(time_str, k, mob, exp_session, params):
             #values[ names.index('flowcontrolenable') ] = 'off'
             values[ names.index('flowcontroltokens') ] = '10'
             print 'Emane Model overridden values: %s'%(str(list(values)))
+            typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
+            msg = EmaneIeee80211abgModel.toconfmsg(flags=0, nodenum=wlan1.objid,
+                                             typeflags=typeflags, values=values)
+            session.broker.handlerawmsg(msg)
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
+            #session.emane.setconfig(None, EmaneGlobalModel._name, global_values)
         elif model == "Basic":
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
             wlan1.setposition(x=80,y=50)
@@ -217,6 +241,9 @@ def run_session(time_str, k, mob, exp_session, params):
         else:
             raise Exception("Unknown model: "+model)
 
+
+        if not add_to_server(session): 
+            print 'Could not add to server'
 
         if params['iperf']:
             #run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
@@ -295,7 +322,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         print 'Instantiating session ',exp_session, ' with CORE session id', session.sessionid
         session.instantiate()
-	remote_instantiate(session)
+	#remote_instantiate(session)
 
         chmod_dir(session.sessiondir)
         for n in range(2,3+len(num_workers)):
@@ -336,8 +363,8 @@ def run_session(time_str, k, mob, exp_session, params):
             sink_display.terminate()
 
 
-def remote_configure(session, slave):
-	session.broker.addserver(slave, slave, coreapi.CORE_API_PORT)
+def remote_configure(session, slave, slaveip):
+	session.broker.addserver(slave, slaveip, coreapi.CORE_API_PORT)
 	session.broker.setupserver(slave)
 	session.setstate(coreapi.CORE_EVENT_CONFIGURATION_STATE)
 	tlvdata = coreapi.CoreEventTlv.pack(coreapi.CORE_TLV_EVENT_TYPE,
@@ -420,7 +447,8 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     taddservices = time.time() - tstart
     if addinf:
         ip = i + ip_offset 
-        n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+        #n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+        n.newnetif(net=wlan, addrlist=["10.0.0.%d/24"%(ip)], ifindex=0)
         taddnetif = time.time() - tstart
         n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
         tcmd = time.time() - tstart
@@ -444,6 +472,26 @@ def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1,
         session.services.addservicestonode(n, "", services_str, verbose=False)
 	# TODO: addinf
         session.broker.handlerawmsg(n.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG))
+
+	#if addinf:
+	#	ip = i + ip_offset 
+	#	n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+	prefix = ipaddr.IPv4Prefix("10.0.0.0/24")
+	ip = i + ip_offset 
+        tlvdata = coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_N1NUMBER,
+                                           wlan.objid)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_N2NUMBER, i)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_TYPE,
+                                            coreapi.CORE_LINK_WIRED)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_IF2NUM, 0)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_IF2IP4,
+                                            prefix.addr(i+ip_offset))
+                                            #"10.0.0.%d"%ip)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_IF2IP4MASK,
+                                            prefix.prefixlen)
+        msg = coreapi.CoreLinkMessage.pack(coreapi.CORE_API_ADD_FLAG, tlvdata)
+        session.broker.handlerawmsg(msg)
+	
 
 def create_node_map(ns_nums, nodes):
     print 'ns_nums=%s'%str(ns_nums)
