@@ -111,24 +111,27 @@ def run_sessions(time_str, k, mob, sessions, params):
 def run_session(time_str, k, mob, exp_session, params):
 
     try:
-        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1',
+        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
                 'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
         #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
-	#session_cfg['controlnet'] = "koala1:172.16.1.0/24 koala2:172.16.2.0/24"
-	session_cfg['controlnet'] = "koala1:172.16.0.0/24 146.179.131.161:172.16.2.0/24"
+	session_cfg['controlnet'] = "koala1:172.16.1.0/24 koala2:172.16.2.0/24"
+	#session_cfg['controlnet'] = "koala1:172.16.0.0/24 146.179.131.161:172.16.2.0/24"
 	session_cfg['controlnet1'] = "koala1:172.17.1.0/24 146.179.131.161:172.17.2.0/24"
 	session_cfg['controlnetif1'] = "eth1"
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         session.master=True
+        session.location.setrefgeo(47.5791667,-122.132322,2.00000)
+        session.location.refscale = 100.0
         session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
         #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
 
 	slave =  'koala2' # koala2
 	slaveip =  '146.179.131.161' # koala2
 	remote_configure(session, slave, slaveip)
+        session.broker.handlerawmsg(location_conf_msg(session.location))
 
         if params['sinkDisplay']:
             sink_display = start_query_sink_display("sinkDisplay.log", session.sessiondir, params)
@@ -172,8 +175,6 @@ def run_session(time_str, k, mob, exp_session, params):
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
             session.master = True
-            session.location.setrefgeo(47.5791667,-122.132322,2.00000)
-            session.location.refscale = 100.0
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
             session.emane.loadmodels()
 
@@ -192,7 +193,7 @@ def run_session(time_str, k, mob, exp_session, params):
             # set increasing Z coordinates
             wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
             wlan1.setposition(x=80,y=50)
-            session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG))
+            session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG|coreapi.CORE_API_STR_FLAG))
             for servername in session.broker.getserverlist():
                 session.broker.addnodemap(servername, wlan1.objid)
             #msg = session.emane.emane_config.toconfmsg(coreapi.CORE_API_CONF_MSG, wlan1, todo, values)
@@ -261,7 +262,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
-        services_str = "IPForward|SSH"
+        services_str = "IPForward|DefaultRoute|DefaultMulticastRoute|SSH"
         master_services = services_str
         if params['dstat']: master_services += "|dstat" 
  
@@ -383,6 +384,18 @@ def remote_shutdown(session):
 	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
 	session.broker.handlerawmsg(msg)
 
+def location_conf_msg(location):
+	tlvdata = ""
+	tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_OBJ, "location")
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_TYPE, coreapi.CONF_TYPE_FLAGS_NONE)
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_DATA_TYPES,
+                                            (coreapi.CONF_DATA_TYPE_STRING,))
+	vals = [ location.refxyz[0], location.refxyz[1], location.refgeo[0], location.refgeo[1], location.refgeo[2], location.refscale ]
+	vals = "|".join(map(str, vals))
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
+        msg = coreapi.CoreConfMessage.pack(0, tlvdata)
+	return msg
+
 def get_num_workers(k, params):
     q = params['query']
     sink_scale_factor = k if params['pyScaleOutSinks'] else 1
@@ -467,11 +480,11 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
 def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1, addinf=True):
         n = pycore.nodes.CoreNode(session = session, objid = i,
                                     name = "n%d" % i, start=False)
-        n.setposition(x=150*i,y=150)
+        n.setposition(x=pos[0],y=pos[1], z=1.0)
         n.server = slave
         session.services.addservicestonode(n, "", services_str, verbose=False)
 	# TODO: addinf
-        session.broker.handlerawmsg(n.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG))
+        session.broker.handlerawmsg(n.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG | coreapi.CORE_API_STR_FLAG))
 
 	#if addinf:
 	#	ip = i + ip_offset 
@@ -491,7 +504,6 @@ def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1,
                                             prefix.prefixlen)
         msg = coreapi.CoreLinkMessage.pack(coreapi.CORE_API_ADD_FLAG, tlvdata)
         session.broker.handlerawmsg(msg)
-	
 
 def create_node_map(ns_nums, nodes):
     print 'ns_nums=%s'%str(ns_nums)
