@@ -118,7 +118,7 @@ def run_session(time_str, k, mob, exp_session, params):
         #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
 	session_cfg['controlnet'] = "koala1:172.16.1.0/24 koala2:172.16.2.0/24"
 	#session_cfg['controlnet'] = "koala1:172.16.0.0/24 146.179.131.161:172.16.2.0/24"
-	session_cfg['controlnet1'] = "koala1:172.17.1.0/24 146.179.131.161:172.17.2.0/24"
+	session_cfg['controlnet1'] = "koala1:172.17.1.0/24 koala2:172.17.2.0/24"
 	session_cfg['controlnetif1'] = "eth1"
         print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
@@ -126,7 +126,10 @@ def run_session(time_str, k, mob, exp_session, params):
         session.location.setrefgeo(47.5791667,-122.132322,2.00000)
         session.location.refscale = 100.0
         session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
-        #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
+
+	conf_msg = raw_emane_global_conf_msg(1)
+	session.broker.handlerawmsg(conf_msg)
+	session.confobj("emane", session, to_msg(conf_msg))
 
 	slave =  'koala2' # koala2
 	slaveip =  '146.179.131.161' # koala2
@@ -178,24 +181,17 @@ def run_session(time_str, k, mob, exp_session, params):
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
             session.emane.loadmodels()
 
-            """
-            global_names = EmaneGlobalModel.getnames()
-            global_values = list(EmaneGlobalModel.getdefaultvalues())
-            global_values[ global_names.index('otamanagerdevice') ] = 'ctrl1'
-            msg = EmaneGlobalModel.toconfmsg(flags=0, nodenum=1,
-                                             typeflags=coreapi.CONF_TYPE_FLAGS_NONE, values=global_values)
-
-            session.broker.handlerawmsg(msg)
-            session.emane.setconfig(1, EmaneGlobalModel._name, global_values)
-            """
             #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
             #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
             # set increasing Z coordinates
             wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
             wlan1.setposition(x=80,y=50)
             session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG|coreapi.CORE_API_STR_FLAG))
+            """
+            TODO: Might need to add this back!
             for servername in session.broker.getserverlist():
                 session.broker.addnodemap(servername, wlan1.objid)
+            """
             #msg = session.emane.emane_config.toconfmsg(coreapi.CORE_API_CONF_MSG, wlan1, todo, values)
             #session.emane.configure(session, msg)
             names = EmaneIeee80211abgModel.getnames()
@@ -229,7 +225,12 @@ def run_session(time_str, k, mob, exp_session, params):
                                              typeflags=typeflags, values=values)
             session.broker.handlerawmsg(msg)
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
-            #session.emane.setconfig(None, EmaneGlobalModel._name, global_values)
+
+            #No idea why I need to call this again here with a None node but seems I have to. 
+            conf_msg = raw_emane_global_conf_msg(None)
+            session.broker.handlerawmsg(conf_msg)
+            session.confobj("emane", session, to_msg(conf_msg))
+
         elif model == "Basic":
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
             wlan1.setposition(x=80,y=50)
@@ -383,6 +384,38 @@ def remote_shutdown(session):
 					coreapi.CORE_EVENT_SHUTDOWN_STATE)
 	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
 	session.broker.handlerawmsg(msg)
+
+def raw_emane_global_conf_msg(wlanid):
+	"""
+	tlvdata = ""
+	tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_OBJ, "emane")
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_NODE, wlanid)
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_DATA_TYPES,
+                                            (coreapi.CONF_DATA_TYPE_STRING,))
+        #datatypes = tuple( map(lambda v: coreapi.CONF_DATA_TYPE_STRING,
+        #                       EmaneGlobalModel.getnames()) )
+	defaults = EmaneGlobalModel.getdefaultvalues()
+	names = EmaneGlobalModel.getnames()
+	vals = [ location.refxyz[0], location.refxyz[1], location.refgeo[0], location.refgeo[1], location.refgeo[2], location.refscale ]
+	vals = "|".join(map(str, vals))
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
+        msg = coreapi.CoreConfMessage.pack(0, tlvdata)
+	return msg
+	"""
+	global_names = EmaneGlobalModel.getnames()
+	global_values = list(EmaneGlobalModel.getdefaultvalues())
+	global_values[ global_names.index('otamanagerdevice') ] = 'ctrl1'
+	global_values[ global_names.index('otamanagergroup') ] = '224.1.2.9:45702'
+	msg = EmaneGlobalModel.toconfmsg(flags=0, nodenum=wlanid,
+				     typeflags=coreapi.CONF_TYPE_FLAGS_NONE, values=global_values)
+	print 'Created emane conf msg=%s'%str(msg)
+	return msg
+
+def to_msg(raw_msg):
+        hdr = raw_msg[:coreapi.CoreMessage.hdrsiz]
+        msgtype, flags, msglen = coreapi.CoreMessage.unpackhdr(hdr)
+        msgcls = coreapi.msg_class(msgtype)
+        return msgcls(flags, hdr, raw_msg[coreapi.CoreMessage.hdrsiz:])
 
 def location_conf_msg(location):
 	tlvdata = ""
