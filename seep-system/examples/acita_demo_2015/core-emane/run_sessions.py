@@ -67,7 +67,7 @@ do
         cp $d/log2/*.log $resultsDir	
     fi
 	cp $d/mappingRecordOut.txt $resultsDir	
-    mkdir $resultsDir/positions
+    mkdir -p $resultsDir/positions
 	cp $d/*.xyz $resultsDir/positions	
 	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
 
@@ -390,7 +390,8 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     taddservices = time.time() - tstart
     if addinf:
         ip = i + ip_offset 
-        n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+        #n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+        n.newnetif(net=wlan, addrlist=["10.0.0.%d/24"%(ip)], ifindex=0)
         taddnetif = time.time() - tstart
         n.cmd([SYSCTL_BIN, "net.ipv4.icmp_echo_ignore_broadcasts=0"])
         tcmd = time.time() - tstart
@@ -638,7 +639,6 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
-    parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
     parser.add_argument('--model', dest='model', default="Emane", help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSRETX',
             help='Net layer routing alg (OLSR, OLSRETX, OSPFv3MDR)')
@@ -662,7 +662,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     k=int(args.k)
     pt=float(args.pt)
     params = {'nodes':int(args.nodes)}
-    if not args.disable_ctrl_net: params['controlnet']='172.16.0.0/24'
+    params['controlnet']='172.16.1.0/24'
     # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
