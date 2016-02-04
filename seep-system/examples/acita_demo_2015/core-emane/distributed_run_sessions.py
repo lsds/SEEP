@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys,os,time,re,argparse,math,shutil,subprocess
+import sys,os,time,re,argparse,math,shutil,subprocess,socket
 
 
 from core import pycore
@@ -110,17 +110,17 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
 
+    print 'params=',params
+    slave = params['slave']
+    slaveip = socket.gethostbyname(slave)
+
     try:
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
                 'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
-        #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
-        #if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
-	session_cfg['controlnet'] = "koala1:172.16.1.0/24 koala2:172.16.2.0/24"
-	#session_cfg['controlnet'] = "koala1:172.16.0.0/24 146.179.131.161:172.16.2.0/24"
-	session_cfg['controlnet1'] = "koala1:172.17.1.0/24 koala2:172.17.2.0/24"
+	session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
+	session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
 	session_cfg['controlnetif1'] = "eth1"
-        print 'params=',params
         session = pycore.Session(cfg=session_cfg, persistent=True)
         session.master=True
         session.location.setrefgeo(47.5791667,-122.132322,2.00000)
@@ -131,8 +131,6 @@ def run_session(time_str, k, mob, exp_session, params):
 	session.broker.handlerawmsg(conf_msg)
 	session.confobj("emane", session, to_msg(conf_msg))
 
-	slave =  'koala2' # koala2
-	slaveip =  '146.179.131.161' # koala2
 	remote_configure(session, slave, slaveip)
         session.broker.handlerawmsg(location_conf_msg(session.location))
 
@@ -141,7 +139,6 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Started query sink display ', sink_display 
 
         params['repoDir'] = get_repo_dir()
-        #This is so broken, should find a better way...
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
         write_chain_length(params['h'], session.sessiondir)
@@ -770,7 +767,6 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--specific', dest='specific', default=False, action='store_true', help='Run a specific session')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
-    parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
     parser.add_argument('--model', dest='model', default="Emane", help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSRETX',
             help='Net layer routing alg (OLSR, OLSRETX, OSPFv3MDR)')
@@ -789,13 +785,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
+    parser.add_argument('--slave', dest='slave', default='koala4', help='Hostname of slave')
     args=parser.parse_args()
 
     k=int(args.k)
     pt=float(args.pt)
     params = {'nodes':int(args.nodes)}
-    if not args.disable_ctrl_net: params['controlnet']='172.16.0.0/24'
-    # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
     params['specific']=args.specific
@@ -823,6 +818,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"
+    params['slave']= args.slave 
 
     if args.verbose: params['verbose']='true'
 
