@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
@@ -27,7 +28,8 @@ public class RoutingController implements Runnable{
 	private final static double INITIAL_WEIGHT = -1;
 	//private final static double COST_THRESHOLD = 3.9;
 	//private final static double COST_THRESHOLD = 4.5;
-	private final static double COST_THRESHOLD = 5.5;
+	//private final static double COST_THRESHOLD = 5.5;
+	private final static double COST_THRESHOLD = 10;
 	private final long MAX_WEIGHT_DELAY;// = 1 * 1000;
 	private final CoreRE owner;
 	private final Integer nodeId;
@@ -57,10 +59,13 @@ public class RoutingController implements Runnable{
 			//this.MAX_WEIGHT_DELAY = 10 * 1000;
 			this.MAX_WEIGHT_DELAY = 2 * 1000;
 			weights.put(nodeId, INITIAL_WEIGHT);
+			throw new RuntimeException("TODO: Set using config & sync with dispatcher.");
 		}
 		else
 		{
-			this.MAX_WEIGHT_DELAY = 1 * 500;
+			//this.MAX_WEIGHT_DELAY = 1 * 50;
+			//this.MAX_WEIGHT_DELAY = 1 * 25;
+			this.MAX_WEIGHT_DELAY = Long.parseLong(GLOBALS.valueFor("routingCtrlDelay"));
 		}
 		
 		for (int i = 0; i < numLogicalInputs; i++)
@@ -85,7 +90,8 @@ public class RoutingController implements Runnable{
 	
 	@Override
 	public void run() {
-		
+	
+		long tLast = System.currentTimeMillis();	
 		while(true)
 		{
 			Map<Integer, Double> weightsCopy = null;
@@ -117,13 +123,18 @@ public class RoutingController implements Runnable{
 				for (Integer upstreamId : weightsCopy.keySet())
 				{
 					RangeSet<Long> empty = TreeRangeSet.create();
-					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
+					//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
+					double weight = weightsCopy.get(upstreamId);
+					//if (nodeId == 1 && upstreamId == 10 || nodeId == 110 && upstreamId == 0 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
+					//if (nodeId == 1 && upstreamId == 0 || nodeId == 110 && upstreamId == 10 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
+					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, empty);
 					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
 				}
 			}
-			logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms");
+			logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
 			long tStart = System.currentTimeMillis();
+			tLast = tStart;
 			long tNow = tStart;
 			while (tNow - tStart < MAX_WEIGHT_DELAY)
 			{

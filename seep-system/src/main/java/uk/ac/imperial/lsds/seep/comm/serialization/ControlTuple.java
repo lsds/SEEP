@@ -70,6 +70,7 @@ public class ControlTuple {
 
 	private DownUpRCtrl downUp;
 	private UpDownRCtrl upDown;
+	private long tsSend = 0;
 
 	public ControlTuple(){}
 	
@@ -94,12 +95,14 @@ public class ControlTuple {
 		if (!type.equals(CoreRE.ControlTupleType.UP_DOWN_RCTRL)) { throw new RuntimeException("Logic error."); }
 		this.type = type;
 		this.upDown = new UpDownRCtrl(opId, qLen);
+		this.tsSend = System.currentTimeMillis();
 	}
 
 	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, RangeSet<Long> unmatched)
 	{
 		this.type = type;
 		this.downUp = new DownUpRCtrl(opId, weight, unmatched);
+		this.tsSend = System.currentTimeMillis();
 	}
 	
 	public CoreRE.ControlTupleType getType() {
@@ -410,7 +413,17 @@ public class ControlTuple {
 	public UpDownRCtrl getUpDown() {
 		return upDown;
 	}
-    
+  
+
+	public long getTsSend() {
+		return tsSend;
+	}
+
+	public void setTsSend(long tsSend)
+	{
+		this.tsSend = tsSend;
+	}
+
 	@Override
 	public String toString(){
 		return "ControlTuple."+this.type;

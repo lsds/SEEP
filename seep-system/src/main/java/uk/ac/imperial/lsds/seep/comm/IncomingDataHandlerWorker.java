@@ -157,7 +157,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 							reg.getPayload().attrValues.set(reg.getMap().get("latencyBreakdown"), newLatencies);
 						}
 
-						LOG.debug("Adding batch to dso.");
+						LOG.debug("Adding batch to dso, local latency="+(System.currentTimeMillis()-receiveTs));
 						if (dso instanceof OutOfOrderBufferedBarrier)
 						{
 							LOG.debug("Pushing to ooo buffered barrier.");
@@ -168,6 +168,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 							LOG.debug("Pushing to dso.");
 							dso.push(reg);
 						}
+						LOG.debug("Finished pushing to dso, ts="+t_payload.timestamp+", local latency="+(System.currentTimeMillis()-receiveTs));
 					}
 					else{
 						///\todo{check for garbage in the tcp buffers}

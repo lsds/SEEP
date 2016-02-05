@@ -144,8 +144,11 @@ public class ControlDispatcher {
 				synchronized(k){
 					synchronized(socket){
 						synchronized (output){
+							long writeStart = System.currentTimeMillis();
+							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
 							k.writeObject(output, ct);
 							output.flush();
+							LOG.info("Wrote upstream control tuple in "+(System.currentTimeMillis()-writeStart)+" ms");
 						}
 					}
 				}
@@ -294,6 +297,7 @@ public class ControlDispatcher {
 					output = new Output(socket.getOutputStream());
 					synchronized(k){
 						synchronized (socket){
+							if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
 							k.writeObject(output, ct);
 							output.flush();
 						}

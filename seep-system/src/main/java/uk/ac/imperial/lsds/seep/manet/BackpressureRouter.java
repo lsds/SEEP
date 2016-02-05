@@ -28,6 +28,7 @@ public class BackpressureRouter implements IRouter {
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
 	private int switchCount = 0;
+	private long tLastSwitch = 0;
 	private final Object lock = new Object(){};
 	private final WeightExpiryMonitor weightExpiryMonitor = new WeightExpiryMonitor();
 
@@ -86,7 +87,11 @@ public class BackpressureRouter implements IRouter {
 				if (downOpId != lastRouted)
 				{
 					switchCount++;
-					logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+")");
+					long now = System.currentTimeMillis();
+					long lastSwitch = 0;
+					if (tLastSwitch > 0) { lastSwitch = now - tLastSwitch; }
+					tLastSwitch = now;	
+					logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+", last switch="+lastSwitch+")");
 					lastRouted = downOpId;
 				}
 				if (downOpId != null)

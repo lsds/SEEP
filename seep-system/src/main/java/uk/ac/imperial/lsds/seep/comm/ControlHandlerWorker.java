@@ -116,11 +116,14 @@ public class ControlHandlerWorker implements Runnable{
 			os = incomingSocket.getOutputStream();
 			Input i = new Input(is, 100000);
 			//Read the connection to get the data
+			long txnStart = System.currentTimeMillis();
 			while(goOn){
 				long readStart = System.currentTimeMillis();
 				tuple = k.readObject(i, ControlTuple.class);
 				long readEnd = System.currentTimeMillis();
-				LOG.debug("Read control tuple in "+ (readEnd-readStart) + " ms");
+				long netDelay = tuple.getTsSend() > 0 ? readEnd - tuple.getTsSend() : -1;
+				LOG.debug("Read control tuple in "+ (readEnd-readStart) + " ms"+ (netDelay > 0 ? ", netDelay="+netDelay : "")+",txnDelay="+(readStart-txnStart));
+				txnStart = readEnd;
 				if(tuple != null){
 					InetAddress ip = incomingSocket.getInetAddress();
 					owner.processControlTuple(tuple, os, ip);

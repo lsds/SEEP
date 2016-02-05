@@ -47,8 +47,12 @@ public class Dispatcher implements IRoutingObserver {
 
 	//private final Map<Integer, DataTuple> senderQueues = new HashMap<Integer, ConcurrentNavigableMap<Integer, DataTuple>>();
 	private static final Logger logger = LoggerFactory.getLogger(Dispatcher.class);
-	private static final long ROUTING_CTRL_DELAY = 1 * 500;
+	//private static final long ROUTING_CTRL_DELAY = 1 * 50;
+	//private static final long ROUTING_CTRL_DELAY = 1 * 25;
+	private static final long ROUTING_CTRL_DELAY = Long.parseLong(GLOBALS.valueFor("routingCtrlDelay"));
 	private static final long SEND_TIMEOUT = 1 * 500;
+	//private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 120 * 1000; // 4 * 1000 Only set this really high for latency breakdown.
+	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 4 * 1000;
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
@@ -200,6 +204,9 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void dispatch(DataTuple dt) 
 	{
+		long ts = dt.getPayload().timestamp;
+		long local_ts = dt.getPayload().local_ts;
+		logger.debug("Dispatcher queuing tuple with ts="+ts+",local latency="+(System.currentTimeMillis()-local_ts)); 
 		if (!bestEffort)
 		{
 			dispatchReliable(dt); 
@@ -352,7 +359,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}	
 		synchronized(lock) { lock.notifyAll(); }
-		logger.debug("Finished handling routing change, duration=" + ((System.currentTimeMillis() - tStart)/1000));
+		logger.debug("Finished handling routing change, duration=" + (System.currentTimeMillis() - tStart));
 	}
 	
 	private boolean isDownAlive(int downOpId, long ts)
@@ -389,7 +396,8 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				dt = peekNext();
 				targets = owner.getOperator().getRouter().forward_highestWeight(dt);
-				logger.debug("Dispatcher peeked at head tuple "+dt.getPayload().timestamp + " with targets "+targets);
+				long localLatency = System.currentTimeMillis() - dt.getPayload().local_ts;
+				logger.debug("Dispatcher peeked at head tuple with ts="+dt.getPayload().timestamp + ", targets "+targets+", local latency="+localLatency);
 
 				if (targets == null || targets.isEmpty())
 				{
@@ -650,7 +658,10 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			this.outputQueue = outputQueue;
 			this.dest = dest;
-			rateLimiter.setLimit(60);
+			if (Boolean.parseBoolean(GLOBALS.valueFor("rateLimitConnections")))
+			{
+				rateLimiter.setLimit(Long.parseLong(GLOBALS.valueFor("frameRate")));
+			}
 		}
 		
 		public boolean isConnected()
@@ -702,7 +713,8 @@ public class Dispatcher implements IRoutingObserver {
 				} catch (InterruptedException e) {
 					throw new RuntimeException("TODO: Addition and removal of downstreams.");
 				}
-				logger.debug("Dispatcher worker sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+				long localLatency = System.currentTimeMillis() - nextTuple.getPayload().local_ts;
+				logger.debug("Dispatcher worker sending tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp+", local latency="+localLatency);
 				
 				rateLimiter.limit();
 
@@ -853,14 +865,19 @@ public class Dispatcher implements IRoutingObserver {
 		@Override
 		public void run() {
 			// while true
+			long tLast = System.currentTimeMillis();
 			while (true)
 			{
 				int totalQueueLength = getTotalQlen();
 				//TODO: This doesn't include the input queues.
 				logger.info("Total queue length to "+downId + " = "+ totalQueueLength);
+				
+				long tStart = System.currentTimeMillis();
 				//Create and send control tuple
 				sendQueueLength(totalQueueLength);
-				
+				long tEnd = System.currentTimeMillis();
+				logger.debug("Sent updown rctrl in "+(tEnd - tStart)+"ms, since last="+(tEnd-tLast)+" ms");
+				tLast = tEnd;
 				//wait for interval
 				try {
 					Thread.sleep(ROUTING_CTRL_DELAY);
@@ -943,9 +960,9 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				
 				//TODO: Get an appropriate value for this timeout.
-				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.reset(dsOpId, 2 * 2000); }
+				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.reset(dsOpId, FAILURE_CTRL_WATCHDOG_TIMEOUT); }
 				lock.notifyAll();
-				logger.debug("Handled failure ctrl in duration(s)="+ ((System.currentTimeMillis() - tStart)/1000));
+				logger.debug("Handled failure ctrl in duration="+ (System.currentTimeMillis() - tStart));
 			}
 		}
 		
