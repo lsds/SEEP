@@ -1,15 +1,18 @@
 #!/usr/bin/python
 
-import sys,os,time,re,argparse,math,shutil,subprocess
+import sys,os,time,re,argparse,math,shutil,subprocess,socket
 
 
 from core import pycore
+from core.api import coreapi
 from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
+from core.emane.emane import EmaneGlobalModel
 #from core.misc.xmlutils import savesessionxml
 from core.misc.xmlsession import savesessionxml
+from core.misc import ipaddr
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
@@ -28,6 +31,7 @@ conf_dir='%s/vldb/config'%script_dir
 seep_jar = "seep-system-0.0.1-SNAPSHOT.jar"
 mobility_params = [('file','%s/rwpt.ns_movements'%conf_dir),('refresh_ms',1000),
         ('loop',1),('autostart',1.0),('map',''),('script_start',''),('script_pause',''),('script_stop','')]
+
 
 datacollect_template = '''#!/bin/bash
 # session hook script; write commands here to execute on the host at the
@@ -67,7 +71,7 @@ do
         cp $d/log2/*.log $resultsDir	
     fi
 	cp $d/mappingRecordOut.txt $resultsDir	
-    mkdir -p $resultsDir/positions
+    mkdir $resultsDir/positions
 	cp $d/*.xyz $resultsDir/positions	
 	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
 
@@ -106,26 +110,43 @@ def run_sessions(time_str, k, mob, sessions, params):
 
 def run_session(time_str, k, mob, exp_session, params):
 
+    print 'params=',params
+
+    distributed = bool(params['slave'])
+
     try:
-        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'1',
+        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
                 'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
-        if params.get('controlnet'): session_cfg['controlnet'] = params['controlnet'] 
-        print 'params=',params
-        session = pycore.Session(cfg=session_cfg, persistent=True)
-        session.master=True
-        session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
-        #session = pycore.Session(cfg={'custom_services_dir':svc_dir}, persistent=True)
+        if distributed: 
+            slave = params['slave']
+            slaveip = socket.gethostbyname(slave)
+            session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
+            session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
+            session_cfg['controlnetif1'] = "eth1"
+        else: 
+            session_cfg['controlnet'] = "172.16.1.0/24"
 
-        if not add_to_server(session): 
-            print 'Could not add to server'
+        session = pycore.Session(cfg=session_cfg, persistent=True)
+
+        session.master=True
+        session.location.setrefgeo(47.5791667,-122.132322,2.00000)
+        session.location.refscale = 100.0
+        session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
+
+        if distributed: 
+            conf_msg = raw_emane_global_conf_msg(1)
+            session.broker.handlerawmsg(conf_msg)
+            session.confobj("emane", session, to_msg(conf_msg))
+
+            remote_configure(session, slave, slaveip)
+            session.broker.handlerawmsg(location_conf_msg(session.location))
 
         if params['sinkDisplay']:
             sink_display = start_query_sink_display("sinkDisplay.log", session.sessiondir, params)
             print 'Started query sink display ', sink_display 
 
         params['repoDir'] = get_repo_dir()
-        #This is so broken, should find a better way...
         #This is so broken, should find a better way...
         write_replication_factor(k, session.sessiondir)
         write_chain_length(params['h'], session.sessiondir)
@@ -161,17 +182,22 @@ def run_session(time_str, k, mob, exp_session, params):
         if model == "Emane":
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
-            session.master = True
-            session.location.setrefgeo(47.5791667,-122.132322,2.00000)
-            session.location.refscale = 100.0
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
             session.emane.loadmodels()
 
             #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
             #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
             # set increasing Z coordinates
-            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=False)
+            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
             wlan1.setposition(x=80,y=50)
+            if distributed: session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG|coreapi.CORE_API_STR_FLAG))
+            """
+            TODO: Might need to add this back!
+            for servername in session.broker.getserverlist():
+                session.broker.addnodemap(servername, wlan1.objid)
+            """
+            #msg = session.emane.emane_config.toconfmsg(coreapi.CORE_API_CONF_MSG, wlan1, todo, values)
+            #session.emane.configure(session, msg)
             names = EmaneIeee80211abgModel.getnames()
             values = list(EmaneIeee80211abgModel.getdefaultvalues())
             print 'Emane Model default names: %s'%(str(names))
@@ -198,8 +224,21 @@ def run_session(time_str, k, mob, exp_session, params):
             #values[ names.index('flowcontrolenable') ] = 'off'
             values[ names.index('flowcontroltokens') ] = '10'
             print 'Emane Model overridden values: %s'%(str(list(values)))
+            if distributed:
+                typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
+                msg = EmaneIeee80211abgModel.toconfmsg(flags=0, nodenum=wlan1.objid,
+		     typeflags=typeflags, values=values)
+                session.broker.handlerawmsg(msg)
+
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
-        elif model == "Basic":
+
+            if distributed:
+                #No idea why I need to call this again here with a None node but seems I have to. 
+                conf_msg = raw_emane_global_conf_msg(None)
+                session.broker.handlerawmsg(conf_msg)
+                session.confobj("emane", session, to_msg(conf_msg))
+
+        elif model == "Basic" and not distributed:
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
             wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
@@ -209,8 +248,11 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Basic Range configured values: %s'%(str(model_cfg))
             wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
         else:
-            raise Exception("Unknown model: "+model)
+            raise Exception("Unknown model/distributed: %s/%s"%(model,str(distributed)))
 
+
+        if not add_to_server(session): 
+            print 'Could not add to server'
 
         if params['iperf']:
             #run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
@@ -228,7 +270,8 @@ def run_session(time_str, k, mob, exp_session, params):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
-        services_str = "IPForward|SSH"
+        #TODO: Do I actually need the default route/multicast service?
+        services_str = "IPForward|DefaultRoute|DefaultMulticastRoute|SSH"
         master_services = services_str
         if params['dstat']: master_services += "|dstat" 
  
@@ -265,7 +308,11 @@ def run_session(time_str, k, mob, exp_session, params):
                 pos = placements[i]
             else:
                 pos = gen_grid_position(i, params['nodes']-1)
-            routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
+
+            if distributed:
+                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos))
+            else:
+                routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
 
         if trace_file:
             #node_map = create_node_map(range(0,6), workers)
@@ -288,6 +335,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         print 'Instantiating session ',exp_session, ' with CORE session id', session.sessionid
         session.instantiate()
+	#remote_instantiate(session)
 
         chmod_dir(session.sessiondir)
         for n in range(2,3+len(num_workers)):
@@ -309,22 +357,88 @@ def run_session(time_str, k, mob, exp_session, params):
         #time.sleep(30)
         print 'Collecting data'
         session.datacollect()
+	#remote_datacollect(session)
         time.sleep(5)
         print 'Shutting down'
 
     finally:
         print 'Shutting down session.'
         if session:
+            if distributed: remote_shutdown(session)
+            session.shutdown()
             if 'server' in globals():
                 print 'Removing session from core daemon server'
                 server.delsession(session)
-            session.shutdown()
 
         if params['sinkDisplay'] and sink_display:
             print 'Shutting down query sink display ', sink_display
             sink_display.stdin.close()
             sink_display.terminate()
 
+
+def remote_configure(session, slave, slaveip):
+	session.broker.addserver(slave, slaveip, coreapi.CORE_API_PORT)
+	session.broker.setupserver(slave)
+	session.setstate(coreapi.CORE_EVENT_CONFIGURATION_STATE)
+	tlvdata = coreapi.CoreEventTlv.pack(coreapi.CORE_TLV_EVENT_TYPE,
+					coreapi.CORE_EVENT_CONFIGURATION_STATE)
+	session.broker.handlerawmsg(coreapi.CoreEventMessage.pack(0, tlvdata))
+
+def remote_instantiate(session):
+	tlvdata = coreapi.CoreEventTlv.pack(coreapi.CORE_TLV_EVENT_TYPE,
+					coreapi.CORE_EVENT_INSTANTIATION_STATE)
+	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
+	session.broker.handlerawmsg(msg)
+
+def remote_shutdown(session):
+	tlvdata = coreapi.CoreEventTlv.pack(coreapi.CORE_TLV_EVENT_TYPE,
+					coreapi.CORE_EVENT_SHUTDOWN_STATE)
+	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
+	session.broker.handlerawmsg(msg)
+
+def raw_emane_global_conf_msg(wlanid):
+	"""
+	tlvdata = ""
+	tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_OBJ, "emane")
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_NODE, wlanid)
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_DATA_TYPES,
+                                            (coreapi.CONF_DATA_TYPE_STRING,))
+        #datatypes = tuple( map(lambda v: coreapi.CONF_DATA_TYPE_STRING,
+        #                       EmaneGlobalModel.getnames()) )
+	defaults = EmaneGlobalModel.getdefaultvalues()
+	names = EmaneGlobalModel.getnames()
+	vals = [ location.refxyz[0], location.refxyz[1], location.refgeo[0], location.refgeo[1], location.refgeo[2], location.refscale ]
+	vals = "|".join(map(str, vals))
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
+        msg = coreapi.CoreConfMessage.pack(0, tlvdata)
+	return msg
+	"""
+	global_names = EmaneGlobalModel.getnames()
+	global_values = list(EmaneGlobalModel.getdefaultvalues())
+	global_values[ global_names.index('otamanagerdevice') ] = 'ctrl1'
+	global_values[ global_names.index('otamanagergroup') ] = '224.1.2.9:45702'
+	msg = EmaneGlobalModel.toconfmsg(flags=0, nodenum=wlanid,
+				     typeflags=coreapi.CONF_TYPE_FLAGS_NONE, values=global_values)
+	print 'Created emane conf msg=%s'%str(msg)
+	return msg
+
+def to_msg(raw_msg):
+        hdr = raw_msg[:coreapi.CoreMessage.hdrsiz]
+        msgtype, flags, msglen = coreapi.CoreMessage.unpackhdr(hdr)
+        msgcls = coreapi.msg_class(msgtype)
+        return msgcls(flags, hdr, raw_msg[coreapi.CoreMessage.hdrsiz:])
+
+def location_conf_msg(location):
+	tlvdata = ""
+	tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_OBJ, "location")
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_TYPE, coreapi.CONF_TYPE_FLAGS_NONE)
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_DATA_TYPES,
+                                            (coreapi.CONF_DATA_TYPE_STRING,))
+	vals = [ location.refxyz[0], location.refxyz[1], location.refgeo[0], location.refgeo[1], location.refgeo[2], location.refscale ]
+	vals = "|".join(map(str, vals))
+        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
+        msg = coreapi.CoreConfMessage.pack(0, tlvdata)
+	return msg
 
 def get_num_workers(k, params):
     q = params['query']
@@ -406,6 +520,34 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     #n.cmd([SYSCTL_BIN, "net.ipv4.conf.default.rp_filter=0"])
 
     return n
+
+def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1, addinf=True):
+        n = pycore.nodes.CoreNode(session = session, objid = i,
+                                    name = "n%d" % i, start=False)
+        n.setposition(x=pos[0],y=pos[1], z=1.0)
+        n.server = slave
+        session.services.addservicestonode(n, "", services_str, verbose=False)
+	# TODO: addinf
+        session.broker.handlerawmsg(n.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG | coreapi.CORE_API_STR_FLAG))
+
+	#if addinf:
+	#	ip = i + ip_offset 
+	#	n.newnetif(net=wlan, addrlist=["10.0.0.%d/32"%(ip)], ifindex=0)
+	prefix = ipaddr.IPv4Prefix("10.0.0.0/24")
+	ip = i + ip_offset 
+        tlvdata = coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_N1NUMBER,
+                                           wlan.objid)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_N2NUMBER, i)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_TYPE,
+                                            coreapi.CORE_LINK_WIRED)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_IF2NUM, 0)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_IF2IP4,
+                                            prefix.addr(i+ip_offset))
+                                            #"10.0.0.%d"%ip)
+        tlvdata += coreapi.CoreLinkTlv.pack(coreapi.CORE_TLV_LINK_IF2IP4MASK,
+                                            prefix.prefixlen)
+        msg = coreapi.CoreLinkMessage.pack(coreapi.CORE_API_ADD_FLAG, tlvdata)
+        session.broker.handlerawmsg(msg)
 
 def create_node_map(ns_nums, nodes):
     print 'ns_nums=%s'%str(ns_nums)
@@ -657,13 +799,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
+    parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
     args=parser.parse_args()
 
     k=int(args.k)
     pt=float(args.pt)
     params = {'nodes':int(args.nodes)}
-    params['controlnet']='172.16.1.0/24'
-    # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
     params['specific']=args.specific
@@ -691,6 +832,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"
+    params['slave']= args.slave 
 
     if args.verbose: params['verbose']='true'
 

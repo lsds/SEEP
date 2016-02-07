@@ -111,6 +111,8 @@ def run_sessions(time_str, k, mob, sessions, params):
 def run_session(time_str, k, mob, exp_session, params):
 
     print 'params=',params
+
+    distributed = bool(params['slave'])
     slave = params['slave']
     slaveip = socket.gethostbyname(slave)
 
@@ -118,21 +120,25 @@ def run_session(time_str, k, mob, exp_session, params):
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
                 'verbose':params.get('verbose', "False")} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
-	session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
-	session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
-	session_cfg['controlnetif1'] = "eth1"
+        if distributed: 
+		session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
+		session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
+		session_cfg['controlnetif1'] = "eth1"
+
         session = pycore.Session(cfg=session_cfg, persistent=True)
+
         session.master=True
         session.location.setrefgeo(47.5791667,-122.132322,2.00000)
         session.location.refscale = 100.0
         session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
 
-	conf_msg = raw_emane_global_conf_msg(1)
-	session.broker.handlerawmsg(conf_msg)
-	session.confobj("emane", session, to_msg(conf_msg))
+        if distributed: 
+		conf_msg = raw_emane_global_conf_msg(1)
+		session.broker.handlerawmsg(conf_msg)
+		session.confobj("emane", session, to_msg(conf_msg))
 
-	remote_configure(session, slave, slaveip)
-        session.broker.handlerawmsg(location_conf_msg(session.location))
+		remote_configure(session, slave, slaveip)
+		session.broker.handlerawmsg(location_conf_msg(session.location))
 
         if params['sinkDisplay']:
             sink_display = start_query_sink_display("sinkDisplay.log", session.sessiondir, params)
@@ -174,7 +180,6 @@ def run_session(time_str, k, mob, exp_session, params):
         if model == "Emane":
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
-            session.master = True
             session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
             session.emane.loadmodels()
 
@@ -183,7 +188,7 @@ def run_session(time_str, k, mob, exp_session, params):
             # set increasing Z coordinates
             wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
             wlan1.setposition(x=80,y=50)
-            session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG|coreapi.CORE_API_STR_FLAG))
+            if distributed: session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG|coreapi.CORE_API_STR_FLAG))
             """
             TODO: Might need to add this back!
             for servername in session.broker.getserverlist():
@@ -217,18 +222,21 @@ def run_session(time_str, k, mob, exp_session, params):
             #values[ names.index('flowcontrolenable') ] = 'off'
             values[ names.index('flowcontroltokens') ] = '10'
             print 'Emane Model overridden values: %s'%(str(list(values)))
-            typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
-            msg = EmaneIeee80211abgModel.toconfmsg(flags=0, nodenum=wlan1.objid,
-                                             typeflags=typeflags, values=values)
-            session.broker.handlerawmsg(msg)
+            if distributed:
+		    typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
+		    msg = EmaneIeee80211abgModel.toconfmsg(flags=0, nodenum=wlan1.objid,
+						     typeflags=typeflags, values=values)
+		    session.broker.handlerawmsg(msg)
             session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
 
             #No idea why I need to call this again here with a None node but seems I have to. 
-            conf_msg = raw_emane_global_conf_msg(None)
-            session.broker.handlerawmsg(conf_msg)
-            session.confobj("emane", session, to_msg(conf_msg))
 
-        elif model == "Basic":
+            if distributed:
+		    conf_msg = raw_emane_global_conf_msg(None)
+		    session.broker.handlerawmsg(conf_msg)
+		    session.confobj("emane", session, to_msg(conf_msg))
+
+        elif model == "Basic" and not distributed:
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
             wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
@@ -238,7 +246,7 @@ def run_session(time_str, k, mob, exp_session, params):
             print 'Basic Range configured values: %s'%(str(model_cfg))
             wlan1.setmodel(BasicRangeModel, tuple(model_cfg))
         else:
-            raise Exception("Unknown model: "+model)
+            raise Exception("Unknown model/distributed: %s/%s"%(model,str(distributed)))
 
 
         if not add_to_server(session): 
@@ -260,6 +268,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
+        #TODO: Do I actually need the default route/multicast service?
         services_str = "IPForward|DefaultRoute|DefaultMulticastRoute|SSH"
         master_services = services_str
         if params['dstat']: master_services += "|dstat" 
@@ -297,8 +306,11 @@ def run_session(time_str, k, mob, exp_session, params):
                 pos = placements[i]
             else:
                 pos = gen_grid_position(i, params['nodes']-1)
-            #routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
-            routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos))
+
+            if distributed:
+                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos))
+            else:
+                routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
 
         if trace_file:
             #node_map = create_node_map(range(0,6), workers)
@@ -350,7 +362,7 @@ def run_session(time_str, k, mob, exp_session, params):
     finally:
         print 'Shutting down session.'
         if session:
-            remote_shutdown(session)
+            if distributed: remote_shutdown(session)
             session.shutdown()
             if 'server' in globals():
                 print 'Removing session from core daemon server'
@@ -785,7 +797,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
-    parser.add_argument('--slave', dest='slave', default='koala4', help='Hostname of slave')
+    parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
     args=parser.parse_args()
 
     k=int(args.k)
