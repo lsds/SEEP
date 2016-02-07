@@ -48,6 +48,8 @@ public class Source implements StatelessOperator {
 		long interFrameDelay = 1000 / frameRate;
 		logger.info("Source inter-frame delay="+interFrameDelay);
 		
+		initialPause();
+
 		final String value = generateFrame(tupleSizeChars);
 		final long[] latencyBreakdown = new long[0];
 		final long tStart = System.currentTimeMillis();
@@ -99,5 +101,16 @@ public class Source implements StatelessOperator {
 			builder.append('x');
 		}
 		return builder.toString();
+	}
+	
+	private void initialPause()
+	{
+		try {
+			Thread.sleep(Long.parseLong(GLOBALS.valueFor("numTuples")));
+		} 
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}				
+
 	}
 }
