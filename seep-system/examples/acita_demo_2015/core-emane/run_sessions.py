@@ -499,7 +499,9 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     tstart = time.time() 
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
     taddobj = time.time() - tstart
-    n.setposition(x=pos[0], y=pos[1], z=1.0)
+    #n.setposition(x=pos[0], y=pos[1], z=1.0) N.B. Might need an altitude of 3.0 for 2ray!
+    print('N.B. Might need an altitude of 3.0 for 2ray (z=1.0)')
+    n.setposition(x=pos[0], y=pos[1])
     session.services.addservicestonode(n, "", services_str, verbose=False)
     taddservices = time.time() - tstart
     if addinf:
@@ -524,7 +526,9 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
 def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1, addinf=True):
         n = pycore.nodes.CoreNode(session = session, objid = i,
                                     name = "n%d" % i, start=False)
-        n.setposition(x=pos[0],y=pos[1], z=1.0)
+        print('N.B. Might need an altitude of 3.0 for 2ray (z=1.0)')
+        #n.setposition(x=pos[0], y=pos[1], z=1.0) N.B. Might need an altitude of 3.0 for 2ray!
+        n.setposition(x=pos[0],y=pos[1])
         n.server = slave
         session.services.addservicestonode(n, "", services_str, verbose=False)
 	# TODO: addinf
