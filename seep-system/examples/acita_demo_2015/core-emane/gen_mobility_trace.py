@@ -71,10 +71,12 @@ def gen_trace(session_dir, session_id, params):
         raw_proc = subprocess.Popen(bm_raw_params, cwd='.')
         raw_proc.wait()
 
+        print 'Converting mobility trace to ns2 format with cmd=%s'%str(bm_raw_params)
         # call bonn_motion to convert raw trace to ns2
         bm_ns2_params = ['bm', 'NSFile', '-f', trace_file] 
-        ns2_proc = subprocess.Popen(bm_ns2_params, cwd='.')
-        ns2_proc.wait()
+        with open(os.devnull, 'w') as null: 
+            ns2_proc = subprocess.Popen(bm_ns2_params, cwd='.', stdout=null, stderr=subprocess.STDOUT)
+            ns2_proc.wait()
         return '%s.ns_movements'%trace_name
 
 def parse_trace(session_dir, metadata, params):
