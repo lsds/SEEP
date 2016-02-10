@@ -113,17 +113,18 @@ def run_session(time_str, k, mob, exp_session, params):
     print 'params=',params
 
     distributed = bool(params['slave'])
+    verbose = params['verbose'] 
 
     try:
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
-                'verbose':params.get('verbose', "False")} 
+                'verbose':"true" if verbose else "False"} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if distributed: 
             slave = params['slave']
             slaveip = socket.gethostbyname(slave)
             session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
             session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
-            session_cfg['controlnetif1'] = "eth1"
+            session_cfg['controlnetif1'] = "eth4"
         else: 
             session_cfg['controlnet'] = "172.16.1.0/24"
 
@@ -188,7 +189,7 @@ def run_session(time_str, k, mob, exp_session, params):
             #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
             #tmp.newnetif(net, ["%s/%s" % (prefix.addr(i), prefix.prefixlen)])
             # set increasing Z coordinates
-            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=True)
+            wlan1 = session.addobj(cls = pycore.nodes.EmaneNode, name = "wlan1", objid=1, verbose=verbose)
             wlan1.setposition(x=80,y=50)
             if distributed: session.broker.handlerawmsg(wlan1.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG|coreapi.CORE_API_STR_FLAG))
             """
@@ -239,7 +240,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 session.confobj("emane", session, to_msg(conf_msg))
 
         elif model == "Basic" and not distributed:
-            wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=False)
+            wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=verbose)
             wlan1.setposition(x=80,y=50)
             print 'Basic Range Model default values: %s'%(str(BasicRangeModel.getdefaultvalues()))
             model_cfg = list(BasicRangeModel.getdefaultvalues())
@@ -276,7 +277,7 @@ def run_session(time_str, k, mob, exp_session, params):
         if params['dstat']: master_services += "|dstat" 
  
         master = create_node(2, session, "%s|MeanderMaster"%master_services, wlan1,
-                gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False)
+                gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False, verbose=verbose)
 
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
@@ -298,7 +299,7 @@ def run_session(time_str, k, mob, exp_session, params):
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|PcapSrc"
             #if params['emanestats']: worker_services += "|EmaneStats"
-            workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos)) 
+            workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos, verbose=verbose)) 
        
         routers = []
         print 'Creating routers.'
@@ -310,9 +311,9 @@ def run_session(time_str, k, mob, exp_session, params):
                 pos = gen_grid_position(i, params['nodes']-1)
 
             if distributed:
-                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos))
+                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos, verbose=verbose))
             else:
-                routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
+                routers.append(create_node(i, session, "%s"%services_str, wlan1, pos, verbose=verbose))
 
         if trace_file:
             #node_map = create_node_map(range(0,6), workers)
@@ -494,7 +495,7 @@ def get_num_workers(k, params):
 
     return num_workers
 
-def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
+def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True, verbose=False):
 #def create_node(i, session, services_str, wlan, pos, ip_offset=8):
     tstart = time.time() 
     n = session.addobj(cls = pycore.nodes.CoreNode, name="n%d"%i, objid=i)
@@ -502,7 +503,7 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
     #n.setposition(x=pos[0], y=pos[1], z=1.0) N.B. Might need an altitude of 3.0 for 2ray!
     print('N.B. Might need an altitude of 3.0 for 2ray (z=1.0)')
     n.setposition(x=pos[0], y=pos[1])
-    session.services.addservicestonode(n, "", services_str, verbose=False)
+    session.services.addservicestonode(n, "", services_str, verbose=verbose)
     taddservices = time.time() - tstart
     if addinf:
         ip = i + ip_offset 
@@ -523,14 +524,14 @@ def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True):
 
     return n
 
-def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1, addinf=True):
+def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1, addinf=True, verbose=False):
         n = pycore.nodes.CoreNode(session = session, objid = i,
                                     name = "n%d" % i, start=False)
         print('N.B. Might need an altitude of 3.0 for 2ray (z=1.0)')
         #n.setposition(x=pos[0], y=pos[1], z=1.0) N.B. Might need an altitude of 3.0 for 2ray!
         n.setposition(x=pos[0],y=pos[1])
         n.server = slave
-        session.services.addservicestonode(n, "", services_str, verbose=False)
+        session.services.addservicestonode(n, "", services_str, verbose=verbose)
 	# TODO: addinf
         session.broker.handlerawmsg(n.tonodemsg(flags=coreapi.CORE_API_ADD_FLAG | coreapi.CORE_API_STR_FLAG))
 
@@ -800,7 +801,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--emanestats', dest='emanestats', default=False, action='store_true', help='Start emanestats service on master')
     parser.add_argument('--dstat', dest='dstat', default=False, action='store_true', help='Start dstat service on master.')
     parser.add_argument('--duplex', dest='duplex', default=False, action='store_true', help='Send in both directions for iperf tests')
-    parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
+    parser.add_argument('--verbose', dest='verbose', action='store_true', default=False, help='Verbose core logging')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
@@ -837,8 +838,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"
     params['slave']= args.slave 
-
-    if args.verbose: params['verbose']='true'
+    params['verbose']= args.verbose 
+	
+    #if args.verbose: params['verbose']='true'
 
     sessions = int(args.sessions)
     session_ids = [sessions] if args.specific else range(0,sessions)

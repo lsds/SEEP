@@ -254,7 +254,6 @@ if __name__ == "__main__":
     #parser.add_argument('--query', dest='query_type', default='linear', help='query type: linear,join,mixed,parallel')
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
-    parser.add_argument('--disableCtrlNet', dest='disable_ctrl_net', action='store_true', help='Disable ctrl network')
     parser.add_argument('--model', dest='model', default="Emane", help='Wireless model (Basic, Emane)')
     parser.add_argument('--routing', dest='routing', default='OLSRETX',
             help='Net layer routing alg (OLSR, OLSRETX)')
@@ -268,7 +267,7 @@ if __name__ == "__main__":
     parser.add_argument('--sources', dest='sources', default='2', help='Number of unreplicated sources (for join operators)')
     parser.add_argument('--sinks', dest='sinks', default='1', help='Number of unreplicated sinks')
     parser.add_argument('--trace', dest='trace', default=None, help='Mobility trace to use, if any (sftaxi, debs13)')
-    parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose core logging')
+    parser.add_argument('--verbose', dest='verbose', action='store_true', default=False, help='Verbose core logging')
     parser.add_argument('--masterPostDelay', dest='master_postdelay', default=None, help='Time to wait after starting master service before deploying query')
     parser.add_argument('--workerPreDelay', dest='worker_predelay', default=None, help='Time to wait before starting worker')
     parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
@@ -282,6 +281,7 @@ if __name__ == "__main__":
     parser.add_argument('--iperfcxns', dest='iperfcxns', default=None, help='Do an iperf test')
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a gui for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
+    parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -291,7 +291,6 @@ if __name__ == "__main__":
     #mobs=map(lambda x: float(x), [] if args.mobility in 'static' else args.ds.split(','))
     sessions=int(args.sessions)
     params = {'nodes':int(args.nodes)}
-    if not args.disable_ctrl_net: params['controlnet']='172.16.0.0/24'
     # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
@@ -321,8 +320,9 @@ if __name__ == "__main__":
     params['sinkDisplay']=args.sink_display
     params['enableSinkDisplay']=pybool_to_javastr(args.sink_display)
     params['enableGUI']= "true" if args.gui else "false"
+    params['slave']= args.slave 
+    params['verbose']= args.verbose 
     if args.trace: params['trace']=args.trace
-    if args.verbose: params['verbose']='true'
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
     if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
