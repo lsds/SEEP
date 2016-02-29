@@ -8,10 +8,10 @@ from util import chmod_dir, pybool_to_javastr
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
-#latency_percentile = '95%'
-#latency_regex = re.compile('%s%%_lat=(\d+)'%(latency_percentile))
-latency_percentile = 'max'
-latency_regex = re.compile('max_lat=(\d+)')
+latency_percentile = '95%'
+latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
+#latency_percentile = 'max'
+#latency_regex = re.compile('max_lat=(\d+)')
 
 def main(ks,mobilities,sessions,params,plot_time_str=None):
 
