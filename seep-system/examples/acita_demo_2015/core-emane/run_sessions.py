@@ -805,6 +805,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a sink display for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
+    parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -839,6 +840,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['enableGUI']= "true" if args.gui else "false"
     params['slave']= args.slave 
     params['verbose']= args.verbose 
+    params['emaneMobility']= args.emane_mobility
 	
     #if args.verbose: params['verbose']='true'
 

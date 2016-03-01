@@ -282,6 +282,7 @@ if __name__ == "__main__":
     parser.add_argument('--sinkDisplay', dest='sink_display', default=False, action='store_true', help='Start a gui for query output')
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
+    parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
 
     #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
@@ -322,6 +323,7 @@ if __name__ == "__main__":
     params['enableGUI']= "true" if args.gui else "false"
     params['slave']= args.slave 
     params['verbose']= args.verbose 
+    params['emaneMobility']= args.emane_mobility
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
