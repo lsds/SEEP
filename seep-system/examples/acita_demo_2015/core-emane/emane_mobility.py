@@ -1,3 +1,5 @@
+import sys,time
+from core.pycore import Session 
 from core.mobility import Ns2ScriptedMobility 
 from emanesh.events import EventService, LocationEvent
 
@@ -22,7 +24,7 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
     '''
     _name = "emaneNs2script"
     nem_offset = 2
-
+    remote_nodes = {} 
 
     def __init__(self, session, objid, verbose = False, values = None):
         ''' 
@@ -42,7 +44,43 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
         #SEEP nodes are on the master?
         node.position.set(x, y, z)  
         #msg = node.tonodemsg(flags=0)
-        self.writenodeposition(node, x, y, z)
+        #TODO: Record of remote node positions might be needed if SEEP nodes on slaves
+        if not node.objid in self.remote_nodes: self.writenodeposition(node, x, y, z)
         publish_loc(node.objid-self.nem_offset, x, y, z, self.session)
         #self.session.broadcastraw(None, msg)
         #self.session.sdt.updatenode(node.objid, flags=0, x=x, y=y, z=z)
+
+    def set_remote_nodes(self, remote_nodes):
+        self.remote_nodes = dict([(n.objid, n) for n in remote_nodes])
+        self.session.info("Set EmaneNs2ScriptedMobility remote nodes: %s"%str(self.remote_nodes.keys()))
+
+class EmaneNs2Session(Session):
+
+    def __init__(self, sessionid = None, cfg = {}, server = None, persistent = False, mkdir = True):
+        super(EmaneNs2Session, self).__init__(sessionid = sessionid, cfg=cfg, server=server, persistent=persistent, mkdir=mkdir)
+
+    def instantiate(self, wlan, remote_nodes, handler=None):
+        ''' We have entered the instantiation state, invoke startup methods
+            of various managers and boot the nodes. Validate nodes and check
+            for transition to the runtime state.
+        '''
+        
+        self.writeobjs()
+        # controlnet may be needed by some EMANE models
+        self.addremovectrlif(node=None, remove=False)
+        if self.emane.startup() == self.emane.NOT_READY:
+            return # instantiate() will be invoked again upon Emane.configure()
+        self.broker.startup()
+        self.mobility.startup()
+
+        wlan.mobility.set_remote_nodes(remote_nodes)
+ 
+        # boot the services on each node
+        self.bootnodes(handler)
+        # allow time for processes to start
+        time.sleep(0.125)
+        self.validatenodes()
+        # assume either all nodes have booted already, or there are some
+        # nodes on slave servers that will be booted and those servers will
+        # send a node status response message
+        self.checkruntime()

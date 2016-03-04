@@ -24,7 +24,7 @@ sys.path.append(script_dir)
 from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
 from gen_fixed_routes import create_static_routes
-from emane_mobility import publish_loc, register_emane_ns2_model
+from emane_mobility import publish_loc, register_emane_ns2_model, EmaneNs2Session
 
 
 #repo_dir = '%s/../../../..'
@@ -134,7 +134,8 @@ def run_session(time_str, k, mob, exp_session, params):
         else: 
             session_cfg['controlnet'] = "172.16.1.0/24"
 
-        session = pycore.Session(cfg=session_cfg, persistent=True)
+        if distributed and params['emaneMobility']: session = EmaneNs2Session(cfg=session_cfg, persistent=True)
+        else: session = pycore.Session(cfg=session_cfg, persistent=True)
 
         session.master=True
         session.location.setrefgeo(47.5791667,-122.132322,2.00000)
@@ -357,7 +358,8 @@ def run_session(time_str, k, mob, exp_session, params):
             savesessionxml(session, '%s/session.xml'%session.sessiondir, '1.0')
 
         print 'Instantiating session ',exp_session, ' with CORE session id', session.sessionid
-        session.instantiate()
+        if distributed and params['emaneMobility']: session.instantiate(wlan1, routers)  
+        else: session.instantiate()
 	#remote_instantiate(session)
 
         chmod_dir(session.sessiondir)
@@ -597,6 +599,7 @@ def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1,
                                             prefix.prefixlen)
         msg = coreapi.CoreLinkMessage.pack(coreapi.CORE_API_ADD_FLAG, tlvdata)
         session.broker.handlerawmsg(msg)
+        return n
 
 def create_node_map(ns_nums, nodes):
     print 'ns_nums=%s'%str(ns_nums)
