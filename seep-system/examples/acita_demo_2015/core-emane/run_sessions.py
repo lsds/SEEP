@@ -24,7 +24,7 @@ sys.path.append(script_dir)
 from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
 from gen_fixed_routes import create_static_routes
-from emane_mobility import publish_loc
+from emane_mobility import publish_loc, register_emane_ns2_model
 
 
 #repo_dir = '%s/../../../..'
@@ -140,6 +140,10 @@ def run_session(time_str, k, mob, exp_session, params):
         session.location.setrefgeo(47.5791667,-122.132322,2.00000)
         session.location.refscale = 100.0
         session.metadata.additem("canvas c1", "{name {Canvas1}} {wallpaper-style {upperleft}} {wallpaper {/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane/vldb/config/sample1-bg-large.png}} {size {3000 3000}}")
+
+
+        if params['emaneMobility']: 
+            register_emane_ns2_model(session)
 
         if distributed: 
             conf_msg = raw_emane_global_conf_msg(1)
@@ -333,6 +337,7 @@ def run_session(time_str, k, mob, exp_session, params):
             mobility_params[2] = ('loop', 0)
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
         elif trace_file and params['emaneMobility']:
+            print 'Using EmaneNs2Mobility.'
             node_map = create_node_map(range(0,params['nodes']-2), workers+routers)
             print 'Node map=%s'%node_map
             mobility_params[4] = ('map', node_map)
