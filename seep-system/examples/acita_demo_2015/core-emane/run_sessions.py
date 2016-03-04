@@ -364,6 +364,7 @@ def run_session(time_str, k, mob, exp_session, params):
                 time.sleep(1)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
 
+        """
         if params['emaneMobility']:
             #loc = LocationEvent() 
             #lat,lon,alt = session.location.getgeo(1201.0,401.0,2.0)
@@ -383,6 +384,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
                 loop +=1
                 time.sleep(5)
+        """
 
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
