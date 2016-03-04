@@ -14,6 +14,8 @@ from core.emane.emane import EmaneGlobalModel
 from core.misc.xmlsession import savesessionxml
 from core.misc import ipaddr
 
+from emanesh.events import EventService, LocationEvent
+
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
 
@@ -22,6 +24,8 @@ sys.path.append(script_dir)
 from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
 from gen_fixed_routes import create_static_routes
+from emane_mobility import publish_loc
+
 
 #repo_dir = '%s/../../../..'
 #svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
@@ -116,15 +120,17 @@ def run_session(time_str, k, mob, exp_session, params):
     verbose = params['verbose'] 
 
     try:
-        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
-                'verbose':"true" if verbose else "False"} 
+        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'4',
+                'verbose':"true" if verbose else "False", 
+		'emane_event_monitor':"true" if params['emaneMobility'] else "false"} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if distributed: 
             slave = params['slave']
             slaveip = socket.gethostbyname(slave)
             session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
             session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
-            session_cfg['controlnetif1'] = "eth4"
+            #session_cfg['controlnetif1'] = "eth4"
+            session_cfg['controlnetif1'] = "eth1"
         else: 
             session_cfg['controlnet'] = "172.16.1.0/24"
 
@@ -253,7 +259,8 @@ def run_session(time_str, k, mob, exp_session, params):
 
 
         if not add_to_server(session): 
-            print 'Could not add to server'
+            if distributed: raise Exception("Couldn't attach to core daemon in distributed mode!")
+            else: print 'Could not add to server'
 
         if params['iperf']:
             #run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
@@ -315,7 +322,7 @@ def run_session(time_str, k, mob, exp_session, params):
             else:
                 routers.append(create_node(i, session, "%s"%services_str, wlan1, pos, verbose=verbose))
 
-        if trace_file:
+        if trace_file and not params['emaneMobility']:
             #node_map = create_node_map(range(0,6), workers)
             node_map = create_node_map(range(0,params['nodes']-2), workers+routers)
             print 'Node map=%s'%node_map
@@ -325,6 +332,7 @@ def run_session(time_str, k, mob, exp_session, params):
             mobility_params[1] = ('refresh_ms', refresh_ms)
             mobility_params[2] = ('loop', 0)
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
+
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
@@ -346,6 +354,26 @@ def run_session(time_str, k, mob, exp_session, params):
             while not os.path.exists('%s/etc.ssh/ssh_host_rsa_key'%node_dir):
                 time.sleep(1)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
+
+        if params['emaneMobility']:
+            #loc = LocationEvent() 
+            #lat,lon,alt = session.location.getgeo(1201.0,401.0,2.0)
+            #print 'Publishing location event: lat=%s,lon=%s,alt=%s'%(str(lat),str(lon),str(alt))
+            #loc.append(10, latitude=lat,longitude=lon, altitude=alt)
+            #loc.append(10, latitude=1201.0,longitude=401.0, altitude=1.0)
+            #session.emane.service.publish(0, loc)
+            loop = 0.0
+            while True:
+                for n in range (3, params['nodes']+1):
+                    if placements:
+                        pos = placements[n]
+                    else:
+                        pos = gen_grid_position(n, params['nodes']-1)
+
+                    publish_loc(n-2, pos[0], pos[1], loop, session, verbose=verbose)  
+
+                loop +=1
+                time.sleep(5)
 
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
