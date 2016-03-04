@@ -1,7 +1,12 @@
 #!/usr/bin/python
 
-import subprocess,os,time,re,argparse
+import subprocess,os,time,re,argparse,sys
 
+script_dir = os.path.dirname(os.path.realpath(__file__))
+#script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
+
+print 'Appending script_dir to path'
+sys.path.append(script_dir)
 from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles
 from run_sessions import run_sessions
 from util import chmod_dir, pybool_to_javastr
@@ -15,8 +20,9 @@ latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
 
 def main(ks,mobilities,sessions,params,plot_time_str=None):
 
-    script_dir = os.path.dirname(os.path.realpath(__file__))
+    #script_dir = os.path.dirname(os.path.realpath(__file__))
     data_dir = '%s/log'%script_dir
+    params['daemon_server'] = get_daemon_server()
 
     session_ids = [sessions] if params['specific'] else range(0,sessions)
     if plot_time_str:
@@ -68,6 +74,10 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
             #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
 
         chmod_dir('%s/%s'%(data_dir, time_str))
+
+def get_daemon_server():
+    global server
+    return server
 
 def get_session_dir(k, mob, session, time_str, data_dir):
     return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
@@ -240,7 +250,7 @@ def plot_fixed_kmobsession(p, k, mob, session, time_str, script_dir, data_dir, p
     kmobsession_envstr = '%s;k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';session=\'%d\''%(add_to_envstr,k,mob,params['query'],params['duration'],session)
     plot(p, time_str, script_dir, data_dir, term, kmobsession_envstr)
 
-if __name__ == "__main__":
+if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run simulations.')
     parser.add_argument('--ks', dest='ks', default='1,2,3,5', help='replication factors [1,2,3,5]')
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')

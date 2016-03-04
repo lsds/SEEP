@@ -19,8 +19,8 @@ from emanesh.events import EventService, LocationEvent
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
 
-print 'Appending script_dir to path'
-sys.path.append(script_dir)
+#print 'Appending script_dir to path'
+#sys.path.append(script_dir)
 from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
 from gen_fixed_routes import create_static_routes
@@ -263,7 +263,7 @@ def run_session(time_str, k, mob, exp_session, params):
             raise Exception("Unknown model/distributed: %s/%s"%(model,str(distributed)))
 
 
-        if not add_to_server(session): 
+        if not add_to_server(session, params): 
             if distributed: raise Exception("Couldn't attach to core daemon in distributed mode!")
             else: print 'Could not add to server'
 
@@ -632,14 +632,18 @@ def gen_grid_position(i, nodes, offset=3, spacing=400):
     print 'i=',i, 'nodes=',nodes,'offset=',offset,'dim=',dim,'num_x=',num_x,'num_y=',num_y
     return (int(spacing * num_x), int(spacing * num_y)) 
 
-def add_to_server(session):
+def add_to_server(session, params):
     global server
     try:
         server.addsession(session)
         return True
     except NameError:
-        print 'Name error'
-        return False
+        if params['daemon_server']: 
+            params['daemon_server'].addsession(session)
+            return True
+        else: 
+            print 'Name error'
+            return False
 
 def create_datacollect_hook(time_str, k, mob, exp_session):
     print 'Script dir = %s'%script_dir
