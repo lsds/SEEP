@@ -332,6 +332,15 @@ def run_session(time_str, k, mob, exp_session, params):
             mobility_params[1] = ('refresh_ms', refresh_ms)
             mobility_params[2] = ('loop', 0)
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
+        elif trace_file and params['emaneMobility']:
+            node_map = create_node_map(range(0,params['nodes']-2), workers+routers)
+            print 'Node map=%s'%node_map
+            mobility_params[4] = ('map', node_map)
+            mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
+            refresh_ms = int(params.get('refresh_ms', 1000))
+            mobility_params[1] = ('refresh_ms', refresh_ms)
+            mobility_params[2] = ('loop', 0)
+            session.mobility.setconfig_keyvalues(wlan1.objid, 'emaneNs2script', mobility_params)
 
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
