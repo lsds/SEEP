@@ -76,6 +76,7 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         chmod_dir('%s/%s'%(data_dir, time_str))
 
 def get_daemon_server():
+    if not 'server' in globals(): return None
     global server
     return server
 
