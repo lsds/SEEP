@@ -54,6 +54,89 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
         self.remote_nodes = dict([(n.objid, n) for n in remote_nodes])
         self.session.info("Set EmaneNs2ScriptedMobility remote nodes: %s"%str(self.remote_nodes.keys()))
 
+    def runround(self):
+        ''' Advance script time and move nodes.
+        '''
+        if self.state != self.STATE_RUNNING:
+            return        
+        t = self.lasttime
+        self.lasttime = time.time()
+        now = self.lasttime - self.timezero
+        dt = self.lasttime - t
+        #print "runround(now=%.2f, dt=%.2f)" % (now, dt)
+        
+        # keep current waypoints up-to-date
+        self.updatepoints(now)
+        
+        if not len(self.points):
+            if len(self.queue):
+                # more future waypoints, allow time for self.lasttime update
+                nexttime = self.queue[0].time - now
+                if nexttime > (0.001 * self.refresh_ms):
+                    nexttime -= (0.001 * self.refresh_ms)
+                self.session.evq.add_event(nexttime, self.runround)
+                return
+            else:
+                # no more waypoints or queued items, loop?
+                if not self.empty_queue_stop:
+                    # keep running every refresh_ms, even with empty queue
+                    self.session.evq.add_event(0.001 * self.refresh_ms, self.runround)
+                    return
+                if not self.loopwaypoints():
+                    #return self.stop(move_initial=False)
+                    raise Exception("Mobility script expired (1)!")
+                if not len(self.queue):
+                    # prevent busy loop
+                    #return
+                    raise Exception("Mobility script expired (2)!")
+                return self.run()
+        
+        # only move netifs attached to self.wlan, or all nodenum in script?
+        moved = []
+        moved_netifs = []
+        for netif in self.wlan.netifs():
+            node = netif.node
+            if self.movenode(node, dt):
+                moved.append(node)
+                moved_netifs.append(netif)
+
+        for nodeid in self.remote_nodes:
+            node = self.remote_nodes[nodeid] 
+            self.movenode(node, dt)
+        
+        # calculate all ranges after moving nodes; this saves calculations
+        #self.wlan.model.update(moved)
+        self.session.mobility.updatewlans(moved, moved_netifs)
+        
+        # TODO: check session state
+        self.session.evq.add_event(0.001 * self.refresh_ms, self.runround)
+
+    def movenodesinitial(self):
+        ''' Move nodes to their initial positions. Then calculate the ranges.
+        '''
+        moved = []
+        moved_netifs = []
+        self.session.info("Mobility: Setting initial positions for nodes %s"%(str(self.initial.keys())))
+        for netif in self.wlan.netifs():
+            self.session.info("Mobility: Initial move of node %d"%netif.node.objid)
+            node = netif.node
+            if node.objid not in self.initial:
+                continue
+            (x, y, z) = self.initial[node.objid].coords
+            self.setnodeposition(node, x, y, z)
+            moved.append(node)
+            moved_netifs.append(netif)
+
+        for nodeid in self.remote_nodes:
+            self.session.info("Mobility: Initial move of remote node %d"%nodeid)
+            node = self.remote_nodes[nodeid]
+            if node.objid not in self.initial:
+                continue
+            (x, y, z) = self.initial[node.objid].coords
+            self.setnodeposition(node, x, y, z)
+
+        self.session.mobility.updatewlans(moved, moved_netifs)
+
 class EmaneNs2Session(Session):
 
     def __init__(self, sessionid = None, cfg = {}, server = None, persistent = False, mkdir = True):
