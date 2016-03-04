@@ -46,7 +46,7 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
         #msg = node.tonodemsg(flags=0)
         #TODO: Record of remote node positions might be needed if SEEP nodes on slaves
         if not node.objid in self.remote_nodes: self.writenodeposition(node, x, y, z)
-        publish_loc(node.objid-self.nem_offset, x, y, z, self.session)
+        publish_loc(node.objid-self.nem_offset, x, y, z, self.session, verbose=self.verbose)
         #self.session.broadcastraw(None, msg)
         #self.session.sdt.updatenode(node.objid, flags=0, x=x, y=y, z=z)
 
