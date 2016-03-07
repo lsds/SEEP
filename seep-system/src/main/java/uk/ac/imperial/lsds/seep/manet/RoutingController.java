@@ -29,7 +29,7 @@ public class RoutingController implements Runnable{
 	//private final static double COST_THRESHOLD = 3.9;
 	//private final static double COST_THRESHOLD = 4.5;
 	//private final static double COST_THRESHOLD = 5.5;
-	private final static double COST_THRESHOLD = 10;
+	private final static double COST_THRESHOLD = Double.parseDouble(GLOBALS.valueFor("costThreshold"));
 	private final long MAX_WEIGHT_DELAY;// = 1 * 1000;
 	private final CoreRE owner;
 	private final Integer nodeId;
@@ -57,9 +57,9 @@ public class RoutingController implements Runnable{
 		if (numLogicalInputs > 1)
 		{
 			//this.MAX_WEIGHT_DELAY = 10 * 1000;
-			this.MAX_WEIGHT_DELAY = 2 * 1000;
+			//this.MAX_WEIGHT_DELAY = 2 * 1000;
+			this.MAX_WEIGHT_DELAY = Long.parseLong(GLOBALS.valueFor("routingCtrlDelay"));
 			weights.put(nodeId, INITIAL_WEIGHT);
-			throw new RuntimeException("TODO: Set using config & sync with dispatcher.");
 		}
 		else
 		{

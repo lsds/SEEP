@@ -52,7 +52,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long ROUTING_CTRL_DELAY = Long.parseLong(GLOBALS.valueFor("routingCtrlDelay"));
 	private static final long SEND_TIMEOUT = 1 * 500;
 	//private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 120 * 1000; // 4 * 1000 Only set this really high for latency breakdown.
-	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 4 * 1000;
+	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;

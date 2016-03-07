@@ -120,7 +120,7 @@ def run_session(time_str, k, mob, exp_session, params):
     verbose = params['verbose'] 
 
     try:
-        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'4',
+        session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
                 'verbose':"true" if verbose else "False", 
 		'emane_event_monitor':"true" if params['emaneMobility'] else "false"} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
