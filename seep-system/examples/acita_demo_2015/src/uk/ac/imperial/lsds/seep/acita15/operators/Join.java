@@ -44,10 +44,10 @@ public class Join implements StatelessOperator{
 		recordTuple(arg0.get(0));
 		recordTuple(arg0.get(1));
 		
-		DataTuple data = arg0.get(1);
-		if (arg0.get(1).getPayload().instrumentation_ts < data.getPayload().instrumentation_ts)
+		DataTuple data = arg0.get(0);
+		if (arg0.get(1).getPayload().instrumentation_ts > data.getPayload().instrumentation_ts)
 		{
-			data = arg0.get(0);
+			data = arg0.get(1);
 		}
 	
 		long tupleId = data.getLong("tupleId");
