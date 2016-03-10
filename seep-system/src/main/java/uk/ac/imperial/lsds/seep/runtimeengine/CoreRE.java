@@ -943,7 +943,7 @@ public class CoreRE {
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
 		}
-		LOG.info("Wrote failure ctrl in "+ (System.currentTimeMillis() - tStart) + " ms");
+		LOG.debug("Wrote failure ctrl in "+ (System.currentTimeMillis() - tStart) + " ms");
 	}
 	
 	public void writeDownstreamFailureCtrls(ArrayList<Integer> downOpIndexes, FailureCtrl nodeFctrl)

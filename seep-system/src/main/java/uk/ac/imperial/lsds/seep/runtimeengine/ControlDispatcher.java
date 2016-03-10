@@ -148,7 +148,7 @@ public class ControlDispatcher {
 							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
 							k.writeObject(output, ct);
 							output.flush();
-							LOG.info("Wrote upstream control tuple in "+(System.currentTimeMillis()-writeStart)+" ms");
+							LOG.debug("Wrote upstream control tuple in "+(System.currentTimeMillis()-writeStart)+" ms");
 						}
 					}
 				}

@@ -17,7 +17,7 @@
 # If set to 0 the daemon runs in the background, unless "NoFork" is set to true
 # (default is 1)
 
-# DebugLevel  1
+DebugLevel  0
 
 # IP version to use (4 or 6)
 # (default is 4)
