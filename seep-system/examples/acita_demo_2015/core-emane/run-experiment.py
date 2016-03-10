@@ -274,7 +274,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--placement', dest='placement', default='', help='Explicit static topology to use for all sessions')
     parser.add_argument('--user', dest='user', default='dan', help='Non-root user to start processes with')
     parser.add_argument('--duration', dest='duration', default='100000', help='Mobility params duration')
-    parser.add_argument('--maxFanIn', dest='max_fan_in', default='2', help='Max fan-in for join operators')
+    parser.add_argument('--maxFanIn', dest='max_fan_in', default='2', help='Max fan-in for join operators (2)')
     parser.add_argument('--sources', dest='sources', default='2', help='Number of unreplicated sources (for join operators)')
     parser.add_argument('--sinks', dest='sinks', default='1', help='Number of unreplicated sinks')
     parser.add_argument('--trace', dest='trace', default=None, help='Mobility trace to use, if any (sftaxi, debs13)')
