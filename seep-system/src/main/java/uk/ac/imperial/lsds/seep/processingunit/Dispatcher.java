@@ -870,7 +870,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				int totalQueueLength = getTotalQlen();
 				//TODO: This doesn't include the input queues.
-				logger.info("Total queue length to "+downId + " = "+ totalQueueLength);
+				logger.debug("Total queue length to "+downId + " = "+ totalQueueLength);
 				
 				long tStart = System.currentTimeMillis();
 				//Create and send control tuple
