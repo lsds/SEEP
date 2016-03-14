@@ -4,7 +4,8 @@ set output sprintf("%s/%s/latency_vs_mobility_stddev%s",outputdir,timestr,termex
 set xlabel "Node speed (m/s)" font ", 16"
 set ylabel sprintf("%s Latency (ms)",percentile) font ", 16" offset -3
 #set yrange [0:100000]
-set yrange [0:5000]
+#set yrange [0:5000]
+set yrange [0:*]
 set tics font ", 10"
 #set xtics 0,5,15
 
