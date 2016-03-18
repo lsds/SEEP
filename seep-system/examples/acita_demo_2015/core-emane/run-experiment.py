@@ -18,7 +18,7 @@ latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
 #latency_percentile = 'max'
 #latency_regex = re.compile('max_lat=(\d+)')
 
-def main(ks,mobilities,sessions,params,plot_time_str=None):
+def main(ks,mobilities,nodes,sessions,params,plot_time_str=None):
 
     #script_dir = os.path.dirname(os.path.realpath(__file__))
     data_dir = '%s/log'%script_dir
@@ -29,11 +29,11 @@ def main(ks,mobilities,sessions,params,plot_time_str=None):
         time_str = plot_time_str
     else:
         time_str = time.strftime('%H-%M-%S-%a%d%m%y')
-        run_experiment(ks, mobilities, session_ids, params, time_str, data_dir )
+        run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
 
     if not params['iperf']:
-        record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'tput', get_tput)
-        record_statistics(ks, mobilities, session_ids, time_str, data_dir, 'lat', get_latency)
+        record_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
+        record_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
 
         if len(mobilities) > 1:
             for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
@@ -94,11 +94,15 @@ def create_exp_dirs(ks, mobilities, sessions, time_str, data_dir):
             for session in range(0, sessions):
                 os.mkdir('%s/%ds'%(mob_dir, session))
 
-def run_experiment(ks, mobilities, sessions, params, time_str, data_dir):
+def run_experiment(ks, mobilities, nodes, sessions, params, time_str, data_dir):
     #TODO: Not using data dir here!
     for k in ks:
-        for mob in mobilities:
-            run_sessions(time_str, k,mob,sessions, params)
+        if len(nodes) == 1:
+            for mob in mobilities:
+                run_sessions(time_str, k, mob, nodes[0], sessions, params)
+        else:
+            for n in nodes:
+                run_sessions(time_str, k, mobilities[0], n, sessions, params)
                     
 
 def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffix, get_metric_fn):
@@ -258,7 +262,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
     parser.add_argument('--y', dest='y', default='1200', help='Grid y dimension (1200)')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join, debsgc, fr, frshard, nameassist')
-    parser.add_argument('--pausetimes', dest='pts', default='0.0,2.0,4.0,6.0,8.0', help='pause times [0.0,2.0,4.0,6.0,8.0]')
+    parser.add_argument('--pausetimes', dest='pts', default='5.0', help='pause times [5.0]')
+    parser.add_argument('--dimension', dest='exp_dim', default='mobility', help='Parameter to vary (mobility,nodes,...)')
     parser.add_argument('--sessions', dest='sessions', default='2', help='number of sessions (2)')
     parser.add_argument('--specific', dest='specific', default=False, action='store_true')
     #parser.add_argument('--mobility', dest='mobility', default='static', help='mobility model: static,waypoint')
@@ -295,16 +300,22 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
     parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
 
-    #parser.add_argument('--placements', dest='placements', default='', help='placements 0,1,2,...')
     args=parser.parse_args()
 
     ks=map(lambda x: int(x), args.ks.split(','))
     pts=map(lambda x: float(x), args.pts.split(','))
-    #mobs=map(lambda x: float(x), [] if args.mobility in 'static' else args.ds.split(','))
     sessions=int(args.sessions)
-    params = {'nodes':int(args.nodes)}
-    # placements=map(lambda x: str(int(x)), [] if not args.placements else args.placements.split(','))
+    nodes=map(lambda x: int(x), args.nodes.split(','))
+
+    if args.exp_dim == "mobility" and len(nodes) > 1:
+        raise Exception("Evaluating mobility dimension but more than one nodes value supplied.")
+    elif args.exp_dim == "nodes" and len(pts) > 1:
+        raise Exception("Evaluating nodes dimension but more than one pausetimes value supplied.")
+    else: raise Exception("Unknown dimension: %s"%args.exp_dim)
+
+    #params = {'nodes':int(args.nodes)}
     if args.model: params['model']=args.model
+    params['exp-dim']=args.exp_dim
     params['net-routing']=args.routing
     params['specific']=args.specific
     params['preserve']=args.preserve
@@ -340,5 +351,5 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
     if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
 
-    main(ks,pts,sessions,params,plot_time_str=args.plot_time_str)
+    main(ks,pts,nodes,sessions,params,plot_time_str=args.plot_time_str)
 

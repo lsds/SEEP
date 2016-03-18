@@ -107,12 +107,12 @@ cd $scriptDir
 chmod -R go+rw $resultsDir
 cd $expDir
 '''
-def run_sessions(time_str, k, mob, sessions, params):
+def run_sessions(time_str, k, mob, nodes, sessions, params):
     for session in sessions:
         print '*** Running session %d ***'%session
-        run_session(time_str, k, mob, session, params)
+        run_session(time_str, k, mob, nodes, session, params)
 
-def run_session(time_str, k, mob, exp_session, params):
+def run_session(time_str, k, mob, nodes, exp_session, params):
 
     print 'params=',params
 
@@ -173,7 +173,7 @@ def run_session(time_str, k, mob, exp_session, params):
             trace_params['h'] = mob + 1.0
             trace_params['l'] = mob - 1.0
             trace_params['o'] = mob
-            trace_file = gen_trace(session.sessiondir, exp_session, trace_params)
+            trace_file = gen_trace(session.sessiondir, exp_session, nodes, trace_params)
             print 'Trace file=',trace_file
 
 
@@ -289,13 +289,13 @@ def run_session(time_str, k, mob, exp_session, params):
         if params['dstat']: master_services += "|dstat" 
  
         master = create_node(2, session, "%s|MeanderMaster"%master_services, wlan1,
-                gen_grid_position(2+params['nodes'], params['nodes'] - 1), addinf=False, verbose=verbose)
+                gen_grid_position(2+nodes, nodes - 1), addinf=False, verbose=verbose)
 
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
         if params['emanestats']: services_str += "|EmaneStats"
         workers = []
-        num_workers = get_num_workers(k, params)
+        num_workers = get_num_workers(k, nodes, params)
         print 'num_workers=', num_workers
         placements = get_initial_placements(params['placement'], mob)
         print 'Initial placements=',placements
@@ -307,7 +307,7 @@ def run_session(time_str, k, mob, exp_session, params):
             if placements:
                 pos = placements[i]
             else:
-                pos = gen_grid_position(i, params['nodes']-1)
+                pos = gen_grid_position(i, nodes-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|PcapSrc"
             #if params['emanestats']: worker_services += "|EmaneStats"
@@ -316,11 +316,11 @@ def run_session(time_str, k, mob, exp_session, params):
         routers = []
         print 'Creating routers.'
         # Create auxiliary 'router' nodes if any left
-        for i in range(3+len(num_workers), 1+params['nodes']):
+        for i in range(3+len(num_workers), 1+nodes):
             if placements:
                 pos = placements[i]
             else:
-                pos = gen_grid_position(i, params['nodes']-1)
+                pos = gen_grid_position(i, nodes-1)
 
             if distributed:
                 routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos, verbose=verbose))
@@ -329,7 +329,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         if trace_file and not params['emaneMobility']:
             #node_map = create_node_map(range(0,6), workers)
-            node_map = create_node_map(range(0,params['nodes']-2), workers+routers)
+            node_map = create_node_map(range(0,nodes-2), workers+routers)
             print 'Node map=%s'%node_map
             mobility_params[4] = ('map', node_map)
             mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
@@ -339,7 +339,7 @@ def run_session(time_str, k, mob, exp_session, params):
             session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
         elif trace_file and params['emaneMobility']:
             print 'Using EmaneNs2Mobility.'
-            node_map = create_node_map(range(0,params['nodes']-2), workers+routers)
+            node_map = create_node_map(range(0,nodes-2), workers+routers)
             print 'Node map=%s'%node_map
             mobility_params[4] = ('map', node_map)
             mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
@@ -351,7 +351,7 @@ def run_session(time_str, k, mob, exp_session, params):
 
         datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
-        session.node_count="%d"%(params['nodes'])
+        session.node_count="%d"%(nodes)
 
         if params['saveconfig']:
             print 'Saving session config.'
@@ -371,35 +371,13 @@ def run_session(time_str, k, mob, exp_session, params):
                 time.sleep(1)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
 
-        """
-        if params['emaneMobility']:
-            #loc = LocationEvent() 
-            #lat,lon,alt = session.location.getgeo(1201.0,401.0,2.0)
-            #print 'Publishing location event: lat=%s,lon=%s,alt=%s'%(str(lat),str(lon),str(alt))
-            #loc.append(10, latitude=lat,longitude=lon, altitude=alt)
-            #loc.append(10, latitude=1201.0,longitude=401.0, altitude=1.0)
-            #session.emane.service.publish(0, loc)
-            loop = 0.0
-            while True:
-                for n in range (3, params['nodes']+1):
-                    if placements:
-                        pos = placements[n]
-                    else:
-                        pos = gen_grid_position(n, params['nodes']-1)
-
-                    publish_loc(n-2, pos[0], pos[1], loop, session, verbose=verbose)  
-
-                loop +=1
-                time.sleep(5)
-        """
-
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
             range(2,3 + sum(num_workers))))
 
 
         if model == "Emane" and params['emanestats']:
-            record_emanesh_tables(session.sessiondir, range(3, params['nodes']+1), params)
+            record_emanesh_tables(session.sessiondir, range(3, nodes+1), params)
 
         #time.sleep(30)
         print 'Collecting data'
@@ -489,7 +467,7 @@ def location_conf_msg(location):
         msg = coreapi.CoreConfMessage.pack(0, tlvdata)
 	return msg
 
-def get_num_workers(k, params):
+def get_num_workers(k, nodes, params):
     q = params['query']
     sink_scale_factor = k if params['pyScaleOutSinks'] else 1
     if q == 'chain' or q == 'fr' or q == 'join': 
@@ -530,7 +508,7 @@ def get_num_workers(k, params):
             join_ops += parents
             children = parents
         print 'height=%d, join_ops=%d'%(height, join_ops)
-        worker_nodes = params['nodes'] - 2
+        worker_nodes = nodes - 2
         if worker_nodes >= sources + k*(join_ops) + (sink_scale_factor * sinks):
             num_workers = [1] * (sources + k*(join_ops) + (sink_scale_factor * sinks))
         else:
@@ -695,7 +673,7 @@ def copy_seep_jar(session_dir):
 def regen_sessions(time_str):
     raise Exception("TODO")
 
-def run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
+def run_basic_iperf_test(session, wlan1, mob, nodes, trace_file, tx_range, params):
     services_str = "IPForward|SSH"
     services_str += "|%s"%params['net-routing']
     if params['quagga']: services_str += "|zebra|vtysh"
@@ -705,12 +683,12 @@ def run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
     placements = get_initial_placements(params['placement'], mob)
     if placements: create_static_routes(placements, tx_range, session.sessiondir)
     print placements
-    pos = placements[2] if placements else gen_grid_position(2, params['nodes']-1, 2, spacing=400)
+    pos = placements[2] if placements else gen_grid_position(2, nodes-1, 2, spacing=400)
     src_services = "%s|IPerfSrc"%(services_str)
     if params['duplex']: src_services += "|IPerfSink"
     src = create_node(2, session, src_services, wlan1, pos) 
     
-    pos = placements[3] if placements else gen_grid_position(3, params['nodes']-1, 2, spacing=400)
+    pos = placements[3] if placements else gen_grid_position(3, nodes-1, 2, spacing=400)
     sink_services = "%s|IPerfSink"%(services_str)
     if params['duplex']: sink_services += "|IPerfSrc"
     sink = create_node(3, session, sink_services, wlan1, pos) 
@@ -718,16 +696,16 @@ def run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
     routers = []
     print 'Creating routers.'
     # Create auxiliary 'router' nodes if any left
-    for i in range(4, params['nodes']+1):
+    for i in range(4, nodes+1):
         if placements:
             pos = placements[i]
         else:
-            pos = gen_grid_position(i, params['nodes']-1, 2, spacing=400)
+            pos = gen_grid_position(i, nodes-1, 2, spacing=400)
         routers.append(create_node(i, session, "%s"%services_str, wlan1, pos))
 
     if trace_file:
         #node_map = create_node_map(range(0,6), workers)
-        node_map = create_node_map(range(0,params['nodes']-1), [src, sink]+routers)
+        node_map = create_node_map(range(0,nodes-1), [src, sink]+routers)
         print 'Node map=%s'%node_map
         mobility_params[4] = ('map', node_map)
         mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
@@ -736,7 +714,7 @@ def run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
         session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
 
 
-    session.node_count="%d"%(params['nodes'])
+    session.node_count="%d"%(nodes)
     session.instantiate()
     time.sleep(1000000)
 
@@ -753,7 +731,7 @@ def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, param
     iperf_cxns = read_iperf_cxns(params)
     copy_iperf_cxns(session.sessiondir, params)
 
-    for i in range(2, params['nodes']+1):
+    for i in range(2, nodes+1):
         i_services_str = services_str
         # Check if src or sink			
         if has_iperf_src(i, iperf_cxns):
@@ -770,7 +748,7 @@ def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, param
 		
     print placements
 
-    session.node_count="%d"%(params['nodes'])
+    session.node_count="%d"%(nodes)
     session.instantiate()
     time.sleep(1000000)
 

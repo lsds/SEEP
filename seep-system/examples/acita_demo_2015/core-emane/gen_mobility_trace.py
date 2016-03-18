@@ -21,7 +21,7 @@ trace_name = 'r_waypoints'
 
 trace_dirs = {'sftaxi':'../resources/mobility/cabspottingdata'}
 
-def gen_trace(session_dir, session_id, params):
+def gen_trace(session_dir, session_id, nodes, params):
     #params['trace_dir'] = '/home/dan/dev/seep-ita/seep-system/examples/'
     #params['trace_file'] = 'new_abboip.txt'
     
@@ -32,7 +32,7 @@ def gen_trace(session_dir, session_id, params):
         metadata = pd.Series.from_csv(metafile, sep=' ') 
 
         print 'Read metadata:', metadata
-        trace_file = parse_trace(session_dir, metadata, params)
+        trace_file = parse_trace(session_dir, nodes, metadata, params)
         return trace_file
     else:
         # get trace file name
@@ -43,7 +43,7 @@ def gen_trace(session_dir, session_id, params):
         if mobility_model ==  'RandomWaypoint':
             # get relevant params
             bm_raw_params = ['bm', '-f', trace_file, 'RandomWaypoint', 
-                    '-n', str(params['nodes']-1), 
+                    '-n', str(nodes-1), 
                     '-R', str(session_id),
                     '-d', str(params.get('duration', default_duration)), 
                     '-x', str(params.get('x', default_x)), 
@@ -54,7 +54,7 @@ def gen_trace(session_dir, session_id, params):
 
         elif mobility_model ==  'SteadyStateRandomWaypoint':
             bm_raw_params = ['bm', '-f', trace_file, 'SteadyStateRandomWaypoint', 
-                    '-n', str(params['nodes']-1), 
+                    '-n', str(nodes-1), 
                     '-R', str(session_id),
                     '-d', str(params.get('duration', default_duration)), 
                     '-x', str(params.get('x', default_x)), 
@@ -79,9 +79,9 @@ def gen_trace(session_dir, session_id, params):
             ns2_proc.wait()
         return '%s.ns_movements'%trace_name
 
-def parse_trace(session_dir, metadata, params):
+def parse_trace(session_dir, nodes, metadata, params):
     ns2_file = 'r_waypoints.ns_movements'
-    convert_to_cartesian(session_dir, ns2_file,  metadata, trace_dirs[params['trace']], params['nodes'])
+    convert_to_cartesian(session_dir, ns2_file,  metadata, trace_dirs[params['trace']], nodes)
     return ns2_file 
 
 def convert_to_cartesian(session_dir, ns2_file, metadata, trace_dir, nodes):
