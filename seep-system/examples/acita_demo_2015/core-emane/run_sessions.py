@@ -625,7 +625,7 @@ def add_to_server(session, params):
             print 'Name error'
             return False
 
-def create_datacollect_hook(time_str, k, dim, exp_session):
+def create_datacollect_hook(time_str, k, dim, dim_suffix, exp_session):
     print 'Script dir = %s'%script_dir
     return datacollect_template%(script_dir, time_str, k, dim, dim_suffix, exp_session)
 
