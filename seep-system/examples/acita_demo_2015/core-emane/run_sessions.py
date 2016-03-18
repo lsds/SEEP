@@ -52,10 +52,10 @@ datacollect_template = '''#!/bin/bash
 scriptDir=%s
 timeStr=%s
 k=%dk
-mob=%.2fm
+dim=%.2f%s
 session=%ds
 #resultsDir=$scriptDir/log/$timeStr
-resultsDir=$scriptDir/log/$timeStr/$k/$mob/$session
+resultsDir=$scriptDir/log/$timeStr/$k/$dim/$session
 
 expDir=$(pwd)
 
@@ -107,12 +107,12 @@ cd $scriptDir
 chmod -R go+rw $resultsDir
 cd $expDir
 '''
-def run_sessions(time_str, k, mob, nodes, sessions, params):
+def run_sessions(time_str, k, mob, nodes, dim_suffix, sessions, params):
     for session in sessions:
         print '*** Running session %d ***'%session
-        run_session(time_str, k, mob, nodes, session, params)
+        run_session(time_str, k, mob, nodes, dim_suffix, session, params)
 
-def run_session(time_str, k, mob, nodes, exp_session, params):
+def run_session(time_str, k, mob, nodes, dim_suffix, exp_session, params):
 
     print 'params=',params
 
@@ -349,7 +349,7 @@ def run_session(time_str, k, mob, nodes, exp_session, params):
             session.mobility.setconfig_keyvalues(wlan1.objid, 'emaneNs2script', mobility_params)
 
 
-        datacollect_hook = create_datacollect_hook(time_str, k, mob, exp_session) 
+        datacollect_hook = create_datacollect_hook(time_str, k, mob if dim_suffix=='m' else nodes, dim_suffix, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(nodes)
 
@@ -625,9 +625,9 @@ def add_to_server(session, params):
             print 'Name error'
             return False
 
-def create_datacollect_hook(time_str, k, mob, exp_session):
+def create_datacollect_hook(time_str, k, dim, exp_session):
     print 'Script dir = %s'%script_dir
-    return datacollect_template%(script_dir, time_str, k, mob, exp_session)
+    return datacollect_template%(script_dir, time_str, k, dim, dim_suffix, exp_session)
 
 def watch_meander_services(sessiondir, node_names):
     while True:

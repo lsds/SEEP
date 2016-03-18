@@ -32,14 +32,18 @@ def main(ks,mobilities,nodes,sessions,params,plot_time_str=None):
         run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
 
     if not params['iperf']:
-        record_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
-        record_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
+        record_dim_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
+        record_dim_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
 
         if len(mobilities) > 1:
             for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
                 'latency_vs_mobility', 'tput_vs_mobility_stddev', 
                 'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
                 'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
+                plot(p, time_str, script_dir, data_dir)
+        if len(nodes) > 1:
+            for p in ['tput_vs_nodes_stddev', 'latency_vs_nodes_stddev', 
+                    'rel_tput_vs_nodes_stddev', 'rel_latency_vs_nodes_stddev']:
                 plot(p, time_str, script_dir, data_dir)
         else:
             plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
@@ -52,23 +56,26 @@ def main(ks,mobilities,nodes,sessions,params,plot_time_str=None):
 	# Do any plots that summarize all sessions for fixed k and mob.
 
         for k in ks:
-            for mob in mobilities:
-                plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
-                plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+            if len(nodes) == 1:
+                for mob in mobilities:
+                    plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+                    plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
 
-                for session in session_ids:
-                    plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                    plot_fixed_kmobsession('tx_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                    if params['dstat']:
-                        plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kmobsession('page_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kmobsession('io_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kmobsession('disk_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                    if params['emanestats']:
-			for stat in get_emane_mac_stats(script_dir):
-				plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
-            
+                    for session in session_ids:
+                        plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmobsession('tx_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        if params['dstat']:
+                            plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('page_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('io_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('disk_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                        if params['emanestats']:
+                            for stat in get_emane_mac_stats(script_dir):
+                                plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
+            else:
+                #TODO
+                pass
             # Uncomment this and tweak params when plotting movement analysis.
             #for node in range(3,10):
             #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
@@ -80,8 +87,9 @@ def get_daemon_server():
     global server
     return server
 
-def get_session_dir(k, mob, session, time_str, data_dir):
-    return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, mob, session)
+def get_session_dir(k, dim, session, time_str, data_dir):
+    raise Exception('suffix!')
+    return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, dim, session)
 
 def create_exp_dirs(ks, mobilities, sessions, time_str, data_dir):
     root_exp_dir = '%s/%s'%(data_dir,time_str)
@@ -99,88 +107,91 @@ def run_experiment(ks, mobilities, nodes, sessions, params, time_str, data_dir):
     for k in ks:
         if len(nodes) == 1:
             for mob in mobilities:
-                run_sessions(time_str, k, mob, nodes[0], sessions, params)
+                run_sessions(time_str, k, mob, nodes[0], 'm', sessions, params)
         else:
             for n in nodes:
-                run_sessions(time_str, k, mobilities[0], n, sessions, params)
+                run_sessions(time_str, k, mobilities[0], n, 'n', sessions, params)
                     
-
-def record_statistics(ks, mobilities, sessions, time_str, data_dir, metric_suffix, get_metric_fn):
+def record_dim_statistics(ks, mobilities, nodes, sessions, time_str, data_dir, metric_suffix, get_metric_fn):
     raw_vals = {}
     all_loglines = []
+
+    dims = nodes if len(nodes) > 1 else mobilities
+    dim_suffix = 'n' if len(nodes) > 1 else 'm'
+    
     for k in ks:
         raw_vals[k] = {}
-        for (i_mob, mob) in enumerate(mobilities):
-            writeHeader = i_mob == 0
-            metrics = get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn)
+        for (i_dim, dim) in enumerate(dims):
+            writeHeader = i_dim == 0
+            metrics = get_metrics(k, dim, sessions, time_str, data_dir, get_metric_fn)
 
-            #First record any cumulative stats for fixed kmob
-            record_fixed_kmob_statistics(k, mob, metrics.values(), time_str, data_dir, metric_suffix)
+            #First record any cumulative stats for fixed kdim
+            record_fixed_kdim_statistics(k, dim, dim_suffix, metrics.values(), time_str, data_dir, metric_suffix)
 
-	    #Next record cumulative stats for raw  latencies for fixed kmob (if recording latency stats)
+	    #Next record cumulative stats for raw  latencies for fixed kdim (if recording latency stats)
 	    if metric_suffix == 'lat': 
-                raw_latencies = [lat for session_lats in get_metrics(k, mob, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
-                record_fixed_kmob_statistics(k, mob, raw_latencies, time_str, data_dir, 'raw-lat')
+                raw_latencies = [lat for session_lats in get_metrics(k, dim, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
+                record_fixed_kdim_statistics(k, dim, dim_suffix, raw_latencies, time_str, data_dir, 'raw-lat')
 
-            #Now record any aggregate stats across all kmob 
-            raw_vals[k][mob] = metrics 
+            #Now record any aggregate stats across all kdim 
+            raw_vals[k][dim] = metrics 
             meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
-            # record stats vs mobility 
-            with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_mob_plotdata:
+            # record stats vs dimility 
+            with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_dim_plotdata:
                 if writeHeader: 
-                    rx_vs_mob_plotdata.write('#k=%d\n'%k)
-                    rx_vs_mob_plotdata.write('#mob mean k stdDev max min med lq uq\n')
-                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
-                rx_vs_mob_plotdata.write(logline)
+                    rx_vs_dim_plotdata.write('#k=%d\n'%k)
+                    rx_vs_dim_plotdata.write('#dim mean k stdDev max min med lq uq\n')
+                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(dim,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                rx_vs_dim_plotdata.write(logline)
                 all_loglines.append(logline)
 
     # Write a joint log file too in case we want to plot a histogram
-    with open('%s/%s/all-k-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rx_vs_mob_plotdata:
+    with open('%s/%s/all-k-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rx_vs_dim_plotdata:
         for line in all_loglines:
-           all_rx_vs_mob_plotdata.write(line) 
+           all_rx_vs_dim_plotdata.write(line) 
 
 	#TODO Do relative weights with raw_vals.
     if 1 in ks:
         all_loglines = []
         relative_raw_vals = compute_relative_raw_vals(raw_vals)
         for k in ks:
-            for (i_mob, mob) in enumerate(mobilities):
-                writeHeader = i_mob == 0
-                metrics = relative_raw_vals[k][mob]
+            for (i_dim, dim) in enumerate(dims):
+                writeHeader = i_dim == 0
+                metrics = relative_raw_vals[k][dim]
                 meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
-                #record relative stats vs mobility
-                with open('%s/%s/%dk-rel-%s.data'%(data_dir,time_str,k,metric_suffix), 'w' if writeHeader else 'a') as rel_rx_vs_mob_plotdata:	
+                #record relative stats vs dimility
+                with open('%s/%s/%dk-rel-%s.data'%(data_dir,time_str,k,metric_suffix), 'w' if writeHeader else 'a') as rel_rx_vs_dim_plotdata:	
                     if writeHeader:
-                        rel_rx_vs_mob_plotdata.write('#k=%d\n'%k)
-                        rel_rx_vs_mob_plotdata.write('#mob mean k stdDev max min med lq uq\n')
-                    logline =  '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(mob,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
-                    rel_rx_vs_mob_plotdata.write(logline)
+                        rel_rx_vs_dim_plotdata.write('#k=%d\n'%k)
+                        rel_rx_vs_dim_plotdata.write('#dim mean k stdDev max min med lq uq\n')
+                    logline =  '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(dim,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                    rel_rx_vs_dim_plotdata.write(logline)
                     all_loglines.append(logline)
 
         # Write a joint log file too in case we want to plot a histogram
-        with open('%s/%s/all-k-rel-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rel_rx_vs_mob_plotdata:
+        with open('%s/%s/all-k-rel-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rel_rx_vs_dim_plotdata:
             for line in all_loglines:
-               all_rel_rx_vs_mob_plotdata.write(line) 
+               all_rel_rx_vs_dim_plotdata.write(line) 
 
-def record_fixed_kmob_statistics(k, mob, values, time_str, data_dir, metric_suffix):
+def record_fixed_kdim_statistics(k, dim, dim_suffix, values, time_str, data_dir, metric_suffix):
 
     #First sort the metrics in ascending order
     #Then get the total number of metrics
     #Then get the x increment per value 
     cum_distribution = compute_cumulative_percentiles(values) 
 
-    with open('%s/%s/%dk/%.2fm/cum-%s.data'%(data_dir,time_str,k,mob,metric_suffix),'w') as cum_fixed_kmob_plotdata:
-	cum_fixed_kmob_plotdata.write('#p %s\n'%metric_suffix)
+    with open('%s/%s/%dk/%.2f%s/cum-%s.data'%(data_dir,time_str,k,dim,dim_suffix,metric_suffix),'w') as cum_fixed_kdim_plotdata:
+	cum_fixed_kdim_plotdata.write('#p %s\n'%metric_suffix)
 	for (p, value) in cum_distribution: 
             logline = '%.2f %d\n'%(p,value)
-            cum_fixed_kmob_plotdata.write(logline)
+            cum_fixed_kdim_plotdata.write(logline)
 
-def get_metrics(k, mob, sessions, time_str, data_dir, get_metric_fn):
+def get_metrics(k, dim, sessions, time_str, data_dir, get_metric_fn):
     metrics = {} 
     for session in sessions:
-        logdir = '%s'%(get_session_dir(k,mob,session,time_str,data_dir))
+        logdir = '%s'%(get_session_dir(k,dim,session,time_str,data_dir))
         metric = get_metric_fn(logdir)
         metrics[session] = metric 
 
