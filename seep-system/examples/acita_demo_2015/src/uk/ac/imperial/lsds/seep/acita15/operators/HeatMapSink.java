@@ -112,6 +112,7 @@ public class HeatMapSink implements StatelessOperator {
 	private void recordTuple(DataTuple dt, int bytes)
 	{
 		long rxts = System.currentTimeMillis();
+		/*
 		logger.info("SNK: Received tuple with cnt="+tuplesReceived 
 				+",id="+dt.getLong("tupleId")
 				+",ts="+dt.getPayload().timestamp
@@ -119,6 +120,15 @@ public class HeatMapSink implements StatelessOperator {
 				+",rxts="+rxts
 				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
 				+",bytes="+ bytes);
+		*/
+		logger.info("SNK: Received tuple with cnt="+tuplesReceived 
+				+",id="+dt.getLong("tupleId")
+				+",ts="+dt.getPayload().timestamp
+				+",txts="+dt.getPayload().instrumentation_ts
+				+",rxts="+rxts
+				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
+				+",bytes="+ bytes
+				+",latencyBreakdown="+getLatencyBreakdown(dt, rxts-dt.getPayload().instrumentation_ts));
 	}
 	
 	public void processData(List<DataTuple> arg0) {
@@ -175,5 +185,10 @@ public class HeatMapSink implements StatelessOperator {
       }
       return occupiedTiles;
     }
+
+	private String getLatencyBreakdown(DataTuple dt, long latency)
+	{ 
+		return "0;0"; 
+	}
 
 }

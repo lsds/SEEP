@@ -1170,6 +1170,19 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				else
 				{
+					Iterator<Map.Entry<Long, DataTuple>> iter = queue.entrySet().iterator();
+					while (iter.hasNext())
+					{
+						Map.Entry<Long,DataTuple> qEntry = iter.next();
+						Long qts = qEntry.getKey();
+						if (tsSet.contains(qts))
+						{
+							iter.remove();
+							DataTuple dt = qEntry.getValue();
+							if (dt != null) { removed.put(qts,  dt); }
+						}
+					}
+					/*
 					for (Long qts : queue.keySet())
 					{
 						if (tsSet.contains(qts))
@@ -1178,6 +1191,7 @@ public class Dispatcher implements IRoutingObserver {
 							if (dt != null) { removed.put(qts,  dt); }
 						}
 					}
+					*/
 				}
 				if (!removed.isEmpty()) { lock.notifyAll(); }
 			}

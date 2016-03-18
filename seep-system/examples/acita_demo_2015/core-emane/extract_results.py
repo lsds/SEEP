@@ -109,6 +109,7 @@ def dedup_latencies(latencies):
 def sink_rx_tuples(f):
     results = []
     regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+),latencyBreakdown=(\d+);(\d+)$')
+    #regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+)$')
     for line in f:
         match = re.search(regex, line)
         if match:
