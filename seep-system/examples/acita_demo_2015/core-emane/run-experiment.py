@@ -282,8 +282,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--plotOnly', dest='plot_time_str', default=None, help='time_str of run to plot (hh-mm-DDDddmmyy)[None]')
     parser.add_argument('--nodes', dest='nodes', default='10', help='Total number of core nodes in network')
     parser.add_argument('--model', dest='model', default="Emane", help='Wireless model (Basic, Emane)')
-    parser.add_argument('--routing', dest='routing', default='OLSRETX',
-            help='Net layer routing alg (OLSR, OLSRETX)')
+    parser.add_argument('--routing', dest='routing', default='OLSRETX', help='Net layer routing alg (OLSR, OLSRETX)')
     parser.add_argument('--preserve', dest='preserve', default=False, action='store_true', help='Preserve session directories')
     parser.add_argument('--saveconfig', dest='saveconfig', default=False, action='store_true', help='Export the session configuration to an XML file')
     parser.add_argument('--constraints', dest='constraints', default='', help='Initial mapping constraints for each session ')
@@ -322,9 +321,10 @@ if __name__ == "__main__" or __name__ == "__builtin__":
         raise Exception("Evaluating mobility dimension but more than one nodes value supplied.")
     elif args.exp_dim == "nodes" and len(pts) > 1:
         raise Exception("Evaluating nodes dimension but more than one pausetimes value supplied.")
-    else: raise Exception("Unknown dimension: %s"%args.exp_dim)
+    elif not args.exp_dim in ["mobility", "nodes"]: 
+        raise Exception("Unknown dimension: %s"%args.exp_dim)
 
-    #params = {'nodes':int(args.nodes)}
+    params = {} 
     if args.model: params['model']=args.model
     params['exp-dim']=args.exp_dim
     params['net-routing']=args.routing
