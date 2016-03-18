@@ -87,9 +87,8 @@ def get_daemon_server():
     global server
     return server
 
-def get_session_dir(k, dim, session, time_str, data_dir):
-    raise Exception('suffix!')
-    return '%s/%s/%dk/%.2fm/%ds'%(data_dir, time_str, k, dim, session)
+def get_session_dir(k, dim, dim_suffix, session, time_str, data_dir):
+    return '%s/%s/%dk/%.2f%s/%ds'%(data_dir, time_str, k, dim, dim_suffix, session)
 
 def create_exp_dirs(ks, mobilities, sessions, time_str, data_dir):
     root_exp_dir = '%s/%s'%(data_dir,time_str)
@@ -123,14 +122,14 @@ def record_dim_statistics(ks, mobilities, nodes, sessions, time_str, data_dir, m
         raw_vals[k] = {}
         for (i_dim, dim) in enumerate(dims):
             writeHeader = i_dim == 0
-            metrics = get_metrics(k, dim, sessions, time_str, data_dir, get_metric_fn)
+            metrics = get_metrics(k, dim, dim_suffix, sessions, time_str, data_dir, get_metric_fn)
 
             #First record any cumulative stats for fixed kdim
             record_fixed_kdim_statistics(k, dim, dim_suffix, metrics.values(), time_str, data_dir, metric_suffix)
 
 	    #Next record cumulative stats for raw  latencies for fixed kdim (if recording latency stats)
 	    if metric_suffix == 'lat': 
-                raw_latencies = [lat for session_lats in get_metrics(k, dim, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
+                raw_latencies = [lat for session_lats in get_metrics(k, dim, dim_suffix, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
                 record_fixed_kdim_statistics(k, dim, dim_suffix, raw_latencies, time_str, data_dir, 'raw-lat')
 
             #Now record any aggregate stats across all kdim 
@@ -188,10 +187,10 @@ def record_fixed_kdim_statistics(k, dim, dim_suffix, values, time_str, data_dir,
             logline = '%.2f %d\n'%(p,value)
             cum_fixed_kdim_plotdata.write(logline)
 
-def get_metrics(k, dim, sessions, time_str, data_dir, get_metric_fn):
+def get_metrics(k, dim, dim_suffix, sessions, time_str, data_dir, get_metric_fn):
     metrics = {} 
     for session in sessions:
-        logdir = '%s'%(get_session_dir(k,dim,session,time_str,data_dir))
+        logdir = '%s'%(get_session_dir(k,dim,dim_suffix, session,time_str,data_dir))
         metric = get_metric_fn(logdir)
         metrics[session] = metric 
 
