@@ -55,7 +55,7 @@ public class Join implements StatelessOperator{
 		
 		DataTuple outputTuple = data.setValues(tupleId, value);
 		processed++;
-		if (processed % 1000 == 0)
+		if (processed == 1 || processed % 1000 == 0)
 		{
 			logger.info("Join operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 		}
