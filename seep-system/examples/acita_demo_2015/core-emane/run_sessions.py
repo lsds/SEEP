@@ -393,6 +393,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 remote_shutdown(session)
                 time.sleep(5)
             session.shutdown()
+            if not params['preserve']:
+                core_cleanup()
             if 'server' in globals():
                 print 'Removing session from core daemon server'
                 server.delsession(session)
@@ -799,6 +801,10 @@ def record_emanesh_tables(sessiondir, nodes, params):
         with open('%s/n%d.conf/emane-tables-n%d.txt'%(sessiondir, node, node), 'w') as log:
             p = subprocess.Popen(args, stdout=log, cwd='%s/n%d.conf'%(sessiondir,node), stderr=subprocess.STDOUT, env=os.environ.copy())
             p.wait()
+
+def core_cleanup():
+    p = subprocess.Popen(['/usr/sbin/core-cleanup']) 
+    p.wait()
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     print 'Hello world'
