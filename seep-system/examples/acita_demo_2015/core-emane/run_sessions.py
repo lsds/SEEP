@@ -349,7 +349,11 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             session.mobility.setconfig_keyvalues(wlan1.objid, 'emaneNs2script', mobility_params)
 
 
-        datacollect_hook = create_datacollect_hook(time_str, k, mob if var_suffix=='m' else nodes, var_suffix, exp_session) 
+        var = mob
+        if var_suffix=='n': var = nodes 
+        if var_suffix=='d': var = params['x']
+ 
+        datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(nodes)
 
@@ -391,7 +395,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if session:
             if distributed: 
                 remote_shutdown(session)
-                time.sleep(5)
+                time.sleep(300)
             session.shutdown()
             if not params['preserve']:
                 core_cleanup()
