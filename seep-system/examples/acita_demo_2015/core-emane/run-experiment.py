@@ -10,6 +10,7 @@ sys.path.append(script_dir)
 from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles
 from run_sessions import run_sessions
 from util import chmod_dir, pybool_to_javastr
+from notify import notify
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
@@ -21,74 +22,78 @@ latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
 def main(ks,variables,sessions,params,plot_time_str=None):
 
     #script_dir = os.path.dirname(os.path.realpath(__file__))
-    data_dir = '%s/log'%script_dir
-    params['daemon_server'] = get_daemon_server()
+    try:
+        data_dir = '%s/log'%script_dir
+        params['daemon_server'] = get_daemon_server()
 
-    session_ids = [sessions] if params['specific'] else range(0,sessions)
-    if plot_time_str:
-        time_str = plot_time_str
-    else:
-        time_str = time.strftime('%H-%M-%S-%a%d%m%y')
-        #run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
-        run_experiment(ks, variables, session_ids, params, time_str, data_dir )
-
-    if not params['iperf']:
-        #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
-        #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
-        record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput)
-        record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency)
-
-        
-        if len(variables['mobility']) > 1:
-            for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
-                'latency_vs_mobility', 'tput_vs_mobility_stddev', 
-                'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
-                'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
-                plot(p, time_str, script_dir, data_dir)
-        elif len(variables['nodes']) > 1:
-            for p in ['tput_vs_nodes_stddev', 'latency_vs_nodes_stddev', 
-                    'rel_tput_vs_nodes_stddev', 'rel_latency_vs_nodes_stddev']:
-                plot(p, time_str, script_dir, data_dir)
-        elif len(variables['dimension']) > 1:
-            for p in ['tput_vs_dimension_stddev', 'latency_vs_dimension_stddev', 
-                    'rel_tput_vs_dimension_stddev', 'rel_latency_vs_dimension_stddev']:
-                plot(p, time_str, script_dir, data_dir)
+        session_ids = [sessions] if params['specific'] else range(0,sessions)
+        if plot_time_str:
+            time_str = plot_time_str
         else:
-            plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-            plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
-            plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-            plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-            plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
-            #latex_plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
+            time_str = time.strftime('%H-%M-%S-%a%d%m%y')
+            #run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
+            run_experiment(ks, variables, session_ids, params, time_str, data_dir )
 
-	# Do any plots that summarize all sessions for fixed k and mob.
+        if not params['iperf']:
+            #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
+            #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
+            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput)
+            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency)
 
-        for k in ks:
-            if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1:
-                for mob in variables['mobility']:
-                    plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
-                    plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
-
-                    for session in session_ids:
-                        plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kmobsession('tx_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        if params['dstat']:
-                            plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kmobsession('page_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kmobsession('io_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kmobsession('disk_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                        if params['emanestats']:
-                            for stat in get_emane_mac_stats(script_dir):
-                                plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
+            
+            if len(variables['mobility']) > 1:
+                for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
+                    'latency_vs_mobility', 'tput_vs_mobility_stddev', 
+                    'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
+                    'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
+            elif len(variables['nodes']) > 1:
+                for p in ['tput_vs_nodes_stddev', 'latency_vs_nodes_stddev', 
+                        'rel_tput_vs_nodes_stddev', 'rel_latency_vs_nodes_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
+            elif len(variables['dimension']) > 1:
+                for p in ['tput_vs_dimension_stddev', 'latency_vs_dimension_stddev', 
+                        'rel_tput_vs_dimension_stddev', 'rel_latency_vs_dimension_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
             else:
-                #TODO
-                pass
-            # Uncomment this and tweak params when plotting movement analysis.
-            #for node in range(3,10):
-            #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
+                plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+                plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
+                plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+                plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+                plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+                #latex_plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
 
-        chmod_dir('%s/%s'%(data_dir, time_str))
+        # Do any plots that summarize all sessions for fixed k and mob.
+
+            for k in ks:
+                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1:
+                    for mob in variables['mobility']:
+                        plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+
+                        for session in session_ids:
+                            plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('tx_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            if params['dstat']:
+                                plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                                plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                                plot_fixed_kmobsession('page_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                                plot_fixed_kmobsession('io_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                                plot_fixed_kmobsession('disk_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            if params['emanestats']:
+                                for stat in get_emane_mac_stats(script_dir):
+                                    plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
+                else:
+                    #TODO
+                    pass
+                # Uncomment this and tweak params when plotting movement analysis.
+                #for node in range(3,10):
+                #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
+
+            chmod_dir('%s/%s'%(data_dir, time_str))
+    finally:
+        if params['notifyAddr']:
+            notify('Job complete', params['notifyAddr'], params['notifySmtp'])
 
 def get_daemon_server():
     if not 'server' in globals(): return None
@@ -328,6 +333,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
     parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
+    parser.add_argument('--notifyAddr', dest='notify_addr', default=None, help='Send email from/to addr on job completion.')
+    parser.add_argument('--notifySmtp', dest='notify_smtp', default='smarthost.cc.ic.ac.uk', help='Smtp server to use for email notifications.')
 
     args=parser.parse_args()
 
@@ -375,6 +382,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['slave']= args.slave 
     params['verbose']= args.verbose 
     params['emaneMobility']= args.emane_mobility
+    params['notifyAddr'] = args.notify_addr
+    params['notifySmtp'] = args.notify_smtp
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
