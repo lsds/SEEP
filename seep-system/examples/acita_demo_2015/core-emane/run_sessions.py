@@ -125,12 +125,22 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 		'emane_event_monitor':"true" if params['emaneMobility'] else "false"} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if distributed: 
-            slave = params['slave']
-            slaveip = socket.gethostbyname(slave)
-            session_cfg['controlnet'] = "%s:172.16.1.0/24 %s:172.16.2.0/24"%(socket.gethostname(), slave)
-            session_cfg['controlnet1'] = "%s:172.17.1.0/24 %s:172.17.2.0/24"%(socket.gethostname(), slave)
+            slaves = params['slave'].split(',')
             #session_cfg['controlnetif1'] = "eth4"
             session_cfg['controlnetif1'] = "eth1"
+            session_cfg['controlnet'] = "%s:172.16.1.0/24"%socket.gethostname()
+            session_cfg['controlnet1'] = "%s:172.17.1.0/24"%socket.gethostname()
+
+            slaveips = {}
+            for i,slave in enumerate(slaves):
+                slave = params['slave']
+                slaveip = socket.gethostbyname(slave)
+                slaveips[slave] = slaveip
+                session_cfg['controlnet'] += " %s:172.16.%d.0/24"%(i+2, slave)
+                session_cfg['controlnet1'] += " %s:172.17.%d.0/24"%(i+2, slave)
+
+            print 'Using controlnet: %s'%session_cfg['controlnet']
+            print 'Using controlnet1: %s'%session_cfg['controlnet1']
         else: 
             session_cfg['controlnet'] = "172.16.1.0/24"
 
@@ -151,8 +161,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             session.broker.handlerawmsg(conf_msg)
             session.confobj("emane", session, to_msg(conf_msg))
 
-            remote_configure(session, slave, slaveip)
-            session.broker.handlerawmsg(location_conf_msg(session.location))
+            for slave in slaves:
+                remote_configure(session, slave, slaveips[slave])
+                session.broker.handlerawmsg(location_conf_msg(session.location))
 
         if params['sinkDisplay']:
             sink_display = start_query_sink_display("sinkDisplay.log", session.sessiondir, params)
@@ -323,7 +334,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 pos = gen_grid_position(i, nodes-1)
 
             if distributed:
-                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos, verbose=verbose))
+                slave = slaves[i % len(slaves)]
+                routers.append(create_remote_node(i, session, slave, slaveips[slave], "%s"%services_str, wlan1, pos, verbose=verbose))
             else:
                 routers.append(create_node(i, session, "%s"%services_str, wlan1, pos, verbose=verbose))
 
