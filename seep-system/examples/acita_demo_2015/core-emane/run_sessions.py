@@ -123,7 +123,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         session_cfg = {'custom_services_dir':svc_dir, 'emane_log_level':'3',
                 'verbose':"true" if verbose else "False", 
 		'emane_event_monitor':"true" if params['emaneMobility'] else "false"} 
-        if params['preserve']: session_cfg['preservedir'] = '0' 
+        if params['preserve']: session_cfg['preservedir'] = '1' 
         if distributed: 
             slave = params['slave']
             slaveip = socket.gethostbyname(slave)
