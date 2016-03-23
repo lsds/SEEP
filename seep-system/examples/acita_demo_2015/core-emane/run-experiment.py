@@ -22,6 +22,7 @@ latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
 def main(ks,variables,sessions,params,plot_time_str=None):
 
     #script_dir = os.path.dirname(os.path.realpath(__file__))
+    time_str = 'unknown'
     try:
         data_dir = '%s/log'%script_dir
         params['daemon_server'] = get_daemon_server()
@@ -93,7 +94,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
             chmod_dir('%s/%s'%(data_dir, time_str))
     finally:
         if params['notifyAddr']:
-            notify('Job complete', params['notifyAddr'], params['notifySmtp'])
+            notify('Job %s complete'%time_str, params['notifyAddr'], params['notifySmtp'])
 
 def get_daemon_server():
     if not 'server' in globals(): return None
