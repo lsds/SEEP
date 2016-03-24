@@ -125,6 +125,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 		'emane_event_monitor':"true" if params['emaneMobility'] else "false"} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if distributed: 
+            print 'slaves=',params['slave']
             slaves = params['slave'].split(',')
             #session_cfg['controlnetif1'] = "eth4"
             session_cfg['controlnetif1'] = "eth1"
@@ -133,11 +134,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
             slaveips = {}
             for i,slave in enumerate(slaves):
-                slave = params['slave']
-                slaveip = socket.gethostbyname(slave)
-                slaveips[slave] = slaveip
-                session_cfg['controlnet'] += " %s:172.16.%d.0/24"%(i+2, slave)
-                session_cfg['controlnet1'] += " %s:172.17.%d.0/24"%(i+2, slave)
+                slaveips[slave] = socket.gethostbyname(slave)
+                session_cfg['controlnet'] += " %s:172.16.%d.0/24"%(slave, i+2)
+                session_cfg['controlnet1'] += " %s:172.17.%d.0/24"%(slave, i+2)
 
             print 'Using controlnet: %s'%session_cfg['controlnet']
             print 'Using controlnet1: %s'%session_cfg['controlnet1']
@@ -335,7 +334,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
             if distributed:
                 slave = slaves[i % len(slaves)]
-                routers.append(create_remote_node(i, session, slave, slaveips[slave], "%s"%services_str, wlan1, pos, verbose=verbose))
+                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos, verbose=verbose))
             else:
                 routers.append(create_node(i, session, "%s"%services_str, wlan1, pos, verbose=verbose))
 
@@ -404,6 +403,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
     finally:
         print 'Shutting down session.'
+
         if session:
             if distributed: 
                 remote_shutdown(session)
@@ -419,7 +419,6 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             print 'Shutting down query sink display ', sink_display
             sink_display.stdin.close()
             sink_display.terminate()
-
 
 def remote_configure(session, slave, slaveip):
 	session.broker.addserver(slave, slaveip, coreapi.CORE_API_PORT)
