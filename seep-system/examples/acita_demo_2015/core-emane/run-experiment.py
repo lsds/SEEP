@@ -56,6 +56,10 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 for p in ['tput_vs_dimension_stddev', 'latency_vs_dimension_stddev', 
                         'rel_tput_vs_dimension_stddev', 'rel_latency_vs_dimension_stddev']:
                     plot(p, time_str, script_dir, data_dir)
+            elif len(variables['cpudelay']) > 1:
+                for p in ['tput_vs_cpudelay_stddev', 'latency_vs_cpudelay_stddev', 
+                        'rel_tput_vs_cpudelay_stddev', 'rel_latency_vs_cpudelay_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
             else:
                 plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
                 plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
@@ -67,7 +71,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
         # Do any plots that summarize all sessions for fixed k and mob.
 
             for k in ks:
-                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1:
+                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1:
                     for mob in variables['mobility']:
                         plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
                         plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
@@ -126,6 +130,10 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
                 params['x'] = dim
                 params['y'] = dim
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'd', sessions, params)
+        elif len(variables['cpudelay']) > 1:
+            for cpudelay in variables['cpudelay']:
+                params['defaultProcessingDelay'] = cpudelay 
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'c', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -140,6 +148,9 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
     elif len(variables['dimension']) > 1:
         var_vals = variables['dimension']
         var_suffix = 'd'
+    elif len(variables['cpudelay']) > 1:
+        var_vals = variables['cpudelay']
+        var_suffix = 'c'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -298,6 +309,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     #parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
     #parser.add_argument('--y', dest='y', default='1200', help='Grid y dimension (1200)')
     parser.add_argument('--dimension', dest='dimension', default='1200', help='Grid dimension (1200)')
+    parser.add_argument('--cpuDelay', dest='cpu_delay', default='0', help='Processing delay for each operator')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join, debsgc, fr, frshard, nameassist')
     parser.add_argument('--pausetimes', dest='pts', default='5.0', help='pause times [5.0]')
     parser.add_argument('--sessions', dest='sessions', default='2', help='number of sessions (2)')
@@ -344,8 +356,10 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     sessions=int(args.sessions)
     nodes=map(lambda x: int(x), args.nodes.split(','))
     dimension=map(lambda x: int(x), args.dimension.split(','))
+    cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
 
-    variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension }
+    variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
+            "cpudelay" : cpudelay}
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))
@@ -359,6 +373,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     if len(dimension) == 1:
         params['x']=args.dimension
         params['y']=args.dimension
+    if len(cpudelay) == 1:
+        params['defaultProcessingDelay'] = 0
     params['query']=args.query
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
