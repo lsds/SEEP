@@ -363,6 +363,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         var = mob
         if var_suffix=='n': var = nodes 
         if var_suffix=='d': var = params['x']
+        if var_suffix=='c': var = params['defaultProcessingDelay']
  
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)

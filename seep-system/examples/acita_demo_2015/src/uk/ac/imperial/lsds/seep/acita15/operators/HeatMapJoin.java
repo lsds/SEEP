@@ -26,6 +26,7 @@ public class HeatMapJoin implements StatelessOperator{
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Join.class);
 	private int processed = 0;
+	private final long processingDelay = Long.parseLong(GLOBALS.valueFor("defaultProcessingDelay"));
 	
 	public void processData(DataTuple data) {
 		logger.error("Should never be called for a join op!");
@@ -76,6 +77,9 @@ public class HeatMapJoin implements StatelessOperator{
 			logger.debug("Join operator "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
 			recordTuple(outputTuple);
 		} 
+
+		doProcessing();
+
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -126,5 +130,14 @@ public class HeatMapJoin implements StatelessOperator{
 			builder.append('x');
 		}
 		return builder.toString();
+	}
+
+	private void doProcessing()
+	{
+		if (processingDelay > 0)
+		{	
+			try { Thread.sleep(processingDelay); }
+			catch (InterruptedException e) { }
+		}
 	}
 }
