@@ -54,6 +54,7 @@ public class Dispatcher implements IRoutingObserver {
 	//private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 120 * 1000; // 4 * 1000 Only set this really high for latency breakdown.
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
+	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
 	private final boolean eagerPurgeOpQueue;
@@ -84,14 +85,16 @@ public class Dispatcher implements IRoutingObserver {
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
 		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues"));
-		
+
+		GLOBAL_MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+
 		if (owner.getOperator().getOpContext().isSource())
 		{
 			MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxSrcTotalQueueSizeTuples"));
 		}
 		else
 		{
-			MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
+			MAX_TOTAL_QUEUE_SIZE = GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 			//MAX_TOTAL_QUEUE_SIZE = 1;
 		}
 		//opQueue = new OperatorOutputQueue(Integer.MAX_VALUE);
@@ -259,7 +262,11 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public int getTotalQlen()
 	{
-		return opQueue.size();
+		if (owner.getOperator().getOpContext().isSource()) 
+		{ 
+			return GLOBAL_MAX_TOTAL_QUEUE_SIZE;
+		}
+		else { return opQueue.size(); }
 	}
 	
 	public void ack(DataTuple dt)
