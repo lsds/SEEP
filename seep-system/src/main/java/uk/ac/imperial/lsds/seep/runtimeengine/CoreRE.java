@@ -362,6 +362,13 @@ public class CoreRE {
 					processingUnit.getDispatcher().startDispatcherMain();
 				}
 			}
+			else if (GLOBALS.valueFor("meanderRouting").equals("hash"))
+			{				
+				if (!processingUnit.getOperator().getOpContext().isSink())
+				{
+					processingUnit.getDispatcher().startDispatcherMain();
+				}
+			}
 			else
 			{
 				if (!processingUnit.getOperator().getOpContext().isSource())

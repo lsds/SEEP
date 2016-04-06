@@ -68,13 +68,25 @@ public class BackpressureRouter implements IRouter {
 						{
 							targets = new ArrayList<>();
 							targets.add(-1);	//Hack: allows dispatcher to distinguish constrained routing.
-							logger.info("Adding routing constraints for "+batchId);
+							logger.debug("Adding routing constraints for "+batchId);
 						}
 						//Don't care about weight, must at least be connected if non-empty constraints.
 						//Problem: If catchup weight has changed!
 						//TODO: Can perhaps optimize this, although need to be careful.
 						targets.add(opContext.getDownOpIndexFromOpId(downOpId));
-						logger.info("Added routing constraint to "+downOpId);
+						logger.debug("Added routing constraint to "+downOpId);
+						
+						//For debugging
+						Integer maxWeightDownOpId = maxWeightOpId();
+						if (maxWeightDownOpId != null && !maxWeightOpId().equals(downOpId))
+						{
+							logger.debug("Potential target mismatch: downOpId="+downOpId+",mw="+maxWeightDownOpId);	
+						}
+						else if (maxWeightDownOpId != null)
+						{
+							logger.debug("Matching target and down op weight not null: downOpId="+downOpId+",mw="+maxWeightDownOpId);	
+						}
+						else { logger.debug("Max weight is null: downOpId="+downOpId);	}
 					}
 				}
 			}
@@ -163,7 +175,7 @@ public class BackpressureRouter implements IRouter {
 				
 				if (changed) {
 					newConstraints = new HashMap<Integer, Set<Long>>();
-					newConstraints.put(downUp.getOpId(), newUnmatched);
+					newConstraints.put(downUp.getOpId(), new HashSet<>(newUnmatched));
 				}
 			}
 			else
