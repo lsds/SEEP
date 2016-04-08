@@ -102,9 +102,10 @@ sudo apt-get -y install bison flex
 #sudo make install
 #popd
 
-#(to download source repo)
-git clone http://olsr.org/git/olsrd.git 
-pushd olsrd
+#git clone http://olsr.org/git/olsrd.git 
+wget http://www.olsr.org/releases/0.9/olsrd-0.9.0.3.tar.gz
+tar -xzvf olsrd-0.9.0.3.tar.gz 
+pushd olsrd-0.9.0.3
 make
 sudo make install
 pushd lib/txtinfo
