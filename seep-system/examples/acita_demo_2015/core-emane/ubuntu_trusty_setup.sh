@@ -1,5 +1,20 @@
 #!/bin/bash
 set -o errexit ; set -o nounset
+if [[ $HOME == *"root"* ]]
+then
+	USER_HOME=$1
+else
+	USER_HOME=$HOME
+fi
+
+if [ ! -d "$USER_HOME" ]
+then
+	echo "Invalid home directory: $USER_HOME"
+	echo "Please enter your home directory as the first argument to script"
+	exit 1
+fi
+
+echo "Using USER_HOME directory of $USER_HOME"
 echo "Making directory."
 mkdir -p install
 cd install
@@ -8,6 +23,7 @@ echo "Installing prerequisites."
 
 # First update and install prerequisite packages for CORE
 sudo apt-get update
+sudo apt-get install git make
 sudo apt-get -y install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
 
 echo "Installing Core from main repo."
@@ -138,7 +154,7 @@ sudo cp /etc/core/core.conf /etc/core/core.conf.orig
 sudo cp vldb/config/core4.8.conf.orig /etc/core/core.conf
 
 #Then need to point core config to acita config dir.
-ln -s `pwd`/vldb /home/dokeeffe/.core
+ln -s `pwd`/vldb $USER_HOME/.core
 
 # Install tun_flowctl
 #popd
@@ -178,3 +194,7 @@ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get -y install gcc g++
 #sudo apt-get install libstdc++6
+
+pushd ../../../..
+sudo chown -R $USER:$USER .
+popd
