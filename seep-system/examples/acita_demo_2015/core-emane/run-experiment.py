@@ -349,6 +349,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
     parser.add_argument('--notifyAddr', dest='notify_addr', default=None, help='Send email from/to addr on job completion.')
     parser.add_argument('--notifySmtp', dest='notify_smtp', default='smarthost.cc.ic.ac.uk', help='Smtp server to use for email notifications.')
+    parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
 
     args=parser.parse_args()
 
@@ -402,6 +403,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['emaneMobility']= args.emane_mobility
     params['notifyAddr'] = args.notify_addr
     params['notifySmtp'] = args.notify_smtp
+    params['xyScale'] = args.xy_scale
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

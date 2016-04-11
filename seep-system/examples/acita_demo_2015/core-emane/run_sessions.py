@@ -310,6 +310,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         placements = get_initial_placements(params['placement'], mob)
         print 'Initial placements=',placements
         if placements: 
+            if params['xyScale']:
+                placements = map(lambda (x,y): (x*float(params['xyScale']), y*float(params['xyScale'])), placements)
             create_static_routes(placements, tx_range, session.sessiondir)
 
         print 'Creating workers.'
@@ -859,6 +861,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--gui', dest='gui', default=False, action='store_true', help='Show placements in core GUI')
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
     parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
+    parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -894,6 +897,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['slave']= args.slave 
     params['verbose']= args.verbose 
     params['emaneMobility']= args.emane_mobility
+    params['xyScale'] = args.xy_scale
 	
     #if args.verbose: params['verbose']='true'
 
