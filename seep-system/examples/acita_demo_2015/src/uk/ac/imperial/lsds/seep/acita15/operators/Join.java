@@ -18,12 +18,14 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
 
 public class Join implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Join.class);
 	private int processed = 0;
+	private Stats stats;
 	private final long processingDelay = Long.parseLong(GLOBALS.valueFor("defaultProcessingDelay"));
 	
 	public void processData(DataTuple data) {
@@ -68,6 +70,7 @@ public class Join implements StatelessOperator{
 		} 
 
 		doProcessing();
+		stats.add(System.currentTimeMillis(), outputTuple.getPayload().toString().length());
 
 		api.send_highestWeight(outputTuple);
 	}
@@ -84,6 +87,7 @@ public class Join implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up JOIN operator with id="+api.getOperatorId());
+		stats = new Stats(api.getOperatorId());
 	}
 
 	private void doProcessing()
