@@ -230,6 +230,7 @@ public class RoutingController implements Runnable{
 			if (numLogicalInputs > 1)
 			{
 				 localInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 logger.info("Op "+nodeId+" oob inputqlens="+localInputQlens); 
 			}
 			else
 			{
