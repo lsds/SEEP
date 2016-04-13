@@ -307,11 +307,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         workers = []
         num_workers = get_num_workers(k, nodes, params)
         print 'num_workers=', num_workers
-        placements = get_initial_placements(params['placement'], mob)
+        placements = get_initial_placements(params['placement'], mob, params['xyScale'])
         print 'Initial placements=',placements
         if placements: 
-            if params['xyScale']:
-                placements = map(lambda (x,y): (x*float(params['xyScale']), y*float(params['xyScale'])), placements)
             create_static_routes(placements, tx_range, session.sessiondir)
 
         print 'Creating workers.'
@@ -608,16 +606,19 @@ def create_node_map(ns_nums, nodes):
         raise Exception("Invalid node mapping, %d != %d"%(len(ns_nums), len(nodes)))
     return ",".join(map(lambda (ns_num, node) : "%d:%d"%(ns_num,node.objid), zip(ns_nums, nodes)))
 
-def get_initial_placements(placements, mobility):
+def get_initial_placements(placements, mobility, xyScale):
     if not placements or mobility > 0.0:
         return None
     else:
         result = {}
         placements_path = '%s/static/%s'%(script_dir, placements)
+        xyScale = float(xyScale) if xyScale else 1.0
+        print 'xyScale = %s'%str(xyScale)
         with open(placements_path, 'r') as pf:
             for line in pf:
                 els = map(int, line.split(','))
-                result[els[0]] = (els[1], els[2])
+                print els
+                result[els[0]] = (int(xyScale*els[1]), int(xyScale*els[2]))
 
         return result
 
