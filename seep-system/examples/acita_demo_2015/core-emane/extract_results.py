@@ -129,4 +129,18 @@ def processor_tput(f):
             op_id = match.group(2)
 
     return (op_id, last_cum_tput)
-    
+
+def get_interval_tputs(f):
+    regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
+    op_id = None
+    tputs = [] 
+    for line in f:
+        match = re.search(regex, line)
+        if match:
+            op_id = int(match.group(2))
+            tputs.append((int(match.group(1)), float(match.group(4))))
+
+    return (op_id, tputs)
+
+
+

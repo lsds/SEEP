@@ -74,12 +74,18 @@ def main(exp_dir):
     deduped_tx_latencies = dedup_latencies(rx_latencies)
 
     op_tputs = {}
+    op_interval_tputs = {}
     for op_log in op_logs:
         with open(op_log, 'r') as f:
             (op_id, tput) = processor_tput(f)
             if op_id:
                 op_tputs[op_id] = tput 
 
+        with open(op_log, 'r') as f:
+            (op_id, interval_tputs) = get_interval_tputs(f)
+            if op_id:
+                op_interval_tputs[op_id] = interval_tputs
+                
     # Record the tput, k, w, query name etc.
     # Compute the mean tput
     if t_src_begin: 
@@ -101,6 +107,7 @@ def main(exp_dir):
     """
 
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
+    record_op_interval_tputs(op_interval_tputs, exp_dir)
 
 def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -184,6 +191,14 @@ def record_latencies(latencies, latencies_file):
             tx_sorted.append((latencies[ts][1], latencies[ts][0]))
         for (tx, latency) in sorted(tx_sorted): 
             lf.write('%d %d\n'%(tx/1000, latency))
+
+def record_op_interval_tputs(op_interval_tputs, exp_dir):
+    for op in op_interval_tputs:
+        op_interval_tput_file = "%s/op_%d_interval_tput.txt"%(exp_dir, op)
+        with open(op_interval_tput_file, 'w') as f:
+            f.write('# tput')
+            for (ts, tput) in op_interval_tputs[op]:
+                f.write('%d %.1f\n'%(ts, tput))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')
