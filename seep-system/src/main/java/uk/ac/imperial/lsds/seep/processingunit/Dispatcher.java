@@ -520,7 +520,7 @@ public class Dispatcher implements IRoutingObserver {
 				//to replay if the downstream fails.
 				if (fctrl.alives().contains(ts) && dt != null)
 				{
-					logger.info("Replay optimization: dispatcher avoided replaying tuple "+ts);
+					logger.info("admitBatch: replay optimization: dispatcher avoided replaying tuple "+ts);
 					sharedReplayLog.add(dt);
 				}
 				
