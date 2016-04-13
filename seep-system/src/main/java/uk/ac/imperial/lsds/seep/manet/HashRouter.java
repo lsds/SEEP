@@ -74,6 +74,6 @@ public class HashRouter implements IRouter {
 	
 	public void handleDownFailed(int downOpId)
 	{
-		throw new RuntimeException("TODO"); 
+		//throw new RuntimeException("TODO"); 
 	}
 }
