@@ -137,7 +137,7 @@ def get_interval_tputs(f):
     for line in f:
         match = re.search(regex, line)
         if match:
-            op_id = int(match.group(2))
+            op_id = str(int(match.group(2)))
             tputs.append((int(match.group(1)), float(match.group(4))))
 
     return (op_id, tputs)

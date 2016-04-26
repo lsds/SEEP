@@ -351,6 +351,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--notifyAddr', dest='notify_addr', default=None, help='Send email from/to addr on job completion.')
     parser.add_argument('--notifySmtp', dest='notify_smtp', default='smarthost.cc.ic.ac.uk', help='Smtp server to use for email notifications.')
     parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
+    parser.add_argument('--meanderRouting', dest='meander_routing', default=None, help='Override meander routing alg (backpressure, hash, shortestPath)')
 
     args=parser.parse_args()
 
@@ -377,7 +378,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
         params['x']=args.dimension
         params['y']=args.dimension
     if len(cpudelay) == 1:
-        params['defaultProcessingDelay'] = 0
+        params['defaultProcessingDelay'] = int(cpudelay[0]) 
     params['query']=args.query
     params['saveconfig']=args.saveconfig
     params['constraints']=args.constraints
@@ -409,6 +410,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
     if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
+    if args.meander_routing: params['meanderRouting'] = args.meander_routing
 
     #main(ks,pts,nodes,sessions,params,plot_time_str=args.plot_time_str)
     main(ks,variables,sessions,params,plot_time_str=args.plot_time_str)

@@ -194,7 +194,7 @@ def record_latencies(latencies, latencies_file):
 
 def record_op_interval_tputs(op_interval_tputs, exp_dir):
     for op in op_interval_tputs:
-        op_interval_tput_file = "%s/op_%d_interval_tput.txt"%(exp_dir, op)
+        op_interval_tput_file = "%s/op_%s_interval_tput.txt"%(exp_dir, op)
         with open(op_interval_tput_file, 'w') as f:
             f.write('# tput')
             for (ts, tput) in op_interval_tputs[op]:
