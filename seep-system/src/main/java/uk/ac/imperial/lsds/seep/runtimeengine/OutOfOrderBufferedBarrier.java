@@ -27,6 +27,7 @@ import uk.ac.imperial.lsds.seep.manet.Query;
 public class OutOfOrderBufferedBarrier implements DataStructureI {
 
 	private final static Logger logger = LoggerFactory.getLogger(OutOfOrderBufferedBarrier.class);
+	private final int opId;
 	private final int logicalId;
 	private final Query meanderQuery;
 	private final int numLogicalInputs;
@@ -37,11 +38,13 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	private final boolean bestEffort;
 	private final boolean reprocessNonLocals;
 	private final int maxReadyQueueSize;
+	private final boolean boundReadyQueue;
 	private final long barrierTimeout;
 	private final BarrierTimeoutMonitor barrierTimeoutMonitor;
 	
 	public OutOfOrderBufferedBarrier(Query meanderQuery, int opId)
 	{
+		this.opId = opId;
 		this.meanderQuery = meanderQuery;	//To get logical index for upstreams.
 		this.logicalId = meanderQuery.getLogicalNodeId(opId);
 		this.numLogicalInputs = meanderQuery.getLogicalInputs(meanderQuery.getLogicalNodeId(opId)).length;
@@ -50,6 +53,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
 		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
 		this.barrierTimeout = Long.parseLong(GLOBALS.valueFor("barrierTimeout"));
+		this.boundReadyQueue = Boolean.parseBoolean(GLOBALS.valueFor("boundReadyQueue"));
 		if (barrierTimeout > 0)  
 		{ 
 			logger.info("Setting up barrier timeout monitor with delay="+barrierTimeout);
@@ -103,7 +107,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 				addReady(ts);
 				if (barrierTimeoutMonitor != null) { barrierTimeoutMonitor.clear(ts); }
 				
-				while (ready.size() > maxReadyQueueSize)
+				while (boundReadyQueue && ready.size() > maxReadyQueueSize)
 				{
 					try {
 						this.wait();
@@ -261,7 +265,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			
 			pendingSizes.put(i,  pending.get(i).size());
 		}
-		logger.debug("Sizes="+sizes+", pendingSizes="+pendingSizes);
+		logger.debug("op "+opId+" sizes="+sizes+", pendingSizes="+pendingSizes+", ready="+ready.size());
 		return sizes;
 	}
 	
