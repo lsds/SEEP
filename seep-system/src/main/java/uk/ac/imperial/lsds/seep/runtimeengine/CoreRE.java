@@ -347,7 +347,16 @@ public class CoreRE {
 	{
 		if (GLOBALS.valueFor("enableMeanderRouting").equals("true"))
 		{
-			if (GLOBALS.valueFor("meanderRouting").equals("shortestPath"))
+			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+			if (GLOBALS.valueFor("meanderRouting").equals("hash") || replicationFactor == 1)
+			{				
+				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication."); }
+				if (!processingUnit.getOperator().getOpContext().isSink())
+				{
+					processingUnit.getDispatcher().startDispatcherMain();
+				}
+			}
+			else if (GLOBALS.valueFor("meanderRouting").equals("shortestPath"))
 			{				
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
@@ -357,13 +366,6 @@ public class CoreRE {
 					ntMonT = new Thread(netTopologyMonitor, "NetTopologyMonitor");
 					ntMonT.start();
 				}
-				if (!processingUnit.getOperator().getOpContext().isSink())
-				{
-					processingUnit.getDispatcher().startDispatcherMain();
-				}
-			}
-			else if (GLOBALS.valueFor("meanderRouting").equals("hash"))
-			{				
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
 					processingUnit.getDispatcher().startDispatcherMain();

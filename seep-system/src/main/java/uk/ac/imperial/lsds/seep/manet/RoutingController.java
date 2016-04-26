@@ -187,6 +187,8 @@ public class RoutingController implements Runnable{
 					Double cost = upstreamCosts.get(upstreamId);
 					if (cost==null || (useCostThreshold && cost > COST_THRESHOLD)) {
 						cost = new Double(GraphUtil.SUB_INFINITE_DISTANCE);
+						if (useCostThreshold && cost > COST_THRESHOLD)
+						{ logger.warn("Cost exceeded threshold: node="+nodeId+",up="+upstreamId+",thresh="+COST_THRESHOLD+",cost="+cost); }
 					}
 					
 					if (cost >= GraphUtil.SUB_INFINITE_DISTANCE
@@ -254,7 +256,7 @@ public class RoutingController implements Runnable{
 					int localTotalInputQlen = localInputQlens.get(-1);
 
 					//TODO: Should we be multiplying the input q length by the processing rate?
-					logger.info("Computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
+					logger.info("Op "+ nodeId+ " computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					

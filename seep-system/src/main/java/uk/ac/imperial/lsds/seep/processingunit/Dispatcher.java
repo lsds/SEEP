@@ -84,7 +84,10 @@ public class Dispatcher implements IRoutingObserver {
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");		
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
-		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues"));
+		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
+					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
+					replicationFactor == 1;
 
 		GLOBAL_MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
 

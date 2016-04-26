@@ -27,6 +27,7 @@ public class BackpressureRouter implements IRouter {
 	private final Map<Integer, Set<Long>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
+
 	private int switchCount = 0;
 	private long tLastSwitch = 0;
 	private final Object lock = new Object(){};
@@ -161,7 +162,7 @@ public class BackpressureRouter implements IRouter {
 				else { logger.info("Downstream timed out with no alternative downstream."); }
 			}
 			
-			logger.debug("Backpressure router weights= "+weights);
+			logger.debug("handleDownUp:Node "+opContext.getOperatorStaticInformation().getOpId()+" backpressure router weights= "+weights);
 			Set<Long> newUnmatched = downUp.getUnmatched();
 			if (newUnmatched != null)
 			{
@@ -197,7 +198,7 @@ public class BackpressureRouter implements IRouter {
 				double opWeight = weights.get(opId);
 				if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
 			}
-			logger.debug("maxWeight: Backpressure router weights= "+weights);
+			logger.debug("maxWeight:Node "+opContext.getOperatorStaticInformation().getOpId()+" backpressure router weights= "+weights);
 		}
 		return result;
 	}

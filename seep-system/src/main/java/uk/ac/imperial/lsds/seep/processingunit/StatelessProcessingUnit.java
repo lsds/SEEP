@@ -456,18 +456,20 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		if (dispatcher != null && !getOperator().getOpContext().isSink())
 		{
 			String routingAlg = GLOBALS.valueFor("meanderRouting");
-			if ("roundRobin".equals(routingAlg))
+			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+			if ("hash".equals(routingAlg) || replicationFactor == 1)
+			{
+				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication.");}
+				getOperator().getRouter().setMeanderRouting(new HashRouter(getOperator().getOpContext()));
+
+			}
+			else if ("roundRobin".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new RoundRobinRouter(getOperator().getOpContext()));
 			}
 			else if ("weightedRoundRobin".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
-
-			}
-			else if ("hash".equals(routingAlg))
-			{
-				getOperator().getRouter().setMeanderRouting(new HashRouter(getOperator().getOpContext()));
 
 			}
 			else if ("shortestPath".equals(routingAlg))
