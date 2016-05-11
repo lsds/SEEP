@@ -9,7 +9,7 @@ print 'Appending script_dir to path'
 sys.path.append(script_dir)
 from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles
 from run_sessions import run_sessions
-from util import chmod_dir, pybool_to_javastr
+from util import chmod_dir, pybool_to_javastr, copy_pdfs
 from notify import notify
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
@@ -103,7 +103,13 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 #for node in range(3,10):
                 #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
 
-            chmod_dir('%s/%s'%(data_dir, time_str))
+            logdir = '%s/%s'%(data_dir, time_str)
+            chmod_dir(logdir)
+            sharedir = os.path.expanduser('~/shares/%s'%time_str)
+            print sharedir
+            if not os.path.isdir(sharedir): os.mkdir(sharedir)
+            copy_pdfs(logdir, sharedir)
+
     finally:
         if params['notifyAddr']:
             notify('Job %s complete'%time_str, params['notifyAddr'], params['notifySmtp'])
