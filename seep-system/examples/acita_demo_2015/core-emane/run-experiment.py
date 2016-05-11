@@ -30,9 +30,14 @@ def main(ks,variables,sessions,params,plot_time_str=None):
         session_ids = [sessions] if params['specific'] else range(0,sessions)
         if plot_time_str:
             time_str = plot_time_str
+            with open("%s/%s/plotOnly-cmdline.txt"%(data_dir,time_str), 'w') as f:
+                f.write("%s\n"%params['cmdline'])
         else:
             time_str = time.strftime('%H-%M-%S-%a%d%m%y')
             #run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
+            run_experiment(ks, variables, session_ids, params, time_str, data_dir )
+            with open("%s/%s/cmdline.txt"%(data_dir,time_str), 'w') as f:
+                f.write("%s\n"%params['cmdline'])
             run_experiment(ks, variables, session_ids, params, time_str, data_dir )
 
         if not params['iperf']:
@@ -370,6 +375,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))
 
     params = {} 
+    params['cmdline'] = " ".join(sys.argv[:])
+    print params['cmdline']
+	
     if args.model: params['model']=args.model
     params['net-routing']=args.routing
     params['specific']=args.specific
