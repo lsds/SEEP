@@ -38,7 +38,6 @@ def main(ks,variables,sessions,params,plot_time_str=None):
             run_experiment(ks, variables, session_ids, params, time_str, data_dir )
             with open("%s/%s/cmdline.txt"%(data_dir,time_str), 'w') as f:
                 f.write("%s\n"%params['cmdline'])
-            run_experiment(ks, variables, session_ids, params, time_str, data_dir )
 
         if not params['iperf']:
             #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
