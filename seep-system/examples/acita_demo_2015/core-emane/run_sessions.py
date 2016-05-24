@@ -25,6 +25,7 @@ from util import chmod_dir,pybool_to_javastr
 from gen_mobility_trace import gen_trace
 from gen_fixed_routes import create_static_routes
 from emane_mobility import publish_loc, register_emane_ns2_model, EmaneNs2Session
+from core_msg_util import *
 
 
 #repo_dir = '%s/../../../..'
@@ -272,7 +273,6 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         else:
             raise Exception("Unknown model/distributed: %s/%s"%(model,str(distributed)))
 
-
         if not add_to_server(session, params): 
             if distributed: raise Exception("Couldn't attach to core daemon in distributed mode!")
             else: print 'Could not add to server'
@@ -365,6 +365,11 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='d': var = params['x']
         if var_suffix=='c': var = params['defaultProcessingDelay']
  
+        if params['noiseNodes'] > 0:
+            #TODO: Is this the right way to compute noise_net_id?
+            noise_net_id = nodes + 1
+            wlan_noise = create_noise_net(session, noise_net_id, distributed, verbose)
+
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(nodes)
@@ -441,23 +446,8 @@ def remote_shutdown(session):
 	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
 	session.broker.handlerawmsg(msg)
 
+"""
 def raw_emane_global_conf_msg(wlanid):
-	"""
-	tlvdata = ""
-	tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_OBJ, "emane")
-        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_NODE, wlanid)
-        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_DATA_TYPES,
-                                            (coreapi.CONF_DATA_TYPE_STRING,))
-        #datatypes = tuple( map(lambda v: coreapi.CONF_DATA_TYPE_STRING,
-        #                       EmaneGlobalModel.getnames()) )
-	defaults = EmaneGlobalModel.getdefaultvalues()
-	names = EmaneGlobalModel.getnames()
-	vals = [ location.refxyz[0], location.refxyz[1], location.refgeo[0], location.refgeo[1], location.refgeo[2], location.refscale ]
-	vals = "|".join(map(str, vals))
-        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
-        msg = coreapi.CoreConfMessage.pack(0, tlvdata)
-	return msg
-	"""
 	global_names = EmaneGlobalModel.getnames()
 	global_values = list(EmaneGlobalModel.getdefaultvalues())
 	global_values[ global_names.index('otamanagerdevice') ] = 'ctrl1'
@@ -484,6 +474,7 @@ def location_conf_msg(location):
         tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
         msg = coreapi.CoreConfMessage.pack(0, tlvdata)
 	return msg
+"""
 
 def get_num_workers(k, nodes, params):
     q = params['query']
@@ -863,6 +854,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--slave', dest='slave', default=None, help='Hostname of slave')
     parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
     parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
+    parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -899,6 +891,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['verbose']= args.verbose 
     params['emaneMobility']= args.emane_mobility
     params['xyScale'] = args.xy_scale
+    params['noiseNodes'] = int(args.noise_nodes)
 	
     #if args.verbose: params['verbose']='true'
 
