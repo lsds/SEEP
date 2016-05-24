@@ -26,6 +26,7 @@ from gen_mobility_trace import gen_trace
 from gen_fixed_routes import create_static_routes
 from emane_mobility import publish_loc, register_emane_ns2_model, EmaneNs2Session
 from core_msg_util import *
+from noise import create_noise_net
 
 
 #repo_dir = '%s/../../../..'
@@ -347,7 +348,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
             for noise_node_id in range(nodes+2, nodes+2+params['noiseNodes']):
                 print 'Creating noise source with node id %d'%noise_node_id
-                pos = placements[i] if placements else gen_grid_position(noise_node_id, nodes + params['noiseNodes'])
+                #pos = placements[noise_node_id] if placements else gen_grid_position(noise_node_id, nodes + params['noiseNodes'])
+                pos = gen_grid_position(noise_node_id, nodes + params['noiseNodes'])
 
                 if distributed:
                     slave = slaves[i % len(slaves)]
