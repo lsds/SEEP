@@ -338,37 +338,40 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             else:
                 routers.append(create_node(i, session, "%s"%services_str, wlan1, pos, verbose=verbose))
 
-        if trace_file and not params['emaneMobility']:
-            #node_map = create_node_map(range(0,6), workers)
-            node_map = create_node_map(range(0,nodes-2), workers+routers)
-            print 'Node map=%s'%node_map
-            mobility_params[4] = ('map', node_map)
-            mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
-            refresh_ms = int(params.get('refresh_ms', 1000))
-            mobility_params[1] = ('refresh_ms', refresh_ms)
-            mobility_params[2] = ('loop', 0)
-            session.mobility.setconfig_keyvalues(wlan1.objid, 'ns2script', mobility_params)
-        elif trace_file and params['emaneMobility']:
-            print 'Using EmaneNs2Mobility.'
-            node_map = create_node_map(range(0,nodes-2), workers+routers)
-            print 'Node map=%s'%node_map
-            mobility_params[4] = ('map', node_map)
-            mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
-            refresh_ms = int(params.get('refresh_ms', 1000))
-            mobility_params[1] = ('refresh_ms', refresh_ms)
-            mobility_params[2] = ('loop', 0)
-            session.mobility.setconfig_keyvalues(wlan1.objid, 'emaneNs2script', mobility_params)
+        if params['noiseNodes'] > 0:
+            #TODO: Is this the right way to compute noise_net_id?
+            noise_net_id = nodes + 1
+            wlan_noise = create_noise_net(session, noise_net_id, distributed, verbose)
+            noise_nodes = []
+            noise_services_str = ""
 
+            for noise_node_id in range(nodes+2, nodes+2+params['noiseNodes']):
+                print 'Creating noise source with node id %d'%noise_node_id
+                pos = placements[i] if placements else gen_grid_position(noise_node_id, nodes + params['noiseNodes'])
+
+                if distributed:
+                    slave = slaves[i % len(slaves)]
+                    noise_nodes.append(create_remote_node(noise_node_id, session, slave, "%s"%noise_services_str, wlan_noise, pos, verbose=verbose))
+                else:
+                    noise_nodes.append(create_node(noise_node_id, session, "%s"%noise_services_str, wlan_noise, pos, verbose=verbose))
+
+        if trace_file:
+            node_map = create_node_map(range(0,nodes-2), workers+routers)
+            print 'Node map=%s'%node_map
+            mobility_params[4] = ('map', node_map)
+            mobility_params[0] = ('file','%s/%s'%(session.sessiondir, trace_file))
+            refresh_ms = int(params.get('refresh_ms', 1000))
+            mobility_params[1] = ('refresh_ms', refresh_ms)
+            mobility_params[2] = ('loop', 0)
+            mobility_script = 'emaneNs2script' if params['emaneMobility'] else 'ns2script'
+            print 'Using %s mobility script'%mobility_script
+            session.mobility.setconfig_keyvalues(wlan1.objid, mobility_script, mobility_params)
 
         var = mob
         if var_suffix=='n': var = nodes 
         if var_suffix=='d': var = params['x']
         if var_suffix=='c': var = params['defaultProcessingDelay']
  
-        if params['noiseNodes'] > 0:
-            #TODO: Is this the right way to compute noise_net_id?
-            noise_net_id = nodes + 1
-            wlan_noise = create_noise_net(session, noise_net_id, distributed, verbose)
 
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
