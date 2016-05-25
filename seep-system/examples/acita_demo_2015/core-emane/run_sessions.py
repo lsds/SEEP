@@ -27,6 +27,7 @@ from gen_fixed_routes import create_static_routes
 from emane_mobility import publish_loc, register_emane_ns2_model, EmaneNs2Session
 from core_msg_util import *
 from noise import create_noise_net
+from iperf_util import *
 
 
 #repo_dir = '%s/../../../..'
@@ -745,8 +746,8 @@ def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, param
     placements = get_initial_placements(params['placement'], mob)
     if placements: create_static_routes(placements, tx_range, session.sessiondir)
 
-    iperf_cxns = read_iperf_cxns(params)
-    copy_iperf_cxns(session.sessiondir, params)
+    iperf_cxns = read_iperf_cxns(script_dir, params)
+    copy_iperf_cxns(session.sessiondir, script_dir, params)
 
     for i in range(2, nodes+1):
         i_services_str = services_str
@@ -768,27 +769,6 @@ def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, param
     session.node_count="%d"%(nodes)
     session.instantiate()
     time.sleep(1000000)
-
-def read_iperf_cxns(params):
-    cxns = []
-    with open("%s/static/%s"%(script_dir, params['iperfcxns']), 'r') as cxns_file:
-        for line in cxns_file:
-            cxns.append(line.split(","))
-
-    return cxns 
-
-def copy_iperf_cxns(sessiondir, params):
-    shutil.copy("%s/static/%s"%(script_dir, params['iperfcxns']), '%s/iperf_connections.txt'%sessiondir)
-
-def has_iperf_src(node, cxns):
-    for [src, dest] in cxns:
-        if int(src) == int(node):
-            return True
-
-def has_iperf_dest(node, cxns):
-    for [src, dest] in cxns:
-        if int(dest) == int(node):
-            return True
 
 def start_query_sink_display(logfile, logdir, params):
 
