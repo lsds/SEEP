@@ -11,7 +11,11 @@ def main(node):
         log_index = "-".join(cxn)
         logfile = "iperf_src_%s.log"%(log_index.strip())
         #cmd_args = [cxn[1], cxn[2]]
-        cmd_args = ["n%s"%cxn[1].strip()]
+        if cxn[1] == "all":
+            #Noise source
+            cmd_args = ["all"]
+        else:
+            cmd_args = ["n%s"%cxn[1].strip()]
         with open(logfile, 'w') as log:
             p = subprocess.Popen(cmd + cmd_args, stdout=log, cwd=".", stderr=subprocess.STDOUT, env=os.environ.copy())
             src_processes.append(p)
