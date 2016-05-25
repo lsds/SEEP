@@ -9,7 +9,7 @@ print 'Appending script_dir to path'
 sys.path.append(script_dir)
 from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles
 from run_sessions import run_sessions
-from util import chmod_dir, pybool_to_javastr, copy_pdfs
+from util import chmod_dir, pybool_to_javastr, copy_pdfs, copy_results
 from notify import notify
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
@@ -108,6 +108,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
             print sharedir
             if not os.path.isdir(sharedir): os.mkdir(sharedir)
             copy_pdfs(logdir, sharedir)
+            copy_results(logdir, sharedir)
 
     finally:
         if params['notifyAddr']:

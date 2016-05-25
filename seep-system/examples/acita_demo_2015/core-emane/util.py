@@ -13,6 +13,11 @@ def copy_pdfs(srcdir, destdir):
         if fnmatch.fnmatch(file, '*.pdf'):
             shutil.copy("%s/%s"%(srcdir,file), destdir)
 
+def copy_results(srcdir, destdir):
+    for file in os.listdir(srcdir):
+        if fnmatch.fnmatch(file, 'all-k-*.data'):
+            shutil.copy("%s/%s"%(srcdir,file), destdir)
+
 def pybool_to_javastr(mybool):
     return "true" if mybool else "false"
 
