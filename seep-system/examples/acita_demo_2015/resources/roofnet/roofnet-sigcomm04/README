@@ -1,0 +1,94 @@
+21 September 2004
+
+These are the experiment data used for the Roofnet paper that appeared
+in SIGCOMM 2004, "Link-Level Measurements from an 802.11b Mesh Network".
+
+In each experiment, one Roofnet node sent 1500-byte broadcast packets
+as fast as possible for 90 seconds.  Meanwhile, all other nodes in the
+network listened and recorded which packets they received.
+
+The files 'sent_packets_060624xx' and 'received_packets_060624xx' are
+comma-delimited text files containing the raw results.  The sent_packets
+file lists all the packets that were sent, and the received_packets file
+lists all the packets that were received.  The summaries file provides
+average delivery rate, over the 90s, for every pair of nodes in the
+network.
+
+The node_coordinates file lists the approximate latitude and longitude
+of each of the participating nodes.
+
+
+SENT PACKETS
+  
+  The fields in the sent_packets file are:
+  
+    exp_id,link_test,test_phase,src,seq,time
+  
+  The exp_id field is the experiment ID.  The traces provided here come
+  from four experiments, 0606062400 through 0606062403, which correspond
+  to bit-rates of 1, 2, 5.5 and 11 Mbits/s respectively.
+  
+  The link_test field is different for each broadcaster's turn.  It can
+  basically be ignored, as the src field can be used to differentiate
+  between tests.
+  
+  The test_phase field can also be ignored; it's used in some other
+  experiments we've run, but isn't used for these broadcast tests.
+  
+  The src field is the node ID of the sender node.
+  
+  The seq field is a unique sequence number for each packet.
+  
+  The time field is the time at which the packet went to the outgoing
+  interface on the sender, as measured by the sender's clock.  Note that
+  the clocks on the nodes are only loosely synchronized, to within a
+  few seconds.
+  
+
+RECEIVED PACKETS
+  
+  The fields in the received_packets file are:
+  
+    exp_id,link_test,test_phase,src,dst,seq,time,signal,noise
+  
+  The exp_id, link_test, test_phase, src, and seq fields correspond to
+  the same fields in the sent packets log.
+  
+  The dst field is the node ID of the node that received this packet.
+  
+  The time field is the time at which this packet was received, as measured
+  by the receiving node's clock.
+  
+  The signal and noise fields are the signal and noise (a.k.a. 'silence')
+  values which are reported by the 802.11 card.
+ 
+
+SUMMARIES
+  
+  The fields in the summaries file are:
+  
+    exp_id,link_test,test_phase,src,dst,delivery_ratio,signal,noise
+  
+  The exp_id, link_test, test_phase, src, and dst fields are the same as
+  in the sent and received packets logs.
+  
+  The delivery_ratio is the fraction of packets sent by src that were
+  received by dst.
+  
+  The signal and noise are average values for all received packets.
+  
+
+NODE COORDINATES
+  
+  The fields in the node coordinates file are:
+  
+  node_id,latitude,longitude
+  
+  The coordinates are approximate, based on the street address of the
+  building that hosts the node.
+  
+
+QUESTIONS, COMMENTS?
+  
+  Please email roofnet-hackers@pdos.csail.mit.edu.
+
