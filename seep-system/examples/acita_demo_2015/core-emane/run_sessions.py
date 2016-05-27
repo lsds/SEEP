@@ -14,7 +14,7 @@ from core.emane.emane import EmaneGlobalModel
 from core.misc.xmlsession import savesessionxml
 from core.misc import ipaddr
 
-from emanesh.events import EventService, LocationEvent
+#from emanesh.events import EventService, LocationEvent
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
@@ -28,7 +28,7 @@ from emane_mobility import publish_loc, register_emane_ns2_model, EmaneNs2Sessio
 from core_msg_util import *
 from noise import create_noise_net
 from iperf_util import *
-
+from roofnet import *
 
 #repo_dir = '%s/../../../..'
 #svc_dir='/data/dev/seep-github/seep-system/examples/acita_demo_2015/core-emane/vldb/myservices'
@@ -207,7 +207,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if model == "Emane":
             # Gives ping range of ~915m with 1:1 pixels to m and default 802.11
             # settings (2ray).
-            session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass"
+            session.cfg['emane_models'] = "RfPipe, Ieee80211abg, Bypass, CommEffect"
             session.emane.loadmodels()
 
             #prefix = ipaddr.IPv4Prefix("10.0.0.0/32")
@@ -221,47 +221,12 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             for servername in session.broker.getserverlist():
                 session.broker.addnodemap(servername, wlan1.objid)
             """
-            #msg = session.emane.emane_config.toconfmsg(coreapi.CORE_API_CONF_MSG, wlan1, todo, values)
-            #session.emane.configure(session, msg)
-            names = EmaneIeee80211abgModel.getnames()
-            values = list(EmaneIeee80211abgModel.getdefaultvalues())
-            print 'Emane Model default names: %s'%(str(names))
-            print 'Emane Model default values: %s'%(str(values))
-            # TODO: change any of the EMANE 802.11 parameter values here
-            values[ names.index('mode') ] = '3'
-            #values[ names.index('rtsthreshold') ] = '1024'
-            values[ names.index('retrylimit') ] = '0:7'
-            #values[ names.index('retrylimit') ] = '0:3'
-            #values[ names.index('cwmin') ] = '0:16'
-            #values[ names.index('cwmax') ] = '0:2048'
-            values[ names.index('propagationmodel') ] = '2ray'
-            #values[ names.index('propagationmodel') ] = 'freespace'
-            #values[ names.index('pathlossmode') ] = '2ray'
-            #values[ names.index('multicastrate') ] = '12'
-            values[ names.index('multicastrate') ] = '4'
-            #values[ names.index('multicastrate') ] = '1'
-            #values[ names.index('unicastrate') ] = '12'
-            #values[ names.index('distance') ] = '500'
-            values[ names.index('unicastrate') ] = '4'
-            values[ names.index('txpower') ] = '-10.0'
-            #values[ names.index('txpower') ] = '-1.0'
-            values[ names.index('flowcontrolenable') ] = 'on'
-            #values[ names.index('flowcontrolenable') ] = 'off'
-            values[ names.index('flowcontroltokens') ] = '10'
-            print 'Emane Model overridden values: %s'%(str(list(values)))
-            if distributed:
-                typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
-                msg = EmaneIeee80211abgModel.toconfmsg(flags=0, nodenum=wlan1.objid,
-		     typeflags=typeflags, values=values)
-                session.broker.handlerawmsg(msg)
-
-            session.emane.setconfig(wlan1.objid, EmaneIeee80211abgModel._name, values)
-
-            if distributed:
-                #No idea why I need to call this again here with a None node but seems I have to. 
-                conf_msg = raw_emane_global_conf_msg(None)
-                session.broker.handlerawmsg(conf_msg)
-                session.confobj("emane", session, to_msg(conf_msg))
+            if params['emane_model'] == 'Ieee80211abg':
+                create_80211_net(session, wlan1, distributed, verbose)
+            elif params['emane_model'] == 'CommEffect':
+                create_commeffect_net(session, wlan1, distributed, verbose)
+            else:
+                raise Exception('Unknown emane model: %s'%str(params['emane_model']))
 
         elif model == "Basic" and not distributed:
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=verbose)
@@ -309,10 +274,20 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         workers = []
         num_workers = get_num_workers(k, nodes, params)
         print 'num_workers=', num_workers
-        placements = get_initial_placements(params['placement'], mob, params['xyScale'])
-        print 'Initial placements=',placements
-        if placements: 
-            create_static_routes(placements, tx_range, session.sessiondir)
+        if params['roofnet']:
+            roofnet_placements = parse_roofnet_locations()
+            # TODO: Random shuffle?
+            roof_node_ids = map(roofnet_placements, lambda (node, x, y) : node)
+            # node id offset = wlan1 + master -> 2
+            roof_to_nem = zip(roof_node_ids, range(3,len(roofnet_placements)+2))
+            placements = map(roofnet_placements, lambda (node, x, y) : (roof_to_nem[node], x, y))
+
+        else:
+            placements = get_initial_placements(params['placement'], mob, params['xyScale'])
+
+            print 'Initial placements=',placements
+            if placements: 
+                create_static_routes(placements, tx_range, session.sessiondir)
 
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
@@ -345,7 +320,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             noise_net_id = nodes + 1
             wlan_noise = create_noise_net(session, noise_net_id, distributed, verbose)
             noise_nodes = []
-            noise_services_str = ""
+            noise_services_str = "IPForward|DefaultRoute|DefaultMulticastRoute|SSH|IPerfSrc"
 
             for noise_node_id in range(nodes+2, nodes+2+params['noiseNodes']):
                 print 'Creating noise source with node id %d'%noise_node_id
@@ -397,6 +372,12 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             while not os.path.exists('%s/etc.ssh/ssh_host_rsa_key'%node_dir):
                 time.sleep(1)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
+
+        if params['roofnet']:
+
+            packet_losses = parse_roofnet_packetloss()
+            #TODO Only publish for nodes that exist?
+            publish_commeffects(session, packet_losses, roof_to_nem)
 
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
@@ -452,35 +433,68 @@ def remote_shutdown(session):
 	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
 	session.broker.handlerawmsg(msg)
 
-"""
-def raw_emane_global_conf_msg(wlanid):
-	global_names = EmaneGlobalModel.getnames()
-	global_values = list(EmaneGlobalModel.getdefaultvalues())
-	global_values[ global_names.index('otamanagerdevice') ] = 'ctrl1'
-	global_values[ global_names.index('otamanagergroup') ] = '224.1.2.9:45702'
-	msg = EmaneGlobalModel.toconfmsg(flags=0, nodenum=wlanid,
-				     typeflags=coreapi.CONF_TYPE_FLAGS_NONE, values=global_values)
-	print 'Created emane conf msg=%s'%str(msg)
-	return msg
+def create_80211_net(session, wlan, distributed, verbose=False):
+    names = EmaneIeee80211abgModel.getnames()
+    values = list(EmaneIeee80211abgModel.getdefaultvalues())
+    print 'Emane Model default names: %s'%(str(names))
+    print 'Emane Model default values: %s'%(str(values))
+    # TODO: change any of the EMANE 802.11 parameter values here
+    values[ names.index('mode') ] = '3'
+    #values[ names.index('rtsthreshold') ] = '1024'
+    values[ names.index('retrylimit') ] = '0:7'
+    #values[ names.index('retrylimit') ] = '0:3'
+    #values[ names.index('cwmin') ] = '0:16'
+    #values[ names.index('cwmax') ] = '0:2048'
+    values[ names.index('propagationmodel') ] = '2ray'
+    #values[ names.index('propagationmodel') ] = 'freespace'
+    #values[ names.index('pathlossmode') ] = '2ray'
+    #values[ names.index('multicastrate') ] = '12'
+    values[ names.index('multicastrate') ] = '4'
+    #values[ names.index('multicastrate') ] = '1'
+    #values[ names.index('unicastrate') ] = '12'
+    #values[ names.index('distance') ] = '500'
+    values[ names.index('unicastrate') ] = '4'
+    values[ names.index('txpower') ] = '-10.0'
+    #values[ names.index('txpower') ] = '-1.0'
+    values[ names.index('flowcontrolenable') ] = 'on'
+    #values[ names.index('flowcontrolenable') ] = 'off'
+    values[ names.index('flowcontroltokens') ] = '10'
+    print 'Emane Model overridden values: %s'%(str(list(values)))
+    if distributed:
+        typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
+        msg = EmaneIeee80211abgModel.toconfmsg(flags=0, nodenum=wlan.objid,
+     typeflags=typeflags, values=values)
+        session.broker.handlerawmsg(msg)
 
-def to_msg(raw_msg):
-        hdr = raw_msg[:coreapi.CoreMessage.hdrsiz]
-        msgtype, flags, msglen = coreapi.CoreMessage.unpackhdr(hdr)
-        msgcls = coreapi.msg_class(msgtype)
-        return msgcls(flags, hdr, raw_msg[coreapi.CoreMessage.hdrsiz:])
+    session.emane.setconfig(wlan.objid, EmaneIeee80211abgModel._name, values)
 
-def location_conf_msg(location):
-	tlvdata = ""
-	tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_OBJ, "location")
-        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_TYPE, coreapi.CONF_TYPE_FLAGS_NONE)
-        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_DATA_TYPES,
-                                            (coreapi.CONF_DATA_TYPE_STRING,))
-	vals = [ location.refxyz[0], location.refxyz[1], location.refgeo[0], location.refgeo[1], location.refgeo[2], location.refscale ]
-	vals = "|".join(map(str, vals))
-        tlvdata += coreapi.CoreConfTlv.pack(coreapi.CORE_TLV_CONF_VALUES, vals)
-        msg = coreapi.CoreConfMessage.pack(0, tlvdata)
-	return msg
-"""
+    if distributed:
+        #No idea why I need to call this again here with a None node but seems I have to. 
+        conf_msg = raw_emane_global_conf_msg(None)
+        session.broker.handlerawmsg(conf_msg)
+        session.confobj("emane", session, to_msg(conf_msg))
+
+def create_commeffect_net(session, wlan, distributed, verbose=False):
+    names = EmaneCommEffectModel.getnames()
+    values = list(EmaneCommEffectModel.getdefaultvalues())
+    values[ names.index('flowcontrolenable') ] = 'on'
+    values[ names.index('flowcontroltokens') ] = '10'
+    values[ names.index('defaultconnectivitymode') ] = 'off'
+    values[ names.index('filterfile') ] = ''
+
+    if distributed:
+        typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE
+        msg = EmaneCommEffectModel.toconfmsg(flags=0, nodenum=wlan.objid,
+     typeflags=typeflags, values=values)
+        session.broker.handlerawmsg(msg)
+
+    session.emane.setconfig(wlan.objid, EmaneCommEffectModel._name, values)
+
+    if distributed:
+        #No idea why I need to call this again here with a None node but seems I have to. 
+        conf_msg = raw_emane_global_conf_msg(None)
+        session.broker.handlerawmsg(conf_msg)
+        session.confobj("emane", session, to_msg(conf_msg))
 
 def get_num_workers(k, nodes, params):
     q = params['query']
@@ -840,6 +854,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--emaneMobility', dest='emane_mobility', default=False, action='store_true', help='Use emane location events for mobility (instead of ns2)')
     parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
     parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
+    parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
+    parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -877,6 +893,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['emaneMobility']= args.emane_mobility
     params['xyScale'] = args.xy_scale
     params['noiseNodes'] = int(args.noise_nodes)
+    params['roofnet'] = args.roofnet
+    params['emane_model'] = args.emane_model
 	
     #if args.verbose: params['verbose']='true'
 

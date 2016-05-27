@@ -365,6 +365,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
     parser.add_argument('--meanderRouting', dest='meander_routing', default=None, help='Override meander routing alg (backpressure, hash, shortestPath)')
     parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
+    parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
+    parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
 
     args=parser.parse_args()
 
@@ -423,6 +425,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['notifySmtp'] = args.notify_smtp
     params['xyScale'] = args.xy_scale
     params['noiseNodes'] = int(args.noise_nodes)
+    params['roofnet'] = args.roofnet
+    params['emane_model'] = args.emane_model
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
