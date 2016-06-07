@@ -9,6 +9,7 @@ from core.constants import *
 from core.mobility import BasicRangeModel
 from core.mobility import Ns2ScriptedMobility 
 from core.emane.ieee80211abg import EmaneIeee80211abgModel
+from core.emane.commeffect import EmaneCommEffectModel
 from core.emane.emane import EmaneGlobalModel
 #from core.misc.xmlutils import savesessionxml
 from core.misc.xmlsession import savesessionxml
@@ -277,10 +278,10 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if params['roofnet']:
             roofnet_placements = parse_roofnet_locations()
             # TODO: Random shuffle?
-            roof_node_ids = map(roofnet_placements, lambda (node, x, y) : node)
+            roof_node_ids = map(lambda (node, x, y) : node, roofnet_placements)
             # node id offset = wlan1 + master -> 2
-            roof_to_nem = zip(roof_node_ids, range(3,len(roofnet_placements)+2))
-            placements = map(roofnet_placements, lambda (node, x, y) : (roof_to_nem[node], x, y))
+            roof_to_nem = dict(zip(roof_node_ids, range(3,len(roofnet_placements)+3)))
+            placements = map(lambda (node, x, y) : (roof_to_nem[node], x, y), roofnet_placements)
 
         else:
             placements = get_initial_placements(params['placement'], mob, params['xyScale'])
@@ -375,9 +376,15 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
         if params['roofnet']:
 
-            packet_losses = parse_roofnet_packetloss()
+            packet_losses = parse_roofnet_packetloss(roof_to_nem)
             #TODO Only publish for nodes that exist?
-            publish_commeffects(session, packet_losses, roof_to_nem)
+
+            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+            time.sleep(5)
+            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+            time.sleep(5)
+            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+            time.sleep(5)
 
         print 'Waiting for a meander worker/master to terminate'
         watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
@@ -477,9 +484,10 @@ def create_80211_net(session, wlan, distributed, verbose=False):
 def create_commeffect_net(session, wlan, distributed, verbose=False):
     names = EmaneCommEffectModel.getnames()
     values = list(EmaneCommEffectModel.getdefaultvalues())
-    values[ names.index('flowcontrolenable') ] = 'on'
-    values[ names.index('flowcontroltokens') ] = '10'
+    #values[ names.index('flowcontrolenable') ] = 'on'
+    #values[ names.index('flowcontroltokens') ] = '10'
     values[ names.index('defaultconnectivitymode') ] = 'off'
+    #values[ names.index('defaultconnectivitymode') ] = 'on'
     values[ names.index('filterfile') ] = ''
 
     if distributed:
