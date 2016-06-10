@@ -1,3 +1,4 @@
+import shutil
 
 def read_iperf_cxns(script_dir, params):
     cxns = []

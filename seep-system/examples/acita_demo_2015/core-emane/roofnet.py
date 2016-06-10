@@ -35,19 +35,23 @@ def parse_roofnet_packetloss(roof_to_nem=None):
     print 'Unique nodes len=%d, ids=%s'%(len(unique_nodes), str(unique_nodes))
     return packet_losses
 
-def publish_commeffects(session, packet_losses, roof_to_nem, verbose=False):
-    print 'Publishing %d packet loss events'%len(packet_losses)
+def publish_commeffects(session, packet_losses, roof_to_nem, nem_offset=2, verbose=False):
+    if verbose: print 'Publishing %d roofnet packet loss events'%len(packet_losses)
     for (src, dest, ploss) in packet_losses:
-        print 'Publishing packet loss event %d %d %s'%(roof_to_nem[src], roof_to_nem[dest], str(ploss))
-        publish_commeffect(session, roof_to_nem[src], roof_to_nem[dest], ploss, verbose)
+        if verbose: print 'Publishing packet loss event %d %d %s'%(roof_to_nem[src], roof_to_nem[dest], str(ploss))
+        publish_commeffect(session, roof_to_nem[src], roof_to_nem[dest], ploss, nem_offset=nem_offset, verbose=verbose)
 
-def publish_commeffect(session, src, dest, packet_loss, latency=0.001, jitter=0.001, duplicate=0, unicast=11534336, broadcast=11534336, verbose=False):  
-    nem_offset = 2
+def publish_commeffect(session, src, dest, packet_loss, latency=0.001, jitter=0.001, duplicate=0, unicast=11534336, broadcast=11534336, nem_offset=2, verbose=False):  
     ce = CommEffectEvent()
 
-    if verbose: print 'Publishing commeffect event: src=%s,dest=%s,packet_loss=%s'%(str(src),str(dest),str(packet_loss))
-    ce.append(src-nem_offset, latency=latency, jitter=jitter, loss=int(100*packet_loss), duplicate=duplicate, unicast=unicast, broadcast=broadcast)
-    #ce.append(src-nem_offset, latency=latency, jitter=jitter, loss=0, duplicate=duplicate, unicast=unicast, broadcast=broadcast)
+    event_nem = src-nem_offset
+    ce.append(event_nem, latency=latency, jitter=jitter, loss=int(100*packet_loss), duplicate=duplicate, unicast=unicast, broadcast=broadcast)
+    #ce.append(event_nem, latency=latency, jitter=jitter, loss=5, duplicate=duplicate, unicast=unicast, broadcast=broadcast)
 
-    session.emane.service.publish(dest-nem_offset, ce)
+    publish_nem = dest-nem_offset
+    if verbose: print 'Publishing to nem %d with event nem %d, ce=%s'%(publish_nem, event_nem, str(ce))
+
+    session.emane.service.publish(publish_nem, ce)
+
+
 

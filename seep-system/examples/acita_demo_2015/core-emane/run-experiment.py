@@ -426,7 +426,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['xyScale'] = args.xy_scale
     params['noiseNodes'] = int(args.noise_nodes)
     params['roofnet'] = args.roofnet
-    params['emane_model'] = args.emane_model
+    params['emaneModel'] = args.emane_model
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

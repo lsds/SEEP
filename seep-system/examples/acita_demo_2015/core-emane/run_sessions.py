@@ -222,12 +222,12 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             for servername in session.broker.getserverlist():
                 session.broker.addnodemap(servername, wlan1.objid)
             """
-            if params['emane_model'] == 'Ieee80211abg':
+            if params['emaneModel'] == 'Ieee80211abg':
                 create_80211_net(session, wlan1, distributed, verbose)
-            elif params['emane_model'] == 'CommEffect':
+            elif params['emaneModel'] == 'CommEffect':
                 create_commeffect_net(session, wlan1, distributed, verbose)
             else:
-                raise Exception('Unknown emane model: %s'%str(params['emane_model']))
+                raise Exception('Unknown emane model: %s'%str(params['emaneModel']))
 
         elif model == "Basic" and not distributed:
             wlan1 = session.addobj(cls = pycore.nodes.WlanNode, name="wlan1",objid=1, verbose=verbose)
@@ -247,7 +247,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
         if params['iperf']:
             #run_basic_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
-            run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, params)
+            run_multi_source_iperf_test(session, nodes, wlan1, mob, trace_file, tx_range, params)
+
             return
 
         #Copy appropriate mapping constraints.
@@ -374,10 +375,24 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 time.sleep(1)
             os.chmod('%s/etc.ssh/ssh_host_rsa_key'%node_dir, 0700)
 
-        if params['roofnet']:
+        if params['emaneMobility'] and params['roofnet']:
 
             packet_losses = parse_roofnet_packetloss(roof_to_nem)
             #TODO Only publish for nodes that exist?
+
+            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+            time.sleep(5)
+            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+            time.sleep(5)
+            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+            time.sleep(5)
+
+        elif params['emaneMobility'] and params['emaneModel'] == "CommEffect":
+
+            #TODO Only publish for nodes that exist?
+            loss = 0.0
+            packet_losses = [(src, dest, loss) for src in range(3, nodes+1) for dest in range(3,nodes+1) if src != dest]
+            roof_to_nem = dict((n,n) for n in range(3, nodes+1))
 
             publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
             time.sleep(5)
@@ -484,9 +499,13 @@ def create_80211_net(session, wlan, distributed, verbose=False):
 def create_commeffect_net(session, wlan, distributed, verbose=False):
     names = EmaneCommEffectModel.getnames()
     values = list(EmaneCommEffectModel.getdefaultvalues())
+    print 'Emane Model default names: %s'%(str(names))
+    print 'Emane Model default values: %s'%(str(values))
     #values[ names.index('flowcontrolenable') ] = 'on'
     #values[ names.index('flowcontroltokens') ] = '10'
     values[ names.index('defaultconnectivitymode') ] = 'off'
+    #values[ names.index('defaultconnectivitymode') ] = 'on'
+    values[ names.index('receivebufferperiod') ] = '1.0'
     #values[ names.index('defaultconnectivitymode') ] = 'on'
     values[ names.index('filterfile') ] = ''
 
@@ -758,14 +777,14 @@ def run_basic_iperf_test(session, wlan1, mob, nodes, trace_file, tx_range, param
     session.instantiate()
     time.sleep(1000000)
 
-def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, params):
+def run_multi_source_iperf_test(session, nodes, wlan1, mob, trace_file, tx_range, params):
     services_str = "IPForward|SSH"
     services_str += "|%s"%params['net-routing']
     if params['quagga']: services_str += "|zebra|vtysh"
     if params['emanestats']: services_str += "|EmaneStats"
     if params['dstat']: services_str += "|dstat"
 
-    placements = get_initial_placements(params['placement'], mob)
+    placements = get_initial_placements(params['placement'], mob, params['xyScale'])
     if placements: create_static_routes(placements, tx_range, session.sessiondir)
 
     iperf_cxns = read_iperf_cxns(script_dir, params)
@@ -790,6 +809,21 @@ def run_multi_source_iperf_test(session, wlan1, mob, trace_file, tx_range, param
 
     session.node_count="%d"%(nodes)
     session.instantiate()
+
+    if params['emaneMobility'] and params['emaneModel'] == "CommEffect":
+        loss = 0.0
+        packet_losses = [(src, dest, loss) for src in range(2, nodes+1) for dest in range(2,nodes+1) if src != dest]
+        roof_to_nem = dict((n,n) for n in range(2, nodes+1))
+        print 'packet_losses=%s'%str(packet_losses)
+        print 'roof_to_nem=%s'%str(roof_to_nem)
+
+        publish_commeffects(session, packet_losses, roof_to_nem, nem_offset=1, verbose=True)
+        time.sleep(5)
+        publish_commeffects(session, packet_losses, roof_to_nem, nem_offset=1, verbose=True)
+        time.sleep(5)
+        publish_commeffects(session, packet_losses, roof_to_nem, nem_offset=1, verbose=True)
+        time.sleep(5)
+
     time.sleep(1000000)
 
 def start_query_sink_display(logfile, logdir, params):
@@ -902,7 +936,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['xyScale'] = args.xy_scale
     params['noiseNodes'] = int(args.noise_nodes)
     params['roofnet'] = args.roofnet
-    params['emane_model'] = args.emane_model
+    params['emaneModel'] = args.emane_model
 	
     #if args.verbose: params['verbose']='true'
 
