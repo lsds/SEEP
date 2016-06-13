@@ -223,9 +223,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 session.broker.addnodemap(servername, wlan1.objid)
             """
             if params['emaneModel'] == 'Ieee80211abg':
-                create_80211_net(session, wlan1, distributed, verbose)
+                create_80211_net(session, wlan1, distributed, params, verbose)
             elif params['emaneModel'] == 'CommEffect':
-                create_commeffect_net(session, wlan1, distributed, verbose)
+                create_commeffect_net(session, wlan1, distributed, params, verbose)
             else:
                 raise Exception('Unknown emane model: %s'%str(params['emaneModel']))
 
@@ -380,12 +380,20 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             packet_losses = parse_roofnet_packetloss(roof_to_nem)
             #TODO Only publish for nodes that exist?
 
-            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
-            time.sleep(5)
-            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
-            time.sleep(5)
-            publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
-            time.sleep(5)
+            if params['emaneModel'] == 'CommEffect':
+                publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+                time.sleep(5)
+                publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+                time.sleep(5)
+                publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
+                time.sleep(5)
+            else:
+                publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                time.sleep(5)
+                publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                time.sleep(5)
+                publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                time.sleep(5)
 
         elif params['emaneMobility'] and params['emaneModel'] == "CommEffect":
 
@@ -455,7 +463,7 @@ def remote_shutdown(session):
 	msg = coreapi.CoreEventMessage.pack(0, tlvdata)
 	session.broker.handlerawmsg(msg)
 
-def create_80211_net(session, wlan, distributed, verbose=False):
+def create_80211_net(session, wlan, distributed, params, verbose=False):
     names = EmaneIeee80211abgModel.getnames()
     values = list(EmaneIeee80211abgModel.getdefaultvalues())
     print 'Emane Model default names: %s'%(str(names))
@@ -467,7 +475,9 @@ def create_80211_net(session, wlan, distributed, verbose=False):
     #values[ names.index('retrylimit') ] = '0:3'
     #values[ names.index('cwmin') ] = '0:16'
     #values[ names.index('cwmax') ] = '0:2048'
-    values[ names.index('propagationmodel') ] = '2ray'
+    prop_model = 'precomputed' if params['roofnet'] else '2ray'
+    values[ names.index('propagationmodel') ] = prop_model 
+    #values[ names.index('propagationmodel') ] = '2ray'
     #values[ names.index('propagationmodel') ] = 'freespace'
     #values[ names.index('pathlossmode') ] = '2ray'
     #values[ names.index('multicastrate') ] = '12'
@@ -496,7 +506,7 @@ def create_80211_net(session, wlan, distributed, verbose=False):
         session.broker.handlerawmsg(conf_msg)
         session.confobj("emane", session, to_msg(conf_msg))
 
-def create_commeffect_net(session, wlan, distributed, verbose=False):
+def create_commeffect_net(session, wlan, distributed, params, verbose=False):
     names = EmaneCommEffectModel.getnames()
     values = list(EmaneCommEffectModel.getdefaultvalues())
     print 'Emane Model default names: %s'%(str(names))

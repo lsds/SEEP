@@ -53,5 +53,113 @@ def publish_commeffect(session, src, dest, packet_loss, latency=0.001, jitter=0.
 
     session.emane.service.publish(publish_nem, ce)
 
+def publish_pathlosses(session, packet_losses, roof_to_nem, nem_offset=2, verbose=False):
+
+    for (src, dest, pkt_loss) in packet_losses: 
+        pathloss = compute_pathloss(pkt_loss)
+        publish_pathloss(session, roof_to_nem[src]-nem_offset, roof_to_nem[dest]-nem_offset, pathloss, verbose=verbose) 
+
+def publish_pathloss(session, src_nem, dest_nem, pathloss, verbose=False):
+    ce = PathLossEvent()
+
+    ce.append(dest_nem, forward=pathloss)
+    if verbose: print 'Publishing to nem %d with event nem %d, ce=%s'%(src_nem, dest_nem, str(ce))
+
+    session.emane.service.publish(src_nem, ce)
+
+def compute_pathloss(loss, txpower=-10.0):
+    """
+    /usr/share/emane/xml/models/mac/ieee80211abg/ieee80211pcr.xml
+    128 byte packets
+    <!-- 11Mpbs -->
+    <datarate index="4">
+      <row sinr="1.0"   por="0.0"/>
+      <row sinr="2.0"   por="0.2"/>
+      <row sinr="3.0"   por="8.9"/>
+      <row sinr="4.0"   por="45.8"/>
+      <row sinr="5.0"   por="82.5"/>
+      <row sinr="6.0"   por="96.7"/>
+      <row sinr="7.0"   por="99.6"/>
+      <row sinr="8.0"   por="100.0"/>
+    </datarate>
+
+    Given a probability of reception (POR, i.e. 1-loss), first compute POR0
+
+    POR = POR0^(S1/S0)
+    where:
+    S0 = 128
+    S1 = exp_pkt_size
+
+    Note that if por = 0.0 then just return pathloss = txpower - rxSensitivity +
+    1, since packets dropped if rxPower < rxSensitivity and so set rxPower to
+    rxSensitivity-1, and hence pathloss = txpower - rxpower = txpower -
+    (rxSensitivity - 1) = txpower - rxSensitivity + 1
+
+    Next, compute the corresponding SINR for POR0 given the pcr_curve.
+  
+    Given the SINR, and since SINR = rxPower - rxSensitivity, we can compute rxPower as:
+
+        rxPower = SINR + rxSensitivity 
+
+    where:
+
+        rxSensitivity = -174 + noiseFigure + 10log(bandwidth)
+
+    bandwidth defined by configuration parameter bandwidth (default=1000000), noiseFigure defined
+    by systemnoisefigure (default=4.0). 
+    
+    So by default: 
+        rxSensitivity = -174 + 4 + 100 = -100
+        rxPower = SINR - 100
+
+    But:
+
+        rxPower = txPower + txAntennaGain + rxAntennaGain - pathloss
+
+    And so assuming 0 gain, we can compute pathloss as:
+    
+        pathloss = txPower - rxPower 
+
+    """
+
+    noise_figure = 4
+    bandwidth = 10000000
+    rx_sensitivity = -174 + noise_figure + 10 * log(bandwidth)
+    exp_pkt_size=1500
+    pcr_pkt_size=128
+
+    assert loss >= 0.0 and loss <= 1
+
+    por = 1 - loss
+    if por <= 0.0:
+        return txpower - rx_sensitivity + 1
+    else:
+        por0 = por
+        #loss = por0 ^ (exp_pkt_size / pcr_pkt_size)
+        #por0 = loss ^ (pcr_pkt_size / exp_pkt_size)
+        
+        #TODO packet size adjustment (por0)
+        sinr = get_sinr(por0)
+        assert sinr >= 1.0 and sinr <= 8.0
+        
+        rxpower = sinr + rx_sensitivity
+        pathloss = txpower - rxpower
+        return pathloss
+
+def get_sinr(por):
+    reverse_pcr_curve = [(0.0, 1.0), (0.2, 2.0), (8.9,3.0), (45.8,4.0), (82.5,
+        5.0), (96.7, 6.0), (99.6, 7.0), (100.0, 8.0)] 
+
+    #TODO interpolation
+    for i, (p, sinr) in enumerate(reverse_pcr_curve):
+        if i+1 >= len(reverse_pcr_curve):
+            return sinr
+        elif por < reverse_pcr_curve[i+1][0]:
+            return sinr
+
+    assert False
+
+    
+
 
 
