@@ -1,7 +1,7 @@
-import os,utm
+import os,utm,math
 
 from core.pycore import Session 
-from emanesh.events import EventService, CommEffectEvent
+from emanesh.events import EventService, CommEffectEvent, PathlossEvent
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -60,7 +60,7 @@ def publish_pathlosses(session, packet_losses, roof_to_nem, nem_offset=2, verbos
         publish_pathloss(session, roof_to_nem[src]-nem_offset, roof_to_nem[dest]-nem_offset, pathloss, verbose=verbose) 
 
 def publish_pathloss(session, src_nem, dest_nem, pathloss, verbose=False):
-    ce = PathLossEvent()
+    ce = PathlossEvent()
 
     ce.append(dest_nem, forward=pathloss)
     if verbose: print 'Publishing to nem %d with event nem %d, ce=%s'%(src_nem, dest_nem, str(ce))
@@ -124,7 +124,7 @@ def compute_pathloss(loss, txpower=-10.0):
 
     noise_figure = 4
     bandwidth = 10000000
-    rx_sensitivity = -174 + noise_figure + 10 * log(bandwidth)
+    rx_sensitivity = -174 + noise_figure + 10 * math.log10(bandwidth)
     exp_pkt_size=1500
     pcr_pkt_size=128
 
