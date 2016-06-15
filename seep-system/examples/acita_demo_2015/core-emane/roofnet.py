@@ -1,4 +1,4 @@
-import os,utm,math
+import os,utm,math,numpy
 
 from core.pycore import Session 
 from emanesh.events import EventService, CommEffectEvent, PathlossEvent
@@ -125,8 +125,8 @@ def compute_pathloss(loss, txpower=-10.0):
     noise_figure = 4
     bandwidth = 10000000
     rx_sensitivity = -174 + noise_figure + 10 * math.log10(bandwidth)
-    exp_pkt_size=1500
-    pcr_pkt_size=128
+    exp_pkt_size=1500.0
+    pcr_pkt_size=128.0
 
     assert loss >= 0.0 and loss <= 1
 
@@ -134,11 +134,13 @@ def compute_pathloss(loss, txpower=-10.0):
     if por <= 0.0:
         return txpower - rx_sensitivity + 1
     else:
-        por0 = por
-        #loss = por0 ^ (exp_pkt_size / pcr_pkt_size)
-        #por0 = loss ^ (pcr_pkt_size / exp_pkt_size)
+        #por0 = por
+
+        #Packet size adjustment (por0)
+        # por = por0 ^ (exp_pkt_size / pcr_pkt_size)
+        # -> por0 = por ^ (pcr_pkt_size / exp_pkt_size)
+        por0 = math.pow(por, pcr_pkt_size / exp_pkt_size)
         
-        #TODO packet size adjustment (por0)
         sinr = get_sinr(por0)
         assert sinr >= 1.0 and sinr <= 8.0
         
@@ -150,6 +152,12 @@ def get_sinr(por):
     reverse_pcr_curve = [(0.0, 1.0), (0.2, 2.0), (8.9,3.0), (45.8,4.0), (82.5,
         5.0), (96.7, 6.0), (99.6, 7.0), (100.0, 8.0)] 
 
+    x = map(lambda (a,b): a, reverse_pcr_curve)
+    y = map(lambda (a,b): b, reverse_pcr_curve)
+
+    return numpy.interp(por, x, y)
+
+    """
     #TODO interpolation
     for i, (p, sinr) in enumerate(reverse_pcr_curve):
         if i+1 >= len(reverse_pcr_curve):
@@ -158,6 +166,7 @@ def get_sinr(por):
             return sinr
 
     assert False
+    """
 
     
 
