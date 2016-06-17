@@ -147,7 +147,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         else: 
             session_cfg['controlnet'] = "172.16.1.0/24"
 
-        if distributed and params['emaneMobility']: session = EmaneNs2Session(cfg=session_cfg, persistent=True)
+        if distributed and params['emaneMobility'] and mob > 0.0: session = EmaneNs2Session(cfg=session_cfg, persistent=True)
         else: session = pycore.Session(cfg=session_cfg, persistent=True)
 
         session.master=True
@@ -283,6 +283,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             # node id offset = wlan1 + master -> 2
             roof_to_nem = dict(zip(roof_node_ids, range(3,len(roofnet_placements)+3)))
             placements = map(lambda (node, x, y) : (roof_to_nem[node], x, y), roofnet_placements)
+            print 'Roofnet placements=%s'%str(placements)
 
         else:
             placements = get_initial_placements(params['placement'], mob, params['xyScale'])
@@ -362,7 +363,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             savesessionxml(session, '%s/session.xml'%session.sessiondir, '1.0')
 
         print 'Instantiating session ',exp_session, ' with CORE session id', session.sessionid
-        if distributed and params['emaneMobility']: session.instantiate(wlan1, routers)  
+        if distributed and params['emaneMobility'] and mob > 0.0: session.instantiate(wlan1, routers)  
         else: session.instantiate()
 	#remote_instantiate(session)
 
@@ -389,10 +390,13 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 time.sleep(5)
             else:
                 publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
                 publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
                 publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
 
         elif params['emaneMobility'] and params['emaneModel'] == "CommEffect":
@@ -645,6 +649,7 @@ def create_remote_node(i, session, slave, services_str, wlan, pos, ip_offset=-1,
                                             prefix.prefixlen)
         msg = coreapi.CoreLinkMessage.pack(coreapi.CORE_API_ADD_FLAG, tlvdata)
         session.broker.handlerawmsg(msg)
+        print 'Created remote node n%d (no inf) with initial pos=(%.1f,%.1f)'%(i,pos[0], pos[1])
         return n
 
 def create_node_map(ns_nums, nodes):

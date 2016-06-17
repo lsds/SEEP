@@ -1,20 +1,28 @@
 import os,utm,math,numpy
 
 from core.pycore import Session 
-from emanesh.events import EventService, CommEffectEvent, PathlossEvent
+from emanesh.events import EventService, CommEffectEvent, PathlossEvent, LocationEvent
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
 def parse_roofnet_locations():
     loc_file = '%s/../resources/roofnet/roofnet-sigcomm04/node_coordinates_06060624xx'%script_dir
     locs = []
+    mins = None
     with open(loc_file, 'r') as lf:
         for line in lf:
             [nodeid, lat, lon] = line.split(',')
             (x,y,zone_num,zone_letter) = utm.from_latlon(float(lat), float(lon))
+            #locs.append((int(nodeid), x/10000.0, y/10000.0)) 
             locs.append((int(nodeid), x, y)) 
+            if not mins: mins = [x, y]
+            else: 
+                if x < mins[0]: mins[0] = x
+                if y < mins[1]: mins[1] = y
 
-    return locs
+    translated_locs = map(lambda(n, x, y): (n, x - mins[0] + 1, y - mins[1] + 1), locs)
+    print 'Translated roofnet locs from: %s\nTo: %s'%(locs, translated_locs)
+    return translated_locs 
 
 def parse_roofnet_packetloss(roof_to_nem=None):
     summary_file =  '%s/../resources/roofnet/roofnet-sigcomm04/summaries_06060624xx'%script_dir 
@@ -169,6 +177,18 @@ def get_sinr(por):
     """
 
     
+def publish_locations(session, roofnet_placements, roof_to_nem, nem_offset=2, verbose=False):
+    for (n, x, y) in roofnet_placements: 
+        publish_loc(roof_to_nem[n]-nem_offset, x, y, 0, session, verbose=verbose) 
+
+def publish_loc(n, x, y, z, session, verbose=False):
+    loc = LocationEvent() 
+    lat,lon,alt = session.location.getgeo(x, y, z)
+
+    if verbose: print 'Publishing location event: lat=%s,lon=%s,alt=%s'%(str(lat),str(lon),str(alt))
+    loc.append(n, latitude=lat,longitude=lon, altitude=alt)
+
+    session.emane.service.publish(0, loc)
 
 
 

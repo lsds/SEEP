@@ -27,7 +27,8 @@ def main(ks,variables,sessions,params,plot_time_str=None):
         data_dir = '%s/log'%script_dir
         params['daemon_server'] = get_daemon_server()
 
-        session_ids = [sessions] if params['specific'] else range(0,sessions)
+        session_ids = map(int, sessions.split(",")) if params['specific'] else range(0,int(sessions))
+        print 'Experiment session ids=%s'%str(session_ids)
         if plot_time_str:
             time_str = plot_time_str
             with open("%s/%s/plotOnly-cmdline.txt"%(data_dir,time_str), 'w') as f:
@@ -78,8 +79,8 @@ def main(ks,variables,sessions,params,plot_time_str=None):
             for k in ks:
                 if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1:
                     for mob in variables['mobility']:
-                        plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
-                        plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, sessions, time_str, script_dir, data_dir, params)
+                        plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, len(session_ids), time_str, script_dir, data_dir, params)
+                        plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, len(session_ids), time_str, script_dir, data_dir, params)
 
                         for session in session_ids:
                             plot_fixed_kmobsession('cum_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
@@ -372,7 +373,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
 
     ks=map(lambda x: int(x), args.ks.split(','))
     pts=map(lambda x: float(x), args.pts.split(','))
-    sessions=int(args.sessions)
+    sessions=args.sessions
     nodes=map(lambda x: int(x), args.nodes.split(','))
     dimension=map(lambda x: int(x), args.dimension.split(','))
     cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
