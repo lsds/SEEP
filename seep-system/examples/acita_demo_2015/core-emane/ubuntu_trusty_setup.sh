@@ -204,6 +204,17 @@ wget http://filestore.nicta.com.au/Comms/OpenNICTA/data/crop/P2E.tar.xz
 tar xf P2E.tar.xz
 popd
 
+#pushd /tmp
+#wget http://filestore.nicta.com.au/Comms/OpenNICTA/data/orig/P2E_S1.tar.xz
+#tar xf P2E_S1.tar.xz
+#tar xf P2E_S1_C3.tar.xz
+#tar xf P2E_S1_C3.1.tar.xz
+#popd
+#pushd ../resources/images
+#cp /tmp/P2E_S1_C3.1/000021*.jpg .
+#rm *.pgm
+#popd
+
 pushd ../../../..
 sudo chown -R $USER:$USER .
 popd
