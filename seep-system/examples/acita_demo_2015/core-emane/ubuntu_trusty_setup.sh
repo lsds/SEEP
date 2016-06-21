@@ -194,6 +194,8 @@ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get -y install gcc g++
 #sudo apt-get install libstdc++6
+#For facerec query.
+sudo apt-get -y install libv4l-dev
 
 pushd ../../../..
 sudo chown -R $USER:$USER .
