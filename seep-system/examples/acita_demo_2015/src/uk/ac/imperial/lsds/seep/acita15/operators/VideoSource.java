@@ -15,6 +15,7 @@ import java.io.FilenameFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +38,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import org.imgscalr.Scalr;
 
 /*
 import com.googlecode.javacpp.FloatPointer;
@@ -74,6 +77,7 @@ public class VideoSource implements StatelessOperator {
 	//private final String testFramesDir = "images/chokepoint";
 	private final String extractedFilesDir = "resources/source";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
+	private final boolean resizeImages = true;
 	
 	public void setUp() {
 		System.out.println("Setting up VIDEO_SOURCE operator with id="+api.getOperatorId());
@@ -258,6 +262,25 @@ public class VideoSource implements StatelessOperator {
 	
 				buffer.flush();
 				frameArr[i] = buffer.toByteArray();
+				buffer.close();
+				is.close();
+
+				if (resizeImages)
+				{
+					int originalSize = frameArr[i].length;
+					is = new ByteArrayInputStream(frameArr[i]);
+					buffer = new ByteArrayOutputStream();
+
+					BufferedImage original = ImageIO.read(is);	
+					if (original == null) { throw new RuntimeException("Error reading byte array to buffered image."); }
+
+					ImageIO.write(Scalr.resize(original, original.getWidth() / 2), "jpg", buffer);
+					buffer.flush();
+					frameArr[i] = buffer.toByteArray();	
+					logger.debug("Reduced image from "+originalSize+" to "+frameArr[i].length+" bytes");
+					buffer.close();
+					is.close();
+				}
 			}
 			catch (IOException e) { throw new RuntimeException(e); }
 			if (frameArr[i] == null) {

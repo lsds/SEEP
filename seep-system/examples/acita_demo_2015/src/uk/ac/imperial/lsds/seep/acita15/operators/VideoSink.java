@@ -64,6 +64,7 @@ public class VideoSink implements StatelessOperator {
 		logger.info("SINK expecting "+numTuples+" tuples.");
 		frameConverter = new Java2DFrameConverter();
 		iplConverter = new OpenCVFrameConverter.ToIplImage();
+		recordImages = Boolean.parseBoolean(GLOBALS.valueFor("recordImages"));
 		connectToDisplay();
 	}
 	

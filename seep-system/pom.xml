@@ -92,6 +92,7 @@
 	  <groupId>org.bytedeco</groupId>
 	  <artifactId>javacv</artifactId>
 	  <version>0.11</version>
+	  <!--<version>1.2</version>-->
   </dependency>
   <dependency>
 	<groupId>com.twelvemonkeys.imageio</groupId>
@@ -103,6 +104,12 @@
     <artifactId>kryo-serializers</artifactId>
     <version>0.37</version>
 </dependency>
+<dependency>
+    <groupId>org.imgscalr</groupId>
+    <artifactId>imgscalr-lib</artifactId>
+    <version>4.2</version>
+</dependency>
+
   </dependencies>
   
   <build>
