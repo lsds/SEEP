@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
+import uk.ac.imperial.lsds.seep.GLOBALS;
+import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -39,6 +41,7 @@ import java.awt.image.BufferedImage;
 
 import static org.bytedeco.javacpp.opencv_contrib.*;
 import static org.bytedeco.javacpp.opencv_core.*;
+//import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 
@@ -51,6 +54,8 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	private static final Logger logger = LoggerFactory.getLogger(SEEPFaceRecognizer.class);
 	private int processed = 0;
 	private PersonRecognizer personRecognizer = null;
+	private static final String repoDir = GLOBALS.valueFor("repoDir");	
+	private Stats stats;
 	
 	public void processData(DataTuple data) {
 		long tProcessStart = System.currentTimeMillis();
@@ -82,6 +87,8 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		}
 		
 		logger.debug("Face recognizer processed "+width+"x"+height+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		//stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
+		stats.add(System.currentTimeMillis(), value.length);
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -102,11 +109,12 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up FACE_RECOGNIZER operator with id="+api.getOperatorId());
-		//String trainingDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/training";
+		stats = new Stats(api.getOperatorId());
+		//String trainingDir = repoDir + "/seep-system/examples/acita_demo_2015/resources/training";
 		String trainingDir = "training";
-		//String trainingList = "at.txt"
+		//String trainingList = "at.txt";
 		String trainingList = "chokepoint.txt";
-		String testImageFilename = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
+		String testImageFilename = repoDir + "/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
 		personRecognizer = new PersonRecognizer(api.getOperatorId(), trainingDir, trainingList, testImageFilename);
 		//recognizer.testSample();
 		//personRecognizer.testATT();

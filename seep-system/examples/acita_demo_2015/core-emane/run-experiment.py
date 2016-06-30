@@ -262,13 +262,14 @@ def get_tput(logdir):
 def get_latency(logdir):
     #TODO: Handle float for latency in regex!
     regex = latency_regex
-    with open('%s/latency.txt'%logdir, 'r') as latency_log:
+    logfilename = '%s/latency.txt'%logdir
+    with open(logfilename, 'r') as latency_log:
         for line in latency_log:
             match = re.search(regex, line)
             if match:
                 return float(match.group(1))
             
-    raise Exception("Could not find %s% latency in %s"%(latency_percentile, logfilename))
+    raise Exception("Could not find %s latency in %s"%(latency_percentile, logfilename))
 
 def get_raw_latencies(logdir):
     result = []

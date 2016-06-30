@@ -54,6 +54,7 @@ public class VideoSink implements StatelessOperator {
 	private boolean recordImages = false;
     private Java2DFrameConverter frameConverter = null;
     private OpenCVFrameConverter iplConverter = null; 
+	private boolean exitOnFinished = true;
     
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
@@ -102,9 +103,10 @@ public class VideoSink implements StatelessOperator {
 					+",total bytes="+totalBytes
 					+",t="+System.currentTimeMillis()
 					+",tuple size bytes="+tupleSize);
-			//System.exit(0);
+			System.exit(0);
 		}
-		stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
+		//stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
+		stats.add(System.currentTimeMillis(), value.length);
 		api.ack(dt);
 	}
 	
@@ -117,7 +119,8 @@ public class VideoSink implements StatelessOperator {
 				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
 				+",latency="+ (rxts - dt.getPayload().instrumentation_ts)
-				+",bytes="+ bytes);
+				+",bytes="+ bytes
+				+",latencyBreakdown=0;0");
 	}
 	
 	public void processData(List<DataTuple> arg0) {

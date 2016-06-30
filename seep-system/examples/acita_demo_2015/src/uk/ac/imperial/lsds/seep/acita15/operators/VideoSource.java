@@ -70,8 +70,8 @@ public class VideoSource implements StatelessOperator {
 	
 	private IplImage[] testIplFrames = null;
 	private byte[][] testRawFrames = null;
-	//private final String testFramesDir = "images";
-	private final String testFramesDir = "images/chokepoint";
+	private final String testFramesDir = "images";
+	//private final String testFramesDir = "images/chokepoint";
 	private final String extractedFilesDir = "resources/source";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
 	
@@ -85,90 +85,103 @@ public class VideoSource implements StatelessOperator {
 	}
 
 	public void processData(DataTuple dt) {
-		Map<String, Integer> mapper = api.getDataMapper();
-		DataTuple data = new DataTuple(mapper, new TuplePayload());
-		
-		long tupleId = 0;
-		
-		boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
-		long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
-		//int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
-		boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
-		long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
-		long interFrameDelay = 1000 / frameRate;
-		logger.info("Source inter-frame delay="+interFrameDelay);
-		
-		final long tStart = System.currentTimeMillis();
-		logger.info("Source sending started at t="+tStart);
-		logger.info("Source sending started at t="+tStart);
-		logger.info("Source sending started at t="+tStart);
-		
-		//String testFramesDir = GLOBALS.valueFor("testFramesDir");
-		//String imgFileExt = GLOBALS.valueFor("imgFileExt");
-		//String testFramesDir = "images";
-		//TODO: Load resources from jar.
-		//String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
-		//String testFramesDir = "images";
-		
-		//logger.info("Loading test images...");
-		//byte[][] testFrames = loadImagesFromJar(testFramesDir);
-		//IplImage[] testFrames = loadGreyImages(testFramesDir);
-		
-		//logger.info("Loaded "+testFrames.length+" test images.");
-		int currentFrame = 0;
-		
-		while(sendIndefinitely || tupleId < numTuples)
-		{
-			/*
-			Mat img = testFrames[currentFrame];
-			byte[] matBytes = new byte[safeLongToInt(img.total())*img.channels()];
-			img.data().get(matBytes);
-			DataTuple output = data.newTuple(tupleId, matBytes, img.rows(), img.cols(), img.type(), 0, 0, 0, 0);
-			*/
-			DataTuple output = null;
 
-			if (loadIplImages)
-			{
-				IplImage iplImage = testIplFrames[currentFrame];
-				byte[] iplBytes = new byte[iplImage.imageSize()];
-				iplImage.getByteBuffer().get(iplBytes);
-				//TODO: Rows, cols, type?
-				//output = data.newTuple(tupleId, iplBytes, iplImage.rows(), iplImage.cols(), iplImage.type(), 0, 0, 0, 0);
-				currentFrame = (currentFrame + 1) % testIplFrames.length;
-			}
-			else
-			{
-				output = data.newTuple(tupleId, testRawFrames[currentFrame], 0, 0, 1, 0, 0, 0, 0, "");
-				currentFrame = (currentFrame + 1) % testRawFrames.length;
-			}
- 
-			output.getPayload().timestamp = tupleId;
-			if (tupleId % 1000 == 0)
-			{
-				logger.info("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
-			}
-			else
-			{
-				logger.debug("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
-			}
-			api.send_highestWeight(output);
+		try
+		{
+
+			Map<String, Integer> mapper = api.getDataMapper();
+			DataTuple data = new DataTuple(mapper, new TuplePayload());
 			
-			tupleId++;
+			long tupleId = 0;
 			
-			long tNext = tStart + (tupleId * interFrameDelay);
-			long tNow = System.currentTimeMillis();
-			if (tNext > tNow && rateLimitSrc)
+			boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
+			long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+			//int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
+			boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
+			long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
+			long interFrameDelay = 1000 / frameRate;
+			logger.info("Source inter-frame delay="+interFrameDelay);
+			
+			final long tStart = System.currentTimeMillis();
+			logger.info("Source sending started at t="+tStart);
+			logger.info("Source sending started at t="+tStart);
+			logger.info("Source sending started at t="+tStart);
+			
+			//String testFramesDir = GLOBALS.valueFor("testFramesDir");
+			//String imgFileExt = GLOBALS.valueFor("imgFileExt");
+			//String testFramesDir = "images";
+			//TODO: Load resources from jar.
+			//String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
+			//String testFramesDir = "images";
+			
+			//logger.info("Loading test images...");
+			//byte[][] testFrames = loadImagesFromJar(testFramesDir);
+			//IplImage[] testFrames = loadGreyImages(testFramesDir);
+			
+			//logger.info("Loaded "+testFrames.length+" test images.");
+			int currentFrame = 0;
+			
+			while(sendIndefinitely || tupleId < numTuples)
 			{
-				logger.debug("Source wait to send next frame="+(tNext-tNow));
-				try {
-					Thread.sleep(tNext - tNow);
-				} 
-				catch (InterruptedException e) {
-					e.printStackTrace();
-				}				
+				/*
+				Mat img = testFrames[currentFrame];
+				byte[] matBytes = new byte[safeLongToInt(img.total())*img.channels()];
+				img.data().get(matBytes);
+				DataTuple output = data.newTuple(tupleId, matBytes, img.rows(), img.cols(), img.type(), 0, 0, 0, 0);
+				*/
+				DataTuple output = null;
+
+				if (loadIplImages)
+				{
+					IplImage iplImage = testIplFrames[currentFrame];
+					byte[] iplBytes = new byte[iplImage.imageSize()];
+					iplImage.getByteBuffer().get(iplBytes);
+					//TODO: Rows, cols, type?
+					//output = data.newTuple(tupleId, iplBytes, iplImage.rows(), iplImage.cols(), iplImage.type(), 0, 0, 0, 0);
+					currentFrame = (currentFrame + 1) % testIplFrames.length;
+				}
+				else
+				{
+					output = data.newTuple(tupleId, testRawFrames[currentFrame], 0, 0, 1, 0, 0, 0, 0, "");
+					currentFrame = (currentFrame + 1) % testRawFrames.length;
+				}
+	 
+				output.getPayload().timestamp = tupleId;
+				if (tupleId % 1000 == 0)
+				{
+					logger.info("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
+				}
+				else
+				{
+					logger.debug("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
+				}
+				api.send_highestWeight(output);
+				
+				tupleId++;
+				
+				long tNext = tStart + (tupleId * interFrameDelay);
+				long tNow = System.currentTimeMillis();
+				if (tNext > tNow && rateLimitSrc)
+				{
+					logger.debug("Source wait to send next frame="+(tNext-tNow));
+					try {
+						Thread.sleep(tNext - tNow);
+					} 
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}				
+				}
 			}
 		}
-		System.exit(0);
+		catch(Exception e)
+		{
+			logger.error("Exception in video source: "+e);		
+			e.printStackTrace();
+		}
+		finally
+		{
+			System.exit(0);
+		}
 	}
 	
 	public void processData(List<DataTuple> arg0) {

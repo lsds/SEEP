@@ -51,6 +51,7 @@ import static org.bytedeco.javacpp.opencv_highgui.*;
 
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
+import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
 
 public class FaceDetector implements StatelessOperator{
 
@@ -67,6 +68,7 @@ public class FaceDetector implements StatelessOperator{
 	private final double SCALE_FACTOR = 1.1;
 	private final double RELATIVE_FACE_SIZE = 0.2;
 	private boolean recordImages = false;
+	private Stats stats;
 	
 	public void processData(DataTuple data) {
 		
@@ -96,7 +98,7 @@ public class FaceDetector implements StatelessOperator{
 		
 		if (bbox != null)
 		{
-			logger.debug("Found face at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+			logger.debug("Found face for "+ data.getLong("tupleId") + " at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3], "");
 			if (recordImages)
 			{
@@ -105,6 +107,7 @@ public class FaceDetector implements StatelessOperator{
 		}
 		else	
 		{
+			logger.debug("No face found for "+data.getLong("tupleId"));
 			outputTuple = data.setValues(tupleId, value, rows, cols, type, 0, 0, 0, 0, "");
 		}
 		
@@ -124,6 +127,8 @@ public class FaceDetector implements StatelessOperator{
 		}
 		
 		logger.debug("Face detector processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		stats.add(System.currentTimeMillis(), value.length);
+		//stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -144,6 +149,7 @@ public class FaceDetector implements StatelessOperator{
 	
 	public void setUp() {
 		System.out.println("Setting up FACE_DETECTOR operator with id="+api.getOperatorId());
+		stats = new Stats(api.getOperatorId());
 		//testFaceDetection();
 		try
 		{
