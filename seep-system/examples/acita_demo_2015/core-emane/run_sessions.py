@@ -361,6 +361,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='n': var = nodes 
         if var_suffix=='d': var = params['x']
         if var_suffix=='c': var = params['defaultProcessingDelay']
+        if var_suffix=='r': var = params['frameRate']
  
 
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
@@ -398,13 +399,13 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
                 time.sleep(5)
             else:
-                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(txratemode), verbose=True)
+                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(params['txratemode']), verbose=True)
                 if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
-                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(txratemode), verbose=True)
+                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(params['txratemode']), verbose=True)
                 if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
-                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(txratemode), verbose=True)
+                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(params['txratemode']), verbose=True)
                 if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
 

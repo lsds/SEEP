@@ -65,6 +65,9 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 for p in ['tput_vs_cpudelay_stddev', 'latency_vs_cpudelay_stddev', 
                         'rel_tput_vs_cpudelay_stddev', 'rel_latency_vs_cpudelay_stddev']:
                     plot(p, time_str, script_dir, data_dir)
+            elif len(variables['srcrates']) > 1:
+                for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
             else:
                 plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
                 plot('m1_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
@@ -77,7 +80,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
         # Do any plots that summarize all sessions for fixed k and mob.
 
             for k in ks:
-                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1:
+                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['srcrates']) <=1 :
                     for mob in variables['mobility']:
                         plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, len(session_ids), time_str, script_dir, data_dir, params)
                         plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, len(session_ids), time_str, script_dir, data_dir, params)
@@ -149,6 +152,11 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
             for cpudelay in variables['cpudelay']:
                 params['defaultProcessingDelay'] = cpudelay 
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'c', sessions, params)
+        elif len(variables['srcrates']) > 1:
+            params['rateLimitSrc'] = 'true'
+            for srcrate in variables['srcrates']:
+                params['frameRate'] = srcrate 
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'r', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -166,6 +174,9 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
     elif len(variables['cpudelay']) > 1:
         var_vals = variables['cpudelay']
         var_suffix = 'c'
+    elif len(variables['srcrates']) > 1:
+        var_vals = variables['srcrates']
+        var_suffix = 'r'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -370,6 +381,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
     parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
     parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
+    parser.add_argument('--srcRates', dest='src_rates', default='', help='Fixed frame rates for sources to send at.')
 
     args=parser.parse_args()
 
@@ -379,9 +391,10 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     nodes=map(lambda x: int(x), args.nodes.split(','))
     dimension=map(lambda x: int(x), args.dimension.split(','))
     cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
+    srcrates=map(lambda x: int(x), args.src_rates.split(','))
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
-            "cpudelay" : cpudelay}
+            "cpudelay" : cpudelay, "srcrates": srcrates}
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))

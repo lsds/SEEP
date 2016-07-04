@@ -20,8 +20,8 @@ def parse_roofnet_locations():
                 if x < mins[0]: mins[0] = x
                 if y < mins[1]: mins[1] = y
 
-    translated_locs = map(lambda(n, x, y): (n, x - mins[0] + 1, y - mins[1] + 1), locs)
-    print 'Translated roofnet locs from: %s\nTo: %s'%(locs, translated_locs)
+    translated_locs = map(lambda(n, x, y): (n, x - mins[0] + 10, y - mins[1] + 10), locs)
+    print 'Translated roofnet locs from: %s\nTo: %s'%(str(locs), str(translated_locs))
     return translated_locs 
 
 def parse_roofnet_packetloss(roof_to_nem=None):
@@ -61,10 +61,10 @@ def publish_commeffect(session, src, dest, packet_loss, latency=0.001, jitter=0.
 
     session.emane.service.publish(publish_nem, ce)
 
-def publish_pathlosses(session, packet_losses, roof_to_nem, nem_offset=2, verbose=False):
+def publish_pathlosses(session, packet_losses, roof_to_nem, nem_offset=2, txratemode=4, verbose=False):
 
     for (src, dest, pkt_loss) in packet_losses: 
-        pathloss = compute_pathloss(pkt_loss)
+        pathloss = compute_pathloss(pkt_loss,txratemode=txratemode)
         publish_pathloss(session, roof_to_nem[src]-nem_offset, roof_to_nem[dest]-nem_offset, pathloss, verbose=verbose) 
 
 def publish_pathloss(session, src_nem, dest_nem, pathloss, verbose=False):
@@ -75,7 +75,7 @@ def publish_pathloss(session, src_nem, dest_nem, pathloss, verbose=False):
 
     session.emane.service.publish(src_nem, ce)
 
-def compute_pathloss(loss, txpower=-10.0):
+def compute_pathloss(loss, txpower=-10.0, txratemode=4):
     """
     /usr/share/emane/xml/models/mac/ieee80211abg/ieee80211pcr.xml
     128 byte packets
@@ -89,6 +89,17 @@ def compute_pathloss(loss, txpower=-10.0):
       <row sinr="6.0"   por="96.7"/>
       <row sinr="7.0"   por="99.6"/>
       <row sinr="8.0"   por="100.0"/>
+    </datarate>
+    <!-- 54Mpbs -->
+    <datarate index="12">
+      <row sinr="17.0"  por="0.0"/>
+      <row sinr="18.0"  por="0.2"/>
+      <row sinr="19.0"  por="5.7"/>
+      <row sinr="20.0"  por="32.4"/>
+      <row sinr="21.0"  por="71.3"/>
+      <row sinr="22.0"  por="92.4"/>
+      <row sinr="23.0"  por="99.9"/>
+      <row sinr="24.0"  por="100.0"/>
     </datarate>
 
     Given a probability of reception (POR, i.e. 1-loss), first compute POR0
@@ -136,6 +147,18 @@ def compute_pathloss(loss, txpower=-10.0):
     exp_pkt_size=1500.0
     pcr_pkt_size=128.0
 
+    reverse_pcr_curve_11 = [(0.0, 1.0), (0.2, 2.0), (8.9,3.0), (45.8,4.0), (82.5,
+        5.0), (96.7, 6.0), (99.6, 7.0), (100.0, 8.0)] 
+	
+    reverse_pcr_curve_54 = [(0.0, 17.0), (0.2, 18.0), (5.7,19.0), (32.4,20.0), (71.3,
+        21.0), (92.4, 22.0), (99.9, 23.0), (100.0, 24.0)] 
+
+    if txratemode == 12:
+        reverse_pcr_curve = reverse_pcr_curve_54
+    elif txratemode == 4:
+        reverse_pcr_curve = reverse_pcr_curve_11
+    else: raise Exception("Unknown txratemode: %s"%str(txratemode)) 
+
     assert loss >= 0.0 and loss <= 1
 
     por = 1 - loss
@@ -149,16 +172,15 @@ def compute_pathloss(loss, txpower=-10.0):
         # -> por0 = por ^ (pcr_pkt_size / exp_pkt_size)
         por0 = math.pow(por, pcr_pkt_size / exp_pkt_size)
         
-        sinr = get_sinr(por0)
-        assert sinr >= 1.0 and sinr <= 8.0
+        sinr = get_sinr(por0, reverse_pcr_curve)
+        assert sinr >= reverse_pcr_curve[0][1] and sinr <= reverse_pcr_curve[len(reverse_pcr_curve)-1][1]
         
         rxpower = sinr + rx_sensitivity
         pathloss = txpower - rxpower
         return pathloss
 
-def get_sinr(por):
-    reverse_pcr_curve = [(0.0, 1.0), (0.2, 2.0), (8.9,3.0), (45.8,4.0), (82.5,
-        5.0), (96.7, 6.0), (99.6, 7.0), (100.0, 8.0)] 
+def get_sinr(por, reverse_pcr_curve):
+
 
     x = map(lambda (a,b): a, reverse_pcr_curve)
     y = map(lambda (a,b): b, reverse_pcr_curve)
