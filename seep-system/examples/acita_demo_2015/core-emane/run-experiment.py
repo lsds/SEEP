@@ -66,6 +66,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                         'rel_tput_vs_cpudelay_stddev', 'rel_latency_vs_cpudelay_stddev']:
                     plot(p, time_str, script_dir, data_dir)
             elif len(variables['srcrates']) > 1:
+                record_tput_vs_lat_statistics(time_str, data_dir)
                 for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
                     plot(p, time_str, script_dir, data_dir)
             else:
@@ -249,6 +250,18 @@ def record_fixed_kvar_statistics(k, var, var_suffix, values, time_str, data_dir,
 	for (p, value) in cum_distribution: 
             logline = '%.2f %d\n'%(p,value)
             cum_fixed_kvar_plotdata.write(logline)
+
+def record_tput_vs_lat_statistics(time_str, data_dir):
+    # Read in all-k-tput & all-k-lat and merge into all-k-tput-vs-lat.data
+    with open('%s/%s/all-k-tput.data'%(data_dir,time_str),'r') as all_k_tput_plotdata:
+        with open('%s/%s/all-k-lat.data'%(data_dir,time_str),'r') as all_k_lat_plotdata:
+           tput_lines = all_k_tput_plotdata.readlines()
+           lat_lines = all_k_lat_plotdata.readlines()
+           if len(tput_lines) != len(lat_lines): raise Exception("Logic error - mismatching tput vs lat lists")
+           joint_lines = map(lambda (tput,lat): tput.strip()+" "+lat, zip(tput_lines, lat_lines))
+           with open('%s/%s/all-k-tput-vs-lat.data'%(data_dir, time_str), 'w') as all_k_tput_vs_lat_plotdata:
+               for joint_line in joint_lines: 
+                    all_k_tput_vs_lat_plotdata.write(joint_line) 
 
 def get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_metric_fn):
     metrics = {} 
