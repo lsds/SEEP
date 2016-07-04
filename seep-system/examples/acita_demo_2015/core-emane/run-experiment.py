@@ -369,6 +369,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
     parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
     parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
+    parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
 
     args=parser.parse_args()
 
@@ -429,6 +430,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['noiseNodes'] = int(args.noise_nodes)
     params['roofnet'] = args.roofnet
     params['emaneModel'] = args.emane_model
+    params['txratemode'] = args.txratemode
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

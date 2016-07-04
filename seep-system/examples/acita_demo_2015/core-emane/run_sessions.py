@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys,os,time,re,argparse,math,shutil,subprocess,socket
+import sys,os,time,re,argparse,math,shutil,subprocess,socket,random
 
 
 from core import pycore
@@ -278,11 +278,20 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         print 'num_workers=', num_workers
         if params['roofnet']:
             roofnet_placements = parse_roofnet_locations()
-            # TODO: Random shuffle?
             roof_node_ids = map(lambda (node, x, y) : node, roofnet_placements)
             # node id offset = wlan1 + master -> 2
-            roof_to_nem = dict(zip(roof_node_ids, range(3,len(roofnet_placements)+3)))
-            placements = map(lambda (node, x, y) : (roof_to_nem[node], x, y), roofnet_placements)
+            random.seed(int(exp_session))
+            shuffle = range(3,len(roofnet_placements)+3)
+            random.shuffle(shuffle)
+            print 'shuffle=%s'%str(shuffle)
+            roof_to_nem = dict(zip(roof_node_ids, shuffle))
+            print 'roof_to_nem=%s'%str(roof_to_nem)
+            # Shuffle based on session id to give a different query placement for each session.
+            # Need to make sure placements is sorted though. 
+            # TODO: This initial placement is wrong! 
+            #placements = map(lambda (node, x, y) : (roof_to_nem[node], x, y), roofnet_placements)
+            #placements = map(lambda node: (roofnet_placements[node][1], roofnet_placements[node][2]), shuffle)
+            placements = [(-1.0,-1.0),(-1.0,-1.0),(-1.0,-1.0)] + map(lambda node: (roofnet_placements[node-3][1], roofnet_placements[node-3][2]), shuffle)
             print 'Roofnet placements=%s'%str(placements)
 
         else:
@@ -389,13 +398,13 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
                 time.sleep(5)
             else:
-                publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(txratemode), verbose=True)
                 if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
-                publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(txratemode), verbose=True)
                 if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
-                publish_pathlosses(session, packet_losses, roof_to_nem, verbose=True)
+                publish_pathlosses(session, packet_losses, roof_to_nem, txratemode=int(txratemode), verbose=True)
                 if distributed: publish_locations(session, roofnet_placements, roof_to_nem, verbose=True)
                 time.sleep(5)
 
@@ -485,11 +494,14 @@ def create_80211_net(session, wlan, distributed, params, verbose=False):
     #values[ names.index('propagationmodel') ] = 'freespace'
     #values[ names.index('pathlossmode') ] = '2ray'
     #values[ names.index('multicastrate') ] = '12'
-    values[ names.index('multicastrate') ] = '4'
+    txratemode = params['txratemode']
+    values[ names.index('multicastrate') ] = txratemode 
+    #values[ names.index('multicastrate') ] = '4'
     #values[ names.index('multicastrate') ] = '1'
     #values[ names.index('unicastrate') ] = '12'
     #values[ names.index('distance') ] = '500'
-    values[ names.index('unicastrate') ] = '4'
+    values[ names.index('unicastrate') ] = txratemode 
+    #values[ names.index('unicastrate') ] = '4'
     values[ names.index('txpower') ] = '-10.0'
     #values[ names.index('txpower') ] = '-1.0'
     values[ names.index('flowcontrolenable') ] = 'on'
@@ -913,6 +925,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
     parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
     parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
+    parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
     args=parser.parse_args()
 
     k=int(args.k)
@@ -952,6 +965,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['noiseNodes'] = int(args.noise_nodes)
     params['roofnet'] = args.roofnet
     params['emaneModel'] = args.emane_model
+    params['txratemode'] = args.txratemode
 	
     #if args.verbose: params['verbose']='true'
 

@@ -46,6 +46,7 @@ def start_worker(k, h, query, logfilename, sim_env, local_worker_id):
         args = ['sudo', '-u', user] + taskset_params + ['java', '-verbose:gc',
                 '-XX:+PrintGCDetails', '-XX:+PrintGCTimeStamps',
                 '-Dplatform.dependencies=true',
+                '-Djava.awt.headless=true',
                 '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
