@@ -75,6 +75,7 @@ def main(exp_dir):
 
     op_tputs = {}
     op_interval_tputs = {}
+    op_qlens = {}
     for op_log in op_logs:
         with open(op_log, 'r') as f:
             (op_id, tput) = processor_tput(f)
@@ -85,6 +86,11 @@ def main(exp_dir):
             (op_id, interval_tputs) = get_interval_tputs(f)
             if op_id:
                 op_interval_tputs[op_id] = interval_tputs
+
+        with open(op_log, 'r') as f:
+            (op_id, qlens) = get_qlens(f)
+            if op_id:
+                op_qlens[op_id] = qlens 
                 
     # Record the tput, k, w, query name etc.
     # Compute the mean tput
@@ -108,6 +114,7 @@ def main(exp_dir):
 
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
     record_op_interval_tputs(op_interval_tputs, exp_dir)
+    record_op_qlens(op_qlens, exp_dir)
 
 def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -199,6 +206,14 @@ def record_op_interval_tputs(op_interval_tputs, exp_dir):
             f.write('# tput cum\n')
             for (ts, tput, cum) in op_interval_tputs[op]:
                 f.write('%d %.1f %.1f\n'%(ts/1000, tput, cum))
+
+def record_op_qlens(op_qlens, exp_dir):
+    for op in op_qlens:
+        op_qlens_file = "%s/op_%s_qlens.txt"%(exp_dir, op)
+        with open(op_qlens_file, 'w') as f:
+            f.write('# qlen\n')
+            for (ts, qlen) in op_qlens[op]:
+                f.write('%d %d\n'%(ts/1000, qlen))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

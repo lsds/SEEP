@@ -44,6 +44,7 @@ public class RoutingController implements Runnable{
 	private final Object lock = new Object(){};
 	
 	public RoutingController(CoreRE owner) {
+		logger.info("Creating routing controller.");
 		this.owner = owner;
 		this.nodeId = owner.getProcessingUnit().getOperator().getOperatorId();
 		this.query = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
@@ -86,80 +87,86 @@ public class RoutingController implements Runnable{
 				}
 			}
 		}
+		logger.info("Created routing controller.");
 	}
 	
 	@Override
 	public void run() {
+		logger.info("Starting routing controller.");
 	
-		long tLast = System.currentTimeMillis();	
-		while(true)
+		try 
 		{
-			Map<Integer, Double> weightsCopy = null;
-			synchronized(lock)
+			long tLast = System.currentTimeMillis();	
+			while(true)
 			{
-				updateWeight();
-				weightsCopy = new HashMap<>(weights);
-			}
-			
-			logger.info("Routing controller sending weights upstream: "+weightsCopy);
-			
-			long tSendBegin = System.currentTimeMillis();
-			if (numLogicalInputs > 1)
-			{
-				ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
-				for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
-				{
-					int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
-					//N.B. Sending the *aggregate* weight across all upstreams.
-					logger.info("Routing controller sending constraints upstream op "+upstreamId+": "+routingConstraints.get(logicalInputIndex));
-					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
-					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
-					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
-				}
-			}
-			else
-			{
-
-				for (Integer upstreamId : weightsCopy.keySet())
-				{
-					RangeSet<Long> empty = TreeRangeSet.create();
-					//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
-					double weight = weightsCopy.get(upstreamId);
-					//if (nodeId == 1 && upstreamId == 10 || nodeId == 110 && upstreamId == 0 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
-					//if (nodeId == 1 && upstreamId == 0 || nodeId == 110 && upstreamId == 10 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
-					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, empty);
-					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
-					owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
-				}
-			}
-			logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
-			long tStart = System.currentTimeMillis();
-			tLast = tStart;
-			long tNow = tStart;
-			while (tNow - tStart < MAX_WEIGHT_DELAY)
-			{
+				Map<Integer, Double> weightsCopy = null;
 				synchronized(lock)
 				{
-					try {
-						lock.wait(MAX_WEIGHT_DELAY - (tNow - tStart));
-					} catch (InterruptedException e) {
-						//Woken up early, that's fine.
+					updateWeight();
+					weightsCopy = new HashMap<>(weights);
+				}
+				
+				logger.info("Routing controller sending weights upstream: "+weightsCopy);
+				
+				long tSendBegin = System.currentTimeMillis();
+				if (numLogicalInputs > 1)
+				{
+					ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+					for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
+					{
+						int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
+						//N.B. Sending the *aggregate* weight across all upstreams.
+						logger.info("Routing controller sending constraints upstream op "+upstreamId+": "+routingConstraints.get(logicalInputIndex));
+						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
+						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
+						owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
 					}
 				}
-				tNow = System.currentTimeMillis();
+				else
+				{
+
+					for (Integer upstreamId : weightsCopy.keySet())
+					{
+						RangeSet<Long> empty = TreeRangeSet.create();
+						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
+						double weight = weightsCopy.get(upstreamId);
+						//if (nodeId == 1 && upstreamId == 10 || nodeId == 110 && upstreamId == 0 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
+						//if (nodeId == 1 && upstreamId == 0 || nodeId == 110 && upstreamId == 10 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
+						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, empty);
+						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
+						owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+					}
+				}
+				logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
+				long tStart = System.currentTimeMillis();
+				tLast = tStart;
+				long tNow = tStart;
+				while (tNow - tStart < MAX_WEIGHT_DELAY)
+				{
+					synchronized(lock)
+					{
+						try {
+							lock.wait(MAX_WEIGHT_DELAY - (tNow - tStart));
+						} catch (InterruptedException e) {
+							//Woken up early, that's fine.
+						}
+					}
+					tNow = System.currentTimeMillis();
+				}
+			
+			/*
+			synchronized(lock)
+			{
+				try {
+					lock.wait(MAX_WEIGHT_DELAY);
+				} catch (InterruptedException e) {
+					//Woken up early, that's fine.
+				}
 			}
-		
-		/*
-		synchronized(lock)
-		{
-			try {
-				lock.wait(MAX_WEIGHT_DELAY);
-			} catch (InterruptedException e) {
-				//Woken up early, that's fine.
+			*/
 			}
 		}
-		*/
-		}
+		catch(Exception e) { logger.debug("Routing controller exception: "+ e);}
 	}
 
 	public void handleRCtrl(UpDownRCtrl rctrl)
@@ -259,8 +266,8 @@ public class RoutingController implements Runnable{
 					logger.info("Op "+ nodeId+ " computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
-					
-					logger.info("Op "+nodeId+" total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
+					long t = System.currentTimeMillis();	
+					logger.info("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
 					logger.info("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
 					
 					if (numLogicalInputs == 1)

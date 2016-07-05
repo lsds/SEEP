@@ -91,6 +91,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                             plot_fixed_kmobsession('tx_lat_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_cum_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('op_qlen_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             if params['dstat']:
                                 plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                                 plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
@@ -405,7 +406,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
     parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
     parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
-    parser.add_argument('--srcRates', dest='src_rates', default='', help='Fixed frame rates for sources to send at.')
+    parser.add_argument('--srcRates', dest='src_rates', default=None, help='Fixed frame rates for sources to send at.')
 
     args=parser.parse_args()
 
@@ -415,7 +416,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     nodes=map(lambda x: int(x), args.nodes.split(','))
     dimension=map(lambda x: int(x), args.dimension.split(','))
     cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
-    srcrates=map(lambda x: int(x), args.src_rates.split(','))
+    srcrates=map(lambda x: int(x), args.src_rates.split(',')) if args.src_rates else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
             "cpudelay" : cpudelay, "srcrates": srcrates}

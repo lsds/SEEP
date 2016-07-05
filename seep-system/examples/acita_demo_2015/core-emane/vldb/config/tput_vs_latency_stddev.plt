@@ -24,4 +24,8 @@ plot sprintf("%s/%s/1k-tput-vs-lat.data",outputdir,timestr) using 11:2 title "k=
 	sprintf("%s/%s/1k-tput-vs-lat.data",outputdir,timestr) using 11:2:4 notitle linestyle 1 with yerrorb, \
 	sprintf("%s/%s/2k-tput-vs-lat.data",outputdir,timestr) using ($11+0.05):2:4 notitle linestyle 2 with yerrorb, \
 	sprintf("%s/%s/3k-tput-vs-lat.data",outputdir,timestr) using ($11+0.10):2:4 notitle linestyle 3 with yerrorb, \
-	sprintf("%s/%s/5k-tput-vs-lat.data",outputdir,timestr) using ($11+0.15):2:4 notitle linestyle 4 with yerrorb
+	sprintf("%s/%s/5k-tput-vs-lat.data",outputdir,timestr) using ($11+0.15):2:4 notitle linestyle 4 with yerrorb, \
+	sprintf("%s/%s/1k-tput-vs-lat.data",outputdir,timestr) using 11:2:13 notitle linestyle 1 with xerrorb, \
+	sprintf("%s/%s/2k-tput-vs-lat.data",outputdir,timestr) using ($11+0.05):2:13 notitle linestyle 2 with xerrorb, \
+	sprintf("%s/%s/3k-tput-vs-lat.data",outputdir,timestr) using ($11+0.10):2:13 notitle linestyle 3 with xerrorb, \
+	sprintf("%s/%s/5k-tput-vs-lat.data",outputdir,timestr) using ($11+0.15):2:13 notitle linestyle 4 with xerrorb
