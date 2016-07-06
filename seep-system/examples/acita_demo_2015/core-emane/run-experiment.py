@@ -101,6 +101,11 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                             if params['emanestats']:
                                 for stat in get_emane_mac_stats(script_dir):
                                     plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
+                elif len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['mobility']) <=1 :
+                    for var in variables['srcrates']:
+                        for session in session_ids:
+                            plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
                 else:
                     #TODO
                     pass
@@ -353,6 +358,10 @@ def plot_fixed_kmob(p, k, mob, sessions, time_str, script_dir, data_dir, params,
 def plot_fixed_kmobsession(p, k, mob, session, time_str, script_dir, data_dir, params, term='pdf', add_to_envstr=''):
     kmobsession_envstr = '%s;k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';session=\'%d\''%(add_to_envstr,k,mob,params['query'],params['duration'],session)
     plot(p, time_str, script_dir, data_dir, term, kmobsession_envstr)
+
+def plot_fixed_kvarsession(p, k, varname, varval, varext, session, time_str, script_dir, data_dir, params, term='pdf', add_to_envstr=''):
+    kvarsession_envstr = '%s;k=\'%d\';varname=\'%s\';var=\'%.2f\';varext=\'%s\';query=\'%s\';duration=\'%s\';session=\'%d\''%(add_to_envstr,k,varname,varval,varext,params['query'],params['duration'],session)
+    plot(p, time_str, script_dir, data_dir, term, kvarsession_envstr)
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     parser = argparse.ArgumentParser(description='Run simulations.')
