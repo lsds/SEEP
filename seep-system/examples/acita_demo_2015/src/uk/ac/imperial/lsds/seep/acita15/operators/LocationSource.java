@@ -36,6 +36,7 @@ public class LocationSource implements StatelessOperator {
 	private static final Logger logger = LoggerFactory.getLogger(Source.class);
 	boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
 	long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+	long warmUpTuples = Long.parseLong(GLOBALS.valueFor("warmUpTuples"));
 	int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
 	boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
 	long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
@@ -75,12 +76,16 @@ public class LocationSource implements StatelessOperator {
 		
 		//final String value = generateFrame(tupleSizeChars);
 		final long tStart = System.currentTimeMillis();
-		logger.info("Source sending started at t="+tStart);
-		logger.info("Source sending started at t="+tStart);
-		logger.info("Source sending started at t="+tStart);
 		
 		String value = null;
-		while(sendIndefinitely || tupleId < numTuples){
+		while(sendIndefinitely || tupleId < warmUpTuples + numTuples){
+			if (tupleId == warmUpTuples)
+			{ 
+				long tWarmedUp = System.currentTimeMillis();
+				logger.info("Source sending started at t="+tWarmedUp);
+				logger.info("Source sending started at t="+tWarmedUp);
+				logger.info("Source sending started at t="+tWarmedUp);
+			}
 			
 			try
 			{

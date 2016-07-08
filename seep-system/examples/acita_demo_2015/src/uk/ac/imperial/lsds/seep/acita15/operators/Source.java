@@ -42,6 +42,7 @@ public class Source implements StatelessOperator {
 		
 		boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
 		long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+		long warmUpTuples = Long.parseLong(GLOBALS.valueFor("warmUpTuples"));
 		int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
 		boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
 		long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
@@ -53,10 +54,14 @@ public class Source implements StatelessOperator {
 		final String value = generateFrame(tupleSizeChars);
 		final long[] latencyBreakdown = new long[0];
 		final long tStart = System.currentTimeMillis();
-		logger.info("Source sending started at t="+tStart);
-		logger.info("Source sending started at t="+tStart);
-		logger.info("Source sending started at t="+tStart);
-		while(sendIndefinitely || tupleId < numTuples){
+		while(sendIndefinitely || tupleId < numTuples + warmUpTuples){
+			if (tupleId == warmUpTuples)
+			{ 
+				long tWarmedUp = System.currentTimeMillis();
+				logger.info("Source sending started at t="+tWarmedUp);
+				logger.info("Source sending started at t="+tWarmedUp);
+				logger.info("Source sending started at t="+tWarmedUp);
+			}
 			
 			DataTuple output = data.newTuple(tupleId, value, latencyBreakdown);
 			output.getPayload().timestamp = tupleId;
@@ -106,7 +111,7 @@ public class Source implements StatelessOperator {
 	private void initialPause()
 	{
 		try {
-			Thread.sleep(Long.parseLong(GLOBALS.valueFor("numTuples")));
+			Thread.sleep(Long.parseLong(GLOBALS.valueFor("initialPause")));
 		} 
 		catch (InterruptedException e) {
 			e.printStackTrace();

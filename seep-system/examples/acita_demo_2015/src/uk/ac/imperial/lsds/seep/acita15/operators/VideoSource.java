@@ -100,6 +100,7 @@ public class VideoSource implements StatelessOperator {
 			
 			boolean sendIndefinitely = Boolean.parseBoolean(GLOBALS.valueFor("sendIndefinitely"));
 			long numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+			long warmUpTuples = Long.parseLong(GLOBALS.valueFor("warmUpTuples"));
 			//int tupleSizeChars = Integer.parseInt(GLOBALS.valueFor("tupleSizeChars"));
 			boolean rateLimitSrc = Boolean.parseBoolean(GLOBALS.valueFor("rateLimitSrc"));
 			long frameRate = Long.parseLong(GLOBALS.valueFor("frameRate"));
@@ -107,9 +108,6 @@ public class VideoSource implements StatelessOperator {
 			logger.info("Source inter-frame delay="+interFrameDelay);
 			
 			final long tStart = System.currentTimeMillis();
-			logger.info("Source sending started at t="+tStart);
-			logger.info("Source sending started at t="+tStart);
-			logger.info("Source sending started at t="+tStart);
 			
 			//String testFramesDir = GLOBALS.valueFor("testFramesDir");
 			//String imgFileExt = GLOBALS.valueFor("imgFileExt");
@@ -125,8 +123,15 @@ public class VideoSource implements StatelessOperator {
 			//logger.info("Loaded "+testFrames.length+" test images.");
 			int currentFrame = 0;
 			
-			while(sendIndefinitely || tupleId < numTuples)
+			while(sendIndefinitely || tupleId < numTuples + warmUpTuples)
 			{
+				if (tupleId == warmUpTuples)
+				{ 
+					long tWarmedUp = System.currentTimeMillis();
+					logger.info("Source sending started at t="+tWarmedUp);
+					logger.info("Source sending started at t="+tWarmedUp);
+					logger.info("Source sending started at t="+tWarmedUp);
+				}
 				/*
 				Mat img = testFrames[currentFrame];
 				byte[] matBytes = new byte[safeLongToInt(img.total())*img.channels()];

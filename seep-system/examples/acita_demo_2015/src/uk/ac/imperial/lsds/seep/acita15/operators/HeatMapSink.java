@@ -29,6 +29,7 @@ public class HeatMapSink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(HeatMapSink.class);
 	private long numTuples;
+	private long warmUpTuples;
 	private long tupleSize;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
@@ -46,6 +47,7 @@ public class HeatMapSink implements StatelessOperator {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+		warmUpTuples = Long.parseLong(GLOBALS.valueFor("warmUpTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		numSources = Integer.parseInt(GLOBALS.valueFor("sources"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
@@ -57,6 +59,11 @@ public class HeatMapSink implements StatelessOperator {
 		if (dt.getPayload().timestamp != dt.getLong("tupleId"))
 		{
 			throw new RuntimeException("Logic error: ts " + dt.getPayload().timestamp+ "!= tupleId "+dt.getLong("tupleId"));
+		}
+		if (dt.getLong("tupleId") < warmUpTuples) 
+		{ 
+			logger.debug("Ignoring warm up tuple "+dt.getLong("tupleId")); 
+			return;
 		}
 		if (tuplesReceived == 0)
 		{
@@ -89,7 +96,7 @@ public class HeatMapSink implements StatelessOperator {
 		logger.debug("Current heatmap="+result.toString());
 		
 		long tupleId = dt.getLong("tupleId");
-		if (tupleId != tuplesReceived -1)
+		if (tupleId != warmUpTuples + tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}

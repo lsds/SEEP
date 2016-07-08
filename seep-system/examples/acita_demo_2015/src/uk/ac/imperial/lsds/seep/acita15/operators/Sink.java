@@ -25,6 +25,7 @@ public class Sink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Sink.class);
 	private long numTuples;
+	private long warmUpTuples;
 	private long tupleSize;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
@@ -35,6 +36,7 @@ public class Sink implements StatelessOperator {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
 		numTuples = Long.parseLong(GLOBALS.valueFor("numTuples"));
+		warmUpTuples = Long.parseLong(GLOBALS.valueFor("warmUpTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		enableLatencyBreakdown = Boolean.parseBoolean(GLOBALS.valueFor("enableLatencyBreakdown"));
 		logger.info("SINK expecting "+numTuples+" tuples.");
@@ -45,6 +47,13 @@ public class Sink implements StatelessOperator {
 		{
 			throw new RuntimeException("Logic error: ts " + dt.getPayload().timestamp+ "!= tupleId "+dt.getLong("tupleId"));
 		}
+		
+		if (dt.getLong("tupleId") < warmUpTuples) 
+		{ 
+			logger.debug("Ignoring warm up tuple "+dt.getLong("tupleId")); 
+			return;
+		}
+
 		if (tuplesReceived == 0)
 		{
 			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
@@ -57,7 +66,7 @@ public class Sink implements StatelessOperator {
 		totalBytes += dt.getString("value").length();
 		recordTuple(dt, dt.getString("value").length());
 		long tupleId = dt.getLong("tupleId");
-		if (tupleId != tuplesReceived -1)
+		if (tupleId != warmUpTuples + tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}

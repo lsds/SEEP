@@ -30,6 +30,7 @@ def build_cfg(lwid, cls, node, filename, services):
             cfg += "cp %s/core-emane/vldb/config/olsrd-net-rates.sh net-rates.sh\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/olsrd-net-topology.sh net-topology.sh\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/olsrd-all-net-info.sh all-net-info.sh\n"%(seep_example_dir)
+            cfg += "cp %s/core-emane/vldb/config/olsrd-get-neighbours.sh get-neighbours.sh\n"%(seep_example_dir)
         else:
             cfg += "cp %s/core-emane/vldb/config/net-rates.sh net-rates.sh\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/net-topology1.sh net-topology.sh\n"%(seep_example_dir)
@@ -43,6 +44,7 @@ def build_cfg(lwid, cls, node, filename, services):
         cfg += "/sbin/route > rts.log\n"
         cfg += 'echo "0.0,0.0,0.0" > node.xyz\n'
         cfg += "./net-rates.sh\n"
+        cfg += "./get-neighbours.sh %s &\n"%(str(node))
         worker_processors = ",".join(map(str, range(3,64,4)))
         #cfg += "taskset -c %s ./run-worker.py --id %d\n"%(worker_processors, lwid)
         #cfg += "taskset -c 25-31 ./run-worker.py --id %d\n"%lwid

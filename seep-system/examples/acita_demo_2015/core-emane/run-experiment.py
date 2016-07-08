@@ -104,9 +104,13 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 elif len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['mobility']) <=1 :
                     for var in variables['srcrates']:
                         for session in session_ids:
-                            plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
+                            if k > 1: plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
                             plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
                 else:
+                    for var in variables['srcrates']:
+                        for session in session_ids:
+                            if k > 1: plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
                     #TODO
                     pass
                 # Uncomment this and tweak params when plotting movement analysis.
