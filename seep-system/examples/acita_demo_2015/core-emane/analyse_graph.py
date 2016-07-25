@@ -2,10 +2,14 @@
 import networkx as nx
 import glob as glob
 import argparse
+import matplotlib.pyplot as plt
+import pprint as pp
 
 def main(links_dir):
     adjacency_matrix = read_links(links_dir)
-    analyse_graph(adjacency_matrix)
+    g = build_graph(adjacency_matrix)
+    record_degrees(g, links_dir)
+    plot_degrees(g, links_dir)
 
 def read_links(links_dir):
     # placements dict of the form nid -> (x,y)
@@ -22,7 +26,7 @@ def read_links(links_dir):
 
     return adjacency_matrix
 
-def analyse_graph(adjacency_matrix):
+def build_graph(adjacency_matrix):
     # placements dict of the form nid -> (x,y)
     g = nx.Graph()
     g.add_nodes_from(adjacency_matrix.keys())
@@ -31,11 +35,32 @@ def analyse_graph(adjacency_matrix):
         for dest in adjacency_matrix[src]:
             if src != dest: 
                 g.add_edge(src, dest)
-
-
-    print 'Graph degree = %s'%g.degree()
     return g
 
+def record_degrees(g, links_dir):
+    with open(links_dir + "/degrees.txt", 'w') as f:
+        print('Graph degree = %s'%g.degree())
+        pp.pprint(g.degree(), f)
+
+def plot_degrees(g, links_dir):
+    degree_sequence=sorted(nx.degree(g).values(),reverse=True) # degree sequence
+    #print "Degree sequence", degree_sequence
+    dmax=max(degree_sequence)
+
+    plt.loglog(degree_sequence,'b-',marker='o')
+    plt.title("Degree rank plot")
+    plt.ylabel("degree")
+    plt.xlabel("rank")
+
+    # draw graph in inset
+    plt.axes([0.45,0.45,0.45,0.45])
+    gcc=sorted(nx.connected_component_subgraphs(g), key = len, reverse=True)[0]
+    pos=nx.spring_layout(gcc)
+    plt.axis('off')
+    nx.draw_networkx_nodes(gcc,pos,node_size=20)
+    nx.draw_networkx_edges(gcc,pos,alpha=0.4)
+
+    plt.savefig("%s/degree_histogram.png"%links_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse net topology')
