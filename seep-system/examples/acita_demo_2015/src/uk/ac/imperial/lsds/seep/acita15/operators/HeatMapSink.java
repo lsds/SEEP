@@ -63,6 +63,7 @@ public class HeatMapSink implements StatelessOperator {
 		if (dt.getLong("tupleId") < warmUpTuples) 
 		{ 
 			logger.debug("Ignoring warm up tuple "+dt.getLong("tupleId")); 
+			api.ack(dt);
 			return;
 		}
 		if (tuplesReceived == 0)
