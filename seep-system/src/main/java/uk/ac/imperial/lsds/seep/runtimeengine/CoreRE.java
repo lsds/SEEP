@@ -351,6 +351,24 @@ public class CoreRE {
 			if (GLOBALS.valueFor("meanderRouting").equals("hash") || replicationFactor == 1)
 			{				
 				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication."); }
+
+				//Record net rates for debugging purposes
+				ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
+				Map<Integer, String> upOpIdAddrs = new HashMap<>();
+				
+				for (Integer upOpId : upOpIds)
+				{
+					OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getUpstreamLocation(upOpId);
+					upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
+					
+				}
+				
+				LOG.info("Starting OLSRETX net rate monitor.");
+				//Null routingController since just want to log net rates.
+				netRateMonitor = new NetRateMonitor(upOpIdAddrs, null);
+				nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
+				nrMonT.start();		
+	
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
 					processingUnit.getDispatcher().startDispatcherMain();
@@ -443,7 +461,7 @@ public class CoreRE {
                     try {
                         processingUnit.startDataProcessing();
                     } catch(Throwable t) {
-                        LOG.error("Exception while processing data " + t.getMessage());
+                        LOG.error("Exception while processing data " + t);
                     }
                 }
             }

@@ -89,7 +89,7 @@ public class NetRateMonitor implements Runnable {
 					}
 				}
 				
-				if (upstreamCosts !=  null)
+				if (upstreamCosts !=  null && rController != null)
 				{
 					rController.handleNetCostsUpdate(upstreamCosts);
 				}
