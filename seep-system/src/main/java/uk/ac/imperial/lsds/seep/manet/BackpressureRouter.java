@@ -22,6 +22,7 @@ public class BackpressureRouter implements IRouter {
 	private final static Logger logger = LoggerFactory.getLogger(BackpressureRouter.class);
 	private final static double INITIAL_WEIGHT = 1;
 	private final boolean downIsMultiInput;
+	private final boolean downIsUnreplicatedSink;
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Long> lastWeightUpdateTimes;
 	private final Map<Integer, Set<Long>> unmatched;
@@ -52,6 +53,7 @@ public class BackpressureRouter implements IRouter {
 		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
 
 		downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+		downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
 	}
 	
 	public ArrayList<Integer> route(long batchId)
@@ -59,7 +61,7 @@ public class BackpressureRouter implements IRouter {
 		ArrayList<Integer> targets = null;
 		synchronized(lock)
 		{
-			if (downIsMultiInput)
+			if (downIsMultiInput && !downIsUnreplicatedSink)
 			{
 				for (Integer downOpId : unmatched.keySet())
 				{
@@ -195,6 +197,7 @@ public class BackpressureRouter implements IRouter {
 		{
 			for (Integer opId : weights.keySet())
 			{
+				if (downIsUnreplicatedSink) { return opId; }
 				double opWeight = weights.get(opId);
 				if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
 			}
