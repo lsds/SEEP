@@ -282,10 +282,18 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             # node id offset = wlan1 + master -> 2
             random.seed(int(exp_session))
             shuffle = range(3,len(roofnet_placements)+3)
-            random.shuffle(shuffle)
+            #random.shuffle(shuffle)
             print 'shuffle=%s'%str(shuffle)
             roof_to_nem = dict(zip(roof_node_ids, shuffle))
-            print 'roof_to_nem=%s'%str(roof_to_nem)
+            ##swaps = [(8,10), (7,9)]
+            swaps = []
+            nem_to_roof = dict(zip(shuffle, roof_node_ids))
+            print 'Pre swaps roof_to_nem=%s'%str(roof_to_nem)
+            for (m, n) in swaps:
+               roof_to_nem[nem_to_roof[m]] = n
+               roof_to_nem[nem_to_roof[n]] = m
+
+            print 'Post swaps roof_to_nem=%s'%str(roof_to_nem)
             # Shuffle based on session id to give a different query placement for each session.
             # Need to make sure placements is sorted though. 
             # TODO: This initial placement is wrong! 

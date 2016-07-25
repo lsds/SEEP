@@ -296,7 +296,8 @@ def get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_metric_fn)
 def get_tput(logdir):
     #regex = re.compile('src_sink_mean_tput=(\d+)')
     regex = re.compile('sink_sink_mean_tput=(\d+)')
-    with open('%s/tput.txt'%logdir, 'r') as tput_log:
+    logfilename = '%s/tput.txt'%logdir
+    with open(logfilename, 'r') as tput_log:
         for line in tput_log:
             match = re.search(regex, line)
             if match:
