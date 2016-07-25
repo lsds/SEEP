@@ -51,22 +51,23 @@ def main(exp_dir):
     for sink_log in filter(lambda log: log != finished_sink_log, sink_logs):
 	print 'Processing potentially unfinished log: ', sink_log
 	with open(sink_log, 'r') as sink:
-	    # Get time sink received first message
-	    t_sink_begin = sink_rx_begin(sink)
-	    #if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
-	    if not t_sink_begin: t_min_sink_begin 
-
-	    if t_sink_begin < t_min_sink_begin:
-		t_min_sink_begin = t_sink_begin
-	with open(sink_log, 'r') as sink:
 	    (tuples, bytez) = unfinished_sink_tuples(sink, t_finished_sink_end, tuple_ids)
 
 	    #TODO: This will fail for sinks that didn't finish.
 	    #(tuples, sink_total_bytes, t_sink_end) = sink_rx_end(sink)
 	    #if not t_sink_end: raise Exception("Could not find t_sink_end.")
-	    total_bytes += bytez 
+	    if tuples == 0: continue
 	    total_tuples += tuples
+	    total_bytes += bytez 
 	    #max_t_sink_end = max(max_t_sink_end, t_sink_end)
+	with open(sink_log, 'r') as sink:
+	    # Get time sink received first message
+	    t_sink_begin = sink_rx_begin(sink)
+	    if not t_sink_begin: raise Exception("Could not find t_sink_begin.")
+	    #if not t_sink_begin: t_min_sink_begin 
+
+	    if t_sink_begin and t_sink_begin < t_min_sink_begin:
+		t_min_sink_begin = t_sink_begin
 	with open(sink_log, 'r') as sink:
 	    rx_latencies += unfinished_sink_rx_latencies(sink, t_finished_sink_end)
 	    #if not rx_latencies: raise Exception("Could not find any latencies.")
