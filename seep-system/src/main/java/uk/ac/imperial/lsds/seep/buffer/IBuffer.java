@@ -32,6 +32,7 @@ public interface IBuffer {
 	public abstract TreeMap<Long, BatchTuplePayload> trim(FailureCtrl fctrl);
 	
 	public abstract TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl);
+	public abstract BatchTuplePayload get(long ts);
 
 	///fixme{just for testing, do binary search on structure}
 	public abstract TimestampTracker getInputVTsForOutputTs(long output_ts);

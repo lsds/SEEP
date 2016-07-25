@@ -53,6 +53,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long SEND_TIMEOUT = 1 * 500;
 	//private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 120 * 1000; // 4 * 1000 Only set this really high for latency breakdown.
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
+	private static final long FAILURE_CTRL_RETRANSMIT_TIMEOUT = Long.parseLong(GLOBALS.valueFor("retransmitTimeout"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
@@ -737,7 +738,7 @@ public class Dispatcher implements IRoutingObserver {
 				if (success)
 				{
 					logger.debug("Dispatcher worker sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
-					fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis())
+					fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis());
 
 				}
 				else
@@ -752,7 +753,7 @@ public class Dispatcher implements IRoutingObserver {
 					{
 						dataConnected = false;
 						if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dest.getOperatorId()); }
-						if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimeouts(dest.getOperatorId()); }
+						if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(dest.getOperatorId()); }
 						
 						//holding the lock
 						//1) compute the new joint alives
@@ -919,13 +920,13 @@ public class Dispatcher implements IRoutingObserver {
 	private class FailureCtrlHandler
 	{		
 		private final Map<Integer, Long> lastUpdateTimes = new HashMap<>();
-		private final Map<Integer, Map<Long,Long>> batchRetransmitTimers= new HashMap<>();
+		private final Map<Integer, Map<Long,Long>> batchRetransmitTimers= new HashMap<Integer, Map<Long,Long>>();
 
 		public FailureCtrlHandler()
 		{
 			for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
 			{
-				batchRetransmitTimers.put(downOpId, new HashMap<>());
+				batchRetransmitTimers.put(downOpId, new HashMap<Long,Long>());
 			}
 		}
 
@@ -1034,7 +1035,7 @@ public class Dispatcher implements IRoutingObserver {
 			opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
 		}
 
-		private void addBatchRetransmitTimer(int dsOpId, int batchId, long ts)
+		private void addBatchRetransmitTimer(int dsOpId, long batchId, long ts)
 		{
 			if (bestEffort) { throw new RuntimeException("TODO"); }
 
@@ -1046,7 +1047,7 @@ public class Dispatcher implements IRoutingObserver {
 				// Add (batchId, ts) to dsOpid.cache
 				// Log/fail if attempted to retransmit via same for the moment as a reminder!
 				if (batchRetransmitTimers.get(dsOpId).containsKey(batchId)) { throw new RuntimeException("TODO"); }
-				batchRetransmitTimers.get(dsOpId).put(batchId, ts)
+				batchRetransmitTimers.get(dsOpId).put(batchId, ts);
 			}
 		}
 
@@ -1061,18 +1062,23 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 
-		private void checkBatchRetransmitTimeouts(int dsOpId)
+		private void checkBatchRetransmitTimeouts(int downOpId)
 		{
 			if (bestEffort) { throw new RuntimeException("TODO"); }
+
+			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
+			SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
+			IBuffer buffer = cci.getBuffer();
 
 			//TODO: Locking?
 			synchronized(lock)
 			{
 
-				Iterator iter = batchRetransmitTimers.get(dsOpId).keySet().iterator();
-				// for each batch in dsOpId.cache
+				Iterator<Long> iter = batchRetransmitTimers.get(downOpId).keySet().iterator();
+				// for each batch in downOpId.cache
 				while (iter.hasNext())
 				{
+					Long batchId = iter.next();
 					if (combinedDownFctrl.lw() >= batchId || combinedDownFctrl.acks().contains(batchId) ||
 						(optimizeReplay && combinedDownFctrl.alives().contains(batchId)))
 					{
@@ -1080,26 +1086,29 @@ public class Dispatcher implements IRoutingObserver {
 						// TODO: Trickier if alive since if we delete and alive gets retracted due to failure ctrl timeout the batch won't have a retransmit timer? 
 						// For now just ignore and delete in both cases.
 						iter.remove();
-						for (Integer otherDsOpId : batchRetransmitTimers.keySet())
+						for (Integer otherDownOpId : batchRetransmitTimers.keySet())
 						{
-							if (otherDsOpId != dsOpId) { batchRetransmitTimers.get(otherDsOpId).remove(batchId); }	
+							if (otherDownOpId != downOpId) { batchRetransmitTimers.get(otherDownOpId).remove(batchId); }	
 						}  
 
 					} 
 					// else if timed out for dsOpid
-					else if (System.currentTimeMillis() - batchRetransmitTimers.get(otherDsOpId).get(batchId) > RETRANSMIT_TIMEOUT)
+					else if (System.currentTimeMillis() - batchRetransmitTimers.get(downOpId).get(batchId) > FAILURE_CTRL_RETRANSMIT_TIMEOUT)
 					{
 						// TODO: Could improve this with more info to routing about where to retransmit to.
 						// TODO: Could be smarter about when its not worth retransmitting (e.g. if already sent to all downstreams)
 						// TODO: Have a separate 'sent' data structure per ds to filter retransmit attempts
 						// Delete from ds retransmit cache 
 						iter.remove();
-						for (Integer otherDsOpId : batchRetransmitTimers.keySet())
+						for (Integer otherDownOpId : batchRetransmitTimers.keySet())
 						{
-							if (otherDsOpId != dsOpId) { batchRetransmitTimers.get(otherDsOpId).remove(batchId); }	
+							if (otherDownOpId != downOpId) { batchRetransmitTimers.get(otherDownOpId).remove(batchId); }	
 						}  
-						opQueue.forceAdd(batchId);
-						logger.info("Retransmit timeout for ts="+batchId+" to "+dsOpId+", readded to op queue.");
+						//Get the tuple
+						TuplePayload p = buffer.get(batchId).getTuple(0);
+						DataTuple dt = new DataTuple(idxMapper, p);
+						opQueue.forceAdd(dt);
+						logger.info("Retransmit timeout for ts="+batchId+" to "+downOpId+", readded to op queue.");
 					}
 					// else do nothing.
 				}
@@ -1126,7 +1135,7 @@ public class Dispatcher implements IRoutingObserver {
 					synchronized(lock)
 					{
 						clear(downOpId);
-						if (fctrlHandler != null) { clearBatchRetransmitTimers(downOpId); }
+						if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(downOpId); }
 
 						//TODO: What to do when a failure ctrl times out?
 						//TODO: In theory this could fail to include the current

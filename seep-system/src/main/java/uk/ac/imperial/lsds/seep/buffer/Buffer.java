@@ -187,6 +187,7 @@ public class Buffer implements Serializable, IBuffer{
 	}
 	
 	public boolean contains(long ts) { throw new RuntimeException("Logic error."); }
+	public BatchTuplePayload get(long ts) { throw new RuntimeException("Logic error."); }
 	public TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl)
 	{
 		throw new RuntimeException("Logic error.");
