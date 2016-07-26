@@ -1079,11 +1079,12 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock)
 			{
 
-				Iterator<Long> iter = batchRetransmitTimers.get(downOpId).keySet().iterator();
+				Iterator<Map.Entry<Long,Long>> iter = batchRetransmitTimers.get(downOpId).entrySet().iterator();
 				while (iter.hasNext())
 				{
-					Long batchId = iter.next();
-					long delay = System.currentTimeMillis() - batchRetransmitTimers.get(downOpId).get(batchId);
+					Map.Entry<Long,Long> e = iter.next();
+					Long batchId = e.getKey();
+					long delay = System.currentTimeMillis() - e.getValue();
 					if (combinedDownFctrl.lw() >= batchId || combinedDownFctrl.acks().contains(batchId) ||
 						(optimizeReplay && combinedDownFctrl.alives().contains(batchId)))
 					{
