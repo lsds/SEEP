@@ -139,6 +139,19 @@ public class OutputQueue {
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
 					
+					// We save the data
+					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
+						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
+						if(GLOBALS.valueFor("TTT").equals("TRUE") || 
+								GLOBALS.valueFor("reliability").equals("bestEffort") ||
+								GLOBALS.valueFor("noBufferSave").equals("true")){
+							
+						}
+						else{
+							buffer.save(msg, msg.outputTs, owner.getIncomingTT());
+						}
+					}
+
 					boolean flushed = false;
 					while(!flushed)
 					{
@@ -153,36 +166,11 @@ public class OutputQueue {
 						catch(KryoException|IllegalArgumentException e)
 						{
 							LOG.error("Writing batch to "+dest.getOperatorId() + " failed, tp.ts="+ tp.timestamp);
-							if (!bestEffort)
-							{
-								buffer.save(msg, msg.outputTs, owner.getIncomingTT());
-							}
 							channelRecord.cleanBatch2();
 							return false;
-							/*
-							//TODO: Get rid of this global. Might want to
-							//Have different behaviour for different instances.
-							if(!"true".equals(GLOBALS.valueFor("autoReconnectChannel")))
-							{
-								throw(e);
-							}
-							channelRecord.reopenDownstreamDataSocket();
-							*/
 						}
 					}
 					
-					// We save the data
-					if(GLOBALS.valueFor("eftMechanismEnabled").equals("true")){
-						// while taking latency measures, to avoid that sources and sink in same node will be affected by buffer trimming
-						if(GLOBALS.valueFor("TTT").equals("TRUE") || 
-								GLOBALS.valueFor("reliability").equals("bestEffort") ||
-								GLOBALS.valueFor("noBufferSave").equals("true")){
-							
-						}
-						else{
-							buffer.save(msg, msg.outputTs, owner.getIncomingTT());
-						}
-					}
 					// Anf finally we reset the batch
 //					channelRecord.cleanBatch(); // RACE CONDITION ??
 					channelRecord.cleanBatch2();

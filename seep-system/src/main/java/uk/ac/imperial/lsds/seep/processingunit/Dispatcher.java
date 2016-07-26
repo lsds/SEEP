@@ -734,11 +734,11 @@ public class Dispatcher implements IRoutingObserver {
 				rateLimiter.limit();
 
 				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
+				fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis());
 				boolean success = outputQueue.sendToDownstream(nextTuple, dest);
 				if (success)
 				{
 					logger.debug("Dispatcher worker sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
-					fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis());
 
 				}
 				else
@@ -988,6 +988,7 @@ public class Dispatcher implements IRoutingObserver {
 				
 				//TODO: Get an appropriate value for this timeout.
 				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.reset(dsOpId, FAILURE_CTRL_WATCHDOG_TIMEOUT); }
+				checkBatchRetransmitTimeouts(dsOpId);		
 				lock.notifyAll();
 				logger.debug("Handled failure ctrl in duration="+ (System.currentTimeMillis() - tStart));
 			}
@@ -1035,7 +1036,7 @@ public class Dispatcher implements IRoutingObserver {
 			opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
 		}
 
-		private void addBatchRetransmitTimer(int dsOpId, long batchId, long ts)
+		private void addBatchRetransmitTimer(int downOpId, long batchId, long now)
 		{
 			if (bestEffort) { throw new RuntimeException("TODO"); }
 
@@ -1046,19 +1047,24 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				// Add (batchId, ts) to dsOpid.cache
 				// Log/fail if attempted to retransmit via same for the moment as a reminder!
-				if (batchRetransmitTimers.get(dsOpId).containsKey(batchId)) { throw new RuntimeException("TODO"); }
-				batchRetransmitTimers.get(dsOpId).put(batchId, ts);
+				if (batchRetransmitTimers.get(downOpId).containsKey(batchId)) 
+				{ 
+					logger.warn("Retransmission of ts="+batchId+" routed to same downstream="+downOpId);
+				}
+				batchRetransmitTimers.get(downOpId).put(batchId, now);
+				logger.debug("Added retransmit timer for ts="+batchId+" to "+downOpId);
 			}
 		}
 
-		private void clearBatchRetransmitTimers(int dsOpId)
+		private void clearBatchRetransmitTimers(int downOpId)
 		{
 			if (bestEffort) { throw new RuntimeException("TODO"); }
-			// TODO Locking?
+
 			synchronized(lock)
 			{
-				// Basically clear cache of dsOpId.
-				batchRetransmitTimers.get(dsOpId).clear();
+				// Basically clear cache of downOpId.
+				batchRetransmitTimers.get(downOpId).clear();
+				logger.debug("Cleared retransmit timers for "+downOpId);
 			}
 		}
 
@@ -1068,49 +1074,61 @@ public class Dispatcher implements IRoutingObserver {
 
 			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 			SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
-			IBuffer buffer = cci.getBuffer();
+			IBuffer buffer = (OutOfOrderBuffer)cci.getBuffer();
 
-			//TODO: Locking?
 			synchronized(lock)
 			{
 
 				Iterator<Long> iter = batchRetransmitTimers.get(downOpId).keySet().iterator();
-				// for each batch in downOpId.cache
 				while (iter.hasNext())
 				{
 					Long batchId = iter.next();
+					long delay = System.currentTimeMillis() - batchRetransmitTimers.get(downOpId).get(batchId);
 					if (combinedDownFctrl.lw() >= batchId || combinedDownFctrl.acks().contains(batchId) ||
 						(optimizeReplay && combinedDownFctrl.alives().contains(batchId)))
 					{
 						// Acked so remove batch from all caches.
 						// TODO: Trickier if alive since if we delete and alive gets retracted due to failure ctrl timeout the batch won't have a retransmit timer? 
 						// For now just ignore and delete in both cases.
+						logger.debug("Removing batch id timer for "+batchId);
 						iter.remove();
 						for (Integer otherDownOpId : batchRetransmitTimers.keySet())
 						{
 							if (otherDownOpId != downOpId) { batchRetransmitTimers.get(otherDownOpId).remove(batchId); }	
 						}  
+					
 
 					} 
-					// else if timed out for dsOpid
-					else if (System.currentTimeMillis() - batchRetransmitTimers.get(downOpId).get(batchId) > FAILURE_CTRL_RETRANSMIT_TIMEOUT)
+					else if (delay > FAILURE_CTRL_RETRANSMIT_TIMEOUT)
 					{
+
 						// TODO: Could improve this with more info to routing about where to retransmit to.
 						// TODO: Could be smarter about when its not worth retransmitting (e.g. if already sent to all downstreams)
 						// TODO: Have a separate 'sent' data structure per ds to filter retransmit attempts
-						// Delete from ds retransmit cache 
-						iter.remove();
-						for (Integer otherDownOpId : batchRetransmitTimers.keySet())
+						BatchTuplePayload btp = buffer.get(batchId);
+
+						if (btp != null)
 						{
-							if (otherDownOpId != downOpId) { batchRetransmitTimers.get(otherDownOpId).remove(batchId); }	
-						}  
-						//Get the tuple
-						TuplePayload p = buffer.get(batchId).getTuple(0);
-						DataTuple dt = new DataTuple(idxMapper, p);
-						opQueue.forceAdd(dt);
-						logger.info("Retransmit timeout for ts="+batchId+" to "+downOpId+", readded to op queue.");
+							logger.debug("Removing batch id timer for "+batchId);
+							for (Integer otherDownOpId : batchRetransmitTimers.keySet())
+							{
+								if (otherDownOpId != downOpId) { batchRetransmitTimers.get(otherDownOpId).remove(batchId); }	
+							}  
+
+							if (btp.getTuple(0) == null) { throw new RuntimeException("Tuple null."); }
+							DataTuple dt = new DataTuple(idxMapper, btp.getTuple(0));
+							opQueue.forceAdd(dt);
+							logger.info("Retransmit timeout for ts="+batchId+" to "+downOpId+", delay="+delay+", readded to op queue.");
+						}
+						else
+						{
+							logger.warn("Ignoring retransmit timeout for ts="+batchId+" to "+downOpId+", delay="+delay+", no batch in buffer.");
+						}
 					}
-					// else do nothing.
+					else
+					{
+						logger.debug("Retransmit timeout for ts="+batchId+" to "+downOpId+" not exceeded.");
+					}
 				}
 			}
 		}
@@ -1145,7 +1163,12 @@ public class Dispatcher implements IRoutingObserver {
 						//Should also clear fctrl?
 						//Should get the current alives for this downstream
 						//Or should it be the current combined alives?
-						throw new RuntimeException("TODO: This doesn't replay any alives in sharedReplayLog that were only at the downstream + doesn't clear downOpId.downAlives!");
+						//Currently, this only replays tuples in the downstreams output buffer for which there is no alive from any downstream.
+						//In particular, unlike when a connection fails it doesn't clear the alives of the downstream, so anything that is only at the downstream won't be 
+						//replayed. Should probably be more aggressive and just treat it like a connection failure in terms of what gets replayed.
+						//However, would also need to add code to replay anything in the shared replay log that's no longer alive elsewhere or been
+						//transmitted already to a different downstream.
+						//throw new RuntimeException("TODO: This doesn't clear downOpId.downAlives, so won't replay tuples alive only at that downstream.");
 						
 						FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
 						int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
@@ -1168,7 +1191,7 @@ public class Dispatcher implements IRoutingObserver {
 									long latency = now - dt.getPayload().instrumentation_ts;
 									if (!optimizeReplay || !combinedDownFctrl.alives().contains(ts))
 									{
-										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with timestamp="+p.timestamp+",latency="+latency);
+										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with ts="+p.timestamp+",latency="+latency);
 										opQueue.forceAdd(dt);
 									}
 								}
@@ -1189,11 +1212,12 @@ public class Dispatcher implements IRoutingObserver {
 		
 		public void clear(int downOpId)
 		{
-			//TODO: Is this thread safe?
-			throw new RuntimeException("This isn't thread safe!");
-			if (currentTasks.containsKey(downOpId))
+			synchronized(lock)
 			{
-				currentTasks.remove(downOpId).cancel();
+				if (currentTasks.containsKey(downOpId))
+				{
+					currentTasks.remove(downOpId).cancel();
+				}
 			}
 		}
 	}
