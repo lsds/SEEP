@@ -97,7 +97,11 @@ public class OutputQueue {
 		
 		IBuffer buffer = channelRecord.getBuffer();
 		
-		if (buffer.contains(tuple.getPayload().timestamp)) { return true; } 
+		if (buffer.contains(tuple.getPayload().timestamp)) 
+		{ 
+			LOG.info("oq.dupe ts="+tuple.getPayload().timestamp+",dsOpId="+dest.getOperatorId());	
+			return true; 
+		} 
 		AtomicBoolean replay = channelRecord.getReplay();
 		AtomicBoolean stop = channelRecord.getStop();
 		//Output for this socket
