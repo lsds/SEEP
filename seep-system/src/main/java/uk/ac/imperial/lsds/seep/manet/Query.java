@@ -222,6 +222,19 @@ public class Query implements Serializable
 		return !parallelized.isEmpty();
 	}
 
+	public int getHeight(Integer logicalId)
+	{
+		int height = 0;
+		Integer[] inputs = getLogicalInputs(logicalId);
+		while (inputs.length > 0)
+		{
+			if (inputs.length > 1) { throw new RuntimeException("TODO: height of join query"); }
+			height++;
+			inputs = getLogicalInputs(inputs[0]);
+		}
+		return height;
+	}
+
 	public Integer getNextHopLogicalNodeId(Integer logicalId)
 	{
 		if (!logicalTopology.keySet().contains(logicalId)) throw new RuntimeException("Invalid logical node id.");

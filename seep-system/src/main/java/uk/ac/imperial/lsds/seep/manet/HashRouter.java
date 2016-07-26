@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,20 +23,60 @@ public class HashRouter implements IRouter {
 	private int switchCount = 0;
 	private final Object lock = new Object(){};
 	private final ArrayList<Integer> downOps;
+	private final int height;
+	private final int opId;
 	
 	
 	
 	public HashRouter(OperatorContext opContext) {
 		this.opContext = opContext;
 		this.downOps = opContext.getDownstreamOpIdList();
+		Query meanderQuery = opContext.getMeanderQuery(); 
+		this.opId = opContext.getOperatorStaticInformation().getOpId();
+		int logicalId = meanderQuery.getLogicalNodeId(opId);
+		this.height = meanderQuery.getHeight(logicalId);
 	}
 	
 	@Override
 	public ArrayList<Integer> route(long batchId) {
 		synchronized(lock)
 		{
-			int index = (int)(batchId % downOps.size());	
+			int index = (int)((batchId / Math.pow(downOps.size(), height)) % downOps.size());	
 			Integer downOpId = downOps.get(index);
+			/*
+			if (height == 1)
+			{
+				logger.info("Down ops = "+downOps);
+				Random r = new Random();
+				double randomValue = r.nextDouble();
+				
+				if (opId == 0)
+				{
+					//1 + 1.75 + 17.5 = 20.25
+					//1 / 20.25 ~= 0.05
+					if (randomValue <= 0.05) { downOpId = 1; }
+					else if (randomValue <= 0.05 + (1.75 * 0.05)) { downOpId = 110; }
+					else { downOpId = 111; }
+					
+				}
+				else if (opId == 10)
+				{
+					//1 + 1.7 + + 29 = 31.7
+					//1 / 31.7 ~= 0.03
+					if (randomValue <= 0.03) { downOpId = 1; }
+					else if (randomValue <= 0.03 + (1.7 * 0.03)) { downOpId = 110; }
+					else { downOpId = 111; }
+				}
+				else if (opId == 11)
+				{
+					//1 + 1 + 12 = 14
+					//1 / 14 = 0.07
+					if (randomValue <= 0.07) { downOpId = 1; }
+					else if (randomValue <= 0.14) { downOpId = 110; }
+					else { downOpId = 111; }
+				}
+			}
+			*/
 			
 			if (downOpId != lastRouted)
 			{
