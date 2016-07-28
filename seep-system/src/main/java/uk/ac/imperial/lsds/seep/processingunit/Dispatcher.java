@@ -54,6 +54,7 @@ public class Dispatcher implements IRoutingObserver {
 	//private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 120 * 1000; // 4 * 1000 Only set this really high for latency breakdown.
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private static final long FAILURE_CTRL_RETRANSMIT_TIMEOUT = Long.parseLong(GLOBALS.valueFor("retransmitTimeout"));
+	private static final long TRY_SEND_ALTERNATIVES_TIMEOUT = Long.parseLong(GLOBALS.valueFor("trySendAlternativesTimeout"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
@@ -561,26 +562,37 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				logger.debug("Sending unconstrained tuple "+ ts);
 				//Could already be in session log if sending to multi-input op.
-				int target = targets.get(0);
 				boolean remove = false;
-				if (downIsMultiInput && workers.get(target).inSessionLog(ts))
+				if (downIsMultiInput && workers.get(targets.get(0)).inSessionLog(ts))
 				{
 					logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
 					remove = true;
 				}
 				else
 				{
-					remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
-					notifyThat(owner.getOperator().getOperatorId()).triedSend();
-					if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
-					else
-					{
-						ArrayList<Integer> nextTargets = owner.getOperator().getRouter().forward_highestWeight(dt);
-						if (nextTargets != null && !nextTargets.isEmpty() && nextTargets.get(0) != target)
+					int alternativesTried = 0;
+					for (Integer target : targets)
+					{	
+						remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
+						notifyThat(owner.getOperator().getOperatorId()).triedSend();
+						long localLatency = System.currentTimeMillis() - dt.getPayload().local_ts;
+						//boolean trySendAlternativesOnFail = getLocalLatency(dt) > trySendAlternativesThreshold
+						if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
+						if (remove || localLatency < TRY_SEND_ALTERNATIVES_TIMEOUT|| targets.size() < 2) { break; }
+						else
 						{
-							notifyThat(owner.getOperator().getOperatorId()).missedSwitch();
+							logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target+", local latency="+localLatency+", trying alternatives:"+targets);
+							alternativesTried++;
+							/*
+							ArrayList<Integer> nextTargets = owner.getOperator().getRouter().forward_highestWeight(dt);
+							if (nextTargets != null && !nextTargets.isEmpty() && nextTargets.get(0) != target)
+							{
+								notifyThat(owner.getOperator().getOperatorId()).missedSwitch();
+							}
+							*/
 						}
 					}
+					if (remove) { logger.debug("Suceeded sending ts="+ts+", altsTried="+alternativesTried); }
 				}
 				
 				if (remove)
@@ -590,7 +602,8 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				else
 				{
-					logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target);
+					int otherTargets = targets.size() - 1; 
+					logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+targets.get(0)+", other active targets="+otherTargets);
 				}
 			}
 			else
@@ -634,7 +647,7 @@ public class Dispatcher implements IRoutingObserver {
 		//for now.
 		private boolean isConstrainedRoute(ArrayList<Integer> targets)
 		{
-			boolean constrainedRoute = targets != null && targets.size() > 1;
+			boolean constrainedRoute = targets != null && targets.size() > 1 && targets.get(0) < 0;
 			if (constrainedRoute && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
 			return constrainedRoute;
 		}
@@ -916,7 +929,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 	}
-	
+
 	private class FailureCtrlHandler
 	{		
 		private final Map<Integer, Long> lastUpdateTimes = new HashMap<>();
@@ -1076,9 +1089,11 @@ public class Dispatcher implements IRoutingObserver {
 			SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
 			IBuffer buffer = (OutOfOrderBuffer)cci.getBuffer();
 
+			DataTuple testRoutesTuple = null;
 			synchronized(lock)
 			{
 
+				logger.debug("Retransmit timers before check="+batchRetransmitTimers);
 				Iterator<Map.Entry<Long,Long>> iter = batchRetransmitTimers.get(downOpId).entrySet().iterator();
 				while (iter.hasNext())
 				{
@@ -1091,7 +1106,7 @@ public class Dispatcher implements IRoutingObserver {
 						// Acked so remove batch from all caches.
 						// TODO: Trickier if alive since if we delete and alive gets retracted due to failure ctrl timeout the batch won't have a retransmit timer? 
 						// For now just ignore and delete in both cases.
-						logger.debug("Removing batch id timer for "+batchId);
+						logger.debug("Removing retransmit timer for ts="+batchId+",dsOpId="+downOpId);
 						iter.remove();
 						for (Integer otherDownOpId : batchRetransmitTimers.keySet())
 						{
@@ -1110,15 +1125,16 @@ public class Dispatcher implements IRoutingObserver {
 
 						if (btp != null)
 						{
-							logger.debug("Removing batch id timer for "+batchId);
+							logger.debug("Removing retransmit timer for ts="+batchId);
+							iter.remove();
 							for (Integer otherDownOpId : batchRetransmitTimers.keySet())
 							{
 								if (otherDownOpId != downOpId) { batchRetransmitTimers.get(otherDownOpId).remove(batchId); }	
 							}  
 
-							if (btp.getTuple(0) == null) { throw new RuntimeException("Tuple null."); }
 							DataTuple dt = new DataTuple(idxMapper, btp.getTuple(0));
 							opQueue.forceAdd(dt);
+							testRoutesTuple = dt;
 							logger.info("Retransmit timeout for ts="+batchId+" to "+downOpId+", delay="+delay+", readded to op queue.");
 						}
 						else
@@ -1131,10 +1147,21 @@ public class Dispatcher implements IRoutingObserver {
 						logger.debug("Retransmit timeout for ts="+batchId+" to "+downOpId+" not exceeded.");
 					}
 				}
+
+				logger.debug("Retransmit timers after check="+batchRetransmitTimers);
 			}
+			if (testRoutesTuple != null) { checkAlternates(testRoutesTuple, downOpId, downOpIndex); }
 		}
 	}
 	
+	private void checkAlternates(DataTuple dt, int downOpId, int downOpIndex)
+	{
+		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
+		int numTargets = targets == null ? 0 : targets.size();
+		boolean containsDown = targets == null ? false : targets.contains(downOpIndex);
+		logger.info("Watchdog requeueing some tuples for "+downOpId+" with "+numTargets+" targets, containsDown="+containsDown);
+	}	
+		
 	private class FailureCtrlWatchdog
 	{
 		final Timer timer = new Timer(true);
@@ -1151,6 +1178,8 @@ public class Dispatcher implements IRoutingObserver {
 				{  
 					logger.warn("Failure ctrl watchdog of "+owner.getOperator().getOperatorId() + " for "+downOpId+" expired.");
 					owner.getOperator().getRouter().update_downFailed(downOpId);
+					DataTuple testRoutesTuple = null;
+					int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 					synchronized(lock)
 					{
 						clear(downOpId);
@@ -1172,7 +1201,6 @@ public class Dispatcher implements IRoutingObserver {
 						//throw new RuntimeException("TODO: This doesn't clear downOpId.downAlives, so won't replay tuples alive only at that downstream.");
 						
 						FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
-						int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 						SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
 						if (cci != null)
 						{
@@ -1194,6 +1222,7 @@ public class Dispatcher implements IRoutingObserver {
 									{
 										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with ts="+p.timestamp+",latency="+latency);
 										opQueue.forceAdd(dt);
+										testRoutesTuple = dt;
 									}
 								}
 							}
@@ -1203,14 +1232,16 @@ public class Dispatcher implements IRoutingObserver {
 							//TODO: Can perhaps reuse requeueTuples code here.
 							
 						}
-					}
+					} 
+
+					if (testRoutesTuple != null) { checkAlternates(testRoutesTuple, downOpId, downOpIndex); }
 				} 
 			};
 			
 			currentTasks.put(downOpId, timeoutTask);
 			timer.schedule(timeoutTask, delay);
 		}
-		
+
 		public void clear(int downOpId)
 		{
 			synchronized(lock)

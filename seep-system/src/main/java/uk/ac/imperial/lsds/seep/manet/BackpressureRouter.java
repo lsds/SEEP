@@ -8,6 +8,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.Comparator;
+import java.util.Collections;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,6 +102,20 @@ public class BackpressureRouter implements IRouter {
 			//If no constrained routes, try to get based on weight.
 			if (targets == null)
 			{
+				targets = weightSortedOpIds();
+				Integer downOpId = targets == null ? null : opContext.getDownOpIdFromIndex(targets.get(0));
+				if (!Objects.equals(downOpId, lastRouted))
+				{
+					switchCount++;
+					long now = System.currentTimeMillis();
+					long lastSwitch = 0;
+					if (tLastSwitch > 0) { lastSwitch = now - tLastSwitch; }
+					tLastSwitch = now;	
+					logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+", last switch="+lastSwitch+")");
+					lastRouted = downOpId;
+				}
+			
+				/*
 				Integer downOpId = maxWeightOpId();
 				
 				if (downOpId != lastRouted)
@@ -115,6 +134,7 @@ public class BackpressureRouter implements IRouter {
 					targets.add(opContext.getDownOpIndexFromOpId(downOpId));
 				}
 				else { return null; }
+				*/
 			}
 		}
 		return targets;
@@ -204,6 +224,44 @@ public class BackpressureRouter implements IRouter {
 			logger.debug("maxWeight:Node "+opContext.getOperatorStaticInformation().getOpId()+" backpressure router weights= "+weights);
 		}
 		return result;
+	}
+
+	private ArrayList<Integer> weightSortedOpIds()
+	{
+		synchronized(lock)
+		{
+			ArrayList<Integer> targets = null;
+			if (downIsUnreplicatedSink)
+			{
+				targets = new ArrayList<Integer>();
+				for (Integer opId : weights.keySet()) 
+				{ 
+					targets.add(opContext.getDownOpIndexFromOpId(opId)); 
+					return targets;
+				}
+				throw new RuntimeException("Logic error.");
+			}
+
+			List<Map.Entry<Integer,Double>> list = new LinkedList(weights.entrySet());
+			Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>()
+			{
+				public int compare( Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2 )
+				{
+					return (o1.getValue()).compareTo( o2.getValue() );
+				}
+			});	
+		
+			Collections.reverse(list);
+			for (Map.Entry<Integer,Double> e : list)
+			{
+				if (e.getValue() > 0)
+				{
+					if (targets==null) { targets = new ArrayList<Integer>(); }
+					targets.add(opContext.getDownOpIndexFromOpId(e.getKey()));	
+				}
+			}	
+			return targets;
+		}	
 	}
 
 	@Override
