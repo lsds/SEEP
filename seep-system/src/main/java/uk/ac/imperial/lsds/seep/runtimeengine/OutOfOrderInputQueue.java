@@ -35,7 +35,19 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	public OutOfOrderInputQueue()
 	{
 		//inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
-		maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
+		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+		boolean boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
+					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
+					replicationFactor == 1;
+		if (boundedOpQueue)
+		{
+			maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
+		}
+		else
+		{
+			maxInputQueueSize = Integer.MAX_VALUE;
+		}
+
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
