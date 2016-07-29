@@ -55,6 +55,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private static final long FAILURE_CTRL_RETRANSMIT_TIMEOUT = Long.parseLong(GLOBALS.valueFor("retransmitTimeout"));
 	private static final long TRY_SEND_ALTERNATIVES_TIMEOUT = Long.parseLong(GLOBALS.valueFor("trySendAlternativesTimeout"));
+	private static final long ABORT_SESSION_TIMEOUT = 1000 * Long.parseLong(GLOBALS.valueFor("abortSessionTimeoutSec"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
@@ -388,9 +389,11 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public class DispatcherMain implements Runnable
 	{
+		private long lastSendSuccess= -1; //Use to abort if can't send for ages
 		public DispatcherMain() {}
 		public void run()
 		{
+			lastSendSuccess = System.currentTimeMillis();
 			while(true)
 			{
 				Set<Long> constraints = dispatchHead();
@@ -399,6 +402,12 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					dispatchConstrained(constraints);
 				}
+
+				if (owner.getOperator().getOpContext().isSource() && System.currentTimeMillis() - lastSendSuccess > ABORT_SESSION_TIMEOUT)
+				{
+					logger.error("Abort session timeout exceeded");
+					System.exit(1);	
+				} 
 			}
 		}
 
@@ -599,6 +608,7 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					logger.debug("Removing tuple "+ts+" from op queue.");
 					dt = opQueue.remove(dt.getPayload().timestamp);
+					lastSendSuccess = System.currentTimeMillis();
 				}
 				else
 				{
@@ -628,7 +638,9 @@ public class Dispatcher implements IRoutingObserver {
 						else
 						{
 							logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
-							allSucceeded = allSucceeded && workers.get(target).trySend(dt, SEND_TIMEOUT);
+							boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT);
+							if (downSucceeded) { lastSendSuccess = System.currentTimeMillis(); }
+							allSucceeded = allSucceeded && downSucceeded; 
 						}
 					}
 				}

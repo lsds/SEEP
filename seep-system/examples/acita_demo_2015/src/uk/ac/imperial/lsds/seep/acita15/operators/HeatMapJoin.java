@@ -20,7 +20,7 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
-import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
+import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
 public class HeatMapJoin implements StatelessOperator{
 

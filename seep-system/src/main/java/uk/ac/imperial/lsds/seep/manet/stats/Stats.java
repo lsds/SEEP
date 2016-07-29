@@ -8,7 +8,7 @@
  * Contributors:
  *     Raul Castro Fernandez - initial API and implementation
  ******************************************************************************/
-package uk.ac.imperial.lsds.seep.acita15.stats;
+package uk.ac.imperial.lsds.seep.manet.stats;
 
 import java.util.List;
 import java.io.Serializable;

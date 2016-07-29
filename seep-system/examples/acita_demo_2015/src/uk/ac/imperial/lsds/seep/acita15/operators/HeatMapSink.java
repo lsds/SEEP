@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
-import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
+import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
 public class HeatMapSink implements StatelessOperator {

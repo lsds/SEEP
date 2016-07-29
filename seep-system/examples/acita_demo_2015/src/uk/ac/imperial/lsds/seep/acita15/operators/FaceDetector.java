@@ -51,7 +51,7 @@ import static org.bytedeco.javacpp.opencv_highgui.*;
 
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
-import uk.ac.imperial.lsds.seep.acita15.stats.Stats;
+import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
 public class FaceDetector implements StatelessOperator{
 
