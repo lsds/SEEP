@@ -107,7 +107,7 @@ public interface IProcessingUnit {
 
 	public void emitACK(TimestampTracker currentTs);
 
-	public void emitFailureCtrl(FailureCtrl nodeFctrl);
+	public void emitFailureCtrl(FailureCtrl combinedDownFctrl, boolean downstreamsRoutable);
 
 	public ArrayList<Integer> getRouterIndexesInformation(int opId);
 

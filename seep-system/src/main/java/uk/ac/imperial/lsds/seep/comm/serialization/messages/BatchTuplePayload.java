@@ -66,4 +66,20 @@ public class BatchTuplePayload {
 		}
 		outputTs = newOutputTs;	//TODO: This will probably mess up the existing acking relationships.
 	}
+
+	public synchronized boolean containsAcked(FailureCtrl fctrl)
+	{
+		//TODO: Is this even thread safe wrt output sending?
+		Iterator<TuplePayload> iter = batch.iterator();
+		while (iter.hasNext())
+		{
+			long tupleTs = iter.next().timestamp;
+			// Don't remove based on alives here - we're using this log for replay.
+			if (tupleTs <= fctrl.lw() || fctrl.acks().contains(tupleTs) /*|| fctrl.alives().contains(tupleTs)*/)
+			{
+				return true;	
+			}
+		}
+		return false;
+	}
 }

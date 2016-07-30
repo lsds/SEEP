@@ -31,6 +31,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
+import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -45,6 +46,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 	private Map<String, Integer> idxMapper;
 	private DataStructureAdapter dsa;
 	private Kryo k = null;
+	private Stats stats;
 	
 	public IncomingDataHandlerWorker(Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper, DataStructureAdapter dsa){
 		//upstream id
@@ -54,6 +56,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.idxMapper = idxMapper;
 		this.dsa = dsa;
 		this.k = initializeKryo();
+		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress()));
 	}
 	
 	private Kryo initializeKryo(){
@@ -146,6 +149,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 						long socketLatency = receiveTs - t_payload.local_ts;
 						t_payload.local_ts = receiveTs;
 						LOG.debug("icdhw for "+opId+",ts="+t_payload.timestamp+",its="+t_payload.instrumentation_ts+",rx latency="+latency+", socket latency="+socketLatency+", readTime="+readTime);
+						stats.add(System.currentTimeMillis(), t_payload.toString().toString().length());
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
 						if (reg.getMap().containsKey("latencyBreakdown"))
 						{

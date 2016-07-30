@@ -22,14 +22,15 @@ public class FailureCtrlWriter implements Runnable {
 		while(goOn){
 			
 			FailureCtrl fctrl = processingUnit.getDispatcher().getCombinedDownFailureCtrl();
+			boolean downstreamsRoutable = processingUnit.getDispatcher().areDownstreamsRoutable();
 			
 			/*
 			TimestampTracker currentTsV = processingUnit.getLastACK();
 			System.out.println("ACKWorker: EmitACK");
 			processingUnit.emitACK(currentTsV);
 			*/
-			logger.debug("Writing failure ctrl: "+ fctrl.toString());
-			processingUnit.emitFailureCtrl(fctrl);
+			processingUnit.emitFailureCtrl(fctrl,  downstreamsRoutable);
+			logger.debug("Writing failure ctrl: "+ fctrl.toString()+",downstreamsRoutable="+downstreamsRoutable);
 			
 			try{
 				Thread.sleep(sleep);

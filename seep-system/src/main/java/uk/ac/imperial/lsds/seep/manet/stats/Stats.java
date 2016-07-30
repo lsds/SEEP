@@ -26,6 +26,7 @@ public class Stats implements Serializable {
 
 	private final long MIN_INTERVAL= 1 * 1000;
 	private final int operatorId;
+	private final Integer upstreamId;
 	private long tIntervalStart = System.currentTimeMillis();
 	private long tFirst = -1;
 	private long byteCount = 0;
@@ -34,6 +35,13 @@ public class Stats implements Serializable {
 	public Stats(int operatorId)
 	{
 		this.operatorId = operatorId;
+		this.upstreamId = null;
+	}
+
+	public Stats(int operatorId, int upstreamId)
+	{
+		this.operatorId = operatorId;
+		this.upstreamId = upstreamId;
 	}
 
 	//TODO: Initial tStart?
@@ -48,7 +56,14 @@ public class Stats implements Serializable {
 		long cumInterval = t - tFirst;
 		double cumIntervalTput = cumInterval > 0 ? computeTput(cumByteCount, cumInterval) : 0;
 		
-		return "t="+t+",id="+operatorId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
+		if (upstreamId == null)	
+		{
+			return "t="+t+",id="+operatorId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
+		}
+		else
+		{
+			return "t="+t+",opid="+operatorId+",upid="+upstreamId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
+		}
 	}
 
 	public void add(long t, long bytes)

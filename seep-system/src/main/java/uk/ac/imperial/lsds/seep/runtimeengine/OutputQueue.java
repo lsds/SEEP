@@ -169,7 +169,7 @@ public class OutputQueue {
 						}
 						catch(KryoException|IllegalArgumentException e)
 						{
-							LOG.error("Writing batch to "+dest.getOperatorId() + " failed, tp.ts="+ tp.timestamp);
+							LOG.error("Writing batch to "+dest.getOperatorId() + " failed, ts="+ tp.timestamp+", "+e);
 							channelRecord.cleanBatch2();
 							return false;
 						}

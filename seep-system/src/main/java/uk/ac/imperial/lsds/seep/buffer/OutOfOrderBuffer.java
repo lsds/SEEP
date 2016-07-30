@@ -49,7 +49,15 @@ public class OutOfOrderBuffer implements IBuffer {
 			while (iter.hasNext())
 			{
 				Long ts = iter.next();
+				if (fctrl.lw() >= ts || fctrl.acks().contains(ts)) 
+				{ 
+					logger.trace("Trimmed batch "+ts);
+					iter.remove(); 
+					notifyThat(opID).trimmedBuffer(1);
+				}	
+				/*
 				BatchTuplePayload batch = log.get(ts);
+				TODO: This isn't thread safe currently
 				batch.trim(fctrl);
 				if (batch.size() <= 0) 
 				{ 
@@ -57,6 +65,7 @@ public class OutOfOrderBuffer implements IBuffer {
 					iter.remove(); 
 					notifyThat(opID).trimmedBuffer(1);
 				}
+				*/
 			}
 			return null;
 		}

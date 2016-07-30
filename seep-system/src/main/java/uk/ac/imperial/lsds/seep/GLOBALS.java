@@ -29,6 +29,7 @@ public class GLOBALS {
 		LOG.debug("Loading GLOBALS...");
 		GLOBALS.loadProperties();
 		LOG.debug("Loading GLOBALS...Done");
+		LOG.info("java.library.path="+System.getProperty("java.library.path"));
 	}
 	
 	private GLOBALS(){}

@@ -56,6 +56,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long FAILURE_CTRL_RETRANSMIT_TIMEOUT = Long.parseLong(GLOBALS.valueFor("retransmitTimeout"));
 	private static final long TRY_SEND_ALTERNATIVES_TIMEOUT = Long.parseLong(GLOBALS.valueFor("trySendAlternativesTimeout"));
 	private static final long ABORT_SESSION_TIMEOUT = 1000 * Long.parseLong(GLOBALS.valueFor("abortSessionTimeoutSec"));
+	private static final boolean enableDownstreamsUnroutable = Boolean.parseBoolean(GLOBALS.valueFor("enableDownstreamsUnroutable"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
@@ -81,6 +82,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	private final Object lock = new Object(){};
 	private final int numDownstreamReplicas;
+	private boolean downstreamsRoutable = true;
 	
 	public Dispatcher(IProcessingUnit owner)
 	{
@@ -213,6 +215,24 @@ public class Dispatcher implements IRoutingObserver {
 			copy = new FailureCtrl(combinedDownFctrl);
 		}
 		return copy;
+	}
+
+	public void setDownstreamsRoutable(boolean newValue)
+	{
+		if (!enableDownstreamsUnroutable || 
+			owner.getOperator().getOpContext().isSource() || 
+			owner.getOperator().getOpContext().isSink()) 
+		{ return; }
+
+		synchronized(lock)
+		{
+			if (newValue != downstreamsRoutable) { logger.debug("Changing "+owner.getOperator().getOperatorId()+ " downstreamsRoutable="+newValue); }
+			downstreamsRoutable = newValue;
+		}
+	}
+	public boolean areDownstreamsRoutable()
+	{
+		synchronized(lock) { return downstreamsRoutable; }
 	}
 	
 	public void dispatch(DataTuple dt) 
@@ -517,7 +537,8 @@ public class Dispatcher implements IRoutingObserver {
 				long ts = dt.getPayload().timestamp;
 				if (ts <= combinedDownFctrl.lw() || combinedDownFctrl.acks().contains(ts))
 				{
-					opQueue.remove(ts);
+					boolean removed = opQueue.remove(ts) != null;
+					if (removed) { setDownstreamsRoutable(true); }
 					dt = null;
 				}
 			}
@@ -533,6 +554,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (!shouldTrySend(ts, fctrl, isConstrainedRoute(targets)))
 			{
 				dt = opQueue.remove(dt.getPayload().timestamp);
+				if (dt != null) { setDownstreamsRoutable(true); }
 				
 				//Alive downstream, so don't discard in case we need
 				//to replay if the downstream fails.
@@ -576,10 +598,12 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
 					remove = true;
+					// In particular, setDownstreamsRoutable (false) will be overridden by this when retransmitting!
+					throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
 				}
 				else
 				{
-					int alternativesTried = 0;
+					int targetsTried = 0;
 					for (Integer target : targets)
 					{	
 						remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
@@ -587,27 +611,26 @@ public class Dispatcher implements IRoutingObserver {
 						long localLatency = System.currentTimeMillis() - dt.getPayload().local_ts;
 						//boolean trySendAlternativesOnFail = getLocalLatency(dt) > trySendAlternativesThreshold
 						if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
-						if (remove || localLatency < TRY_SEND_ALTERNATIVES_TIMEOUT|| targets.size() < 2) { break; }
+						if (remove || localLatency < TRY_SEND_ALTERNATIVES_TIMEOUT) { break; }
 						else
 						{
-							logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target+", local latency="+localLatency+", trying alternatives:"+targets);
-							alternativesTried++;
-							/*
-							ArrayList<Integer> nextTargets = owner.getOperator().getRouter().forward_highestWeight(dt);
-							if (nextTargets != null && !nextTargets.isEmpty() && nextTargets.get(0) != target)
+							targetsTried++;
+							if (targetsTried >= targets.size()) { setDownstreamsRoutable(false); } 
+
+							if (targets.size() > 1)
 							{
-								notifyThat(owner.getOperator().getOperatorId()).missedSwitch();
+								logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target+", local latency="+localLatency+", trying alternatives:"+targets);
 							}
-							*/
 						}
 					}
-					if (remove) { logger.debug("Suceeded sending ts="+ts+", altsTried="+alternativesTried); }
+					if (remove) { logger.debug("Suceeded sending ts="+ts+", targetsTried="+targetsTried); }
 				}
 				
 				if (remove)
 				{
 					logger.debug("Removing tuple "+ts+" from op queue.");
 					dt = opQueue.remove(dt.getPayload().timestamp);
+					if (dt != null) { setDownstreamsRoutable(true); }
 					lastSendSuccess = System.currentTimeMillis();
 				}
 				else
@@ -639,7 +662,11 @@ public class Dispatcher implements IRoutingObserver {
 						{
 							logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
 							boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT);
-							if (downSucceeded) { lastSendSuccess = System.currentTimeMillis(); }
+							if (downSucceeded) 
+							{ 
+								lastSendSuccess = System.currentTimeMillis(); 
+								setDownstreamsRoutable(true);
+							}
 							allSucceeded = allSucceeded && downSucceeded; 
 						}
 					}
@@ -733,6 +760,7 @@ public class Dispatcher implements IRoutingObserver {
 			} catch (InterruptedException | TimeoutException e) {
 				return false;
 			}
+			setDownstreamsRoutable(true);
 			return true;
 		}
 		
@@ -817,6 +845,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
+
 		/* TODO: Should be holding lock here? */
 		private void requeueTuples(TreeMap<Long, BatchTuplePayload> sessionLog, Set<Long> dsOpOldAlives)
 		{
@@ -850,6 +879,40 @@ public class Dispatcher implements IRoutingObserver {
 		}
 	}
 	
+	//Assumes you've already trimmed buffer, updated combinedDownFctrl, and lock is held.
+	public void requeueRetractedTuples(int downOpId, Set<Long> retracted)
+	{
+		int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
+		SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
+		IBuffer buffer = (OutOfOrderBuffer)cci.getBuffer();
+		//TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+		//for (Map.Entry<Long, BatchTuplePayload> e : sessionLog.entrySet())
+		for (Long ts : retracted)
+		{
+			if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts) && !combinedDownFctrl.alives().contains(ts))
+			{
+				BatchTuplePayload btp = buffer.get(ts);
+				if (btp != null)
+				{
+					TuplePayload p = btp.getTuple(0);	//TODO: Proper batches.
+
+					//TODO: what if acked already?
+					DataTuple dt = new DataTuple(idxMapper, p);
+					if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
+					{
+						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
+						sharedReplayLog.add(dt);
+					}
+					else
+					{
+						logger.debug("Requeueing retracted data tuple with ts="+p.timestamp);
+						opQueue.forceAdd(dt);
+					}
+				}
+			}
+		}
+	}
+
 	//Lock should be held
 	private Set<Long> updateDownAlives(int dsOpId, Set<Long> newDownAlives)
 	{
@@ -998,6 +1061,10 @@ public class Dispatcher implements IRoutingObserver {
 						Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
 						logger.trace("Failure ctrl handler checking for replay from shared log.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
+			
+						Set<Long> retractions = getRetractions(dsOpOldAlives);
+						if (!retractions.isEmpty()) { logger.info("Downstream "+dsOpId+" retractions:"+retractions); }
+						requeueRetractedTuples(dsOpId, retractions);
 					}
 				}
 				
@@ -1017,6 +1084,19 @@ public class Dispatcher implements IRoutingObserver {
 				lock.notifyAll();
 				logger.debug("Handled failure ctrl in duration="+ (System.currentTimeMillis() - tStart));
 			}
+		}
+
+		private Set<Long> getRetractions(Set<Long> dsOpOldAlives)
+		{
+			Set<Long> retractions = new HashSet<>();
+			for (Long id : dsOpOldAlives)
+			{
+				if (id > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(id) && !combinedDownFctrl.alives().contains(id))
+				{
+					retractions.add(id);
+				}
+			}		
+			return retractions;
 		}
 		
 		public void handleUpstreamFailureCtrl(FailureCtrl fctrl, int upOpId)
@@ -1057,8 +1137,9 @@ public class Dispatcher implements IRoutingObserver {
 		
 		private void purgeOpOutputQueue()
 		{
-			opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
-			opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
+			boolean removedSome = !opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
+			removedSome = removedSome || opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
+			if (removedSome) { setDownstreamsRoutable(true); }
 		}
 
 		private void addBatchRetransmitTimer(int downOpId, long batchId, long now)

@@ -100,9 +100,11 @@ public class RoutingController implements Runnable{
 			while(true)
 			{
 				Map<Integer, Double> weightsCopy = null;
+				boolean downstreamsRoutable = areDownstreamsRoutable();
 				synchronized(lock)
 				{
-					updateWeight();
+					//TODO: Should possibly change this to call getLocalOutputQLen without holdinng the lock.
+					updateWeight(downstreamsRoutable);
 					weightsCopy = new HashMap<>(weights);
 				}
 				
@@ -232,8 +234,21 @@ public class RoutingController implements Runnable{
 			throw new RuntimeException("Logic error.");
 		}
 	}
+
+	private boolean areDownstreamsRoutable()
+	{
+		if (owner.getProcessingUnit().getDispatcher() != null)
+		{
+			return owner.getProcessingUnit().getDispatcher().areDownstreamsRoutable();
+		}
+		else
+		{
+			throw new RuntimeException("Logic error.");
+		}
+		
+	}
 	
-	private void updateWeight()
+	private void updateWeight(boolean downstreamsRoutable)
 	{
 			Map<Integer, Integer> localInputQlens = null;
 			if (numLogicalInputs > 1)
@@ -272,7 +287,7 @@ public class RoutingController implements Runnable{
 					
 					if (numLogicalInputs == 1)
 					{
-						weights.put(upstreamId, weight);
+						weights.put(upstreamId, downstreamsRoutable ? weight : -1);
 					}
 					else
 					{
@@ -283,6 +298,7 @@ public class RoutingController implements Runnable{
 						weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 								localPerInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 						weights.put(upstreamId, weight);
+						throw new RuntimeException("TODO: Downstreams routable");
 					}					
 				}
 			}

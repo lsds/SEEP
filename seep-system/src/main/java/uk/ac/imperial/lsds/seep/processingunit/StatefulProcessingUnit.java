@@ -930,8 +930,8 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 
 	@Override
-	public void emitFailureCtrl(FailureCtrl nodeFctrl) {
-		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl);
+	public void emitFailureCtrl(FailureCtrl nodeFctrl, boolean downstreamsRoutable) {
+		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl, downstreamsRoutable);
 	}
 	
 	public void resetState() {

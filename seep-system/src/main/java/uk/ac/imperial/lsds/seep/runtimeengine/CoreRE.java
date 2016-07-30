@@ -946,7 +946,7 @@ public class CoreRE {
 		}
 	}
 	
-	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl)
+	public void writeFailureCtrls(ArrayList<Integer> upOpIndexes, FailureCtrl nodeFctrl, boolean downstreamsRoutable)
 	{
 		if (controlDispatcher == null || upOpIndexes.isEmpty()) { return; }
 		long tStart = System.currentTimeMillis();
@@ -966,6 +966,7 @@ public class CoreRE {
 					meanderQuery.getLogicalNodeId(opId), 
 					meanderQuery.getLogicalNodeId(upOpId)));
 			LOG.debug("Writing failure ctrl, node="+nodeFctrl+",upOp="+upFctrl);
+			if (!downstreamsRoutable) { upFctrl = nodeFctrl; }
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId , upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);

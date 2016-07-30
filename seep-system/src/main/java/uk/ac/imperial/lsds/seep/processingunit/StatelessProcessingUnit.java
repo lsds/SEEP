@@ -86,13 +86,6 @@ public class StatelessProcessingUnit implements IProcessingUnit {
         return ctx;
     }
 	
-    /*
-    public Dispatcher processFailureCtrl(FailureCtrl fctrl, int downOpId)
-    {
-    	if (dispatcher == null) { throw new RuntimeException("Logic error."); }
-    	dispatcher.handleFailureCtrl(fctrl, downOpId);
-    }
-    */
 	@Override
 	public void addDownstream(int opId, OperatorStaticInformation location) {
 		// First pick the most downstream operator, and add the downstream to that one
@@ -553,9 +546,9 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	}
 	
 	@Override
-	public void emitFailureCtrl(FailureCtrl nodeFctrl)
+	public void emitFailureCtrl(FailureCtrl nodeFctrl, boolean downstreamsRoutable)
 	{	
-		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl);
+		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl, downstreamsRoutable);
 		
 		Query meanderQuery = getOperator().getOpContext().getMeanderQuery();
 		int logicalId = meanderQuery.getLogicalNodeId(getOperator().getOperatorId());
