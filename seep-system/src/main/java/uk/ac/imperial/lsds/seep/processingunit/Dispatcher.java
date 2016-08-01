@@ -1063,8 +1063,11 @@ public class Dispatcher implements IRoutingObserver {
 						requeueFromSharedReplayLog(dsOpOldAlives);
 			
 						Set<Long> retractions = getRetractions(dsOpOldAlives);
-						if (!retractions.isEmpty()) { logger.info("Downstream "+dsOpId+" retractions:"+retractions); }
-						requeueRetractedTuples(dsOpId, retractions);
+						if (!retractions.isEmpty()) 
+						{ 
+							logger.info("Downstream "+dsOpId+" retractions:"+retractions); 
+							requeueRetractedTuples(dsOpId, retractions);
+						}
 					}
 				}
 				
@@ -1089,13 +1092,16 @@ public class Dispatcher implements IRoutingObserver {
 		private Set<Long> getRetractions(Set<Long> dsOpOldAlives)
 		{
 			Set<Long> retractions = new HashSet<>();
-			for (Long id : dsOpOldAlives)
+			if (dsOpOldAlives != null)
 			{
-				if (id > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(id) && !combinedDownFctrl.alives().contains(id))
+				for (Long id : dsOpOldAlives)
 				{
-					retractions.add(id);
-				}
-			}		
+					if (id > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(id) && !combinedDownFctrl.alives().contains(id))
+					{
+						retractions.add(id);
+					}
+				}		
+			}
 			return retractions;
 		}
 		

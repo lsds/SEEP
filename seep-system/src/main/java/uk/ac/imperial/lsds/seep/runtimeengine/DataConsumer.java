@@ -51,7 +51,7 @@ public class DataConsumer implements Runnable {
 		else{
 			logger.info("1 input data ingestion mode.");
 			DataStructureI dso = dataAdapter.getUniqueDso();
-			if(dso instanceof InputQueue || dso instanceof OutOfOrderInputQueue){
+			if(dso instanceof InputQueue || dso instanceof OutOfOrderInputQueue || dso instanceof OutOfOrderFairInputQueue){
 				logger.info("Pulling from input queue");
 				while(doWork){
 					DataTuple data = dso.pull();
@@ -96,7 +96,7 @@ public class DataConsumer implements Runnable {
 
 		@Override
 		public void run() {			
-			if(dsi instanceof InputQueue || dsi instanceof OutOfOrderInputQueue){
+			if(dsi instanceof InputQueue || dsi instanceof OutOfOrderInputQueue || dsi instanceof OutOfOrderFairInputQueue){
 				logger.info("Pulling from input queue.");
 				while(doWork){
 					DataTuple data = dsi.pull();
