@@ -192,14 +192,14 @@ public class NodeManager{
 						}
 						//Here I have the serialized bytes of the file, we materialize the real file
 						//For now the name of the file is always query.jar
-						FileOutputStream fos = new FileOutputStream(new File("query.jar"));
+						FileOutputStream fos = new FileOutputStream(new File(ownPort+"query.jar"));
 						fos.write(serializedFile);
 						fos.close();
 						dis.close();
 						subConnection.close();
 						out.println("ack");
 						//At this point we should have the file on disk
-						File pathToCode = new File("query.jar");
+						File pathToCode = new File(ownPort+"query.jar");
 						if(pathToCode.exists()){
 							LOG.info("-> Loading CODE from: {}", pathToCode.getAbsolutePath());
 							loadCodeToRuntime(pathToCode);
