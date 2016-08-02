@@ -16,8 +16,9 @@ ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
 latency_percentile = '95%'
 latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
-#latency_percentile = 'max'
-#latency_regex = re.compile('max_lat=(\d+)')
+latency_percentile = 'max'
+latency_regex = re.compile('max_lat=(\d+)')
+max_latency = 1000000.0 
 
 def main(ks,variables,sessions,params,plot_time_str=None):
 
@@ -41,10 +42,11 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 f.write("%s\n"%params['cmdline'])
 
         if not params['iperf']:
+            include_failed = params['includeFailed']
             #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
             #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
-            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput)
-            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency)
+            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput_include_failed if include_failed else get_tput)
+            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
 
             
             if len(variables['mobility']) > 1:
@@ -228,6 +230,10 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
     if 1 in ks:
         all_loglines = []
         relative_raw_vals = compute_relative_raw_vals(raw_vals)
+        if not relative_raw_vals:
+            if params['includeFailed']: return 
+            else: raise Exception("No relative raw vals - presumably divide by zero?")
+
         for k in ks:
             for (i_var, var) in enumerate(var_vals):
                 writeHeader = i_var == 0
@@ -249,7 +255,6 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
                all_rel_rx_vs_var_plotdata.write(line) 
 
 def record_fixed_kvar_statistics(k, var, var_suffix, values, time_str, data_dir, metric_suffix):
-
     #First sort the metrics in ascending order
     #Then get the total number of metrics
     #Then get the x increment per value 
@@ -293,33 +298,51 @@ def get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_metric_fn)
 
     return metrics
 
-def get_tput(logdir):
+def get_tput(logdir, include_failed=False):
     #regex = re.compile('src_sink_mean_tput=(\d+)')
     regex = re.compile('sink_sink_mean_tput=(\d+)')
     logfilename = '%s/tput.txt'%logdir
+    if not os.path.exists(logfilename): 
+        if include_failed: return 0.0
+        else: raise Exception("Could not find tput log %s"%logfilename)
+
     with open(logfilename, 'r') as tput_log:
         for line in tput_log:
             match = re.search(regex, line)
             if match:
                 return float(match.group(1))
             
-    raise Exception("Could not find tput in %s"%logfilename)
+    if include_failed: return 0.0
+    else: raise Exception("Could not find tput in %s"%logfilename)
 
-def get_latency(logdir):
+def get_tput_include_failed(logdir):
+    return get_tput(logdir, True)
+
+def get_latency(logdir, include_failed=False):
     #TODO: Handle float for latency in regex!
     regex = latency_regex
     logfilename = '%s/latency.txt'%logdir
+    if not os.path.exists(logfilename): 
+        if include_failed: return max_latency 
+        else: raise Exception("Could not find latency log %s"%logfilename)
+
     with open(logfilename, 'r') as latency_log:
         for line in latency_log:
             match = re.search(regex, line)
             if match:
                 return float(match.group(1))
             
-    raise Exception("Could not find %s latency in %s"%(latency_percentile, logfilename))
+    if include_failed: return max_latency 
+    else: raise Exception("Could not find %s latency in %s"%(latency_percentile, logfilename))
+
+def get_latency_include_failed(logdir):
+    return get_latency(logdir, True)
 
 def get_raw_latencies(logdir):
     result = []
-    with open('%s/cum-lat.data'%logdir, 'r') as latency_log:
+    logfilename = '%s/cum-lat.data'%logdir
+    if not os.path.exists(logfilename): return result
+    with open(logfilename, 'r') as latency_log:
         for line in latency_log:
             if not line.startswith('#'):
                 result.append(int(line.split()[1]))
@@ -401,6 +424,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--workerPreDelay', dest='worker_predelay', default=None, help='Time to wait before starting worker')
     parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
+    parser.add_argument('--sinkScaleFactor', dest='sink_scale_factor', default=None, help='Replicate sinks this many times')
+    parser.add_argument('--colocateSrcSink', dest='colocate_src_sink', default=False, action='store_true', help='Colocate src and sink workers')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--pcap', dest='pcap', default=False, action='store_true', help='Start pcap service for workers.')
     parser.add_argument('--emanestats', dest='emanestats', default=False, action='store_true', help='Start emanestats service on master')
@@ -421,6 +446,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
     parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
     parser.add_argument('--srcRates', dest='src_rates', default=None, help='Fixed frame rates for sources to send at.')
+    parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
 
     args=parser.parse_args()
 
@@ -463,6 +489,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['fanin']=args.max_fan_in
     params['pyScaleOutSinks']=args.scale_sinks
     params['scaleOutSinks']=pybool_to_javastr(args.scale_sinks)
+    params['sinkScaleFactor']=args.sink_scale_factor
+    params['colocateSrcSink']=args.colocate_src_sink
     params['quagga']=args.quagga
     params['pcap']=args.pcap
     params['emanestats']=args.emanestats
@@ -483,6 +511,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['roofnet'] = args.roofnet
     params['emaneModel'] = args.emane_model
     params['txratemode'] = args.txratemode
+    params['includeFailed'] = args.include_failed
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

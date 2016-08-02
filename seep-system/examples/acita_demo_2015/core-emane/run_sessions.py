@@ -261,6 +261,11 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             if not os.path.exists(session_constraints):
                 raise Exception("Could not find sessions constraints: %s"%session_constraints)
             shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
+        elif params['colocateSrcSink']:
+            session_constraints = '%s/static/colo_src_sink_constraints.txt'%(script_dir)
+            if not os.path.exists(session_constraints):
+                raise Exception("Could not find colocated src and sink constraints: %s"%session_constraints)
+            shutil.copy(session_constraints, '%s/mappingRecordIn.txt'%session.sessiondir)
 
         #TODO: Do I actually need the default route/multicast service?
         services_str = "IPForward|DefaultRoute|DefaultMulticastRoute|SSH"
@@ -282,7 +287,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             # node id offset = wlan1 + master -> 2
             random.seed(int(exp_session))
             shuffle = range(3,len(roofnet_placements)+3)
-            #random.shuffle(shuffle)
+            random.shuffle(shuffle)
             print 'shuffle=%s'%str(shuffle)
             roof_to_nem = dict(zip(roof_node_ids, shuffle))
             ##swaps = [(8,10), (7,9)]
@@ -560,32 +565,17 @@ def create_commeffect_net(session, wlan, distributed, params, verbose=False):
 
 def get_num_workers(k, nodes, params):
     q = params['query']
-    sink_scale_factor = k if params['pyScaleOutSinks'] else 1
-    if q == 'chain' or q == 'fr' or q == 'join': 
-        num_workers = [1] * (1 + sink_scale_factor + (k * params['h']))
-        if params['query'] == 'join':
-            if params['h'] != 1: raise Exception('Only support query of height 1 for join')
-            num_workers.append(1)
-    elif q == 'debsGC13':
-        if k > 2 or h > 1: raise Exception('Only support replication factors <= 2 for debs_gc_13') 
-        num_workers = [1] * 23 
-        if h > 0:
-            num_workers[1] += 1 #A RB
-            num_workers[5] += 1 #A RM
-            num_workers[9] += 1 #A RF
-            num_workers[12] += 1 #B RB
-            num_workers[16] += 1 #B RM
-            num_workers[20] += 1 #B RF
-            if k > 1:
-                num_workers[2] += 1 #A RCB
-                num_workers[6] += 1 #A RCM
-                num_workers[10] += 1 #A LF
-                num_workers[13] += 1 #B RCB
-                num_workers[17] += 1 #B RCM
-                num_workers[21] += 1 #B LF
+    sink_scale_factor = get_sink_scale_factor(k, params)
 
-    elif q == 'nameAssist':
-        num_workers = [2]+([1]*(1+ (k*3))) 
+    if q == 'chain' or q == 'fr': 
+        if params['colocateSrcSink']:
+            if sink_scale_factor > 1: raise Exception("Can't colocate source with replicated sinks.")
+            num_workers = [2] + [1] * (k * params['h'])
+        else:
+            num_workers = [1] * (1 + sink_scale_factor + (k * params['h']))
+    elif q == 'join':
+        if params['h'] != 1: raise Exception('Only support query of height 1 for join')
+        num_workers.append(1)
     elif q == 'heatMap':
         sources =  int(params['sources'])
         sinks = int(params['sinks'])
@@ -611,6 +601,11 @@ def get_num_workers(k, nodes, params):
         raise Exception('Unknown query type: %s'%q)
 
     return num_workers
+
+def get_sink_scale_factor(k, params):
+	if not params['pyScaleOutSinks']: return 1
+	elif params['sinkScaleFactor']: return params['sinkScaleFactor']
+	else: return k
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True, verbose=False):
 #def create_node(i, session, services_str, wlan, pos, ip_offset=8):

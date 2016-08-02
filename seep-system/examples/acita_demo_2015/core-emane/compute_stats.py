@@ -77,6 +77,7 @@ def compute_relative_raw_vals(abs_vals):
 		for mob in abs_vals[k]:
 			rel_vals[k][mob]={}
 			for rand in abs_vals[k][mob]:
+				if float(abs_vals[1][mob][rand]) <= 0.0 : return None
 				rel_vals[k][mob][rand] = float(abs_vals[k][mob][rand]) / float(abs_vals[1][mob][rand])
 	print 'rel_vals',rel_vals
 	return rel_vals
