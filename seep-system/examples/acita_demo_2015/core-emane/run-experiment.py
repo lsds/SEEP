@@ -7,7 +7,7 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 
 print 'Appending script_dir to path'
 sys.path.append(script_dir)
-from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles
+from compute_stats import compute_stats,median,compute_relative_raw_vals,compute_cumulative_percentiles, compute_percentile_stats
 from run_sessions import run_sessions
 from util import chmod_dir, pybool_to_javastr, copy_pdfs, copy_results
 from notify import notify
@@ -78,6 +78,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 plot('m1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
                 plot('m1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
                 plot('m1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+                plot_fixed_mob('m1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
                 #latex_plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
 
         # Do any plots that summarize all sessions for fixed k and mob.
@@ -207,6 +208,13 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
             if metric_suffix == 'lat': 
                 raw_latencies = [lat for session_lats in get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
                 record_fixed_kvar_statistics(k, var, var_suffix, raw_latencies, time_str, data_dir, 'raw-lat')
+                percentile_stat_vals = compute_percentile_stats(raw_latencies)
+                with open('%s/%s/%dk/%.2f%s/%dk-%s.data'%(data_dir,time_str,k,var,var_suffix,k, metric_suffix),'w' if writeHeader else 'a') as fixed_var_plotdata:
+                    if writeHeader: 
+                        fixed_var_plotdata.write('#k=%d\n'%k)
+                        fixed_var_plotdata.write('#k mean min .05 .25 .5 .75 .9 .95 .99 max\n')
+                    logline = '%d %s\n'%(k," ".join(map(str, percentile_stat_vals)))
+		    fixed_var_plotdata.write(logline)
 
             #Now record any aggregate stats across all kvar 
             raw_vals[k][var] = metrics 
@@ -378,6 +386,10 @@ def latex_plot(p, time_str, script_dir, data_dir):
     # ps2pdf -dEPSCrop p.eps p.pdf
     # replace p.tex.tmpl p-text.tex 'input=p, text=todo'
     # pdflatex p-text.tex
+
+def plot_fixed_mob(p, mob, sessions, time_str, script_dir, data_dir, params, term='pdf'):
+    mob_envstr = ';mob=\'%.2f\';query=\'%s\';duration=\'%s\';runs=\'%d\''%(mob,params['query'],params['duration'],sessions)
+    plot(p, time_str, script_dir, data_dir, term, mob_envstr)
 
 def plot_fixed_kmob(p, k, mob, sessions, time_str, script_dir, data_dir, params, term='pdf'):
     kmob_envstr = ';k=\'%d\';mob=\'%.2f\';query=\'%s\';duration=\'%s\';runs=\'%d\''%(k,mob,params['query'],params['duration'],sessions)

@@ -1,4 +1,4 @@
-import math
+import math, pandas as pd
 
 def compute_stats_dict(vals):
     (meanVal, stdDevVal, maxVal, minVal, medianVal, lowerQuartileVal,
@@ -83,4 +83,12 @@ def compute_relative_raw_vals(abs_vals):
 	return rel_vals
 
 
+def compute_percentile_stats(raw_vals):
+    result = {}
+    val_series = pd.Series(raw_vals)
+    percentiles = [0.05,.25,.50,.75,.9,.95,.99]
+    result = dict(val_series.describe(percentiles=percentiles))
+    print result
+    result_vals = [result['mean'], result['min'], result['5%'], result['25%'], result['50%'], result['75%'], result['90%'], result['95%'], result['99%'], result['max']]
+    return result_vals
 
