@@ -132,6 +132,9 @@ public class CoreRE {
 		return controlDispatcher;
 	}
 
+	public RoutingController getRoutingController()
+	{ return routingController; }
+
     public IProcessingUnit getProcessingUnit() {
         return processingUnit;
     }

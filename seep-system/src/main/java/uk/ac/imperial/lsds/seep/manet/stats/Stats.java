@@ -45,7 +45,7 @@ public class Stats implements Serializable {
 	}
 
 	//TODO: Initial tStart?
-	public String reset(long t)
+	public IntervalTput reset(long t)
 	{
 		long interval = t - tIntervalStart;
 
@@ -56,17 +56,10 @@ public class Stats implements Serializable {
 		long cumInterval = t - tFirst;
 		double cumIntervalTput = cumInterval > 0 ? computeTput(cumByteCount, cumInterval) : 0;
 		
-		if (upstreamId == null)	
-		{
-			return "t="+t+",id="+operatorId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
-		}
-		else
-		{
-			return "t="+t+",opid="+operatorId+",upid="+upstreamId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
-		}
+		return new IntervalTput(t, operatorId, upstreamId, interval, intervalTput, cumIntervalTput);
 	}
 
-	public void add(long t, long bytes)
+	public IntervalTput add(long t, long bytes)
 	{
 		if (tFirst < 0) { tFirst = System.currentTimeMillis(); }
 		
@@ -75,8 +68,11 @@ public class Stats implements Serializable {
 		
 		if (t - tIntervalStart > MIN_INTERVAL)
 		{
-			logger.info(reset(t));
+			IntervalTput tput = reset(t);
+			if (upstreamId == null) { logger.info(tput.toString()); }
+			return tput;
 		}
+		return null;
 	}
 
 	private double computeTput(long bytes, long interval)
@@ -84,5 +80,38 @@ public class Stats implements Serializable {
 		if (interval < 0) { throw new RuntimeException("Logic error."); }
 		if (interval == 0) { return 0; }
 		return ((8 * bytes * 1000) / interval)/1024;
+	}
+
+	public static class IntervalTput
+	{
+		public final long t;
+		public final int operatorId;
+		public final Integer upstreamId;
+		public final long interval;
+		public final double intervalTput;
+		public final double cumIntervalTput;
+
+		public IntervalTput(long t, int operatorId, Integer upstreamId, long interval, double intervalTput, double cumIntervalTput)
+		{
+			this.t = t;
+			this.operatorId = operatorId;
+			this.upstreamId = upstreamId;
+			this.interval= interval;
+			this.intervalTput = intervalTput;
+			this.cumIntervalTput = cumIntervalTput;	
+		}
+
+		@Override
+		public String toString()
+		{
+			if (upstreamId == null)	
+			{
+				return "t="+t+",id="+operatorId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
+			}
+			else
+			{
+				return "t="+t+",opid="+operatorId+",upid="+upstreamId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
+			}
+		}
 	}
 }

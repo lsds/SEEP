@@ -149,8 +149,11 @@ public class IncomingDataHandlerWorker implements Runnable{
 						long socketLatency = receiveTs - t_payload.local_ts;
 						t_payload.local_ts = receiveTs;
 						LOG.debug("icdhw for "+opId+",ts="+t_payload.timestamp+",its="+t_payload.instrumentation_ts+",rx latency="+latency+", socket latency="+socketLatency+", readTime="+readTime);
-						stats.add(System.currentTimeMillis(), t_payload.toString().toString().length());
 						DataTuple reg = new DataTuple(idxMapper, t_payload);
+						int length = reg.getByteArray("value") != null ? reg.getByteArray("value").length : reg.getPayload().toString().length();
+						Stats.IntervalTput tput = stats.add(System.currentTimeMillis(), length);
+
+						if (tput != null && owner.getRoutingController() != null) { owner.getRoutingController().handleIntervalTputUpdate(tput); } 
 						if (reg.getMap().containsKey("latencyBreakdown"))
 						{
 							long[] latencies = reg.getLongArray("latencyBreakdown");

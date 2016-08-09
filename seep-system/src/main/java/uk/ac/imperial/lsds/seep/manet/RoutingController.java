@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
+import uk.ac.imperial.lsds.seep.manet.stats.Stats;
+
 
 public class RoutingController implements Runnable{
 
@@ -40,6 +43,7 @@ public class RoutingController implements Runnable{
 	private final Map<Integer, Double> weights = new HashMap<>(); 
 	private final Query query;
 	private final boolean useCostThreshold;
+	private final Map<Integer, Stats.IntervalTput> tputStats = new ConcurrentHashMap<>();
 	
 	private final Object lock = new Object(){};
 	
@@ -194,6 +198,8 @@ public class RoutingController implements Runnable{
 				while (iter.hasNext()) {
 					Integer upstreamId = iter.next();
 					Double cost = upstreamCosts.get(upstreamId);
+					if (tputStats.get(upstreamId) != null) { logger.info(tputStats.get(upstreamId).toString()+", cost="+cost); }
+
 					if (cost==null || (useCostThreshold && cost > COST_THRESHOLD)) {
 						cost = new Double(GraphUtil.SUB_INFINITE_DISTANCE);
 						if (useCostThreshold && cost > COST_THRESHOLD)
@@ -216,7 +222,12 @@ public class RoutingController implements Runnable{
 			lock.notifyAll();
 		}
 	}
-	
+
+	public void handleIntervalTputUpdate(Stats.IntervalTput update)
+	{
+		tputStats.put(update.upstreamId, update);
+	}
+
 	private int getLocalOutputQLen()
 	{
 		if (owner.getProcessingUnit().getDispatcher() != null)

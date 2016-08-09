@@ -55,6 +55,7 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private static final long FAILURE_CTRL_RETRANSMIT_TIMEOUT = Long.parseLong(GLOBALS.valueFor("retransmitTimeout"));
 	private static final long TRY_SEND_ALTERNATIVES_TIMEOUT = Long.parseLong(GLOBALS.valueFor("trySendAlternativesTimeout"));
+	private static final long DOWNSTREAMS_UNROUTABLE_TIMEOUT = Long.parseLong(GLOBALS.valueFor("downstreamsUnroutableTimeout"));
 	private static final long ABORT_SESSION_TIMEOUT = 1000 * Long.parseLong(GLOBALS.valueFor("abortSessionTimeoutSec"));
 	private static final boolean enableDownstreamsUnroutable = Boolean.parseBoolean(GLOBALS.valueFor("enableDownstreamsUnroutable"));
 	private final int MAX_TOTAL_QUEUE_SIZE;
@@ -94,6 +95,8 @@ public class Dispatcher implements IRoutingObserver {
 		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
 					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
 					replicationFactor == 1;
+
+		if (TRY_SEND_ALTERNATIVES_TIMEOUT > DOWNSTREAMS_UNROUTABLE_TIMEOUT) { throw new RuntimeException("Logic error: todo."); }
 
 		GLOBAL_MAX_TOTAL_QUEUE_SIZE = Integer.parseInt(GLOBALS.valueFor("maxTotalQueueSizeTuples"));
 
@@ -573,7 +576,12 @@ public class Dispatcher implements IRoutingObserver {
 		private void sendBatch(DataTuple dt, ArrayList<Integer> targets)
 		{
 			if (targets == null) { throw new RuntimeException("Logic error."); }
-			boolean constrainedRoute = isConstrainedRoute(targets);
+			if (isConstrainedRoute(targets)) { sendBatchConstrainedRoute(dt, targets); }
+			else { sendBatchUnconstrainedRoute(dt, targets); }
+		}
+	
+		private void sendBatchUnconstrainedRoute(DataTuple dt, ArrayList<Integer> targets)
+		{
 			long ts = dt.getPayload().timestamp;
 			
 			//Option 1: Don't remove unless there is space in target
@@ -589,97 +597,125 @@ public class Dispatcher implements IRoutingObserver {
 			//Problem: A bit crude. Can't check if the tuple has been acked, routing has changed or a 
 			//higher priority tuple has been queued. Simplest for now though perhaps. More importantly
 			//could hurt parallelism? Can perhaps avoid with priorities. ;
-			if (!constrainedRoute)
+			logger.debug("Sending unconstrained tuple "+ ts);
+			//Could already be in session log if sending to multi-input op.
+			boolean remove = false;
+			if (downIsMultiInput && workers.get(targets.get(0)).inSessionLog(ts))
 			{
-				logger.debug("Sending unconstrained tuple "+ ts);
-				//Could already be in session log if sending to multi-input op.
-				boolean remove = false;
-				if (downIsMultiInput && workers.get(targets.get(0)).inSessionLog(ts))
-				{
-					logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
-					remove = true;
-					// In particular, setDownstreamsRoutable (false) will be overridden by this when retransmitting!
-					throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
-				}
-				else
-				{
-					int targetsTried = 0;
-					for (Integer target : targets)
-					{	
-						remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
-						notifyThat(owner.getOperator().getOperatorId()).triedSend();
-						long localLatency = System.currentTimeMillis() - dt.getPayload().local_ts;
-						//boolean trySendAlternativesOnFail = getLocalLatency(dt) > trySendAlternativesThreshold
-						if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
-						if (remove || localLatency < TRY_SEND_ALTERNATIVES_TIMEOUT) { break; }
-						else
-						{
-							targetsTried++;
-							if (targetsTried >= targets.size()) { setDownstreamsRoutable(false); } 
-
-							if (targets.size() > 1)
-							{
-								logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target+", local latency="+localLatency+", trying alternatives:"+targets);
-							}
-						}
-					}
-					if (remove) { logger.debug("Suceeded sending ts="+ts+", targetsTried="+targetsTried); }
-				}
-				
-				if (remove)
-				{
-					logger.debug("Removing tuple "+ts+" from op queue.");
-					dt = opQueue.remove(dt.getPayload().timestamp);
-					if (dt != null) { setDownstreamsRoutable(true); }
-					lastSendSuccess = System.currentTimeMillis();
-				}
-				else
-				{
-					int otherTargets = targets.size() - 1; 
-					logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+targets.get(0)+", other active targets="+otherTargets);
-				}
+				logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
+				remove = true;
+				// In particular, setDownstreamsRoutable (false) will be overridden by this when retransmitting!
+				throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
 			}
 			else
 			{
-				logger.debug("Sending constrained tuple "+ ts);
-				boolean allSucceeded = true;
-				//Skip first target here, it's just an indicator the remaining targets are constrained.
-				for (int i = 1; i < targets.size(); i++)
-				{
-					Integer target = targets.get(i);
-					// if not in session log for target
-					if (!workers.get(target).inSessionLog(ts))
+				int targetsTried = 0;
+				boolean preventOqDupes = true;
+				for (Integer target : targets)
+				{	
+					boolean oqDupeBackoff = false;
+					if (!(preventOqDupes && workers.get(target).inSessionLog(ts, true)))
 					{
-						//Don't retransmit if optimizing replay and in alives.
-						int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
-						if (optimizeReplay && isDownAlive(downOpId, ts))
-						{
-							logger.debug("Skipping recovery for "+ts+", adding to shared replay:"+sharedReplayLog.keys());
-							//Might need to resend if an alive is removed.
-							sharedReplayLog.add(dt);
-						}
-						else
-						{
-							logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
-							boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT);
-							if (downSucceeded) 
+						remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
+						notifyThat(owner.getOperator().getOperatorId()).triedSend();
+					}
+					else if (preventOqDupes) 
+					{ 
+						logger.debug("Avoided oq dupe for "+ts+ " to " + target); 
+						oqDupeBackoff = true;
+					}
+
+					long localLatency = System.currentTimeMillis() - dt.getPayload().local_ts;
+					//boolean trySendAlternativesOnFail = getLocalLatency(dt) > trySendAlternativesThreshold
+					if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
+					if (remove || localLatency < TRY_SEND_ALTERNATIVES_TIMEOUT) 
+					{ 
+						if (oqDupeBackoff) 
+						{ 
+								try { Thread.sleep(SEND_TIMEOUT); } catch (InterruptedException e) {}
+							/*
+							synchronized(lock) 
 							{ 
-								lastSendSuccess = System.currentTimeMillis(); 
-								setDownstreamsRoutable(true);
-							}
-							allSucceeded = allSucceeded && downSucceeded; 
+								//Backoff in cases where we didn't get anywhere.
+								try { lock.wait(SEND_TIMEOUT); } catch (InterruptedException e) {}
+							} 
+							*/
+						}
+						break; 
+					}
+					else
+					{
+						targetsTried++;
+						if (targetsTried >= targets.size() && localLatency > DOWNSTREAMS_UNROUTABLE_TIMEOUT) { setDownstreamsRoutable(false); } 
+						else if (targetsTried >= targets.size() && oqDupeBackoff) 
+						{ 
+								try { Thread.sleep(SEND_TIMEOUT); } catch (InterruptedException e) {}
+						}
+
+						if (targets.size() > 1)
+						{
+							logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+target+", local latency="+localLatency+", trying alternatives:"+targets);
 						}
 					}
 				}
-				
-				if (allSucceeded)
-				{
-					logger.debug("All succeeded, removing tuple "+dt.getPayload().timestamp);
-					opQueue.remove(dt.getPayload().timestamp);
-				}
+				if (remove) { logger.debug("Suceeded sending ts="+ts+", targetsTried="+targetsTried); }
+			}
+			
+			if (remove)
+			{
+				logger.debug("Removing tuple "+ts+" from op queue.");
+				dt = opQueue.remove(dt.getPayload().timestamp);
+				if (dt != null) { setDownstreamsRoutable(true); }
+				lastSendSuccess = System.currentTimeMillis();
+			}
+			else
+			{
+				int otherTargets = targets.size() - 1; 
+				logger.debug("Failed to send tuple "+dt.getPayload().timestamp +" to "+targets.get(0)+", other active targets="+otherTargets);
 			}
 		}
-		
+
+		private void sendBatchConstrainedRoute(DataTuple dt, ArrayList<Integer> targets)
+		{
+			long ts = dt.getPayload().timestamp;
+			logger.debug("Sending constrained tuple "+ ts);
+			boolean allSucceeded = true;
+			//Skip first target here, it's just an indicator the remaining targets are constrained.
+			for (int i = 1; i < targets.size(); i++)
+			{
+				Integer target = targets.get(i);
+				// if not in session log for target
+				if (!workers.get(target).inSessionLog(ts))
+				{
+					//Don't retransmit if optimizing replay and in alives.
+					int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
+					if (optimizeReplay && isDownAlive(downOpId, ts))
+					{
+						logger.debug("Skipping recovery for "+ts+", adding to shared replay:"+sharedReplayLog.keys());
+						//Might need to resend if an alive is removed.
+						sharedReplayLog.add(dt);
+					}
+					else
+					{
+						logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
+						boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT);
+						if (downSucceeded) 
+						{ 
+							lastSendSuccess = System.currentTimeMillis(); 
+							setDownstreamsRoutable(true);
+						}
+						allSucceeded = allSucceeded && downSucceeded; 
+					}
+				}
+			}
+			
+			if (allSucceeded)
+			{
+				logger.debug("All succeeded, removing tuple "+dt.getPayload().timestamp);
+				opQueue.remove(dt.getPayload().timestamp);
+			}
+		}
+	
 		//Convention: If the routing is constrained, ignore the first
 		//target and route to all the remaining targets.
 		//TODO: Will probably break once we have multiple logical outputs, but ok
@@ -736,10 +772,16 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock) { return dataConnected; }
 		}
 		
+		public boolean inSessionLog(long ts, boolean downIsUnaryOK)
+		{
+			if (!downIsUnaryOK && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
+			return ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).contains(ts);
+
+		}
+
 		public boolean inSessionLog(long ts)
 		{
-			if (!downIsMultiInput) { throw new RuntimeException("Logic error."); }
-			return ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).contains(ts);
+			return inSessionLog(ts, false);
 		}
 		
 		public DataTuple getFromSessionLog(long ts)
@@ -1337,7 +1379,7 @@ public class Dispatcher implements IRoutingObserver {
 				} 
 			};
 			
-			currentTasks.put(downOpId, timeoutTask);
+			synchronized(lock) { currentTasks.put(downOpId, timeoutTask); }
 			timer.schedule(timeoutTask, delay);
 		}
 

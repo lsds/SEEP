@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.manet.Query;
 
 public class OutOfOrderFairInputQueue implements DataStructureI {
 
@@ -36,13 +37,15 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 	
 	private final FailureCtrl inputFctrl = new FailureCtrl();
 	
-	public OutOfOrderFairInputQueue()
+	public OutOfOrderFairInputQueue(Query meanderQuery, int opId)
 	{
+		boolean isSink = meanderQuery.isSink(meanderQuery.getLogicalNodeId(opId));
 		//inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
 		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+		boolean replicatedSink = isSink && Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor")) > 0;
 		boolean boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
 					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
-					replicationFactor == 1;
+					(replicationFactor == 1 && !replicatedSink);
 		if (boundedOpQueue)
 		{
 			maxInputQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));

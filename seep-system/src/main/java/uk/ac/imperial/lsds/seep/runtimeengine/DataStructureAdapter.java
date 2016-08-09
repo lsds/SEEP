@@ -82,7 +82,7 @@ public class DataStructureAdapter {
 					else
 					{
 						//OutOfOrderInputQueue iq = new OutOfOrderInputQueue();
-						OutOfOrderFairInputQueue iq = new OutOfOrderFairInputQueue();
+						OutOfOrderFairInputQueue iq = new OutOfOrderFairInputQueue(query, opId);
 						dsoMap.put(entry.getKey(), iq);
 						tmpLogicalDsoMap.put(entry.getKey(), iq);
 					}	
@@ -115,7 +115,7 @@ public class DataStructureAdapter {
 			for(Entry<Integer, InputDataIngestionMode> entry : iimMap.entrySet()){
 				if(entry.getValue().equals(InputDataIngestionMode.ONE_AT_A_TIME)){
 					//OutOfOrderInputQueue iq = new OutOfOrderInputQueue();
-					OutOfOrderFairInputQueue iq = new OutOfOrderFairInputQueue();
+					OutOfOrderFairInputQueue iq = new OutOfOrderFairInputQueue(query, opId);
 					uniqueDso = iq;
 					LOG.debug("-> Ingest with InputQueue from {}", entry.getKey());
 				}
