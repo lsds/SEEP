@@ -77,7 +77,8 @@ def main(exp_dir):
     op_tputs = {}
     op_interval_tputs = {}
     op_qlens = {}
-    for op_log in op_logs:
+    link_interval_tputs = {}
+    for op_log in op_logs + sink_logs:
         with open(op_log, 'r') as f:
             (op_id, tput) = processor_tput(f)
             if op_id:
@@ -92,6 +93,12 @@ def main(exp_dir):
             (op_id, qlens) = get_qlens(f)
             if op_id:
                 op_qlens[op_id] = qlens 
+
+        with open(op_log, 'r') as f:
+            (op_id, interval_tputs) = get_link_interval_tputs(f)
+            if op_id:
+                for up_id in interval_tputs:
+                    link_interval_tputs[(op_id, up_id)] = interval_tputs[up_id]
                 
     # Record the tput, k, w, query name etc.
     # Compute the mean tput
@@ -116,6 +123,7 @@ def main(exp_dir):
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
     record_op_interval_tputs(op_interval_tputs, exp_dir)
     record_op_qlens(op_qlens, exp_dir)
+    record_link_interval_tputs(link_interval_tputs, exp_dir)
 
 def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -207,6 +215,16 @@ def record_op_interval_tputs(op_interval_tputs, exp_dir):
             f.write('# tput cum\n')
             for (ts, tput, cum) in op_interval_tputs[op]:
                 f.write('%d %.1f %.1f\n'%(ts/1000, tput, cum))
+
+def record_link_interval_tputs(link_interval_tputs, exp_dir):
+    links_tput_dir = "%s/link-tputs"%(exp_dir)
+    if not os.path.exists(links_tput_dir): os.mkdir(links_tput_dir)
+    for (op, up) in link_interval_tputs:
+        link_interval_tput_file = "%s/link-tputs/op_%s_up_%s_link_interval_tput.txt"%(exp_dir, op, up)
+        with open(link_interval_tput_file, 'w') as f:
+            f.write('# tput cum cost\n')
+            for (ts, tput, cum, cost) in link_interval_tputs[(op, up)]:
+                f.write('%d %.1f %.1f %.1f\n'%(ts/1000, tput, cum, cost))
 
 def record_op_qlens(op_qlens, exp_dir):
     for op in op_qlens:

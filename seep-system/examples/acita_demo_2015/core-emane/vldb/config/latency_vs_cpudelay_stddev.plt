@@ -5,7 +5,8 @@ set xlabel "Operator latency (ms)" font ", 16"
 set ylabel sprintf("%s Latency (ms)",percentile) font ", 16" offset -3
 #set yrange [0:100000]
 #set yrange [0:5000]
-set yrange [0:*]
+set yrange [0.1:*]
+set logscale y
 set tics font ", 10"
 #set xtics 0,5,15
 

@@ -95,6 +95,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                             plot_fixed_kmobsession('op_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_cum_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_qlen_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('link_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             if params['dstat']:
                                 plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                                 plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
@@ -436,7 +437,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--workerPreDelay', dest='worker_predelay', default=None, help='Time to wait before starting worker')
     parser.add_argument('--refresh', dest='refresh_ms', default=None, help='Time between updating node position in model')
     parser.add_argument('--scaleSinks', dest='scale_sinks', default=False, action='store_true', help='Replicate sinks k times')
-    parser.add_argument('--sinkScaleFactor', dest='sink_scale_factor', default=None, help='Replicate sinks this many times')
+    parser.add_argument('--sinkScaleFactor', dest='sink_scale_factor', default=0, help='Replicate sinks this many times')
     parser.add_argument('--colocateSrcSink', dest='colocate_src_sink', default=False, action='store_true', help='Colocate src and sink workers')
     parser.add_argument('--quagga', dest='quagga', default=False, action='store_true', help='Start quagga services (zebra, vtysh)')
     parser.add_argument('--pcap', dest='pcap', default=False, action='store_true', help='Start pcap service for workers.')

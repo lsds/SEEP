@@ -19,7 +19,7 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 #set boxwidth 0.1
 set style fill empty 
 set offsets graph 0.0, 0.0, 0.1, 0.1
-op_tput_files=system(sprintf("find %s -name 'op_*_interval_tput.txt' | sed 's/.*op_\\([0-9]\\+\\)_interval_tput.txt/\\1/'", expdir))
+op_tput_files=system(sprintf("find %s -maxdepth 1 -name 'op_*_interval_tput.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_interval_tput.txt/\\1/'", expdir))
 
 #plot for [file in op_tput_files] file using 1:2 notitle w steps linestyle 1
 #plot for [i=1:words(op_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_tput_files,i)) using 1:3 title word(op_tput_files,i) w fsteps linestyle i

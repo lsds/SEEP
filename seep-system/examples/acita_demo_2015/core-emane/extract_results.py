@@ -18,7 +18,7 @@ def is_finished_sink_log(f):
 def is_processor_log(f):
     #return log_type(f) == 'PROCESSOR'
     f_type = log_type(f) 
-    return f_type in ['PROCESSOR', 'FACE_DETECTOR', 'FACE_RECOGNIZER', 'JOIN', 'HEATMAP_JOIN']
+    return f_type in ['PROCESSOR', 'FACE_DETECTOR', 'FACE_DETECTOR_RECOGNIZER', 'FACE_RECOGNIZER', 'JOIN', 'HEATMAP_JOIN']
 
 def log_type(f):
     regex = re.compile(r'Setting up (.*) operator with id=(.*)$')
@@ -139,6 +139,23 @@ def get_interval_tputs(f):
         if match:
             op_id = str(int(match.group(2)))
             tputs.append((int(match.group(1)), float(match.group(4)), float(match.group(5))))
+
+    return (op_id, tputs)
+
+def get_link_interval_tputs(f):
+    # t=1470426279812,opid=111,upid=10,interval=1903,tput=63.0,cumTput=53.0, cost=7.408
+
+    regex = re.compile(r't=(\d+),opid=([-+]?\d+),upid=([-+]?\d+),interval=(\d+),tput=(.*),cumTput=(.*), cost=(\d+\.\d+)$')
+    op_id = None
+    tputs = {} 
+    for line in f:
+        match = re.search(regex, line)
+        if match:
+            op_id = str(int(match.group(2)))
+            up_id = str(int(match.group(3)))
+            up_tputs = tputs.get(up_id, [])
+            up_tputs.append((int(match.group(1)), float(match.group(5)), float(match.group(6)), float(match.group(7))))
+            tputs[up_id] = up_tputs
 
     return (op_id, tputs)
 

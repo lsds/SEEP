@@ -567,7 +567,9 @@ def get_num_workers(k, nodes, params):
     q = params['query']
     sink_scale_factor = get_sink_scale_factor(k, params)
 
-    if q == 'chain' or q == 'fr': 
+    if q == 'chain' or q == 'fr' or q == 'fdr': 
+        if q == 'fr' and params['h'] != 2: raise Exception("Fr query needs height of 2.");
+        if q == 'fdr' and params['h'] != 1: raise Exception("Fdr query needs height of 1.");
         if params['colocateSrcSink']:
             if sink_scale_factor > 1: raise Exception("Can't colocate source with replicated sinks.")
             num_workers = [2] + [1] * (k * params['h'])
@@ -604,7 +606,7 @@ def get_num_workers(k, nodes, params):
 
 def get_sink_scale_factor(k, params):
 	if not params['pyScaleOutSinks']: return 1
-	elif params['sinkScaleFactor']: return params['sinkScaleFactor']
+	elif params['sinkScaleFactor']: return int(params['sinkScaleFactor'])
 	else: return k
 
 def create_node(i, session, services_str, wlan, pos, ip_offset=-1, addinf=True, verbose=False):

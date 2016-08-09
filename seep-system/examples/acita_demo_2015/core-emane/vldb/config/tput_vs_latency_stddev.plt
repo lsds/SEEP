@@ -3,7 +3,7 @@ set output sprintf("%s/%s/tput_vs_latency_stddev%s",outputdir,timestr,termext)
 
 set xlabel "Latency (ms), 95th percentile" font ", 16" 
 set ylabel "Throughput (Kb/s)" font ", 16" offset -2
-#set yrange [0:100]
+set yrange [0:*]
 set tics font ", 10"
 
 set border linewidth 1.5
