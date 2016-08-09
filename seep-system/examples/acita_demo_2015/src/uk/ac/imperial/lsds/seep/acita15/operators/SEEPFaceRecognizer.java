@@ -53,7 +53,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(SEEPFaceRecognizer.class);
 	private int processed = 0;
-	private PersonRecognizer personRecognizer = null;
+	private FaceRecognizerHelper faceRecognizerHelper = null;
 	private static final String repoDir = GLOBALS.valueFor("repoDir");	
 	private Stats stats;
 	
@@ -67,8 +67,8 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		int height = data.getInt("height");
 		int width = data.getInt("width");
 		
-		int prediction = personRecognizer.recognize(value, x, y, height, width, type);
-		String labelExample = personRecognizer.getLabelExample(prediction);
+		int prediction = faceRecognizerHelper.recognize(value, x, y, height, width, type);
+		String labelExample = faceRecognizerHelper.getLabelExample(prediction);
 		
 		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width, labelExample);
 			
@@ -115,13 +115,13 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		//String trainingList = "at.txt";
 		String trainingList = "chokepoint.txt";
 		String testImageFilename = repoDir + "/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
-		personRecognizer = new PersonRecognizer(api.getOperatorId(), trainingDir, trainingList, testImageFilename);
+		faceRecognizerHelper = new FaceRecognizerHelper(api.getOperatorId(), trainingDir, trainingList, testImageFilename);
 		//recognizer.testSample();
-		//personRecognizer.testATT();
+		//faceRecognizerHelper.testATT();
 	}
 
 	
-	public static class PersonRecognizer
+	public static class FaceRecognizerHelper
 	{
 		private final int opId;
 		private final String trainingDir;
@@ -129,11 +129,11 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		private final String testImageFilename;
 		private final Map<Integer, String> labelExamples = new HashMap<>();
 		private final FaceRecognizer faceRecognizer;
-        private final Java2DFrameConverter frameConverter = new Java2DFrameConverter();
-        private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
-        private final OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
+		private final Java2DFrameConverter frameConverter = new Java2DFrameConverter();
+		private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
+		private final OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
 		
-		public PersonRecognizer(int opId, String trainingDir, String trainingList, String testImageFilename)
+		public FaceRecognizerHelper(int opId, String trainingDir, String trainingList, String testImageFilename)
 		{
 			this.opId = opId;
 			this.trainingDir = trainingDir;

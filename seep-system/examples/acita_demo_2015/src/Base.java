@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
+import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetectorRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizer;
 //import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
@@ -65,6 +66,10 @@ public class Base implements QueryComposer{
 		{
 			return composeFaceRecognizer();
 		}
+		else if (queryType.equals("fdr"))
+		{
+			return composeFaceDetectorRecognizer();
+		}
 		else if (queryType.equals("nameAssist"))
 		{
 			return composeNameAssist();
@@ -106,7 +111,8 @@ public class Base implements QueryComposer{
 			autoScaleout(ops);
 			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
 			{
-				QueryBuilder.scaleOut(snk.getOperatorId(), REPLICATION_FACTOR);
+				int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
 			}
 		}
 		else
@@ -126,7 +132,7 @@ public class Base implements QueryComposer{
 		
 		return QueryBuilder.build();
 	}
-	
+
 	private QueryPlan composeFaceRecognizer()
 	{
 		// Declare Source
@@ -196,16 +202,86 @@ public class Base implements QueryComposer{
 		{
 			QueryBuilder.scaleOut(faceDetect.getOperatorId(), REPLICATION_FACTOR);
 			QueryBuilder.scaleOut(faceRec.getOperatorId(), REPLICATION_FACTOR);
+		}
 			
-			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
 			{
-				QueryBuilder.scaleOut(snk.getOperatorId(), REPLICATION_FACTOR);
+				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
 			}
 		}
 		
 		return QueryBuilder.build();
 	}
 	
+	private QueryPlan composeFaceDetectorRecognizer()
+	{
+		// Declare Source
+		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("tupleId");
+		srcFields.add("value");
+		srcFields.add("rows");
+		srcFields.add("cols");
+		srcFields.add("type");
+		srcFields.add("x");
+		srcFields.add("y");
+		srcFields.add("height");
+		srcFields.add("width");
+		srcFields.add("label");
+		Connectable src = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
+		
+		
+		//Declare FaceDetector
+		ArrayList<String> faceDetectorRecognizerFields = new ArrayList<String>();
+		faceDetectorRecognizerFields.add("tupleId");
+		faceDetectorRecognizerFields.add("value");
+		faceDetectorRecognizerFields.add("rows");
+		faceDetectorRecognizerFields.add("cols");
+		faceDetectorRecognizerFields.add("type");
+		faceDetectorRecognizerFields.add("x");
+		faceDetectorRecognizerFields.add("y");
+		faceDetectorRecognizerFields.add("height");
+		faceDetectorRecognizerFields.add("width");
+		faceDetectorRecognizerFields.add("label");
+		Connectable faceDetectorRecognizer = QueryBuilder.newStatelessOperator(new FaceDetectorRecognizer(), 0, faceDetectorRecognizerFields);
+		
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		snkFields.add("rows");
+		snkFields.add("cols");
+		snkFields.add("type");
+		snkFields.add("x");
+		snkFields.add("y");
+		snkFields.add("height");
+		snkFields.add("width");
+		snkFields.add("label");
+		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -2, snkFields);
+		
+		src.connectTo(faceDetectorRecognizer, true, 0);
+		faceDetectorRecognizer.connectTo(snk, true, 1);
+		
+		if (REPLICATION_FACTOR > 1)
+		{
+			QueryBuilder.scaleOut(faceDetectorRecognizer.getOperatorId(), REPLICATION_FACTOR);
+		}
+			
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
+			{
+				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
+			}
+		}
+		
+		return QueryBuilder.build();
+	}
 	
 	private QueryPlan composeJoin()
 	{
@@ -244,6 +320,7 @@ public class Base implements QueryComposer{
 			QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
 		}
 		
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks"))) { throw new RuntimeException("TODO."); }
 		return QueryBuilder.build();
 	}
 	
@@ -333,12 +410,17 @@ public class Base implements QueryComposer{
 					QueryBuilder.scaleOut(opsTree[h][i].getOperatorId(), REPLICATION_FACTOR);
 				}
 			}
-			
-			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		}	
+
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
 			{
 				for (int i = 0; i < sinks.length; i++)
 				{
-					QueryBuilder.scaleOut(sinks[i].getOperatorId(), REPLICATION_FACTOR);
+					//QueryBuilder.scaleOut(sinks[i].getOperatorId(), REPLICATION_FACTOR);
+					QueryBuilder.scaleOut(sinks[i].getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
 				}
 			}
 		}
