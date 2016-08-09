@@ -30,6 +30,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +39,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Collections;
+import java.util.Comparator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,6 +102,7 @@ public class Infrastructure {
 	private int baseId = Integer.parseInt(GLOBALS.valueFor("baseId"));
 	
 	private ArrayDeque<Node> nodeStack = new ArrayDeque<Node>();
+	private boolean havePopped = false;
 	private int numberRunningMachines = 0;
 
 	private boolean systemIsRunning = false;
@@ -297,6 +301,7 @@ public class Infrastructure {
 	}
 	
 	public void addNode(Node n) {
+		if (havePopped) { throw new RuntimeException("Attempt to addNode when we've already started removing nodes from pool!!"); }
 		nodeStack.push(n);
 		LOG.debug("-> New Node: {}", n);
 		LOG.debug("-> Num nodes: {}", getNodePoolSize());
@@ -478,6 +483,10 @@ public class Infrastructure {
 		{
 			return buildFaceRecognition();
 		}
+		else if (queryType.equals("fdr"))
+		{
+			return buildFaceDetectorRecognition();
+		}
 		else if (queryType.equals("heatMap"))
 		{
 			return buildHeatMap();
@@ -556,6 +565,11 @@ public class Infrastructure {
 	private Query buildFaceRecognition()
 	{
 		return buildChainQuery(2);
+	}
+
+	private Query buildFaceDetectorRecognition()
+	{
+		return buildChainQuery(1);
 	}
 	
 	private Query buildHeatMap()
@@ -1209,11 +1223,24 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 
 		checkEmptyPool();
 		numberRunningMachines++;		
+
+		if (!havePopped)
+		{
+			havePopped = true;
+			sortNodeStack();
+			//Collections.sort(nodeStack);
+		}
 		return nodeStack.pop();
 	}
 	
 	public synchronized Node getNodeFromPool(InetAddress nodeIp, int nodePort) throws NodePoolEmptyException
 	{
+		if (!havePopped)
+		{
+			havePopped = true;
+			sortNodeStack();
+		}
+
 		Iterator<Node> iter = nodeStack.iterator();
 		while (iter.hasNext())
 		{
@@ -1238,6 +1265,25 @@ System.out.println("sending stream state to : "+op.getOperatorId());
 		}
 	}
 	
+	//Make the assignment deterministic given the same mapping constraints.
+	private void sortNodeStack()
+	{
+		List<Node> nodeList = new LinkedList<>(nodeStack);
+		
+		Collections.sort(nodeList, new Comparator<Node>()
+		{
+			public int compare( Node o1, Node o2 )
+			{
+				String id1 = o1.getIp() + ":" + o1.getPort();
+				String id2 = o2.getIp() + ":" + o2.getPort();
+				return id1.compareTo(id2);
+			}
+		});	
+
+		nodeStack.clear();
+		nodeStack.addAll(nodeList);
+	}
+
 	private void checkEmptyPool() throws NodePoolEmptyException
 	{
 		if(nodeStack.isEmpty()){
