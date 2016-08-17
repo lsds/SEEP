@@ -83,6 +83,10 @@ do
 	cp $d/*.xyz $resultsDir/positions	
 	cp $d/mappingRecordOut.txt $scriptDir/log/$timeStr/session${session}MappingRecord.txt
 
+    #Copy network links
+    mkdir -p $resultsDir/links
+    cp $d/links-*.txt $resultsDir/links
+
     #Copy any emane stats
     if [ -d emane-stats ];
     then

@@ -77,6 +77,7 @@ def main(exp_dir):
     op_tputs = {}
     op_interval_tputs = {}
     op_qlens = {}
+    op_utils = {}
     link_interval_tputs = {}
     for op_log in op_logs + sink_logs:
         with open(op_log, 'r') as f:
@@ -93,6 +94,11 @@ def main(exp_dir):
             (op_id, qlens) = get_qlens(f)
             if op_id:
                 op_qlens[op_id] = qlens 
+
+        with open(op_log, 'r') as f:
+            (op_id, utils) = get_utils(f)
+            if op_id:
+                op_utils[op_id] = utils 
 
         with open(op_log, 'r') as f:
             (op_id, interval_tputs) = get_link_interval_tputs(f)
@@ -123,6 +129,7 @@ def main(exp_dir):
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
     record_op_interval_tputs(op_interval_tputs, exp_dir)
     record_op_qlens(op_qlens, exp_dir)
+    record_op_utils(op_utils, exp_dir)
     record_link_interval_tputs(link_interval_tputs, exp_dir)
 
 def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
@@ -233,6 +240,14 @@ def record_op_qlens(op_qlens, exp_dir):
             f.write('# qlen\n')
             for (ts, qlen) in op_qlens[op]:
                 f.write('%d %d\n'%(ts/1000, qlen))
+
+def record_op_utils(op_utils, exp_dir):
+    for op in op_utils:
+        op_utils_file = "%s/op_%s_utils.txt"%(exp_dir, op)
+        with open(op_utils_file, 'w') as f:
+            f.write('# util cum\n')
+            for (ts, util, cum) in op_utils[op]:
+                f.write('%d %.1f %.1f\n'%(ts/1000, util, cum))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

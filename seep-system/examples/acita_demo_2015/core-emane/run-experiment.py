@@ -95,7 +95,9 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                             plot_fixed_kmobsession('op_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_cum_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_qlen_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kmobsession('link_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            #plot_fixed_kmobsession('link_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            #plot_fixed_kmobsession('link_cost_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('op_cum_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             if params['dstat']:
                                 plot_fixed_kmobsession('cpu_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                                 plot_fixed_kmobsession('cpu_wait_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)

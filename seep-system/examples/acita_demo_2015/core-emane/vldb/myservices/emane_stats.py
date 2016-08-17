@@ -43,6 +43,8 @@ if [ "x$1" = "xstart" ]; then
 elif [ "x$1" = "xstop" ]; then
     mkdir -p ${SESSION_DIR}/emane-stats
     mv *emane-stats.txt ${SESSION_DIR}/emane-stats
+    mkdir -p ${SESSION_DIR}/links
+    cp links*.txt ${SESSION_DIR}/links
 fi;
 """
         return cfg
