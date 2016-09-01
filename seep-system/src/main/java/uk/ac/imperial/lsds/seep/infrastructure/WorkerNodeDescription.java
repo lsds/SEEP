@@ -17,6 +17,7 @@ public class WorkerNodeDescription {
 	
 	private int nodeId;
 	private InetAddress ip;
+	private InetAddress controlIp;
 	private int ownPort;
 	
 	public int getNodeId() {
@@ -31,6 +32,14 @@ public class WorkerNodeDescription {
 		this.ip = ip;
 	}
 
+	public InetAddress getControlIp() {
+		return controlIp;
+	}
+
+	public void setControlIp(InetAddress controlIp) {
+		this.controlIp = controlIp;
+	}
+
 	public int getOwnPort() {
 		return ownPort;
 	}
@@ -39,9 +48,10 @@ public class WorkerNodeDescription {
 		this.ownPort = ownPort;
 	}
 	
-	public WorkerNodeDescription(InetAddress ip, int ownPort){
+	public WorkerNodeDescription(InetAddress ip, InetAddress controlIp, int ownPort){
 		this.nodeId = generateNodeIdFromIp(ip);
 		this.ip = ip;
+		this.controlIp = controlIp;
 		this.ownPort = ownPort;
 	}
 	

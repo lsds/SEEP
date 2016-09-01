@@ -70,7 +70,7 @@ public class ControlHandler implements Runnable{
 		int socketCount = 0;
 		try{
 			//Establish listening port
-    		controlServerSocket = new ServerSocket(connPort);
+    		controlServerSocket = new ServerSocket(connPort, 50, owner.getNodeDescr().getControlIp());
 			controlServerSocket.setReuseAddress(true);
 			LOG.info("-> ControlHandler listening on port: {}", connPort);
 			//while goOn is active

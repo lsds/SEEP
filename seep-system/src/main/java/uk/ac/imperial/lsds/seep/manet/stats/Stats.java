@@ -25,12 +25,15 @@ public class Stats implements Serializable {
 	private static final Logger logger = LoggerFactory.getLogger(Stats.class);
 
 	private final long MIN_INTERVAL= 1 * 1000;
+	private final long UTIL_MIN_INTERVAL= 5 * 1000;
 	private final int operatorId;
 	private final Integer upstreamId;
 	private long tIntervalStart = System.currentTimeMillis();
 	private long tFirst = -1;
 	private long byteCount = 0;
 	private long cumByteCount = 0;
+	private long intervalWorkDone = 0;
+	private long cumWorkDone = 0;
 
 	public Stats(int operatorId)
 	{
@@ -75,11 +78,50 @@ public class Stats implements Serializable {
 		return null;
 	}
 
+	public IntervalUtil addWorkDone(long t, long workDone)
+	{
+		if (tFirst < 0) { tFirst = System.currentTimeMillis(); }
+		
+		intervalWorkDone += workDone;
+		cumWorkDone += workDone;
+		
+		if (t - tIntervalStart > UTIL_MIN_INTERVAL)
+		{
+			IntervalUtil util = resetUtil(t);
+			logger.info(util.toString());
+			return util;
+		}
+		return null;
+	}
+
+	public IntervalUtil resetUtil(long t)
+	{
+		long interval = t - tIntervalStart;
+
+		double intervalUtil = computeUtil(intervalWorkDone, interval);
+		intervalWorkDone = 0;
+		tIntervalStart = t;
+		
+		long cumInterval = t - tFirst;
+		double cumIntervalUtil = cumInterval > 0 ? computeUtil(cumWorkDone, cumInterval) : 0;
+		
+		return new IntervalUtil(t, operatorId, interval, intervalUtil, cumIntervalUtil);
+	}
+	
+
 	private double computeTput(long bytes, long interval)
 	{
 		if (interval < 0) { throw new RuntimeException("Logic error."); }
 		if (interval == 0) { return 0; }
 		return ((8 * bytes * 1000) / interval)/1024;
+	}
+
+	private double computeUtil(long work, long interval)
+	{
+		logger.info("Computing util with work="+work+",interval="+interval);
+		if (interval < 0) { throw new RuntimeException("Logic error."); }
+		if (interval == 0) { return 0; }
+		return ((double)work) / ((double)interval);
 	}
 
 	public static class IntervalTput
@@ -112,6 +154,30 @@ public class Stats implements Serializable {
 			{
 				return "t="+t+",opid="+operatorId+",upid="+upstreamId+",interval="+interval+",tput="+intervalTput+",cumTput="+cumIntervalTput;
 			}
+		}
+	}
+
+	public static class IntervalUtil
+	{
+		public final long t;
+		public final int operatorId;
+		public final long interval;
+		public final double intervalUtil;
+		public final double cumUtil;	
+
+		public IntervalUtil(long t, int operatorId, long interval, double intervalUtil, double cumUtil)
+		{
+			this.t = t;
+			this.operatorId = operatorId;
+			this.interval= interval;
+			this.intervalUtil = intervalUtil;
+			this.cumUtil = cumUtil;	
+		}
+
+		@Override
+		public String toString()
+		{
+			return "t="+t+",id="+operatorId+",interval="+interval+",util="+intervalUtil+",cumUtil="+cumUtil;
 		}
 	}
 }

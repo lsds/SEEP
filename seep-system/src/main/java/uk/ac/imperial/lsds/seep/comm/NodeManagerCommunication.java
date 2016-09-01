@@ -54,8 +54,8 @@ public class NodeManagerCommunication {
 		boolean success = false;
 		try{
 			if(connection == null){
+				LOG.info("-> BCU. Creating new socket, IP: "+ip.toString()+", masterWorkerCommsIp: "+masterWorkerCommsIp+" Port: "+port);
 				connection = new Socket(masterWorkerCommsIp == null? ip : masterWorkerCommsIp, port);
-				LOG.debug("-> BCU. New socket created, IP: "+ip.toString()+" Port: "+port);
 			}
 			oos = new ExtendedObjectOutputStream(connection.getOutputStream());
 			in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -132,10 +132,10 @@ public class NodeManagerCommunication {
 	}
 	
 	//This method gets the local IP and sends a BOOT message to the central node.
-	public void sendBootstrapInformation(int port, InetAddress bindAddr, int ownPort){
+	public void sendBootstrapInformation(InetAddress controlIp, int port, InetAddress bindAddr, int ownPort){
 		try{
 			InetAddress ownIp = InetAddress.getLocalHost();
-			String command = "bootstrap "+(ownIp.getHostAddress()+" "+ownPort+"\n");
+			String command = "bootstrap "+(ownIp.getHostAddress()+" "+ controlIp.getHostAddress()+" "+ownPort+"\n");
 			LOG.info("--> Boot Info: {} to: {} on: {}", command, bindAddr, port);
 			Socket conn = new Socket(bindAddr, port);
 			(conn.getOutputStream()).write(command.getBytes());

@@ -189,9 +189,10 @@ System.out.println("broadcast state and runtime init");
 		inf.getEiu().scaleOutOperator(opId, 555, newNodeSO);
 	}
 		
-	private void bootstrapCommand(String ip, InetAddress masterWorkerCommsIp, int port) throws UnknownHostException{
+	private void bootstrapCommand(String ip, String controlIp, InetAddress masterWorkerCommsIp, int port) throws UnknownHostException{
 		InetAddress bootIp = InetAddress.getByName(ip);
-		Node n = new Node(bootIp, masterWorkerCommsIp, port);
+		InetAddress bootControlIp = InetAddress.getByName(controlIp);
+		Node n = new Node(bootIp, bootControlIp, masterWorkerCommsIp, port);
 		//add node to the stack
 		inf.addNode(n);
 		if(inf.isSystemRunning()){
@@ -246,6 +247,8 @@ System.out.println("broadcast state and runtime init");
 		System.out.println(op);
 		inf.updateContextLocations(op);
 		System.out.println(op);
+		LOG.error("TODO: Place.");
+		throw new RuntimeException("TODO control ip in placeCommand.");
 	}
 		
 	/// \todo {java 7 supports switch(string)}
@@ -258,13 +261,14 @@ System.out.println("broadcast state and runtime init");
 		}
 		else { managerS = new ServerSocket(port); }
 		
-		LOG.info(" Listening on {}:{}", InetAddress.getLocalHost(), port);
+		LOG.info(" Listening on {}:{}", managerS.getInetAddress(), port);
 		BufferedReader bis = null;
 		goOn = true;
 		while(goOn){
 			try {
 				clientSocket = managerS.accept();
 				InetAddress masterWorkerCommsIp = clientSocket.getInetAddress(); 
+				LOG.info(" Received worker connection from {}", masterWorkerCommsIp);
 				bis = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 				String com = "";
 				while( (com = bis.readLine()) != null) {
@@ -281,7 +285,7 @@ System.out.println("broadcast state and runtime init");
 						}
 					}
 					else if(token[0].equals("bootstrap")){
-						bootstrapCommand(token[1], masterWorkerCommsIp, Integer.parseInt(token[2]));
+						bootstrapCommand(token[1], token[2], masterWorkerCommsIp, Integer.parseInt(token[3]));
 					}
 					else if(token[0].equals("systemStable")){
 						Infrastructure.msh.setSystemStableTime(System.currentTimeMillis());

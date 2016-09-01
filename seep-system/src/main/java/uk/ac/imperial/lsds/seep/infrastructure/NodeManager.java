@@ -21,10 +21,13 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.NetworkInterface;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.logging.Level;
+import java.util.Enumeration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.NodeManagerCommunication;
@@ -73,9 +76,26 @@ public class NodeManager{
         
 		this.ownPort = ownPort;
 		try {
-			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
+			//nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
+			InetAddress localHost = InetAddress.getLocalHost();
+
+			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) 
+			{
+				NetworkInterface intf = en.nextElement();
+				LOG.info("Interface " + intf.getName() + " " + intf.getDisplayName());
+				for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) 
+				{
+					InetAddress next = enumIpAddr.nextElement();
+					LOG.info("Local IP " + next.toString() );
+					if (next.toString().contains("172")) { localHost = next; }
+				}
+			}
+			
+			LOG.info("Choosing local ip="+localHost); 
+			//nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), localHost, ownPort);
+			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), InetAddress.getLocalHost(), ownPort);
 		} 
-		catch (UnknownHostException e) {
+		catch (UnknownHostException | SocketException e) {
 			e.printStackTrace();
 		}
         
@@ -108,7 +128,7 @@ public class NodeManager{
 			LOG.info("Waiting for incoming requests on port: {}", ownPort);
 			Socket clientSocket = null;
 			//Send bootstrap information
-			bcu.sendBootstrapInformation(bindPort, bindAddr, ownPort);
+			bcu.sendBootstrapInformation(nodeDescr.getControlIp(), bindPort, bindAddr, ownPort);
 			while(listen){
 				//Accept incoming connections
 				clientSocket = serverSocket.accept();

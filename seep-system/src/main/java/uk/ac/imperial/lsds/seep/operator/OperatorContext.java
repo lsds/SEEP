@@ -400,6 +400,7 @@ public class OperatorContext implements Serializable{
 				downstream.set(i, newLoc);
 			}
 		}
+		throw new RuntimeException("Channge location");
 	}
 
 	public void changeLocation(int opId, InetAddress newIp){
@@ -417,6 +418,7 @@ public class OperatorContext implements Serializable{
 				downstream.set(i, newLoc);
 			}
 		}
+		throw new RuntimeException("Channge location");
 	}
 	
 	

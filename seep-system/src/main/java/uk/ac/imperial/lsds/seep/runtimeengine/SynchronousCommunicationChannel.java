@@ -62,6 +62,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private long tick = 0;
 	private boolean deferredInit = false;
 	private InetAddress deferredIp = null;
+	private InetAddress deferredControlIp = null;
 	private int deferredPortD = -1;
 	private int deferredPortC = -1;
 
@@ -87,11 +88,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}
 	}
 	
-	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
+	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
 		this.targetOperatorId = opId;
 		this.buffer = buffer;
 		this.deferredInit = true;
 		this.deferredIp = deferredIp;
+		this.deferredControlIp = deferredControlIp;
 		this.deferredPortD = deferredPortD;
 		this.deferredPortC = deferredPortC;
 	}
@@ -107,7 +109,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			{
 				try
 				{
-					controlSocketLock.wait(30*1000);
+					controlSocketLock.wait(1*1000);
 				}
 				catch(InterruptedException e) { e.printStackTrace(); /*Urgh*/}
 			}
@@ -231,7 +233,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private void deferredInitDownstreamControlSocket()
 	{				
 		if (deferredPortC <= 0) { return; }
-		openDownstreamControlSocketNonBlocking(deferredIp, deferredPortC);
+		openDownstreamControlSocketNonBlocking(deferredControlIp, deferredPortC);
 	}
 	
 	

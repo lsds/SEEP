@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.zip.DeflaterOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,7 +141,10 @@ public class ControlDispatcher {
 			
 			Output output = null;
 			try{
-				output = new Output(socket.getOutputStream());
+				//boolean compress = true;
+				boolean compress = false;
+				OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
+				output = new Output(outputStream);
 				synchronized(k){
 					synchronized(socket){
 						synchronized (output){
@@ -148,7 +152,7 @@ public class ControlDispatcher {
 							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
 							k.writeObject(output, ct);
 							output.flush();
-							LOG.debug("Wrote upstream control tuple in "+(System.currentTimeMillis()-writeStart)+" ms");
+							LOG.debug("Wrote upstream control tuple "+ct.toString() + "in "+(System.currentTimeMillis()-writeStart)+" ms");
 						}
 					}
 				}
@@ -294,12 +298,16 @@ public class ControlDispatcher {
 				
 				Output output = null;
 				try{
-					output = new Output(socket.getOutputStream());
+					//boolean compress = true;
+					boolean compress = false;
+					OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
+					output = new Output(outputStream);
 					synchronized(k){
 						synchronized (socket){
 							if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
 							k.writeObject(output, ct);
 							output.flush();
+							LOG.debug("Wrote downstream control tuple "+ct.toString());
 						}
 					}
 					success = true;

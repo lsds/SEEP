@@ -24,6 +24,7 @@ public class Node implements Serializable{
 	private int nodeId = 0;
 	
 	private InetAddress ip;
+	private InetAddress controlIp;
 	private InetAddress masterCommsIp;
 	private int port;
 	
@@ -34,6 +35,11 @@ public class Node implements Serializable{
 	public InetAddress getIp(){
 		return ip;
 	}	
+	
+	public InetAddress getControlIp()
+	{
+		return controlIp;
+	}
 
 	public InetAddress getMasterWorkerCommsIp(){
 		return masterCommsIp;
@@ -44,11 +50,16 @@ public class Node implements Serializable{
 	}
 
 	public Node setIp(InetAddress newIp){
-		return new Node(newIp, masterCommsIp, port);
+		throw new RuntimeException("Todo setip.");
+		//return new Node(newIp, controlIp, masterCommsIp, port);
+	}
+
+	public Node setControlIp(InetAddress newControlIp){
+		return new Node(ip, newControlIp, masterCommsIp, port);
 	}
 
 	public Node setMasterWorkerCommsIp(InetAddress newMasterCommsIp){
-		return new Node(ip, newMasterCommsIp, port);
+		return new Node(ip, controlIp, newMasterCommsIp, port);
 	}
 
 
@@ -63,9 +74,11 @@ public class Node implements Serializable{
 		this.port = port;
 		throw new RuntimeException("TODO: Get rid of this.");
 	}
-	public Node(InetAddress ip, InetAddress masterCommsIp, int port) {
+
+	public Node(InetAddress ip, InetAddress controlIp, InetAddress masterCommsIp, int port) {
 		super();
 		this.ip = ip;
+		this.controlIp = controlIp;
 		this.masterCommsIp = masterCommsIp;
 		this.port = port;
 	}
@@ -100,7 +113,7 @@ public class Node implements Serializable{
 
 	@Override 
 	public String toString() {
-		return "Node [ip=" + ip + ", masterCommsIp=" + masterCommsIp + ", port=" + port + "]";
+		return "Node [ip=" + ip + ", controlIp="+controlIp+", masterCommsIp=" + masterCommsIp + ", port=" + port + "]";
 	}
 
 }
