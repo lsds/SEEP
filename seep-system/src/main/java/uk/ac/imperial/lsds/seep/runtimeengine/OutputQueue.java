@@ -43,6 +43,9 @@ public class OutputQueue {
 	private Kryo k = null;
 	private final boolean bestEffort;
 	private final boolean outputQueueTimestamps;
+	private final OutputQueueWorker oqWorker;
+	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private long currentReconnectCount = -1;
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
@@ -50,6 +53,8 @@ public class OutputQueue {
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		boolean isSource = owner.getProcessingUnit().getOperator().getOpContext().isSource();
 		outputQueueTimestamps = isSource && Boolean.parseBoolean(GLOBALS.valueFor("srcOutputQueueTimestamps"));
+		if (piggybackControlTraffic) { oqWorker = new OutputQueueWorker(); } 
+		else { oqWorker = null; }
 	}
 	
 	private Kryo initializeKryo(){
@@ -88,11 +93,38 @@ public class OutputQueue {
 	
 	public synchronized void reopenEndpoint(EndPoint dest)
 	{
-		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
-		channelRecord.reopenDownstreamDataSocket();
+		if (piggybackControlTraffic)
+		{
+			currentReconnectCount = oqWorker.reopenEndpoint(dest, currentReconnectCount);
+		}	
+		else
+		{
+			SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
+			channelRecord.reopenDownstreamDataSocket();
+		}
+	}
+
+	public synchronized boolean sendToDownstream(DataTuple tuple)
+	{
+		if (piggybackControlTraffic)
+		{
+			long prevReconnectCount = currentReconnectCount;
+			currentReconnectCount = oqWorker.sendData(tuple);
+			return currentReconnectCount == prevReconnectCount;
+		}
+		else { throw new RuntimeException("Logic error."); }
+	}
+
+	//Assumes oqWorker handles synchronization. 
+	public void sendToDownstream(ControlTuple tuple)
+	{
+		if (!piggybackControlTraffic) { throw new RuntimeException("Logic error."); }
+		oqWorker.sendControl(tuple);
 	}
 	
 	public synchronized boolean sendToDownstream(DataTuple tuple, EndPoint dest) {
+		if (piggybackControlTraffic) { return sendToDownstream(tuple); }
+
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
 		IBuffer buffer = channelRecord.getBuffer();
@@ -173,6 +205,7 @@ public class OutputQueue {
 							channelRecord.cleanBatch2();
 							return false;
 						}
+						catch(Exception e) { LOG.error("Unexpected exception, should squash and return false: "+e); System.exit(1); }
 					}
 					
 					// Anf finally we reset the batch
@@ -195,7 +228,7 @@ public class OutputQueue {
 		}
 		return true;
 	}
-	
+
 	public void replay(SynchronousCommunicationChannel oi){
 		long a = System.currentTimeMillis();
 				while(oi.getSharedIterator().hasNext()){

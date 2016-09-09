@@ -20,6 +20,8 @@ public class BatchTuplePayload {
 	public int batchSize = 0;
 	public ArrayList<TuplePayload> batch = new ArrayList<TuplePayload>();
 	public long outputTs = -1;
+	public ControlTuple rctrl = null;
+	public ControlTuple fctrl = null;
 	
 	public synchronized void addTuple(TuplePayload payload){
 		outputTs = payload.timestamp; //update the newest ts in the batch
@@ -40,7 +42,7 @@ public class BatchTuplePayload {
 		
 	}
 	
-	public int size(){
+	public synchronized int size(){
 		//TODO: dokeeffe - should this not be batchSize? is it thread safe currently?
 		return batch.size();
 	}
