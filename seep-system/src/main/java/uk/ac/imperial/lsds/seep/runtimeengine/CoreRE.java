@@ -15,12 +15,17 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.net.Socket;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +40,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
@@ -67,6 +73,9 @@ import uk.ac.imperial.lsds.seep.reliable.StateBackupWorker.CheckpointMode;
 public class CoreRE {
 	
 	final private Logger LOG = LoggerFactory.getLogger(CoreRE.class);
+	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
+	private final Map<Integer, ControlTuple> lastUpOpIndexFctrls = new ConcurrentHashMap<Integer, ControlTuple>();
 
 	private WorkerNodeDescription nodeDescr = null;
 	
@@ -135,9 +144,18 @@ public class CoreRE {
 	public RoutingController getRoutingController()
 	{ return routingController; }
 
+	public ControlTuple removeLastFCtrl(int upOpIndex)
+	{
+		if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+		{ throw new RuntimeException("Logic error.");}
+		return lastUpOpIndexFctrls.remove(upOpIndex);
+	}
+
     public IProcessingUnit getProcessingUnit() {
         return processingUnit;
     }
+
+	public ControlHandler getControlHandler() { return ch; }
 	
 	public void pushOperator(Operator o){
 		boolean multicoreSupport = GLOBALS.valueFor("multicoreSupport").equals("true") ? true : false;
@@ -199,11 +217,29 @@ public class CoreRE {
 		int inC = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInC();
 		int inD = processingUnit.getOperator().getOpContext().getOperatorStaticInformation().getInD();
 		int inBT = new Integer(GLOBALS.valueFor("blindSocket"));
+
+		
+		Map<Integer, BlockingQueue<ControlTuple>> ctrlQueues = null;
+		BlockingQueue<Socket> ctrlConnQueue = null;
+		if (piggybackControlTraffic)
+		{
+			ctrlConnQueue = new LinkedBlockingQueue<Socket>();
+			ctrlQueues = new ConcurrentHashMap<Integer, BlockingQueue<ControlTuple>>();
+			for (Integer i : processingUnit.getOperator().getOpContext().getUpstreamOpIdList())	//TODO: Right number of upstreams?
+			{
+				LOG.info("Creating ctrlQueue for up op: " + i);
+				ctrlQueues.put(i, new LinkedBlockingQueue<ControlTuple>());
+			}
+			LOG.info("Control queues: " + ctrlQueues);
+		}
+
 		//Control worker
-		ch = new ControlHandler(this, inC);
+		ch = new ControlHandler(this, inC, ctrlQueues, ctrlConnQueue);
 		controlH = new Thread(ch, "controlHandlerT");
 		//Data worker
-		idh = new IncomingDataHandler(this, inD, tupleIdxMapper, dsa);
+
+		
+		idh = new IncomingDataHandler(this, inD, tupleIdxMapper, dsa, ctrlQueues);
 		iDataH = new Thread(idh, "dataHandlerT");
 		//Consumer worker
 		dataConsumer = new DataConsumer(this, dsa);
@@ -483,7 +519,7 @@ public class CoreRE {
 	public enum ControlTupleType{
 		ACK, BACKUP_OP_STATE, RECONFIGURE, SCALE_OUT, SCALE_IN, RESUME, INIT_STATE, STATE_ACK, INVALIDATE_STATE,
 		BACKUP_RI, INIT_RI, OPEN_BACKUP_SIGNAL, CLOSE_BACKUP_SIGNAL, STREAM_STATE, STATE_CHUNK, DISTRIBUTED_SCALE_OUT,
-		KEY_SPACE_BOUNDS, FAILURE_CTRL, DOWN_UP_RCTRL, UP_DOWN_RCTRL
+		KEY_SPACE_BOUNDS, FAILURE_CTRL, DOWN_UP_RCTRL, UP_DOWN_RCTRL, MERGED_CTRL
 	}
 	
 	public synchronized void setTsData(int stream, long ts_data){
@@ -616,6 +652,35 @@ public class CoreRE {
 			{
 				routingController.handleRCtrl(ct.getUpDown());
 			}
+		}
+		else if (ctt.equals(ControlTupleType.MERGED_CTRL))
+		{
+			LOG.debug("Handling merged ctrl: "+ct);
+			FailureCtrl fctrl = ct.getOpFailureCtrl().getFailureCtrl();
+			int fctrlSenderOpId = ct.getOpFailureCtrl().getOpId();
+			
+			/*
+			if (processingUnit.getOperator().getOpContext().isSink())
+			{
+		
+			}
+			else
+			{
+				//TODO: Check whether dupe?
+				coreProcessLogic.processFailureCtrl(fctrl, fctrlSenderOpId);
+			}
+			*/
+			
+			coreProcessLogic.processFailureCtrl(fctrl, fctrlSenderOpId);
+
+			if (processingUnit.getOperator().getOpContext().isSink())
+			{
+				throw new RuntimeException("Logic error?");
+			}		
+
+			LOG.debug("About to update weight with downup rctrl: "+ct.getDownUp());
+			processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
+
 		}
 		/** INVALIDATE_STATE message **/
 		else if(ctt.equals(ControlTupleType.INVALIDATE_STATE)) {
@@ -972,7 +1037,15 @@ public class CoreRE {
 			if (!downstreamsRoutable) { upFctrl = nodeFctrl; }
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId , upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
-			controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
+
+			if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+			{
+				controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
+			}
+			else
+			{
+				lastUpOpIndexFctrls.put(upOpIndex, ct);
+			}
 		}
 		LOG.debug("Wrote failure ctrl in "+ (System.currentTimeMillis() - tStart) + " ms");
 	}
@@ -987,8 +1060,16 @@ public class CoreRE {
 			int downOpId = processingUnit.getOperator().getOpContext().getDownOpIdFromIndex(downOpIndex);
 			LOG.debug("Writing failure ctrl to down op id="+downOpId+",fctrl="+noAlives);
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId, noAlives);
-			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
-			controlDispatcher.sendDownstream(ct, downOpIndex, !bestEffortAcks);
+			//Why don't I care about this failing here?
+			if (!piggybackControlTraffic)
+			{
+				boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
+				controlDispatcher.sendDownstream(ct, downOpIndex, !bestEffortAcks);
+			}
+			else
+			{
+				outputQueues.get(downOpIndex).sendToDownstream(ct);	
+			}
 		}	
 	}
 	

@@ -20,6 +20,7 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -66,12 +68,23 @@ public class ControlHandlerWorker implements Runnable{
 	//In charge of control thread execution
 	private boolean goOn;
 	private Kryo k = null;
+	private java.util.Random rand = new java.util.Random();
+	private final BlockingQueue<ControlTuple> ctrlChannel;
 
 	public ControlHandlerWorker(Socket incomingSocket, CoreRE owner){
 		this.incomingSocket = incomingSocket;
 		this.owner = owner;
 		this.goOn = true;
 		this.k = initializeKryo();
+		this.ctrlChannel = null;
+	}
+
+	public ControlHandlerWorker(BlockingQueue<ControlTuple> ctrlChannel, CoreRE owner){
+		this.incomingSocket = null;
+		this.owner = owner;
+		this.goOn = true;
+		this.k = null;
+		this.ctrlChannel = ctrlChannel; 
 	}
 	
 	private Kryo initializeKryo(){
@@ -110,38 +123,94 @@ public class ControlHandlerWorker implements Runnable{
 		InputStream is = null;
 		OutputStream os = null;
 		ControlTuple tuple = null;
-		try{
-			//Establish input stream, which receives serialised objects
-			is = incomingSocket.getInputStream();
-			os = incomingSocket.getOutputStream();
-			Input i = new Input(is, 100000);
-			//Read the connection to get the data
+		if (ctrlChannel != null)
+		{
 			long txnStart = System.currentTimeMillis();
 			while(goOn){
 				long readStart = System.currentTimeMillis();
-				tuple = k.readObject(i, ControlTuple.class);
+
+				try { tuple = ctrlChannel.take(); } 
+				catch(InterruptedException e) { LOG.error("Unexpected interrupt: "+ e); System.exit(1); }
+
 				long readEnd = System.currentTimeMillis();
 				long netDelay = tuple.getTsSend() > 0 ? readEnd - tuple.getTsSend() : -1;
 				LOG.debug("Read control tuple in "+ (readEnd-readStart) + " ms"+ (netDelay > 0 ? ", netDelay="+netDelay : "")+",txnDelay="+(readStart-txnStart));
 				txnStart = readEnd;
+				//simulateNetDelay();
 				if(tuple != null){
-					InetAddress ip = incomingSocket.getInetAddress();
-					owner.processControlTuple(tuple, os, ip);
+					//N.B. If os is no longer null, need to change locking around upstream since icdhw will pass
+					//the same socket for sending upstream control messages.
+					owner.processControlTuple(tuple, null, null);
 					LOG.debug("Processed control tuple in "+(System.currentTimeMillis()-readEnd) + " ms");
 				}
 				else{
 					LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
-					break;
+					System.exit(1);
 				}
 			}
-			//Close streams and socket
-			LOG.error("-> Closing connection");
-			is.close();
-			incomingSocket.close();
+			LOG.error("-> ControlHandlerWorker. Exiting loop !");
 		}
-		catch(IOException io){
-			LOG.error("-> ControlHandlerWorker. IO Error "+io.getMessage());
-			io.printStackTrace();
+		else
+		{
+			try{
+				//Establish input stream, which receives serialised objects
+				is = incomingSocket.getInputStream();
+				if (!Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic")))
+				{ os = incomingSocket.getOutputStream(); } //This must be an incoing conn created by ouptut queue worker.
+				Input i = new Input(is, 100000);
+				//Read the connection to get the data
+				long txnStart = System.currentTimeMillis();
+				while(goOn){
+					long readStart = System.currentTimeMillis();
+					tuple = k.readObject(i, ControlTuple.class);
+					long readEnd = System.currentTimeMillis();
+					long netDelay = tuple.getTsSend() > 0 ? readEnd - tuple.getTsSend() : -1;
+					LOG.debug("Read control tuple in "+ (readEnd-readStart) + " ms"+ (netDelay > 0 ? ", netDelay="+netDelay : "")+",txnDelay="+(readStart-txnStart));
+					txnStart = readEnd;
+					//simulateNetDelay();
+					if(tuple != null){
+						InetAddress ip = incomingSocket.getInetAddress();
+						owner.processControlTuple(tuple, os, ip);
+						LOG.debug("Processed control tuple in "+(System.currentTimeMillis()-readEnd) + " ms");
+					}
+					else{
+						LOG.error("-> ControlHandlerWorker. TUPLE IS NULL !");
+						break;
+					}
+				}
+				//Close streams and socket
+				LOG.error("-> Closing connection");
+				is.close();
+				incomingSocket.close();
+			}
+			catch(Exception io){
+				LOG.error("-> ControlHandlerWorker. IO Error "+io.getMessage());
+				io.printStackTrace();
+				try { 
+					incomingSocket.close();
+				} catch (IOException e) {}
+			}
 		}
 	}
+
+	private void simulateNetDelay()
+	{
+
+		long minDelay = 10;
+		long maxDelay = 500;
+		
+		long nextDelay = minDelay;
+
+		if (rand.nextDouble() < 0.005) { nextDelay += (long)((maxDelay - minDelay) * rand.nextDouble()); }
+
+		try
+		{
+			Thread.sleep(nextDelay);
+
+
+		} catch(Exception e) { throw new RuntimeException(e); }
+
+
+	}
+
 }

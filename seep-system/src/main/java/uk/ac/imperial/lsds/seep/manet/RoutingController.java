@@ -19,6 +19,7 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
@@ -28,6 +29,8 @@ import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 public class RoutingController implements Runnable{
 
 	private final static Logger logger = LoggerFactory.getLogger(RoutingController.class);
+	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final static double INITIAL_WEIGHT = -1;
 	//private final static double COST_THRESHOLD = 3.9;
 	//private final static double COST_THRESHOLD = 4.5;
@@ -130,9 +133,10 @@ public class RoutingController implements Runnable{
 				}
 				else
 				{
-
+			
 					for (Integer upstreamId : weightsCopy.keySet())
 					{
+	
 						RangeSet<Long> empty = TreeRangeSet.create();
 						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
 						double weight = weightsCopy.get(upstreamId);
@@ -140,7 +144,29 @@ public class RoutingController implements Runnable{
 						//if (nodeId == 1 && upstreamId == 0 || nodeId == 110 && upstreamId == 10 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
 						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, empty);
 						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
-						owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+
+						/*
+						if (nodeId.intValue() == -2 && upstreamId.intValue() != 0 ||
+							nodeId.intValue() == -190 && upstreamId.intValue() != 10 ||
+							nodeId.intValue() == -189 && upstreamId.intValue() != 11)
+						{ continue; }
+						*/
+						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+						{
+							owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+						}
+						else
+						{
+							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							if (fct != null)
+							{
+								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
+								ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, weight, empty, fctrl);
+								owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
+								logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
+							}
+							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
+						}
 					}
 				}
 				logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
@@ -213,7 +239,7 @@ public class RoutingController implements Runnable{
 					else
 					{
 						upstreamNetRates.get(i).put(upstreamId,
-								new Double(1.0 / cost.doubleValue()));
+								new Double(1.0 / Math.pow(cost.doubleValue(), 2)));
 					}
 				}
 			}

@@ -17,24 +17,50 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Map;
-
+import java.util.BitSet;
+import java.util.HashMap;
+import java.util.concurrent.BlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitNodeState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpFailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
+import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
+import de.javakaffee.kryoserializers.BitSetSerializer;
 
 public class IncomingDataHandlerWorker implements Runnable{
 
@@ -47,6 +73,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 	private DataStructureAdapter dsa;
 	private Kryo k = null;
 	private Stats stats;
+	private final BlockingQueue<ControlTuple> ctrlQueue;
 	
 	public IncomingDataHandlerWorker(Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper, DataStructureAdapter dsa){
 		//upstream id
@@ -57,6 +84,21 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.dsa = dsa;
 		this.k = initializeKryo();
 		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress()));
+		this.ctrlQueue = null;
+		LOG.info("Created icdhw with ctrlQueue = "+ctrlQueue);
+	}
+
+	public IncomingDataHandlerWorker(Socket upstreamSocket, CoreRE owner, Map<String, Integer> idxMapper, DataStructureAdapter dsa, BlockingQueue<ControlTuple> ctrlQueue){
+		//upstream id
+		this.upstreamSocket = upstreamSocket;
+		this.owner = owner;
+		this.goOn = true;
+		this.idxMapper = idxMapper;
+		this.dsa = dsa;
+		this.k = initializeKryo();
+		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress()));
+		this.ctrlQueue = ctrlQueue;
+		LOG.info("Created icdhw with ctrlQueue = "+ctrlQueue);
 	}
 	
 	private Kryo initializeKryo(){
@@ -68,6 +110,32 @@ public class IncomingDataHandlerWorker implements Runnable{
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
+
+		k.register(ControlTuple.class);
+		k.register(MemoryChunk.class);
+		k.register(StateChunk.class);
+		k.register(HashMap.class, new MapSerializer());
+		k.register(BackupOperatorState.class);
+		k.register(byte[].class);
+		k.register(RawData.class);
+		k.register(Ack.class);
+		k.register(BackupNodeState.class);
+		k.register(Resume.class);
+		k.register(ScaleOutInfo.class);
+		k.register(StateAck.class);
+		//k.register(ArrayList.class);
+		k.register(BackupRI.class);
+		k.register(InitNodeState.class);
+		k.register(InitOperatorState.class);
+		k.register(InitRI.class);
+		k.register(InvalidateState.class);
+		k.register(ReconfigureConnection.class);
+		//k.register(BitSet.class);
+		k.register(BitSet.class, new BitSetSerializer());
+		k.register(OpFailureCtrl.class);
+		k.register(FailureCtrl.class);
+		k.register(UpDownRCtrl.class);
+		k.register(DownUpRCtrl.class);
 		return k;
 	}
 	
@@ -182,6 +250,13 @@ public class IncomingDataHandlerWorker implements Runnable{
 						LOG.warn("Discarding batch as system status not normal.");
 					}
 				}
+				LOG.debug("ichw rctrl="+batchTuplePayload.rctrl + ", fctrl="+batchTuplePayload.fctrl);				
+				if (batchTuplePayload.rctrl != null) 
+				{ 
+					ControlTuple ct = new ControlTuple(ControlTupleType.UP_DOWN_RCTRL, opId, batchTuplePayload.rctrl.intValue());
+					ctrlQueue.offer(ct); }
+				if (batchTuplePayload.fctrl != null) 
+				{ ctrlQueue.offer(batchTuplePayload.fctrl); }
 			}
 			LOG.error("-> Data connection closing...");
 			upstreamSocket.close();

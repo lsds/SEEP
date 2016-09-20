@@ -1,30 +1,119 @@
 package uk.ac.imperial.lsds.seep.runtimeengine;
 
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.HashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import uk.ac.imperial.lsds.seep.GLOBALS;
+
+import uk.ac.imperial.lsds.seep.buffer.IBuffer;
+
+import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitNodeState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpFailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
+import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
+
+import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
+import de.javakaffee.kryoserializers.BitSetSerializer;
+
 public class OutputQueueWorker
 {
 
 	final private Logger logger = LoggerFactory.getLogger(OutputQueueWorker.class);
 	private final Object lock = new Object(){};
 
+	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final static long DEFAULT_TIMEOUT = 1 * 1000;
 	private boolean connected = false;
 	private long reconnectCount = -1;
 	private final CtrlDataExchanger exchanger = new CtrlDataExchanger();
+	private final CoreRE owner;
+	private final Kryo k;
+	private final boolean outputQueueTimestamps;
+	private double totalSent = 0;
+	private double coalesced = 0;
 
-	public OutputQueueWorker()
+	public OutputQueueWorker(CoreRE owner, boolean outputQueueTimestamps)
 	{
+		this.owner = owner;
+		this.k = initialiseKryo(); 
+		this.outputQueueTimestamps = outputQueueTimestamps;
+	}
+	
+	private Kryo initialiseKryo()
+	{
+		Kryo k = new Kryo();
+		k.register(ArrayList.class, new ArrayListSerializer());
+		k.register(Payload.class);
+		k.register(TuplePayload.class);
+		k.register(BatchTuplePayload.class);
 
-
+		k.register(ControlTuple.class);
+		k.register(MemoryChunk.class);
+		k.register(StateChunk.class);
+		k.register(HashMap.class, new MapSerializer());
+		k.register(BackupOperatorState.class);
+		k.register(byte[].class);
+		k.register(RawData.class);
+		k.register(Ack.class);
+		k.register(BackupNodeState.class);
+		k.register(Resume.class);
+		k.register(ScaleOutInfo.class);
+		k.register(StateAck.class);
+		//k.register(ArrayList.class);
+		k.register(BackupRI.class);
+		k.register(InitNodeState.class);
+		k.register(InitOperatorState.class);
+		k.register(InitRI.class);
+		k.register(InvalidateState.class);
+		k.register(ReconfigureConnection.class);
+		//k.register(BitSet.class);
+		k.register(BitSet.class, new BitSetSerializer());
+		k.register(OpFailureCtrl.class);
+		k.register(FailureCtrl.class);
+		k.register(UpDownRCtrl.class);
+		k.register(DownUpRCtrl.class);
+		return k;
 	}
 
-	public int reopenEndpoint(Endpoint dest, int prevReconnectCount)
+	public long reopenEndpoint(EndPoint dest, long prevReconnectCount)
 	{
 		synchronized(lock)
 		{
-			if getReconnectCount < 0 
+			if (getReconnectCount() < 0)
 			{
-				reconnectCount++; / Notify?
-				spawnWorkerThread((SynchronousCommunicationChannel)dest);	
+				reconnectCount++; // TODO: Notify?
+				spawnWorkerThread(dest);	
 			}
 		}
 
@@ -32,24 +121,35 @@ public class OutputQueueWorker
 		return getReconnectCount();
 	} 
 
-	private void spawnWorkerThread(final SynchronousCommunicationChannel channel)
+	private void spawnWorkerThread(final EndPoint dest)
 	{
 		new Thread(new Runnable() { 
 			public void run()
 			{
-				channel.reopenDownstreamDataSocket();
-				setConnected();		
-				while (true)
+				try
 				{
-					CtrlDataTuple ctrlData = exchanger.getCtrlData();
-					boolean success = sendCtrlData(ctrlData, channel);
-					if (!success)
+					SynchronousCommunicationChannel channel = (SynchronousCommunicationChannel)dest;
+					channel.reopenDownstreamDataSocket();
+					owner.getControlHandler().newIncomingConn(channel.getDownstreamDataSocket());
+					setConnected();		
+					logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " connected to downstream: "+dest.getOperatorId());
+					while (true)
 					{
-						setReconnecting();	
-						channel.reopenDownstreamDataSocket();
-						setConnected();
+						CtrlDataTuple ctrlData = exchanger.getCtrlData(channel);
+						logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " exchanged ctrlData for "+dest.getOperatorId());
+						boolean success = sendCtrlData(ctrlData, dest);
+						logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " sent ctrlData for "+dest.getOperatorId()+", success="+success);
+						if (!success)
+						{
+							setReconnecting();	
+							channel.reopenDownstreamDataSocket();
+							owner.getControlHandler().newIncomingConn(channel.getDownstreamDataSocket());
+							setConnected();
+							logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " connected to downstream: "+dest.getOperatorId());
+						}
 					}
 				}
+				catch(Exception e) { logger.error("Fatal error: "+e); System.exit(1); }
 			}
 		}).start();
 	} 
@@ -70,9 +170,20 @@ public class OutputQueueWorker
 		}
 	}
 
-	private void getReconnectCount() { synchronized(lock) { return reconnectCount; } }
+	private long getReconnectCount() { synchronized(lock) { return reconnectCount; } }
 	private void setConnected() { synchronized(lock) { connected = true; lock.notifyAll(); } }
-	private void setReconnecting() { synchronized(lock) { connected = false; reconnectCount++; exchanger.clearCtrlData(); lock.notifyAll(); } }
+	private boolean isConnected() { synchronized(lock) { return connected; } }
+	private void setReconnecting() 
+	{ 
+		synchronized(lock) 
+		{ 
+			connected = false; 
+			reconnectCount++; 
+			exchanger.clearCtrlData(); 
+			exchanger.prevRCtrl = null;			
+			lock.notifyAll(); 
+		} 
+	}
 
 	/*
 	This is the one that still needs a bit of work. What happens
@@ -89,28 +200,18 @@ public class OutputQueueWorker
 	about is a thread hanging unneccessarily.
 	*/
 
-	public int sendData(DataTuple data, int prevReconnectCount)
+	public long sendData(DataTuple data, EndPoint dest, long prevReconnectCount)
 	{
-		Add data to output log 
-		int reconnectCountCopy = getReconnectCount(); 
+		boolean dupe = logTuple(data.getPayload(), dest);
+		long reconnectCountCopy = getReconnectCount(); 
 		if (prevReconnectCount > reconnectCountCopy) { throw new RuntimeException("Logic error"); }
 		else if (prevReconnectCount == reconnectCountCopy)
 		{
-			setDataSync(data);
-			reconnectCountCopy = getReconnectCount();
-			
-			/*
-			while (prevReconnectCount == reconnectCountCopy)
+			if (!dupe)
 			{
-				setDataSync(data);
-				try
-					exchange (timeout)
-					reconnectCountCopy = getReconnectCount();
-					break;
-				catch Exception e { squash but log? }
+				exchanger.setDataSync(data);
 				reconnectCountCopy = getReconnectCount();
 			}
-			*/
 		}
 
 		/*
@@ -122,89 +223,104 @@ public class OutputQueueWorker
 		return reconnectCountCopy;
 	}
 
-
-	public void sendControl(ControlTuple control)
+	private boolean logTuple(TuplePayload tp, EndPoint dest)
 	{
-		exchanger.setCtrlAsync(control);
+		BatchTuplePayload msg = new BatchTuplePayload();
+		msg.addTuple(tp);
+		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel)dest;		
+		if (channelRecord.getBuffer().contains(tp.timestamp)) 
+		{ 
+			logger.info("oq.dupe ts="+tp.timestamp+",dsOpId="+dest.getOperatorId());	
+			return true; 
+		} 
+		channelRecord.getBuffer().save(msg, msg.outputTs, owner.getIncomingTT());
+		return false;
+	}
+
+	public boolean sendControl(ControlTuple control)
+	{
+		return exchanger.setCtrlAsync(control);
 	}
 
 
-	private boolean sendCtrlData(CtrlDataTuple ctrlDataTuple, SynchronousCommunicationChannel channel)
+	private boolean sendCtrlData(CtrlDataTuple ctrlDataTuple, EndPoint dest)
 	{
+		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel)dest;
 		IBuffer buffer = channelRecord.getBuffer();
 		DataTuple tuple = ctrlDataTuple.data;	
+		/*
 		if (tuple != null && buffer.contains(tuple.getPayload().timestamp)) 
 		{ 
-			LOG.info("oq.dupe ts="+tuple.data.getPayload().timestamp+",dsOpId="+dest.getOperatorId());	
+			logger.info("oq.dupe ts="+tuple.getPayload().timestamp+",dsOpId="+dest.getOperatorId());	
 			return true; 
 		} 
+		*/
 		//Output for this socket
-		try
+		if (tuple != null)
 		{
-			if (tuple != null)
+			//To send tuple
+			TuplePayload tp = tuple.getPayload();
+			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
+			if (!allowOutOfOrderTuples)
 			{
-				//To send tuple
-				TuplePayload tp = tuple.getPayload();
-				final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
-				if (!allowOutOfOrderTuples)
-				{
-					tp.timestamp = System.currentTimeMillis(); // assign local ack
-				}
-				long currentTime = System.currentTimeMillis();
-				if (outputQueueTimestamps) { tp.instrumentation_ts = currentTime; }
-				long latency = currentTime - tp.instrumentation_ts;
-				long oqLatency = currentTime - tp.local_ts;
-				tp.local_ts = currentTime;
-
-				if (tuple.getMap().containsKey("latencyBreakdown"))
-				{
-					long[] latencies = tuple.getLongArray("latencyBreakdown");
-					long[] newLatencies = new long[latencies.length+1];
-					for (int i=0; i < latencies.length; i++) { newLatencies[i] = latencies[i]; }
-					newLatencies[latencies.length] = oqLatency;
-					tuple.getPayload().attrValues.set(tuple.getMap().get("latencyBreakdown"), newLatencies);
-				}
-
-				channelRecord.addDataToBatch(tp);
-				LOG.debug("oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency);
+				tp.timestamp = System.currentTimeMillis(); // assign local ack
 			}
-	
-			if(channelRecord.getChannelBatchSize() <= 0 || ctrlDataTuple.rctrl != null || ctrlDataTuple.fctrl != null){
-				channelRecord.setTick(currentTime);
-				BatchTuplePayload msg = channelRecord.getBatch();
-				
-				//Don't save if it is an empty batch e.g. when we just have ctrl to send.
-				if(!GLOBALS.valueFor("reliability").equals("bestEffort") && msg.size() > 0)
-				{
-					buffer.save(msg, msg.outputTs, owner.getIncomingTT());
-				}
+			long currentTime = System.currentTimeMillis();
+			if (outputQueueTimestamps) { tp.instrumentation_ts = currentTime; }
+			long latency = currentTime - tp.instrumentation_ts;
+			long oqLatency = currentTime - tp.local_ts;
+			tp.local_ts = currentTime;
 
-				msg.rctrl = ctrlDataTuple.rctrl;
-				msg.fctrl = ctrlDataTuple.fctrl;
-
-				try
-				{
-					k.writeObject(channelRecord.getOutput(), msg);
-					//Flush the buffer to the stream
-					channelRecord.getOutput().flush();
-				}
-				catch(KryoException|IllegalArgumentException e)
-				{
-					LOG.error("Writing batch to "+dest.getOperatorId() + " failed, ts="+ tp.timestamp+", "+e);
-					channelRecord.cleanBatch2();
-					return false;
-				}
-				catch(Exception e) { LOG.error("Unexpected exception, should squash and return false: "+e); System.exit(1); }
-				
-				// Anf finally we reset the batch
-	//					channelRecord.cleanBatch(); // RACE CONDITION ??
-				channelRecord.cleanBatch2();
+			if (tuple.getMap().containsKey("latencyBreakdown"))
+			{
+				long[] latencies = tuple.getLongArray("latencyBreakdown");
+				long[] newLatencies = new long[latencies.length+1];
+				for (int i=0; i < latencies.length; i++) { newLatencies[i] = latencies[i]; }
+				newLatencies[latencies.length] = oqLatency;
+				tuple.getPayload().attrValues.set(tuple.getMap().get("latencyBreakdown"), newLatencies);
 			}
+
+			channelRecord.addDataToBatch(tp);
+			logger.debug("oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency);
 		}
-		catch(InterruptedException ie){
-			LOG.error("-> Dispatcher. While trying to do wait() "+ie.getMessage());
-			ie.printStackTrace();
-			System.exit(1);	//dokeeffe abort - don't want this any more.
+
+		if(channelRecord.getChannelBatchSize() <= 0 || ctrlDataTuple.rctrl != null || ctrlDataTuple.fctrl != null){
+			//channelRecord.setTick(currentTime);
+			BatchTuplePayload msg = channelRecord.getBatch();
+			
+			//Don't save if it is an empty batch e.g. when we just have ctrl to send.
+			/*
+			if(!GLOBALS.valueFor("reliability").equals("bestEffort") && msg.size() > 0)
+			{
+				buffer.save(msg, msg.outputTs, owner.getIncomingTT());
+			}
+			*/
+
+			if (ctrlDataTuple.rctrl != null) { msg.rctrl = ctrlDataTuple.rctrl.getUpDown().getQlen(); }
+			msg.fctrl = ctrlDataTuple.fctrl;
+			totalSent++;
+			if (!msg.batch.isEmpty() && (msg.rctrl != null || msg.fctrl != null))
+			{ logger.debug("Coalesced data with ctrl traffic, coalseced %="+ (++coalesced/totalSent)); }
+			else { logger.debug("No coalescing: "+ (coalesced / totalSent) ); }  
+
+			try
+			{
+				k.writeObject(channelRecord.getOutput(), msg);
+				//Flush the buffer to the stream
+				channelRecord.getOutput().flush();
+			}
+			catch(KryoException|IllegalArgumentException e)
+			{
+				long ts = tuple == null ? -1 : tuple.getPayload().timestamp;
+				logger.error("Writing batch to "+dest.getOperatorId() + " failed, ts="+ ts +", "+e);
+				channelRecord.cleanBatch2();
+				return false;
+			}
+			catch(Exception e) { logger.error("Unexpected exception, should squash and return false: "+e); System.exit(1); }
+			
+			// Anf finally we reset the batch
+//					channelRecord.cleanBatch(); // RACE CONDITION ??
+			channelRecord.cleanBatch2();
 		}
 		return true;
 	}
@@ -212,17 +328,24 @@ public class OutputQueueWorker
 	private class CtrlDataExchanger
 	{
 		public ControlTuple rctrl = null;
+		public ControlTuple prevRCtrl = null;
 		public ControlTuple fctrl = null;
+		//public ControlTuple prevFCtrl = null;
 		public DataTuple data = null;
 
-		public void setCtrlAsync(ControlTuple ctrl)
+		public boolean setCtrlAsync(ControlTuple ctrl)
 		{
 			synchronized(lock)
 			{
-				if (ctrl.type == ControlTuple.UpDownRctrl) { rctrl = ctrl; }
-				else if (ctrl.type == ControlTuple.FailureCtrl) { fctrl = ctrl; }
-				else  { throw new RuntimeException("Logic error."); } 
-				lock.notifyAll();
+				if (isConnected())
+				{
+					if (ctrl.getType().equals(CoreRE.ControlTupleType.UP_DOWN_RCTRL)) { rctrl = ctrl; }
+					else if (ctrl.getType().equals(CoreRE.ControlTupleType.FAILURE_CTRL)) { fctrl = ctrl; }
+					else  { throw new RuntimeException("Logic error."); } 
+					lock.notifyAll();
+					return true;
+				}
+				else { return false; }
 			}
 		}
 
@@ -231,6 +354,7 @@ public class OutputQueueWorker
 			synchronized(lock)
 			{
 				if (data != null) { throw new RuntimeException("Logic error"); }
+				logger.debug("Setting data with ts="+newData.getPayload().timestamp);
 				data = newData;
 				lock.notifyAll();
 			}
@@ -244,18 +368,26 @@ public class OutputQueueWorker
 			}
 		}
 
-		public CtrlDataTuple getCtrlData()
+		public CtrlDataTuple getCtrlData(SynchronousCommunicationChannel channel)
 		{
 			synchronized(lock)
 			{
-				while (data == null && rctrl == null && fctrl == null)
+				while (!ctrlDataChanged(channel))
 				{
 					try { lock.wait(DEFAULT_TIMEOUT); } catch(InterruptedException e) { logger.debug("getCtrlData wait timed out"); }
 				}
 				CtrlDataTuple result = new CtrlDataTuple(data, rctrl, fctrl);	
+				if (rctrl != null) { prevRCtrl = rctrl; }	
 				clearCtrlData();	
 				return result;
 			}
+		}
+
+		//Assumes lock held.
+		private boolean ctrlDataChanged(SynchronousCommunicationChannel channel)
+		{
+			return data != null || (rctrl != null && (prevRCtrl == null || (rctrl.getUpDown().getQlen() != prevRCtrl.getUpDown().getQlen() || channel.getDownstreamDataSocket().isClosed()))) || (!mergeFailureAndRoutingCtrl && fctrl != null);
+
 		}
 
 		public void clearCtrlData()

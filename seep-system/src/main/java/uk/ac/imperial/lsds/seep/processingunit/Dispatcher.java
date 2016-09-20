@@ -58,6 +58,8 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long DOWNSTREAMS_UNROUTABLE_TIMEOUT = Long.parseLong(GLOBALS.valueFor("downstreamsUnroutableTimeout"));
 	private static final long ABORT_SESSION_TIMEOUT = 1000 * Long.parseLong(GLOBALS.valueFor("abortSessionTimeoutSec"));
 	private static final boolean enableDownstreamsUnroutable = Boolean.parseBoolean(GLOBALS.valueFor("enableDownstreamsUnroutable"));
+	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final boolean bestEffort;
@@ -190,8 +192,10 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void startRoutingCtrlWorkers()
 	{
+		int opId = owner.getOperator().getOperatorId();
 		for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
 		{
+
 			//1 thread per worker - assumes fan-out not too crazy and that we're network bound.
 			RoutingControlWorker worker = new RoutingControlWorker(downOpId);			
 			Thread workerT = new Thread(worker, "RoutingControlWorker-"+downOpId);
@@ -416,22 +420,26 @@ public class Dispatcher implements IRoutingObserver {
 		public DispatcherMain() {}
 		public void run()
 		{
-			lastSendSuccess = System.currentTimeMillis();
-			while(true)
+			try
 			{
-				Set<Long> constraints = dispatchHead();
-				
-				if (constraints != null && !constraints.isEmpty())
+				lastSendSuccess = System.currentTimeMillis();
+				while(true)
 				{
-					dispatchConstrained(constraints);
-				}
+					Set<Long> constraints = dispatchHead();
+					
+					if (constraints != null && !constraints.isEmpty())
+					{
+						dispatchConstrained(constraints);
+					}
 
-				if (owner.getOperator().getOpContext().isSource() && System.currentTimeMillis() - lastSendSuccess > ABORT_SESSION_TIMEOUT)
-				{
-					logger.error("Abort session timeout exceeded");
-					System.exit(1);	
-				} 
+					if (owner.getOperator().getOpContext().isSource() && System.currentTimeMillis() - lastSendSuccess > ABORT_SESSION_TIMEOUT)
+					{
+						logger.error("Abort session timeout exceeded");
+						System.exit(1);	
+					} 
+				}
 			}
+			catch(Exception e) { logger.error("Fatal error - aborting: "+e); System.exit(1); }
 		}
 
 		private Set<Long> dispatchHead()
@@ -664,8 +672,9 @@ public class Dispatcher implements IRoutingObserver {
 			if (remove)
 			{
 				logger.debug("Removing tuple "+ts+" from op queue.");
-				dt = opQueue.remove(dt.getPayload().timestamp);
-				if (dt != null) { setDownstreamsRoutable(true); }
+				//dt = opQueue.remove(dt.getPayload().timestamp);
+				//if (dt != null) { setDownstreamsRoutable(true); }
+				if (!opQueue.contains(dt.getPayload().timestamp)) { setDownstreamsRoutable(true); }
 				lastSendSuccess = System.currentTimeMillis();
 			}
 			else
@@ -713,6 +722,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				logger.debug("All succeeded, removing tuple "+dt.getPayload().timestamp);
 				opQueue.remove(dt.getPayload().timestamp);
+				throw new RuntimeException("TODO: Changed trySend, need to update this.13/09/16");
 			}
 		}
 	
@@ -798,8 +808,10 @@ public class Dispatcher implements IRoutingObserver {
 		public boolean trySend(DataTuple dt, long timeout)
 		{
 			try {
+				opQueue.remove(dt.getPayload().timestamp);
 				exchanger.exchange(dt, timeout, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException | TimeoutException e) {
+				opQueue.forceAdd(dt);
 				return false;
 			}
 			setDownstreamsRoutable(true);
@@ -1027,9 +1039,14 @@ public class Dispatcher implements IRoutingObserver {
 				logger.debug("Sent updown rctrl in "+(tEnd - tStart)+"ms, since last="+(tEnd-tLast)+" ms");
 				tLast = tEnd;
 				//wait for interval
-				try {
-					Thread.sleep(ROUTING_CTRL_DELAY);
-				} catch (InterruptedException e) {}
+				long waited = System.currentTimeMillis()+1 - tEnd;
+				while (waited < ROUTING_CTRL_DELAY)
+				{
+					try {
+						Thread.sleep(ROUTING_CTRL_DELAY - waited);
+					} catch (InterruptedException e) {}
+					waited = System.currentTimeMillis()+1 - tEnd;
+				}
 			}
 		}
 		
@@ -1038,7 +1055,24 @@ public class Dispatcher implements IRoutingObserver {
 			int localOpId = owner.getOperator().getOperatorId();
 			ControlTuple ct = new ControlTuple(ControlTupleType.UP_DOWN_RCTRL, localOpId, queueLength);
 			logger.debug("Sending control tuple downstream from "+localOpId+" with queue length="+queueLength);
-			boolean flushSuccess = owner.getOwner().getControlDispatcher().sendDownstream(ct, owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId), false);
+			/*
+			if (localOpId == 0 && downId != -2 || 
+				localOpId == 10 && downId != -190 ||
+				localOpId == 11 && downId != -189)
+			{ return; }
+			*/
+			boolean flushSuccess = false;
+			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downId);
+			if (!piggybackControlTraffic)
+			{
+				flushSuccess = owner.getOwner().getControlDispatcher().sendDownstream(ct, downOpIndex, false);
+			}
+			else
+			{
+				//TODO What if this fails?
+				flushSuccess = outputQueues.get(downOpIndex).sendToDownstream(ct);
+			}
+
 			if (!flushSuccess)
 			{
 				logger.warn("Failed to send control tuple, clearing routing ctrl.");

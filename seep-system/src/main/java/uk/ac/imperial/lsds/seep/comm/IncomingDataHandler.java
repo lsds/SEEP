@@ -14,12 +14,19 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Vector;
+import java.util.concurrent.BlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.GLOBALS;
+import uk.ac.imperial.lsds.seep.operator.EndPoint;
+import uk.ac.imperial.lsds.seep.operator.OperatorContext;
+import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
 
 /**
 * IncomingDataHandler. This is in charge of managing incoming data connections and associate a thread to them
@@ -35,6 +42,7 @@ public class IncomingDataHandler implements Runnable{
 	private boolean goOn;
 	private Map<String, Integer> idxMapper;
 	private DataStructureAdapter dsa;
+	private final Map<Integer, BlockingQueue<ControlTuple>> ctrlQueues;
 
 	public int getConnPort(){
 		return connPort;
@@ -44,13 +52,15 @@ public class IncomingDataHandler implements Runnable{
 		this.connPort = connPort;
 	}
 
-	public IncomingDataHandler(CoreRE owner, int connPort, Map<String, Integer> idxMapper, DataStructureAdapter dsa){
+	public IncomingDataHandler(CoreRE owner, int connPort, Map<String, Integer> idxMapper, DataStructureAdapter dsa, Map<Integer, BlockingQueue<ControlTuple>> ctrlQueues){
 		this.owner = owner;
 		this.connPort = connPort;
 		//this.selector = initSelector();
 		this.goOn = true;
 		this.idxMapper = idxMapper;
 		this.dsa = dsa;
+		this.ctrlQueues = ctrlQueues;
+		LOG.info(" -> ctrl queues = "+ctrlQueues);
 	}
 
 	public void run(){
@@ -67,7 +77,35 @@ public class IncomingDataHandler implements Runnable{
 			while(goOn){
 				Socket incomingConn = incDataServerSocket.accept();
 				String threadName = incomingConn.getInetAddress().toString();
-				Thread newConn = new Thread(new IncomingDataHandlerWorker(incomingConn, owner, idxMapper, dsa),  "idhw-"+threadName+"-T-"+socketCount++);
+				Thread newConn = null;
+				int upstreamOpId = owner.getOpIdFromInetAddress(((InetSocketAddress)incomingConn.getRemoteSocketAddress()).getAddress());
+				LOG.info("-> Creating worker for upstream: "+upstreamOpId);
+				if (ctrlQueues == null)
+				{
+					newConn = new Thread(new IncomingDataHandlerWorker(incomingConn, owner, idxMapper, dsa),  "idhw-"+threadName+"-T-"+socketCount++);
+				}
+				else
+				{
+					LOG.info("-> ctrl queue:"+ctrlQueues.get(upstreamOpId));
+					OperatorContext opCtx = owner.getProcessingUnit().getOperator().getOpContext();
+					int index = opCtx.getUpOpIndexFromOpId(upstreamOpId);
+					LOG.info("-> index:"+index+", upOpIds="+opCtx.getUpstreamOpIdList()+",indexes="+opCtx.getListOfUpstreamIndexes());
+					if (owner.getProcessingUnit().getPUContext().isConfigured())
+					{
+						Vector<EndPoint> upstreamConnections = owner.getProcessingUnit().getPUContext().getUpstreamTypeConnection();
+						//TODO: Thread safety wrt PUContext here?
+						EndPoint obj = upstreamConnections.elementAt(index);
+						newConn = new Thread(new IncomingDataHandlerWorker(incomingConn, owner, idxMapper, dsa, ctrlQueues.get(upstreamOpId)),  "idhjw-"+threadName+"-T-"+socketCount++);
+						SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
+						channel.updateDownstreamControlSocket(incomingConn); 
+					}
+					else
+					{
+						LOG.warn("Received incoming data conn but pu ctxt not created yet. Closing.");
+						incomingConn.close();	
+						continue;
+					}
+				}
 				newConn.start();
 			}
 			incDataServerSocket.close();

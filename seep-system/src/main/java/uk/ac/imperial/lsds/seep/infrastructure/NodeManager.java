@@ -42,6 +42,7 @@ import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorStaticInformation;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 /**
  * NodeManager. This is the entity that controls the system info associated to a given node, for instance, the monitor of the node, and the 
@@ -77,7 +78,7 @@ public class NodeManager{
 		this.ownPort = ownPort;
 		try {
 			//nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
-			InetAddress localHost = InetAddress.getLocalHost();
+			InetAddress controlIp = InetAddress.getLocalHost();
 
 			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) 
 			{
@@ -87,13 +88,20 @@ public class NodeManager{
 				{
 					InetAddress next = enumIpAddr.nextElement();
 					LOG.info("Local IP " + next.toString() );
-					if (next.toString().contains("172")) { localHost = next; }
+					if (next.toString().contains("172")) { controlIp = next; }
 				}
 			}
 			
-			LOG.info("Choosing local ip="+localHost); 
-			//nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), localHost, ownPort);
-			nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), InetAddress.getLocalHost(), ownPort);
+			if (Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet")))
+			{
+				LOG.info("Choosing separate control net with control ip="+controlIp); 
+				nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), controlIp, ownPort);
+			}
+			else
+			{
+				LOG.info("Choosing wireless net control ip="+InetAddress.getLocalHost()); 
+				nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), InetAddress.getLocalHost(), ownPort);
+			}
 		} 
 		catch (UnknownHostException | SocketException e) {
 			e.printStackTrace();

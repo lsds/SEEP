@@ -66,6 +66,8 @@ public class PUContext {
 	
 	//map in charge of storing the buffers that this operator is using
 	private HashMap<Integer, IBuffer> downstreamBuffers = new HashMap<Integer, IBuffer>();
+
+	private volatile boolean configured = false;
 	
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
 		this.CONTROL_SOCKET = new Integer(GLOBALS.valueFor("controlSocket")); 
@@ -157,8 +159,10 @@ public class PUContext {
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
 		configureDownstreamAndUpstreamConnections(op);	
+		configured = true;
 	}
-	
+
+	public boolean isConfigured() { return configured; }
 	/**
 	 * This function creates a (always) synchronous communication channel with the specified upstream operator
 	 * @param opID

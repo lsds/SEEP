@@ -37,6 +37,7 @@ import com.esotericsoftware.kryo.io.Output;
 public class SynchronousCommunicationChannel implements EndPoint{
 
 	private static final Logger logger = LoggerFactory.getLogger(SynchronousCommunicationChannel.class);
+	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
@@ -227,6 +228,16 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	{
 		logger.info("Starting deferred init to "+deferredIp);
 		if (!deferredInit) { throw new RuntimeException("Logic error."); }
+		if (piggybackControlTraffic && buffer != null && deferredPortD != 0) 
+		{ 
+			logger.info("Skipping deferred init to "+deferredIp);
+			return; 
+		}
+		else if (piggybackControlTraffic)
+		{
+			logger.info("Skipping deferred init to non downstream data conn "+deferredIp);
+			return; 
+		}
 		deferredInitDownstreamControlSocket();
 	}
 	
@@ -244,6 +255,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	 */	 
 	public void reopenDownstreamControlSocketNonBlocking(Socket prevSocketToClose)
 	{
+		if (piggybackControlTraffic) 
+		{ 
+			logger.info("Not reopening downstream control socket - piggyback control traffic enabled");
+			return; 
+		}
+
 		if (prevSocketToClose == null) 
 		{ 
 			if (!deferredInit)
@@ -281,6 +298,28 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}
 
 		openDownstreamControlSocketNonBlocking(ip, port);		
+	}
+
+	public void updateDownstreamControlSocket(Socket newSocket)
+	{
+		if (piggybackControlTraffic)
+		{
+			synchronized(controlSocketLock)
+			{
+				if (downstreamControlSocket != null)
+				{
+					// TODO: Not sure if it is necessary to close this?
+					try { downstreamControlSocket.close(); }
+					catch(IOException e) {
+						e.printStackTrace(); /*Urgh*/ 
+					}
+					logger.info("Closing downstream control socket");
+				}
+
+				downstreamControlSocket = newSocket;	
+			}
+		}
+		else { throw new RuntimeException("Logic error."); }
 	}
 	
 	private void openDownstreamControlSocketNonBlocking(final InetAddress ip, final int port)

@@ -14,13 +14,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
+
 
 public class BatchTuplePayload {
 
 	public int batchSize = 0;
 	public ArrayList<TuplePayload> batch = new ArrayList<TuplePayload>();
 	public long outputTs = -1;
-	public ControlTuple rctrl = null;
+	public Integer rctrl = null;
 	public ControlTuple fctrl = null;
 	
 	public synchronized void addTuple(TuplePayload payload){
@@ -47,7 +49,7 @@ public class BatchTuplePayload {
 		return batch.size();
 	}
 	
-	public synchronized void trim(FailureCtrl fctrl)
+	public synchronized void trim(FailureCtrl otherFctrl)
 	{
 		//TODO: Is this even thread safe wrt output sending?
 		Iterator<TuplePayload> iter = batch.iterator();
@@ -56,7 +58,7 @@ public class BatchTuplePayload {
 		{
 			long tupleTs = iter.next().timestamp;
 			// Don't remove based on alives here - we're using this log for replay.
-			if (tupleTs <= fctrl.lw() || fctrl.acks().contains(tupleTs) /*|| fctrl.alives().contains(tupleTs)*/)
+			if (tupleTs <= otherFctrl.lw() || otherFctrl.acks().contains(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
 			{
 				iter.remove();
 				batchSize--;
@@ -69,7 +71,7 @@ public class BatchTuplePayload {
 		outputTs = newOutputTs;	//TODO: This will probably mess up the existing acking relationships.
 	}
 
-	public synchronized boolean containsAcked(FailureCtrl fctrl)
+	public synchronized boolean containsAcked(FailureCtrl otherFctrl)
 	{
 		//TODO: Is this even thread safe wrt output sending?
 		Iterator<TuplePayload> iter = batch.iterator();
@@ -77,7 +79,7 @@ public class BatchTuplePayload {
 		{
 			long tupleTs = iter.next().timestamp;
 			// Don't remove based on alives here - we're using this log for replay.
-			if (tupleTs <= fctrl.lw() || fctrl.acks().contains(tupleTs) /*|| fctrl.alives().contains(tupleTs)*/)
+			if (tupleTs <= otherFctrl.lw() || otherFctrl.acks().contains(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
 			{
 				return true;	
 			}

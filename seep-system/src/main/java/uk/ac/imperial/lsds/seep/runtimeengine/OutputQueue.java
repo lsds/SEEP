@@ -22,6 +22,7 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
@@ -53,7 +54,7 @@ public class OutputQueue {
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		boolean isSource = owner.getProcessingUnit().getOperator().getOpContext().isSource();
 		outputQueueTimestamps = isSource && Boolean.parseBoolean(GLOBALS.valueFor("srcOutputQueueTimestamps"));
-		if (piggybackControlTraffic) { oqWorker = new OutputQueueWorker(); } 
+		if (piggybackControlTraffic) { oqWorker = new OutputQueueWorker(owner, outputQueueTimestamps); } 
 		else { oqWorker = null; }
 	}
 	
@@ -95,7 +96,9 @@ public class OutputQueue {
 	{
 		if (piggybackControlTraffic)
 		{
+			long prevReconnectCount = currentReconnectCount;
 			currentReconnectCount = oqWorker.reopenEndpoint(dest, currentReconnectCount);
+			LOG.debug("Oq worker reopened endpoint "+dest.getOperatorId() +" with reconnect count = "+currentReconnectCount+", prev="+prevReconnectCount);
 		}	
 		else
 		{
@@ -104,26 +107,23 @@ public class OutputQueue {
 		}
 	}
 
-	public synchronized boolean sendToDownstream(DataTuple tuple)
+	private synchronized boolean sendToDownstreamPiggybacked(DataTuple tuple, EndPoint dest)
 	{
-		if (piggybackControlTraffic)
-		{
-			long prevReconnectCount = currentReconnectCount;
-			currentReconnectCount = oqWorker.sendData(tuple);
-			return currentReconnectCount == prevReconnectCount;
-		}
-		else { throw new RuntimeException("Logic error."); }
+		long prevReconnectCount = currentReconnectCount;
+		currentReconnectCount = oqWorker.sendData(tuple, dest, currentReconnectCount);
+		LOG.debug("Sent ts="+tuple.getPayload().timestamp+" to downstream "+dest.getOperatorId()+" piggybacked, current="+currentReconnectCount+",prev="+prevReconnectCount);
+		return currentReconnectCount == prevReconnectCount;
 	}
 
 	//Assumes oqWorker handles synchronization. 
-	public void sendToDownstream(ControlTuple tuple)
+	public boolean sendToDownstream(ControlTuple tuple)
 	{
 		if (!piggybackControlTraffic) { throw new RuntimeException("Logic error."); }
-		oqWorker.sendControl(tuple);
+		return oqWorker.sendControl(tuple);
 	}
 	
 	public synchronized boolean sendToDownstream(DataTuple tuple, EndPoint dest) {
-		if (piggybackControlTraffic) { return sendToDownstream(tuple); }
+		if (piggybackControlTraffic) { return sendToDownstreamPiggybacked(tuple, dest); }
 
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel) dest;
 		
