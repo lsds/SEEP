@@ -14,8 +14,13 @@ def main(node):
         if cxn[1] == "all":
             #Noise source
             cmd_args = ["all"]
+        elif len(cxn) == 3:
+            # udp send rate
+            #cmd_args = ["n%s %s"%(cxn[1].strip(), cxn[2].strip())]
+            cmd_args = ["n%s"%cxn[1].strip(), cxn[2].strip()]
         else:
             cmd_args = ["n%s"%cxn[1].strip()]
+        print "Iperf src cmd args: "+str(cmd_args)
         with open(logfile, 'w') as log:
             p = subprocess.Popen(cmd + cmd_args, stdout=log, cwd=".", stderr=subprocess.STDOUT, env=os.environ.copy())
             src_processes.append(p)
