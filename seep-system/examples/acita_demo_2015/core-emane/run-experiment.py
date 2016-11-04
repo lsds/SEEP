@@ -67,7 +67,11 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 for p in ['tput_vs_cpudelay_stddev', 'latency_vs_cpudelay_stddev', 
                         'rel_tput_vs_cpudelay_stddev', 'rel_latency_vs_cpudelay_stddev']:
                     plot(p, time_str, script_dir, data_dir)
-            elif len(variables['srcrates']) > 1:
+            elif len(variables['rctrl_delay']) > 0:
+                for p in ['tput_vs_rctrldelay_stddev', 'latency_vs_rctrldelay_stddev', 
+                        'rel_tput_vs_rctrldelay_stddev', 'rel_latency_vs_rctrldelay_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
+            elif len(variables['srcrates']) > 1 or len(variables['rctrl_delay']) > 1:
                 record_tput_vs_lat_statistics(ks, time_str, data_dir)
                 for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
                     plot(p, time_str, script_dir, data_dir)
@@ -84,7 +88,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
         # Do any plots that summarize all sessions for fixed k and mob.
 
             for k in ks:
-                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['srcrates']) <=1 :
+                if len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['srcrates']) <=1 and len(variables['rctrl_delay']) <=1:
                     for mob in variables['mobility']:
                         plot_fixed_kmob('cum_lat_fixed_kmob', k, mob, len(session_ids), time_str, script_dir, data_dir, params)
                         plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, mob, len(session_ids), time_str, script_dir, data_dir, params)
@@ -95,7 +99,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                             plot_fixed_kmobsession('op_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_cum_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_qlen_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
-                            #plot_fixed_kmobsession('link_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kmobsession('link_tput_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             #plot_fixed_kmobsession('link_cost_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             plot_fixed_kmobsession('op_cum_util_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params)
                             if params['dstat']:
@@ -107,7 +111,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                             if params['emanestats']:
                                 for stat in get_emane_mac_stats(script_dir):
                                     plot_fixed_kmobsession('emane_stats_fixed_kmobsession', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
-                elif len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['mobility']) <=1 :
+                elif len(variables['nodes']) <= 1 and len(variables['dimension']) <= 1 and len(variables['cpudelay']) <=1 and len(variables['mobility']) <=1 and len(variables['rctrl_delay']) <= 1:
                     for var in variables['srcrates']:
                         for session in session_ids:
                             if k > 1: plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, 'srcrate', var, 'r', session, time_str, script_dir, data_dir, params)
@@ -174,6 +178,10 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
             for srcrate in variables['srcrates']:
                 params['frameRate'] = srcrate 
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'r', sessions, params)
+        elif len(variables['rctrl_delay']) > 0:
+            for rctrl_delay in variables['rctrl_delay']:
+                params['routingCtrlDelay'] = rctrl_delay 
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'rcd', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -194,6 +202,9 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
     elif len(variables['srcrates']) > 1:
         var_vals = variables['srcrates']
         var_suffix = 'r'
+    elif len(variables['rctrl_delay']) > 0:
+        var_vals = variables['rctrl_delay']
+        var_suffix = 'rcd'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -203,6 +214,7 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
         for (i_var, var) in enumerate(var_vals):
             writeHeader = i_var == 0
             metrics = get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_metric_fn)
+            raw_vals[k][var] = metrics 
 
             #First record any cumulative stats for fixed kvar
             record_fixed_kvar_statistics(k, var, var_suffix, metrics.values(), time_str, data_dir, metric_suffix)
@@ -219,18 +231,28 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
                     logline = '%d %s\n'%(k," ".join(map(str, percentile_stat_vals)))
 		    fixed_var_plotdata.write(logline)
 
-            #Now record any aggregate stats across all kvar 
-            raw_vals[k][var] = metrics 
-            meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
+                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(raw_latencies)  
 
-            # record stats vs varility 
-            with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_var_plotdata:
-                if writeHeader: 
-                    rx_vs_var_plotdata.write('#k=%d\n'%k)
-                    rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
-                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
-                rx_vs_var_plotdata.write(logline)
-                all_loglines.append(logline)
+                with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_var_plotdata:
+                    if writeHeader: 
+                        rx_vs_var_plotdata.write('#k=%d\n'%k)
+                        rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
+                    logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                    rx_vs_var_plotdata.write(logline)
+                    all_loglines.append(logline)
+
+            else: 
+                #Now record any aggregate stats across all kvar 
+                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
+
+                # record stats vs varility 
+                with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_var_plotdata:
+                    if writeHeader: 
+                        rx_vs_var_plotdata.write('#k=%d\n'%k)
+                        rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
+                    logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                    rx_vs_var_plotdata.write(logline)
+                    all_loglines.append(logline)
 
     # Write a joint log file too in case we want to plot a histogram
     with open('%s/%s/all-k-%s.data'%(data_dir,time_str,metric_suffix),'w') as all_rx_vs_var_plotdata:
@@ -462,6 +484,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
     parser.add_argument('--srcRates', dest='src_rates', default=None, help='Fixed frame rates for sources to send at.')
     parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
+    parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
+    parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
 
     args=parser.parse_args()
 
@@ -472,9 +496,10 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     dimension=map(lambda x: int(x), args.dimension.split(','))
     cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
     srcrates=map(lambda x: int(x), args.src_rates.split(',')) if args.src_rates else []
+    rctrl_delay=map(lambda x: int(x), args.rctrl_delay.split(',')) if args.rctrl_delay else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
-            "cpudelay" : cpudelay, "srcrates": srcrates}
+            "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay }
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))
@@ -532,6 +557,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
     if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
     if args.meander_routing: params['meanderRouting'] = args.meander_routing
+    if args.initial_pause: params['initialPause'] = args.initial_pause
 
     #main(ks,pts,nodes,sessions,params,plot_time_str=args.plot_time_str)
     main(ks,variables,sessions,params,plot_time_str=args.plot_time_str)

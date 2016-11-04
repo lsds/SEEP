@@ -73,6 +73,9 @@ def main(exp_dir):
 	    #if not rx_latencies: raise Exception("Could not find any latencies.")
 
     deduped_tx_latencies = dedup_latencies(rx_latencies)
+    total_dupes = len(rx_latencies) - len(deduped_tx_latencies)
+    print 'Found %d duplicates.'%total_dupes
+    record_stat('%s/dupes.txt'%exp_dir, {'total_dupes':total_dupes})
 
     op_tputs = {}
     op_interval_tputs = {}

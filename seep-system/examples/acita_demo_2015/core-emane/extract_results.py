@@ -98,7 +98,7 @@ def dedup_latencies(latencies):
     deduped = {}
     for (ts, latency, txts) in latencies:
         if ts in deduped:
-            print 'Found dupe latency'
+            print 'Found dupe latency %s'%(str(ts))
             if deduped[ts][0] > latency:
                 deduped[ts] = (latency, txts)
         else:

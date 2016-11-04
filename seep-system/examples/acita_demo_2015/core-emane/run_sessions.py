@@ -117,12 +117,13 @@ cd $expDir
 '''
 def run_sessions(time_str, k, mob, nodes, var_suffix, sessions, params):
     for session in sessions:
-        print '*** Running session %d ***'%session
         run_session(time_str, k, mob, nodes, var_suffix, session, params)
 
 def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
+    print '*** Running session %d ***'%exp_session
     print 'params=',params
+    tstart = time.time()
 
     distributed = bool(params['slave'])
     verbose = params['verbose'] 
@@ -379,6 +380,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='d': var = params['x']
         if var_suffix=='c': var = params['defaultProcessingDelay']
         if var_suffix=='r': var = params['frameRate']
+        if var_suffix=='rcd': var = params['routingCtrlDelay']
  
 
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
@@ -473,6 +475,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             print 'Shutting down query sink display ', sink_display
             sink_display.stdin.close()
             sink_display.terminate()
+        print 'Session completed in %.1f seconds.'%(time.time() - tstart)
 
 def remote_configure(session, slave, slaveip):
 	session.broker.addserver(slave, slaveip, coreapi.CORE_API_PORT)
@@ -506,7 +509,8 @@ def create_80211_net(session, wlan, distributed, params, verbose=False):
     #values[ names.index('retrylimit') ] = '0:3'
     #values[ names.index('cwmin') ] = '0:16'
     #values[ names.index('cwmax') ] = '0:2048'
-    prop_model = 'precomputed' if params['roofnet'] else '2ray'
+    #prop_model = 'precomputed' if params['roofnet'] else '2ray'
+    prop_model = 'precomputed' if params['roofnet'] else 'freespace'
     values[ names.index('propagationmodel') ] = prop_model 
     #values[ names.index('propagationmodel') ] = '2ray'
     #values[ names.index('propagationmodel') ] = 'freespace'
@@ -820,6 +824,7 @@ def run_multi_source_iperf_test(session, nodes, wlan1, mob, trace_file, tx_range
     if params['quagga']: services_str += "|zebra|vtysh"
     if params['emanestats']: services_str += "|EmaneStats"
     if params['dstat']: services_str += "|dstat"
+    if params['pcap']: services_str += "|PcapSrc"
 
     placements = get_initial_placements(params['placement'], mob, params['xyScale'])
     if placements: create_static_routes(placements, tx_range, session.sessiondir)

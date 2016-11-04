@@ -2,9 +2,13 @@
 
 #iperf -c n3 -t 1000000 -i 1 -u -b 7m 
 echo "iperf src starting sending to node $1"
-if [ "$1" == "all" ] 
+echo "Received $# arguments"
+#iperf -u -c $1 -b 40M -t 100000 -i 10 
+#if [ "$1" == "all" ] 
+if (( $# == 2 ))
 then
-	iperf -u -c $1 -b 40M -t 100000 -i 10 
+	echo "Sending udp at $2"
+	iperf -u -c $1 -b $2 -t 100000 -i 10 -l 100b
 else
 	iperf -c $1 -t 10000 -i 10 -w 32728 -N
 fi

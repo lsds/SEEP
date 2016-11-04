@@ -12,11 +12,11 @@ def copy_iperf_cxns(sessiondir, script_dir, params):
     shutil.copy("%s/static/%s"%(script_dir, params['iperfcxns']), '%s/iperf_connections.txt'%sessiondir)
 
 def has_iperf_src(node, cxns):
-    for [src, dest] in cxns:
-        if int(src) == int(node):
+    for cxn in cxns:
+        if int(cxn[0]) == int(node):
             return True
 
 def has_iperf_dest(node, cxns):
-    for [src, dest] in cxns:
-        if int(dest) == int(node):
+    for cxn in cxns:
+        if int(cxn[1]) == int(node):
             return True

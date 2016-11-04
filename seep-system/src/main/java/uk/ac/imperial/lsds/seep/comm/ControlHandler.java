@@ -39,6 +39,7 @@ public class ControlHandler implements Runnable{
 	private boolean goOn;
 	private final Map<Integer, BlockingQueue<ControlTuple>> ctrlQueues;
 	private final BlockingQueue<Socket> ctrlConnQueue;
+	private final boolean dummy;
 
 	public CoreRE getOwner(){
 		return owner;
@@ -70,57 +71,78 @@ public class ControlHandler implements Runnable{
 		this.goOn = true;
 		this.ctrlQueues = ctrlQueues;
 		this.ctrlConnQueue = ctrlConnQueue;
+		this.dummy = false;
+	}
+
+	public ControlHandler(CoreRE owner, int connPort, Map<Integer, BlockingQueue<ControlTuple>> ctrlQueues, BlockingQueue<Socket> ctrlConnQueue, boolean dummy){
+		this.owner = owner;
+		this.connPort = connPort;
+		this.goOn = true;
+		this.ctrlQueues = ctrlQueues;
+		this.ctrlConnQueue = ctrlConnQueue;
+		this.dummy = dummy;
 	}
 	
 	public void run(){
 		startCtrlQueueWorkers();
-		int socketCount = 0;
 		if (ctrlConnQueue != null)
 		{
-			//Piggybacking upstream control messages, so new conns received from ouptut queue worker.
-			while(goOn){
-				//Place new connections in a new thread. We have a thread per upstream connection
-				Socket incomingConn = null;
-				try
-				{
-					incomingConn = ctrlConnQueue.take();
-				} catch(InterruptedException e) { LOG.error("Unexpected interrupt: "+e); System.exit(1); }
-				String threadName = incomingConn.getInetAddress().toString();
-				
-				Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T-"+socketCount++);
-				newConn.start();
-			}
-			
+			channelListen();	
 		}
 		else
 		{
-			//Not piggybacking upstream control messages.
-			ServerSocket controlServerSocket = null;
-			try{
-				//Establish listening port
-				controlServerSocket = new ServerSocket(connPort, 50, owner.getNodeDescr().getControlIp());
-				controlServerSocket.setReuseAddress(true);
-				LOG.info("-> ControlHandler listening on port: {}", connPort);
-				//while goOn is active
-				while(goOn){
-					//Place new connections in a new thread. We have a thread per upstream connection
-					Socket incomingConn = controlServerSocket.accept();
-					String threadName = incomingConn.getInetAddress().toString();
-					
-					Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T-"+socketCount++);
-					newConn.start();
-				}
-				controlServerSocket.close();
+			socketListen();
+		}
+	}
+
+	private void channelListen()
+	{
+		int socketCount = 0;
+		//Piggybacking upstream control messages, so new conns received from ouptut queue worker.
+		while(goOn){
+			//Place new connections in a new thread. We have a thread per upstream connection
+			Socket incomingConn = null;
+			try
+			{
+				incomingConn = ctrlConnQueue.take();
+			} catch(InterruptedException e) { LOG.error("Unexpected interrupt: "+e); System.exit(1); }
+			String threadName = incomingConn.getInetAddress().toString();
+			
+			Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner), "chw-"+threadName+"-T-"+socketCount++);
+			newConn.start();
+		}
+	}
+
+	private void socketListen()
+	{
+		int socketCount = 0;
+		//Not piggybacking upstream control messages.
+		ServerSocket controlServerSocket = null;
+		try{
+			//Establish listening port
+			if (dummy) { controlServerSocket = new ServerSocket(connPort, 50, owner.getNodeDescr().getIp()); }
+			else { controlServerSocket = new ServerSocket(connPort, 50, owner.getNodeDescr().getControlIp()); }
+			controlServerSocket.setReuseAddress(true);
+			LOG.info("-> ControlHandler listening on port: {}", connPort);
+			//while goOn is active
+			while(goOn){
+				//Place new connections in a new thread. We have a thread per upstream connection
+				Socket incomingConn = controlServerSocket.accept();
+				String threadName = incomingConn.getInetAddress().toString();
+				
+				Thread newConn = new Thread(new ControlHandlerWorker(incomingConn, owner, dummy), "chw-"+threadName+"-T-"+socketCount++);
+				newConn.start();
 			}
-			catch(BindException be){
-				LOG.error("-> BIND EXC IO Error "+be.getMessage());
-				//LOG.error("-> controlServerSocket.toString: "+controlServerSocket.toString());
-				be.printStackTrace();
-			}
-			catch(IOException io){
-				LOG.error("-> ControlHandler. While listening incoming conns "+io.getMessage());
-				io.printStackTrace();
-			}
+			controlServerSocket.close();
+		}
+		catch(BindException be){
+			LOG.error("-> BIND EXC IO Error "+be.getMessage());
+			//LOG.error("-> controlServerSocket.toString: "+controlServerSocket.toString());
+			be.printStackTrace();
+		}
+		catch(IOException io){
+			LOG.error("-> ControlHandler. While listening incoming conns "+io.getMessage());
+			io.printStackTrace();
 		}
 	}
 	

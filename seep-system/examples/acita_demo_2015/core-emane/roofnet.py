@@ -64,7 +64,13 @@ def publish_commeffect(session, src, dest, packet_loss, latency=0.001, jitter=0.
 def publish_pathlosses(session, packet_losses, roof_to_nem, nem_offset=2, txratemode=4, verbose=False):
 
     for (src, dest, pkt_loss) in packet_losses: 
-        pathloss = compute_pathloss(pkt_loss,txratemode=txratemode)
+        #pathloss = compute_pathloss(pkt_loss,txratemode=txratemode)
+        #pathloss = compute_pathloss(pkt_loss,txpower=0.0,txratemode=txratemode)
+        #pathloss = compute_pathloss(pkt_loss,txpower=-2.5,txratemode=txratemode)
+        #pathloss = compute_pathloss(pkt_loss,txpower=-4.0,txratemode=txratemode)
+        #pathloss = compute_pathloss(pkt_loss,txpower=-5.0,txratemode=txratemode)
+        #pathloss = compute_pathloss(pkt_loss,txpower=-10.0,txratemode=txratemode)
+        pathloss = compute_pathloss(pkt_loss,txpower=-10.0,txratemode=4)
         publish_pathloss(session, roof_to_nem[src]-nem_offset, roof_to_nem[dest]-nem_offset, pathloss, verbose=verbose) 
 
 def publish_pathloss(session, src_nem, dest_nem, pathloss, verbose=False):
@@ -139,6 +145,27 @@ def compute_pathloss(loss, txpower=-10.0, txratemode=4):
     
         pathloss = txPower - rxPower 
 
+
+    However, just using the same loss ratio for each link with 54mb is a bit strange.
+    Effectively you are saying the loss ratio is unchanged at higher datarates. 
+    Also, you should really have the same level of interference, since according to EMANE's
+    probabilistic model, that only really depends on the number of neighbours each node observes, 
+    which in this case is completely dictated by the loss ratio, and is in fact the same as the
+    11Mb case using the current approach.
+    Alternatively, given a fixed pathloss, you could either reduce the txPower that's actually used
+    at runtime in order to emulate a sparser network. This would however reduce the overall throughput.
+   
+    pathloss = txPower - SINR + 100
+    SINR = txPower - pathloss + 100 
+    So could just use a reduced txPower at runtime but keep pathloss fixed at a higher ratio.
+    Similarly, to get everything to work for 54MB we might need to increase the runtime txpower, but 
+    still use the 11MB pcr curves to compute the path loss? Presumably if the actual txpower used
+    was higher, then the pathloss should have been higher? Right. The point is that you should have
+    the same relative path loss for each link as you scale the txPower up and down.
+ 
+    If you switch to 54MB, will the corresponding pcr curves be used for anything now though?
+    
+    
     """
 
     noise_figure = 4

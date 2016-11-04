@@ -53,7 +53,7 @@ class IPerfSrc(CoreService):
             cfg += "cp %s/core-emane/vldb/config/run-iperf-src.sh .\n"%(seep_example_dir)
             cfg += "cp %s/core-emane/vldb/config/run_iperf_src.py .\n"%(seep_example_dir)
             cfg += 'echo "Pausing iperf src."\n'
-            cfg += 'sleep 60\n'
+            cfg += 'sleep 20\n'
             cfg += 'echo "Starting iperf cxn srcs on node %d"\n'%node.objid
             cfg += "./run_iperf_src.py --node n%d >iperf-src.log 2>&1\n"%node.objid
             cfg += 'echo "iperf src finished."\n'
