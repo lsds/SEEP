@@ -118,7 +118,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		String trainingDir = "training";
 		//String trainingList = "at.txt";
 		String trainingList = "chokepoint.txt";
-		String testImageFilename = repoDir + "/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
+		String testImageFilename = repoDir + "/seep-system/examples/acita_demo_2015/resources/images/test/barack2.jpg";
 		faceRecognizerHelper = new FaceRecognizerHelper(api.getOperatorId(), trainingDir, trainingList, testImageFilename);
 		//recognizer.testSample();
 		//faceRecognizerHelper.testATT();

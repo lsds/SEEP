@@ -131,6 +131,7 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 			String labelExample = faceRecognizerHelper.getLabelExample(prediction);
 			
 			outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width, labelExample);
+			throw new RuntimeException("Height and width are wrong!");
 		}
 		else	
 		{
@@ -192,7 +193,7 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 		String trainingDir = "training";
 		//String trainingList = "at.txt";
 		String trainingList = "chokepoint.txt";
-		String testImageFilename = repoDir + "/seep-system/examples/acita_demo_2015/resources/images/barack.jpg";
+		String testImageFilename = repoDir + "/seep-system/examples/acita_demo_2015/resources/images/test/barack2.jpg";
 		faceRecognizerHelper = new FaceRecognizerHelper(api.getOperatorId(), trainingDir, trainingList, testImageFilename);
 	}
 
