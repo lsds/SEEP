@@ -25,7 +25,8 @@ import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 public class BackpressureRouter implements IRouter {
 
 	private final static Logger logger = LoggerFactory.getLogger(BackpressureRouter.class);
-	private final static double INITIAL_WEIGHT = 1;
+	//private final static double INITIAL_WEIGHT = 1;
+	private final static double INITIAL_WEIGHT = -1;
 	private final boolean downIsMultiInput;
 	private final boolean downIsUnreplicatedSink;
 	private final Map<Integer, Double> weights;
@@ -33,11 +34,14 @@ public class BackpressureRouter implements IRouter {
 	private final Map<Integer, Set<Long>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
+	private ArrayList<Integer> lastOrder = null;
 
 	private int switchCount = 0;
+	private int orderChanges = 0;
 	private long tLastSwitch = 0;
 	private final Object lock = new Object(){};
 	private final WeightExpiryMonitor weightExpiryMonitor = new WeightExpiryMonitor();
+	private final boolean upstreamRoutingController;
 
 	
 	public BackpressureRouter(OperatorContext opContext) {
@@ -59,6 +63,7 @@ public class BackpressureRouter implements IRouter {
 
 		downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
 		downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
+		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
 	
 	public ArrayList<Integer> route(long batchId)
@@ -102,7 +107,35 @@ public class BackpressureRouter implements IRouter {
 			//If no constrained routes, try to get based on weight.
 			if (targets == null)
 			{
+				/*
+				int opId = opContext.getOperatorStaticInformation().getOpId();
+				if (opId == 0 || opId == 10 || opId == 11)
+				{
+					Integer fixedDownOpId = getFixedActiveDownstream();
+					if (fixedDownOpId != null)
+					{
+						targets = new ArrayList<Integer>();
+						targets.add(opContext.getDownOpIndexFromOpId(fixedDownOpId));	
+					}
+				}
+				else if (opId == -1)
+				{
+					Query meanderQuery = opContext.getMeanderQuery(); 
+					int logicalId = meanderQuery.getLogicalNodeId(opId);
+					int height = meanderQuery.getHeight(logicalId);
+					ArrayList<Integer> downOps = opContext.getDownstreamOpIdList();
+					int index = (int)((batchId / Math.pow(downOps.size(), height)) % downOps.size());	
+					targets = new ArrayList<Integer>();
+					targets.add(index);
+				}
+				else
+				{
+
 				targets = weightSortedOpIds();
+				}
+				*/
+				targets = positiveWeightSortedTargets();
+
 				Integer downOpId = targets == null ? null : opContext.getDownOpIdFromIndex(targets.get(0));
 				if (!Objects.equals(downOpId, lastRouted))
 				{
@@ -114,7 +147,15 @@ public class BackpressureRouter implements IRouter {
 					logger.info("Switched route from "+lastRouted + " to "+downOpId+" (switch cnt="+switchCount+", last switch="+lastSwitch+")");
 					lastRouted = downOpId;
 				}
-			
+				
+				ArrayList<Integer> nextOrder = weightSortedOpIds();
+				if (lastOrder != null && !nextOrder.equals(lastOrder))
+				{
+					orderChanges++;
+					logger.info("Order change "+orderChanges+" from "+lastOrder+" -> "+nextOrder);
+				}
+				lastOrder = nextOrder;
+
 				/*
 				Integer downOpId = maxWeightOpId();
 				
@@ -140,8 +181,32 @@ public class BackpressureRouter implements IRouter {
 		return targets;
 	}
 	
+
+	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	{
+		synchronized(lock)
+		{
+			logger.debug("BP router handling upstream controller weights: "+ newWeights);
+			long prevUpdateTs = lastWeightUpdateTimes.get(downUpdated);
+			lastWeightUpdateTimes.put(downUpdated, System.currentTimeMillis());
+			weightExpiryMonitor.reset(downUpdated);
+			
+			if (prevUpdateTs > 0) 
+			{ 
+				logger.info("Weight update delay for "+downUpdated+"="+(System.currentTimeMillis() - prevUpdateTs));
+			}
+			
+			for (Integer opId : newWeights.keySet())
+			{
+				weights.put(opId, newWeights.get(opId));
+			}
+		}	
+		return null;
+	}
+
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp)
 	{
+		if (upstreamRoutingController) { throw new RuntimeException ("Logic error."); }
 		return handleDownUp(downUp, true);
 	}
 
@@ -226,7 +291,7 @@ public class BackpressureRouter implements IRouter {
 		return result;
 	}
 
-	private ArrayList<Integer> weightSortedOpIds()
+	private ArrayList<Integer> positiveWeightSortedTargets()
 	{
 		synchronized(lock)
 		{
@@ -262,6 +327,42 @@ public class BackpressureRouter implements IRouter {
 			}	
 			return targets;
 		}	
+	}
+
+
+	private ArrayList<Integer> weightSortedOpIds()
+	{
+
+		synchronized(lock)
+		{
+			if (downIsUnreplicatedSink)
+			{
+				throw new RuntimeException("Logic error.");
+			}
+
+			List<Map.Entry<Integer,Double>> list = new LinkedList(weights.entrySet());
+			Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>()
+			{
+				public int compare( Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2 )
+				{
+                                	if (o1.getValue() <= 0.0 && o2.getValue() <= 0.0)
+                                	{
+						return o1.getKey().compareTo(o2.getKey()) * -1;
+                                	}
+                                	else
+                                	{
+						return (o1.getValue()).compareTo( o2.getValue() ) * -1;
+                                	}
+				}
+			});	
+			
+			ArrayList<Integer> result = new ArrayList<Integer>();
+			for (Map.Entry<Integer,Double> e : list)
+			{
+				result.add(e.getKey());	
+			}	
+			return result;
+		}
 	}
 
 	@Override
@@ -332,5 +433,29 @@ public class BackpressureRouter implements IRouter {
 			currentTasks.put(opId, timeoutTask);
 			timer.schedule(timeoutTask, WEIGHT_TIMEOUT);
 		}
+	}
+
+	private Integer getFixedActiveDownstream()
+	{
+		int opId = opContext.getOperatorStaticInformation().getOpId();
+		synchronized(lock)
+		{
+			if (opId == 0)
+			{
+				//if (weights.get(-2) > 0) { return new Integer(-2); }
+				return new Integer(-2);
+			} 
+			else if (opId == 10)
+			{
+				//if (weights.get(-190) > 0) { return new Integer(-190); }
+				return new Integer(-190);
+			}
+			else if (opId == 11)
+			{
+				//if (weights.get(-189) > 0) { return new Integer(-189); }
+				return new Integer(-189);
+			}
+		} 
+		return null;
 	}
 }

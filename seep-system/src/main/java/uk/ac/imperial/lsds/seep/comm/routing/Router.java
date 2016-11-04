@@ -264,7 +264,17 @@ public class Router implements Serializable{
 			notifyObservers(null);
 		}
 	}
-	
+
+	public void update_highestWeights(Map<Integer, Double> weights, Integer downOpUpdated)
+	{	
+		if (meanderRouter == null) 
+		{ 
+			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
+			return;
+		}
+		notifyObservers(((BackpressureRouter)meanderRouter).handleWeights(weights, downOpUpdated));
+	}
+
 	public void update_downFailed(int downOpId)
 	{
 		if (meanderRouter == null) 

@@ -46,6 +46,16 @@ public class HashRouter implements IRouter {
 			/*
 			if (height == 1)
 			{
+				if (opId == 0) { downOpId = -2; }
+				else if (opId == 10) { downOpId = -190; }
+				else if (opId == 11) { downOpId = -189; }
+				else if (opId == 12) { downOpId = -188; }
+				else { throw new RuntimeException("Logic error."); }
+			}
+			*/
+			/*
+			if (height == 1)
+			{
 				logger.info("Down ops = "+downOps);
 				Random r = new Random();
 				double randomValue = r.nextDouble();

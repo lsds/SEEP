@@ -26,12 +26,34 @@ public class NetRateMonitor implements Runnable {
 	private final static long NET_MONITOR_DELAY = 2 * 1000;
 	private final Object lock = new Object(){};
 	private final RoutingController rController;
+	private final UpstreamRoutingController upstreamRoutingController;
 	private Map <Integer, String> upOpIds;
 	private final boolean coreDeployment;
+
+	public NetRateMonitor(Map<Integer, String> upOpIds)
+	{
+		this.upOpIds = upOpIds;
+		this.rController = null;
+		this.upstreamRoutingController = null;
+		coreDeployment = "true".equals(GLOBALS.valueFor("useCoreAddr"));
+		logger.info("Net rate monitor using up op id to addr mapping: "+upOpIds);
+	}
+
 	public NetRateMonitor(Map<Integer, String> upOpIds, RoutingController rController)
 	{
 		this.upOpIds = upOpIds;
 		this.rController = rController;
+		this.upstreamRoutingController = null;
+		coreDeployment = "true".equals(GLOBALS.valueFor("useCoreAddr"));
+		logger.info("Net rate monitor using up op id to addr mapping: "+upOpIds);
+	}
+
+	
+	public NetRateMonitor(Map<Integer, String> upOpIds, UpstreamRoutingController upstreamRoutingController)
+	{
+		this.upOpIds = upOpIds;
+		this.upstreamRoutingController = upstreamRoutingController;
+		this.rController = null;
 		coreDeployment = "true".equals(GLOBALS.valueFor("useCoreAddr"));
 		logger.info("Net rate monitor using up op id to addr mapping: "+upOpIds);
 	}
@@ -92,6 +114,10 @@ public class NetRateMonitor implements Runnable {
 				if (upstreamCosts !=  null && rController != null)
 				{
 					rController.handleNetCostsUpdate(upstreamCosts);
+				}
+				if (upstreamCosts !=  null && upstreamRoutingController != null)
+				{
+					upstreamRoutingController.handleNetCostsUpdate(upstreamCosts);
 				}
 				
 				try {

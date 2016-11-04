@@ -36,6 +36,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+import uk.ac.imperial.lsds.seep.manet.Query;
 
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
@@ -53,6 +54,8 @@ public class OutputQueueWorker
 	private final Object lock = new Object(){};
 
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
+	private final boolean enableUpstreamRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
+	private final boolean downIsMultiInput;
 	private final static long DEFAULT_TIMEOUT = 1 * 1000;
 	private boolean connected = false;
 	private long reconnectCount = -1;
@@ -68,6 +71,10 @@ public class OutputQueueWorker
 		this.owner = owner;
 		this.k = initialiseKryo(); 
 		this.outputQueueTimestamps = outputQueueTimestamps;
+		Query meanderQuery = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
+		int logicalId = meanderQuery.getLogicalNodeId(owner.getProcessingUnit().getOperator().getOperatorId());
+		boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
+		this.downIsMultiInput = !owner.getProcessingUnit().getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
 	}
 	
 	private Kryo initialiseKryo()
@@ -322,6 +329,11 @@ public class OutputQueueWorker
 //					channelRecord.cleanBatch(); // RACE CONDITION ??
 			channelRecord.cleanBatch2();
 		}
+		else if (enableUpstreamRoutingCtrl && !downIsMultiInput && channelRecord.getDownstreamDataSocket().isClosed())
+		{
+			return false;
+		} 
+
 		return true;
 	}
 
@@ -386,7 +398,10 @@ public class OutputQueueWorker
 		//Assumes lock held.
 		private boolean ctrlDataChanged(SynchronousCommunicationChannel channel)
 		{
-			return data != null || (rctrl != null && (prevRCtrl == null || (rctrl.getUpDown().getQlen() != prevRCtrl.getUpDown().getQlen() || channel.getDownstreamDataSocket().isClosed()))) || (!mergeFailureAndRoutingCtrl && fctrl != null);
+			return data != null || 
+				(rctrl != null && (prevRCtrl == null || (rctrl.getUpDown().getQlen() != prevRCtrl.getUpDown().getQlen() || channel.getDownstreamDataSocket().isClosed()))) || 
+				(!mergeFailureAndRoutingCtrl && fctrl != null) ||
+				(enableUpstreamRoutingCtrl && !downIsMultiInput && channel.getDownstreamDataSocket().isClosed());
 
 		}
 

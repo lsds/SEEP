@@ -53,6 +53,7 @@ import uk.ac.imperial.lsds.seep.manet.NetRateMonitor;
 import uk.ac.imperial.lsds.seep.manet.NetTopologyMonitor;
 import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.manet.RoutingController;
+import uk.ac.imperial.lsds.seep.manet.UpstreamRoutingController;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.InputDataIngestionMode;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -74,9 +75,11 @@ public class CoreRE {
 	
 	final private Logger LOG = LoggerFactory.getLogger(CoreRE.class);
 	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private final boolean separateControlNet = Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet"));
+	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyFailureControlTraffic"));
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final Map<Integer, ControlTuple> lastUpOpIndexFctrls = new ConcurrentHashMap<Integer, ControlTuple>();
-
+	private final boolean enableUpstreamRoutingControl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")); 
 	private WorkerNodeDescription nodeDescr = null;
 	
     private Thread processingUnitThread = null;
@@ -98,6 +101,7 @@ public class CoreRE {
 	private OutgoingDataHandlerWorker odhw = null;
 	
 	private Thread controlH = null;
+	private Thread dummyControlH = null;
 	private ControlHandler ch = null;
 	private Thread iDataH = null;
 	private IncomingDataHandler idh = null;
@@ -107,6 +111,7 @@ public class CoreRE {
 	private CostHandler costHandler = null;
 	
 	private RoutingController routingController = null;
+	private UpstreamRoutingController upstreamRoutingController = null;
 	private Thread rControllerT = null;
 	
 	private NetRateMonitor netRateMonitor = null;
@@ -237,6 +242,10 @@ public class CoreRE {
 		ch = new ControlHandler(this, inC, ctrlQueues, ctrlConnQueue);
 		controlH = new Thread(ch, "controlHandlerT");
 		//Data worker
+		if (separateControlNet && enableDummies)
+		{
+			dummyControlH = new Thread(new ControlHandler(this, inC, ctrlQueues, ctrlConnQueue, true), "dummyControlHandlerT");
+		} 
 
 		
 		idh = new IncomingDataHandler(this, inD, tupleIdxMapper, dsa, ctrlQueues);
@@ -247,6 +256,11 @@ public class CoreRE {
 
 		controlH.start();
 		iDataH.start();
+
+		if (separateControlNet && enableDummies)
+		{
+			dummyControlH.start(); 
+		} 
 		
 		// Backup worker
 		//dokeeffe TODO: Comment this out
@@ -386,6 +400,7 @@ public class CoreRE {
 	{
 		if (GLOBALS.valueFor("enableMeanderRouting").equals("true"))
 		{
+			Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 			if (GLOBALS.valueFor("meanderRouting").equals("hash") || replicationFactor == 1)
 			{				
@@ -404,7 +419,7 @@ public class CoreRE {
 				
 				LOG.info("Starting OLSRETX net rate monitor.");
 				//Null routingController since just want to log net rates.
-				netRateMonitor = new NetRateMonitor(upOpIdAddrs, null);
+				netRateMonitor = new NetRateMonitor(upOpIdAddrs);
 				nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
 				nrMonT.start();		
 	
@@ -417,7 +432,6 @@ public class CoreRE {
 			{				
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
-					Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 				
 					netTopologyMonitor = new NetTopologyMonitor(processingUnit.getOperator().getOperatorId(), meanderQuery, processingUnit.getOperator().getRouter());
 					ntMonT = new Thread(netTopologyMonitor, "NetTopologyMonitor");
@@ -430,39 +444,60 @@ public class CoreRE {
 			}
 			else
 			{
+				int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
+				boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
+				boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+					
 				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
-					routingController = new RoutingController(this);
-					Thread rControllerT = new Thread(routingController, "RoutingController");
-					rControllerT.start();
+						routingController = new RoutingController(this);
+						Thread rControllerT = new Thread(routingController, "RoutingController");
+						rControllerT.start();
 					
-					ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
-					Map<Integer, String> upOpIdAddrs = new HashMap<>();
-					
-					for (Integer upOpId : upOpIds)
+					if (!enableUpstreamRoutingControl || opIsMultiInput)
 					{
-						OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getUpstreamLocation(upOpId);
-						upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
+						ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
+						Map<Integer, String> upOpIdAddrs = new HashMap<>();
 						
-					}
-					
-					//if (GLOBALS.valueFor("net-routing").equals("OLSRETX"))
-					//{
+						for (Integer upOpId : upOpIds)
+						{
+							OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getUpstreamLocation(upOpId);
+							upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
+							
+						}
+						
 						LOG.info("Starting OLSRETX net rate monitor.");
 						netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
 						nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
 						nrMonT.start();		
-					/*
-					}
-					else
-					{
-						LOG.warn("Net rate monitor disabled for net-routing:"+GLOBALS.valueFor("net-routing"));
-					}
-					*/
+					}	
 				}
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
-					processingUnit.getDispatcher().startRoutingCtrlWorkers();
+					if (enableUpstreamRoutingControl && !downIsMultiInput)
+					{
+						upstreamRoutingController = new UpstreamRoutingController(this);
+
+						ArrayList<Integer> downOpIds = processingUnit.getOperator().getOpContext().getDownstreamOpIdList();
+						Map<Integer, String> downOpIdAddrs = new HashMap<>();
+						
+						for (Integer downOpId : downOpIds)
+						{
+							OperatorStaticInformation opInfo = processingUnit.getOperator().getOpContext().getDownstreamLocation(downOpId);
+							downOpIdAddrs.put(downOpId, opInfo.getMyNode().getIp().getHostName());
+							
+						}
+					
+						LOG.info("Starting OLSRETX net rate monitor.");
+						netRateMonitor = new NetRateMonitor(downOpIdAddrs, upstreamRoutingController);
+						nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
+						nrMonT.start();		
+					}
+					else
+					{
+						processingUnit.getDispatcher().startRoutingCtrlWorkers();
+					}
+
 					processingUnit.getDispatcher().startDispatcherMain();
 					
 					/*
@@ -595,6 +630,12 @@ public class CoreRE {
 		 *
 		 **/
 		ControlTupleType ctt = ct.getType();
+
+		Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
+		int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
+		boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
+		boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+
 		/** ACK message **/
 		if(ctt.equals(ControlTupleType.ACK)) {
 			Ack ack = ct.getAck();
@@ -635,8 +676,16 @@ public class CoreRE {
 				throw new RuntimeException("Logic error?");
 			}		
 
-			LOG.debug("About to update weight with downup rctrl: "+ct.getDownUp());
-			processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
+			if (!enableUpstreamRoutingControl || downIsMultiInput)
+			{
+				LOG.debug("About to update weight with downup rctrl: "+ct.getDownUp());
+				processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
+			}
+			else
+			{
+				if (upstreamRoutingController == null) { LOG.warn("Dropping down up routing control as upstream controller is null."); }
+				else { upstreamRoutingController.handleRCtrl(ct.getDownUp()); }
+			}
 		}
 		else if (ctt.equals(ControlTupleType.UP_DOWN_RCTRL))
 		{			
@@ -679,7 +728,17 @@ public class CoreRE {
 			}		
 
 			LOG.debug("About to update weight with downup rctrl: "+ct.getDownUp());
-			processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
+			if (!enableUpstreamRoutingControl || downIsMultiInput)
+			{
+				LOG.debug("About to update weight with downup rctrl: "+ct.getDownUp());
+				processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
+			}
+			else
+			{
+				if (upstreamRoutingController == null) { LOG.warn("Dropping down up routing control as upstream controller is null."); }
+				else { upstreamRoutingController.handleRCtrl(ct.getDownUp()); }
+			}
+			//processingUnit.getOperator().getRouter().update_highestWeight(ct.getDownUp());			
 
 		}
 		/** INVALIDATE_STATE message **/
@@ -1046,6 +1105,8 @@ public class CoreRE {
 			{
 				lastUpOpIndexFctrls.put(upOpIndex, ct);
 			}
+
+			if (separateControlNet && enableDummies) { controlDispatcher.sendDummyUpstream(ct, upOpIndex); }
 		}
 		LOG.debug("Wrote failure ctrl in "+ (System.currentTimeMillis() - tStart) + " ms");
 	}
@@ -1070,6 +1131,8 @@ public class CoreRE {
 			{
 				outputQueues.get(downOpIndex).sendToDownstream(ct);	
 			}
+
+			if (separateControlNet && enableDummies) { controlDispatcher.sendDummyDownstream(ct, downOpIndex); }
 		}	
 	}
 	

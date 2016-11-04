@@ -156,6 +156,12 @@ public class Query implements Serializable
 		}
 	}
 
+
+	public boolean isJoin(Integer logicalId)
+	{
+		return getPhysicalInputs(logicalId).length > 1;
+	}
+
 	public boolean isSource(Integer logicalId)
 	{
 		return logicalId != null && getLogicalInputs(logicalId).length == 0;

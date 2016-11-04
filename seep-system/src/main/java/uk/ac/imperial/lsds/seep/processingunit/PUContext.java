@@ -57,7 +57,15 @@ public class PUContext {
 	/// \todo {refactor this to a synchronized map??}
 	private Vector<EndPoint> downstreamTypeConnection = null;
 	private Vector<EndPoint> upstreamTypeConnection = null;
-	
+
+	private Vector<EndPoint> dummyDownstreamTypeConnection = null;
+	private Vector<EndPoint> dummyUpstreamTypeConnection = null;
+
+	private final boolean enableUpDownDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyUpDownControlTraffic"));
+	private final boolean enableDownUpDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
+	private final boolean enableFailureCtrlDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyFailureControlTraffic"));
+	private final boolean enableDummies = enableUpDownDummies || enableDownUpDummies || enableFailureCtrlDummies;
+
 	//The structure just stores the ip adresses of those nodes in the topology ready to receive state chunks
 	private ArrayList<EndPoint> starTopology = null;
 	
@@ -138,7 +146,15 @@ public class PUContext {
 	public Vector<EndPoint> getUpstreamTypeConnection() {
 		return upstreamTypeConnection;
 	}
+
+	public Vector<EndPoint> getDummyDownstreamTypeConnection() {
+		return dummyDownstreamTypeConnection;
+	}
 	
+	public Vector<EndPoint> getDummyUpstreamTypeConnection() {
+		return dummyUpstreamTypeConnection;
+	}
+
 	public Selector getConfiguredSelector(){
 		return selector;
 	}
@@ -158,6 +174,11 @@ public class PUContext {
 		
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
+		if (enableDummies)
+		{
+			dummyDownstreamTypeConnection = new Vector<EndPoint>();
+			dummyUpstreamTypeConnection = new Vector<EndPoint>();
+		}
 		configureDownstreamAndUpstreamConnections(op);	
 		configured = true;
 	}
@@ -299,12 +320,6 @@ public class PUContext {
 	{
 		if(type.equals("down")){
 			LOG.debug("-> Trying remote deferred downstream conn to: {}/{}", ip.toString(), portD);
-			/*
-			socketD = new Socket(ip, portD);
-			if(portC != 0){
-				socketC = new Socket(ip, portC);
-			}					
-			*/
 			IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer(opID) : new Buffer();
 			
 			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, controlIp, portD, portC, buffer);
@@ -313,17 +328,27 @@ public class PUContext {
 /// \todo{here a 40000 is used, change this line to make it properly}
 			downstreamBuffers.put((portD-40000), buffer);
 			con.deferredInit();
+
+			if (enableDummies)
+			{
+				SynchronousCommunicationChannel dummyCon = new SynchronousCommunicationChannel(opID, ip, ip, 0, portC, null);
+				dummyDownstreamTypeConnection.add(dummyCon);
+				dummyCon.deferredInit();
+			}
 		}
 		else if(type.equals("up")){
 			LOG.debug("-> Trying remote deferred upstream conn to: {}/{}", ip.toString(), portC);
-			/*
-			socketC = new Socket(ip, portC);
-			*/
-			//socketBlind = new Socket(ip, blindPort);
 			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, controlIp, 0, portC, null);
 			upstreamTypeConnection.add(con);
 			remoteUpstream.add(con);
 			con.deferredInit();
+
+			if (enableDummies)
+			{
+				SynchronousCommunicationChannel dummyCon = new SynchronousCommunicationChannel(opID, ip, ip, 0, portC, null);
+				dummyUpstreamTypeConnection.add(dummyCon);
+				dummyCon.deferredInit();
+			}
 		}		
 	}
 	

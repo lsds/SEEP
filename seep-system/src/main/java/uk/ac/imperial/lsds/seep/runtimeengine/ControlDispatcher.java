@@ -123,10 +123,19 @@ public class ControlDispatcher {
 	{
 		return sendUpstream(ct, index, true);
 	}
-	
+
+	public boolean sendDummyUpstream(ControlTuple ct, int index)
+	{
+		EndPoint obj = puCtx.getDummyUpstreamTypeConnection().elementAt(index);
+		return sendUpstream(ct, (SynchronousCommunicationChannel)obj, false);
+	}	
+
 	public boolean sendUpstream(ControlTuple ct, int index, boolean block){
 		EndPoint obj = puCtx.getUpstreamTypeConnection().elementAt(index);
-		SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
+		return sendUpstream(ct, (SynchronousCommunicationChannel)obj, block);
+	}
+	
+	private boolean sendUpstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block){
 		int numRetries = 0;
 		boolean success = false;
 		while(!success)
@@ -164,7 +173,7 @@ public class ControlDispatcher {
 					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
 					e.printStackTrace();
 				}
-				((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
+				channel.reopenDownstreamControlSocketNonBlocking(socket);
 				if (!block) { break; }
 			}
 		}
@@ -280,51 +289,57 @@ public class ControlDispatcher {
 	
 	public boolean sendDownstream(ControlTuple ct, int index) { return sendDownstream(ct, index, true); }
 	
-	public boolean sendDownstream(ControlTuple ct, int index, boolean block) 
+	public boolean sendDummyDownstream(ControlTuple ct, int index)
 	{
+		EndPoint obj = puCtx.getDummyDownstreamTypeConnection().elementAt(index);
+		return sendDownstream(ct, (SynchronousCommunicationChannel)obj, false);
+	}	
+
+	public boolean sendDownstream(ControlTuple ct, int index, boolean block){
 		EndPoint obj = puCtx.getDownstreamTypeConnection().elementAt(index);
-		if (obj instanceof SynchronousCommunicationChannel){
-			SynchronousCommunicationChannel channel = ((SynchronousCommunicationChannel) obj);
-			int numRetries = 0;
-			boolean success = false;
-			while (!success)
+		return sendDownstream(ct, (SynchronousCommunicationChannel)obj, block);
+	}
+	
+	private boolean sendDownstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block) 
+	{
+		int numRetries = 0;
+		boolean success = false;
+		while (!success)
+		{
+			Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
+			if (socket == null)
 			{
-				Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
-				if (socket == null)
-				{
-					if (block) { throw new RuntimeException("Logic error."); }
-					break;
-				}
-				
-				Output output = null;
-				try{
-					//boolean compress = true;
-					boolean compress = false;
-					OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
-					output = new Output(outputStream);
-					synchronized(k){
-						synchronized (socket){
-							if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
-							k.writeObject(output, ct);
-							output.flush();
-							LOG.debug("Wrote downstream control tuple "+ct.toString());
-						}
-					}
-					success = true;
-				}
-				catch(IOException | KryoException e){
-					if (numRetries < 1)
-					{
-						LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
-						e.printStackTrace();
-					}
-					((SynchronousCommunicationChannel) obj).reopenDownstreamControlSocketNonBlocking(socket);
-					if (!block) { break; }
-				}
+				if (block) { throw new RuntimeException("Logic error."); }
+				break;
 			}
-			return success;
+			
+			Output output = null;
+			try{
+				//boolean compress = true;
+				boolean compress = false;
+				OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
+				output = new Output(outputStream);
+				synchronized(k){
+					synchronized (socket){
+						if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
+						k.writeObject(output, ct);
+						output.flush();
+						LOG.debug("Wrote downstream control tuple "+ct.toString());
+					}
+				}
+				success = true;
+			}
+			catch(IOException | KryoException e){
+				if (numRetries < 1)
+				{
+					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
+					e.printStackTrace();
+				}
+				channel.reopenDownstreamControlSocketNonBlocking(socket);
+				if (!block) { break; }
+			}
 		}
-		else { throw new RuntimeException("Logic error?"); }
+		return success;
 	}
 	
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){

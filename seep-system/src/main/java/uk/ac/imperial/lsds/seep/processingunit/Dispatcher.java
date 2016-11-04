@@ -57,8 +57,11 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long TRY_SEND_ALTERNATIVES_TIMEOUT = Long.parseLong(GLOBALS.valueFor("trySendAlternativesTimeout"));
 	private static final long DOWNSTREAMS_UNROUTABLE_TIMEOUT = Long.parseLong(GLOBALS.valueFor("downstreamsUnroutableTimeout"));
 	private static final long ABORT_SESSION_TIMEOUT = 1000 * Long.parseLong(GLOBALS.valueFor("abortSessionTimeoutSec"));
+	private static final long MAX_LOCK_WAIT = 30 * 1000; 
 	private static final boolean enableDownstreamsUnroutable = Boolean.parseBoolean(GLOBALS.valueFor("enableDownstreamsUnroutable"));
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private static final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyUpDownControlTraffic"));
+	private static final boolean separateControlNet = Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet"));
 
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
@@ -467,7 +470,7 @@ public class Dispatcher implements IRoutingObserver {
 						{
 							logger.debug("Dispatcher waiting for routing change or constrained tuples.");
 							//If no constraints, wait for some queue/routing change and then loop back
-							try { lock.wait(); } catch (InterruptedException e) {}
+							try { lock.wait(MAX_LOCK_WAIT); } catch (InterruptedException e) {}
 						}
 						return null;
 					}
@@ -1072,6 +1075,8 @@ public class Dispatcher implements IRoutingObserver {
 				//TODO What if this fails?
 				flushSuccess = outputQueues.get(downOpIndex).sendToDownstream(ct);
 			}
+
+			if (separateControlNet && enableDummies) { owner.getOwner().getControlDispatcher().sendDummyDownstream(ct, downOpIndex); }
 
 			if (!flushSuccess)
 			{

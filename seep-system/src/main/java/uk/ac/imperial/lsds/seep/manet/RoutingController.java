@@ -29,8 +29,12 @@ import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 public class RoutingController implements Runnable{
 
 	private final static Logger logger = LoggerFactory.getLogger(RoutingController.class);
+	private final boolean separateControlNet = Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet"));
 	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
+	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
+	private final boolean sendQueueLengthsOnly;
+
 	private final static double INITIAL_WEIGHT = -1;
 	//private final static double COST_THRESHOLD = 3.9;
 	//private final static double COST_THRESHOLD = 4.5;
@@ -58,6 +62,7 @@ public class RoutingController implements Runnable{
 		//this.inputQueues = inputQueues;
 		this.numLogicalInputs = query.getLogicalInputs(query.getLogicalNodeId(nodeId)).length;
 		
+		this.sendQueueLengthsOnly = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && numLogicalInputs <= 1;
 		this.useCostThreshold = query.getPhysicalNodeIds(query.getLogicalNodeId(nodeId)).size() > 1;
 		this.upstreamNetRates = new HashMap<>();
 		this.upstreamQlens = new HashMap<>();
@@ -97,10 +102,22 @@ public class RoutingController implements Runnable{
 		logger.info("Created routing controller.");
 	}
 	
+
 	@Override
 	public void run() {
 		logger.info("Starting routing controller.");
+		if (sendQueueLengthsOnly)
+		{
+			sendQueueLengths();
+		}
+		else
+		{
+			sendWeights();
+		}
+	}
 	
+	private void sendWeights()
+	{
 		try 
 		{
 			long tLast = System.currentTimeMillis();	
@@ -129,6 +146,7 @@ public class RoutingController implements Runnable{
 						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
 						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 						owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
 					}
 				}
 				else
@@ -167,6 +185,8 @@ public class RoutingController implements Runnable{
 							}
 							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
 						}
+
+						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
 					}
 				}
 				logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
@@ -198,7 +218,75 @@ public class RoutingController implements Runnable{
 			*/
 			}
 		}
-		catch(Exception e) { logger.debug("Routing controller exception: "+ e);}
+		catch(Exception e) { logger.error("Routing controller exception: "+ e); System.exit(1); }
+
+	}
+
+	private void sendQueueLengths()
+	{
+
+		try 
+		{
+			long tLast = System.currentTimeMillis();	
+			while(true)
+			{
+				boolean downstreamsRoutable = areDownstreamsRoutable();
+				int localInputQueueLength = owner.getDSA().getUniqueDso().size();
+				int localOutputQueueLength = getLocalOutputQLen();
+				int localQueueLength = localInputQueueLength + localOutputQueueLength;
+				if (!downstreamsRoutable) { localQueueLength = -1; }
+				
+				logger.info("Routing controller sending queue length upstream: "+localQueueLength);
+				
+				long tSendBegin = System.currentTimeMillis();
+				for (Object upstreamIdObj : query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[0])
+				{
+					Integer upstreamId = (Integer)upstreamIdObj;
+
+					RangeSet<Long> empty = TreeRangeSet.create();
+					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, localQueueLength, empty);
+					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
+
+					if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+					{
+						owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+					}
+					else
+					{
+						ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+						if (fct != null)
+						{
+							FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
+							ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, localQueueLength, empty, fctrl);
+							owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
+							logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
+						}
+						else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
+					}
+
+					if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
+				}
+
+				logger.info("Routing controller sent queue length upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
+				long tStart = System.currentTimeMillis();
+				tLast = tStart;
+				long tNow = tStart;
+				while (tNow - tStart < MAX_WEIGHT_DELAY)
+				{
+					synchronized(lock)
+					{
+						try {
+							lock.wait(MAX_WEIGHT_DELAY - (tNow - tStart));
+						} catch (InterruptedException e) {
+							//Woken up early, that's fine.
+						}
+					}
+					tNow = System.currentTimeMillis();
+				}
+			}
+		}
+		catch(Exception e) { logger.error("Routing controller exception: "+ e); System.exit(1); }
+
 	}
 
 	public void handleRCtrl(UpDownRCtrl rctrl)
