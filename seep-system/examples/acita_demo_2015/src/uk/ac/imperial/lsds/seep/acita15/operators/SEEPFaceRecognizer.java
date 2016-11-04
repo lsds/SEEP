@@ -56,6 +56,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	private FaceRecognizerHelper faceRecognizerHelper = null;
 	private static final String repoDir = GLOBALS.valueFor("repoDir");	
 	private Stats stats;
+	private Stats utilStats;
 	
 	public void processData(DataTuple data) {
 		long tProcessStart = System.currentTimeMillis();
@@ -64,8 +65,8 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		int type = data.getInt("type");
 		int x = data.getInt("x");
 		int y = data.getInt("y");
-		int height = data.getInt("height");
-		int width = data.getInt("width");
+		int height = data.getInt("height") - x; //Should really rename to x1 y1 or something
+		int width = data.getInt("width") - y;
 		
 		int prediction = faceRecognizerHelper.recognize(value, x, y, height, width, type);
 		String labelExample = faceRecognizerHelper.getLabelExample(prediction);
@@ -86,9 +87,11 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			}
 		}
 		
-		logger.debug("Face recognizer processed "+width+"x"+height+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		//stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
-		stats.add(System.currentTimeMillis(), value.length);
+		long tProcessEnd = System.currentTimeMillis();
+		logger.debug("Face recognizer processed "+width+"x"+height+" tuple "+data.getLong("tupleId")+" in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		stats.add(tProcessEnd, value.length);
+		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -110,6 +113,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	public void setUp() {
 		System.out.println("Setting up FACE_RECOGNIZER operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
+		utilStats = new Stats(api.getOperatorId());
 		//String trainingDir = repoDir + "/seep-system/examples/acita_demo_2015/resources/training";
 		String trainingDir = "training";
 		//String trainingList = "at.txt";
@@ -152,11 +156,12 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			IplImage imgBW = prepareBWImage(img, type);
 			cvSetImageROI(imgBW, cvRect(x, y, width, height));
 			Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
+			logger.debug("Converted roi to "+imgBWMat.cols()+"x"+imgBWMat.rows()+" mat");
 			int predictedLabel[] = new int[1];
 			double confidence[] = new double[1];
 			
 			faceRecognizer.predict(imgBWMat, predictedLabel, confidence);
-			logger.debug("Predicted label for received image: " + predictedLabel[0]+ " with confidence "+confidence[0]);
+			logger.debug("Predicted label for received image: " + predictedLabel[0]+ " (ROI="+width+"x"+height+") with confidence "+confidence[0]);
 			if (labelExamples.containsKey(predictedLabel[0]))
 			{
 				logger.debug("Example of matching face: "+labelExamples.get(predictedLabel[0]));
@@ -201,7 +206,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 				//File imgFile = new File(trainingDir+"/"+filename);
 				//Mat img = imread(imgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
 				Mat img = loadBWMatImage(filename);
-				logger.info("Read training image from "+ filename);
+				logger.info("Read "+img.rows()+"x"+img.cols()+" training image from "+ filename);
 				images.put(counter, img);
 				int label = trainingFiles.get(filename);
 				

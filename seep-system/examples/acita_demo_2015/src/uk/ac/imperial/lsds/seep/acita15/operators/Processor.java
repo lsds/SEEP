@@ -26,9 +26,11 @@ public class Processor implements StatelessOperator{
 	private static final Logger logger = LoggerFactory.getLogger(Processor.class);
 	private int processed = 0;
 	private Stats stats;
-	private final long processingDelay = Long.parseLong(GLOBALS.valueFor("defaultProcessingDelay"));
+	private Stats utilStats;
+	private long processingDelay = Long.parseLong(GLOBALS.valueFor("defaultProcessingDelay"));
 	
 	public void processData(DataTuple data) {
+		long tProcessStart = System.currentTimeMillis();
 		long tupleId = data.getLong("tupleId");
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
@@ -49,7 +51,9 @@ public class Processor implements StatelessOperator{
 		
 		doProcessing();
 		
-		stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
+		long tProcessEnd = System.currentTimeMillis();
+		stats.add(tProcessEnd, data.getPayload().toString().length());
+		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
 		api.send_highestWeight(outputTuple);
 	}
 
@@ -88,6 +92,8 @@ public class Processor implements StatelessOperator{
 	public void setUp() {
 		System.out.println("Setting up PROCESSOR operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
+		utilStats = new Stats(api.getOperatorId());
+		setProcessingDelay();
 	}
 
 	private void doProcessing()
@@ -98,4 +104,17 @@ public class Processor implements StatelessOperator{
 			catch (InterruptedException e) { }
 		}
 	}
+
+	//Tmp hack
+	private void setProcessingDelay()
+	{
+		/*
+		if (api.getOperatorId() == 0 || api.getOperatorId() == 10 || api.getOperatorId() == 11)
+		{ processingDelay = 0; } 
+		else { processingDelay = 0; }
+		logger.warn("Setting explicit processing delay of "+processingDelay+" for operator "+api.getOperatorId());
+		*/
+	}
+		
+		
 }

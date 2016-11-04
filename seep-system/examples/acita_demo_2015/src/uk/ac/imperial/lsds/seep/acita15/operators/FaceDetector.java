@@ -57,6 +57,8 @@ public class FaceDetector implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(FaceDetector.class);
+	private static final double SCALE_FACTOR = 1.1;
+	private static final int MIN_FEATURE_DIM = 40;
 	private int processed = 0;
 	
 	//private CascadeClassifier faceDetector = null;
@@ -65,10 +67,10 @@ public class FaceDetector implements StatelessOperator{
 	private OpenCVFrameConverter matConverter = null;
 	private OpenCVFrameConverter iplConverter = null;
 	
-	private final double SCALE_FACTOR = 1.1;
 	private final double RELATIVE_FACE_SIZE = 0.2;
 	private boolean recordImages = false;
 	private Stats stats;
+	private Stats utilStats;
 	
 	public void processData(DataTuple data) {
 		
@@ -92,7 +94,7 @@ public class FaceDetector implements StatelessOperator{
 		IplImage img = parseBufferedImage(value, cols, rows, type);
 		logger.debug("Received "+img.width()+"x"+img.height()+" frame.");
 		IplImage imgBW = prepareBWImage(img, type);
-		int[] bbox = detectFirstFace(imgBW);
+		int[] bbox = detectFirstFace(imgBW, absoluteFaceSize);
 		
 		DataTuple outputTuple = null;
 		
@@ -126,8 +128,10 @@ public class FaceDetector implements StatelessOperator{
 			}
 		}
 		
-		logger.debug("Face detector processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
-		stats.add(System.currentTimeMillis(), value.length);
+		long tProcessEnd = System.currentTimeMillis();
+		logger.debug("Face detector processed "+cols+"x"+rows+" tuple in " + (tProcessEnd - tProcessStart) + "ms");
+		stats.add(tProcessEnd, value.length);
+		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
 		//stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
 		api.send_highestWeight(outputTuple);
 	}
@@ -150,6 +154,7 @@ public class FaceDetector implements StatelessOperator{
 	public void setUp() {
 		System.out.println("Setting up FACE_DETECTOR operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
+		utilStats = new Stats(api.getOperatorId());
 		//testFaceDetection();
 		try
 		{
@@ -238,15 +243,17 @@ public class FaceDetector implements StatelessOperator{
 		}
 	}
 
-	public int[] detectFirstFace(IplImage bwImg)
+	public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
 	{
 		CvMemStorage storage = cvCreateMemStorage(0);
 		cvClearMemStorage(storage);
 		try {
-			double search_scale_factor = 1.1;
 			int flags = CV_HAAR_DO_CANNY_PRUNING;
-			CvSize minFeatureSize = cvSize(40, 40);
-			CvSeq rects = cvHaarDetectObjects(bwImg, faceDetector, storage, search_scale_factor, 2, flags, minFeatureSize, cvSize(0, 0));
+			CvSize minFeatureSize = cvSize(MIN_FEATURE_DIM, MIN_FEATURE_DIM);
+			CvSize maxFeatureSize = cvSize(0,0); //No max
+			int minNeighbours = 2;
+
+			CvSeq rects = cvHaarDetectObjects(bwImg, faceDetector, storage, SCALE_FACTOR, minNeighbours, flags, minFeatureSize, maxFeatureSize);
 			int nFaces = rects.total();
 			if (nFaces == 0) {
 				return null;
@@ -293,10 +300,9 @@ public class FaceDetector implements StatelessOperator{
 		CvMemStorage storage = cvCreateMemStorage(0);
 		cvClearMemStorage(storage);
 		try {
-			double search_scale_factor = 1.1;
 			int flags = CV_HAAR_DO_CANNY_PRUNING;
-			CvSize minFeatureSize = cvSize(40, 40);
-			CvSeq rects = cvHaarDetectObjects(input, cascade, storage, search_scale_factor, 2, flags, minFeatureSize, cvSize(0, 0));
+			CvSize minFeatureSize = cvSize(MIN_FEATURE_DIM, MIN_FEATURE_DIM);
+			CvSeq rects = cvHaarDetectObjects(input, cascade, storage, SCALE_FACTOR, 2, flags, minFeatureSize, cvSize(0, 0));
 			int nFaces = rects.total();
 			if (nFaces == 0) {
 				throw new Exception("No faces detected");

@@ -77,7 +77,8 @@ public class VideoSource implements StatelessOperator {
 	//private final String testFramesDir = "images/chokepoint";
 	private final String extractedFilesDir = "resources/source";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
-	private final boolean resizeImages = true;
+	private final boolean resizeImages = Boolean.parseBoolean(GLOBALS.valueFor("resizeImages"));
+	//private final boolean resizeImages = true;
 	
 	public void setUp() {
 		System.out.println("Setting up VIDEO_SOURCE operator with id="+api.getOperatorId());
