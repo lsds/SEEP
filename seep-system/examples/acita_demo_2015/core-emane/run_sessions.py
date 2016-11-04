@@ -585,7 +585,9 @@ def get_num_workers(k, nodes, params):
             num_workers = [1] * (1 + sink_scale_factor + (k * params['h']))
     elif q == 'join':
         if params['h'] != 1: raise Exception('Only support query of height 1 for join')
-        num_workers.append(1)
+        sources = int(params['sources'])
+        if sources <= 1: raise Exception('Need at least 2 sources for join')
+        num_workers = [1] * (sources +  k + sink_scale_factor)
     elif q == 'heatMap':
         sources =  int(params['sources'])
         sinks = int(params['sinks'])
