@@ -141,7 +141,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				if (meanderQuery.getLogicalInputs(downLogicalId).length > 1)
 				{
-					throw new RuntimeException("TODO");
+					throw new RuntimeException("TODO: Best effort mode not supported for join operators yet.");
 				}
 			}
 			
@@ -239,6 +239,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (newValue != downstreamsRoutable) { logger.debug("Changing "+owner.getOperator().getOperatorId()+ " downstreamsRoutable="+newValue); }
 			downstreamsRoutable = newValue;
 		}
+		throw new RuntimeException("TODO: Check this works with multi-input ops.");
 	}
 	public boolean areDownstreamsRoutable()
 	{
@@ -692,6 +693,11 @@ public class Dispatcher implements IRoutingObserver {
 			long ts = dt.getPayload().timestamp;
 			logger.debug("Sending constrained tuple "+ ts);
 			boolean allSucceeded = true;
+
+			// Remove first to avoid removing a tuple later that was readded concurrenlty by a retransmit timeout.
+			//Readd at the end if not all suceeded.
+			opQueue.remove(ts);
+			
 			//Skip first target here, it's just an indicator the remaining targets are constrained.
 			for (int i = 1; i < targets.size(); i++)
 			{
@@ -710,7 +716,7 @@ public class Dispatcher implements IRoutingObserver {
 					else
 					{
 						logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
-						boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT);
+						boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT, false);
 						if (downSucceeded) 
 						{ 
 							lastSendSuccess = System.currentTimeMillis(); 
@@ -724,8 +730,13 @@ public class Dispatcher implements IRoutingObserver {
 			if (allSucceeded)
 			{
 				logger.debug("All succeeded, removing tuple "+dt.getPayload().timestamp);
-				opQueue.remove(dt.getPayload().timestamp);
-				throw new RuntimeException("TODO: Changed trySend, need to update this.13/09/16");
+				//opQueue.remove(dt.getPayload().timestamp);
+				//throw new RuntimeException("TODO: Changed trySend, need to update this.13/09/16");
+			}
+			else
+			{
+				logger.debug("Not all succeeded, readding tuple "+dt.getPayload().timestamp);
+				opQueue.forceAdd(dt); 
 			}
 		}
 	
@@ -808,13 +819,14 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		public boolean trySend(DataTuple dt, long timeout)
+		public boolean trySend(DataTuple dt, long timeout) { return trySend(dt, timeout, true); }
+		public boolean trySend(DataTuple dt, long timeout, boolean removeAndReadd)
 		{
 			try {
-				opQueue.remove(dt.getPayload().timestamp);
+				if (removeAndReadd) { opQueue.remove(dt.getPayload().timestamp); }
 				exchanger.exchange(dt, timeout, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException | TimeoutException e) {
-				opQueue.forceAdd(dt);
+				if (removeAndReadd) { opQueue.forceAdd(dt); }
 				return false;
 			}
 			setDownstreamsRoutable(true);
