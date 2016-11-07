@@ -155,7 +155,10 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 			IplImage img = parseBufferedImage(value);
 			IplImage imgBW = prepareBWImage(img, type);
 			cvSetImageROI(imgBW, cvRect(x, y, width, height));
-			Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
+			IplImage cropped = cvCreateImage(cvGetSize(imgBW), imgBW.depth(), imgBW.nChannels());
+			cvCopy(imgBW, cropped);
+			//Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
+			Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(cropped));
 			logger.debug("Converted roi to "+imgBWMat.cols()+"x"+imgBWMat.rows()+" mat");
 			int predictedLabel[] = new int[1];
 			double confidence[] = new double[1];
