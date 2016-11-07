@@ -137,18 +137,18 @@ public class Dispatcher implements IRoutingObserver {
 		else
 		{
 			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
+			downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
 			if (bestEffort)
 			{
-				if (meanderQuery.getLogicalInputs(downLogicalId).length > 1)
+				if (downIsMultiInput)
 				{
 					throw new RuntimeException("TODO");
 				}
 			}
-			
-			downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+				
 			numDownstreamReplicas = meanderQuery.getPhysicalNodeIds(downLogicalId).size();
 			if (Boolean.parseBoolean(GLOBALS.valueFor("enableFailureCtrlWatchdog")) && 
-					numDownstreamReplicas > 1)
+					numDownstreamReplicas > 1 && !bestEffort)
 			{
 				failureCtrlWatchdog = new FailureCtrlWatchdog();
 			}
@@ -158,7 +158,9 @@ public class Dispatcher implements IRoutingObserver {
 			}	
 		}
 
-		fctrlHandler = new FailureCtrlHandler();
+		if (!bestEffort) { fctrlHandler = new FailureCtrlHandler(); }
+		else { fctrlHandler = null; }
+		
 	}
 	
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
@@ -844,7 +846,7 @@ public class Dispatcher implements IRoutingObserver {
 				rateLimiter.limit();
 
 				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
-				fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis());
+				if (fctrlHandler != null) { fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis()); }
 				boolean success = outputQueue.sendToDownstream(nextTuple, dest);
 				if (success)
 				{
@@ -1231,7 +1233,7 @@ public class Dispatcher implements IRoutingObserver {
 
 		private void addBatchRetransmitTimer(int downOpId, long batchId, long now)
 		{
-			if (bestEffort) { throw new RuntimeException("TODO"); }
+			if (bestEffort) { return; }
 
 			//No point retransmitting if only one downstream replica!
 			if (numDownstreamReplicas < 2) { return ; }
