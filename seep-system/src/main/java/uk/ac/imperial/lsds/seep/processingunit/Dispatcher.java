@@ -617,7 +617,8 @@ public class Dispatcher implements IRoutingObserver {
 				logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
 				remove = true;
 				// In particular, setDownstreamsRoutable (false) will be overridden by this when retransmitting!
-				throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
+				//throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
+				opQueue.remove(ts);	//TODO: This could be racy if remove and it gets readded in the meantime?
 			}
 			else
 			{
