@@ -38,8 +38,8 @@
   <logger name="uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBuffer" level="DEBUG"/> 
   <logger name="uk.ac.imperial.lsds.seep.comm.ControlHandlerWorker" level="DEBUG"/>
   <logger name="uk.ac.imperial.lsds.seep.acita15.operators" level="DEBUG"/>
--->
   <logger name="uk.ac.imperial.lsds.seep.acita15.operators" level="DEBUG"/>
+-->
 
   <logger name="uk.ac.imperial.lsds.seep.manet" level="WARN"/>
   <logger name="uk.ac.imperial.lsds.seep.manet.NetRateMonitor" level="INFO"/>
