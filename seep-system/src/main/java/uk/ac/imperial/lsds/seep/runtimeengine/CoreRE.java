@@ -80,6 +80,7 @@ public class CoreRE {
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final Map<Integer, ControlTuple> lastUpOpIndexFctrls = new ConcurrentHashMap<Integer, ControlTuple>();
 	private final boolean enableUpstreamRoutingControl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")); 
+	private final boolean multiHopReplayOptimization = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay")) && Boolean.parseBoolean(GLOBALS.valueFor("multiHopReplayOptimization")); 
 	private WorkerNodeDescription nodeDescr = null;
 	
     private Thread processingUnitThread = null;
@@ -1080,20 +1081,19 @@ public class CoreRE {
 		LOG.debug("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		DataStructureI dso = dsa.getUniqueDso();
 		if (dso == null) { throw new RuntimeException("TODO"); }
-		ArrayList<FailureCtrl> upFctrls = dso.purge(nodeFctrl);
+		FailureCtrl purgeFctrl = multiHopReplayOptimization ? nodeFctrl : new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
+		ArrayList<FailureCtrl> upFctrls = dso.purge(purgeFctrl);
 		Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 		int opId = processingUnit.getOperator().getOperatorId();
 		for (int upOpIndex : upOpIndexes)
 		{
 			int upOpId = processingUnit.getOperator().getOpContext().getUpOpIdFromIndex(upOpIndex);
 			LOG.debug("Writing failure ctrl to up op id:"+upOpId);
-			//if (dso == null) { dso = dsa.getDataStructureIForOp(upOpId); }
-			//FailureCtrl upFctrl = dso.purge(nodeFctrl);
 			FailureCtrl upFctrl = upFctrls.get(meanderQuery.getLogicalInputIndex(
 					meanderQuery.getLogicalNodeId(opId), 
 					meanderQuery.getLogicalNodeId(upOpId)));
+			if (!downstreamsRoutable) { upFctrl = purgeFctrl; }
 			LOG.debug("Writing failure ctrl, node="+nodeFctrl+",upOp="+upFctrl);
-			if (!downstreamsRoutable) { upFctrl = nodeFctrl; }
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId , upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 

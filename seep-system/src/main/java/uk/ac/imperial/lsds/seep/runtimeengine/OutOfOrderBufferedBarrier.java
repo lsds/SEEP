@@ -131,7 +131,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			inputFctrls.get(i).updateAlives(ts);	//TODO: Should just have 1?
+			if (!bestEffort) { inputFctrls.get(i).updateAlives(ts); }	//TODO: Should just have 1?
 			readyBatches.add(pending.get(i).remove(ts));
 			/*
 			if (i == logicalInputIndex) { readyBatches.add(dt); }
