@@ -142,7 +142,8 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				if (downIsMultiInput)
 				{
-					throw new RuntimeException("TODO");
+					//throw new RuntimeException("TODO");
+					logger.warn("Best effort mode with multi-input operator could lead to deadlock on tuple loss.");
 				}
 			}
 				

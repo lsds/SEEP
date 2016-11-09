@@ -63,7 +63,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 	public synchronized void push(DataTuple data){
 		
 		long ts = data.getPayload().timestamp; 
-		if (!inputFctrl.updateAlives(ts))
+		if (!bestEffort && !inputFctrl.updateAlives(ts))
 		{
 			logger.debug("Ignoring tuple with ts="+ts);
 			return; 
