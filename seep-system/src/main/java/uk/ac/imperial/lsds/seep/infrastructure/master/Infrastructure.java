@@ -736,7 +736,7 @@ public class Infrastructure {
 			LOG.info("Number of downstreams for op "+ current.getOperatorId()+"= "+numDownstreams);
 			Set<Integer> downstreamPhys = new HashSet<Integer>();
 
-			//TODO: Complete hack. For the FR query, enough to know the downstreams of one
+			//TODO: Complete hack. For the simple join query, enough to know the downstreams of one
 			//physical replica to know the downstreams of all.
 			Operator next = null;
 			for (PlacedOperator downstreamPlacement : current.getOpContext().downstreams)

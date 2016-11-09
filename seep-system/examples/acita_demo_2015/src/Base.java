@@ -320,7 +320,16 @@ public class Base implements QueryComposer{
 			QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
 		}
 		
-		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks"))) { throw new RuntimeException("TODO."); }
+		//if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks"))) { throw new RuntimeException("TODO."); }
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
+			{
+				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
+			}
+		}
+
 		return QueryBuilder.build();
 	}
 	

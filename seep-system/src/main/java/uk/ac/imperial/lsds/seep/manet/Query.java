@@ -234,7 +234,9 @@ public class Query implements Serializable
 		Integer[] inputs = getLogicalInputs(logicalId);
 		while (inputs.length > 0)
 		{
-			if (inputs.length > 1) { throw new RuntimeException("TODO: height of join query"); }
+			//TODO: To support unbalanced joins, should first compute the max height and 
+			//assign that to the sink, then work back from there.
+			if (inputs.length > 1) { logger.warn("Assuming join query is a balanced tree."); }
 			height++;
 			inputs = getLogicalInputs(inputs[0]);
 		}
