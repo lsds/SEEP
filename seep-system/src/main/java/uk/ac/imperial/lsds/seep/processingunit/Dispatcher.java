@@ -870,6 +870,8 @@ public class Dispatcher implements IRoutingObserver {
 					//Connection must be down.
 					//Remove any output tuples from this replica's output log and add them to the operator output queue.
 					//This should include the current 'SEEP' batch since it might contain several tuples.
+					//N.B. Important to remove from buffer/session log before adding to output queue since the dispatcher main could otherwise think a tuple is in the session log
+					//and delete it from it's output queue.
 					TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 
 					synchronized(lock)
