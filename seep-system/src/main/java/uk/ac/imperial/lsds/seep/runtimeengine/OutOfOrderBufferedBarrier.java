@@ -53,7 +53,11 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
 		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
 		this.barrierTimeout = Long.parseLong(GLOBALS.valueFor("barrierTimeout"));
-		this.boundReadyQueue = Boolean.parseBoolean(GLOBALS.valueFor("boundReadyQueue"));
+		this.boundReadyQueue = Boolean.parseBoolean(GLOBALS.valueFor("boundReadyQueue")) || 
+					!GLOBALS.valueFor("meanderRouting").equals("backpressure") ||  
+					meanderQuery.getPhysicalNodeIds(logicalId).size() == 1;
+		logger.info("OutOfOrderBufferedBarrier using bound ready queue? "+this.boundReadyQueue);
+
 		if (barrierTimeout > 0)  
 		{ 
 			logger.info("Setting up barrier timeout monitor with delay="+barrierTimeout);
