@@ -51,7 +51,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		this.bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		this.optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
-		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
+		//this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("inputQueueLength"));
+		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("readyQueueLength"));
 		this.barrierTimeout = Long.parseLong(GLOBALS.valueFor("barrierTimeout"));
 		this.boundReadyQueue = Boolean.parseBoolean(GLOBALS.valueFor("boundReadyQueue")) || 
 					!GLOBALS.valueFor("meanderRouting").equals("backpressure") ||  
