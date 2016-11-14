@@ -68,7 +68,7 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 		try
 		{	
 			long ts = data.getPayload().timestamp; 
-			if (!inputFctrl.updateAlives(ts))
+			if (!bestEffort && !inputFctrl.updateAlives(ts))
 			{
 				logger.debug("Ignoring tuple with ts="+ts);
 				return; 

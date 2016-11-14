@@ -58,6 +58,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 		
 		logger.info("Setting max input queue size to:"+ maxInputQueueSize);
 		logger.info("Input queue reliability: bestEffort="+bestEffort+",optimizeReplay="+optimizeReplay);
+		throw new RuntimeException("Deprecated: Use OutOfOrderFairInputQueue instead.");
 	}
 	
 	public synchronized void push(DataTuple data){
