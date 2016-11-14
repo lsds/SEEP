@@ -491,6 +491,14 @@ public class Infrastructure {
 		{
 			return buildHeatMap();
 		}
+		else if (queryType.equals("leftJoin"))
+		{
+			return buildLeftJoin();
+		}
+		else if (queryType.equals("frJoin"))
+		{
+			return buildFaceRecognitionJoin();
+		}
 		else { throw new RuntimeException("Logic error, unknown query type."); }
 	}
 	
@@ -753,6 +761,164 @@ public class Infrastructure {
 		}
 
 		return new Query(logicalTopology, log2phys, phys2addr);	
+	}
+
+	private Query buildLeftJoin()
+	{
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		int nSources = Integer.parseInt(GLOBALS.valueFor("sources"));
+		int maxFanIn = Integer.parseInt(GLOBALS.valueFor("fanin"));
+		if (maxFanIn != 2) { throw new RuntimeException("TODO."); }
+		int nSinks = Integer.parseInt(GLOBALS.valueFor("sinks"));
+		if (nSinks != 1) { throw new RuntimeException("TODO."); }
+		
+		int lid = 1;
+		for (; lid < nSources+1; lid++)
+		{
+			logicalTopology.put(lid, new Integer[]{});
+		}
+		
+		Map<Integer, Integer> downstreamLogicalIds = new HashMap<>();
+
+		//join op ids = [nSources+1,..,nSources + 1 + nSources - 1]
+		for (; lid < 2* nSources; lid++)
+		{
+			Integer[] children = new Integer[2];
+			if (lid == nSources + 1) { children[0] = lid - nSources; }
+			else { children[0] = lid - 1; }
+			children[1] = lid - nSources + 1;
+			logicalTopology.put(lid, children); 
+		}
+		
+		//Sink	
+		logicalTopology.put(lid, new Integer[]{lid-1});
+		int sinkId = lid;
+
+		int nOps = nSources - 1;	
+		int totalLogicalOps = nSources+nSinks+nOps;
+		LOG.info("Created logical topology: "+logicalTopology);
+		if (lid != totalLogicalOps+1) { throw new RuntimeException("Logic error: lid="+lid+", total logical ops="+ totalLogicalOps); }
+		if (logicalTopology.size() != totalLogicalOps) 
+		{ 
+			throw new RuntimeException("Logic error: log.top.sz="+logicalTopology.size()+", total logical ops="+totalLogicalOps);
+		}
+		
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<>();
+		
+		if (src.size() != nSources) { throw new RuntimeException("Logic error src.size="+src.size() + ", nSources="+nSources); }	
+		Operator currentSrc = null;
+		//Walk the ops, starting at the source.
+		Map<Integer, Operator> log2origOp = new HashMap<>();
+		for (int i = 0; i < nSources; i++)
+		{
+			Set<Integer> srcPhys = new HashSet<>();
+			currentSrc = src.get(i);
+			srcPhys.add(currentSrc.getOperatorId());
+			log2phys.put(i+1, srcPhys);
+			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(currentSrc.getOperatorId())+",logicalId="+(i+1));
+
+		}
+	
+		//Iterate through the rightmost inputs for the join ops.
+		Operator lastOp = null;
+		for (int i = 1; i < nSources; i++)
+		{
+			currentSrc = src.get(i);
+			Set<Integer> downstreamPhys = new HashSet<Integer>();
+			for (PlacedOperator downstreamPlacement : currentSrc.getOpContext().downstreams)
+			{
+				downstreamPhys.add(downstreamPlacement.opID());
+				Operator nextDownstream = getOp(downstreamPlacement.opID());
+				lastOp = nextDownstream;
+				phys2addr.put(downstreamPlacement.opID(), nextDownstream.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+				LOG.info("Added op "+ currentSrc.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+			}	
+			int currentLogId = i+1+nSources-1;
+			log2phys.put(currentLogId, downstreamPhys);
+			LOG.debug("Adding logical id "+currentLogId+" phys nodes: "+ downstreamPhys);
+		}
+
+		Set<Integer> sinkPhys = new HashSet<>();
+		for (PlacedOperator sinkPlacement : lastOp.getOpContext().downstreams)
+		{
+			sinkPhys.add(sinkPlacement.opID());
+			phys2addr.put(sinkPlacement.opID(), getOp(sinkPlacement.opID()).getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Added snk replica with id="+sinkPlacement.opID()+", ip="+phys2addr.get(sinkPlacement.opID()));
+		}
+
+		log2phys.put(sinkId, sinkPhys);
+		
+		return new Query(logicalTopology, log2phys, phys2addr);
+	}
+
+	private Query buildFaceRecognitionJoin()
+	{
+		
+		TreeMap<Integer, Integer[]> logicalTopology = new TreeMap<Integer, Integer[]>();
+		//TODO: Generalize this for non-face recognition queries.
+		
+		logicalTopology.put(1, new Integer[]{});
+		logicalTopology.put(2, new Integer[]{});
+		logicalTopology.put(3, new Integer[]{1});
+		logicalTopology.put(4, new Integer[]{2});
+		logicalTopology.put(5, new Integer[]{3,4});
+		logicalTopology.put(6, new Integer[]{5});
+
+		if (src.size() > 2) { throw new RuntimeException("TODO"); }
+
+		TreeMap<Integer, Set<Integer>> log2phys = new TreeMap<>();
+		Map<Integer, InetAddress> phys2addr = new HashMap<>();
+
+		for (int i = 0; i < src.size(); i++)
+		{
+			Set<Integer> srcPhys = new HashSet<>();
+			Operator currentSrc = src.get(i);
+			srcPhys.add(currentSrc.getOperatorId());
+			log2phys.put(i+1, srcPhys);
+			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+		}
+
+		Operator lastOp = null;
+		for (int i = 2; i < 4; i++)
+		{
+			Set<Integer> fdPhys = new HashSet<>();
+			for (PlacedOperator downstreamPlacement : src.get(i-2).getOpContext().downstreams)
+			{
+				fdPhys.add(downstreamPlacement.opID());
+				Operator nextDownstream = getOp(downstreamPlacement.opID());
+				lastOp = nextDownstream;
+				phys2addr.put(downstreamPlacement.opID(), nextDownstream.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+				LOG.info("Added op "+ src.get(i-2).getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+			}	
+			log2phys.put(i+1, fdPhys);
+			LOG.debug("Adding logical id "+(i+1)+" phys nodes: "+ fdPhys);
+		}
+
+		Set<Integer> joinPhys = new HashSet<>();
+		for (PlacedOperator downstreamPlacement: lastOp.getOpContext().downstreams)
+		{
+			joinPhys.add(downstreamPlacement.opID());
+			Operator nextDownstream = getOp(downstreamPlacement.opID());
+			lastOp = nextDownstream;
+			phys2addr.put(downstreamPlacement.opID(), nextDownstream.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Added op "+ lastOp.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+		}
+		log2phys.put(5, joinPhys);
+
+		Set<Integer> sinkPhys = new HashSet<>();
+		for (PlacedOperator downstreamPlacement: lastOp.getOpContext().downstreams)
+		{
+			sinkPhys.add(downstreamPlacement.opID());
+			Operator nextDownstream = getOp(downstreamPlacement.opID());
+			lastOp = nextDownstream;
+			phys2addr.put(downstreamPlacement.opID(), nextDownstream.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Added op "+ lastOp.getOperatorId()+" downstream with id="+downstreamPlacement.opID()+", ip="+phys2addr.get(downstreamPlacement.opID()));
+		}
+		log2phys.put(6, sinkPhys);
+
+		return new Query(logicalTopology, log2phys, phys2addr);
 	}
 	
 	private Query buildNameAssist()
