@@ -588,10 +588,10 @@ def get_num_workers(k, nodes, params):
         sources = int(params['sources'])
         if sources <= 1: raise Exception('Need at least 2 sources for join')
         num_workers = [1] * (sources +  k + sink_scale_factor)
-    elif q == 'leftjoin':
+    elif q == 'leftJoin':
         if params['h'] < 2: raise Exception('Left join only needed for height > 2')
         sources =  int(params['sources'])
-        height = sources + 1
+        height = sources - 1
         if height != params['h']: raise Exception('Height must equals # sources + 1 for left join')
         sinks = int(params['sinks'])
         if sinks != 1: raise Exception("Only 1 true (unreplicated) sink supported for left join")
@@ -599,7 +599,7 @@ def get_num_workers(k, nodes, params):
         if fan_in != 2: raise Exception("TODO: Only support fan-in of 2 for left join currently.")
         join_ops = sources - 1
         num_workers = [1] * (sources + (k*join_ops)+ (sink_scale_factor * sinks))
-    elif q == 'frjoin':
+    elif q == 'frJoin':
         if params['h'] != 2: raise Exception('Only support query of height 2 for frjoin')
         sources = int(params['sources'])
         if sources != 2: raise Exception('Only support 2 sources for frjoin')

@@ -797,7 +797,7 @@ public class Infrastructure {
 		int nOps = nSources - 1;	
 		int totalLogicalOps = nSources+nSinks+nOps;
 		LOG.info("Created logical topology: "+logicalTopology);
-		if (lid != totalLogicalOps+1) { throw new RuntimeException("Logic error: lid="+lid+", total logical ops="+ totalLogicalOps); }
+		if (lid != totalLogicalOps) { throw new RuntimeException("Logic error: lid="+lid+", total logical ops="+ totalLogicalOps); }
 		if (logicalTopology.size() != totalLogicalOps) 
 		{ 
 			throw new RuntimeException("Logic error: log.top.sz="+logicalTopology.size()+", total logical ops="+totalLogicalOps);

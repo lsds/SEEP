@@ -52,7 +52,7 @@ import org.bytedeco.javacv.OpenCVFrameConverter;
 public class SEEPFaceRecognizerJoin implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(SEEPFaceRecognizer.class);
+	private static final Logger logger = LoggerFactory.getLogger(SEEPFaceRecognizerJoin.class);
 	private int processed = 0;
 	private FaceRecognizerHelper faceRecognizerHelper = null;
 	private static final String repoDir = GLOBALS.valueFor("repoDir");	
@@ -60,40 +60,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 	private Stats utilStats;
 	
 	public void processData(DataTuple data) {
-		long tProcessStart = System.currentTimeMillis();
-		long tupleId = data.getLong("tupleId");
-		byte[] value = data.getByteArray("value");
-		int type = data.getInt("type");
-		int x = data.getInt("x");
-		int y = data.getInt("y");
-		int height = data.getInt("height") - x; //Should really rename to x1 y1 or something
-		int width = data.getInt("width") - y;
-		
-		int prediction = faceRecognizerHelper.recognize(value, x, y, height, width, type);
-		String labelExample = faceRecognizerHelper.getLabelExample(prediction);
-		
-		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width, labelExample);
-			
-		processed++;
-		if (processed % 1000 == 0)
-		{
-			logger.info("Face recognizer "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-		}
-		else
-		{
-			logger.debug("Face recognizer "+api.getOperatorId()+ " processed "+data.getLong("tupleId")+"->"+outputTuple.getLong("tupleId"));
-			if (logger.isDebugEnabled())
-			{
-				recordTuple(outputTuple);
-			}
-		}
-		
-		//stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
-		long tProcessEnd = System.currentTimeMillis();
-		logger.debug("Face recognizer processed "+width+"x"+height+" tuple "+data.getLong("tupleId")+" in " + (System.currentTimeMillis() - tProcessStart) + "ms");
-		stats.add(tProcessEnd, value.length);
-		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
-		api.send_highestWeight(outputTuple);
+		throw new RuntimeException("Logic error: join operator should receive multiple tuples.");
 	}
 
 	
@@ -101,7 +68,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		if (arg0.size() != 2) { throw new RuntimeException("Logic error - should be 2 tuples, 1 tuple per input for a binary join."); }
 		long tProcessStart = System.currentTimeMillis();
 		int prediction1 = getPrediction(arg0.get(0));
-		int prediction2 = getPrediction(arg0.get(2));
+		int prediction2 = getPrediction(arg0.get(1));
 
 		DataTuple data = null;
 		for (DataTuple dt : arg0)
@@ -150,7 +117,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		}
 
 		long tProcessEnd = System.currentTimeMillis();
-		logger.debug("Face recognizer processed "+width+"x"+height+" tuple "+data.getLong("tupleId")+" in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		logger.debug("Face recognizer join processed "+width+"x"+height+" tuple "+data.getLong("tupleId")+" in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		stats.add(tProcessEnd, value.length);
 		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
 		api.send_highestWeight(outputTuple);
@@ -174,7 +141,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 	private void recordTuple(DataTuple dt)
 	{
 		long rxts = System.currentTimeMillis();
-		logger.debug("FACE_RECOGNIZER: "+api.getOperatorId()+" received tuple with id="+dt.getLong("tupleId")
+		logger.debug("FACE_RECOGNIZER_JOIN: "+api.getOperatorId()+" received tuple with id="+dt.getLong("tupleId")
 				+",ts="+dt.getPayload().timestamp
 				+",txts="+dt.getPayload().instrumentation_ts
 				+",rxts="+rxts
@@ -182,7 +149,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 	}
 	
 	public void setUp() {
-		System.out.println("Setting up FACE_RECOGNIZER operator with id="+api.getOperatorId());
+		System.out.println("Setting up FACE_RECOGNIZER_JOIN operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
 		utilStats = new Stats(api.getOperatorId());
 		//String trainingDir = repoDir + "/seep-system/examples/acita_demo_2015/resources/training";

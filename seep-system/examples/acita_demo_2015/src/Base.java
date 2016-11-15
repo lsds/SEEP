@@ -83,11 +83,11 @@ public class Base implements QueryComposer{
 		{
 			return composeHeatMap();
 		}
-		else if (queryType.equals("leftjoin"))
+		else if (queryType.equals("leftJoin"))
 		{
 			return composeLeftJoin();
 		}
-		else if (queryType.equals("frjoin"))
+		else if (queryType.equals("frJoin"))
 		{
 			return composeFaceRecognizerJoin();
 		}
@@ -601,14 +601,14 @@ public class Base implements QueryComposer{
 		
 		src1.connectTo(faceDetect1, true, 0);
 		src2.connectTo(faceDetect2, true, 1);
-		faceDetect1.connectTo(faceRecJoin, true, 2);
-		faceDetect2.connectTo(faceRecJoin, true, 3);
+		faceDetect1.connectTo(faceRecJoin, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 2);
+		faceDetect2.connectTo(faceRecJoin, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 3);
 		faceRecJoin.connectTo(snk, true, 4);
 		
 		if (REPLICATION_FACTOR > 1)
 		{
 			QueryBuilder.scaleOut(faceDetect1.getOperatorId(), REPLICATION_FACTOR);
-			QueryBuilder.scaleOut(faceDetect1.getOperatorId(), REPLICATION_FACTOR);
+			QueryBuilder.scaleOut(faceDetect2.getOperatorId(), REPLICATION_FACTOR);
 			QueryBuilder.scaleOut(faceRecJoin.getOperatorId(), REPLICATION_FACTOR);
 		}
 			
