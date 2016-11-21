@@ -498,6 +498,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
     parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
+    parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
 
     args=parser.parse_args()
 
@@ -564,6 +565,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['emaneModel'] = args.emane_model
     params['txratemode'] = args.txratemode
     params['includeFailed'] = args.include_failed
+    params['pinnedSeed'] = args.pinned_seed
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
