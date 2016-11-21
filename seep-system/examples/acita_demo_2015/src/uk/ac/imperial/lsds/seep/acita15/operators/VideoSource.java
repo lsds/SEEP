@@ -152,7 +152,9 @@ public class VideoSource implements StatelessOperator {
 				}
 				else
 				{
-					output = data.newTuple(tupleId, testRawFrames[currentFrame], 0, 0, 1, 0, 0, 0, 0, "");
+					
+					//output = data.newTuple(tupleId, testRawFrames[currentFrame], 0, 0, 1, 0, 0, 0, 0, "");
+					output = data.newTuple(tupleId, testRawFrames[51], 0, 0, 1, 0, 0, 0, 0, "");
 					currentFrame = (currentFrame + 1) % testRawFrames.length;
 				}
 	 
