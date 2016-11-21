@@ -29,11 +29,11 @@ set boxwidth 0.1
 set offset 0.1,0.1
 set style fill empty 
 
-plot sprintf("%s/%s/1k/%sm/1k-lat.data",outputdir,timestr,mob) using 1:6:6:6:6 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/2k/%sm/2k-lat.data",outputdir,timestr,mob) using 1:6:6:6:6 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/3k/%sm/3k-lat.data",outputdir,timestr,mob) using 1:6:6:6:6 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/5k/%sm/5k-lat.data",outputdir,timestr,mob) using 1:6:6:6:6 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/1k/%sm/1k-lat.data",outputdir,timestr,mob) using 1:4:3:11:9 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
-	sprintf("%s/%s/2k/%sm/2k-lat.data",outputdir,timestr,mob) using 1:4:3:11:9 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
-	sprintf("%s/%s/3k/%sm/3k-lat.data",outputdir,timestr,mob) using 1:4:3:11:9 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
-	sprintf("%s/%s/5k/%sm/5k-lat.data",outputdir,timestr,mob) using 1:4:3:11:9 notitle with candlesticks whiskerbars 0.5 linestyle 4 
+plot sprintf("%s/%s/1k/%sm/1k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/2k/%sm/2k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/3k/%sm/3k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/5k/%sm/5k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/1k/%sm/1k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
+	sprintf("%s/%s/2k/%sm/2k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
+	sprintf("%s/%s/3k/%sm/3k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
+	sprintf("%s/%s/5k/%sm/5k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 4 

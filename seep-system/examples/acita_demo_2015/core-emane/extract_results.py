@@ -18,7 +18,7 @@ def is_finished_sink_log(f):
 def is_processor_log(f):
     #return log_type(f) == 'PROCESSOR'
     f_type = log_type(f) 
-    return f_type in ['PROCESSOR', 'FACE_DETECTOR', 'FACE_DETECTOR_RECOGNIZER', 'FACE_RECOGNIZER', 'JOIN', 'HEATMAP_JOIN']
+    return f_type in ['PROCESSOR', 'FACE_DETECTOR', 'FACE_DETECTOR_RECOGNIZER', 'FACE_RECOGNIZER', 'JOIN', 'HEATMAP_JOIN', 'FACE_RECOGNIZER_JOIN']
 
 def log_type(f):
     regex = re.compile(r'Setting up (.*) operator with id=(.*)$')
@@ -26,7 +26,7 @@ def log_type(f):
         match = re.search(regex, line)
         if match: return match.group(1)
 
-    raise Exception("Unknown log type!")
+    raise Exception("Unknown log type for file: "+str(f))
 
 def src_tx_begin(f):
     """

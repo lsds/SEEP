@@ -76,6 +76,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
                     plot(p, time_str, script_dir, data_dir)
             else:
+                plot('latency_percentiles', time_str, script_dir, data_dir)
                 plot('m1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
                 plot('m1_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
                 plot('tput_vs_netsize_stddev', time_str, script_dir, data_dir)
@@ -224,22 +225,33 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
                 raw_latencies = [lat for session_lats in get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_raw_latencies).values() for lat in session_lats]
                 record_fixed_kvar_statistics(k, var, var_suffix, raw_latencies, time_str, data_dir, 'raw-lat')
                 percentile_stat_vals = compute_percentile_stats(raw_latencies)
+
                 with open('%s/%s/%dk/%.2f%s/%dk-%s.data'%(data_dir,time_str,k,var,var_suffix,k, metric_suffix),'w' if writeHeader else 'a') as fixed_var_plotdata:
                     if writeHeader: 
-                        fixed_var_plotdata.write('#k=%d\n'%k)
-                        fixed_var_plotdata.write('#k mean min .05 .25 .5 .75 .9 .95 .99 max\n')
-                    logline = '%d %s\n'%(k," ".join(map(str, percentile_stat_vals)))
+                        fixed_var_plotdata.write('#k v mean min .05 .25 .5 .75 .9 .95 .99 max\n')
+                    logline = '%d %.4f %s\n'%(k, var, " ".join(map(str, percentile_stat_vals)))
 		    fixed_var_plotdata.write(logline)
 
-                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(raw_latencies)  
+                with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as all_var_plotdata:
+                    if writeHeader: 
+                        all_var_plotdata.write('#k v mean min .05 .25 .5 .75 .9 .95 .99 max\n')
+                    logline = '%d %.4f %s\n'%(k, var, " ".join(map(str, percentile_stat_vals)))
+                    all_var_plotdata.write(logline)
 
+                # TODO: Get rid of the below and just use the percentiles above for latency
+                # Will need to update gnuplot plots first. 
+                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(raw_latencies)  
+                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                all_loglines.append(logline)
+
+		"""	
                 with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_var_plotdata:
                     if writeHeader: 
                         rx_vs_var_plotdata.write('#k=%d\n'%k)
                         rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
                     logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
-                    rx_vs_var_plotdata.write(logline)
                     all_loglines.append(logline)
+		"""	
 
             else: 
                 #Now record any aggregate stats across all kvar 
@@ -486,6 +498,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
     parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
+    parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
 
     args=parser.parse_args()
 
@@ -552,6 +565,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['emaneModel'] = args.emane_model
     params['txratemode'] = args.txratemode
     params['includeFailed'] = args.include_failed
+    params['pinnedSeed'] = args.pinned_seed
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

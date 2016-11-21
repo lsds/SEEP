@@ -423,7 +423,8 @@ public class RoutingController implements Runnable{
 						weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 								localPerInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 						weights.put(upstreamId, weight);
-						throw new RuntimeException("TODO: Downstreams routable");
+						weights.put(upstreamId, downstreamsRoutable? weight : -1);
+						//throw new RuntimeException("TODO: Downstreams routable");
 					}					
 				}
 			}

@@ -142,8 +142,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				if (downIsMultiInput)
 				{
-					//throw new RuntimeException("TODO");
-					logger.warn("Best effort mode with multi-input operator could lead to deadlock on tuple loss.");
+					throw new RuntimeException("TODO: Best effort mode not supported for join operators yet.");
 				}
 			}
 				
@@ -242,6 +241,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (newValue != downstreamsRoutable) { logger.debug("Changing "+owner.getOperator().getOperatorId()+ " downstreamsRoutable="+newValue); }
 			downstreamsRoutable = newValue;
 		}
+		throw new RuntimeException("TODO: Check this works with multi-input ops.");
 	}
 	public boolean areDownstreamsRoutable()
 	{
@@ -619,7 +619,8 @@ public class Dispatcher implements IRoutingObserver {
 				logger.info("Skipping unconstrained transmission of "+ts+", already in session log");
 				remove = true;
 				// In particular, setDownstreamsRoutable (false) will be overridden by this when retransmitting!
-				throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
+				//throw new RuntimeException("TODO: Refactor/check this makes sense wrt the alternatives retry stuff below.");
+				opQueue.remove(ts);	//TODO: This could be racy if remove and it gets readded in the meantime?
 			}
 			else
 			{
@@ -695,6 +696,11 @@ public class Dispatcher implements IRoutingObserver {
 			long ts = dt.getPayload().timestamp;
 			logger.debug("Sending constrained tuple "+ ts);
 			boolean allSucceeded = true;
+
+			// Remove first to avoid removing a tuple later that was readded concurrenlty by a retransmit timeout.
+			//Readd at the end if not all suceeded.
+			opQueue.remove(ts);
+			
 			//Skip first target here, it's just an indicator the remaining targets are constrained.
 			for (int i = 1; i < targets.size(); i++)
 			{
@@ -713,7 +719,7 @@ public class Dispatcher implements IRoutingObserver {
 					else
 					{
 						logger.info("Coordination failure, recovering "+ts+" to "+downOpId);
-						boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT);
+						boolean downSucceeded = workers.get(target).trySend(dt, SEND_TIMEOUT, false);
 						if (downSucceeded) 
 						{ 
 							lastSendSuccess = System.currentTimeMillis(); 
@@ -727,8 +733,13 @@ public class Dispatcher implements IRoutingObserver {
 			if (allSucceeded)
 			{
 				logger.debug("All succeeded, removing tuple "+dt.getPayload().timestamp);
-				opQueue.remove(dt.getPayload().timestamp);
-				throw new RuntimeException("TODO: Changed trySend, need to update this.13/09/16");
+				//opQueue.remove(dt.getPayload().timestamp);
+				//throw new RuntimeException("TODO: Changed trySend, need to update this.13/09/16");
+			}
+			else
+			{
+				logger.debug("Not all succeeded, readding tuple "+dt.getPayload().timestamp);
+				opQueue.forceAdd(dt); 
 			}
 		}
 	
@@ -811,13 +822,14 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		public boolean trySend(DataTuple dt, long timeout)
+		public boolean trySend(DataTuple dt, long timeout) { return trySend(dt, timeout, true); }
+		public boolean trySend(DataTuple dt, long timeout, boolean removeAndReadd)
 		{
 			try {
-				opQueue.remove(dt.getPayload().timestamp);
+				if (removeAndReadd) { opQueue.remove(dt.getPayload().timestamp); }
 				exchanger.exchange(dt, timeout, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException | TimeoutException e) {
-				opQueue.forceAdd(dt);
+				if (removeAndReadd) { opQueue.forceAdd(dt); }
 				return false;
 			}
 			setDownstreamsRoutable(true);
@@ -860,6 +872,8 @@ public class Dispatcher implements IRoutingObserver {
 					//Connection must be down.
 					//Remove any output tuples from this replica's output log and add them to the operator output queue.
 					//This should include the current 'SEEP' batch since it might contain several tuples.
+					//N.B. Important to remove from buffer/session log before adding to output queue since the dispatcher main could otherwise think a tuple is in the session log
+					//and delete it from it's output queue.
 					TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 
 					synchronized(lock)

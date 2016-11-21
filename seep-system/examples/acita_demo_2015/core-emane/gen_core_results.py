@@ -13,6 +13,7 @@ def main(exp_dir):
 
     # Get src logfilename
     src_log = get_src_logfile(exp_dir) 
+    #src_log = get_src_logfiles(exp_dir)[0]
 
     # Get sink logfilename
     #sink_log = get_sink_logfile(exp_dir)
@@ -150,6 +151,9 @@ def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, dedupe
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
 
+def get_src_logfiles(exp_dir):
+    return get_logfiles(exp_dir, is_src_log)
+
 def get_sink_logfile(exp_dir):
     return get_logfile(exp_dir, is_sink_log)
 
@@ -162,6 +166,14 @@ def get_logfile(exp_dir, type_fn):
         with open(filename, 'r') as f:
             if type_fn(f): return filename 
     return None
+
+def get_logfiles(exp_dir, type_fn):
+    files = glob.glob("%s/*worker*.log"%exp_dir)
+    filenames = []
+    for filename in files:
+        with open(filename, 'r') as f:
+            if type_fn(f): filenames.append(filename)
+    return filenames 
 
 def get_sink_logfiles(exp_dir):
     files = glob.glob("%s/*worker*.log"%exp_dir)

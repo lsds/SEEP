@@ -19,6 +19,7 @@ import uk.ac.imperial.lsds.seep.acita15.operators.Processor;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetector;
 import uk.ac.imperial.lsds.seep.acita15.operators.FaceDetectorRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizer;
+import uk.ac.imperial.lsds.seep.acita15.operators.SEEPFaceRecognizerJoin;
 //import uk.ac.imperial.lsds.seep.acita15.operators.SpeechRecognizer;
 import uk.ac.imperial.lsds.seep.acita15.operators.Join;
 import uk.ac.imperial.lsds.seep.acita15.operators.HeatMapJoin;
@@ -82,6 +83,14 @@ public class Base implements QueryComposer{
 		{
 			return composeHeatMap();
 		}
+		else if (queryType.equals("leftJoin"))
+		{
+			return composeLeftJoin();
+		}
+		else if (queryType.equals("frJoin"))
+		{
+			return composeFaceRecognizerJoin();
+		}
 		else { throw new RuntimeException("Logic error - unknown query type: "+GLOBALS.valueFor("queryType")); }
 	}
 
@@ -106,14 +115,14 @@ public class Base implements QueryComposer{
 		
 		if (AUTO_SCALEOUT)
 		{
-			Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, 1); 
-			connectToOneDownstream(src, snk, ops);
-			autoScaleout(ops);
 			if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
 			{
 				int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
 				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
 			}
+			Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, 1); 
+			connectToOneDownstream(src, snk, ops);
+			autoScaleout(ops);
 		}
 		else
 		{
@@ -198,11 +207,6 @@ public class Base implements QueryComposer{
 		faceDetect.connectTo(faceRec, true, 1);
 		faceRec.connectTo(snk, true, 2);
 		
-		if (REPLICATION_FACTOR > 1)
-		{
-			QueryBuilder.scaleOut(faceDetect.getOperatorId(), REPLICATION_FACTOR);
-			QueryBuilder.scaleOut(faceRec.getOperatorId(), REPLICATION_FACTOR);
-		}
 			
 		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
 		{
@@ -213,6 +217,12 @@ public class Base implements QueryComposer{
 			}
 		}
 		
+		if (REPLICATION_FACTOR > 1)
+		{
+			QueryBuilder.scaleOut(faceDetect.getOperatorId(), REPLICATION_FACTOR);
+			QueryBuilder.scaleOut(faceRec.getOperatorId(), REPLICATION_FACTOR);
+		}
+
 		return QueryBuilder.build();
 	}
 	
@@ -266,11 +276,6 @@ public class Base implements QueryComposer{
 		src.connectTo(faceDetectorRecognizer, true, 0);
 		faceDetectorRecognizer.connectTo(snk, true, 1);
 		
-		if (REPLICATION_FACTOR > 1)
-		{
-			QueryBuilder.scaleOut(faceDetectorRecognizer.getOperatorId(), REPLICATION_FACTOR);
-		}
-			
 		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
 		{
 			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
@@ -280,6 +285,11 @@ public class Base implements QueryComposer{
 			}
 		}
 		
+		if (REPLICATION_FACTOR > 1)
+		{
+			QueryBuilder.scaleOut(faceDetectorRecognizer.getOperatorId(), REPLICATION_FACTOR);
+		}
+
 		return QueryBuilder.build();
 	}
 	
@@ -315,12 +325,22 @@ public class Base implements QueryComposer{
 		src2.connectTo(j, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 1);
 		j.connectTo(snk, true, 2);
 		
+		
+		//if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks"))) { throw new RuntimeException("TODO."); }
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
+			{
+				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
+			}
+		}
+
 		if (REPLICATION_FACTOR > 1)
 		{
 			QueryBuilder.scaleOut(j.getOperatorId(), REPLICATION_FACTOR);
 		}
-		
-		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks"))) { throw new RuntimeException("TODO."); }
+
 		return QueryBuilder.build();
 	}
 	
@@ -400,17 +420,6 @@ public class Base implements QueryComposer{
 			}
 		}
 		
-		if (REPLICATION_FACTOR > 1)
-		{
-			//Finally, scale out the operators.
-			for (int h = 0; h < opsTree.length; h++)
-			{
-				for (int i = 0; i < opsTree[h].length; i++)
-				{
-					QueryBuilder.scaleOut(opsTree[h][i].getOperatorId(), REPLICATION_FACTOR);
-				}
-			}
-		}	
 
 		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
 		{
@@ -425,9 +434,198 @@ public class Base implements QueryComposer{
 			}
 		}
 		
+		if (REPLICATION_FACTOR > 1)
+		{
+			//Finally, scale out the operators.
+			for (int h = 0; h < opsTree.length; h++)
+			{
+				for (int i = 0; i < opsTree[h].length; i++)
+				{
+					QueryBuilder.scaleOut(opsTree[h][i].getOperatorId(), REPLICATION_FACTOR);
+				}
+			}
+		}	
+
 		return QueryBuilder.build();
 	}
 	
+	private QueryPlan composeLeftJoin()
+	{
+		int nSources = Integer.parseInt(GLOBALS.valueFor("sources"));
+		int nSinks = Integer.parseInt(GLOBALS.valueFor("sinks"));
+		int maxFanIn = Integer.parseInt(GLOBALS.valueFor("fanin"));
+		
+		if (nSinks != 1 || maxFanIn != 2) { throw new RuntimeException("TODO"); }
+		int[] tree = computeJoinTree(nSources, maxFanIn);
+		
+		Connectable[] sources = new Connectable[nSources];
+		Connectable[] ops = new Connectable[nSources-1];
+		Connectable[] sinks = new Connectable[nSinks];
+		
+		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("tupleId");
+		srcFields.add("value");
+		srcFields.add("padding");
+
+		for (int i = 0; i < nSources; i++)
+		{
+			sources[i] = QueryBuilder.newStatelessSource(new LocationSource(), -(i+1), srcFields);
+		}
+		
+		ArrayList<String> heatMapFields = new ArrayList<String>();
+		heatMapFields.add("tupleId");
+		heatMapFields.add("value");
+		heatMapFields.add("padding");
+		int opId = 0;
+		for (int h = 0; h < nSources-1; h++)
+		{
+			ops[h] = QueryBuilder.newStatelessOperator(new HeatMapJoin(), opId, heatMapFields);
+			opId++;
+		}
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		snkFields.add("padding");
+		for (int i = 0; i < nSinks; i++)
+		{
+			sinks[i] = QueryBuilder.newStatelessSink(new HeatMapSink(), -(nSources+i+1), snkFields);
+		}
+		
+		//Now connect everything up
+		sources[0].connectTo(ops[0], InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 0);
+		int streamId = 1;
+		for (int i = 1; i < nSources; i++)
+		{
+			sources[i].connectTo(ops[i-1], InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, streamId);
+			streamId++;
+		}
+	
+		for (int h = 0; h < ops.length-1; h++)
+		{
+			ops[h].connectTo(ops[h+1], InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, streamId);
+			streamId++;
+		}
+
+		for (int s = 0; s < sinks.length; s++)
+		{
+			ops[ops.length-1].connectTo(sinks[s], true, streamId);
+			streamId++;
+		}
+	
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
+			{
+				for (int i = 0; i < sinks.length; i++)
+				{
+					//QueryBuilder.scaleOut(sinks[i].getOperatorId(), REPLICATION_FACTOR);
+					QueryBuilder.scaleOut(sinks[i].getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
+				}
+			}
+		}
+		
+		if (REPLICATION_FACTOR > 1)
+		{
+			//Finally, scale out the operators.
+			for (int h = 0; h < ops.length; h++)
+			{
+				QueryBuilder.scaleOut(ops[h].getOperatorId(), REPLICATION_FACTOR);
+			}
+		}	
+
+		return QueryBuilder.build();
+	}
+
+	private QueryPlan composeFaceRecognizerJoin()
+	{
+		// Declare Source
+		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("tupleId");
+		srcFields.add("value");
+		srcFields.add("rows");
+		srcFields.add("cols");
+		srcFields.add("type");
+		srcFields.add("x");
+		srcFields.add("y");
+		srcFields.add("height");
+		srcFields.add("width");
+		srcFields.add("label");
+		Connectable src1 = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
+		Connectable src2 = QueryBuilder.newStatelessSource(new VideoSource(), -2, srcFields);
+		
+		
+		//Declare FaceDetector
+		ArrayList<String> faceDetectFields = new ArrayList<String>();
+		faceDetectFields.add("tupleId");
+		faceDetectFields.add("value");
+		faceDetectFields.add("rows");
+		faceDetectFields.add("cols");
+		faceDetectFields.add("type");
+		faceDetectFields.add("x");
+		faceDetectFields.add("y");
+		faceDetectFields.add("height");
+		faceDetectFields.add("width");
+		faceDetectFields.add("label");
+		Connectable faceDetect1 = QueryBuilder.newStatelessOperator(new FaceDetector(), 0, faceDetectFields);
+		Connectable faceDetect2 = QueryBuilder.newStatelessOperator(new FaceDetector(), 1, faceDetectFields);
+		
+		
+		//Declare SpeechRecognizer
+		ArrayList<String> faceRecFields = new ArrayList<String>();
+		faceRecFields.add("tupleId");
+		faceRecFields.add("value");
+		faceRecFields.add("rows");
+		faceRecFields.add("cols");
+		faceRecFields.add("type");
+		faceRecFields.add("x");
+		faceRecFields.add("y");
+		faceRecFields.add("height");
+		faceRecFields.add("width");
+		faceRecFields.add("label");
+		Connectable faceRecJoin = QueryBuilder.newStatelessOperator(new SEEPFaceRecognizerJoin(), 2, faceRecFields);
+		
+		// Declare sink
+		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("tupleId");
+		snkFields.add("value");
+		snkFields.add("rows");
+		snkFields.add("cols");
+		snkFields.add("type");
+		snkFields.add("x");
+		snkFields.add("y");
+		snkFields.add("height");
+		snkFields.add("width");
+		snkFields.add("label");
+		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
+		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -3, snkFields);
+		
+		src1.connectTo(faceDetect1, true, 0);
+		src2.connectTo(faceDetect2, true, 1);
+		faceDetect1.connectTo(faceRecJoin, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 2);
+		faceDetect2.connectTo(faceRecJoin, InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER, true, 3);
+		faceRecJoin.connectTo(snk, true, 4);
+		
+		if (Boolean.parseBoolean(GLOBALS.valueFor("scaleOutSinks")))
+		{
+			int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
+			if (REPLICATION_FACTOR > 1 || sinkScaleFactor > 1)
+			{
+				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
+			}
+		}
+		
+		if (REPLICATION_FACTOR > 1)
+		{
+			QueryBuilder.scaleOut(faceDetect1.getOperatorId(), REPLICATION_FACTOR);
+			QueryBuilder.scaleOut(faceDetect2.getOperatorId(), REPLICATION_FACTOR);
+			QueryBuilder.scaleOut(faceRecJoin.getOperatorId(), REPLICATION_FACTOR);
+		}
+
+		return QueryBuilder.build();
+	}
 	private int[] computeJoinTree(int sources, int maxFanIn)
 	{
 

@@ -289,27 +289,60 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if params['roofnet']:
             roofnet_placements = parse_roofnet_locations()
             roof_node_ids = map(lambda (node, x, y) : node, roofnet_placements)
-            # node id offset = wlan1 + master -> 2
-            random.seed(int(exp_session))
-            shuffle = range(3,len(roofnet_placements)+3)
-            random.shuffle(shuffle)
-            print 'shuffle=%s'%str(shuffle)
-            roof_to_nem = dict(zip(roof_node_ids, shuffle))
-            ##swaps = [(8,10), (7,9)]
-            swaps = []
-            nem_to_roof = dict(zip(shuffle, roof_node_ids))
-            print 'Pre swaps roof_to_nem=%s'%str(roof_to_nem)
-            for (m, n) in swaps:
-               roof_to_nem[nem_to_roof[m]] = n
-               roof_to_nem[nem_to_roof[n]] = m
 
-            print 'Post swaps roof_to_nem=%s'%str(roof_to_nem)
-            # Shuffle based on session id to give a different query placement for each session.
-            # Need to make sure placements is sorted though. 
-            # TODO: This initial placement is wrong! 
-            #placements = map(lambda (node, x, y) : (roof_to_nem[node], x, y), roofnet_placements)
-            #placements = map(lambda node: (roofnet_placements[node][1], roofnet_placements[node][2]), shuffle)
+
+            numPinned = 0 # Get number of pinned nodes
+            if params['pinnedSeed'] and params['constraints']:
+                # Get number of pinned nodes
+                session_constraints = '%s/static/%s'%(script_dir, params['constraints'])
+                if not os.path.exists(session_constraints):
+                    raise Exception("Could not find sessions constraints: %s"%session_constraints)
+                with open(session_constraints, 'r') as f:
+                    regex = re.compile('.*,.*:.*')
+                    for line in f:
+                        if re.search(regex, line): 
+                            numPinned += 1
+                if numPinned < 1 : raise Exception("Expecting pinned constraints with random seed.")
+                random.seed(int(params['pinnedSeed']))
+                pinned_shuffle = range(3, len(roofnet_placements)+3)
+                random.shuffle(pinned_shuffle)
+                unpinned_shuffle = pinned_shuffle[numPinned:]
+                pinned_shuffle = pinned_shuffle[:numPinned]
+                if len(pinned_shuffle) != numPinned: raise Exception("Logic error.")
+                random.seed(int(exp_session))
+                random.shuffle(unpinned_shuffle)
+
+                print 'pinned shuffle=%s'%str(pinned_shuffle)
+                print 'unpinned shuffle=%s'%str(unpinned_shuffle)
+                shuffle = pinned_shuffle+unpinned_shuffle
+
+                roof_to_nem = dict(zip(roof_node_ids, shuffle))
+
+            else:
+                # node id offset = wlan1 + master -> 2
+                random.seed(int(exp_session))
+                shuffle = range(3,len(roofnet_placements)+3)
+                random.shuffle(shuffle)
+                print 'shuffle=%s'%str(shuffle)
+                roof_to_nem = dict(zip(roof_node_ids, shuffle))
+
+                ##swaps = [(8,10), (7,9)]
+                swaps = []
+                nem_to_roof = dict(zip(shuffle, roof_node_ids))
+                print 'Pre swaps roof_to_nem=%s'%str(roof_to_nem)
+                for (m, n) in swaps:
+                   roof_to_nem[nem_to_roof[m]] = n
+                   roof_to_nem[nem_to_roof[n]] = m
+
+                print 'Post swaps roof_to_nem=%s'%str(roof_to_nem)
+                # Shuffle based on session id to give a different query placement for each session.
+                # Need to make sure placements is sorted though. 
+                # TODO: This initial placement is wrong! 
+                #placements = map(lambda (node, x, y) : (roof_to_nem[node], x, y), roofnet_placements)
+                #placements = map(lambda node: (roofnet_placements[node][1], roofnet_placements[node][2]), shuffle)
+
             placements = [(-1.0,-1.0),(-1.0,-1.0),(-1.0,-1.0)] + map(lambda node: (roofnet_placements[node-3][1], roofnet_placements[node-3][2]), shuffle)
+            print 'roof2nem=%s'%str(roof_to_nem)
             print 'Roofnet placements=%s'%str(placements)
 
         else:
@@ -588,10 +621,32 @@ def get_num_workers(k, nodes, params):
         sources = int(params['sources'])
         if sources <= 1: raise Exception('Need at least 2 sources for join')
         num_workers = [1] * (sources +  k + sink_scale_factor)
+    elif q == 'leftJoin':
+        if params['h'] < 2: raise Exception('Left join only needed for height > 2')
+        sources =  int(params['sources'])
+        height = sources - 1
+        if height != params['h']: raise Exception('Height must equals # sources + 1 for left join')
+        sinks = int(params['sinks'])
+        if sinks != 1: raise Exception("Only 1 true (unreplicated) sink supported for left join")
+        fan_in = int(params['fanin'])
+        if fan_in != 2: raise Exception("TODO: Only support fan-in of 2 for left join currently.")
+        join_ops = sources - 1
+        num_workers = [1] * (sources + (k*join_ops)+ (sink_scale_factor * sinks))
+    elif q == 'frJoin':
+        if params['h'] != 2: raise Exception('Only support query of height 2 for frjoin')
+        sources = int(params['sources'])
+        if sources != 2: raise Exception('Only support 2 sources for frjoin')
+        sinks = int(params['sinks'])
+        if sinks != 1: raise Exception("Only 1 true (unreplicated) sink supported for frjoin")
+        fan_in = int(params['fanin'])
+        if fan_in != 2: raise Exception("TODO: Only support fan-in of 2 for frjoin currently.")
+        join_ops = 1
+        num_workers = [1] * (sources + (k * sources)+ (k * join_ops) + (sink_scale_factor * sinks))
     elif q == 'heatMap':
         sources =  int(params['sources'])
         sinks = int(params['sinks'])
         fan_in = int(params['fanin'])
+        if fan_in != 2: raise Exception("TODO: Only support fan-in of 2 for heatmap currently.")
         height = int(math.ceil(math.log(sources, fan_in)))
         children = sources
         join_ops = 0 

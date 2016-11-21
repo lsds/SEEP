@@ -230,15 +230,33 @@ public class Query implements Serializable
 
 	public int getHeight(Integer logicalId)
 	{
-		int height = 0;
-		Integer[] inputs = getLogicalInputs(logicalId);
-		while (inputs.length > 0)
+
+		int sinkLogicalId = getSinkLogicalId();
+		int queryHeight = getSubQueryHeight(sinkLogicalId, 0);
+
+		int opBranchHeight = 0;
+		int currentLogicalId = logicalId;
+		while (currentLogicalId != sinkLogicalId)
 		{
-			if (inputs.length > 1) { throw new RuntimeException("TODO: height of join query"); }
-			height++;
-			inputs = getLogicalInputs(inputs[0]);
+			currentLogicalId = getNextHopLogicalNodeId(currentLogicalId);
+			opBranchHeight++;
+		}	
+
+		return queryHeight - opBranchHeight;
+	}
+
+	private int getSubQueryHeight(int logicalId, int currentHeight)
+	{
+		int maxHeight = currentHeight;
+		Integer[] inputs = getLogicalInputs(logicalId);
+		if (inputs.length > 0)
+		{
+			for (int i = 0; i < inputs.length; i++)
+			{
+				maxHeight = Math.max(maxHeight, getSubQueryHeight(inputs[i], maxHeight +1));
+			}
 		}
-		return height;
+		return maxHeight;
 	}
 
 	public Integer getNextHopLogicalNodeId(Integer logicalId)
