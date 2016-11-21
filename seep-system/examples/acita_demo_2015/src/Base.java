@@ -153,8 +153,8 @@ public class Base implements QueryComposer{
 		srcFields.add("type");
 		srcFields.add("x");
 		srcFields.add("y");
-		srcFields.add("height");
-		srcFields.add("width");
+		srcFields.add("x2");
+		srcFields.add("y2");
 		srcFields.add("label");
 		Connectable src = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
 		
@@ -168,8 +168,8 @@ public class Base implements QueryComposer{
 		faceDetectFields.add("type");
 		faceDetectFields.add("x");
 		faceDetectFields.add("y");
-		faceDetectFields.add("height");
-		faceDetectFields.add("width");
+		faceDetectFields.add("x2");
+		faceDetectFields.add("y2");
 		faceDetectFields.add("label");
 		Connectable faceDetect = QueryBuilder.newStatelessOperator(new FaceDetector(), 0, faceDetectFields);
 		
@@ -183,8 +183,8 @@ public class Base implements QueryComposer{
 		faceRecFields.add("type");
 		faceRecFields.add("x");
 		faceRecFields.add("y");
-		faceRecFields.add("height");
-		faceRecFields.add("width");
+		faceRecFields.add("x2");
+		faceRecFields.add("y2");
 		faceRecFields.add("label");
 		Connectable faceRec = QueryBuilder.newStatelessOperator(new SEEPFaceRecognizer(), 1, faceRecFields);
 		
@@ -197,8 +197,8 @@ public class Base implements QueryComposer{
 		snkFields.add("type");
 		snkFields.add("x");
 		snkFields.add("y");
-		snkFields.add("height");
-		snkFields.add("width");
+		snkFields.add("x2");
+		snkFields.add("y2");
 		snkFields.add("label");
 		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -2, snkFields);
@@ -237,8 +237,8 @@ public class Base implements QueryComposer{
 		srcFields.add("type");
 		srcFields.add("x");
 		srcFields.add("y");
-		srcFields.add("height");
-		srcFields.add("width");
+		srcFields.add("x2");
+		srcFields.add("y2");
 		srcFields.add("label");
 		Connectable src = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
 		
@@ -252,8 +252,8 @@ public class Base implements QueryComposer{
 		faceDetectorRecognizerFields.add("type");
 		faceDetectorRecognizerFields.add("x");
 		faceDetectorRecognizerFields.add("y");
-		faceDetectorRecognizerFields.add("height");
-		faceDetectorRecognizerFields.add("width");
+		faceDetectorRecognizerFields.add("x2");
+		faceDetectorRecognizerFields.add("y2");
 		faceDetectorRecognizerFields.add("label");
 		Connectable faceDetectorRecognizer = QueryBuilder.newStatelessOperator(new FaceDetectorRecognizer(), 0, faceDetectorRecognizerFields);
 		
@@ -267,8 +267,8 @@ public class Base implements QueryComposer{
 		snkFields.add("type");
 		snkFields.add("x");
 		snkFields.add("y");
-		snkFields.add("height");
-		snkFields.add("width");
+		snkFields.add("x2");
+		snkFields.add("y2");
 		snkFields.add("label");
 		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -2, snkFields);
@@ -550,8 +550,8 @@ public class Base implements QueryComposer{
 		srcFields.add("type");
 		srcFields.add("x");
 		srcFields.add("y");
-		srcFields.add("height");
-		srcFields.add("width");
+		srcFields.add("x2");
+		srcFields.add("y2");
 		srcFields.add("label");
 		Connectable src1 = QueryBuilder.newStatelessSource(new VideoSource(), -1, srcFields);
 		Connectable src2 = QueryBuilder.newStatelessSource(new VideoSource(), -2, srcFields);
@@ -566,8 +566,8 @@ public class Base implements QueryComposer{
 		faceDetectFields.add("type");
 		faceDetectFields.add("x");
 		faceDetectFields.add("y");
-		faceDetectFields.add("height");
-		faceDetectFields.add("width");
+		faceDetectFields.add("x2");
+		faceDetectFields.add("y2");
 		faceDetectFields.add("label");
 		Connectable faceDetect1 = QueryBuilder.newStatelessOperator(new FaceDetector(), 0, faceDetectFields);
 		Connectable faceDetect2 = QueryBuilder.newStatelessOperator(new FaceDetector(), 1, faceDetectFields);
@@ -582,8 +582,8 @@ public class Base implements QueryComposer{
 		faceRecFields.add("type");
 		faceRecFields.add("x");
 		faceRecFields.add("y");
-		faceRecFields.add("height");
-		faceRecFields.add("width");
+		faceRecFields.add("x2");
+		faceRecFields.add("y2");
 		faceRecFields.add("label");
 		Connectable faceRecJoin = QueryBuilder.newStatelessOperator(new SEEPFaceRecognizerJoin(), 2, faceRecFields);
 		
@@ -596,8 +596,8 @@ public class Base implements QueryComposer{
 		snkFields.add("type");
 		snkFields.add("x");
 		snkFields.add("y");
-		snkFields.add("height");
-		snkFields.add("width");
+		snkFields.add("x2");
+		snkFields.add("y2");
 		snkFields.add("label");
 		//Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		Connectable snk = QueryBuilder.newStatelessSink(new VideoSink(), -3, snkFields);

@@ -90,8 +90,10 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		int type = data.getInt("type");
 		int x = data.getInt("x");
 		int y = data.getInt("y");
-		int height = data.getInt("height") - x; //Should really rename to x1 y1 or something
-		int width = data.getInt("width") - y; //Shoulnd't it be height - y and width-x?
+		int x2 = data.getInt("x2");
+		int y2 = data.getInt("y2"); //Should really rename to x1 y1 or something
+		int width = x2 - x;
+		int height = y2 - y; //Should really rename to x1 y1 or something
 
 		String labelExample = "No joint match.";
 		if (prediction1 == prediction2)
@@ -100,7 +102,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		}
 
 		//Shouldn't height/width here be the original input height/width (not height -x, width-y)?
-		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width, labelExample);
+		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, x2, y2, labelExample);
 			
 		processed++;
 		if (processed % 1000 == 0)
@@ -117,7 +119,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		}
 
 		long tProcessEnd = System.currentTimeMillis();
-		logger.debug("Face recognizer join processed "+width+"x"+height+" tuple "+data.getLong("tupleId")+" in " + (System.currentTimeMillis() - tProcessStart) + "ms");
+		logger.debug("Face recognizer join processed "+width+"x"+height+" face ("+x+","+y+"),("+x2+","+y2+"), ts="+data.getLong("tupleId")+" in " + (System.currentTimeMillis() - tProcessStart) + "ms");
 		stats.add(tProcessEnd, value.length);
 		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
 		api.send_highestWeight(outputTuple);
@@ -130,10 +132,12 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		int type = data.getInt("type");
 		int x = data.getInt("x");
 		int y = data.getInt("y");
-		int height = data.getInt("height") - x; //Should really rename to x1 y1 or something
-		int width = data.getInt("width") - y;
+		int x2 = data.getInt("x2");
+		int y2 = data.getInt("y2"); //Should really rename to x1 y1 or something
+		int width = x2 - x;
+		int height = y2 - y; //Should really rename to x1 y1 or something
 		
-		int prediction = faceRecognizerHelper.recognize(value, x, y, height, width, type);
+		int prediction = faceRecognizerHelper.recognize(value, x, y, width, height, type);
 		return prediction;
 	}
 	

@@ -124,14 +124,15 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 
 			int x = bbox[0];
 			int y = bbox[1];
-			int height = bbox[2];
-			int width = bbox[3];
+			int x2 = data.getInt("x2");
+			int y2 = data.getInt("y2"); //Should really rename to x1 y1 or something
+			int width = x2 - x;
+			int height = y2 - y; //Should really rename to x1 y1 or something
 			
-			int prediction = faceRecognizerHelper.recognize(value, x, y, height, width, type);
+			int prediction = faceRecognizerHelper.recognize(value, x, y, width, height, type);
 			String labelExample = faceRecognizerHelper.getLabelExample(prediction);
 			
-			outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, height, width, labelExample);
-			throw new RuntimeException("Height and width are wrong!");
+			outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, x2, y2, labelExample);
 		}
 		else	
 		{

@@ -79,12 +79,18 @@ public class FaceRecognizerHelper
 		IplImage img = parseBufferedImage(value);
 		IplImage imgBW = prepareBWImage(img, type);
 		cvSetImageROI(imgBW, cvRect(x, y, width, height));
-		Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
+
+		IplImage cropped = cvCreateImage(cvGetSize(imgBW), imgBW.depth(), imgBW.nChannels());
+		cvCopy(imgBW, cropped);
+		//Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
+		Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(cropped));
+		logger.debug("Converted roi to "+imgBWMat.cols()+"x"+imgBWMat.rows()+" mat");
 		int predictedLabel[] = new int[1];
 		double confidence[] = new double[1];
 		
 		faceRecognizer.predict(imgBWMat, predictedLabel, confidence);
-		logger.debug("Predicted label for received image: " + predictedLabel[0]+ " with confidence "+confidence[0]);
+		logger.debug("Predicted label for received image: " + predictedLabel[0]+ " (ROI="+width+"x"+height+") with confidence "+confidence[0]);
+
 		if (labelExamples.containsKey(predictedLabel[0]))
 		{
 			logger.debug("Example of matching face: "+labelExamples.get(predictedLabel[0]));
@@ -129,7 +135,7 @@ public class FaceRecognizerHelper
 			//File imgFile = new File(trainingDir+"/"+filename);
 			//Mat img = imread(imgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
 			Mat img = loadBWMatImage(filename);
-			logger.info("Read training image from "+ filename);
+			logger.info("Read "+img.rows()+"x"+img.cols()+" training image from "+ filename);
 			images.put(counter, img);
 			int label = trainingFiles.get(filename);
 			

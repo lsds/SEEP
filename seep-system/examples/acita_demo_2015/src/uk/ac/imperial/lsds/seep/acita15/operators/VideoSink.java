@@ -95,7 +95,7 @@ public class VideoSink implements StatelessOperator {
 		totalBytes += value.length;
 		recordTuple(dt, value.length);
 		long tupleId = dt.getLong("tupleId");
-		int[] bbox = new int[]{dt.getInt("x"), dt.getInt("y"), dt.getInt("height"), dt.getInt("width")};
+		int[] bbox = new int[]{dt.getInt("x"), dt.getInt("y"), dt.getInt("x2"), dt.getInt("y2")};
 		if (tupleId != warmUpTuples + tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
