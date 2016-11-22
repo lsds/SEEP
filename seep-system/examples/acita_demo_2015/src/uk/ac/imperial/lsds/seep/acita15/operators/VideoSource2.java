@@ -67,21 +67,22 @@ import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_legacy.*;
 
-public class VideoSource implements StatelessOperator {
+public class VideoSource2 implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(VideoSource.class);
+	private static final Logger logger = LoggerFactory.getLogger(VideoSource2.class);
 	
 	private IplImage[] testIplFrames = null;
 	private byte[][] testRawFrames = null;
-	private final String testFramesDir = "images";
+	private final String testFramesDir = "images2";
 	//private final String testFramesDir = "images/chokepoint";
-	private final String extractedFilesDir = "resources/source";
+	private final String extractedFilesDir = "resources/source2";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
+
 	private final VideoHelper videoHelper = new VideoHelper();
-	
+
 	public void setUp() {
-		System.out.println("Setting up VIDEO_SOURCE operator with id="+api.getOperatorId());
+		System.out.println("Setting up VIDEO_SOURCE2 operator with id="+api.getOperatorId());
 		
 		//Set<String> jarImageFilenames = getJarImageFilenames(testFramesDir);
 		//Set<File> imgFiles = extractJarImages(jarImageFilenames, extractedFilesDir);
