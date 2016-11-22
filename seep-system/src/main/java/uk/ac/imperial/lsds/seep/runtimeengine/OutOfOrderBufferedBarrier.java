@@ -155,7 +155,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			msg += "idx="+i+";latency="+latency+";pending="+pendingLatency;
 			if (i < readyBatches.size() - 1) { msg += ","; }
 		}
-		logger.info(msg);
+		logger.debug(msg);
 		
 		//TODO: Clear any timers for this ts
 		
@@ -187,7 +187,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			long pullLatency = pullEnd - dts.get(i).getPayload().local_ts;
 			long pullReadTime = pullEnd - pullStart;
 			
-			logger.info("Pulled tuple with ts="+ts+",latency="+latency+",pullLatency="+pullLatency+",pullReadTime="+pullReadTime);
+			logger.debug("Pulled tuple with ts="+ts+",latency="+latency+",pullLatency="+pullLatency+",pullReadTime="+pullReadTime);
 		}
 		for (DataTuple dt : dts) 
 		{ 
