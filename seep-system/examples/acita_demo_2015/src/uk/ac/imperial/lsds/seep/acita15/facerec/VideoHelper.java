@@ -54,7 +54,6 @@ import static org.bytedeco.javacpp.opencv_legacy.*;
 
 public class VideoHelper {
 
-	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(VideoHelper.class);
 	private final boolean resizeImages = Boolean.parseBoolean(GLOBALS.valueFor("resizeImages"));
 

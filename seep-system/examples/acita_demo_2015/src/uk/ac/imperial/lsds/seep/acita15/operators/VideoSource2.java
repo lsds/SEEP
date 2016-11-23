@@ -79,11 +79,11 @@ public class VideoSource2 implements StatelessOperator {
 	private final String extractedFilesDir = "resources/source2";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
 
-	private final VideoHelper videoHelper = new VideoHelper();
+	private VideoHelper videoHelper = null;
 
 	public void setUp() {
 		System.out.println("Setting up VIDEO_SOURCE2 operator with id="+api.getOperatorId());
-		
+		videoHelper = new VideoHelper();
 		//Set<String> jarImageFilenames = getJarImageFilenames(testFramesDir);
 		//Set<File> imgFiles = extractJarImages(jarImageFilenames, extractedFilesDir);
 		//testIplFrames = loadGreyImages(extractedFilesDir);

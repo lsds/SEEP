@@ -3,7 +3,7 @@ import re, pandas as pd
 
 def is_src_log(f):
     f_type = log_type(f) 
-    return f_type in ['SOURCE', 'VIDEO_SOURCE', 'LOCATION_SOURCE']
+    return f_type in ['SOURCE', 'VIDEO_SOURCE', 'VIDEO_SOURCE2', 'LOCATION_SOURCE']
 
 def is_sink_log(f):
     return log_type(f) == 'SINK'
