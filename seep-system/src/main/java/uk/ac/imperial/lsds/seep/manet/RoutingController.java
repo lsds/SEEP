@@ -143,10 +143,29 @@ public class RoutingController implements Runnable{
 						int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
 						//N.B. Sending the *aggregate* weight across all upstreams.
 						logger.info("Routing controller sending constraints upstream op "+upstreamId+": "+routingConstraints.get(logicalInputIndex));
-						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
+						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
 						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
-						owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+
+						sendWeight(upstreamId, upOpIndex, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
+						/*
+						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+						{
+							owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+						}
+						else
+						{
+							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							if (fct != null)
+							{
+								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
+								ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex), fctrl);
+								owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
+								logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
+							}
+							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
+						}
 						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
+						*/
 					}
 				}
 				else
@@ -160,7 +179,7 @@ public class RoutingController implements Runnable{
 						double weight = weightsCopy.get(upstreamId);
 						//if (nodeId == 1 && upstreamId == 10 || nodeId == 110 && upstreamId == 0 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
 						//if (nodeId == 1 && upstreamId == 0 || nodeId == 110 && upstreamId == 10 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
-						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, empty);
+						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, empty);
 						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 
 						/*
@@ -169,6 +188,8 @@ public class RoutingController implements Runnable{
 							nodeId.intValue() == -189 && upstreamId.intValue() != 11)
 						{ continue; }
 						*/
+						sendWeight(upstreamId, upOpIndex, weight, empty);
+						/*
 						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
 						{
 							owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
@@ -187,6 +208,7 @@ public class RoutingController implements Runnable{
 						}
 
 						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
+						*/
 					}
 				}
 				logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
@@ -220,6 +242,29 @@ public class RoutingController implements Runnable{
 		}
 		catch(Exception e) { logger.error("Routing controller exception: "+ e); System.exit(1); }
 
+	}
+	
+
+	private void sendWeight(int upstreamId, int upOpIndex, double weight, RangeSet<Long> constraints)
+	{
+						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, constraints);
+						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+						{
+							owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
+						}
+						else
+						{
+							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							if (fct != null)
+							{
+								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
+								ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, weight, constraints, fctrl);
+								owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
+								logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
+							}
+							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
+						}
+						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
 	}
 
 	private void sendQueueLengths()

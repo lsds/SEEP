@@ -1097,7 +1097,7 @@ public class CoreRE {
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId , upFctrl);
 			boolean bestEffortAcks = "true".equals(GLOBALS.valueFor("bestEffortAcks"));
 
-			if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+			if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl || routingController == null)
 			{
 				controlDispatcher.sendUpstream(ct, upOpIndex, !bestEffortAcks);
 			}
