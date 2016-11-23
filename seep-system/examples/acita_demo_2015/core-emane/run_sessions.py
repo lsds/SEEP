@@ -415,6 +415,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='c': var = params['defaultProcessingDelay']
         if var_suffix=='r': var = params['frameRate']
         if var_suffix=='rcd': var = params['routingCtrlDelay']
+        if var_suffix=='retx': var = params['retransmitTimeout']
+        if var_suffix=='bsz': var = params['maxTotalQueueSizeTuples']
  
 
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
