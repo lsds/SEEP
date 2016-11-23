@@ -71,6 +71,14 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 for p in ['tput_vs_rctrldelay_stddev', 'latency_vs_rctrldelay_stddev', 
                         'rel_tput_vs_rctrldelay_stddev', 'rel_latency_vs_rctrldelay_stddev']:
                     plot(p, time_str, script_dir, data_dir)
+            elif len(variables['buf_size']) > 0:
+                for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev', 
+                        'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
+            elif len(variables['retx_timeout']) > 0:
+                for p in ['tput_vs_retx_timeout_stddev', 'latency_vs_retx_timeout_stddev', 
+                        'rel_tput_vs_retx_timeout_stddev', 'rel_latency_vs_retx_timeout_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
             elif len(variables['srcrates']) > 1 or len(variables['rctrl_delay']) > 1:
                 record_tput_vs_lat_statistics(ks, time_str, data_dir)
                 for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
@@ -183,6 +191,18 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
             for rctrl_delay in variables['rctrl_delay']:
                 params['routingCtrlDelay'] = rctrl_delay 
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'rcd', sessions, params)
+        elif len(variables['buf_size']) > 0:
+            for buf_size in variables['buf_size']:
+                params['maxTotalQueueSizeTuples'] = buf_size 
+                params['inputQueueLength'] = buf_size 
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'bsz', sessions, params)
+        elif len(variables['retx_timeout']) > 0:
+            for retx_timeout in variables['retx_timeout']:
+                params['retransmitTimeout'] = retx_timeout 
+                params['trySendAlternativesTimeout'] = retx_timeout # TODO: Should this be changed differently
+                params['downstreamsUnroutableTimeout'] = retx_timeout # TODO: Should this be changed differently
+                params['failureCtrlTimeout'] = retx_timeout + 1000 # TODO: Should this be changed differently?
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'retx', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -206,6 +226,12 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
     elif len(variables['rctrl_delay']) > 0:
         var_vals = variables['rctrl_delay']
         var_suffix = 'rcd'
+    elif len(variables['buf_size']) > 0:
+        var_vals = variables['buf_size']
+        var_suffix = 'bsz'
+    elif len(variables['retx_timeout']) > 0:
+        var_vals = variables['retx_timeout']
+        var_suffix = 'retx'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -497,6 +523,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--srcRates', dest='src_rates', default=None, help='Fixed frame rates for sources to send at.')
     parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
+    parser.add_argument('--bufSize', dest='buf_size', default=None, help='Max size of intermediate buffers')
+    parser.add_argument('--retransmitTimeout', dest='retx_timeout', default=None, help='Time to wait before retransmitting')
     parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
     parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
 
@@ -510,9 +538,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
     srcrates=map(lambda x: int(x), args.src_rates.split(',')) if args.src_rates else []
     rctrl_delay=map(lambda x: int(x), args.rctrl_delay.split(',')) if args.rctrl_delay else []
+    rctrl_delay=map(lambda x: int(x), args.buf_size.split(',')) if args.buf_size else []
+    rctrl_delay=map(lambda x: int(x), args.retransmit_timeout.split(',')) if args.retransmit_timeout else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
-            "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay }
+            "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay,
+            "buf_size" : buf_size, "retx_timeout": retx_timeout}
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))
