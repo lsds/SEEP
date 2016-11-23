@@ -309,8 +309,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 unpinned_shuffle = pinned_shuffle[numPinned:]
                 pinned_shuffle = pinned_shuffle[:numPinned]
                 if len(pinned_shuffle) != numPinned: raise Exception("Logic error.")
-                random.seed(int(exp_session))
-                random.shuffle(unpinned_shuffle)
+                if params['pinnedSeed'] and not params['pinAll']:
+                    random.seed(int(exp_session))
+                    random.shuffle(unpinned_shuffle)
 
                 print 'pinned shuffle=%s'%str(pinned_shuffle)
                 print 'unpinned shuffle=%s'%str(unpinned_shuffle)
