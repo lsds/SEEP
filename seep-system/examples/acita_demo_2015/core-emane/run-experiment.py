@@ -539,8 +539,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     cpudelay=map(lambda x: int(x), args.cpu_delay.split(','))
     srcrates=map(lambda x: int(x), args.src_rates.split(',')) if args.src_rates else []
     rctrl_delay=map(lambda x: int(x), args.rctrl_delay.split(',')) if args.rctrl_delay else []
-    rctrl_delay=map(lambda x: int(x), args.buf_size.split(',')) if args.buf_size else []
-    rctrl_delay=map(lambda x: int(x), args.retransmit_timeout.split(',')) if args.retransmit_timeout else []
+    buf_size=map(lambda x: int(x), args.buf_size.split(',')) if args.buf_size else []
+    retx_timeout=map(lambda x: int(x), args.retx_timeout.split(',')) if args.retx_timeout else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
             "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay,
