@@ -53,8 +53,8 @@ public class OutputQueueWorker
 	final private Logger logger = LoggerFactory.getLogger(OutputQueueWorker.class);
 	private final Object lock = new Object(){};
 
-	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final boolean enableUpstreamRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
+	private final boolean mergeFailureAndRoutingCtrl;
 	private final boolean downIsMultiInput;
 	private final static long DEFAULT_TIMEOUT = 1 * 1000;
 	private boolean connected = false;
@@ -75,6 +75,12 @@ public class OutputQueueWorker
 		int logicalId = meanderQuery.getLogicalNodeId(owner.getProcessingUnit().getOperator().getOperatorId());
 		boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
 		this.downIsMultiInput = !owner.getProcessingUnit().getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+
+		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
+		boolean bpRouting = GLOBALS.valueFor("enableMeanderRouting").equals("true") && GLOBALS.valueFor("meanderRouting").equals("backpressure");
+		boolean noRoutingCtrlMessagesToSend = !bpRouting || replicationFactor <= 1 || (!downIsMultiInput && enableUpstreamRoutingCtrl);
+		mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl")) && !noRoutingCtrlMessagesToSend;
+		logger.info("OutputQueue worker merging failure and routing ctrl? "+mergeFailureAndRoutingCtrl);
 	}
 	
 	private Kryo initialiseKryo()
