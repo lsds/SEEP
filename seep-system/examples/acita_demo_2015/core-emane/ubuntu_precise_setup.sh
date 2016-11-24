@@ -83,6 +83,9 @@ mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.
 ./meander-bld.sh
 popd
 
+#Needed by javacv
+sudo apt-get install libv4l-0
+
 echo "Downloading NRL OLSR"
 #Nrlolsr (optional)
 wget http://downloads.pf.itd.nrl.navy.mil/olsr/nrlolsrdv7.8.1.tgz
