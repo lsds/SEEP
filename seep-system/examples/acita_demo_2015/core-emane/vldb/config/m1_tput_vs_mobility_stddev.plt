@@ -4,11 +4,11 @@ load sprintf("%s/colours.plt",tmpldir)
 set terminal term 
 set output sprintf("%s/%s/tput_vs_mobility_stddev%s",outputdir,timestr,termext)
 
-set xlabel "Replication factor (k)" font ", 16"
-set ylabel "Throughput (Kb/s)" font ", 16" offset -2
+set xlabel "Replication factor (k)" font ", 20"
+set ylabel "Throughput (Kb/s)" font ", 20" offset -2
 set yrange [0:*]
 #set yrange [0:100]
-set tics font ", 10"
+set tics font ", 16"
 #set xtics offset 1,1,3
 
 set border linewidth 1.5

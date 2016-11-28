@@ -1,8 +1,8 @@
 set terminal term 
 set output sprintf("%s/%s/tput_vs_mobility_stddev%s",outputdir,timestr,termext)
 
-set xlabel "Node speed (m/s)" font ", 16" 
-set ylabel "Throughput (Kb/s)" font ", 16" offset -2
+set xlabel "Node speed (m/s)" font ", 20" 
+set ylabel "Throughput (Kb/s)" font ", 20" offset -2
 #set yrange [0:100]
 set tics font ", 10"
 
@@ -13,7 +13,7 @@ set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
 set boxwidth 0.1
 set style fill empty 
-set key spacing 1.75 font ", 12"
+set key spacing 1.75 font ", 18"
 set bmargin 4
 set lmargin 13 
 

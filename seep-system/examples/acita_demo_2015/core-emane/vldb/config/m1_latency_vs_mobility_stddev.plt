@@ -2,11 +2,11 @@ load sprintf("%s/colours.plt",tmpldir)
 set terminal term 
 set output sprintf("%s/%s/latency_vs_mobility_stddev%s",outputdir,timestr,termext)
 
-set xlabel "Replication factor (k)" font ", 16"
-set ylabel sprintf("%s Latency (ms)",percentile) font ", 16" offset -3
+set xlabel "Replication factor (k)" font ", 20"
+set ylabel sprintf("%s Latency (ms)",percentile) font ", 20" offset -3
 #set yrange [0:5000]
 set yrange [0:*]
-set tics font ", 10"
+set tics font ", 16"
 #set xtics 0,5,15
 
 #set border linewidth 1.5
