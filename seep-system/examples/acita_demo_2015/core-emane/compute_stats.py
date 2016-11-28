@@ -12,6 +12,7 @@ def compute_stats(vals):
     varianceVal = (reduce(lambda accum, x: math.pow(meanVal - x,2) + accum,
         vals, 0)) / max(1, len(vals) - 1)
     stdDevVal = math.sqrt(varianceVal) 
+    sampleStdErr = stdDevVal / math.sqrt(len(vals)) 
 
     maxVal = max(vals)
     minVal = min(vals)
@@ -19,7 +20,8 @@ def compute_stats(vals):
     medianVal = median(vals)
     (lowerQuartileVal,upperQuartileVal) = quartiles(vals)
 
-    return (meanVal, stdDevVal, maxVal, minVal, medianVal, lowerQuartileVal, upperQuartileVal)
+    #return (meanVal, stdDevVal, maxVal, minVal, medianVal, lowerQuartileVal, upperQuartileVal)
+    return (meanVal, sampleStdErr, maxVal, minVal, medianVal, lowerQuartileVal, upperQuartileVal)
 
 def median(nums):
     if len(nums) % 2 == 1:

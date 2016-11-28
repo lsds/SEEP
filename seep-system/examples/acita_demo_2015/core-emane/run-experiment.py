@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import subprocess,os,time,re,argparse,sys
+import subprocess,os,time,re,argparse,sys,socket
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
@@ -30,9 +30,11 @@ def main(ks,variables,sessions,params,plot_time_str=None):
 
         session_ids = map(int, sessions.split(",")) if params['specific'] else range(0,int(sessions))
         print 'Experiment session ids=%s'%str(session_ids)
+        include_failed = params['includeFailed']
+
         if plot_time_str:
             time_str = plot_time_str
-            with open("%s/%s/plotOnly-cmdline.txt"%(data_dir,time_str), 'w') as f:
+            with open("%s/%s/plotOnly-cmdline%s.txt"%(data_dir,time_str,'-include-failed' if include_failed else ''), 'w') as f:
                 f.write("%s\n"%params['cmdline'])
         else:
             time_str = time.strftime('%H-%M-%S-%a%d%m%y')
@@ -42,7 +44,6 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 f.write("%s\n"%params['cmdline'])
 
         if not params['iperf']:
-            include_failed = params['includeFailed']
             #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
             #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
             record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput_include_failed if include_failed else get_tput)
@@ -146,7 +147,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
 
     finally:
         if params['notifyAddr']:
-            notify('Job %s complete'%time_str, params['notifyAddr'], params['notifySmtp'])
+            notify('Job %s@%s complete'%(time_str,socket.gethostname()), params['notifyAddr'], params['notifySmtp'])
 
 def get_daemon_server():
     if not 'server' in globals(): return None
@@ -266,29 +267,29 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
 
                 # TODO: Get rid of the below and just use the percentiles above for latency
                 # Will need to update gnuplot plots first. 
-                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(raw_latencies)  
-                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                meanVal,stdErrVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(raw_latencies)  
+                logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdErrVal, maxVal, minVal, medianVal, lqVal, uqVal)
                 all_loglines.append(logline)
 
 		"""	
                 with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_var_plotdata:
                     if writeHeader: 
                         rx_vs_var_plotdata.write('#k=%d\n'%k)
-                        rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
-                    logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                        rx_vs_var_plotdata.write('#var mean k stdErr max min med lq uq\n')
+                    logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdErrVal, maxVal, minVal, medianVal, lqVal, uqVal)
                     all_loglines.append(logline)
 		"""	
 
             else: 
                 #Now record any aggregate stats across all kvar 
-                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
+                meanVal,stdErrVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
                 # record stats vs varility 
                 with open('%s/%s/%dk-%s.data'%(data_dir,time_str,k, metric_suffix),'w' if writeHeader else 'a') as rx_vs_var_plotdata:
                     if writeHeader: 
                         rx_vs_var_plotdata.write('#k=%d\n'%k)
-                        rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
-                    logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                        rx_vs_var_plotdata.write('#var mean k stdErr max min med lq uq\n')
+                    logline = '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdErrVal, maxVal, minVal, medianVal, lqVal, uqVal)
                     rx_vs_var_plotdata.write(logline)
                     all_loglines.append(logline)
 
@@ -309,14 +310,14 @@ def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_su
             for (i_var, var) in enumerate(var_vals):
                 writeHeader = i_var == 0
                 metrics = relative_raw_vals[k][var]
-                meanVal,stdDevVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
+                meanVal,stdErrVal,maxVal,minVal,medianVal,lqVal,uqVal = compute_stats(metrics.values())  
 
                 #record relative stats vs varility
                 with open('%s/%s/%dk-rel-%s.data'%(data_dir,time_str,k,metric_suffix), 'w' if writeHeader else 'a') as rel_rx_vs_var_plotdata:	
                     if writeHeader:
                         rel_rx_vs_var_plotdata.write('#k=%d\n'%k)
-                        rel_rx_vs_var_plotdata.write('#var mean k stdDev max min med lq uq\n')
-                    logline =  '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdDevVal, maxVal, minVal, medianVal, lqVal, uqVal)
+                        rel_rx_vs_var_plotdata.write('#var mean k stdErr max min med lq uq\n')
+                    logline =  '%.4f %.1f %d %.1f %.1f %.1f %.1f %.1f %.1f\n'%(var,meanVal, k, stdErrVal, maxVal, minVal, medianVal, lqVal, uqVal)
                     rel_rx_vs_var_plotdata.write(logline)
                     all_loglines.append(logline)
 
