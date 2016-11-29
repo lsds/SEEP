@@ -38,7 +38,10 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 f.write("%s\n"%params['cmdline'])
         else:
             time_str = time.strftime('%H-%M-%S-%a%d%m%y')
-            with open("%s/%s/cmdline.txt"%(data_dir,time_str), 'w') as f:
+
+            exp_dir = "%s/%s"%(data_dir,time_str)
+            if not os.path.isdir(exp_dir): os.mkdir(exp_dir)
+            with open("%s/cmdline.txt"%(exp_dir), 'w') as f:
                 f.write("%s\n"%params['cmdline'])
             #run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
             run_experiment(ks, variables, session_ids, params, time_str, data_dir )
