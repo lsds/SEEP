@@ -241,7 +241,10 @@ public class Dispatcher implements IRoutingObserver {
 			if (newValue != downstreamsRoutable) { logger.debug("Changing "+owner.getOperator().getOperatorId()+ " downstreamsRoutable="+newValue); }
 			downstreamsRoutable = newValue;
 		}
-		throw new RuntimeException("TODO: Check this works with multi-input ops.");
+		if (downIsMultiInput)
+		{
+			throw new RuntimeException("TODO: Check this works with multi-input ops.");
+		}
 	}
 	public boolean areDownstreamsRoutable()
 	{

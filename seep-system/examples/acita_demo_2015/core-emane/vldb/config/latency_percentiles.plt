@@ -3,14 +3,14 @@ set terminal term
 set output sprintf("%s/%s/latency_percentiles%s",outputdir,timestr,termext)
 
 #set title sprintf("Latency (min/5th/95th/max) vs mobility for replication factor (k)\n query=%s, runs=%s",query,runs) font ",10"
-set xlabel "Replication factor (k)" font ", 10"
-set ylabel "Latency (ms)" font ", 10" offset -2
+set xlabel "Replication factor (k)" font ", 20"
+set ylabel "Latency (ms)" font ", 20" offset -2
 
 #set yrange [0:100]
 #set xrange [1:5]
 # Only have xtic labels for incr's of 1
 set xtics 1
-set tics font ", 10"
+set tics font ", 16"
 
 set border linewidth 1.5
 set style line 5 linewidth 2.5 linecolor rgb "black"
