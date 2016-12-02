@@ -147,25 +147,6 @@ public class RoutingController implements Runnable{
 						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 
 						sendWeight(upstreamId, upOpIndex, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
-						/*
-						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
-						{
-							owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
-						}
-						else
-						{
-							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
-							if (fct != null)
-							{
-								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
-								ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex), fctrl);
-								owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
-								logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
-							}
-							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
-						}
-						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
-						*/
 					}
 				}
 				else
@@ -189,26 +170,6 @@ public class RoutingController implements Runnable{
 						{ continue; }
 						*/
 						sendWeight(upstreamId, upOpIndex, weight, empty);
-						/*
-						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
-						{
-							owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false);
-						}
-						else
-						{
-							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
-							if (fct != null)
-							{
-								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
-								ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, weight, empty, fctrl);
-								owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
-								logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
-							}
-							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
-						}
-
-						if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
-						*/
 					}
 				}
 				logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
@@ -227,17 +188,6 @@ public class RoutingController implements Runnable{
 					}
 					tNow = System.currentTimeMillis();
 				}
-			
-			/*
-			synchronized(lock)
-			{
-				try {
-					lock.wait(MAX_WEIGHT_DELAY);
-				} catch (InterruptedException e) {
-					//Woken up early, that's fine.
-				}
-			}
-			*/
 			}
 		}
 		catch(Exception e) { logger.error("Routing controller exception: "+ e); System.exit(1); }
