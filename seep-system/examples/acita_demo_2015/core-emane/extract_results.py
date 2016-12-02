@@ -171,6 +171,18 @@ def get_qlens(f):
 
     return (op_id, qlens)
 
+def get_urc_qlens(f):
+    regex = re.compile(r't=(\d+),op=(.*),local output qlen=(\d+)')
+    op_id = None
+    qlens = [] 
+    for line in f:
+        match = re.search(regex, line)
+        if match:
+            op_id = str(int(match.group(2)))
+            qlens.append((int(match.group(1)), int(match.group(3))))
+
+    return (op_id, qlens)
+
 def get_utils(f):
     regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),util=(.*),cumUtil=(.*)$')
     op_id = None
