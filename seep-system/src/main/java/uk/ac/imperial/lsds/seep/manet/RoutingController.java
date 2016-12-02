@@ -229,6 +229,8 @@ public class RoutingController implements Runnable{
 				int localInputQueueLength = owner.getDSA().getUniqueDso().size();
 				int localOutputQueueLength = getLocalOutputQLen();
 				int localQueueLength = localInputQueueLength + localOutputQueueLength;
+				long t = System.currentTimeMillis();
+				logger.info("t="+t+",op="+nodeId+",total qlen="+localQueueLength+",inputq="+localInputQueueLength+",outputq="+localOutputQueueLength);
 				if (!downstreamsRoutable) { localQueueLength = -1; }
 				
 				logger.debug("Routing controller sending queue length upstream: "+localQueueLength);
@@ -402,7 +404,7 @@ public class RoutingController implements Runnable{
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					long t = System.currentTimeMillis();	
-					logger.warn("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
+					logger.info("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
 					logger.debug("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
 					
 					if (numLogicalInputs == 1)

@@ -199,7 +199,8 @@ public class UpstreamRoutingController {
 				logger.debug("Op "+ nodeId+ " computing weight for downOpId="+downstreamId+",downstreamQlens="+downstreamQlens+",downstreamNetRates="+downstreamNetRates);
 				double weight = computeWeight(localOutputQlen, downstreamQlens.get(downstreamId), downstreamNetRates.get(downstreamId), processingRate);
 				long t = System.currentTimeMillis();	
-				logger.info("Op "+nodeId+" downstream "+downstreamId+" weight="+weight+",qlen="+localOutputQlen+",downqlen="+downstreamQlens.get(downstreamId)+",netRate="+downstreamNetRates.get(downstreamId));
+				logger.info("t="+t+",op="+nodeId+",local output qlen="+localOutputQlen);
+				logger.debug("Op "+nodeId+" downstream "+downstreamId+" weight="+weight+",qlen="+localOutputQlen+",downqlen="+downstreamQlens.get(downstreamId)+",netRate="+downstreamNetRates.get(downstreamId));
 				
 				weights.put(downstreamId, downstreamsRoutable ? weight : -1);
 			}
