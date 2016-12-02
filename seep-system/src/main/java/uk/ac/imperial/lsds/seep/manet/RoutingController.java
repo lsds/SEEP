@@ -132,7 +132,7 @@ public class RoutingController implements Runnable{
 					weightsCopy = new HashMap<>(weights);
 				}
 				
-				logger.info("Routing controller sending weights upstream: "+weightsCopy);
+				logger.debug("Routing controller sending weights upstream: "+weightsCopy);
 				
 				long tSendBegin = System.currentTimeMillis();
 				if (numLogicalInputs > 1)
@@ -142,7 +142,7 @@ public class RoutingController implements Runnable{
 					{
 						int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
 						//N.B. Sending the *aggregate* weight across all upstreams.
-						logger.info("Routing controller sending constraints upstream op "+upstreamId+": "+routingConstraints.get(logicalInputIndex));
+						logger.debug("Routing controller sending constraints upstream op "+upstreamId+": "+routingConstraints.get(logicalInputIndex));
 						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(nodeId), routingConstraints.get(logicalInputIndex));
 						int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 
@@ -172,7 +172,7 @@ public class RoutingController implements Runnable{
 						sendWeight(upstreamId, upOpIndex, weight, empty);
 					}
 				}
-				logger.info("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
+				logger.debug("Routing controller send weights upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
 				long tStart = System.currentTimeMillis();
 				tLast = tStart;
 				long tNow = tStart;
@@ -210,7 +210,7 @@ public class RoutingController implements Runnable{
 								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
 								ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, weight, constraints, fctrl);
 								owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
-								logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
+								logger.trace("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
 							}
 							else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
 						}
@@ -231,7 +231,7 @@ public class RoutingController implements Runnable{
 				int localQueueLength = localInputQueueLength + localOutputQueueLength;
 				if (!downstreamsRoutable) { localQueueLength = -1; }
 				
-				logger.info("Routing controller sending queue length upstream: "+localQueueLength);
+				logger.debug("Routing controller sending queue length upstream: "+localQueueLength);
 				
 				long tSendBegin = System.currentTimeMillis();
 				for (Object upstreamIdObj : query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[0])
@@ -254,7 +254,7 @@ public class RoutingController implements Runnable{
 							FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
 							ControlTuple mct = new ControlTuple(ControlTupleType.MERGED_CTRL, nodeId, localQueueLength, empty, fctrl);
 							owner.getControlDispatcher().sendUpstream(mct, upOpIndex, false);
-							logger.debug("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
+							logger.trace("Sending merged failure ctrl from "+nodeId+"->"+upstreamId);
 						}
 						else { owner.getControlDispatcher().sendUpstream(ct, upOpIndex, false); }
 					}
@@ -262,7 +262,7 @@ public class RoutingController implements Runnable{
 					if (separateControlNet && enableDummies) { owner.getControlDispatcher().sendDummyUpstream(ct, upOpIndex); }
 				}
 
-				logger.info("Routing controller sent queue length upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
+				logger.debug("Routing controller sent queue length upstream in "+(System.currentTimeMillis() - tSendBegin)+ " ms, since last="+(System.currentTimeMillis()-tLast)+" ms");
 				long tStart = System.currentTimeMillis();
 				tLast = tStart;
 				long tNow = tStart;
@@ -289,7 +289,7 @@ public class RoutingController implements Runnable{
 		synchronized(lock)
 		{
 			if (query == null) { throw new RuntimeException("Logic error?"); }
-			logger.info("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
+			logger.debug("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
 			int inputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(rctrl.getOpId()));
 			if (!upstreamQlens.get(inputIndex).containsKey(rctrl.getOpId())) { throw new RuntimeException("Logic error."); }
 			this.upstreamQlens.get(inputIndex).put(rctrl.getOpId(),  new Integer(rctrl.getQlen()));
@@ -326,7 +326,7 @@ public class RoutingController implements Runnable{
 					}
 				}
 			}
-			logger.info("Updated upstream net rates: "+upstreamNetRates);
+			logger.debug("Updated upstream net rates: "+upstreamNetRates);
 			//updateWeight();
 			lock.notifyAll();
 		}
@@ -374,7 +374,7 @@ public class RoutingController implements Runnable{
 			if (numLogicalInputs > 1)
 			{
 				 localInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
-				 logger.info("Op "+nodeId+" oob inputqlens="+localInputQlens); 
+				 logger.debug("Op "+nodeId+" oob inputqlens="+localInputQlens); 
 			}
 			else
 			{
@@ -398,12 +398,12 @@ public class RoutingController implements Runnable{
 					int localTotalInputQlen = localInputQlens.get(-1);
 
 					//TODO: Should we be multiplying the input q length by the processing rate?
-					logger.info("Op "+ nodeId+ " computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
+					logger.debug("Op "+ nodeId+ " computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					long t = System.currentTimeMillis();	
-					logger.info("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
-					logger.info("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
+					logger.warn("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
+					logger.debug("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
 					
 					if (numLogicalInputs == 1)
 					{
@@ -428,7 +428,7 @@ public class RoutingController implements Runnable{
 			{
 				weights.put(nodeId, aggregate(joinWeights));
 			}
-			logger.info("Updated routing controller weights: "+ weights);
+			logger.debug("Updated routing controller weights: "+ weights);
 	}
 	
 	private double computeWeight(int qLenUpstream, int qLenLocal, double netRate, double pRate)
