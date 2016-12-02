@@ -1,3 +1,4 @@
+load sprintf("%s/colours.plt",tmpldir)
 set terminal term 
 set output sprintf("%s/%s/tput_vs_retx_timeout_stddev%s",outputdir,timestr,termext)
 
@@ -7,10 +8,12 @@ set ylabel "Throughput (Kb/s)" font ", 16" offset -2
 set tics font ", 10"
 
 set border linewidth 1.5
-set style line 1 linewidth 2.5 linecolor rgb "red"
-set style line 2 linewidth 2.5 linecolor rgb "blue"
-set style line 3 linewidth 2.5 linecolor rgb "green"
-set style line 4 linewidth 2.5 linecolor rgb "pink"
+set style line 1 linewidth 2.5 linecolor rgb CRIMSON 
+set style line 2 linewidth 2.5 linecolor rgb CADMIUMORANGE 
+set style line 3 linewidth 2.5 linecolor rgb COBALT 
+set style line 4 linewidth 2.5 linecolor rgb GREY 
+set style line 5 linewidth 2.5 linecolor rgb "black" 
+
 set boxwidth 0.1
 set style fill empty 
 set key spacing 1.75 font ", 12"
