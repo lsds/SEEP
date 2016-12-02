@@ -160,14 +160,14 @@ def get_link_interval_tputs(f):
     return (op_id, tputs)
 
 def get_qlens(f):
-    regex = re.compile(r't=(\d+),op=(.*),total qlen=(\d+),')
+    regex = re.compile(r't=(\d+),op=(.*),total qlen=(\d+),inputq=(\d+),outputq=(\d+)')
     op_id = None
     qlens = [] 
     for line in f:
         match = re.search(regex, line)
         if match:
             op_id = str(int(match.group(2)))
-            qlens.append((int(match.group(1)), int(match.group(3))))
+            qlens.append((int(match.group(1)), int(match.group(3)), int(match.group(4)), int(match.group(5))))
 
     return (op_id, qlens)
 
