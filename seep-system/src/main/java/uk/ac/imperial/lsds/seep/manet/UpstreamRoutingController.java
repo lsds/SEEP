@@ -89,7 +89,7 @@ public class UpstreamRoutingController {
 		synchronized(lock)
 		{
 			if (query == null) { throw new RuntimeException("Logic error?"); }
-			logger.info("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
+			logger.debug("Phys node "+ nodeId + " with logical id " + query.getLogicalNodeId(nodeId) +" received updown rctrl:"+rctrl.toString());
 			//int inputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(rctrl.getOpId()));
 			this.downstreamQlens.put(rctrl.getOpId(),  new Integer((int)rctrl.getWeight()));
 		}
@@ -101,10 +101,10 @@ public class UpstreamRoutingController {
 			updateWeight(true);
 			weightsCopy = new HashMap<>(weights);
 		}
-		logger.info("Upstream routing controller updating router weights: "+weightsCopy);
+		logger.debug("Upstream routing controller updating router weights: "+weightsCopy);
 		long tSendBegin = System.currentTimeMillis();
 		owner.getProcessingUnit().getOperator().getRouter().update_highestWeights(weightsCopy, rctrl.getOpId());			
-		logger.info("Upstream routing controller updated router weights in "+(System.currentTimeMillis() - tSendBegin)+ " ms");
+		logger.debug("Upstream routing controller updated router weights in "+(System.currentTimeMillis() - tSendBegin)+ " ms");
 	}
 
 
@@ -147,7 +147,7 @@ public class UpstreamRoutingController {
 							new Double(1.0 / Math.pow(cost.doubleValue(), 2)));
 				}
 			}
-			logger.info("Updated downstream net rates: "+downstreamNetRates);
+			logger.debug("Updated downstream net rates: "+downstreamNetRates);
 			//updateWeight();
 			lock.notifyAll();
 		}
@@ -196,7 +196,7 @@ public class UpstreamRoutingController {
 			{
 				Integer downstreamId = (Integer)downstreamIdObj;
 				//TODO: Should we be multiplying the input q length by the processing rate?
-				logger.info("Op "+ nodeId+ " computing weight for downOpId="+downstreamId+",downstreamQlens="+downstreamQlens+",downstreamNetRates="+downstreamNetRates);
+				logger.debug("Op "+ nodeId+ " computing weight for downOpId="+downstreamId+",downstreamQlens="+downstreamQlens+",downstreamNetRates="+downstreamNetRates);
 				double weight = computeWeight(localOutputQlen, downstreamQlens.get(downstreamId), downstreamNetRates.get(downstreamId), processingRate);
 				long t = System.currentTimeMillis();	
 				logger.info("Op "+nodeId+" downstream "+downstreamId+" weight="+weight+",qlen="+localOutputQlen+",downqlen="+downstreamQlens.get(downstreamId)+",netRate="+downstreamNetRates.get(downstreamId));
@@ -204,7 +204,7 @@ public class UpstreamRoutingController {
 				weights.put(downstreamId, downstreamsRoutable ? weight : -1);
 			}
 			
-			logger.info("Updated routing controller weights: "+ weights);
+			logger.debug("Updated routing controller weights: "+ weights);
 	}
 	
 	private double computeWeight(int qLenLocal, int qLenDownstream, double netRate, double pRateDownstream)
