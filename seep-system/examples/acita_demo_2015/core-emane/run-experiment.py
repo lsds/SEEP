@@ -527,6 +527,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--srcRates', dest='src_rates', default=None, help='Fixed frame rates for sources to send at.')
     parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
     parser.add_argument('--pinAll', dest='pin_all', default=False, action='store_true', help='pin all nodes if pinned seed defined')
+    parser.add_argument('--injectFailures', dest='inject_failures', default=None, help='Start a failure cycle service according to config file.')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
     parser.add_argument('--bufSize', dest='buf_size', default=None, help='Max size of intermediate buffers')
     parser.add_argument('--retransmitTimeout', dest='retx_timeout', default=None, help='Time to wait before retransmitting')
@@ -603,6 +604,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['includeFailed'] = args.include_failed
     params['pinnedSeed'] = args.pinned_seed
     params['pinAll'] = args.pin_all
+    params['injectFailures'] = args.inject_failures
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

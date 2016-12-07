@@ -353,6 +353,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             if placements: 
                 create_static_routes(placements, tx_range, session.sessiondir)
 
+        if params['injectFailures']: 
+            shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%sessiondir)
+
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
             if placements:
@@ -361,6 +364,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 pos = gen_grid_position(i, nodes-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|PcapSrc"
+            if params['injectFailures']: worker_services += "|FailureInjector"
             #if params['emanestats']: worker_services += "|EmaneStats"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos, verbose=verbose)) 
        
