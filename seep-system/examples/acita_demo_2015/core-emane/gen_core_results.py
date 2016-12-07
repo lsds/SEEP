@@ -252,7 +252,7 @@ def record_op_qlens(op_qlens, exp_dir):
     for op in op_qlens:
         op_qlens_file = "%s/op_%s_qlens.txt"%(exp_dir, op)
         with open(op_qlens_file, 'w') as f:
-            f.write('# qlen\n')
+            f.write('# qlen iq oq\n')
             for (ts, total_qlen, iqlen, oqlen) in op_qlens[op]:
                 f.write('%d %d %d %d\n'%(ts/1000, total_qlen, iqlen, oqlen))
 
