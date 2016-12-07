@@ -18,7 +18,7 @@ def main(node):
 
 def toggle_netif(direction):
     cmd = ["ip", "link", "set", "dev", "eth0", direction]
-    with open("failure-injector.log", 'w') as log:
+    with open("failure-injector.log", 'a') as log:
         subprocess.Popen(cmd, stdout=log, cwd=".", stderr=subprocess.STDOUT, env=os.environ.copy())
 
 def get_node_cycle_spec(node):
