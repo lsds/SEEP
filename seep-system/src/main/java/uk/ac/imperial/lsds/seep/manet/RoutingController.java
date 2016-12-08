@@ -191,7 +191,7 @@ public class RoutingController implements Runnable{
 				}
 			}
 		}
-		catch(Exception e) { logger.error("Routing controller exception: "+ e); System.exit(1); }
+		catch(Exception e) { e.printStackTrace(); logger.error("Routing controller exception: "+ e); System.exit(1); }
 
 	}
 	
@@ -413,6 +413,7 @@ public class RoutingController implements Runnable{
 			{
 				//Iterator<Integer> iter = query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i].iterator();
 				joinWeights.add(new HashSet<Double>());
+				weightInfo.wdqru.put(i, new HashMap<Integer,double[]>());
 				ArrayList<Integer> upstreamIds = new ArrayList<>(query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i]);
 				Iterator<Integer> iter = upstreamIds.iterator();
 				while (iter.hasNext())
