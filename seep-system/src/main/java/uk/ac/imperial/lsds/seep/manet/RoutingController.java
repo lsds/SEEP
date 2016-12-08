@@ -51,6 +51,7 @@ public class RoutingController implements Runnable{
 	private final Query query;
 	private final boolean useCostThreshold;
 	private final Map<Integer, Stats.IntervalTput> tputStats = new ConcurrentHashMap<>();
+	private WeightInfo weightInfo = null;
 	
 	private final Object lock = new Object(){};
 	
@@ -373,9 +374,24 @@ public class RoutingController implements Runnable{
 	private void updateWeight(boolean downstreamsRoutable)
 	{
 			Map<Integer, Integer> localInputQlens = null;
+		  weightInfo = new WeightInfo();
 			if (numLogicalInputs > 1)
 			{
-				 localInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 Map<Integer, Integer> localRawInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 
+				 //localInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 localInputQlens = new HashMap<>();
+				 int ready = localRawInputQlens.get(-1);
+				 weightInfo.ready = ready;
+				 localInputQlens.put(-1, ready);
+				 for (Map.Entry<Integer, Integer> kv : localRawInputQlens.entrySet())
+				 {
+					if (kv.getKey() != -1)
+					{
+						localInputQlens.put(kv.getKey(), ready + kv.getValue());
+						weightInfo.pending.put(kv.getKey(), kv.getValue());
+					}		
+				 }
 				 logger.debug("Op "+nodeId+" oob inputqlens="+localInputQlens); 
 			}
 			else
@@ -387,6 +403,11 @@ public class RoutingController implements Runnable{
 			
 			//int localInputQlen = getLocalInputQLen();	//TODO: What if join!
 			int localOutputQlen = getLocalOutputQLen();
+			int localTotalInputQlen = localInputQlens.get(-1);
+			weightInfo.oq = localOutputQlen;
+			weightInfo.iq = localTotalInputQlen;
+			weightInfo.ltqlen = localOutputQlen + localTotalInputQlen;
+
 			ArrayList<Set<Double>> joinWeights = new ArrayList<>();
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
@@ -397,15 +418,21 @@ public class RoutingController implements Runnable{
 				while (iter.hasNext())
 				{
 					Integer upstreamId = iter.next();
-					int localTotalInputQlen = localInputQlens.get(-1);
+					weightInfo.wdqru.get(i).put(upstreamId, new double[4]);
 
 					//TODO: Should we be multiplying the input q length by the processing rate?
-					logger.debug("Op "+ nodeId+ " computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
+					//logger.debug("Op "+ nodeId+ " computing weight for input="+i+", upOpId="+upstreamId+",upstreamQlens="+upstreamQlens+",upstreamNetRates="+upstreamNetRates);
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					long t = System.currentTimeMillis();	
 					logger.info("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
-					logger.debug("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
+
+					weightInfo.wdqru.get(i).get(upstreamId)[0] = weight;
+					weightInfo.wdqru.get(i).get(upstreamId)[1] = diffU(upstreamQlens.get(i).get(upstreamId), localTotalInputQlen+localOutputQlen);
+					weightInfo.wdqru.get(i).get(upstreamId)[2] = localTotalInputQlen+localOutputQlen;
+					weightInfo.wdqru.get(i).get(upstreamId)[3] = upstreamNetRates.get(i).get(upstreamId);
+					
+					//logger.debug("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
 					
 					if (numLogicalInputs == 1)
 					{
@@ -417,10 +444,9 @@ public class RoutingController implements Runnable{
 						//Also compute per upstream weight for routing constraints
 						//TODO: Debatable what should actually be used here.
 						int localPerInputQlen = localInputQlens.get(i);
-						weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
+						double perInputWeight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 								localPerInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
-						weights.put(upstreamId, weight);
-						weights.put(upstreamId, downstreamsRoutable? weight : -1);
+						weights.put(upstreamId, downstreamsRoutable? perInputWeight : -1);
 						//throw new RuntimeException("TODO: Downstreams routable");
 					}					
 				}
@@ -429,10 +455,12 @@ public class RoutingController implements Runnable{
 			if (numLogicalInputs > 1)
 			{
 				weights.put(nodeId, aggregate(joinWeights));
+				weightInfo.recordWeight();
 			}
 			logger.debug("Updated routing controller weights: "+ weights);
 	}
-	
+
+
 	private double computeWeight(int qLenUpstream, int qLenLocal, double netRate, double pRate)
 	{
 		// N.B. TODO: Need to discuss this.
@@ -440,8 +468,13 @@ public class RoutingController implements Runnable{
 		//if there is no link we will still have a weight of 0,
 		//But when sending initially it will act as a gradient.
 		//Not sure if it will overload the queues though?
-		return (qLenUpstream + 1 - qLenLocal) * netRate * pRate;
+		return diffU(qLenUpstream, qLenLocal) * netRate * pRate;
 		//return netRate * pRate;
+	}
+
+	private double diffU(int qLenUpstream, int qLenLocal)
+	{
+		return qLenUpstream + 1 - qLenLocal;
 	}
 	
 	private double aggregate(ArrayList<Set<Double>> joinWeights)
@@ -453,9 +486,12 @@ public class RoutingController implements Runnable{
 		for (Double aggregatedInputWeight : perInputAggregates)
 		{
 			sum += aggregatedInputWeight;
+			weightInfo.wi.add(aggregatedInputWeight);
 		}
-		logger.debug("Aggregate weight = "+ (sum/perInputAggregates.size()));
-		return sum / perInputAggregates.size();
+		double aggregateWeight = sum / perInputAggregates.size();
+		weightInfo.w = aggregateWeight;
+		logger.debug("Aggregate weight = "+ aggregateWeight);
+		return aggregateWeight; 
 	}
 	
 	private ArrayList<Double> aggregateInputs(ArrayList<Set<Double>> joinWeights)
@@ -473,4 +509,40 @@ public class RoutingController implements Runnable{
 		}
 		return result;
 	}
+
+	private class WeightInfo
+	{
+		int ltqlen;
+		int iq;
+		int oq;
+		int ready;
+		Map<Integer, Integer> pending = new HashMap<>();
+		double w;
+		ArrayList<Double> wi = new ArrayList<>();
+		Map<Integer, Map<Integer, double[]>> wdqru = new HashMap<>();
+
+		//void recordWeight(int ltqlen, int iq, int oq, int ready, Map<Integer, Integer> pending, double w, Map<Integer, Double> wi, Map<Integer, Map<Integer, double[]>> wdqru)
+		void recordWeight()
+		{
+			long t = System.currentTimeMillis();
+			String wdqruString = "";
+			String isep = "";
+			for (Integer i : wdqru.keySet())
+			{
+				String iStr = "(i="+i+" ";
+				String usep = "";
+				for (Integer u : wdqru.get(i).keySet())
+				{
+					double[] uMetrics = wdqru.get(i).get(u);
+					String uStr = usep + "[u="+ u + ":w="+uMetrics[0]+",d="+uMetrics[1]+",q="+uMetrics[2]+",r="+uMetrics[3]+"]";
+					iStr += uStr;
+					usep = ",";
+				}
+				iStr = isep + iStr + ")"; 
+				wdqruString += iStr;
+				isep = ",";
+			}	
+			logger.info("t="+t+",op="+nodeId+",ltqlen="+ltqlen+",iq="+iq+",oq="+oq+",ready="+ready+",pending="+pending+",w="+w+",wi="+wi+",wdqru"+wdqruString);
+		}
+	}	
 }
