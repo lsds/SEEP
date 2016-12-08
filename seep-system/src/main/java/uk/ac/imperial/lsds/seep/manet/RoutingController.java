@@ -430,7 +430,7 @@ public class RoutingController implements Runnable{
 
 					weightInfo.wdqru.get(i).get(upstreamId)[0] = weight;
 					weightInfo.wdqru.get(i).get(upstreamId)[1] = diffU(upstreamQlens.get(i).get(upstreamId), localTotalInputQlen+localOutputQlen);
-					weightInfo.wdqru.get(i).get(upstreamId)[2] = localTotalInputQlen+localOutputQlen;
+					weightInfo.wdqru.get(i).get(upstreamId)[2] = upstreamQlens.get(i).get(upstreamId);
 					weightInfo.wdqru.get(i).get(upstreamId)[3] = upstreamNetRates.get(i).get(upstreamId);
 					
 					//logger.debug("Op "+nodeId+" upstream "+upstreamId+" weight="+weight+",qlen="+upstreamQlens.get(i).get(upstreamId)+",netRate="+upstreamNetRates.get(i).get(upstreamId));
