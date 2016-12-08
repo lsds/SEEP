@@ -1,7 +1,7 @@
 set terminal term 
-set output sprintf("%s/%s/%sk/%sm/%ss/io_stats_fixed_kmobsession_%s%s",outputdir,timestr,k,mob,session,timestr,termext)
+set output sprintf("%s/%s/%sk/%s%s/%ss/io_stats_fixed_kvarsession_%s%s",outputdir,timestr,k,var,varext,session,timestr,termext)
 
-set title sprintf("io reads/writes \nk=%s, mob=%s, query=%s, duration=%s, session=%s",k,mob,query,duration,session)
+set title sprintf("io reads/writes \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 set xlabel "Seconds since epoch"
 set ylabel "IO reads/writes"
 set yrange [0:*]
@@ -18,5 +18,5 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 set style fill empty 
 set datafile separator ","
 
-plot sprintf("%s/%s/%sk/%sm/%ss/cpu-util.csv",outputdir,timestr,k,mob,session) using 193:196 notitle w lines linestyle 1, \
-	sprintf("%s/%s/%sk/%sm/%ss/cpu-util.csv",outputdir,timestr,k,mob,session) using 193:197 notitle w lines linestyle 2
+plot sprintf("%s/%s/%sk/%s%s/%ss/cpu-util.csv",outputdir,timestr,k,var,varext,session) using 193:196 notitle w lines linestyle 1, \
+	sprintf("%s/%s/%sk/%s%s/%ss/cpu-util.csv",outputdir,timestr,k,var,varext,session) using 193:197 notitle w lines linestyle 2

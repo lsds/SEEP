@@ -1,8 +1,8 @@
 set terminal term 
-expdir=sprintf("%s/%s/%sk/%sm/%ss",outputdir,timestr,k,mob,session)
-set output sprintf("%s/link-tputs/link_cost_fixed_kmobsession_%s%s",expdir,timestr,termext)
+expdir=sprintf("%s/%s/%sk/%s%s/%ss",outputdir,timestr,k,var,varext,session)
+set output sprintf("%s/link-tputs/link_cost_fixed_kvarsession_%s%s",expdir,timestr,termext)
 
-set title sprintf("Link ETX costs \nk=%s, mob=%s, query=%s, duration=%s, session=%s",k,mob,query,duration,session)
+set title sprintf("Link ETX costs \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 set xlabel "Tx time (Seconds since epoch)"
 set ylabel "Cost"
 set yrange [0:*]

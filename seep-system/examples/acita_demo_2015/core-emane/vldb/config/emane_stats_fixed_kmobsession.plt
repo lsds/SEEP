@@ -1,7 +1,7 @@
 set terminal term 
-set output sprintf("%s/%s/%sk/%sm/%ss/emane-stats/%s_emane_stats_fixed_kmobsession_%s%s",outputdir,timestr,k,mob,session,stat,timestr,termext)
+set output sprintf("%s/%s/%sk/%s%s/%ss/emane-stats/%s_emane_stats_fixed_kvarsession_%s%s",outputdir,timestr,k,var,varext,session,stat,timestr,termext)
 
-set title sprintf("%s \nk=%s, mob=%s, query=%s, duration=%s, session=%s",stat,k,mob,query,duration,session)
+set title sprintf("%s \nk=%s, %s=%s, query=%s, duration=%s, session=%s",stat,k,varname,var,query,duration,session)
 set xlabel "Seconds since epoch"
 set ylabel sprintf("%s",stat)
 set yrange [0:*]
@@ -20,5 +20,5 @@ set style fill empty
 delta_v(x) = ( vD = x - old_v, old_v = x, vD)
 old_v = NaN
 
-#plot for [i=3:27] sprintf("%s/%s/%sk/%sm/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,mob,session,i,stat) using 1:(delta_v($7)) title "n=".i w lines linestyle i
-plot for [i=3:27] sprintf("%s/%s/%sk/%sm/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,mob,session,i,stat) using 1:7 title "n=".i w lines linestyle i
+#plot for [i=3:27] sprintf("%s/%s/%sk/%s%s/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,var,varext,session,i,stat) using 1:(delta_v($7)) title "n=".i w lines linestyle i
+plot for [i=3:27] sprintf("%s/%s/%sk/%s%s/%ss/emane-stats/n%d-%s-emane-stats.txt",outputdir,timestr,k,var,varext,session,i,stat) using 1:7 title "n=".i w lines linestyle i

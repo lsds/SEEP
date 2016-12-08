@@ -1,8 +1,8 @@
 set terminal term 
-expdir=sprintf("%s/%s/%sk/%sm/%ss",outputdir,timestr,k,mob,session)
-set output sprintf("%s/op_cum_util_fixed_kmobsession_%s%s",expdir,timestr,termext)
+expdir=sprintf("%s/%s/%sk/%s%s/%ss",outputdir,timestr,k,var,varext,session)
+set output sprintf("%s/op_cum_util_fixed_kvarsession_%s%s",expdir,timestr,termext)
 
-set title sprintf("Operator cumulative utilization \nk=%s, mob=%s, query=%s, duration=%s, session=%s",k,mob,query,duration,session)
+set title sprintf("Operator cumulative utilization \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 set xlabel "Tx time (Seconds since epoch)"
 set ylabel "Util"
 set yrange [0:1]
