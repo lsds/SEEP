@@ -100,7 +100,7 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 		IplImage img = parseBufferedImage(value, cols, rows, type);
 		logger.debug("Received "+img.width()+"x"+img.height()+" frame.");
 		IplImage imgBW = prepareBWImage(img, type);
-		int[] bbox = detectFirstFace(imgBW);
+		int[] bbox = detectFirstFace(imgBW, absoluteFaceSize);
 		
 		DataTuple outputTuple = null;
 		
@@ -124,8 +124,10 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 
 			int x = bbox[0];
 			int y = bbox[1];
-			int x2 = data.getInt("x2");
-			int y2 = data.getInt("y2"); //Should really rename to x1 y1 or something
+			//int x2 = data.getInt("x2");
+			//int y2 = data.getInt("y2"); //Should really rename to x1 y1 or something
+			int x2 = bbox[2];
+			int y2 = bbox[3]; //Should really rename to x1 y1 or something
 			int width = x2 - x;
 			int height = y2 - y; //Should really rename to x1 y1 or something
 			
@@ -273,7 +275,7 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 		}
 	}
 
-	public int[] detectFirstFace(IplImage bwImg)
+	public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
 	{
 		CvMemStorage storage = cvCreateMemStorage(0);
 		cvClearMemStorage(storage);
