@@ -448,7 +448,9 @@ public class Dispatcher implements IRoutingObserver {
 					} 
 				}
 			}
-			catch(Exception e) { logger.error("Fatal error - aborting: "+e); System.exit(1); }
+			catch(Exception e) { 
+				e.printStackTrace();
+				logger.error("Fatal error - aborting: "+e); System.exit(1); }
 		}
 
 		private Set<Long> dispatchHead()

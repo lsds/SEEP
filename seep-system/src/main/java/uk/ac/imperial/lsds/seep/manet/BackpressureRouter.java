@@ -337,7 +337,10 @@ public class BackpressureRouter implements IRouter {
 		{
 			if (downIsUnreplicatedSink)
 			{
-				throw new RuntimeException("Logic error.");
+				ArrayList<Integer> result = new ArrayList<Integer>();
+				result.addAll(weights.keySet());
+				if (result.size() != 1) { throw new RuntimeException("Logic error."); }
+				return result;
 			}
 
 			List<Map.Entry<Integer,Double>> list = new LinkedList(weights.entrySet());

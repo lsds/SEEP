@@ -354,7 +354,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 create_static_routes(placements, tx_range, session.sessiondir)
 
         if params['injectFailures']: 
-            shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%sessiondir)
+            shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
 
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):
