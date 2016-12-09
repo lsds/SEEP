@@ -18,15 +18,15 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 #set boxwidth 0.1
 set style fill empty 
 set offsets graph 0.0, 0.0, 0.1, 0.1
-op_qlen_files=system(sprintf("find %s -maxdepth 1 -name 'op_*_qlens.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_qlens.txt/\\1/'", expdir))
+op_weight_info_files=system(sprintf("find %s -maxdepth 1 -name 'op_*_weight_infos.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_weight_infos.txt/\\1/'", expdir))
 
 #plot for [file in op_tput_files] file using 1:2 notitle w steps linestyle 1
 set title sprintf("Operator total queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-plot for [i=1:words(op_qlen_files)] sprintf("%s/op_%s_qlens.txt", expdir, word(op_qlen_files,i)) using 1:2 title word(op_qlen_files,i) w fsteps linestyle i
+plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:2 title word(op_weight_info_files,i) w fsteps linestyle i
 
 set title sprintf("Operator input queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-plot for [i=1:words(op_qlen_files)] sprintf("%s/op_%s_qlens.txt", expdir, word(op_qlen_files,i)) using 1:3 title word(op_qlen_files,i) w fsteps linestyle i
+plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:3 title word(op_weight_info_files,i) w fsteps linestyle i
 
 set title sprintf("Operator output queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-plot for [i=1:words(op_qlen_files)] sprintf("%s/op_%s_qlens.txt", expdir, word(op_qlen_files,i)) using 1:4 title word(op_qlen_files,i) w fsteps linestyle i
+plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:4 title word(op_weight_info_files,i) w fsteps linestyle i
 
