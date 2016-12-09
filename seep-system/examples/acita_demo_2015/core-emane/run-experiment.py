@@ -79,8 +79,8 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                         'rel_tput_vs_rctrldelay_stddev', 'rel_latency_vs_rctrldelay_stddev']:
                     plot(p, time_str, script_dir, data_dir)
             elif var_suffix == 'bsz':
-                for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev', 
-                        'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
+                for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev']:
+                    #'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
                     plot(p, time_str, script_dir, data_dir)
             elif var_suffix == 'retx':
                 for p in ['tput_vs_retx_timeout_stddev', 'latency_vs_retx_timeout_stddev', 
@@ -111,13 +111,13 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 varname = var_suffix2name[var_suffix]
                 for var in variables[varname]: 
                     for session in session_ids:
-                        plot_fixed_kvarsession('cum_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kvarsession('op_cum_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kvarsession('link_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        #plot_fixed_kvarsession('cum_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        #plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        #plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        #plot_fixed_kvarsession('op_cum_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        #plot_fixed_kvarsession('link_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
                         #plot_fixed_kvarsession('link_cost_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        plot_fixed_kvarsession('op_cum_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        #plot_fixed_kvarsession('op_cum_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
                         if k > 1:
                             plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
 

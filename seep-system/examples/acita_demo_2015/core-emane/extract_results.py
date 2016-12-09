@@ -171,6 +171,31 @@ def get_qlens(f):
 
     return (op_id, qlens)
 
+def get_weight_infos(f):
+    """ 
+    Example log line:
+    t=1481214262870,op=11,ltqlen=726,iq=625,oq=101,ready=625,pending={0=0, 1=0},w=0.0,wi=[0.0, 0.0],wdqru(i=0 [u=-1:w=-359.244746835916,d=-625.0,q=100.0,r=0.5747915949374656]),(i=1 [u=-2:w=-78.81605920712812,d=-625.0,q=100.0,r=0.12610569473140498])
+    """
+    regex = re.compile(r't=(\d+),op=(.*),ltqlen=(\d+),iq=(\d+),oq=(\d+),ready=(\d+),pending=(.*),w=(.*),wi=(.*),wdqru(.*)$')
+    op_id = None
+    weight_info = [] 
+    for line in f:
+        match = re.search(regex, line)
+        if match:
+            t = int(match.group(1))
+            op_id = str(int(match.group(2)))
+            ltqlen = int(match.group(3))
+            iq = int(match.group(4))
+            oq = int(match.group(5))
+            ready = int(match.group(6))
+            pending = match.group(7)
+            w = float(match.group(8))
+            wi = match.group(9)
+            wdqru = match.group(10)
+            weight_info.append((t, ltqlen, iq, oq, ready, pending, w, wi, wdqru))
+
+    return (op_id, weight_info)
+
 def get_urc_qlens(f):
     regex = re.compile(r't=(\d+),op=(.*),local output qlen=(\d+)')
     op_id = None

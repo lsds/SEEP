@@ -82,6 +82,7 @@ def main(exp_dir):
     op_interval_tputs = {}
     op_qlens = {}
     op_utils = {}
+    op_weight_infos= {}
     link_interval_tputs = {}
     for op_log in op_logs + sink_logs:
         with open(op_log, 'r') as f:
@@ -103,6 +104,11 @@ def main(exp_dir):
             (op_id, utils) = get_utils(f)
             if op_id:
                 op_utils[op_id] = utils 
+
+        with open(op_log, 'r') as f:
+            (op_id, weight_infos) = get_weight_infos(f)
+            if op_id:
+                op_weight_infos[op_id] = weight_infos 
 
         with open(op_log, 'r') as f:
             (op_id, interval_tputs) = get_link_interval_tputs(f)

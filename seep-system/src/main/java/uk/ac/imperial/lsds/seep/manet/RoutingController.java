@@ -389,6 +389,7 @@ public class RoutingController implements Runnable{
 					if (kv.getKey() != -1)
 					{
 						localInputQlens.put(kv.getKey(), ready + kv.getValue());
+						localInputQlens.put(-1, localInputQlens.get(-1) + kv.getValue());
 						weightInfo.pending.put(kv.getKey(), kv.getValue());
 					}		
 				 }
