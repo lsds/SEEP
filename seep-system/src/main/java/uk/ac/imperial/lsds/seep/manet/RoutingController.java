@@ -231,8 +231,13 @@ public class RoutingController implements Runnable{
 				int localOutputQueueLength = getLocalOutputQLen();
 				int localQueueLength = localInputQueueLength + localOutputQueueLength;
 				long t = System.currentTimeMillis();
-				logger.info("t="+t+",op="+nodeId+",total qlen="+localQueueLength+",inputq="+localInputQueueLength+",outputq="+localOutputQueueLength);
-				if (!downstreamsRoutable) { localQueueLength = -1; }
+				weightInfo = new WeightInfo();
+				weightInfo.ltqlen = localQueueLength;
+				weightInfo.iq = localInputQueueLength;
+				weightInfo.oq = localOutputQueueLength;
+				weightInfo.recordWeight(); 
+
+				if (!downstreamsRoutable) { localQueueLength = -1; }	//TODO: Record this in weight info.
 				
 				logger.debug("Routing controller sending queue length upstream: "+localQueueLength);
 				
@@ -427,7 +432,6 @@ public class RoutingController implements Runnable{
 					double weight = computeWeight(upstreamQlens.get(i).get(upstreamId), 
 							localTotalInputQlen + localOutputQlen, upstreamNetRates.get(i).get(upstreamId), processingRate);
 					long t = System.currentTimeMillis();	
-					logger.info("t="+t+",op="+nodeId+",total qlen="+(localTotalInputQlen+localOutputQlen)+",inputq="+localTotalInputQlen+",outputq="+localOutputQlen);
 
 					weightInfo.wdqru.get(i).get(upstreamId)[0] = weight;
 					weightInfo.wdqru.get(i).get(upstreamId)[1] = diffU(upstreamQlens.get(i).get(upstreamId), localTotalInputQlen+localOutputQlen);
@@ -457,8 +461,8 @@ public class RoutingController implements Runnable{
 			if (numLogicalInputs > 1)
 			{
 				weights.put(nodeId, aggregate(joinWeights));
-				weightInfo.recordWeight();
 			}
+			weightInfo.recordWeight();
 			logger.debug("Updated routing controller weights: "+ weights);
 	}
 
@@ -512,6 +516,7 @@ public class RoutingController implements Runnable{
 		return result;
 	}
 
+	/* TODO: Incorporate downstreamsRoutable info into weights */
 	private class WeightInfo
 	{
 		int ltqlen;
@@ -528,22 +533,27 @@ public class RoutingController implements Runnable{
 		{
 			long t = System.currentTimeMillis();
 			String wdqruString = "";
-			String isep = "";
-			for (Integer i : wdqru.keySet())
+
+			if (numLogicalInputs > 1)
 			{
-				String iStr = "(i="+i+" ";
-				String usep = "";
-				for (Integer u : wdqru.get(i).keySet())
+				String isep = "";
+				for (Integer i : wdqru.keySet())
 				{
-					double[] uMetrics = wdqru.get(i).get(u);
-					String uStr = usep + "[u="+ u + ":w="+uMetrics[0]+",d="+uMetrics[1]+",q="+uMetrics[2]+",r="+uMetrics[3]+"]";
-					iStr += uStr;
-					usep = ",";
-				}
-				iStr = isep + iStr + ")"; 
-				wdqruString += iStr;
-				isep = ",";
-			}	
+					String iStr = "(i="+i+" ";
+					String usep = "";
+					for (Integer u : wdqru.get(i).keySet())
+					{
+						double[] uMetrics = wdqru.get(i).get(u);
+						String uStr = usep + "[u="+ u + ":w="+uMetrics[0]+",d="+uMetrics[1]+",q="+uMetrics[2]+",r="+uMetrics[3]+"]";
+						iStr += uStr;
+						usep = ",";
+					}
+					iStr = isep + iStr + ")"; 
+					wdqruString += iStr;
+					isep = ",";
+				}	
+			}
+
 			logger.info("t="+t+",op="+nodeId+",ltqlen="+ltqlen+",iq="+iq+",oq="+oq+",ready="+ready+",pending="+pending+",w="+w+",wi="+wi+",wdqru"+wdqruString);
 		}
 	}	

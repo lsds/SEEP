@@ -80,7 +80,6 @@ def main(exp_dir):
 
     op_tputs = {}
     op_interval_tputs = {}
-    op_qlens = {}
     op_utils = {}
     op_weight_infos= {}
     link_interval_tputs = {}
@@ -94,11 +93,6 @@ def main(exp_dir):
             (op_id, interval_tputs) = get_interval_tputs(f)
             if op_id:
                 op_interval_tputs[op_id] = interval_tputs
-
-        with open(op_log, 'r') as f:
-            (op_id, qlens) = get_qlens(f)
-            if op_id:
-                op_qlens[op_id] = qlens 
 
         with open(op_log, 'r') as f:
             (op_id, utils) = get_utils(f)
@@ -138,7 +132,7 @@ def main(exp_dir):
 
     record_stat('%s/op-tputs.txt'%exp_dir, op_tputs)
     record_op_interval_tputs(op_interval_tputs, exp_dir)
-    record_op_qlens(op_qlens, exp_dir)
+    record_op_weight_infos(op_weight_infos, exp_dir)
     record_op_utils(op_utils, exp_dir)
     record_link_interval_tputs(link_interval_tputs, exp_dir)
 
@@ -254,13 +248,13 @@ def record_link_interval_tputs(link_interval_tputs, exp_dir):
             for (ts, tput, cum, cost) in link_interval_tputs[(op, up)]:
                 f.write('%d %.1f %.1f %.1f\n'%(ts/1000, tput, cum, cost))
 
-def record_op_qlens(op_qlens, exp_dir):
-    for op in op_qlens:
-        op_qlens_file = "%s/op_%s_qlens.txt"%(exp_dir, op)
-        with open(op_qlens_file, 'w') as f:
-            f.write('# qlen iq oq\n')
-            for (ts, total_qlen, iqlen, oqlen) in op_qlens[op]:
-                f.write('%d %d %d %d\n'%(ts/1000, total_qlen, iqlen, oqlen))
+def record_op_weight_infos(op_weight_infos, exp_dir):
+    for op in op_weight_infos:
+        op_weight_infos_file = "%s/op_%s_weight_infos.txt"%(exp_dir, op)
+        with open(op_weight_infos_file, 'w') as f:
+            f.write('# ltqlen iq oq\n')
+            for (ts, ltqlen, iq, oq, ready, pending, w, wi, wdqru) in op_weight_infos[op]:
+                f.write('%d %d %d %d\n'%(ts/1000, ltqlen, iq, oq))
 
 def record_op_utils(op_utils, exp_dir):
     for op in op_utils:

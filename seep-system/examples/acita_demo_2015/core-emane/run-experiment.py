@@ -119,7 +119,7 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                         #plot_fixed_kvarsession('link_cost_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
                         #plot_fixed_kvarsession('op_cum_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
                         if k > 1:
-                            plot_fixed_kvarsession('op_qlen_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                            plot_fixed_kvarsession('op_weight_info_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
 
                         if params['dstat']:
                             plot_fixed_kvarsession('cpu_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
