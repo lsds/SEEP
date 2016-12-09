@@ -1,8 +1,8 @@
 set terminal term 
 expdir=sprintf("%s/%s/%sk/%s%s/%ss",outputdir,timestr,k,var,varext,session)
-set output sprintf("%s/op_qlen_fixed_kvarsession_%s%s",expdir,timestr,termext)
+set output sprintf("%s/op_weight_info_fixed_kvarsession_%s%s",expdir,timestr,termext)
 
-set xlabel "Tx time (Seconds since epoch)"
+set xlabel "Tx time (mm:ss since the hour)"
 set ylabel "Queue length (batches)"
 set yrange [0:*]
 set xtics font ",4"
