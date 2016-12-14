@@ -252,9 +252,13 @@ def record_op_weight_infos(op_weight_infos, exp_dir):
     for op in op_weight_infos:
         op_weight_infos_file = "%s/op_%s_weight_infos.txt"%(exp_dir, op)
         with open(op_weight_infos_file, 'w') as f:
-            f.write('# ltqlen iq oq\n')
+            f.write('# ltqlen iq oq ready w pending\n')
             for (ts, ltqlen, iq, oq, ready, pending, w, wi, wdqru) in op_weight_infos[op]:
-                f.write('%d %d %d %d\n'%(ts/1000, ltqlen, iq, oq))
+                line = '%d %d %d %d %d %.1f'%(ts/1000, ltqlen, iq, oq, ready, w)
+                if pending:
+                    line += " " + " ".join(map(str, pending))
+                line += "\n"
+                f.write(line)
 
 def record_op_utils(op_utils, exp_dir):
     for op in op_utils:
