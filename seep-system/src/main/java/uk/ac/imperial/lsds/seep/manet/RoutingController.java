@@ -33,6 +33,7 @@ public class RoutingController implements Runnable{
 	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
+	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private final boolean sendQueueLengthsOnly;
 
 	private final static double INITIAL_WEIGHT = -1;
@@ -46,6 +47,7 @@ public class RoutingController implements Runnable{
 	private final int numLogicalInputs;
 	private final Map<Integer, TreeMap<Integer, Integer>> upstreamQlens;
 	private final Map<Integer, TreeMap<Integer, Double>> upstreamNetRates;
+	private final Map<Integer, TreeMap<Integer, Long>> upstreamLastUpdated;
 	private final double processingRate = 1; //TODO: Measure/update this dynamically?
 	private final Map<Integer, Double> weights = new HashMap<>(); 
 	private final Query query;
@@ -67,6 +69,7 @@ public class RoutingController implements Runnable{
 		this.useCostThreshold = query.getPhysicalNodeIds(query.getLogicalNodeId(nodeId)).size() > 1;
 		this.upstreamNetRates = new HashMap<>();
 		this.upstreamQlens = new HashMap<>();
+		this.upstreamLastUpdated = new HashMap<>();
 
 		if (numLogicalInputs > 1)
 		{
@@ -88,12 +91,14 @@ public class RoutingController implements Runnable{
 			//ArrayList<Integer> upstreamIds = owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList();
 			upstreamNetRates.put(i, new TreeMap<Integer, Double>());
 			upstreamQlens.put(i, new TreeMap<Integer, Integer>());
+			upstreamLastUpdated.put(i, new TreeMap<Integer, Long>());
 			Iterator iter = upstreamIds.iterator();
 			while (iter.hasNext())
 			{
 				Integer nextId = (Integer)iter.next();
 				upstreamNetRates.get(i).put(nextId, 1.0);
 				upstreamQlens.get(i).put(nextId, 0);
+				upstreamLastUpdated.get(i).put(nextId, System.currentTimeMillis());
 				if (numLogicalInputs == 1)
 				{
 					weights.put(nextId, INITIAL_WEIGHT);
@@ -301,6 +306,7 @@ public class RoutingController implements Runnable{
 			int inputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(rctrl.getOpId()));
 			if (!upstreamQlens.get(inputIndex).containsKey(rctrl.getOpId())) { throw new RuntimeException("Logic error."); }
 			this.upstreamQlens.get(inputIndex).put(rctrl.getOpId(),  new Integer(rctrl.getQlen()));
+			this.upstreamLastUpdated.get(inputIndex).put(rctrl.getOpId(), System.currentTimeMillis());
 			//updateWeight();
 			lock.notifyAll();
 		}
@@ -378,6 +384,7 @@ public class RoutingController implements Runnable{
 	
 	private void updateWeight(boolean downstreamsRoutable)
 	{
+			expireUpstreamQlens();
 			Map<Integer, Integer> localInputQlens = null;
 		  weightInfo = new WeightInfo();
 			if (numLogicalInputs > 1)
@@ -557,4 +564,28 @@ public class RoutingController implements Runnable{
 			logger.info("t="+t+",op="+nodeId+",ltqlen="+ltqlen+",iq="+iq+",oq="+oq+",ready="+ready+",pending="+pending+",w="+w+",wi="+wi+",wdqru"+wdqruString);
 		}
 	}	
+
+	private void expireUpstreamQlens()
+	{
+		boolean allInputsExpired = true;
+		for (int i = 0; i < numLogicalInputs; i++)
+		{
+			boolean inputExpired = true;
+			for (Integer ku : upstreamLastUpdated.get(i).keySet())
+			{
+				long updateDelay = System.currentTimeMillis() - upstreamLastUpdated.get(i).get(ku);
+
+				if (updateDelay > FAILURE_CTRL_WATCHDOG_TIMEOUT)
+				{
+					logger.warn("qlentimeout:t="+System.currentTimeMillis()+",op="+nodeId+",ilog="+i+",u="+ku+",delay="+updateDelay);
+				}	
+				else { inputExpired = false; }
+			}
+
+			if (inputExpired) { logger.warn("loginputtimeout:t="+System.currentTimeMillis()+",op="+nodeId+",ilog="+i); }
+			else { allInputsExpired = false; }
+		}
+
+		if (allInputsExpired) { logger.warn("allinputstimeout:t="+System.currentTimeMillis()+",op="+nodeId); }
+	}
 }
