@@ -59,17 +59,20 @@ public class Dispatcher implements IRoutingObserver {
 	private static final long ABORT_SESSION_TIMEOUT = 1000 * Long.parseLong(GLOBALS.valueFor("abortSessionTimeoutSec"));
 	private static final long MAX_LOCK_WAIT = 30 * 1000; 
 	private static final boolean enableDownstreamsUnroutable = Boolean.parseBoolean(GLOBALS.valueFor("enableDownstreamsUnroutable"));
+	private static final boolean enableBatchRetransmitTimeouts = Boolean.parseBoolean(GLOBALS.valueFor("enableBatchRetransmitTimeouts"));
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private static final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyUpDownControlTraffic"));
 	private static final boolean separateControlNet = Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet"));
 
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
+	private final int MAX_UNACKED;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
 	private final boolean eagerPurgeOpQueue;
 	private final boolean downIsMultiInput;
 	private final boolean boundedOpQueue;
+	private final boolean limitUnacked;
 	
 	private final IProcessingUnit owner;
 	private final Map<Integer, DispatcherWorker> workers = new HashMap<>();
@@ -89,6 +92,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final Object lock = new Object(){};
 	private final int numDownstreamReplicas;
 	private boolean downstreamsRoutable = true;
+
 	
 	public Dispatcher(IProcessingUnit owner)
 	{
@@ -160,7 +164,13 @@ public class Dispatcher implements IRoutingObserver {
 
 		if (!bestEffort) { fctrlHandler = new FailureCtrlHandler(); }
 		else { fctrlHandler = null; }
-		
+
+		boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() > 1;
+		if (owner.getOperator().getOpContext().isSource() && !bestEffort && replicationFactor > 1 && hasJoin)  
+		{ limitUnacked = true; }
+		else { limitUnacked = false; }
+		MAX_UNACKED = GLOBAL_MAX_TOTAL_QUEUE_SIZE-1;
+		logger.info("limitUnacked="+limitUnacked);
 	}
 	
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
@@ -254,6 +264,14 @@ public class Dispatcher implements IRoutingObserver {
 	public void dispatch(DataTuple dt) 
 	{
 		long ts = dt.getPayload().timestamp;
+		if (limitUnacked)
+		{
+			while (getCombinedDownFailureCtrl().unacked(ts) >= MAX_UNACKED)
+			{
+				try { lock.wait(MAX_LOCK_WAIT); } catch (InterruptedException e) {}
+			}
+		}
+
 		long local_ts = dt.getPayload().local_ts;
 		logger.debug("Dispatcher queuing tuple with ts="+ts+",local latency="+(System.currentTimeMillis()-local_ts)); 
 		if (!bestEffort)
@@ -1253,7 +1271,7 @@ public class Dispatcher implements IRoutingObserver {
 
 		private void addBatchRetransmitTimer(int downOpId, long batchId, long now)
 		{
-			if (bestEffort) { return; }
+			if (bestEffort || !enableBatchRetransmitTimeouts) { return; }
 
 			//No point retransmitting if only one downstream replica!
 			if (numDownstreamReplicas < 2) { return ; }
@@ -1274,7 +1292,7 @@ public class Dispatcher implements IRoutingObserver {
 		private void clearBatchRetransmitTimers(int downOpId)
 		{
 			if (bestEffort) { throw new RuntimeException("TODO"); }
-
+			
 			synchronized(lock)
 			{
 				// Basically clear cache of downOpId.
@@ -1286,7 +1304,7 @@ public class Dispatcher implements IRoutingObserver {
 		private void checkBatchRetransmitTimeouts(int downOpId)
 		{
 			if (bestEffort) { throw new RuntimeException("TODO"); }
-
+			if (!enableBatchRetransmitTimeouts) { return; }
 			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 			SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
 			IBuffer buffer = (OutOfOrderBuffer)cci.getBuffer();

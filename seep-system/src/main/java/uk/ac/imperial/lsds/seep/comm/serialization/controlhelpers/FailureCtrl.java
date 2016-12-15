@@ -294,4 +294,20 @@ public class FailureCtrl {
 			return ts <= lw || acks.contains(ts);
 		}
 	}
+
+	public long unacked(long ts)
+	{
+		synchronized(lock)
+		{
+			if (ts <= lw) { return 0; }
+			long unacked = ts - lw;
+			for (Long ack : acks) 
+			{ 
+				if (ack <= ts && ack > lw) 
+				{ unacked--; }
+			}
+			if (unacked != (ts - lw - acks.size())) { throw new RuntimeException("Logic error."); }
+			return unacked; 
+		}
+	}
 }
