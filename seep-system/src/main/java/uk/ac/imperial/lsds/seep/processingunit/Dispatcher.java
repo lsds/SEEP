@@ -268,7 +268,10 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			while (getCombinedDownFailureCtrl().unacked(ts) >= MAX_UNACKED)
 			{
-				try { lock.wait(MAX_LOCK_WAIT); } catch (InterruptedException e) {}
+				synchronized(lock)
+				{	
+					try { lock.wait(MAX_LOCK_WAIT); } catch (InterruptedException e) {}
+				}
 			}
 		}
 
