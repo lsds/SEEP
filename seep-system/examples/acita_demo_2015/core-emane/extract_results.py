@@ -176,23 +176,28 @@ def get_weight_infos(f):
             iq = int(match.group(4))
             oq = int(match.group(5))
             ready = int(match.group(6))
-            pending = re.search(re.compile(r'{(.*)}'), match.group(7)).group(1)
 
-            if pending: 
+            pending = []
+            pending_match = re.search(re.compile(r'{(.*)}'), match.group(7)).group(1)
+
+            if pending_match: 
                 pending_dict = {}
-                for split in pending.split(','):
+                for split in pending_match.split(','):
                     i = int(split.split('=')[0])
                     pending_length_i = int(split.split('=')[1])
                     pending_dict[i] = pending_length_i
 
-                pending = []
                 for j in sorted(pending_dict): 
                     pending.append(pending_dict[j])
-            else: 
-                pending = []
-
+            
             w = float(match.group(8))
-            wi = match.group(9)
+
+            wi = []
+            wi_match = re.search(re.compile(r'\[(.*)\]'), match.group(9)).group(1)
+
+            if wi_match:
+                wi = map(float, wi_match.split(','))
+                    
             wdqru = match.group(10)
             weight_info.append((t, ltqlen, iq, oq, ready, pending, w, wi, wdqru))
 

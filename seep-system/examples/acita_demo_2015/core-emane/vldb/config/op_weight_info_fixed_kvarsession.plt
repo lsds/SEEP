@@ -30,14 +30,22 @@ plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", 
 set title sprintf("Operator output queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:4 title word(op_weight_info_files,i) w fsteps linestyle i
 
-#set title sprintf("Operator ready queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-#plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:5 title word(op_weight_info_files,i) w fsteps linestyle i
+set title sprintf("Operator ready queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:5 title word(op_weight_info_files,i) w fsteps linestyle i
 
-#set title sprintf("Operator weights \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-#plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:6 title word(op_weight_info_files,i) w fsteps linestyle i
+set title sprintf("Operator weights \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:6 title word(op_weight_info_files,i) w fsteps linestyle i
 
-#set title sprintf("Pending 0 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-#plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:7 title word(op_weight_info_files,i) w fsteps linestyle i
+if (query eq "heatMap") {
+	set title sprintf("Pending 0 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:7 title word(op_weight_info_files,i) w fsteps linestyle i
 
-#set title sprintf("Pending 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-#plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:8 title word(op_weight_info_files,i) w fsteps linestyle i
+	set title sprintf("Pending 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:8 title word(op_weight_info_files,i) w fsteps linestyle i
+
+	set title sprintf("Weight 0 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:9 title word(op_weight_info_files,i) w fsteps linestyle i
+
+	set title sprintf("Weight 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:10 title word(op_weight_info_files,i) w fsteps linestyle i
+}
