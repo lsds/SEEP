@@ -142,6 +142,7 @@ sudo cp vldb/config/core4.8.conf.orig /etc/core/core.conf
 
 #Then need to point core config to acita config dir.
 ln -s `pwd`/vldb $USER_HOME/.core
+mkdir -p $USER_HOME/tmp
 
 sudo apt-get -y install gnuplot
 
