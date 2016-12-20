@@ -23,6 +23,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
+import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderFairBufferedBarrier;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
 
@@ -143,7 +144,8 @@ public class RoutingController implements Runnable{
 				long tSendBegin = System.currentTimeMillis();
 				if (numLogicalInputs > 1)
 				{
-					ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+					//ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+					ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderFairBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
 					for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
 					{
 						int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
@@ -389,7 +391,8 @@ public class RoutingController implements Runnable{
 		  weightInfo = new WeightInfo();
 			if (numLogicalInputs > 1)
 			{
-				 Map<Integer, Integer> localRawInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 //Map<Integer, Integer> localRawInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
+				 Map<Integer, Integer> localRawInputQlens = ((OutOfOrderFairBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
 				 
 				 //localInputQlens = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).sizes();
 				 localInputQlens = new HashMap<>();

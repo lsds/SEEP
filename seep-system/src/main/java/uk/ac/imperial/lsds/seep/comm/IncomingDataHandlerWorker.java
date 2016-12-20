@@ -53,6 +53,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureAdapter;
 import uk.ac.imperial.lsds.seep.runtimeengine.DataStructureI;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
+import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderFairBufferedBarrier;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 
@@ -237,6 +238,11 @@ public class IncomingDataHandlerWorker implements Runnable{
 						{
 							LOG.debug("Pushing to ooo buffered barrier.");
 							((OutOfOrderBufferedBarrier)dso).push(reg, opId);
+						}
+						else if (dso instanceof OutOfOrderFairBufferedBarrier)
+						{
+							LOG.debug("Pushing to ooo buffered barrier.");
+							((OutOfOrderFairBufferedBarrier)dso).push(reg, opId);
 						}
 						else
 						{

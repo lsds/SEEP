@@ -92,7 +92,8 @@ public class DataStructureAdapter {
 				{
 					if (uniqueDso == null)
 					{
-						OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier(query, opId);
+						//OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier(query, opId);
+						OutOfOrderFairBufferedBarrier b = new OutOfOrderFairBufferedBarrier(query, opId);
 						uniqueDso = b;
 						LOG.debug("-> Ingest with batch buffered Sync-Barrier from {}", entry.getKey());
 					}
@@ -121,7 +122,8 @@ public class DataStructureAdapter {
 				}
 				else if(entry.getValue().equals(InputDataIngestionMode.UPSTREAM_SYNC_BATCH_BUFFERED_BARRIER))
 				{
-					OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier(query, opId);
+					//OutOfOrderBufferedBarrier b = new OutOfOrderBufferedBarrier(query, opId);
+					OutOfOrderFairBufferedBarrier b = new OutOfOrderFairBufferedBarrier(query, opId);
 					uniqueDso = b;
 					LOG.debug("-> Ingest with batch buffered Sync-Barrier from {}", entry.getKey());
 				}

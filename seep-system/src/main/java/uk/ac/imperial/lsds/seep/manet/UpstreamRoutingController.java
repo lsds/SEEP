@@ -23,6 +23,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
+import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderFairBufferedBarrier;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
 
