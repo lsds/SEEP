@@ -34,6 +34,7 @@ public class RoutingController implements Runnable{
 	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
+	private final boolean requirePositiveAggregates = Boolean.parseBoolean(GLOBALS.valueFor("requirePositiveAggregates"));
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private final boolean sendQueueLengthsOnly;
 
@@ -501,6 +502,11 @@ public class RoutingController implements Runnable{
 		double sum = 0;
 		for (Double aggregatedInputWeight : perInputAggregates)
 		{
+			if (requirePositiveAggregates && aggregatedInputWeight <= 0) 
+			{ 
+				logger.debug("Aggregate weight = 0.0 (forced)");
+				return 0.0; 
+			}
 			sum += aggregatedInputWeight;
 			weightInfo.wi.add(aggregatedInputWeight);
 		}
