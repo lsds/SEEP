@@ -500,17 +500,21 @@ public class RoutingController implements Runnable{
 		
 		//Return mean for now.
 		double sum = 0;
+		boolean hasZero = false;
 		for (Double aggregatedInputWeight : perInputAggregates)
 		{
 			if (requirePositiveAggregates && aggregatedInputWeight <= 0) 
 			{ 
-				logger.debug("Aggregate weight = 0.0 (forced)");
-				return 0.0; 
+				hasZero = true;
 			}
-			sum += aggregatedInputWeight;
+			else
+			{
+				sum += aggregatedInputWeight;
+			}
 			weightInfo.wi.add(aggregatedInputWeight);
 		}
-		double aggregateWeight = sum / perInputAggregates.size();
+		
+		double aggregateWeight = hasZero ? 0.0 : sum / perInputAggregates.size();
 		weightInfo.w = aggregateWeight;
 		logger.debug("Aggregate weight = "+ aggregateWeight);
 		return aggregateWeight; 
@@ -530,7 +534,7 @@ public class RoutingController implements Runnable{
 			result.add(max);
 		}
 		return result;
-	}
+	}	
 
 	/* TODO: Incorporate downstreamsRoutable info into weights */
 	private class WeightInfo
