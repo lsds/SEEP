@@ -355,6 +355,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 
         if params['injectFailures']: 
             shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
+            with open("%s/start_failures.txt"%session.sessiondir, 'w') as sf:
+                sf.write(str(time.time()) + "\n")
 
         print 'Creating workers.'
         for i in range(3,3+len(num_workers)):

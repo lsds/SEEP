@@ -5,12 +5,17 @@ import subprocess,os,time,re,argparse
 def main(node):
     cycle_spec = get_node_cycle_spec(node)
     if cycle_spec:
+        now = time.time()
+        exp_start = get_exp_start()
+        if exp_start + cycle_spec[0] > now: 
+            time.sleep(exp_start + cycle_spec[0] - now)
+
         print "Node %s starting failure injector at %.1f"%(node, time.time())
         while True:
-            time.sleep(cycle_spec[0])
+            time.sleep(cycle_spec[1])
             toggle_netif("down")
             print "Node %s net inf down at %.1f"%(node, time.time())
-            time.sleep(cycle_spec[1])
+            time.sleep(cycle_spec[2])
             toggle_netif("up")
             print "Node %s net inf up at %.1f"%(node, time.time())
 
@@ -27,7 +32,7 @@ def get_node_cycle_spec(node):
         for line in f:
             cycle_spec = line.strip().split(',')	
             if node == cycle_spec[0].strip():
-                return (int(cycle_spec[1]), int(cycle_spec[2]))
+                return (float(cycle_spec[1]), int(cycle_spec[2]), int(cycle_spec[3]))
 
 
 if __name__ == "__main__":
