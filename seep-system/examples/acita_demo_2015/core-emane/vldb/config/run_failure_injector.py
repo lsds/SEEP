@@ -27,13 +27,17 @@ def toggle_netif(direction):
         subprocess.Popen(cmd, stdout=log, cwd=".", stderr=subprocess.STDOUT, env=os.environ.copy())
 
 def get_node_cycle_spec(node):
-    """ Format of cycle spec file line is node,up_duration_sec,down_duration_sec"""
+    """ Format of cycle spec file line is node,offset_sec,up_duration_sec,down_duration_sec"""
     with open("../failure_cycles.txt", 'r') as f:
         for line in f:
             cycle_spec = line.strip().split(',')	
             if node == cycle_spec[0].strip():
                 return (float(cycle_spec[1]), int(cycle_spec[2]), int(cycle_spec[3]))
 
+def get_exp_start():
+    with open("../start_failures.txt", 'r') as f:
+        for line in f:
+            return float(line.strip())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run a failure injector on this node.')
