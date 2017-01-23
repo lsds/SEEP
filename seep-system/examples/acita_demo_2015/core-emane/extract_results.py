@@ -226,3 +226,15 @@ def get_utils(f):
             utils.append((int(match.group(1)), float(match.group(4)), float(match.group(5))))
 
     return (op_id, utils)
+
+def get_transmissions(f):
+    regex = re.compile(r't=(\d+), oq.sync (\d+) sending ts=(\d+) for (\d+),')
+    transmissions = []
+    op_id = None
+    for line in f:
+        match = re.search(regex, line)
+        if match:
+            op_id = str(int(match.group(2)))
+            transmissions.append((int(match.group(1)), int(match.group(3)), int(match.group(4))))
+
+    return (op_id, transmissions)

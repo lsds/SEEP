@@ -66,6 +66,7 @@ public class OutputQueueWorker
 	private final boolean outputQueueTimestamps;
 	private double totalSent = 0;
 	private double coalesced = 0;
+	private int opId = 0;
 
 	public OutputQueueWorker(CoreRE owner, boolean outputQueueTimestamps)
 	{
@@ -73,7 +74,8 @@ public class OutputQueueWorker
 		this.k = initialiseKryo(); 
 		this.outputQueueTimestamps = outputQueueTimestamps;
 		Query meanderQuery = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
-		int logicalId = meanderQuery.getLogicalNodeId(owner.getProcessingUnit().getOperator().getOperatorId());
+		opId = owner.getProcessingUnit().getOperator().getOperatorId();
+		int logicalId = meanderQuery.getLogicalNodeId(opId);
 		boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
 		this.downIsMultiInput = !owner.getProcessingUnit().getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
 
@@ -146,20 +148,20 @@ public class OutputQueueWorker
 					channel.reopenDownstreamDataSocket();
 					owner.getControlHandler().newIncomingConn(channel.getDownstreamDataSocket());
 					setConnected();		
-					logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " connected to downstream: "+dest.getOperatorId());
+					logger.debug("Op "+opId + " connected to downstream: "+dest.getOperatorId());
 					while (true)
 					{
 						CtrlDataTuple ctrlData = exchanger.getCtrlData(channel);
-						logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " exchanged ctrlData for "+dest.getOperatorId());
+						logger.debug("Op "+opId + " exchanged ctrlData for "+dest.getOperatorId());
 						boolean success = sendCtrlData(ctrlData, dest);
-						logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " sent ctrlData for "+dest.getOperatorId()+", success="+success);
+						logger.debug("Op "+opId + " sent ctrlData for "+dest.getOperatorId()+", success="+success);
 						if (!success)
 						{
 							setReconnecting();	
 							channel.reopenDownstreamDataSocket();
 							owner.getControlHandler().newIncomingConn(channel.getDownstreamDataSocket());
 							setConnected();
-							logger.debug("Op "+owner.getProcessingUnit().getOperator().getOperatorId() + " connected to downstream: "+dest.getOperatorId());
+							logger.debug("Op "+opId + " connected to downstream: "+dest.getOperatorId());
 						}
 					}
 				}
@@ -295,7 +297,7 @@ public class OutputQueueWorker
 			}
 
 			channelRecord.addDataToBatch(tp);
-			String logline = "t="+System.currentTimeMillis()+", oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency;
+			String logline = "t="+System.currentTimeMillis()+", oq.sync "+opId+" sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency;
 			if (enableTupleTracking) { logger.info(logline); } else { logger.debug(logline);}
 		}
 

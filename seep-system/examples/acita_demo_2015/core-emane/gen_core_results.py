@@ -112,7 +112,14 @@ def main(exp_dir):
             if op_id:
                 for up_id in interval_tputs:
                     link_interval_tputs[(op_id, up_id)] = interval_tputs[up_id]
-        
+    
+    op_transmissions = {}
+    for op_log in op_logs + get_src_logfiles(exp_dir):
+        with open(op_log, 'r') as f:
+            (op_id, transmissions) = get_transmissions(f)
+            if op_id:
+                op_transmissions[op_id] = transmissions
+
     if finished:
         # Record the tput, k, w, query name etc.
         # Compute the mean tput
@@ -139,6 +146,7 @@ def main(exp_dir):
     record_op_weight_infos(op_weight_infos, exp_dir)
     record_op_utils(op_utils, exp_dir)
     record_link_interval_tputs(link_interval_tputs, exp_dir)
+    record_op_transmissions(op_transmissions, exp_dir)
 
 def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -274,6 +282,14 @@ def record_op_utils(op_utils, exp_dir):
             f.write('# util cum\n')
             for (ts, util, cum) in op_utils[op]:
                 f.write('%d %.1f %.1f\n'%(ts/1000, util, cum))
+
+def record_op_transmissions(op_transmissions, exp_dir):
+    for op in op_transmissions:
+        op_transmissions_file = "%s/op_%s_transmissions.txt"%(exp_dir, op)
+        with open(op_transmissions_file, 'w') as f:
+            f.write('# t ts dsop\n')
+            for (t, ts, dsop) in op_transmissions[op]:
+                f.write('%d %d %d\n'%(t, ts, dsOp))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

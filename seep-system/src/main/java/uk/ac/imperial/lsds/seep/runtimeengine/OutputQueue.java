@@ -48,6 +48,7 @@ public class OutputQueue {
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private final boolean enableTupleTracking = Boolean.parseBoolean(GLOBALS.valueFor("enableTupleTracking"));
 	private long currentReconnectCount = -1;
+	private int opId;
 	
 	public OutputQueue(CoreRE owner){
 		this.owner = owner;
@@ -55,6 +56,7 @@ public class OutputQueue {
 		bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		boolean isSource = owner.getProcessingUnit().getOperator().getOpContext().isSource();
 		outputQueueTimestamps = isSource && Boolean.parseBoolean(GLOBALS.valueFor("srcOutputQueueTimestamps"));
+		opId = owner.getProcessingUnit().getOperator().getOperatorId();
 		if (piggybackControlTraffic) { oqWorker = new OutputQueueWorker(owner, outputQueueTimestamps); } 
 		else { oqWorker = null; }
 	}
@@ -171,8 +173,8 @@ public class OutputQueue {
 
 				channelRecord.addDataToBatch(tp);
 				
-				String logline = "t="+System.currentTimeMillis()+", oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency;
-				if (enableTupleTracking) { logger.info(logline); } else { logger.debug(logline);}
+				String logline = "t="+System.currentTimeMillis()+", oq.sync "+opId+" sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency;
+				if (enableTupleTracking) { LOG.info(logline); } else { LOG.debug(logline);}
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();
