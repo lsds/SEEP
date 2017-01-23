@@ -1,0 +1,16 @@
+
+description = 'seep-system'
+dependencies {
+    compile group: 'log4j', name: 'log4j', version:'1.2.17'
+    compile group: 'com.esotericsoftware.kryo', name: 'kryo', version:'2.24.0'
+    compile group: 'com.codahale.metrics', name: 'metrics-core', version:'3.0.1'
+    compile group: 'com.codahale.metrics', name: 'metrics-jvm', version:'3.0.1'
+    compile group: 'com.outr.javasysmon', name: 'javasysmon_2.10', version:'0.3.4'
+    compile group: 'it.unimi.dsi', name: 'fastutil', version:'6.5.9'
+    compile group: 'joda-time', name: 'joda-time', version:'2.3'
+    compile group: 'org.apache.commons', name: 'commons-collections4', version:'4.0'
+    compile group: 'org.bytedeco', name: 'javacv', version:'0.11'
+    compile group: 'com.twelvemonkeys.imageio', name: 'imageio-pnm', version:'3.1.1'
+    compile group: 'de.javakaffee', name: 'kryo-serializers', version:'0.37'
+    compile group: 'org.imgscalr', name: 'imgscalr-lib', version:'4.2'
+}

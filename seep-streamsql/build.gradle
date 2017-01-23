@@ -1,0 +1,6 @@
+
+description = 'seep-streamsql'
+dependencies {
+    compile group: 'com.github.jsqlparser', name: 'jsqlparser', version:'0.9'
+  compile project(':seep-system')
+}
