@@ -284,12 +284,20 @@ def record_op_utils(op_utils, exp_dir):
                 f.write('%d %.1f %.1f\n'%(ts/1000, util, cum))
 
 def record_op_transmissions(op_transmissions, exp_dir):
+    total_transmissions = {}
     for op in op_transmissions:
         op_transmissions_file = "%s/op_%s_transmissions.txt"%(exp_dir, op)
         with open(op_transmissions_file, 'w') as f:
             f.write('# t ts dsop\n')
             for (t, ts, ds_op) in op_transmissions[op]:
                 f.write('%d %d %d\n'%(t, ts, ds_op))
+                total_transmissions[ts] = total_transmissions.get(ts, 0) + 1
+
+    total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
+    with open(total_transmissions_file, 'w') as f:
+        f.write('#ts count\n') 
+        for ts in sorted(total_transmissions.keys()):
+            f.write('%d %d\n'%(ts, total_transmissions[ts]))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')
