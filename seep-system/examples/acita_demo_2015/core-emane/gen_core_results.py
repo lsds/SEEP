@@ -271,7 +271,7 @@ def record_op_weight_infos(op_weight_infos, exp_dir):
                     line += " " + " ".join(map(str, pending))
                 if wi:
                     line += " " + " ".join(map(str, wi))
-                if bool(pending) != bool(wi): raise Exception("Logic error") 
+                if bool(pending) != bool(wi): raise Exception("Logic error: op %s, p=%s, wi=%s"%(op,str(pending),str(wi))) 
                 line += "\n"
                 f.write(line)
 
@@ -288,8 +288,8 @@ def record_op_transmissions(op_transmissions, exp_dir):
         op_transmissions_file = "%s/op_%s_transmissions.txt"%(exp_dir, op)
         with open(op_transmissions_file, 'w') as f:
             f.write('# t ts dsop\n')
-            for (t, ts, dsop) in op_transmissions[op]:
-                f.write('%d %d %d\n'%(t, ts, dsOp))
+            for (t, ts, ds_op) in op_transmissions[op]:
+                f.write('%d %d %d\n'%(t, ts, ds_op))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')
