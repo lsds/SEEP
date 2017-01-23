@@ -46,6 +46,7 @@ public class OutputQueue {
 	private final boolean outputQueueTimestamps;
 	private final OutputQueueWorker oqWorker;
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private final boolean enableTupleTracking = Boolean.parseBoolean(GLOBALS.valueFor("enableTupleTracking"));
 	private long currentReconnectCount = -1;
 	
 	public OutputQueue(CoreRE owner){
@@ -170,7 +171,8 @@ public class OutputQueue {
 
 				channelRecord.addDataToBatch(tp);
 				
-				LOG.debug("oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency);
+				String logline = "t="+System.currentTimeMillis()+", oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency;
+				if (enableTupleTracking) { logger.info(logline); } else { logger.debug(logline);}
 				if(channelRecord.getChannelBatchSize() <= 0){
 					channelRecord.setTick(currentTime);
 					BatchTuplePayload msg = channelRecord.getBatch();

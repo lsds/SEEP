@@ -55,6 +55,7 @@ public class OutputQueueWorker
 
 	private final boolean enableUpstreamRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
 	private final boolean mergeFailureAndRoutingCtrl;
+	private final boolean enableTupleTracking = Boolean.parseBoolean(GLOBALS.valueFor("enableTupleTracking"));
 	private final boolean downIsMultiInput;
 	private final static long DEFAULT_TIMEOUT = 1 * 1000;
 	private boolean connected = false;
@@ -294,7 +295,8 @@ public class OutputQueueWorker
 			}
 
 			channelRecord.addDataToBatch(tp);
-			logger.debug("oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency);
+			String logline = "t="+System.currentTimeMillis()+", oq.sync sending ts="+tp.timestamp+" for "+channelRecord.getOperatorId()+", current latency="+latency+", oq latency="+oqLatency;
+			if (enableTupleTracking) { logger.info(logline); } else { logger.debug(logline);}
 		}
 
 		if(channelRecord.getChannelBatchSize() <= 0 || ctrlDataTuple.rctrl != null || ctrlDataTuple.fctrl != null){
