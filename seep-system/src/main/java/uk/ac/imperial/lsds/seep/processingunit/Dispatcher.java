@@ -91,6 +91,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	private final Object lock = new Object(){};
 	private final int numDownstreamReplicas;
+	private final boolean canRetransmitConstrained;
 	private boolean downstreamsRoutable = true;
 
 	
@@ -131,17 +132,21 @@ public class Dispatcher implements IRoutingObserver {
 		
 		Query meanderQuery = owner.getOperator().getOpContext().getMeanderQuery(); 
 		int logicalId = meanderQuery.getLogicalNodeId(owner.getOperator().getOperatorId());
-		
+
 		if (owner.getOperator().getOpContext().isSink())
 		{
 			downIsMultiInput = false;
 			failureCtrlWatchdog = null;
 			numDownstreamReplicas = 0;
+			canRetransmitConstrained = true;
 		}
 		else
 		{
 			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
 			downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+			int downInputIndex = meanderQuery.getLogicalInputIndex(downLogicalId, logicalId);
+			canRetransmitConstrained = downInputIndex == 0 || !Boolean.parseBoolean(GLOBALS.valueFor("restrictRetransmitConstrained"));
+			logger.info("canRetransmitConstrained="+canRetransmitConstrained);
 			if (bestEffort)
 			{
 				if (downIsMultiInput)
@@ -402,8 +407,9 @@ public class Dispatcher implements IRoutingObserver {
 						if (!opQueue.contains(ts) && !workers.get(target).inSessionLog(ts))
 						{
 							logger.trace("Constrained tuple "+ts+" not in op queue or session log "+target+"/"+downOpId);
-							if (!optimizeReplay || 
-									(optimizeReplay && !isDownAlive(downOpId, ts)))
+							if (canRetransmitConstrained && 
+									(!optimizeReplay || 
+									(optimizeReplay && !isDownAlive(downOpId, ts))))
 							{
 								logger.trace("Constrained tuple "+ts+ "+not in alives.");
 								DataTuple dt = sharedReplayLog.remove(ts);
