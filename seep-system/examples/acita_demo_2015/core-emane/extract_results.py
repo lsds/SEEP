@@ -228,7 +228,7 @@ def get_utils(f):
     return (op_id, utils)
 
 def get_transmissions(f):
-    regex = re.compile(r't=(\d+), oq.sync ([-]?\d+) sending ts=(\d+) for (\d+),')
+    regex = re.compile(r't=(\d+), oq.sync ([-]?\d+) sending ts=(\d+) for ([-]?\d+),')
     transmissions = []
     op_id = None
     for line in f:
