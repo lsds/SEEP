@@ -56,6 +56,7 @@ public class RoutingController implements Runnable{
 	private final boolean useCostThreshold;
 	private final Map<Integer, Stats.IntervalTput> tputStats = new ConcurrentHashMap<>();
 	private WeightInfo weightInfo = null;
+	private final int skewLimit = Integer.parseInt(GLOBALS.valueFor("skewLimit"));
 	
 	private final Object lock = new Object(){};
 	
@@ -471,7 +472,17 @@ public class RoutingController implements Runnable{
 			
 			if (numLogicalInputs > 1)
 			{
-				weights.put(nodeId, aggregate(joinWeights));
+				 int max = Math.max(weightInfo.pending.get(0), weightInfo.pending.get(1));
+				 int min = Math.min(weightInfo.pending.get(0), weightInfo.pending.get(1));
+				 int skew = max - min;
+				 if (skewLimit > 0 && skew > skewLimit && (nodeId == 2 || nodeId == 210 || nodeId == 211))
+				 {
+					weights.put(nodeId, -999999.0);
+				 }
+				 else
+				 {
+					weights.put(nodeId, aggregate(joinWeights));
+				 }
 			}
 			weightInfo.recordWeight();
 			logger.debug("Updated routing controller weights: "+ weights);
