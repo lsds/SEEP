@@ -19,22 +19,12 @@ BUILDING:
 The project follows the standard Maven directory structure, with two
 differentiated modules, seep-system and seep-java2sdg.
 
-There are two options to build the SEEP system:
+From the top level directory:
 
-Option 1, single jar (recommended) -- run:
+./meander-bld.sh
 
-mvn clean compile assembly:single
-
-This produces one jar with all dependencies included.
-
-Option 2, without dependencies -- to compile it:
-
-mvn -DskipTests package
-
-In this case, ensure that the classpath includes the dependencies.
-
-You can alternatively build only individual modules, by running the same
-options above inside seep-system or seep-java2sdg, respectively.
+Will build seep-system and the example applications stateless-simple-query and
+acita_demo_2015.
 
 ************
 seep-system
@@ -46,7 +36,8 @@ The system requires one master node and N worker nodes (one worker node per
 Operator).
 
 First set the IP address of the master node in "mainAddr" inside
-config.properties and build the SEEP system.
+config.properties and rebuild the SEEP system. By default it is 127.0.0.1
+so you don't need to change anything if running in local mode (see below).
 
 Next run the master in the designated node:
 
@@ -54,6 +45,10 @@ java -jar <system.jar> Master <query.jar> <Base-class>
 
 where query.jar is the compiled query and the last parameter is the name of 
 the base class, not a path.
+
+e.g. To run the master for the stateless-simple-query example:
+cd seep-system/examples/stateless-simple-query
+java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Master `pwd`/query.jar Base
 
 Finally run as many worker nodes as your query requires:
 
@@ -66,18 +61,16 @@ each Worker node:
 
 java -jar <system.jar> Worker <port>
 
-*************
-seep-java2sdg
-*************
+e.g. For the stateless-simple-query example:
+cd seep-system/examples/stateless-simple-query
+java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Worker 3501 
+java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Worker 3502 
+java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Worker 3503 
 
-RUNNING:
-###########################
-It is mandatory to indicate an input program, an output file name and a target
-(dot/seepjar) and the classpath to the driver program and its dependencies.
-Examples: 
+Note you will need to run the master and each worker in a different shell. Then follow
+the instructions on the Master command prompt. 
 
-java -jar <java2sdg.jar> -i Driver -t dot -o myOutput -cp examples/
-
-The above code will process input program "Driver" using the dependencies in
-"examples/" to generate an output file "myOutput.dot".
-###########################
+Specifically, after giving the workers a few seconds to register with the Master, enter 1 at the Master command prompt.
+This will deploy the operators in the query in src/Base.java to the Workers.
+Once that has completed, simply press 2 to start the query, and enter to start the source.
+You should see tuples being received in shell output for the Worker running the sink operator. 
