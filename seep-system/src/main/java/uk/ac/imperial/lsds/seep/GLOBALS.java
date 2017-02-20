@@ -10,6 +10,7 @@
  ******************************************************************************/
 package uk.ac.imperial.lsds.seep;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -58,7 +59,12 @@ public class GLOBALS {
 			globals.put("fanin", System.getProperty("fanin", "2"));
 			globals.put("sinkScaleFactor", System.getProperty("sinkScaleFactor", "1"));
 			
-			globals.load(new FileReader("../session_params.txt"));
+			String sessionParamsPath = "../session_params.txt";
+			File f = new File("sessionParamsPath");	
+			if (f.exists() && !f.isDirectory())
+			{
+				globals.load(new FileReader(sessionParamsPath));
+			}
 			LOG.info("Loaded global properties="+propsToString());
 		}
 		catch (FileNotFoundException e1) {
