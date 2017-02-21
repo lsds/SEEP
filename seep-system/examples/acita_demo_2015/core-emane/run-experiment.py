@@ -20,7 +20,7 @@ latency_percentile = 'max'
 latency_regex = re.compile('max_lat=(\d+)')
 max_latency = 1000000.0 
 
-var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx' : 'retx_timeout' }
+var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx' : 'retx_timeout', 'sl' : 'skew_limit' }
 
 def main(ks,variables,sessions,params,plot_time_str=None):
 
@@ -90,6 +90,10 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                 record_tput_vs_lat_statistics(ks, time_str, data_dir)
                 for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
                     plot(p, time_str, script_dir, data_dir)
+            elif var_suffix == 'sl':
+                for p in ['tput_vs_skew_limit_stddev', 'latency_vs_skew_limit_stddev', 
+                        'rel_tput_vs_skew_limit_stddev', 'rel_latency_vs_skew_limit_stddev']:
+                    plot(p, time_str, script_dir, data_dir)
             else:
                 plot('v1_latency_percentiles', time_str, script_dir, data_dir)
                 plot('v1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
@@ -120,6 +124,8 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                         #plot_fixed_kvarsession('op_cum_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
                         if k > 1:
                             plot_fixed_kvarsession('op_weight_info_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                        if k == 1:
+                            plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
 
                         if params['dstat']:
                             plot_fixed_kvarsession('cpu_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
@@ -203,6 +209,10 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
                 params['downstreamsUnroutableTimeout'] = retx_timeout # TODO: Should this be changed differently
                 params['failureCtrlTimeout'] = retx_timeout + 1000 # TODO: Should this be changed differently?
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'retx', sessions, params)
+        elif len(variables['skew_limit']) > 0:
+            for skew_limit in variables['skew_limit']:
+                params['skewLimit'] = skew_limit
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'sl', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -229,6 +239,9 @@ def get_var_suffix_and_vals(variables):
     elif len(variables['retx_timeout']) > 0:
         var_vals = variables['retx_timeout']
         var_suffix = 'retx'
+    elif len(variables['skew_limit']) > 0:
+        var_vals = variables['skew_limit']
+        var_suffix = 'sl'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -377,6 +390,7 @@ def get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_metric_fn)
 
 def get_tput(logdir, include_failed=False):
     #regex = re.compile('src_sink_mean_tput=(\d+)')
+    #regex = re.compile('sink_sink_mean_tput=(\d+)')
     regex = re.compile('sink_sink_mean_tput=(\d+)')
     logfilename = '%s/tput.txt'%logdir
     if not os.path.exists(logfilename): 
@@ -481,7 +495,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
     #parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
     #parser.add_argument('--y', dest='y', default='1200', help='Grid y dimension (1200)')
-    parser.add_argument('--dimension', dest='dimension', default='1200', help='Grid dimension (1200)')
+    #parser.add_argument('--dimension', dest='dimension', default='1200', help='Grid dimension (1200)')
+    parser.add_argument('--dimension', dest='dimension', default='3500', help='Grid dimension (1200)')
     parser.add_argument('--cpuDelay', dest='cpu_delay', default='0', help='Processing delay for each operator')
     parser.add_argument('--query', dest='query', default='chain', help='query type: (chain), join, debsgc, fr, frshard, nameassist')
     parser.add_argument('--pausetimes', dest='pts', default='5.0', help='pause times [5.0]')
@@ -535,6 +550,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--injectFailures', dest='inject_failures', default=None, help='Start a failure cycle service according to config file.')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
     parser.add_argument('--bufSize', dest='buf_size', default=None, help='Max size of intermediate buffers')
+    parser.add_argument('--skewLimit', dest='skew_limit', default=None, help='Max skew for pending tuples')
     parser.add_argument('--retransmitTimeout', dest='retx_timeout', default=None, help='Time to wait before retransmitting')
     parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
     parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
@@ -551,10 +567,11 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     rctrl_delay=map(lambda x: int(x), args.rctrl_delay.split(',')) if args.rctrl_delay else []
     buf_size=map(lambda x: int(x), args.buf_size.split(',')) if args.buf_size else []
     retx_timeout=map(lambda x: int(x), args.retx_timeout.split(',')) if args.retx_timeout else []
+    skew_limit =map(lambda x: int(x), args.skew_limit.split(',')) if args.skew_limit else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
             "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay,
-            "buf_size" : buf_size, "retx_timeout": retx_timeout}
+            "buf_size" : buf_size, "retx_timeout": retx_timeout, "skew_limit": skew_limit}
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))

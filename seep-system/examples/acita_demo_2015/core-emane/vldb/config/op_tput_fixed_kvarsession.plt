@@ -24,3 +24,7 @@ op_tput_files=system(sprintf("find %s -maxdepth 1 -name 'op_*_interval_tput.txt'
 #plot for [file in op_tput_files] file using 1:2 notitle w steps linestyle 1
 plot for [i=1:words(op_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_tput_files,i)) using 1:2 title word(op_tput_files,i) w fsteps linestyle i
 
+op_sink_tput_files=system(sprintf("find %s -maxdepth 1 -name 'op_-*_interval_tput.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_interval_tput.txt/\\1/'", expdir))
+
+set title sprintf("Sink operator interval tput \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_sink_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_sink_tput_files,i)) using 1:2 title word(op_sink_tput_files,i) w fsteps linestyle i

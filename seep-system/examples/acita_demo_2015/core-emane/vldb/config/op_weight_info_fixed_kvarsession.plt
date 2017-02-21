@@ -19,6 +19,7 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 set style fill empty 
 set offsets graph 0.0, 0.0, 0.1, 0.1
 op_weight_info_files=system(sprintf("find %s -maxdepth 1 -name 'op_*_weight_infos.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_weight_infos.txt/\\1/'", expdir))
+#op_weight_info_files="0 1 2 -5 -489 -490"
 
 #plot for [file in op_tput_files] file using 1:2 notitle w steps linestyle 1
 set title sprintf("Operator total queue lengths \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
@@ -36,16 +37,29 @@ plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", 
 set title sprintf("Operator weights \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:6 title word(op_weight_info_files,i) w fsteps linestyle i
 
+set title sprintf("Operator skew \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:7 title word(op_weight_info_files,i) w fsteps linestyle i
+
 if (query eq "heatMap") {
 	set title sprintf("Pending 0 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
-	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:7 title word(op_weight_info_files,i) w fsteps linestyle i
-
-	set title sprintf("Pending 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:8 title word(op_weight_info_files,i) w fsteps linestyle i
 
-	set title sprintf("Weight 0 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	set title sprintf("Pending 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:9 title word(op_weight_info_files,i) w fsteps linestyle i
 
-	set title sprintf("Weight 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	set title sprintf("Weight 0 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:10 title word(op_weight_info_files,i) w fsteps linestyle i
+
+	set title sprintf("Weight 1 \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+	plot for [i=1:words(op_weight_info_files)] sprintf("%s/op_%s_weight_infos.txt", expdir, word(op_weight_info_files,i)) using 1:11 title word(op_weight_info_files,i) w fsteps linestyle i
 }
+
+op_tput_files=system(sprintf("find %s -maxdepth 1 -name 'op_*_interval_tput.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_interval_tput.txt/\\1/'", expdir))
+
+set title sprintf("Operator interval tput \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_tput_files,i)) using 1:2 title word(op_tput_files,i) w fsteps linestyle i
+
+op_sink_tput_files=system(sprintf("find %s -maxdepth 1 -name 'op_-*_interval_tput.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_interval_tput.txt/\\1/'", expdir))
+
+set title sprintf("Sink operator interval tput \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_sink_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_sink_tput_files,i)) using 1:2 title word(op_sink_tput_files,i) w fsteps linestyle i

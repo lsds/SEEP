@@ -67,7 +67,7 @@ def sink_rx_latencies(f):
     returns a list of (tsrx, latency)
     """
     tuple_records = sink_rx_tuples(f)
-    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3])), tuple_records)
+    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3]), int(tuple_record[4])), tuple_records)
     #return pd.Series(latencies)
     return latencies
 
@@ -90,19 +90,19 @@ def unfinished_sink_rx_latencies(f, t_end):
     tuple_records = sink_rx_tuples(f)
     filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez, opLats, sockLats):
             int(rxts) <= int(t_end), tuple_records)
-    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3])), filtered_tuple_records)
+    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3]), int(tuple_record[4])), filtered_tuple_records)
     #return pd.Series(latencies)
     return latencies
 
 def dedup_latencies(latencies):
     deduped = {}
-    for (ts, latency, txts) in latencies:
+    for (ts, latency, txts, rxts) in latencies:
         if ts in deduped:
             print 'Found dupe latency %s'%(str(ts))
             if deduped[ts][0] > latency:
-                deduped[ts] = (latency, txts)
+                deduped[ts] = (latency, txts, rxts)
         else:
-            deduped[ts] = (latency, txts)
+            deduped[ts] = (latency, txts, rxts)
     #return pd.Series(deduped.values())
     return deduped
 
@@ -131,7 +131,7 @@ def processor_tput(f):
     return (op_id, last_cum_tput)
 
 def get_interval_tputs(f):
-    regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
+    regex = re.compile(r't=(\d+),id=([-]?\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
     op_id = None
     tputs = [] 
     for line in f:
@@ -164,7 +164,7 @@ def get_weight_infos(f):
     Example log line:
     t=1481214262870,op=11,ltqlen=726,iq=625,oq=101,ready=625,pending={0=0, 1=0},w=0.0,wi=[0.0, 0.0],wdqru(i=0 [u=-1:w=-359.244746835916,d=-625.0,q=100.0,r=0.5747915949374656]),(i=1 [u=-2:w=-78.81605920712812,d=-625.0,q=100.0,r=0.12610569473140498])
     """
-    regex = re.compile(r't=(\d+),op=(.*),ltqlen=(\d+),iq=(\d+),oq=(\d+),ready=(\d+),pending=(.*),w=(.*),wi=(.*),wdqru(.*)$')
+    regex = re.compile(r't=(\d+),op=(.*),ltqlen=(\d+),iq=(\d+),oq=(\d+),ready=(\d+),pending=(.*),skew=(.*),w=(.*),wi=(.*),wdqru(.*)$')
     op_id = None
     weight_info = [] 
     for line in f:
@@ -190,16 +190,17 @@ def get_weight_infos(f):
                 for j in sorted(pending_dict): 
                     pending.append(pending_dict[j])
             
-            w = float(match.group(8))
+            skew = int(match.group(8))
+            w = float(match.group(9))
 
             wi = []
-            wi_match = re.search(re.compile(r'\[(.*)\]'), match.group(9)).group(1)
+            wi_match = re.search(re.compile(r'\[(.*)\]'), match.group(10)).group(1)
 
             if wi_match:
                 wi = map(float, wi_match.split(','))
                     
-            wdqru = match.group(10)
-            weight_info.append((t, ltqlen, iq, oq, ready, pending, w, wi, wdqru))
+            wdqru = match.group(11)
+            weight_info.append((t, ltqlen, iq, oq, ready, pending, skew, w, wi, wdqru))
 
     return (op_id, weight_info)
 

@@ -42,6 +42,9 @@ def main(exp_dir):
             if not t_finished_sink_begin: raise Exception("Could not find t_sink_begin.")
         with open(finished_sink_log, 'r') as sink:
             (total_tuples, total_bytes, t_finished_sink_end) = sink_rx_end(sink)
+            finished_total_tuples = total_tuples
+            finished_total_bytes = total_bytes #N.B.This assumes all tuples are the same size.
+
             if not t_finished_sink_end: raise Exception("Could not find t_sink_end.")
         with open(finished_sink_log, 'r') as sink:
             rx_latencies = sink_rx_latencies(sink)
@@ -131,6 +134,9 @@ def main(exp_dir):
 
 
         record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_tx_latencies, exp_dir)
+        "N.B. finished_total_bytes will be wrong here if tuples are different sizes."
+        deduped_joint_latencies = sorted(list(deduped_tx_latencies.values()), key=lambda x: x[2])[:finished_total_tuples]
+        record_sink_sink_joint_finished_stats(t_min_sink_begin, deduped_joint_latencies[-1][2], finished_total_bytes, finished_total_tuples, deduped_joint_latencies, exp_dir)
         """
         sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
         record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
@@ -153,12 +159,24 @@ def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, dedupe
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
     sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_frame_rate':sink_sink_frame_rate}, 'a')
-    deduped_latencies = map(lambda (latency, txts): latency, deduped_tx_latencies.values())
+    deduped_latencies = map(lambda (latency, txts, rxts): latency, deduped_tx_latencies.values())
     lstats = latency_stats(pd.Series(deduped_latencies))
     record_stat('%s/latency.txt'%exp_dir, lstats)
     lpercentiles = compute_cumulative_percentiles(deduped_latencies)
     record_percentiles(lpercentiles, 'lat', exp_dir)
     record_latencies(deduped_tx_latencies, '%s/tx_latencies.txt'%exp_dir)
+
+def record_sink_sink_joint_finished_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_joint_latencies, exp_dir):
+    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
+    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
+    record_stat('%s/tput.txt'%exp_dir, {'sink_sink_joint_mean_tput':sink_sink_mean_tput}, 'a')
+    sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
+    record_stat('%s/tput.txt'%exp_dir, {'sink_sink_joint_frame_rate':sink_sink_frame_rate}, 'a')
+    deduped_latencies = map(lambda x: x[0], deduped_joint_latencies)
+    #lstats = latency_stats(pd.Series(deduped_latencies))
+    #record_stat('%s/latency.txt'%exp_dir, lstats)
+    #lpercentiles = compute_cumulative_percentiles(deduped_latencies)
+    #record_percentiles(lpercentiles, 'lat', exp_dir)
 
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
@@ -264,9 +282,9 @@ def record_op_weight_infos(op_weight_infos, exp_dir):
     for op in op_weight_infos:
         op_weight_infos_file = "%s/op_%s_weight_infos.txt"%(exp_dir, op)
         with open(op_weight_infos_file, 'w') as f:
-            f.write('# ltqlen iq oq ready w pending\n')
-            for (ts, ltqlen, iq, oq, ready, pending, w, wi, wdqru) in op_weight_infos[op]:
-                line = '%d %d %d %d %d %.1f'%(ts/1000, ltqlen, iq, oq, ready, w)
+            f.write('#t ltqlen iq oq ready w skew pending(0-i) w(0-i)\n')
+            for (ts, ltqlen, iq, oq, ready, pending, skew, w, wi, wdqru) in op_weight_infos[op]:
+                line = '%d %d %d %d %d %.1f %d'%(ts/1000, ltqlen, iq, oq, ready, w, skew)
                 if pending:
                     line += " " + " ".join(map(str, pending))
                 if wi:
