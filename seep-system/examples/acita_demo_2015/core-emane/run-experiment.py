@@ -79,9 +79,13 @@ def main(ks,variables,sessions,params,plot_time_str=None):
                         'rel_tput_vs_rctrldelay_stddev', 'rel_latency_vs_rctrldelay_stddev']:
                     plot(p, time_str, script_dir, data_dir)
             elif var_suffix == 'bsz':
-                for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev']:
-                    #'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
+                if len (variables['buf_size']) == 1:
+                    plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['buf_size'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
+                    plot_var('v1_tput_vs_var_stddev', var_suffix2name[var_suffix], time_str, script_dir, data_dir)
+                else:
+                    for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev']:
+                        #'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
+                        plot(p, time_str, script_dir, data_dir)
             elif var_suffix == 'retx':
                 for p in ['tput_vs_retx_timeout_stddev', 'latency_vs_retx_timeout_stddev', 
                         'rel_tput_vs_retx_timeout_stddev', 'rel_latency_vs_retx_timeout_stddev']:
@@ -484,6 +488,14 @@ def plot_fixed_kmob(p, k, mob, sessions, time_str, script_dir, data_dir, params,
 
 def plot_fixed_kmobsession(p, k, mob, session, time_str, script_dir, data_dir, params, term='pdf', add_to_envstr=''):
     plot_fixed_kvarsession(p, k, 'mobility', mob, 'm', session, time_str, script_dir, data_dir, params, term, add_to_envstr)
+
+def plot_var(p, varname, time_str, script_dir, data_dir, term='pdf', add_to_envstr=''):
+    var_envstr = '%s;varname=\'%s\''%(add_to_envstr, varname)
+    plot(p, time_str, script_dir, data_dir, term, var_envstr)
+
+def plot_fixed_var(p, varname, varval, varext, sessions, time_str, script_dir, data_dir, params, term='pdf', add_to_envstr=''):
+    var_envstr = '%s;varname=\'%s\';var=\'%.2f\';varext=\'%s\';query=\'%s\';duration=\'%s\';runs=\'%d\''%(add_to_envstr, varname, varval, varext, params['query'],params['duration'],sessions)
+    plot(p, time_str, script_dir, data_dir, term, var_envstr)
 
 def plot_fixed_kvarsession(p, k, varname, varval, varext, session, time_str, script_dir, data_dir, params, term='pdf', add_to_envstr=''):
     kvarsession_envstr = '%s;k=\'%d\';varname=\'%s\';var=\'%.2f\';varext=\'%s\';query=\'%s\';duration=\'%s\';session=\'%d\''%(add_to_envstr,k,varname,varval,varext,params['query'],params['duration'],session)

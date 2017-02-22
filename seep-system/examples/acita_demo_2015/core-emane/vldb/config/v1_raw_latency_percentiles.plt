@@ -2,7 +2,7 @@ load sprintf("%s/colours.plt",tmpldir)
 set terminal term 
 set output sprintf("%s/%s/raw_latency_percentiles%s",outputdir,timestr,termext)
 
-set title sprintf("Latency (min/5th/95th/max) vs replication factor (k)\n mob=%s, query=%s, runs=%s",mob,query,runs) font ",10"
+set title sprintf("Latency (min/5th/95th/max) vs replication factor (k)\n %s=%s, query=%s, runs=%s",varname,var,query,runs) font ",10"
 set xlabel "Replication factor (k)" font ", 20"
 set ylabel "Latency (ms)" font ", 20" offset -2
 
@@ -29,11 +29,11 @@ set boxwidth 0.1
 set offset 0.1,0.1
 set style fill empty 
 
-plot sprintf("%s/%s/1k/%sm/1k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/2k/%sm/2k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/3k/%sm/3k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/5k/%sm/5k-lat.data",outputdir,timestr,mob) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/1k/%sm/1k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
-	sprintf("%s/%s/2k/%sm/2k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
-	sprintf("%s/%s/3k/%sm/3k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
-	sprintf("%s/%s/5k/%sm/5k-lat.data",outputdir,timestr,mob) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 4 
+plot sprintf("%s/%s/1k/%s%s/1k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/2k/%s%s/2k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/3k/%s%s/3k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/5k/%s%s/5k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/1k/%s%s/1k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
+	sprintf("%s/%s/2k/%s%s/2k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
+	sprintf("%s/%s/3k/%s%s/3k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
+	sprintf("%s/%s/5k/%s%s/5k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 4 
