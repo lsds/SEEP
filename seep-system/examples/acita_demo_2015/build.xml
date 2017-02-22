@@ -3,7 +3,8 @@
         Build query
     </description>
   <!-- set global properties for this build -->
-  <property name="src" location="src"/>
+  <!--<property name="src" location="src-noopencv"/>-->
+  <property name="src" location="src-noopencv"/>
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
   <property name="lib"	location="lib"/>
