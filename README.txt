@@ -46,9 +46,9 @@ java -jar <system.jar> Master <query.jar> <Base-class>
 where query.jar is the compiled query and the last parameter is the name of 
 the base class, not a path.
 
-e.g. To run the master for the stateless-simple-query example:
-cd seep-system/examples/stateless-simple-query
-java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Master `pwd`/query.jar Base
+e.g. To run the master for the acita_demo_2015 example:
+cd seep-system/examples/acita_demo_2015
+java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Master `pwd`/dist/acita_demo_2015.jar Base
 
 Finally run as many worker nodes as your query requires:
 
@@ -61,8 +61,8 @@ each Worker node:
 
 java -jar <system.jar> Worker <port>
 
-e.g. For the stateless-simple-query example:
-cd seep-system/examples/stateless-simple-query
+e.g. For the acita_demo_2015 example:
+cd seep-system/examples/acita_demo_2015
 java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Worker 3501 
 java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Worker 3502 
 java -jar lib/seep-system-0.0.1-SNAPSHOT.jar Worker 3503 
