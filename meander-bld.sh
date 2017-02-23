@@ -1,3 +1,5 @@
+pushd seep-system/examples/acita_demo_2015 ; ant clean ; popd 
+pushd seep-system/examples/stateless-simple-query ; ant clean ; popd
 mvn clean compile assembly:single 
 
 mkdir -p seep-system/examples/acita_demo_2015/lib 
