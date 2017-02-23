@@ -9,6 +9,7 @@
   <property name="dist"  location="dist"/>
   <property name="lib"	location="lib"/>
   <property name="resources" location="resources"/>
+  <property name="rundir" location="tmp"/>
   
 
   <target name="init">
@@ -50,5 +51,9 @@
     <!-- Delete the ${build} and ${dist} directory trees -->
     <delete dir="${build}"/>
     <delete dir="${dist}"/>
+    <delete dir="${rundir}/*"/>
+    <delete includeEmptyDirs="true">
+	  <fileset dir="${rundir}" includes="**/*" defaultexcludes="no"/>
+    </delete>
   </target>
 </project>

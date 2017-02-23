@@ -53,7 +53,7 @@ public class GLOBALS {
 			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
 			globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
 			globals.put("chainLength", System.getProperty("chainLength", "1"));
-			globals.put("queryType", System.getProperty("queryType", "chain"));
+			//globals.put("queryType", System.getProperty("queryType", "chain"));
 			globals.put("sources", System.getProperty("sources", "1"));
 			globals.put("sinks", System.getProperty("sinks", "1"));
 			globals.put("fanin", System.getProperty("fanin", "2"));
