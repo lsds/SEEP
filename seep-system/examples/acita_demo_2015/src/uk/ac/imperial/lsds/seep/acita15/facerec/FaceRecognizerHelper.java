@@ -39,11 +39,16 @@ import javax.imageio.ImageIO;
 
 import java.awt.image.BufferedImage;
 
-import static org.bytedeco.javacpp.opencv_contrib.*;
+//import org.bytedeco.javacpp.FloatPointer;
+import org.bytedeco.javacpp.DoublePointer;
+import org.bytedeco.javacpp.IntPointer;
+//import org.bytedeco.javacpp.PointerPointer;
+//import static org.bytedeco.javacpp.opencv_contrib.*;
 import static org.bytedeco.javacpp.opencv_core.*;
-//import static org.bytedeco.javacpp.opencv_imgcodecs.*;
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
+import static org.bytedeco.javacpp.opencv_face.*;
 
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
@@ -88,7 +93,9 @@ public class FaceRecognizerHelper
 		int predictedLabel[] = new int[1];
 		double confidence[] = new double[1];
 		
-		faceRecognizer.predict(imgBWMat, predictedLabel, confidence);
+		IntPointer predictedLabelChannels = new IntPointer(predictedLabel);
+		DoublePointer confidenceChannels = new DoublePointer(confidence);
+		faceRecognizer.predict(imgBWMat, predictedLabelChannels, confidenceChannels);
 		logger.debug("Predicted label for received image: " + predictedLabel[0]+ " (ROI="+width+"x"+height+") with confidence "+confidence[0]);
 
 		if (labelExamples.containsKey(predictedLabel[0]))
@@ -133,7 +140,7 @@ public class FaceRecognizerHelper
 		for (String filename : trainingFiles.keySet())
 		{
 			//File imgFile = new File(trainingDir+"/"+filename);
-			//Mat img = imread(imgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
+			//Mat img = imread(imgFile.getAbsolutePath(), IMREAD_GRAYSCALE);
 			Mat img = loadBWMatImage(filename);
 			logger.info("Read "+img.rows()+"x"+img.cols()+" training image from "+ filename);
 			images.put(counter, img);
@@ -153,7 +160,7 @@ public class FaceRecognizerHelper
 	
 	public void testATT()
 	{
-		Mat testImage = imread(testImageFilename, CV_LOAD_IMAGE_GRAYSCALE);
+		Mat testImage = imread(testImageFilename, IMREAD_GRAYSCALE);
 		int predictedLabel = faceRecognizer.predict(testImage);
 
 		logger.debug("Predicted label for test image: " + predictedLabel);
@@ -180,7 +187,7 @@ public class FaceRecognizerHelper
 		int counter = 0;
 
 		for (File image : imageFiles) {
-			Mat img = imread(image.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
+			Mat img = imread(image.getAbsolutePath(), IMREAD_GRAYSCALE);
 
 			int label = Integer.parseInt(image.getName().split("\\-")[0]);
 
@@ -197,7 +204,7 @@ public class FaceRecognizerHelper
 
 		faceRecognizer.train(images, labels);
 
-		Mat testImage = imread(testImageFilename, CV_LOAD_IMAGE_GRAYSCALE);
+		Mat testImage = imread(testImageFilename, IMREAD_GRAYSCALE);
 		int predictedLabel = faceRecognizer.predict(testImage);
 
 		logger.debug("Predicted label: " + predictedLabel);
@@ -214,7 +221,7 @@ public class FaceRecognizerHelper
 			tmpImgFile.mkdirs();
 			InputStream fileInJar = this.getClass().getClassLoader().getResourceAsStream(filepath);
 			Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			Mat img = imread(tmpImgFile.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
+			Mat img = imread(tmpImgFile.getAbsolutePath(), IMREAD_GRAYSCALE);
 			return img;
 			//BufferedImage bufImg = ImageIO.read(this.getClass().getClassLoader().getResourceAsStream(filepath));
 			//logger.info("Loaded "+bufImg.getWidth()+"x"+bufImg.getHeight()+" training image");

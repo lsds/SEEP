@@ -44,6 +44,7 @@ import org.bytedeco.javacv.*;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.indexer.*;
 
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_objdetect.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;

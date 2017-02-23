@@ -48,6 +48,7 @@ import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_objdetect.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
