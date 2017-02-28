@@ -410,7 +410,7 @@ public class Infrastructure {
 	private Map<Integer, String> readMappingConstraints()
 	{
 		Map<Integer, String> constraints = new HashMap<>();
-		File f = new File("../mappingRecordIn.txt");
+		File f = new File("mappingRecordIn.txt");
 		if (!f.exists()) 
 		{ 
 			LOG.warn("No mapping constraints found.");			
