@@ -40,7 +40,7 @@ import javax.imageio.ImageIO;
 
 import java.awt.image.BufferedImage;
 
-import static org.bytedeco.javacpp.opencv_contrib.*;
+//import static org.bytedeco.javacpp.opencv_contrib.*;
 import static org.bytedeco.javacpp.opencv_core.*;
 //import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;

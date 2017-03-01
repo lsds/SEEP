@@ -48,9 +48,10 @@ import org.bytedeco.javacpp.opencv_core.Mat;
 
 import java.nio.file.Files;
 
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
-import static org.bytedeco.javacpp.opencv_legacy.*;
+//import static org.bytedeco.javacpp.opencv_legacy.*;
 
 public class VideoHelper {
 
@@ -213,11 +214,11 @@ public class VideoHelper {
 			// load the face image
 			IplImage img = cvLoadImage(
 					imgFile.getAbsolutePath(), // filename
-					CV_LOAD_IMAGE_GRAYSCALE); // isColor
+					IMREAD_GRAYSCALE); // isColor
 			/*
 			Mat img = imread(
 					imgFile.getAbsolutePath(), // filename
-					CV_LOAD_IMAGE_GRAYSCALE); // isColor
+					IMREAD_GRAYSCALE); // isColor
 			*/
 
 			if (img == null) {
