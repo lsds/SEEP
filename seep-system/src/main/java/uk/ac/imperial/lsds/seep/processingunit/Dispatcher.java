@@ -175,7 +175,7 @@ public class Dispatcher implements IRoutingObserver {
 		{ limitUnacked = true; }
 		else { limitUnacked = false; }
 		MAX_UNACKED = GLOBAL_MAX_TOTAL_QUEUE_SIZE-1;
-		logger.info("limitUnacked="+limitUnacked);
+		logger.info("limitUnacked="+limitUnacked+",maxUnacked="+MAX_UNACKED);
 	}
 	
 	public void setOutputQueues(ArrayList<OutputQueue> outputQueues)
