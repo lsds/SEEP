@@ -1273,7 +1273,8 @@ public class Dispatcher implements IRoutingObserver {
 		
 		private void purgeOpOutputQueue()
 		{
-			boolean removedSome = !opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
+			//boolean removedSome = !opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
+			boolean removedSome = opQueue.removeOlderInclusive(combinedDownFctrl.lw());
 			removedSome = removedSome || opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
 			if (removedSome) { setDownstreamsRoutable(true); }
 		}
@@ -1503,7 +1504,15 @@ public class Dispatcher implements IRoutingObserver {
 					try { lock.wait();} 
 					catch (InterruptedException e) {}
 				}
-				queue.put(dt.getPayload().timestamp, dt);
+				try
+				{
+					queue.put(dt.getPayload().timestamp, dt);
+				}
+				catch(RuntimeException e)
+				{
+					logger.error("Cannot put timestamp="+dt.getPayload().timestamp+", map="+queue);
+					throw e;
+				}
 				lock.notifyAll();
 			}
 		}
@@ -1595,16 +1604,24 @@ public class Dispatcher implements IRoutingObserver {
 			return removed;
 		}
 		
-		public SortedMap<Long, DataTuple> removeOlderInclusive(long ts)
+		//public SortedMap<Long, DataTuple> removeOlderInclusive(long ts)
+		public boolean removeOlderInclusive(long ts)
 		{
 			synchronized(lock)
 			{
 				SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				boolean removedSome = removed != null && !removed.isEmpty();
 				SortedMap<Long, DataTuple> remainder = queue.tailMap(ts+1);
 				if (remainder == null || remainder.isEmpty()) { queue.clear(); }
-				else { queue = remainder; }
-				if (removed != null && !removed.isEmpty()) { lock.notifyAll(); }
-				return removed;
+				else 
+				{ 
+					//queue = remainder; Don't do this since queue will have a restricted range
+					//Not necessarily what we want for sharedReplayLog?
+					removed.clear(); //Should be reflected in the backing map.
+				}
+				//if (removed != null && !removed.isEmpty()) { lock.notifyAll(); }
+				if (removedSome) { lock.notifyAll(); }
+				return removedSome;
 			}
 		}
 		
