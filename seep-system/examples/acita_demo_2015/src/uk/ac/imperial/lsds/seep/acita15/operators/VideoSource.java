@@ -87,6 +87,7 @@ public class VideoSource implements StatelessOperator {
 		//Set<File> imgFiles = extractJarImages(jarImageFilenames, extractedFilesDir);
 		//testIplFrames = loadGreyImages(extractedFilesDir);
 		testRawFrames = videoHelper.loadImagesFromJar(testFramesDir);
+		logger.info("VIDEO_SOURCE setup complete.");
 	}
 
 	public void processData(DataTuple dt) {

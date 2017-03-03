@@ -60,7 +60,7 @@ public class GLOBALS {
 			globals.put("sinkScaleFactor", System.getProperty("sinkScaleFactor", "1"));
 			
 			String sessionParamsPath = "../session_params.txt";
-			File f = new File("sessionParamsPath");	
+			File f = new File(sessionParamsPath);	
 			if (f.exists() && !f.isDirectory())
 			{
 				globals.load(new FileReader(sessionParamsPath));

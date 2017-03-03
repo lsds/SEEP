@@ -65,6 +65,7 @@ public class FaceRecognizerHelper
 	private final Java2DFrameConverter frameConverter = new Java2DFrameConverter();
 	private final OpenCVFrameConverter matConverter = new OpenCVFrameConverter.ToMat();
 	private final OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
+	private final String existingFaceRecModel = GLOBALS.valueFor("preTrainedFaceRecModel");
 	
 	public FaceRecognizerHelper(int opId, String trainingDir, String trainingList, String testImageFilename)
 	{
@@ -75,7 +76,9 @@ public class FaceRecognizerHelper
 		String[] imgFormats = ImageIO.getReaderFormatNames();
 		logger.info("Image io supported image formats: ");
 		for (int i = 0; i < imgFormats.length; i++) { logger.info(""+imgFormats[i]); }
-		this.faceRecognizer = trainRecognizer();
+		//this.faceRecognizer = trainRecognizer();
+		this.faceRecognizer = createRecognizer();
+		logger.info("FACE_RECOGNIZER setup complete.");
 	}
 	
 	public int recognize(byte[] value, int x, int y, int width, int height, int type)
@@ -110,8 +113,30 @@ public class FaceRecognizerHelper
 		if (labelExamples.containsKey(label)) { return labelExamples.get(label); }
 		else { return ""; }
 	}
-	public FaceRecognizer trainRecognizer()
+	public FaceRecognizer createRecognizer()
 	{
+		//FaceRecognizer faceRecognizer = createFisherFaceRecognizer();
+		// FaceRecognizer faceRecognizer = createEigenFaceRecognizer();
+		FaceRecognizer lbphRecognizer = createLBPHFaceRecognizer();
+
+		if (existingFaceRecModel != null && !existingFaceRecModel.trim().isEmpty())
+		{  	
+			logger.info("Loading existing pre-trained model from:"+existingFaceRecModel);
+			lbphRecognizer.load(existingFaceRecModel);
+		}
+		else
+		{
+			trainRecognizer(lbphRecognizer);
+			lbphRecognizer.save("trainedFaceRecModel.xml");
+		}
+
+
+		return lbphRecognizer;
+	}
+
+	public void trainRecognizer(FaceRecognizer untrainedRecognizer)
+	{
+
 		//File csv = new File(trainingDir+"/at.txt");
 		logger.info("Loading training list from:"+trainingDir+"/"+trainingList);
 		InputStream csv = this.getClass().getClassLoader().getResourceAsStream(trainingDir+"/"+trainingList);
@@ -150,12 +175,7 @@ public class FaceRecognizerHelper
 			counter++;
 		}
 		
-		//FaceRecognizer faceRecognizer = createFisherFaceRecognizer();
-		// FaceRecognizer faceRecognizer = createEigenFaceRecognizer();
-		FaceRecognizer lbphRecognizer = createLBPHFaceRecognizer();
-
-		lbphRecognizer.train(images, labels);
-		return lbphRecognizer;
+		untrainedRecognizer.train(images, labels);
 	}
 	
 	public void testATT()
