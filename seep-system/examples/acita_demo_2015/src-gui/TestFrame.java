@@ -13,7 +13,7 @@ import java.awt.*;
 import javax.swing.*;
 import java.awt.Graphics;
 
-public class TestHeatMap {
+public class TestFrame {
 	private final static int PORT = 20150;
 
 	public static void main(String args[]){
@@ -34,21 +34,16 @@ public class TestHeatMap {
 			myFrame.setLayout(new BorderLayout());
 
 
-			Container pane = myFrame.getContentPane();
+			//Container pane = myFrame.getContentPane();
 			//FacePanel panel = new FacePanel();
-			double[][] data = HeatMap.generateSinCosData(200);
-			JPanel heatMapPanel = new HeatMap(data, true, Gradient.GRADIENT_BLACK_TO_WHITE);
-			pane.add(panel);
+			//pane.add(panel);
 			//myFrame.add(panel);
-			myFrame.pack();
-			myFrame.setVisible(true);
 
-			/*
 			try
 			{
 				BufferedImage img = readBufferedImageFromFile("vldb/config/master.png");
 				ImageIcon icon = new ImageIcon(img);
-				JLabel label = new JLabel("Initial", icon, JLabel.CENTER);
+				//JLabel label = new JLabel("Initial", icon, JLabel.CENTER);
 				JLabel label = new JLabel("Initial", JLabel.CENTER);
 				label.setVerticalTextPosition(JLabel.BOTTOM);
 				label.setHorizontalTextPosition(JLabel.CENTER);
@@ -64,7 +59,7 @@ public class TestHeatMap {
 
 			}
 			catch(Exception e) { throw new RuntimeException(e); }
-			*/
+
 		}
 
 		private BufferedImage readBufferedImageFromFile(String filename)
