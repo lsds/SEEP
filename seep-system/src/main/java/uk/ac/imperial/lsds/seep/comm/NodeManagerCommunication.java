@@ -134,17 +134,24 @@ public class NodeManagerCommunication {
 	//This method gets the local IP and sends a BOOT message to the central node.
 	public void sendBootstrapInformation(InetAddress controlIp, int port, InetAddress bindAddr, int ownPort){
 		try{
-			InetAddress ownIp = InetAddress.getLocalHost();
-			String command = "bootstrap "+(ownIp.getHostAddress()+" "+ controlIp.getHostAddress()+" "+ownPort+"\n");
-			LOG.info("--> Boot Info: {} to: {} on: {}", command, bindAddr, port);
-			Socket conn = new Socket(bindAddr, port);
-			(conn.getOutputStream()).write(command.getBytes());
-			conn.close();
+			sendBootstrapInformation(InetAddress.getLocalHost(), controlIp, port, bindAddr, ownPort);
 		}
 		catch(UnknownHostException uhe){
 			System.out.println("INF.sendBootstrapInformation: "+uhe.getMessage());
 			LOG.error("-> Infrastructure. sendBootstrapInfo "+uhe.getMessage());
 			uhe.printStackTrace();
+		}
+	}
+
+	//This method gets the local IP and sends a BOOT message to the central node.
+	public void sendBootstrapInformation(InetAddress ownIp, InetAddress controlIp, int port, InetAddress bindAddr, int ownPort){
+		try{
+			//InetAddress ownIp = InetAddress.getLocalHost();
+			String command = "bootstrap "+(ownIp.getHostAddress()+" "+ controlIp.getHostAddress()+" "+ownPort+"\n");
+			LOG.info("--> Boot Info: {} to: {} on: {}", command, bindAddr, port);
+			Socket conn = new Socket(bindAddr, port);
+			(conn.getOutputStream()).write(command.getBytes());
+			conn.close();
 		}
 		catch(IOException io){
 			LOG.error("-> Infrastructure. sendBootstrapInfo "+io.getMessage());

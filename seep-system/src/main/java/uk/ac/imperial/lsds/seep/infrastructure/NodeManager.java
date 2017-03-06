@@ -181,7 +181,7 @@ public class NodeManager{
 			LOG.info("Waiting for incoming requests on port: {}", ownPort);
 			Socket clientSocket = null;
 			//Send bootstrap information
-			bcu.sendBootstrapInformation(nodeDescr.getControlIp(), bindPort, bindAddr, ownPort);
+			bcu.sendBootstrapInformation(nodeDescr.getIp(), nodeDescr.getControlIp(), bindPort, bindAddr, ownPort);
 			while(listen){
 				//Accept incoming connections
 				clientSocket = serverSocket.accept();
