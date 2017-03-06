@@ -57,7 +57,7 @@ public class FaceRecognitionDemo {
 			myFrame.setSize(300,400);
 			myFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-			BufferedImage img = readBufferedImageFromFile("vldb/config/sink.png");
+			BufferedImage img = readBufferedImageFromFile("../core-emane/vldb/config/sink.png");
 			ImageIcon icon = new ImageIcon(img);
 			JLabel label = new JLabel("Waiting for first tuple...", icon, JLabel.CENTER);
 			label.setVerticalTextPosition(JLabel.BOTTOM);

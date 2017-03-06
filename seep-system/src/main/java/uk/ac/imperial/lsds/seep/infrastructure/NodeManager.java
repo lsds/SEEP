@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.ObjectStreamClass;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.Inet4Address;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -68,39 +69,73 @@ public class NodeManager{
 	static public MonitorSlave monitorSlave;
 	static public int second;
 	static public double throughput;
-		
+	private final String[] interfacePrefs = {"wlan", "lo" , "eth"};	
+	private static boolean ignoreIpv6 = true;
 	private Thread monitorT = null;
 	
 	public NodeManager(int bindPort, InetAddress bindAddr, int ownPort) {
 		this.bindPort = bindPort;
 		this.bindAddr = bindAddr;
-        
+       
 		this.ownPort = ownPort;
 		try {
-			//nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
-			InetAddress controlIp = InetAddress.getLocalHost();
-
-			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) 
-			{
-				NetworkInterface intf = en.nextElement();
-				LOG.info("Interface " + intf.getName() + " " + intf.getDisplayName());
-				for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) 
-				{
-					InetAddress next = enumIpAddr.nextElement();
-					LOG.info("Local IP " + next.toString() );
-					if (next.toString().contains("172")) { controlIp = next; }
-				}
-			}
-			
 			if (Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet")))
 			{
+				//nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), ownPort);
+				InetAddress controlIp = InetAddress.getLocalHost();
+
+				for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) 
+				{
+					NetworkInterface intf = en.nextElement();
+					LOG.info("Interface " + intf.getName() + " " + intf.getDisplayName());
+
+					for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) 
+					{
+						InetAddress next = enumIpAddr.nextElement();
+						LOG.info("Local IP " + next.toString() );
+						if (next.toString().contains("172")) { controlIp = next; }
+					}
+				}
+			
 				LOG.info("Choosing separate control net with control ip="+controlIp); 
 				nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), controlIp, ownPort);
 			}
 			else
 			{
-				LOG.info("Choosing wireless net control ip="+InetAddress.getLocalHost()); 
-				nodeDescr = new WorkerNodeDescription(InetAddress.getLocalHost(), InetAddress.getLocalHost(), ownPort);
+				int preferredIndex = -1;
+				InetAddress preferredIp = null;
+				for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) 
+				{
+					NetworkInterface intf = en.nextElement();
+					LOG.info("Interface " + intf.getName() + " " + intf.getDisplayName());
+
+					int matchedIndex = getMatchingIndex(intf.getName());
+					if (preferredIndex < 0 || (matchedIndex >= 0 && matchedIndex < preferredIndex)) 
+					{ 
+						preferredIndex = matchedIndex;
+						LOG.info("New preferred interface "+intf.getName()+" with match index "+matchedIndex);
+						for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) 
+						{
+							InetAddress next = enumIpAddr.nextElement();
+							if (!ignoreIpv6 || next instanceof Inet4Address)
+							{
+								LOG.info("New preferred address " + next.toString() );
+								preferredIp = next; 
+							}
+							else
+							{
+								LOG.info("Ignoring IPv6 address " + next.toString() );
+							}
+						}
+					}
+					else
+					{
+						LOG.info("Ignoring interface "+intf.getName()+" with match index "+matchedIndex);
+					}
+				}
+				
+				LOG.info("Choosing wireless net data/control ip="+preferredIp); 
+				nodeDescr = new WorkerNodeDescription(preferredIp, preferredIp, ownPort);
 			}
 		} 
 		catch (UnknownHostException | SocketException e) {
@@ -110,6 +145,16 @@ public class NodeManager{
 		rcl = new RuntimeClassLoader(new URL[0], this.getClass().getClassLoader());
 	}
 	
+	private int getMatchingIndex(String intf)
+	{
+		if (interfacePrefs ==  null) { return -1; }
+		for (int i = 0; i < interfacePrefs.length; i++)
+		{
+			if (intf.startsWith(interfacePrefs[i])) { return i; }	
+		} 
+		return -1;
+	}
+
 	/// \todo{the client-server model implemented here is crap, must be refactored}
 	static public void setSystemStable(){
         MetricsTuple tuple = new MetricsTuple();
