@@ -51,7 +51,7 @@ public class GLOBALS {
 			InputStream fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
 			globals.load(fis);
 			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
-			globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
+			//globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
 			globals.put("chainLength", System.getProperty("chainLength", "1"));
 			//globals.put("queryType", System.getProperty("queryType", "chain"));
 			globals.put("sources", System.getProperty("sources", "1"));
