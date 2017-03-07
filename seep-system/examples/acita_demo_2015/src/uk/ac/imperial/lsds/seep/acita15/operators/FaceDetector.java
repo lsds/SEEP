@@ -54,21 +54,19 @@ import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
+import uk.ac.imperial.lsds.seep.acita15.facerec.FaceDetectorHelper;
+
 public class FaceDetector implements StatelessOperator{
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(FaceDetector.class);
-	private static final double SCALE_FACTOR = 1.1;
-	private static final int MIN_FEATURE_DIM = 40;
-	private int processed = 0;
-	
-	//private CascadeClassifier faceDetector = null;
-	private CvHaarClassifierCascade faceDetector = null;
+
+	private FaceDetectorHelper faceDetector = null;
 	private Java2DFrameConverter frameConverter = null;
 	private OpenCVFrameConverter matConverter = null;
 	private OpenCVFrameConverter iplConverter = null;
 	
-	private final double RELATIVE_FACE_SIZE = 0.2;
+	private int processed = 0;
 	private boolean recordImages = false;
 	private Stats stats;
 	private Stats utilStats;
@@ -83,19 +81,11 @@ public class FaceDetector implements StatelessOperator{
 		int rows = data.getInt("rows");
 		int type = data.getInt("type");
 			
-		int absoluteFaceSize = safeLongToInt(Math.round(rows * RELATIVE_FACE_SIZE));
-		
 		logger.debug("Received "+cols+"x"+rows+" frame of type "+type);
-		/*
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ImageIO.write(img, "jpg", baos);
-		byte[] bytes = baos.toByteArray();
-		*/
-
 		IplImage img = parseBufferedImage(value, cols, rows, type);
 		logger.debug("Received "+img.width()+"x"+img.height()+" frame.");
 		IplImage imgBW = prepareBWImage(img, type);
-		int[] bbox = detectFirstFace(imgBW, absoluteFaceSize);
+		int[] bbox = faceDetector.detectFirstFace(imgBW, rows);
 		
 		DataTuple outputTuple = null;
 		
@@ -157,53 +147,12 @@ public class FaceDetector implements StatelessOperator{
 		stats = new Stats(api.getOperatorId());
 		utilStats = new Stats(api.getOperatorId());
 		//testFaceDetection();
-		try
-		{
-			faceDetector = loadFaceCascade();
-		}
-		catch(Exception e) { throw new RuntimeException(e); }
+		faceDetector = new FaceDetectorHelper();
 
-        frameConverter = new Java2DFrameConverter();
-        //matConverter = new OpenCVFrameConverter.ToMat();
-        iplConverter = new OpenCVFrameConverter.ToIplImage();
-        recordImages = Boolean.parseBoolean(GLOBALS.valueFor("recordImages"));
-	}
-
-	
-	public int safeLongToInt(long l) {
-		if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-			throw new IllegalArgumentException
-			(l + " cannot be cast to int without changing its value.");
-		}
-		return (int) l;
-	}
-	
-	
-	public static CvHaarClassifierCascade loadFaceCascade() throws IOException {
-		
-		String filepath = "cascades/haarcascade_frontalface_alt.xml";
-		File tmpImgFile = new File("resources/"+filepath);
-		tmpImgFile.deleteOnExit();
-		tmpImgFile.mkdirs();
-		InputStream fileInJar = FaceDetector.class.getClassLoader().getResourceAsStream(filepath);
-		Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		
-		//getClass().getClassLoader().getResourceAsStream("cascades/haarcascade_frontalface_alt.xml");
-		//URL url = new URL("file:///home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/cascades/haarcascade_frontalface_alt.xml");
-		
-        //File file = Loader.extractResource(url, null, "classifier", ".xml");
-        //file.deleteOnExit();
-        String classifierName = tmpImgFile.getAbsolutePath();
-        // Preload the opencv_objdetect module to work around a known bug.
-        Loader.load(opencv_objdetect.class);
-
-        // We can "cast" Pointer objects by instantiating a new object of the desired class.
-        CvHaarClassifierCascade classifier = new CvHaarClassifierCascade(cvLoad(classifierName));
-        if (classifier.isNull()) {
-            logger.error("Error loading classifier file \"" + classifierName + "\".");
-            System.exit(1);
-        }
-		return classifier;
+		frameConverter = new Java2DFrameConverter();
+		//matConverter = new OpenCVFrameConverter.ToMat();
+		iplConverter = new OpenCVFrameConverter.ToIplImage();
+		recordImages = Boolean.parseBoolean(GLOBALS.valueFor("recordImages"));
 	}
 
 	public IplImage parseBufferedImage(byte[] bytes, int cols, int rows, int type)
@@ -243,42 +192,6 @@ public class FaceDetector implements StatelessOperator{
 			return image;
 		}
 	}
-
-	public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
-	{
-		CvMemStorage storage = cvCreateMemStorage(0);
-		cvClearMemStorage(storage);
-		try {
-			int flags = CV_HAAR_DO_CANNY_PRUNING;
-			CvSize minFeatureSize = cvSize(MIN_FEATURE_DIM, MIN_FEATURE_DIM);
-			CvSize maxFeatureSize = cvSize(0,0); //No max
-			int minNeighbours = 2;
-
-			CvSeq rects = cvHaarDetectObjects(bwImg, faceDetector, storage, SCALE_FACTOR, minNeighbours, flags, minFeatureSize, maxFeatureSize);
-			int nFaces = rects.total();
-			if (nFaces == 0) {
-				return null;
-			}
-			else
-			{
-				logger.debug("Detected faces: "+nFaces);
-				BytePointer elem = cvGetSeqElem(rects, 0);
-				CvRect rect = new CvRect(elem);
-				int bbox[] = new int[4];
-				bbox[0] = rect.x();
-				bbox[1] = rect.y();
-				bbox[2] = rect.x() + rect.width();
-				bbox[3] = rect.y() + rect.height();
-				
-				logger.debug("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
-				return bbox;
-			}
-		}
-		finally 
-		{
-			cvReleaseMemStorage(storage);
-		}
-	}
 	
 	public void recordFaceDetection(long tupleId, IplImage bwImg, int[] bbox)
 	{
@@ -294,91 +207,6 @@ public class FaceDetector implements StatelessOperator{
 		catch(IOException e) { throw new RuntimeException(e); }
 	}
 	
-	public static void detectFaceInImage(final IplImage orig,
-			final IplImage input,
-			final CvHaarClassifierCascade cascade,
-			final int[] bbox) throws Exception {
-		CvMemStorage storage = cvCreateMemStorage(0);
-		cvClearMemStorage(storage);
-		try {
-			int flags = CV_HAAR_DO_CANNY_PRUNING;
-			CvSize minFeatureSize = cvSize(MIN_FEATURE_DIM, MIN_FEATURE_DIM);
-			CvSeq rects = cvHaarDetectObjects(input, cascade, storage, SCALE_FACTOR, 2, flags, minFeatureSize, cvSize(0, 0));
-			int nFaces = rects.total();
-			if (nFaces == 0) {
-				throw new Exception("No faces detected");
-			}
-			else
-			{
-				logger.debug("Detected faces: "+nFaces);
-			}
-			for (int iface = 0; iface < nFaces; ++iface) {
-				BytePointer elem = cvGetSeqElem(rects, iface);
-				CvRect rect = new CvRect(elem);
-				bbox[0] = rect.x();
-				bbox[1] = rect.y();
-				bbox[2] = rect.x() + rect.width();
-				bbox[3] = rect.y() + rect.height();
-				logger.debug("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
-				// display landmarks
-				cvRectangle(orig, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CV_RGB(255, 0, 0));
-			}
-		} finally {
-			cvReleaseMemStorage(storage);
-		}
-	}
-	
 
 	
-	public static File[] loadFiles()
-	{
-        //Test it works.
-        String testFramesDir = "/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/images";
-    	File dir = new File(testFramesDir);
-		File [] files = dir.listFiles(new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String name) {
-				return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".pgm");
-			}
-		});	
-		
-		return files;
-	}
-
-	public static IplImage loadImage(File file) throws IOException {
-		// Verify file
-		if (!file.exists()) {
-			throw new FileNotFoundException("Image file does not exist: " + file.getAbsolutePath());
-		}
-		// Read input image
-		IplImage image = cvLoadImage(file.getAbsolutePath());
-		if (image == null) {
-			throw new IOException("Couldn't load image: " + file.getAbsolutePath());
-		}
-		return image;
-	}
-	
-	public static void testFaceDetection()
-	{
-
-		//final File faceCascadeFile = new File("haarcascade_frontalface_alt.xml");
-		//File faceCascadeFile = new File("/home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/cascades/haarcascade_frontalface_alt.xml");
-
-		//final File inputImage = new File("face.jpg");
-		try {
-			final File[] inputImages = loadFiles();
-			final CvHaarClassifierCascade faceCascade = loadFaceCascade();
-			logger.debug("Count: " + faceCascade.count());
-			for (File inputImage : inputImages)
-			{
-				final IplImage image = loadImage(inputImage);
-				final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
-				cvCvtColor(image, imageBW, CV_BGR2GRAY);
-				final int[] bbox = new int[4];
-				detectFaceInImage(image, imageBW, faceCascade, bbox);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 }
