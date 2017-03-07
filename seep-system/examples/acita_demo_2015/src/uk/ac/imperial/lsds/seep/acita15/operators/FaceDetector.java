@@ -62,9 +62,6 @@ public class FaceDetector implements StatelessOperator{
 	private static final Logger logger = LoggerFactory.getLogger(FaceDetector.class);
 
 	private FaceDetectorHelper faceDetector = null;
-	private Java2DFrameConverter frameConverter = null;
-	private OpenCVFrameConverter matConverter = null;
-	private OpenCVFrameConverter iplConverter = null;
 	
 	private int processed = 0;
 	private boolean recordImages = false;
@@ -82,9 +79,9 @@ public class FaceDetector implements StatelessOperator{
 		int type = data.getInt("type");
 			
 		logger.debug("Received "+cols+"x"+rows+" frame of type "+type);
-		IplImage img = parseBufferedImage(value, cols, rows, type);
+		IplImage img = faceDetector.parseBufferedImage(value, cols, rows, type);
 		logger.debug("Received "+img.width()+"x"+img.height()+" frame.");
-		IplImage imgBW = prepareBWImage(img, type);
+		IplImage imgBW = faceDetector.prepareBWImage(img, type);
 		int[] bbox = faceDetector.detectFirstFace(imgBW, rows);
 		
 		DataTuple outputTuple = null;
@@ -95,7 +92,7 @@ public class FaceDetector implements StatelessOperator{
 			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3], "");
 			if (recordImages)
 			{
-				recordFaceDetection(tupleId, imgBW, bbox);
+				faceDetector.recordFaceDetection(tupleId, imgBW, bbox);
 			}
 		}
 		else	
@@ -149,64 +146,6 @@ public class FaceDetector implements StatelessOperator{
 		//testFaceDetection();
 		faceDetector = new FaceDetectorHelper();
 
-		frameConverter = new Java2DFrameConverter();
-		//matConverter = new OpenCVFrameConverter.ToMat();
-		iplConverter = new OpenCVFrameConverter.ToIplImage();
 		recordImages = Boolean.parseBoolean(GLOBALS.valueFor("recordImages"));
 	}
-
-	public IplImage parseBufferedImage(byte[] bytes, int cols, int rows, int type)
-	{
-		//if (cols == 0 && rows == 0 && type == 0)
-		if (cols == 0 && rows == 0)
-		{
-			//It's a raw image file, convert to ipl image via buffered image.
-			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-			try
-			{
-				IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
-				return img;
-			} 
-			catch (IOException e)
-			{
-				throw new RuntimeException(e);
-			}
-		}
-		else
-		{
-			//It's an ipl image in byte form already.
-			throw new RuntimeException("TODO"); 
-		}
-	}
-	
-	public IplImage prepareBWImage(IplImage image, int type)
-	{
-		if (type > 0)
-		{
-			final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
-			cvCvtColor(image, imageBW, CV_BGR2GRAY);
-			return imageBW;
-		}
-		else
-		{
-			return image;
-		}
-	}
-	
-	public void recordFaceDetection(long tupleId, IplImage bwImg, int[] bbox)
-	{
-		cvRectangle(bwImg, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
-	
-		BufferedImage outputImg = frameConverter.convert(iplConverter.convert(bwImg));
-		File outputFile = new File("imgout/detected/"+tupleId+".jpg");
-		outputFile.mkdirs();
-		try
-		{
-			ImageIO.write(outputImg, "jpg", outputFile);			
-		}
-		catch(IOException e) { throw new RuntimeException(e); }
-	}
-	
-
-	
 }
