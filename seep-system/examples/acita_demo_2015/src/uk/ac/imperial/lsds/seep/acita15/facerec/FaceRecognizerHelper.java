@@ -93,19 +93,17 @@ public class FaceRecognizerHelper
 		//Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(imgBW));
 		Mat imgBWMat = matConverter.convertToMat(iplConverter.convert(cropped));
 		logger.debug("Converted roi to "+imgBWMat.cols()+"x"+imgBWMat.rows()+" mat");
-		int predictedLabel[] = new int[1];
-		double confidence[] = new double[1];
 		
-		IntPointer predictedLabelChannels = new IntPointer(predictedLabel);
-		DoublePointer confidenceChannels = new DoublePointer(confidence);
+		IntPointer predictedLabelChannels = new IntPointer(1);
+		DoublePointer confidenceChannels = new DoublePointer(1);
 		faceRecognizer.predict(imgBWMat, predictedLabelChannels, confidenceChannels);
-		logger.debug("Predicted label for received image: " + predictedLabel[0]+ " (ROI="+width+"x"+height+") with confidence "+confidence[0]);
+		logger.debug("Predicted label for received image: " + predictedLabelChannels.get()+ " (ROI="+width+"x"+height+") with confidence "+confidenceChannels.get());
 
-		if (labelExamples.containsKey(predictedLabel[0]))
+		if (labelExamples.containsKey(predictedLabelChannels.get()))
 		{
-			logger.debug("Example of matching face: "+labelExamples.get(predictedLabel[0]));
+			logger.debug("Example of matching face: "+labelExamples.get(predictedLabelChannels.get()));
 		}
-		return predictedLabel[0];
+		return predictedLabelChannels.get();
 	}
 	
 	public String getLabelExample(int label)
