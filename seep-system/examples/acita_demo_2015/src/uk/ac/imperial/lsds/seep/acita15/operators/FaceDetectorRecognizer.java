@@ -94,28 +94,17 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 		{
 			logger.debug("Found face for "+ data.getLong("tupleId") + " at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
 
-			//outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3], "");
-
 			if (recordImages)
 			{
 				faceDetectorHelper.recordFaceDetection(tupleId, imgBW, bbox);
 			}
 
-			/*
-			int x = data.getInt("x");
-			int y = data.getInt("y");
-			int height = data.getInt("height");
-			int width = data.getInt("width");
-			*/
-
 			int x = bbox[0];
 			int y = bbox[1];
-			//int x2 = data.getInt("x2");
-			//int y2 = data.getInt("y2"); //Should really rename to x1 y1 or something
 			int x2 = bbox[2];
-			int y2 = bbox[3]; //Should really rename to x1 y1 or something
+			int y2 = bbox[3];
 			int width = x2 - x;
-			int height = y2 - y; //Should really rename to x1 y1 or something
+			int height = y2 - y;
 			
 			int prediction = faceRecognizerHelper.recognize(value, x, y, width, height, type);
 			String labelExample = faceRecognizerHelper.getLabelExample(prediction);
