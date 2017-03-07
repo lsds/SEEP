@@ -50,15 +50,16 @@ public class GLOBALS {
 		try {
 			InputStream fis = (InputStream) Thread.currentThread().getContextClassLoader().getResourceAsStream("config.properties");
 			globals.load(fis);
-			globals.put("useCoreAddr", System.getProperty("useCoreAddr", ""));
-			//globals.put("replicationFactor", System.getProperty("replicationFactor", "1"));	//TODO: Bit of a hack.
-			globals.put("chainLength", System.getProperty("chainLength", "1"));
-			//globals.put("queryType", System.getProperty("queryType", "chain"));
-			globals.put("sources", System.getProperty("sources", "1"));
-			globals.put("sinks", System.getProperty("sinks", "1"));
-			globals.put("fanin", System.getProperty("fanin", "2"));
-			globals.put("sinkScaleFactor", System.getProperty("sinkScaleFactor", "1"));
 			
+			globals.put("useCoreAddr", globals.getProperty("useCoreAddr", ""));
+			globals.put("replicationFactor", System.getProperty("replicationFactor", globals.getProperty("replicationFactor", "1")));
+			globals.put("chainLength", globals.getProperty("chainLength", "1"));
+			globals.put("queryType", globals.getProperty("queryType", "chain"));
+			globals.put("sources", globals.getProperty("sources", "1"));
+			globals.put("sinks", globals.getProperty("sinks", "1"));
+			globals.put("fanin", globals.getProperty("fanin", "2"));
+			globals.put("sinkScaleFactor", globals.getProperty("sinkScaleFactor", "1"));
+
 			String sessionParamsPath = "../session_params.txt";
 			File f = new File(sessionParamsPath);	
 			if (f.exists() && !f.isDirectory())
