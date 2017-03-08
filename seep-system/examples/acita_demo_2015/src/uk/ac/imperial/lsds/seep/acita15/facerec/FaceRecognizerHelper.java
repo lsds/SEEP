@@ -28,6 +28,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -56,6 +58,7 @@ import org.bytedeco.javacv.OpenCVFrameConverter;
 public class FaceRecognizerHelper
 {
 	private final static Logger logger = LoggerFactory.getLogger(FaceRecognizerHelper.class);
+	private final static boolean resourcesInJar = Boolean.parseBoolean(GLOBALS.valueFor("resourcesInJar"));
 	private final int opId;
 	private final String trainingDir;
 	private final String trainingList;
@@ -137,7 +140,19 @@ public class FaceRecognizerHelper
 
 		//File csv = new File(trainingDir+"/at.txt");
 		logger.info("Loading training list from:"+trainingDir+"/"+trainingList);
-		InputStream csv = this.getClass().getClassLoader().getResourceAsStream(trainingDir+"/"+trainingList);
+		InputStream csv = null;
+		if (resourcesInJar)
+		{
+			csv = this.getClass().getClassLoader().getResourceAsStream(trainingDir+"/"+trainingList);
+		}
+		else
+		{
+			try
+			{
+				csv = new FileInputStream(new File(onDiskResourceRoot() + "/" + trainingDir + "/"+trainingList));
+			}catch(FileNotFoundException e) { throw new RuntimeException(e); }
+		}
+
 		Map<String, Integer> trainingFiles = new HashMap<>();
 		
 		try
@@ -234,13 +249,24 @@ public class FaceRecognizerHelper
 		{
 			String filepath = trainingDir+"/"+filename;
 			logger.debug("Loading training image from: "+ filepath);
-			File tmpImgFile = new File("/tmp/resources/"+opId+filepath);
-			tmpImgFile.deleteOnExit();
-			tmpImgFile.mkdirs();
-			InputStream fileInJar = this.getClass().getClassLoader().getResourceAsStream(filepath);
-			Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			Mat img = imread(tmpImgFile.getAbsolutePath(), IMREAD_GRAYSCALE);
+			String absPath = null;
+			if (resourcesInJar)
+			{
+				File tmpImgFile = new File("/tmp/resources/"+opId+filepath);
+				tmpImgFile.deleteOnExit();
+				tmpImgFile.mkdirs();
+				InputStream fileInJar = this.getClass().getClassLoader().getResourceAsStream(filepath);
+				Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				absPath = tmpImgFile.getAbsolutePath();
+			}
+			else
+			{
+				absPath = onDiskResourceRoot()+"/"+filepath;
+			}
+
+			Mat img = imread(absPath, IMREAD_GRAYSCALE);
 			return img;
+
 			//BufferedImage bufImg = ImageIO.read(this.getClass().getClassLoader().getResourceAsStream(filepath));
 			//logger.info("Loaded "+bufImg.getWidth()+"x"+bufImg.getHeight()+" training image");
 			
@@ -248,6 +274,11 @@ public class FaceRecognizerHelper
 			//IplImage bwImg = prepareBWImage(img);
 			//return matConverter.convertToMat(iplConverter.convert(bwImg));
 		} catch (IOException e) { throw new RuntimeException(e); }
+	}
+
+	private static String onDiskResourceRoot()
+	{
+		return GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources";
 	}
 	
 	public IplImage parseBufferedImage(byte[] bytes)

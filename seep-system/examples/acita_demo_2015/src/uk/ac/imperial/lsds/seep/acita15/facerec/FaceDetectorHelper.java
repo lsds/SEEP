@@ -38,10 +38,16 @@ import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 public class FaceDetectorHelper
 {
 	private final static Logger logger = LoggerFactory.getLogger(FaceDetectorHelper.class);
+	private final static boolean resourcesInJar = Boolean.parseBoolean(GLOBALS.valueFor("resourcesInJar"));
+	private final static double SCALE_FACTOR = 1.1;
+	private final static int MIN_FEATURE_DIM = 40;
+	private final static double RELATIVE_FACE_SIZE = 0.2;
+	private final static String classifierName = "cascades/haarcascade_frontalface_alt.xml";
 
 	//private CascadeClassifier faceDetector = null;
 	private CvHaarClassifierCascade faceDetector = null;
@@ -49,9 +55,6 @@ public class FaceDetectorHelper
 	private OpenCVFrameConverter matConverter = null;
 	private OpenCVFrameConverter iplConverter = null;
 	
-	private final static double SCALE_FACTOR = 1.1;
-	private final static int MIN_FEATURE_DIM = 40;
-	private final double RELATIVE_FACE_SIZE = 0.2;
 	private boolean recordImages = false;
 
 
@@ -68,31 +71,44 @@ public class FaceDetectorHelper
 		catch(Exception e) { throw new RuntimeException(e); }
 	}
 
-	public static CvHaarClassifierCascade loadFaceCascade() throws IOException {
-		
-		String filepath = "cascades/haarcascade_frontalface_alt.xml";
-		File tmpImgFile = new File("resources/"+filepath);
-		tmpImgFile.deleteOnExit();
-		tmpImgFile.mkdirs();
-		InputStream fileInJar = FaceDetectorHelper.class.getClassLoader().getResourceAsStream(filepath);
-		Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		
-		//getClass().getClassLoader().getResourceAsStream("cascades/haarcascade_frontalface_alt.xml");
-		//URL url = new URL("file:///home/dan/dev/seep-ita/seep-system/examples/acita_demo_2015/resources/cascades/haarcascade_frontalface_alt.xml");
-		
-        //File file = Loader.extractResource(url, null, "classifier", ".xml");
-        //file.deleteOnExit();
-        String classifierName = tmpImgFile.getAbsolutePath();
+	public static CvHaarClassifierCascade loadFaceCascade() throws IOException 
+	{
+        String classifierPath = null;
+			 	if (resourcesInJar)
+				{	
+					classifierPath = extractFaceCascadeFromJar();
+				}
+				else
+				{
+					classifierPath = onDiskResourceRoot() + "/" + classifierName;
+				}
+
         // Preload the opencv_objdetect module to work around a known bug.
         Loader.load(opencv_objdetect.class);
 
         // We can "cast" Pointer objects by instantiating a new object of the desired class.
-        CvHaarClassifierCascade classifier = new CvHaarClassifierCascade(cvLoad(classifierName));
+        CvHaarClassifierCascade classifier = new CvHaarClassifierCascade(cvLoad(classifierPath));
         if (classifier.isNull()) {
-            logger.error("Error loading classifier file \"" + classifierName + "\".");
+            logger.error("Error loading classifier file \"" + classifierPath + "\".");
             System.exit(1);
         }
 		return classifier;
+	}
+
+	private static String extractFaceCascadeFromJar() throws IOException
+	{
+		File tmpImgFile = new File("resources/"+classifierName);
+		tmpImgFile.deleteOnExit();
+		tmpImgFile.mkdirs();
+		InputStream fileInJar = FaceDetectorHelper.class.getClassLoader().getResourceAsStream(classifierName);
+		Files.copy(fileInJar, tmpImgFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		return tmpImgFile.getAbsolutePath();
+	}
+
+	private static String onDiskResourceRoot()
+	{
+		//return GLOBALS.valueFor("onDiskResourceRoot");
+		return GLOBALS.valueFor("repoRoot")+"/seep-system/examples/acita_demo_2015/resources";
 	}
 
 	//public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
