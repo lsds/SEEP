@@ -38,6 +38,8 @@ import org.bytedeco.javacv.OpenCVFrameConverter;
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 
+import uk.ac.imperial.lsds.seep.acita15.reorder.ReorderBuffer;
+
 public class VideoSink implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Sink.class);
@@ -56,6 +58,8 @@ public class VideoSink implements StatelessOperator {
     private Java2DFrameConverter frameConverter = null;
     private OpenCVFrameConverter iplConverter = null; 
 	private boolean exitOnFinished = true;
+	private ReorderBuffer reorderBuffer = null;
+	private boolean reorder = Boolean.parseBoolean(GLOBALS.valueFor("reorderImages"));
     
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
@@ -106,7 +110,7 @@ public class VideoSink implements StatelessOperator {
 			recordImage(tupleId, value, bbox);
 		}
 		
-		displayImage(value, bbox, dt.getString("label"));
+		displayImage(tupleId, value, bbox, dt.getString("label"));
 		
 		if (tuplesReceived >= numTuples)
 		{
@@ -150,14 +154,36 @@ public class VideoSink implements StatelessOperator {
 		{
 			throw new RuntimeException(e);
 		}
+
+		if (reorder) { reorderBuffer = new ReorderBuffer(); }
 	}
 	
 	//TODO: Do this in the background.
-	private void displayImage(byte[] value, int[] bbox, String label)
+	private void displayImage(long tupleId, byte[] value, int[] bbox, String label)
 	{	
 		if (enableSinkDisplay)
 		{
-			
+			if (reorder)
+			{
+				//N.B. Reorder buffer won't work with replicated sinks!
+				reorderBuffer.add(tupleId, new VideoEntry(value, bbox, label));
+				for (Object o : reorderBuffer.flush())
+				{
+					VideoEntry entry = (VideoEntry)o;
+					sendImage(entry.value, entry.bbox, entry.label);
+				}
+			}
+			else
+			{
+				sendImage(value, bbox, label);
+			}
+		}
+	}
+
+
+
+	private void sendImage(byte[] value, int[] bbox, String label)
+	{
 			BufferedImage img = bytesToBufferedImage(value, bbox);
 			byte[] imgBytes = bufferedImageToBytes(img);
 			
@@ -170,7 +196,6 @@ public class VideoSink implements StatelessOperator {
 			{
 				throw new RuntimeException(e);
 			}
-		}
 	}
 	
 	private void recordImage(long tupleId, byte[] bytes, int[] bbox)
@@ -219,4 +244,19 @@ public class VideoSink implements StatelessOperator {
 		}
 		catch(IOException e) { throw new RuntimeException(e); }
 	}
+
+	private static class VideoEntry
+	{
+		public final byte[] value; 
+		public final int[] bbox;
+		public final String label;
+
+		public VideoEntry(byte[] value, int[] bbox, String label)
+		{
+			this.value = value;
+			this.bbox = bbox;
+			this.label = label;
+		}
+	}
+
 }
