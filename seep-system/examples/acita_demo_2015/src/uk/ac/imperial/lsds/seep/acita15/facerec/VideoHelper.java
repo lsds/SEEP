@@ -62,6 +62,18 @@ public class VideoHelper {
 	{
 	}
 
+	public byte[][] loadImages(String imgDirname)
+	{
+		if (Boolean.parseBoolean(GLOBALS.valueFor("resourcesInJar")))
+		{
+			return loadImagesFromJar(imgDirname);	
+		}
+		else
+		{
+			return loadImagesFromDisk(imgDirname);	
+		}
+	}
+
 	public byte[][] loadImagesFromJar(String imgDirname)
 	{
 
@@ -162,10 +174,15 @@ public class VideoHelper {
 		return extractedImages;
 	}
 	
+	private static String onDiskResourceRoot()
+	{
+		//return GLOBALS.valueFor("onDiskResourceRoot");
+		return new File(GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources").getAbsolutePath();
+	}
 	
-	private byte[][] loadImages(String imgDirname)
+	public byte[][] loadImagesFromDisk(String imgDirname)
 	{		
-		File dir = new File(imgDirname);
+		File dir = new File(onDiskResourceRoot() + "/" + imgDirname);
 		File [] files = dir.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
