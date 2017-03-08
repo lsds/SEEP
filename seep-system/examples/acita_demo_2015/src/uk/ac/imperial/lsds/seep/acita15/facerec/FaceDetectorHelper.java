@@ -108,7 +108,7 @@ public class FaceDetectorHelper
 	private static String onDiskResourceRoot()
 	{
 		//return GLOBALS.valueFor("onDiskResourceRoot");
-		return GLOBALS.valueFor("repoRoot")+"/seep-system/examples/acita_demo_2015/resources";
+		return new File(GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources").getAbsolutePath();
 	}
 
 	//public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)

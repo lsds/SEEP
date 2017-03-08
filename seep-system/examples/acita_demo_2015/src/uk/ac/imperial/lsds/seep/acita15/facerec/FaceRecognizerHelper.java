@@ -278,7 +278,7 @@ public class FaceRecognizerHelper
 
 	private static String onDiskResourceRoot()
 	{
-		return GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources";
+		return new File(GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources").getAbsolutePath();
 	}
 	
 	public IplImage parseBufferedImage(byte[] bytes)
