@@ -1470,9 +1470,10 @@ public class Dispatcher implements IRoutingObserver {
 		//N.B. Assumes the lock is held
 		public DataTuple postFailureCtrlTimeoutCleanupSoft(int downOpId)
 		{
+			logger.info("Failure ctrl watchdog performing soft cleanup for "+downOpId);
 			DataTuple testRoutesTuple = null;
+			long tStart = System.currentTimeMillis();
 
-			owner.getOperator().getRouter().update_downFailed(downOpId);
 			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 			synchronized(lock)
 			{
@@ -1526,7 +1527,10 @@ public class Dispatcher implements IRoutingObserver {
 					//TODO: Can perhaps reuse requeueTuples code here.
 					
 				}
+				lock.notifyAll();
 			} 
+
+			logger.info("Failure ctrl watchdog completed soft cleanup for "+ downOpId +" in "+(System.currentTimeMillis() - tStart) +" ms");
 
 			return testRoutesTuple;
 		}
@@ -1538,23 +1542,23 @@ public class Dispatcher implements IRoutingObserver {
 			//we have a failure ctrl or retransmit timeout, and happen to be transmitting a new tuple, then if we clear
 			//its retransmit timer it might not get readded?
 
+			logger.info("Failure ctrl watchdog performing hard cleanup for "+downOpId);
+			long tStart = System.currentTimeMillis();
 			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 			SynchronousCommunicationChannel dest = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
 			if (dest != null)
 			{
-				long tStart = System.currentTimeMillis();
-				logger.info("Failure ctrl watchdog performing hard cleanup for "+dest.getOperatorId());
 				synchronized(lock)
 				{
-					if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dest.getOperatorId()); }
-					if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(dest.getOperatorId()); }
+					clear(downOpId);
+					if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(downOpId); }
 					
 					//holding the lock
 					//1) compute the new joint alives
 					//2) Do a combined.set alives
 					//3) Save the old alives for this downstream
 					//4) delete the old alives for this downstream
-					Set<Long> dsOpOldAlives = updateDownAlives(dest.getOperatorId(), null);
+					Set<Long> dsOpOldAlives = updateDownAlives(downOpId, null);
 
 					//TODO: Should we be using downOpFailureCtrl?
 					FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
@@ -1572,13 +1576,13 @@ public class Dispatcher implements IRoutingObserver {
 					//		if tuple not acked and not in new joint alives and tuple in shared replay log
 					//			move tuple from shared replay log to output queue
 					//TODO: Should this be outside this if block?
-					logger.info("Dispatcher worker "+dest.getOperatorId()+" checking for replay from shared log after timeout.");
+					logger.info("Dispatcher worker "+downOpId+" checking for replay from shared log after timeout.");
 					requeueFromSharedReplayLog(dsOpOldAlives);
 					lock.notifyAll();
 				}
-				logger.info("Failure ctrl watchdog completed hard cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis() - tStart) +" ms");
 			}	
-			
+
+			logger.info("Failure ctrl watchdog completed hard cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis() - tStart) +" ms");
 			//Update this connections routing cost 
 			//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
 			//TODO: Need a method on router like setFailed (and then unsetFailed).
