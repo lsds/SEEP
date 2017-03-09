@@ -67,6 +67,8 @@ public class Dispatcher implements IRoutingObserver {
 	private final int MAX_TOTAL_QUEUE_SIZE;
 	private final int GLOBAL_MAX_TOTAL_QUEUE_SIZE;
 	private final int MAX_UNACKED;
+	
+	private final long CTRL_DELAY_WARNING = 1000;
 	private final boolean bestEffort;
 	private final boolean optimizeReplay;
 	private final boolean eagerPurgeOpQueue;
@@ -326,8 +328,8 @@ public class Dispatcher implements IRoutingObserver {
 				//Live downstream already, save it in shared replay log
 				//Shouldn't be in per-sender log since would have been
 				//detected as a dupe at input.
-				logger.info("Dispatcher avoided sending live tuple: "+ts);
 				sharedReplayLog.add(dt);
+				logger.info("Dispatcher avoided sending live tuple: "+ts+",srl.size="+sharedReplayLog.size());
 			}
 		}
 	}
@@ -426,6 +428,7 @@ public class Dispatcher implements IRoutingObserver {
 										else { logger.trace("Constrained tuple "+ts+" not in session log "+workerIndex); }
 									}
 								}
+
 								if (dt != null)
 								{
 									logger.info("Readding constrained tuple "+ts+" to op queue.");
@@ -438,8 +441,11 @@ public class Dispatcher implements IRoutingObserver {
 				}
 			}
 		}	
+		long tNotifyStart = System.currentTimeMillis();
 		synchronized(lock) { lock.notifyAll(); }
-		logger.debug("Finished handling routing change, duration=" + (System.currentTimeMillis() - tStart));
+		long tEnd = System.currentTimeMillis();
+		String logMsg = "Finished handling routing change, duration=" + (tEnd - tStart) + ", notify=" + (tEnd - tNotifyStart);
+		if (tEnd - tStart > CTRL_DELAY_WARNING) { logger.warn("HIGH CTRL DELAY: "+ logMsg); } else { logger.debug(logMsg); }
 	}
 	
 	private boolean isDownAlive(int downOpId, long ts)
@@ -609,8 +615,8 @@ public class Dispatcher implements IRoutingObserver {
 				//to replay if the downstream fails.
 				if (fctrl.alives().contains(ts) && dt != null)
 				{
-					logger.info("admitBatch: replay optimization: dispatcher avoided replaying tuple "+ts);
 					sharedReplayLog.add(dt);
+					logger.info("admitBatch: replay optimization: dispatcher avoided replaying tuple "+ts+",srl.size="+sharedReplayLog.size());
 				}
 				
 				return false;
@@ -744,7 +750,7 @@ public class Dispatcher implements IRoutingObserver {
 					int downOpId = owner.getOperator().getOpContext().getDownOpIdFromIndex(target);
 					if (optimizeReplay && isDownAlive(downOpId, ts))
 					{
-						logger.debug("Skipping recovery for "+ts+", adding to shared replay:"+sharedReplayLog.keys());
+						logger.debug("Skipping recovery for "+ts+", adding to shared replay (srl.sz="+sharedReplayLog.size()+"):"+sharedReplayLog.keys());
 						//Might need to resend if an alive is removed.
 						sharedReplayLog.add(dt);
 					}
@@ -901,56 +907,61 @@ public class Dispatcher implements IRoutingObserver {
 				else
 				{
 					logger.debug("Dispatcher worker failed to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
-					//Connection must be down.
-					//Remove any output tuples from this replica's output log and add them to the operator output queue.
-					//This should include the current 'SEEP' batch since it might contain several tuples.
-					//N.B. Important to remove from buffer/session log before adding to output queue since the dispatcher main could otherwise think a tuple is in the session log
-					//and delete it from it's output queue.
-					TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
-
-					synchronized(lock)
-					{
-						dataConnected = false;
-						if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dest.getOperatorId()); }
-						if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(dest.getOperatorId()); }
-						
-						//holding the lock
-						//1) compute the new joint alives
-						//2) Do a combined.set alives
-						//3) Save the old alives for this downstream
-						//4) delete the old alives for this downstream (TODO: What if control connection still open?)
-						Set<Long> dsOpOldAlives = updateDownAlives(dest.getOperatorId(), null);
-						//5) for tuple in logged
-						//		if acked discard
-						//		else if in joint alives add to shared replay log
-						//		else add to output queue 
-						//
-						//		remove from the alives for the old fctrl for this downstream
-						requeueTuples(sessionLog, dsOpOldAlives);
-						//6) For remaining tuples in old fctrl for this downstream
-						//		if tuple not acked and not in new joint alives and tuple in shared replay log
-						//			move tuple from shared replay log to output queue
-						logger.info("Dispatcher worker "+dest.getOperatorId()+" checking for replay from shared log after failure.");
-						requeueFromSharedReplayLog(dsOpOldAlives);
-						lock.notifyAll();
-					}	
-					
-					//Update this connections routing cost 
-					//TODO: Double check the downstream operator id you're using here is the same as the routing control worker
-					//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
-					//Should you actually force close the control connection?
-					owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
-					//TODO: Interrupt the dispatcher thread
-					
-					//Reconnect synchronously (might need to add a helper method to the output queue).
-					outputQueue.reopenEndpoint(dest);
-					
-					synchronized(lock) { dataConnected = true; }
+					postConnectionFailureCleanup();
 					logger.debug("Dispatcher worker recovered from failure to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 				}
 			}
 		}
 		
+
+		private void postConnectionFailureCleanup()
+		{
+			//Connection must be down.
+			//Remove any output tuples from this replica's output log and add them to the operator output queue.
+			//This should include the current 'SEEP' batch since it might contain several tuples.
+			//N.B. Important to remove from buffer/session log before adding to output queue since the dispatcher main could otherwise think a tuple is in the session log
+			//and delete it from its output queue.
+			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+
+			synchronized(lock)
+			{
+				dataConnected = false;
+				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dest.getOperatorId()); }
+				if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(dest.getOperatorId()); }
+				
+				//holding the lock
+				//1) compute the new joint alives
+				//2) Do a combined.set alives
+				//3) Save the old alives for this downstream
+				//4) delete the old alives for this downstream (TODO: What if control connection still open?)
+				Set<Long> dsOpOldAlives = updateDownAlives(dest.getOperatorId(), null);
+				//5) for tuple in logged
+				//		if acked discard
+				//		else if in joint alives add to shared replay log
+				//		else add to output queue 
+				//
+				//		remove from the alives for the old fctrl for this downstream
+				requeueTuples(sessionLog, dsOpOldAlives);
+				//6) For remaining tuples in old fctrl for this downstream
+				//		if tuple not acked and not in new joint alives and tuple in shared replay log
+				//			move tuple from shared replay log to output queue
+				logger.info("Dispatcher worker "+dest.getOperatorId()+" checking for replay from shared log after failure.");
+				requeueFromSharedReplayLog(dsOpOldAlives);
+				lock.notifyAll();
+			}	
+			
+			//Update this connections routing cost 
+			//TODO: Double check the downstream operator id you're using here is the same as the routing control worker
+			//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
+			//Should you actually force close the control connection?
+			owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
+			//TODO: Interrupt the dispatcher thread
+			
+			//Reconnect synchronously (might need to add a helper method to the output queue).
+			outputQueue.reopenEndpoint(dest);
+			
+			synchronized(lock) { dataConnected = true; }
+		}
 
 		/* TODO: Should be holding lock here? */
 		private void requeueTuples(TreeMap<Long, BatchTuplePayload> sessionLog, Set<Long> dsOpOldAlives)
@@ -966,8 +977,8 @@ public class Dispatcher implements IRoutingObserver {
 					DataTuple dt = new DataTuple(idxMapper, p);
 					if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
 					{
-						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
 						sharedReplayLog.add(dt);
+						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts+",srl.sz="+sharedReplayLog.size());
 					}
 					else
 					{
@@ -1046,8 +1057,9 @@ public class Dispatcher implements IRoutingObserver {
 	private void requeueFromSharedReplayLog(Set<Long> dsOpOldAlives)
 	{
 		//Replay any retracted alives that we hold in shared replay logs
-		if (optimizeReplay && dsOpOldAlives != null)
+		if (optimizeReplay && dsOpOldAlives != null && !sharedReplayLog.isEmpty())
 		{
+			logger.debug("Requeuing from shared replay log with dsooa.size="+dsOpOldAlives.size()+",srl.size="+sharedReplayLog.size());
 			for (Long oldDownAlive : dsOpOldAlives)
 			{
 				if (oldDownAlive > combinedDownFctrl.lw() && 
@@ -1179,27 +1191,36 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				long tStart = System.currentTimeMillis();
 				logger.debug("Handling failure ctrl received from "+dsOpId+",cdfctrl="+combinedDownFctrl+ ", fctrl="+fctrl);
+				logger.trace("Failure ctrl handling acquired lock in "+(tStart - rxTime)+" ms");
 				long oldLw = combinedDownFctrl.lw();
 				long oldAcksSize = combinedDownFctrl.acks().size();
 				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
 				boolean acksChanged = oldLw < combinedDownFctrl.lw() || oldAcksSize < combinedDownFctrl.acks().size();
-
+				long tAcks = System.currentTimeMillis();
+				logger.trace("Failure ctrl handling updated acks in "+(tAcks - tStart)+" ms");
 				if (optimizeReplay)
 				{
 					if (workers.get(owner.getOperator().getOpContext().getDownOpIndexFromOpId(dsOpId)).isConnected())
 					{
 						Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+						long tDownAlives = System.currentTimeMillis();
 						logger.trace("Failure ctrl handler checking for replay from shared log.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
+						long tRequeueShared = System.currentTimeMillis();
 			
 						Set<Long> retractions = getRetractions(dsOpOldAlives);
+						long tGetRetractions = System.currentTimeMillis();
 						if (!retractions.isEmpty()) 
 						{ 
 							logger.info("Downstream "+dsOpId+" retractions:"+retractions); 
 							requeueRetractedTuples(dsOpId, retractions);
 						}
+						long tRequeueRetracted = System.currentTimeMillis();
+						logger.debug("Failure ctrl handler da="+(tDownAlives-tAcks)+",trs="+(tRequeueShared-tDownAlives)+",tgr="+(tGetRetractions-tRequeueShared)+",trr="+(tRequeueRetracted-tGetRetractions));
 					}
 				}
+				long tOpt = System.currentTimeMillis();
+				logger.debug("Failure ctrl handling optimized replay in "+(tOpt - tAcks)+" ms");
 				
 				if (acksChanged)
 				{
@@ -1210,10 +1231,14 @@ public class Dispatcher implements IRoutingObserver {
 					
 					if (eagerPurgeOpQueue) { purgeOpOutputQueue(); }
 				}
-				
+
+				long tPurge = System.currentTimeMillis();
+				logger.trace("Failure ctrl handling purged logs in "+(tPurge - tOpt)+" ms");
+
 				//TODO: Get an appropriate value for this timeout.
 				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.reset(dsOpId, FAILURE_CTRL_WATCHDOG_TIMEOUT); }
 				checkBatchRetransmitTimeouts(dsOpId);		
+				logger.trace("Failure ctrl handling checked retransmits and reset watchdog in "+(System.currentTimeMillis() - tOpt)+" ms");
 				lock.notifyAll();
 				logger.debug("Handled failure ctrl in duration="+ (System.currentTimeMillis() - tStart));
 			}
@@ -1380,12 +1405,13 @@ public class Dispatcher implements IRoutingObserver {
 
 				logger.debug("Retransmit timers after check="+batchRetransmitTimers);
 			}
-			if (testRoutesTuple != null) { checkAlternates(testRoutesTuple, downOpId, downOpIndex); }
+			if (testRoutesTuple != null) { checkAlternates(testRoutesTuple, downOpId); }
 		}
 	}
 	
-	private void checkAlternates(DataTuple dt, int downOpId, int downOpIndex)
+	private void checkAlternates(DataTuple dt, int downOpId)
 	{
+		int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 		ArrayList<Integer> targets = owner.getOperator().getRouter().forward_highestWeight(dt);
 		int numTargets = targets == null ? 0 : targets.size();
 		boolean containsDown = targets == null ? false : targets.contains(downOpIndex);
@@ -1407,69 +1433,78 @@ public class Dispatcher implements IRoutingObserver {
 				public void run() 
 				{  
 					logger.warn("Failure ctrl watchdog of "+owner.getOperator().getOperatorId() + " for "+downOpId+" expired.");
-					owner.getOperator().getRouter().update_downFailed(downOpId);
-					DataTuple testRoutesTuple = null;
-					int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
-					synchronized(lock)
-					{
-						clear(downOpId);
-						if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(downOpId); }
-
-						//TODO: What to do when a failure ctrl times out?
-						//TODO: In theory this could fail to include the current
-						//SEEP batch if it is multi-tuple and the dispatcher sends
-						//tuples at a time - although it shouldn't really.
-
-						//Should also clear fctrl?
-						//Should get the current alives for this downstream
-						//Or should it be the current combined alives?
-						//Currently, this only replays tuples in the downstreams output buffer for which there is no alive from any downstream.
-						//In particular, unlike when a connection fails it doesn't clear the alives of the downstream, so anything that is only at the downstream won't be 
-						//replayed. Should probably be more aggressive and just treat it like a connection failure in terms of what gets replayed.
-						//However, would also need to add code to replay anything in the shared replay log that's no longer alive elsewhere or been
-						//transmitted already to a different downstream.
-						//throw new RuntimeException("TODO: This doesn't clear downOpId.downAlives, so won't replay tuples alive only at that downstream.");
-						
-						FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
-						SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
-						if (cci != null)
-						{
-							IBuffer buffer = cci.getBuffer();
-							TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
-							logger.debug("Watchdog requeueing "+delayedBatches.size()+" tuples sent to "+downOpId);
-							long now = System.currentTimeMillis();
-							for (Map.Entry<Long, BatchTuplePayload> e : delayedBatches.entrySet())
-							{
-								long ts = e.getKey();
-								TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
-
-								if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
-								{	
-									//TODO: what if acked already?
-									DataTuple dt = new DataTuple(idxMapper, p);
-									long latency = now - dt.getPayload().instrumentation_ts;
-									if (!optimizeReplay || !combinedDownFctrl.alives().contains(ts))
-									{
-										logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with ts="+p.timestamp+",latency="+latency);
-										opQueue.forceAdd(dt);
-										testRoutesTuple = dt;
-									}
-								}
-							}
-							//TODO: Should clear routing info for op perhaps?
-							//Readd to output queue (N.B. While 'get' is actually 'trim' temporarily, must be careful not
-							//to lose tuples here!)
-							//TODO: Can perhaps reuse requeueTuples code here.
-							
-						}
-					} 
-
-					if (testRoutesTuple != null) { checkAlternates(testRoutesTuple, downOpId, downOpIndex); }
+					DataTuple testRoutesTuple = handleFailureCtrlWatchdogTimeout(downOpId);
+					if (testRoutesTuple != null) { checkAlternates(testRoutesTuple, downOpId); }
 				} 
 			};
 			
 			synchronized(lock) { currentTasks.put(downOpId, timeoutTask); }
 			timer.schedule(timeoutTask, delay);
+		}
+
+		//private void requeueTuples(TreeMap<Long, BatchTuplePayload> sessionLog, Set<Long> dsOpOldAlives)
+		//N.B. Assumes the lock is held
+		public DataTuple handleFailureCtrlWatchdogTimeout(int downOpId)
+		{
+			DataTuple testRoutesTuple = null;
+
+			owner.getOperator().getRouter().update_downFailed(downOpId);
+			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
+			synchronized(lock)
+			{
+				clear(downOpId);
+				if (fctrlHandler != null) { fctrlHandler.clearBatchRetransmitTimers(downOpId); }
+
+				//TODO: What to do when a failure ctrl times out?
+				//TODO: In theory this could fail to include the current
+				//SEEP batch if it is multi-tuple and the dispatcher sends
+				//tuples at a time - although it shouldn't really.
+
+				//Should also clear fctrl?
+				//Should get the current alives for this downstream
+				//Or should it be the current combined alives?
+				//Currently, this only replays tuples in the downstreams output buffer for which there is no alive from any downstream.
+				//In particular, unlike when a connection fails it doesn't clear the alives of the downstream, so anything that is only at the downstream won't be 
+				//replayed. Should probably be more aggressive and just treat it like a connection failure in terms of what gets replayed.
+				//However, would also need to add code to replay anything in the shared replay log that's no longer alive elsewhere or been
+				//transmitted already to a different downstream.
+				//throw new RuntimeException("TODO: This doesn't clear downOpId.downAlives, so won't replay tuples alive only at that downstream.");
+				
+				FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
+				SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
+				if (cci != null)
+				{
+					IBuffer buffer = cci.getBuffer();
+					TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
+					logger.debug("Watchdog requeueing "+delayedBatches.size()+" tuples sent to "+downOpId);
+					long now = System.currentTimeMillis();
+					for (Map.Entry<Long, BatchTuplePayload> e : delayedBatches.entrySet())
+					{
+						long ts = e.getKey();
+						TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
+
+						if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
+						{	
+							//TODO: what if acked already?
+							DataTuple dt = new DataTuple(idxMapper, p);
+							long latency = now - dt.getPayload().instrumentation_ts;
+							if (!optimizeReplay || !combinedDownFctrl.alives().contains(ts))
+							{
+								logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with ts="+p.timestamp+",latency="+latency);
+								opQueue.forceAdd(dt);
+								testRoutesTuple = dt;
+							}
+						}
+					}
+					//TODO: Should clear routing info for op perhaps?
+					//Readd to output queue (N.B. While 'get' is actually 'trim' temporarily, must be careful not
+					//to lose tuples here!)
+					//TODO: Can perhaps reuse requeueTuples code here.
+					
+				}
+			} 
+
+			return testRoutesTuple;
 		}
 
 		public void clear(int downOpId)
