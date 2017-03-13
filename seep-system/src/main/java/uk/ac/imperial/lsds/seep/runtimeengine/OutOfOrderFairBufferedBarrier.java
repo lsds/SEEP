@@ -22,7 +22,7 @@ import com.google.common.collect.TreeRangeSet;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.manet.Query;
 
@@ -341,57 +341,12 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 					// TODO: if numLogicalInputs > 2 should really have a count for each constraint
 					constraints.get(i).addAll(pending.get(j).keySet());
 				}
-				constraintRanges.add(toRangeSet(constraints.get(i)));
+				constraintRanges.add(RangeUtil.toRangeSet(constraints.get(i)));
 			}
 			logger.debug("Constraint ranges: "+constraintRanges+", constraints:"+constraints);
 			return constraintRanges;
 		}
 		finally { lock.unlock(); }
-	}
-	
-	private RangeSet<Long> toRangeSet(TreeSet<Long> constraints)
-	{ 
-		RangeSet<Long> result = TreeRangeSet.create();
-		if (constraints == null || constraints.isEmpty()) { return result; }
-		
-		Iterator<Long> iter = constraints.iterator();
-		Long rangeStart = null;
-		Long rangeEnd = null;
-		while(iter.hasNext())
-		{
-			Long next = iter.next();
-			if (rangeStart == null)
-			{
-				rangeStart = next;
-				rangeEnd = next;
-				if (!iter.hasNext())
-				{
-					result.add(Range.closed(rangeStart, rangeEnd));
-					break;
-				}
-			}
-			else if (next == rangeEnd + 1)
-			{
-				rangeEnd++;
-				if (!iter.hasNext())
-				{
-					result.add(Range.closed(rangeStart, rangeEnd));
-					break;
-				}
-			}
-			else
-			{
-				result.add(Range.closed(rangeStart, rangeEnd));
-				rangeStart = next;
-				rangeEnd = next;
-				if (!iter.hasNext())
-				{
-					result.add(Range.closed(rangeStart, rangeEnd));
-					break;
-				}
-			}
-		}
-		return result;
 	}
 	
 	@Override

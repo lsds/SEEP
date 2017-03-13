@@ -1,9 +1,11 @@
 package uk.ac.imperial.lsds.seep.comm.serialization;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.TreeSet;
+import java.util.Iterator;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -87,9 +89,54 @@ public class RangeUtil
 		Long lower = Long.parseLong(range.substring(1, range.indexOf(':')));
 		Long upper = Long.parseLong(range.substring(range.indexOf(':')+1, range.length()-1));
 
-		if (range.startsWith("[") && range.endsWith(")")) { return Range.closedOpen(lower, upper); } 
-		else if (range.startsWith("[") && range.endsWith("]")) { return Range.closed(lower, upper); }
-		else if (range.startsWith("(") && range.endsWith("]")) { return Range.openClosed(lower, upper); }
-		else {return Range.open(lower, upper);} 
+		if (range.startsWith("[") && range.endsWith(")")) { return Range.closedOpen(lower, upper).canonical(DiscreteDomain.longs()); } 
+		else if (range.startsWith("[") && range.endsWith("]")) { return Range.closed(lower, upper).canonical(DiscreteDomain.longs()); }
+		else if (range.startsWith("(") && range.endsWith("]")) { return Range.openClosed(lower, upper).canonical(DiscreteDomain.longs()); }
+		else {return Range.open(lower, upper).canonical(DiscreteDomain.longs());} 
+	}
+
+	public static RangeSet<Long> toRangeSet(TreeSet<Long> constraints)
+	{ 
+		RangeSet<Long> result = TreeRangeSet.create();
+		if (constraints == null || constraints.isEmpty()) { return result; }
+		
+		Iterator<Long> iter = constraints.iterator();
+		Long rangeStart = null;
+		Long rangeEnd = null;
+		while(iter.hasNext())
+		{
+			Long next = iter.next();
+			if (rangeStart == null)
+			{
+				rangeStart = next;
+				rangeEnd = next;
+				if (!iter.hasNext())
+				{
+					result.add(Range.closed(rangeStart, rangeEnd).canonical(DiscreteDomain.longs()));
+					break;
+				}
+			}
+			else if (next == rangeEnd + 1)
+			{
+				rangeEnd++;
+				if (!iter.hasNext())
+				{
+					result.add(Range.closed(rangeStart, rangeEnd).canonical(DiscreteDomain.longs()));
+					break;
+				}
+			}
+			else
+			{
+				result.add(Range.closed(rangeStart, rangeEnd).canonical(DiscreteDomain.longs()));
+				rangeStart = next;
+				rangeEnd = next;
+				if (!iter.hasNext())
+				{
+					result.add(Range.closed(rangeStart, rangeEnd).canonical(DiscreteDomain.longs()));
+					break;
+				}
+			}
+		}
+		return result;
 	}
 }
