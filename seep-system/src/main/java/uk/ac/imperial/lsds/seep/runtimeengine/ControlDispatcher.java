@@ -161,7 +161,7 @@ public class ControlDispatcher {
 							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
 							k.writeObject(output, ct);
 							output.flush();
-							LOG.debug("Wrote upstream control tuple "+ct.toString() + "in "+(System.currentTimeMillis()-writeStart)+" ms");
+							LOG.debug("Wrote upstream control tuple "+ct.toString() + ",size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms");
 						}
 					}
 				}
@@ -321,10 +321,11 @@ public class ControlDispatcher {
 				output = new Output(outputStream);
 				synchronized(k){
 					synchronized (socket){
+						long writeStart = System.currentTimeMillis();
 						if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
 						k.writeObject(output, ct);
 						output.flush();
-						LOG.debug("Wrote downstream control tuple "+ct.toString());
+						LOG.debug("Wrote downstream control tuple "+ct.toString() + ", size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms");
 					}
 				}
 				success = true;

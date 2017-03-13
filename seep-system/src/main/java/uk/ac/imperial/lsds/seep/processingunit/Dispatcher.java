@@ -671,7 +671,7 @@ public class Dispatcher implements IRoutingObserver {
 					if (!(preventOqDupes && workers.get(target).inSessionLog(ts, true)))
 					{
 						remove = workers.get(target).trySend(dt, SEND_TIMEOUT);
-						notifyThat(owner.getOperator().getOperatorId()).triedSend();
+						//notifyThat(owner.getOperator().getOperatorId()).triedSend();
 					}
 					else if (preventOqDupes) 
 					{ 
@@ -681,7 +681,7 @@ public class Dispatcher implements IRoutingObserver {
 
 					long localLatency = System.currentTimeMillis() - dt.getPayload().local_ts;
 					//boolean trySendAlternativesOnFail = getLocalLatency(dt) > trySendAlternativesThreshold
-					if (remove) { notifyThat(owner.getOperator().getOperatorId()).sendSucceeded(); }
+					if (remove) {/* notifyThat(owner.getOperator().getOperatorId()).sendSucceeded();*/ }
 					if (remove || localLatency < TRY_SEND_ALTERNATIVES_TIMEOUT) 
 					{ 
 						if (oqDupeBackoff) 
@@ -1064,21 +1064,40 @@ public class Dispatcher implements IRoutingObserver {
 		if (optimizeReplay && dsOpOldAlives != null && !sharedReplayLog.isEmpty())
 		{
 			logger.debug("Requeuing from shared replay log with dsooa.size="+dsOpOldAlives.size()+",srl.size="+sharedReplayLog.size());
-			for (Long oldDownAlive : dsOpOldAlives)
+			if (sharedReplayLog.size() > dsOpOldAlives.size())
 			{
-				if (oldDownAlive > combinedDownFctrl.lw() && 
-						!combinedDownFctrl.acks().contains(oldDownAlive) &&
-						!combinedDownFctrl.alives().contains(oldDownAlive))
+				for (Long oldDownAlive : dsOpOldAlives)
 				{
-					//Retraction, should schedule for replay if in shared replay log.
-					DataTuple dt = sharedReplayLog.remove(oldDownAlive);
-					if (dt != null) 
-					{ 
-						logger.info("Replay optimization: Forced to replay tuple from shared log: "+oldDownAlive);
-						opQueue.forceAdd(dt); 
-					}
-				}			
+					if (oldDownAlive > combinedDownFctrl.lw() && 
+							!combinedDownFctrl.acks().contains(oldDownAlive) &&
+							!combinedDownFctrl.alives().contains(oldDownAlive))
+					{
+						moveSharedReplayToOpQueue(oldDownAlive);
+					}			
+				}
 			}
+			else
+			{
+				for (Long srlEntry : sharedReplayLog.keys())
+				{
+					if (combinedDownFctrl.lw() >= srlEntry || combinedDownFctrl.acks().contains(srlEntry)) 
+					{ sharedReplayLog.remove(srlEntry); }
+					else if (dsOpOldAlives.contains(srlEntry) && !combinedDownFctrl.alives().contains(srlEntry))
+					{ moveSharedReplayToOpQueue(srlEntry); }
+				}
+			}
+		}
+	}
+
+	//Assumes lock held	
+	private void moveSharedReplayToOpQueue(Long id)
+	{
+		//Retraction, should schedule for replay if in shared replay log.
+		DataTuple dt = sharedReplayLog.remove(id);
+		if (dt != null) 
+		{ 
+			logger.info("Replay optimization: Forced to replay tuple from shared log: "+id);
+			opQueue.forceAdd(dt); 
 		}
 	}
 	
