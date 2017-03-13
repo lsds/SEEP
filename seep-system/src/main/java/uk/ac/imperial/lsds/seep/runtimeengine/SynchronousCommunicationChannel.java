@@ -335,6 +335,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					try
 					{
 						tmpSocket = new Socket(ip, port);
+						setSocketBufSize(tmpSocket);
 						synchronized(controlSocketLock)
 						{
 							downstreamControlSocket = tmpSocket;
@@ -344,9 +345,9 @@ public class SynchronousCommunicationChannel implements EndPoint{
 							//return downstreamControlSocket;
 						}
 					}
-					catch(IOException e)
+					catch(Exception e)
 					{
-						if (reconnectCount < 1)
+						if (reconnectCount < 1 || reconnectCount % 10 == 0)
 						{
 							e.printStackTrace(); // Urgh
 						}
@@ -362,7 +363,16 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}).start();
 	}
 	
-	
+	private void setSocketBufSize(Socket socket) throws SocketException
+	{
+		int bufSize = Integer.parseInt(GLOBALS.valueFor("ctrlSocketBufSize"));
+		socket.setSendBufferSize(bufSize);
+		socket.setReceiveBufferSize(bufSize);
+		if (bufSize != socket.getSendBufferSize() || bufSize != socket.getReceiveBufferSize()) 
+		{ 
+			logger.error("Set socket buf size failed, requested="+bufSize+",send="+socket.getSendBufferSize()+",receive="+socket.getReceiveBufferSize());
+		}
+	}	
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;

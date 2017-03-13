@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -61,7 +62,7 @@ import com.google.common.collect.RangeSet;
 
 public class ControlHandlerWorker implements Runnable{
 
-	final private Logger LOG = LoggerFactory.getLogger(ControlHandlerWorker.class);
+	private final Logger LOG = LoggerFactory.getLogger(ControlHandlerWorker.class);
 	
 	private Socket incomingSocket = null;
 	private CoreRE owner = null;
@@ -174,6 +175,7 @@ public class ControlHandlerWorker implements Runnable{
 		OutputStream os = null;
 		ControlTuple tuple = null;
 		try{
+			setSocketBufSize(incomingSocket);
 			//Establish input stream, which receives serialised objects
 			is = incomingSocket.getInputStream();
 			if (!Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic")))
@@ -215,6 +217,17 @@ public class ControlHandlerWorker implements Runnable{
 			} catch (IOException e) {}
 		}
 	}
+
+	private void setSocketBufSize(Socket socket) throws SocketException
+	{
+		int bufSize = Integer.parseInt(GLOBALS.valueFor("ctrlSocketBufSize"));
+		socket.setSendBufferSize(bufSize);
+		socket.setReceiveBufferSize(bufSize);
+		if (bufSize != socket.getSendBufferSize() || bufSize != socket.getReceiveBufferSize()) 
+		{ 
+			LOG.error("Set socket buf size failed, requested="+bufSize+",send="+socket.getSendBufferSize()+",receive="+socket.getReceiveBufferSize());
+		}
+	}	
 
 	private void simulateNetDelay()
 	{
