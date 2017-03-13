@@ -8,24 +8,39 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
+
 public class OpFailureCtrl implements Serializable {
 	private static final Logger logger = LoggerFactory.getLogger(OpFailureCtrl.class);
 	private int opId;
 	private long lw;
 	private BitSet acks;
 	private BitSet alives;
-	/*
-	private Set<Long> acks;
-	private Set<Long> alives;
-	*/
+	private String rsAcks;
+	private String rsAlives;
+	private boolean useBitSet = false;
+
 	public OpFailureCtrl() {}
 	
 	public OpFailureCtrl(int opId, long lw, Set<Long> acks, Set<Long> alives)
 	{
 		this.opId = opId;
 		this.lw = lw;
-		this.acks = toBitSet(lw, acks);
-		this.alives = toBitSet(lw, alives);
+		if (useBitSet)
+		{
+			this.acks = toBitSet(lw, acks);
+			this.alives = toBitSet(lw, alives);
+			this.rsAcks = null;
+			this.rsAlives = null;
+		}
+		else
+		{
+			this.acks = null;
+			this.alives = null; 
+			this.rsAcks = RangeUtil.toRangeSetStr(acks);
+			this.rsAlives = RangeUtil.toRangeSetStr(alives);
+
+		}
 	}
 	
 	public int getOpId() {
@@ -44,24 +59,59 @@ public class OpFailureCtrl implements Serializable {
 	}
 	
 	public Set<Long> getAcks() {
-		return fromBitSet(lw, acks);
+		if (useBitSet)
+		{
+			return fromBitSet(lw, acks);
+		}
+		else
+		{
+			return RangeUtil.parseRangeSet(rsAcks);
+		}
 	}
 
-	public void setAcks(Set<Long> acks) {
-		this.acks = toBitSet(lw, acks);
+	public void setAcks(Set<Long> newAcks) {
+		if (useBitSet)
+		{
+			this.acks = toBitSet(lw, newAcks);
+		}
+		else
+		{
+			this.rsAcks = RangeUtil.toRangeSetStr(newAcks);
+		}
 	}
 
 	public Set<Long> getAlives() {
-		return fromBitSet(lw, alives);
+		if (useBitSet)
+		{
+			return fromBitSet(lw, alives);
+		}
+		else
+		{
+			return RangeUtil.parseRangeSet(rsAlives);
+		}
 	}
 
-	public void setAlives(Set<Long> alives) {
-		this.alives = toBitSet(lw, alives);
+	public void setAlives(Set<Long> newAlives) {
+		if (useBitSet)
+		{
+			this.alives = toBitSet(lw, newAlives);
+		}
+		else
+		{
+			this.rsAlives = RangeUtil.toRangeSetStr(newAlives);
+		}
 	}
 
 	public FailureCtrl getFailureCtrl() 
 	{
-		return new FailureCtrl(lw, fromBitSet(lw, acks), fromBitSet(lw, alives));
+		if (useBitSet)
+		{
+			return new FailureCtrl(lw, fromBitSet(lw, acks), fromBitSet(lw, alives));
+		}
+		else
+		{
+			return new FailureCtrl(lw, RangeUtil.parseRangeSet(rsAcks), RangeUtil.parseRangeSet(rsAlives));
+		}
 	}
 	
 	private BitSet toBitSet(long low, Set<Long> ids)
@@ -89,5 +139,4 @@ public class OpFailureCtrl implements Serializable {
 		//logger.trace("Converted bitset "+low+","+bits+" to ids "+ids);
 		return ids;
 	}
-	
 }
