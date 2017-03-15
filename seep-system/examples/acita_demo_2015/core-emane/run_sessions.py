@@ -352,7 +352,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             print 'Initial placements=',placements
             if placements: 
                 create_static_routes(placements, tx_range, session.sessiondir)
-                if (len(placements) != nodes-2): raise Exception("Expected placement for %d nodes, got %d"%(nodes-2,len_placements))
+                if len(placements) != nodes-2: raise Exception("Expected placement for %d nodes, got %d"%(nodes-2,len(placements)))
 
         if params['injectFailures']: 
             shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
