@@ -314,6 +314,7 @@ def record_op_transmissions(op_transmissions, exp_dir):
     total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
     with open(total_transmissions_file, 'w') as f:
         f.write('#ts count\n') 
+        f.write('#total %d'%(sum(total_transmissions.values())):
         for ts in sorted(total_transmissions.keys()):
             f.write('%d %d\n'%(ts, total_transmissions[ts]))
 
