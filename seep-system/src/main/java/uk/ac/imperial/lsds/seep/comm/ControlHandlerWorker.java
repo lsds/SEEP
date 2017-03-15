@@ -63,7 +63,7 @@ import com.google.common.collect.RangeSet;
 public class ControlHandlerWorker implements Runnable{
 
 	private final Logger LOG = LoggerFactory.getLogger(ControlHandlerWorker.class);
-	
+
 	private Socket incomingSocket = null;
 	private CoreRE owner = null;
 	//In charge of control thread execution
@@ -175,7 +175,8 @@ public class ControlHandlerWorker implements Runnable{
 		OutputStream os = null;
 		ControlTuple tuple = null;
 		try{
-			setSocketBufSize(incomingSocket);
+			if (!Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic")))
+			{ setSocketBufSize(incomingSocket); }
 			//Establish input stream, which receives serialised objects
 			is = incomingSocket.getInputStream();
 			if (!Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic")))

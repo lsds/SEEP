@@ -189,6 +189,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			try
 			{
 				tmpSocket = new Socket(ip, port);
+				if (piggybackControlTraffic) { setSocketRcvBufSize(tmpSocket); }
 				tmpOutput = tmpSocket.getOutputStream();
 				downstreamDataSocket = tmpSocket;
 				output = new Output(tmpOutput);
@@ -309,13 +310,18 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				if (downstreamControlSocket != null)
 				{
 					// TODO: Not sure if it is necessary to close this?
-					try { downstreamControlSocket.close(); }
+					try { 
+						downstreamControlSocket.close(); }
 					catch(IOException e) {
 						e.printStackTrace(); /*Urgh*/ 
 					}
 					logger.info("Closing downstream control socket");
 				}
-
+				try {
+					setSocketSndBufSize(newSocket); }
+				catch(SocketException e) {
+					e.printStackTrace(); /*Urgh*/ 
+				}
 				downstreamControlSocket = newSocket;	
 			}
 		}
@@ -363,15 +369,30 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}).start();
 	}
 	
-	private void setSocketBufSize(Socket socket) throws SocketException
+	private void setSocketRcvBufSize(Socket socket) throws SocketException
+	{
+		int bufSize = Integer.parseInt(GLOBALS.valueFor("ctrlSocketBufSize"));
+		socket.setReceiveBufferSize(bufSize);
+		if (bufSize != socket.getReceiveBufferSize()) 
+		{ 
+			logger.error("Set socket rcv buf size failed, requested="+bufSize+", receive="+socket.getReceiveBufferSize());
+		}
+	}
+
+	private void setSocketSndBufSize(Socket socket) throws SocketException
 	{
 		int bufSize = Integer.parseInt(GLOBALS.valueFor("ctrlSocketBufSize"));
 		socket.setSendBufferSize(bufSize);
-		socket.setReceiveBufferSize(bufSize);
-		if (bufSize != socket.getSendBufferSize() || bufSize != socket.getReceiveBufferSize()) 
+		if (bufSize != socket.getSendBufferSize()) 
 		{ 
-			logger.error("Set socket buf size failed, requested="+bufSize+",send="+socket.getSendBufferSize()+",receive="+socket.getReceiveBufferSize());
+			logger.error("Set socket snd buf size failed, requested="+bufSize+", send="+socket.getSendBufferSize());
 		}
+	}
+
+	private void setSocketBufSize(Socket socket) throws SocketException
+	{
+		setSocketRcvBufSize(socket);
+		setSocketSndBufSize(socket);
 	}	
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
