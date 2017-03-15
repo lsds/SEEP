@@ -295,6 +295,14 @@ public class FailureCtrl {
 		}
 	}
 
+	public boolean isAlive(long ts)
+	{
+		synchronized(lock)
+		{
+			return alives.contains(ts) && !isAcked(ts);
+		}
+	}
+
 	public long unacked(long ts)
 	{
 		synchronized(lock)

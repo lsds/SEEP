@@ -306,12 +306,12 @@ public class Dispatcher implements IRoutingObserver {
 		long ts = dt.getPayload().timestamp;
 		synchronized(lock)
 		{
-			if (combinedDownFctrl.lw() >= ts || combinedDownFctrl.acks().contains(ts))
+			if (combinedDownFctrl.isAcked(ts))
 			{
 				//Acked already, discard.
 				return;	
 			}
-			if (!(optimizeReplay && combinedDownFctrl.alives().contains(ts)))
+			if (!(optimizeReplay && combinedDownFctrl.isAlive(ts)))
 			{
 				if (owner.getOperator().getOpContext().isSource() || boundedOpQueue)
 				{
@@ -591,7 +591,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				dt = opQueue.peekHead();
 				long ts = dt.getPayload().timestamp;
-				if (ts <= combinedDownFctrl.lw() || combinedDownFctrl.acks().contains(ts))
+				if (combinedDownFctrl.isAcked(ts))
 				{
 					boolean removed = opQueue.remove(ts) != null;
 					if (removed) { setDownstreamsRoutable(true); }
@@ -614,7 +614,7 @@ public class Dispatcher implements IRoutingObserver {
 				
 				//Alive downstream, so don't discard in case we need
 				//to replay if the downstream fails.
-				if (fctrl.alives().contains(ts) && dt != null)
+				if (fctrl.isAlive(ts) && dt != null)
 				{
 					sharedReplayLog.add(dt);
 					logger.info("admitBatch: replay optimization: dispatcher avoided replaying tuple "+ts+",srl.size="+sharedReplayLog.size());
@@ -800,8 +800,8 @@ public class Dispatcher implements IRoutingObserver {
 		//it will be safe to just add to the shared replay log.
 		private boolean shouldTrySend(long ts, FailureCtrl fctrl, boolean constrainedRoute)
 		{
-			if (fctrl.lw() >= ts || fctrl.acks().contains(ts) || 
-					(optimizeReplay && fctrl.alives().contains(ts) && 
+			if (fctrl.isAcked(ts)|| 
+					(optimizeReplay && fctrl.isAlive(ts) && 
 							(!downIsMultiInput || !constrainedRoute)))
 			{
 				return false;
@@ -976,11 +976,11 @@ public class Dispatcher implements IRoutingObserver {
 				long ts = e.getKey();
 				TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
 
-				if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
+				if (!combinedDownFctrl.isAcked(ts))
 				{	
 					//TODO: what if acked already?
 					DataTuple dt = new DataTuple(idxMapper, p);
-					if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
+					if (optimizeReplay && combinedDownFctrl.isAlive(ts))
 					{
 						sharedReplayLog.add(dt);
 						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts+",srl.sz="+sharedReplayLog.size());
@@ -1010,7 +1010,7 @@ public class Dispatcher implements IRoutingObserver {
 		//for (Map.Entry<Long, BatchTuplePayload> e : sessionLog.entrySet())
 		for (Long ts : retracted)
 		{
-			if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts) && !combinedDownFctrl.alives().contains(ts))
+			if (!combinedDownFctrl.isAcked(ts) && !combinedDownFctrl.isAlive(ts))
 			{
 				BatchTuplePayload btp = buffer.get(ts);
 				if (btp != null)
@@ -1019,7 +1019,7 @@ public class Dispatcher implements IRoutingObserver {
 
 					//TODO: what if acked already?
 					DataTuple dt = new DataTuple(idxMapper, p);
-					if (optimizeReplay && combinedDownFctrl.alives().contains(ts))
+					if (optimizeReplay && combinedDownFctrl.isAlive(ts))
 					{
 						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
 						sharedReplayLog.add(dt);
@@ -1068,9 +1068,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				for (Long oldDownAlive : dsOpOldAlives)
 				{
-					if (oldDownAlive > combinedDownFctrl.lw() && 
-							!combinedDownFctrl.acks().contains(oldDownAlive) &&
-							!combinedDownFctrl.alives().contains(oldDownAlive))
+					if (!combinedDownFctrl.isAcked(oldDownAlive) && !combinedDownFctrl.isAlive(oldDownAlive))
 					{
 						moveSharedReplayToOpQueue(oldDownAlive);
 					}			
@@ -1080,9 +1078,8 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				for (Long srlEntry : sharedReplayLog.keys())
 				{
-					if (combinedDownFctrl.lw() >= srlEntry || combinedDownFctrl.acks().contains(srlEntry)) 
-					{ sharedReplayLog.remove(srlEntry); }
-					else if (dsOpOldAlives.contains(srlEntry) && !combinedDownFctrl.alives().contains(srlEntry))
+					if (combinedDownFctrl.isAcked(srlEntry)) { sharedReplayLog.remove(srlEntry); }
+					else if (dsOpOldAlives.contains(srlEntry) && !combinedDownFctrl.isAlive(srlEntry))
 					{ moveSharedReplayToOpQueue(srlEntry); }
 				}
 			}
@@ -1274,7 +1271,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				for (Long id : dsOpOldAlives)
 				{
-					if (id > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(id) && !combinedDownFctrl.alives().contains(id))
+					if (!combinedDownFctrl.isAcked(id) && !combinedDownFctrl.isAlive(id))
 					{
 						retractions.add(id);
 					}
@@ -1378,8 +1375,8 @@ public class Dispatcher implements IRoutingObserver {
 					Map.Entry<Long,Long> e = iter.next();
 					Long batchId = e.getKey();
 					long delay = System.currentTimeMillis() - e.getValue();
-					if (combinedDownFctrl.lw() >= batchId || combinedDownFctrl.acks().contains(batchId) ||
-						(optimizeReplay && combinedDownFctrl.alives().contains(batchId)))
+					if (combinedDownFctrl.isAcked(batchId) ||
+						(optimizeReplay && combinedDownFctrl.isAlive(batchId)))
 					{
 						// Acked so remove batch from all caches.
 						// TODO: Trickier if alive since if we delete and alive gets retracted due to failure ctrl timeout the batch won't have a retransmit timer? 
@@ -1527,12 +1524,12 @@ public class Dispatcher implements IRoutingObserver {
 						long ts = e.getKey();
 						TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
 
-						if (ts > combinedDownFctrl.lw() && !combinedDownFctrl.acks().contains(ts))
+						if (!combinedDownFctrl.isAcked(ts))
 						{	
 							//TODO: what if acked already?
 							DataTuple dt = new DataTuple(idxMapper, p);
 							long latency = now - dt.getPayload().instrumentation_ts;
-							if (!optimizeReplay || !combinedDownFctrl.alives().contains(ts))
+							if (!(optimizeReplay && combinedDownFctrl.isAlive(ts)))
 							{
 								logger.debug("Watchdog requeueing data tuple sent to "+downOpId+" with ts="+p.timestamp+",latency="+latency);
 								opQueue.forceAdd(dt);
