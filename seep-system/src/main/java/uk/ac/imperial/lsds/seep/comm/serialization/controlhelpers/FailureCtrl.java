@@ -4,6 +4,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
+
 public class FailureCtrl {
 
 	private volatile long lw;
@@ -54,7 +56,10 @@ public class FailureCtrl {
 	{
 		synchronized(lock)
 		{
-			return lw + ":" + joinLongs(acks) + ":" + joinLongs(alives);
+			//return lw + ":" + joinLongs(acks) + ":" + joinLongs(alives);
+			String ackStr = RangeUtil.toRangeSetStr(acks);
+			String aliveStr = RangeUtil.toRangeSetStr(alives);
+			return lw + ":" + (ackStr == null ? "" : ackStr) + ":" + (aliveStr == null ? "" : aliveStr);
 		}
 	}
 	

@@ -70,6 +70,9 @@ public class OutputQueueWorker
 
 	public OutputQueueWorker(CoreRE owner, boolean outputQueueTimestamps)
 	{
+
+		if (enableUpstreamRoutingCtrl) 
+		{ throw new RuntimeException("TODO: Need to fix bug whereby connection hangs because upstream connection has failed due to connection timeout, but ds connection never fails because no data is ever sent on it (because rctrl has timed out) and no non-coalesced ctrl is ever sent on it (because upstream routing ctrl). Solution is to close connection on rctrl timeout at upstream or close both connections at downstream if upstream direction fails. Actually, not even sure the latter will work - will tcp keep trying to close a connection indefinitely? Alternative solution is to ensure some periodic ping is sent ds even with upstream routing ctrl."); }
 		this.owner = owner;
 		this.k = initialiseKryo(); 
 		this.outputQueueTimestamps = outputQueueTimestamps;
@@ -318,7 +321,7 @@ public class OutputQueueWorker
 			totalSent++;
 			if (!msg.batch.isEmpty() && (msg.rctrl != null || msg.fctrl != null))
 			{ logger.debug("Coalesced data with ctrl traffic, coalseced %="+ (++coalesced/totalSent)); }
-			else { logger.debug("No coalescing: "+ (coalesced / totalSent) ); }  
+			else { logger.debug("No coalescing for "+channelRecord.getOperatorId()+": "+ (coalesced / totalSent) ); }  
 
 			try
 			{
@@ -408,8 +411,10 @@ public class OutputQueueWorker
 		//Assumes lock held.
 		private boolean ctrlDataChanged(SynchronousCommunicationChannel channel)
 		{
+			//TODO: Think this is potentially broken - if the socket is closed and rctrl is null with ds rctrl?
 			return data != null || 
-				(rctrl != null && (prevRCtrl == null || (rctrl.getUpDown().getQlen() != prevRCtrl.getUpDown().getQlen() || channel.getDownstreamDataSocket().isClosed()))) || 
+				//(rctrl != null && (prevRCtrl == null || (rctrl.getUpDown().getQlen() != prevRCtrl.getUpDown().getQlen() || channel.getDownstreamDataSocket().isClosed()))) || 
+				(rctrl != null) || 
 				(!mergeFailureAndRoutingCtrl && fctrl != null) ||
 				(enableUpstreamRoutingCtrl && !downIsMultiInput && channel.getDownstreamDataSocket().isClosed());
 
