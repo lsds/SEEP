@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 
 import subprocess,os,time,re,argparse
 
@@ -8,21 +8,26 @@ def main(node):
         now = time.time()
         exp_start = get_exp_start()
         if exp_start + cycle_spec[0] > now: 
+            print "Node %s waiting for %.1f seconds to start failure injector"%(node, exp_start + cycle_spec[0] - now)
             time.sleep(exp_start + cycle_spec[0] - now)
 
-        print "Node %s starting failure injector at %.1f"%(node, time.time())
+        print "Node %s starting failure injector at %.1f (%s)"%(node, time.time(), time.strftime("%H:%M:%S"))
         while True:
             time.sleep(cycle_spec[1])
             toggle_netif("down")
-            print "Node %s net inf down at %.1f"%(node, time.time())
+            print "Node %s net inf down at %.1f (%s)"%(node, time.time(), time.strftime("%H:%M:%S"))
             time.sleep(cycle_spec[2])
             toggle_netif("up")
-            print "Node %s net inf up at %.1f"%(node, time.time())
+            print "Node %s net inf up at %.1f (%s)"%(node, time.time(), time.strftime("%H:%M:%S"))
 
     print "No failure cycles defined for node %s, terminating."%(node)
 
 def toggle_netif(direction):
     cmd = ["ip", "link", "set", "dev", "eth0", direction]
+    with open("failure-injector.log", 'a') as log:
+        subprocess.Popen(cmd, stdout=log, cwd=".", stderr=subprocess.STDOUT, env=os.environ.copy())
+
+    cmd = ["ip", "link", "set", "dev", "ctrl0", direction]
     with open("failure-injector.log", 'a') as log:
         subprocess.Popen(cmd, stdout=log, cwd=".", stderr=subprocess.STDOUT, env=os.environ.copy())
 
