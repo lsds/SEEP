@@ -13,10 +13,14 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +35,31 @@ import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
+import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitNodeState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpFailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
+import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
+import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
+import de.javakaffee.kryoserializers.BitSetSerializer;
+
+import com.esotericsoftware.kryo.Kryo;
+
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
 */
@@ -38,6 +67,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 
 	private static final Logger logger = LoggerFactory.getLogger(SynchronousCommunicationChannel.class);
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private static final int socketConnectTimeout = Integer.parseInt(GLOBALS.valueFor("socketConnectTimeout"));
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
@@ -67,6 +97,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int deferredPortD = -1;
 	private int deferredPortC = -1;
 
+	private Kryo ctrlKryo = null;
+
 	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer){
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
@@ -87,6 +119,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
+		this.ctrlKryo = initializeCtrlKryo();
 	}
 	
 	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
@@ -97,6 +131,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		this.deferredControlIp = deferredControlIp;
 		this.deferredPortD = deferredPortD;
 		this.deferredPortC = deferredPortC;
+		this.ctrlKryo = initializeCtrlKryo();
 	}
 	
 	public int getOperatorId(){
@@ -188,7 +223,10 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			OutputStream tmpOutput = null;
 			try
 			{
-				tmpSocket = new Socket(ip, port);
+				//tmpSocket = new Socket(ip, port);
+				tmpSocket = new Socket();
+				tmpSocket.bind(null);
+				tmpSocket.connect(new InetSocketAddress(ip, port), socketConnectTimeout);
 				if (piggybackControlTraffic) { setSocketRcvBufSize(tmpSocket); }
 				tmpOutput = tmpSocket.getOutputStream();
 				downstreamDataSocket = tmpSocket;
@@ -340,7 +378,10 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					Socket tmpSocket = null;
 					try
 					{
-						tmpSocket = new Socket(ip, port);
+						//tmpSocket = new Socket(ip, port);
+						tmpSocket = new Socket();
+						tmpSocket.bind(null);
+						tmpSocket.connect(new InetSocketAddress(ip, port), socketConnectTimeout);
 						setSocketBufSize(tmpSocket);
 						synchronized(controlSocketLock)
 						{
@@ -405,6 +446,42 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	public Output getOutput() {
 		return output;
+	}
+
+	public Kryo getCtrlKryo()
+	{
+		return ctrlKryo;
+	}
+
+	private Kryo initializeCtrlKryo(){
+		Kryo k = new Kryo();
+		k.register(ControlTuple.class);
+		k.register(MemoryChunk.class);
+		k.register(StateChunk.class);
+		k.register(HashMap.class, new MapSerializer());
+		k.register(BackupOperatorState.class);
+		k.register(byte[].class);
+		k.register(RawData.class);
+		k.register(Ack.class);
+		k.register(BackupNodeState.class);
+		k.register(Resume.class);
+		k.register(ScaleOutInfo.class);
+		k.register(StateAck.class);
+		k.register(ArrayList.class);
+		k.register(BackupRI.class);
+		k.register(InitNodeState.class);
+		k.register(InitOperatorState.class);
+		k.register(InitRI.class);
+		k.register(InvalidateState.class);
+		k.register(ReconfigureConnection.class);
+		//k.register(BitSet.class);
+		k.register(BitSet.class, new BitSetSerializer());
+		k.register(OpFailureCtrl.class);
+		k.register(FailureCtrl.class);
+		k.register(UpDownRCtrl.class);
+		k.register(DownUpRCtrl.class);
+
+		return k;
 	}
 	
 	public void setTick(long tick){
