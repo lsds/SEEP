@@ -11,6 +11,9 @@
 package uk.ac.imperial.lsds.seep.acita15.operators;
 
 import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.FileReader;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -90,6 +93,18 @@ public class Source implements StatelessOperator {
 				}				
 			}
 		}
+
+		while(!sendIndefinitely)
+		{
+			try {
+				Thread.sleep(5000);
+			} 
+			catch (InterruptedException e) {
+				e.printStackTrace();
+			}				
+			logger.info("Source waiting for sink to terminate.");
+		}
+
 		System.exit(0);
 	}
 	
@@ -110,12 +125,47 @@ public class Source implements StatelessOperator {
 	
 	private void initialPause()
 	{
+		long pause = Long.parseLong(GLOBALS.valueFor("initialPause"));
+		long now = System.currentTimeMillis();
+		File startFailures = new File("../start_failures.txt");
+		if (startFailures.exists())
+		{
+			long tStart = readStartTime(startFailures);
+			logger.info("Read start time: "+tStart);
+			if (now < tStart + pause)
+			{
+				pause = tStart + pause - now;	
+				logger.info("Waiting for "+pause+" ms.");
+			}
+			else
+			{
+				logger.error("Startup took to long, missed start time by "+ (now - (tStart + pause)) + " ms.");
+				System.exit(1);
+			}
+		}
+
 		try {
-			Thread.sleep(Long.parseLong(GLOBALS.valueFor("initialPause")));
+			Thread.sleep(pause);
 		} 
 		catch (InterruptedException e) {
 			e.printStackTrace();
 		}				
-
 	}
+
+	private long readStartTime(File f)
+	{
+		String line = null;
+		try
+		{
+			BufferedReader br = new BufferedReader(new FileReader(f));
+			line = br.readLine();
+		}
+		catch (IOException e)
+		{
+			logger.error("Error reading start time:", e);
+			System.exit(1);
+		}
+		return (long)(1000 * Double.parseDouble(line.trim()));
+	}
+
 }
