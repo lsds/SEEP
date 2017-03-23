@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Vector;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -28,6 +29,7 @@ import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.routing.IRoutingObserver;
 import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
@@ -444,6 +446,7 @@ public class Dispatcher implements IRoutingObserver {
 		}	
 		long tNotifyStart = System.currentTimeMillis();
 		synchronized(lock) { lock.notifyAll(); }
+
 		long tEnd = System.currentTimeMillis();
 		String logMsg = "Finished handling routing change, duration=" + (tEnd - tStart) + ", notify=" + (tEnd - tNotifyStart);
 		if (tEnd - tStart > CTRL_DELAY_WARNING) { logger.warn("HIGH CTRL DELAY: "+ logMsg); } else { logger.debug(logMsg); }
@@ -1000,34 +1003,51 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 
-	//Assumes you've already trimmed buffer, updated combinedDownFctrl, and lock is held.
-	public void requeueRetractedTuples(int downOpId, Set<Long> retracted)
+	private Set<Long> getRetractions(Set<Long> dsOpOldAlives)
 	{
-		int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
-		SynchronousCommunicationChannel cci = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
-		IBuffer buffer = (OutOfOrderBuffer)cci.getBuffer();
-		//TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
-		//for (Map.Entry<Long, BatchTuplePayload> e : sessionLog.entrySet())
+		Set<Long> retractions = new HashSet<>();
+		if (dsOpOldAlives != null)
+		{
+			for (Long id : dsOpOldAlives)
+			{
+				if (!combinedDownFctrl.isAcked(id) && !combinedDownFctrl.isAlive(id))
+				{
+					retractions.add(id);
+				}
+			}		
+		}
+		return retractions;
+	}
+
+	//Assumes you've already trimmed buffer, updated combinedDownFctrl, and lock is held.
+	public void requeueRetractedTuples(Set<Long> retracted)
+	{
+		Vector<EndPoint> endpoints = owner.getPUContext().getDownstreamTypeConnection();
+
 		for (Long ts : retracted)
 		{
 			if (!combinedDownFctrl.isAcked(ts) && !combinedDownFctrl.isAlive(ts))
 			{
-				BatchTuplePayload btp = buffer.get(ts);
-				if (btp != null)
+				for (EndPoint endpoint : endpoints)
 				{
-					TuplePayload p = btp.getTuple(0);	//TODO: Proper batches.
+					BatchTuplePayload btp = ((SynchronousCommunicationChannel)endpoint).getBuffer().get(ts);
+					if (btp != null)
+					{
+						TuplePayload p = btp.getTuple(0);	//TODO: Proper batches.
 
-					//TODO: what if acked already?
-					DataTuple dt = new DataTuple(idxMapper, p);
-					if (optimizeReplay && combinedDownFctrl.isAlive(ts))
-					{
-						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
-						sharedReplayLog.add(dt);
-					}
-					else
-					{
-						logger.debug("Requeueing retracted data tuple with ts="+p.timestamp);
-						opQueue.forceAdd(dt);
+						//TODO: what if acked already?
+						DataTuple dt = new DataTuple(idxMapper, p);
+						if (optimizeReplay && combinedDownFctrl.isAlive(ts))
+						{
+							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
+							sharedReplayLog.add(dt);
+						}
+						else
+						{
+							logger.debug("Requeueing retracted data tuple with ts="+p.timestamp);
+							opQueue.forceAdd(dt);
+						}
+						break;	//Don't bother looking at other buffers if found in this one.
 					}
 				}
 			}
@@ -1210,6 +1230,7 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock)
 			{
 				long tStart = System.currentTimeMillis();
+				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dsOpId); }	//In case it takes a while to process this failure ctrl.
 				logger.debug("Handling failure ctrl received from "+dsOpId+",cdfctrl="+combinedDownFctrl+ ", fctrl="+fctrl);
 				logger.trace("Failure ctrl handling acquired lock in "+(tStart - rxTime)+" ms");
 				long oldLw = combinedDownFctrl.lw();
@@ -1233,7 +1254,7 @@ public class Dispatcher implements IRoutingObserver {
 						if (!retractions.isEmpty()) 
 						{ 
 							logger.info("Downstream "+dsOpId+" retractions:"+retractions); 
-							requeueRetractedTuples(dsOpId, retractions);
+							requeueRetractedTuples(retractions);
 						}
 						long tRequeueRetracted = System.currentTimeMillis();
 						logger.debug("Failure ctrl handler da="+(tDownAlives-tAcks)+",trs="+(tRequeueShared-tDownAlives)+",tgr="+(tGetRetractions-tRequeueShared)+",trr="+(tRequeueRetracted-tGetRetractions));
@@ -1264,21 +1285,6 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 
-		private Set<Long> getRetractions(Set<Long> dsOpOldAlives)
-		{
-			Set<Long> retractions = new HashSet<>();
-			if (dsOpOldAlives != null)
-			{
-				for (Long id : dsOpOldAlives)
-				{
-					if (!combinedDownFctrl.isAcked(id) && !combinedDownFctrl.isAlive(id))
-					{
-						retractions.add(id);
-					}
-				}		
-			}
-			return retractions;
-		}
 		
 		public void handleUpstreamFailureCtrl(FailureCtrl fctrl, int upOpId)
 		{
@@ -1578,9 +1584,12 @@ public class Dispatcher implements IRoutingObserver {
 
 					//TODO: Should we be using downOpFailureCtrl?
 					FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
+					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
 					IBuffer buffer = dest.getBuffer();
+					//N.B. This is the key step wrt mhro!
 					TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
 
+					
 					//5) for tuple in logged
 					//		if acked discard
 					//		else if in joint alives add to shared replay log
@@ -1588,12 +1597,24 @@ public class Dispatcher implements IRoutingObserver {
 					//
 					//		remove from the alives for the old fctrl for this downstream
 					requeueTuples(delayedBatches, dsOpOldAlives);
+
+					// Check whether there have been any retractions for batches only contained in other buffers.
+					Set<Long> retractions = getRetractions(dsOpOldAlives);
+					if (!retractions.isEmpty()) 
+					{ 
+						logger.info("Downstream "+downOpId+" retractions:"+retractions); 
+						//requeueRetractedTuples(dsOpId, retractions);
+						requeueRetractedTuples(retractions);
+					}
+
 					//6) For remaining tuples in old fctrl for this downstream
 					//		if tuple not acked and not in new joint alives and tuple in shared replay log
 					//			move tuple from shared replay log to output queue
 					//TODO: Should this be outside this if block?
-					logger.info("Dispatcher worker "+downOpId+" checking for replay from shared log after timeout.");
+					logger.info("Dispatcher worker "+downOpId+" checking for replay from shared log after hard timeout.");
+					logger.debug("dsooa before requeue from srl: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
 					requeueFromSharedReplayLog(dsOpOldAlives);
+					logger.error("TODO: Should we be requeueing from srl before from individual buffers (correctness vs perf?)");
 					lock.notifyAll();
 				}
 			}	
