@@ -80,6 +80,7 @@ public class NetRateMonitor implements Runnable {
 					if (logger.isDebugEnabled())
 					{
 						logNetInfo(allNetInfo());
+						logNetInfo(tcpRtoInfo());
 					}
 					
 					List<String> routes = readRoutes();
@@ -233,6 +234,29 @@ public class NetRateMonitor implements Runnable {
 		return result;
 	}
 	
+	private List<String> tcpRtoInfo()
+	{
+		String cmd = "./tcp-rto-info.sh";
+		ProcessBuilder pb = new ProcessBuilder("/bin/bash", cmd);
+		Process process = null;
+		List<String> result = new LinkedList<>();
+		try {
+			process = pb.start();
+		
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			
+			String line = "";
+			while ((line = reader.readLine()) != null)
+			{
+				result.add(line);
+			}
+		} catch (IOException e) {
+			logger.error("Error reading routes: "+e);
+			System.exit(0);	//TODO: A bit harsh?
+		}
+		return result;
+	}
+
 	private void logNetInfo(List<String> netInfo)
 	{
 		for (String line : netInfo)
