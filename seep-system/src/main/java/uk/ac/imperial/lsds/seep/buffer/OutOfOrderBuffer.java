@@ -79,7 +79,7 @@ public class OutOfOrderBuffer implements IBuffer {
 		for (Long ts : log.keySet())
 		{
 			//TODO: Might as well trim any acked from log too.
-			if (ts > fctrl.lw() && !fctrl.acks().contains(ts) && !fctrl.alives().contains(ts))
+			if (!fctrl.isAcked(ts) && !fctrl.isAlive(ts))
 			{
 				delayed.put(ts,  log.get(ts));
 			}

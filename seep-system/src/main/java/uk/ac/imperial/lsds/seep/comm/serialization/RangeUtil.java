@@ -58,13 +58,13 @@ public class RangeUtil
 		Joiner joiner = Joiner.on(",");
 		String result = joiner.join(rangeStrings);
 
-		logger.debug("Converted range set: "+ rs);
+		logger.trace("Converted range set: "+ rs);
 		return result;
 	}
 	
 	public static Set<Long> parseRangeSet(String rsStr)
 	{
-		logger.debug("Parsing serialized range set: "+ rsStr);
+		logger.trace("Parsing serialized range set: "+ rsStr);
 		if (rsStr == null || rsStr.isEmpty()) { return null; }
 		Set<Long> result = new HashSet<>();
 		Splitter splitter = Splitter.on(",").trimResults().omitEmptyStrings();
