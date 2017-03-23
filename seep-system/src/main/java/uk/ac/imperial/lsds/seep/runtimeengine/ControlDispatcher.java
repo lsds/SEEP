@@ -136,6 +136,11 @@ public class ControlDispatcher {
 	}
 	
 	private boolean sendUpstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block){
+		return send(ct, channel, block, "upstream");
+	}
+
+	private boolean send(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block, String dir)
+	{
 		int numRetries = 0;
 		boolean success = false;
 		long sendStart = System.currentTimeMillis();
@@ -164,7 +169,7 @@ public class ControlDispatcher {
 							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
 							k.writeObject(output, ct);
 							output.flush();
-							LOG.debug("Wrote upstream control tuple "+ct.toString()+" to "+channel.getOperatorId()+",size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms (+sync="+(System.currentTimeMillis() - syncStart)+" ms)");
+							LOG.debug("Wrote "+dir+" control tuple "+ct.toString()+" to "+channel.getOperatorId()+",size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms (+sync="+(System.currentTimeMillis() - syncStart)+" ms)");
 						}
 					}
 				}
@@ -180,7 +185,7 @@ public class ControlDispatcher {
 				if (!block) { break; }
 			}
 		}
-		if (!success) { LOG.warn("Sending control tuple upstream to "+channel.getOperatorId()+" failed in "+(System.currentTimeMillis()-sendStart)+" ms"); }
+		if (!success) { LOG.warn("Sending control tuple "+dir+" to "+channel.getOperatorId()+" failed in "+(System.currentTimeMillis()-sendStart)+" ms"); }
 		return success;
 	}
 	
@@ -305,51 +310,9 @@ public class ControlDispatcher {
 	
 	private boolean sendDownstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block) 
 	{
-		int numRetries = 0;
-		boolean success = false;
-		long sendStart = System.currentTimeMillis();
-		while (!success)
-		{
-			Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
-			if (socket == null)
-			{
-				if (block) { throw new RuntimeException("Logic error."); }
-				break;
-			}
-			
-			Output output = null;
-			try{
-				//boolean compress = true;
-				boolean compress = false;
-				OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
-				output = new Output(outputStream);
-				long syncStart = System.currentTimeMillis();
-				//synchronized(k){
-				synchronized(channel.getCtrlKryo()){
-					synchronized (socket){
-						long writeStart = System.currentTimeMillis();
-						if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
-						k.writeObject(output, ct);
-						output.flush();
-						LOG.debug("Wrote downstream control tuple "+ct.toString()+" to "+channel.getOperatorId()+", size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms (+sync="+(System.currentTimeMillis() - syncStart)+" ms)");
-					}
-				}
-				success = true;
-			}
-			catch(IOException | KryoException e){
-				if (numRetries < 1)
-				{
-					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
-					e.printStackTrace();
-				}
-				channel.reopenDownstreamControlSocketNonBlocking(socket);
-				if (!block) { break; }
-			}
-		}
-		if (!success) { LOG.warn("Sending control tuple downstream to "+channel.getOperatorId()+" failed in "+(System.currentTimeMillis()-sendStart)+" ms"); }
-		return success;
+		return send(ct, channel, block, "downstream");
 	}
-	
+
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
 		Output output = new Output(os);
 		synchronized(k){
