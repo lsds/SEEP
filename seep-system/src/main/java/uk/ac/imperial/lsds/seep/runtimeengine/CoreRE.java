@@ -157,6 +157,13 @@ public class CoreRE {
 		return lastUpOpIndexFctrls.remove(upOpIndex);
 	}
 
+	public ControlTuple getLastFCtrl(int upOpIndex)
+	{
+		if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+		{ throw new RuntimeException("Logic error.");}
+		return lastUpOpIndexFctrls.get(upOpIndex);
+	}
+
     public IProcessingUnit getProcessingUnit() {
         return processingUnit;
     }

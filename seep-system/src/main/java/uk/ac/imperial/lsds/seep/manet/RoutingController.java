@@ -214,7 +214,10 @@ public class RoutingController implements Runnable{
 						}
 						else
 						{
-							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							boolean removeFctrl = this.MAX_WEIGHT_DELAY < Long.parseLong(GLOBALS.valueFor("fctrlEmitInterval"));
+							if (removeFctrl) { throw new RuntimeException("TODO: This might have perf implications, but if worried about upstream fctrl processing overhead then better not to remove but ignore if have sent one recently"); }
+							//ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							ControlTuple fct = owner.getLastFCtrl(upOpIndex);
 							if (fct != null)
 							{
 								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
@@ -265,7 +268,10 @@ public class RoutingController implements Runnable{
 					}
 					else
 					{
-						ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+						boolean removeFctrl = this.MAX_WEIGHT_DELAY < Long.parseLong(GLOBALS.valueFor("fctrlEmitInterval"));
+						if (removeFctrl) { throw new RuntimeException("TODO: This might have perf implications, but if worried about upstream fctrl processing overhead then better not to remove but ignore if have sent one recently"); }
+						//ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+						ControlTuple fct = owner.getLastFCtrl(upOpIndex);
 						if (fct != null)
 						{
 							FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
