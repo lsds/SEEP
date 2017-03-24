@@ -18,9 +18,6 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,28 +32,6 @@ import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
-import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupRI;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitNodeState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitOperatorState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InitRI;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.InvalidateState;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.OpFailureCtrl;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ReconfigureConnection;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Resume;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.ScaleOutInfo;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
-import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
-import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
-import com.esotericsoftware.kryo.serializers.MapSerializer;
-import de.javakaffee.kryoserializers.BitSetSerializer;
 
 import com.esotericsoftware.kryo.Kryo;
 
@@ -97,7 +72,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int deferredPortD = -1;
 	private int deferredPortC = -1;
 
-	private Kryo ctrlKryo = null;
+	private final ControlDispatcherWorker ctrlDispatcherWorker;
 
 	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer){
 		this.targetOperatorId = opId;
@@ -120,7 +95,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			e.printStackTrace();
 		}
 
-		this.ctrlKryo = initializeCtrlKryo();
+		this.ctrlDispatcherWorker = new ControlDispatcherWorker(this);	//Don't like this.
 	}
 	
 	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
@@ -131,7 +106,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		this.deferredControlIp = deferredControlIp;
 		this.deferredPortD = deferredPortD;
 		this.deferredPortC = deferredPortC;
-		this.ctrlKryo = initializeCtrlKryo();
+		this.ctrlDispatcherWorker = new ControlDispatcherWorker(this);	//Don't like this.
 	}
 	
 	public int getOperatorId(){
@@ -272,7 +247,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			logger.info("Skipping deferred init to "+deferredIp);
 			return; 
 		}
-		else if (piggybackControlTraffic)
+		
+		//Only used ctrl dispatcher worker if there is no piggybacked downstream data socket.
+		new Thread(ctrlDispatcherWorker).start();	
+
+		if (piggybackControlTraffic)
 		{
 			logger.info("Skipping deferred init to non downstream data conn "+deferredIp);
 			return; 
@@ -448,40 +427,10 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		return output;
 	}
 
-	public Kryo getCtrlKryo()
+
+	public ControlDispatcherWorker getControlDispatcherWorker()
 	{
-		return ctrlKryo;
-	}
-
-	private Kryo initializeCtrlKryo(){
-		Kryo k = new Kryo();
-		k.register(ControlTuple.class);
-		k.register(MemoryChunk.class);
-		k.register(StateChunk.class);
-		k.register(HashMap.class, new MapSerializer());
-		k.register(BackupOperatorState.class);
-		k.register(byte[].class);
-		k.register(RawData.class);
-		k.register(Ack.class);
-		k.register(BackupNodeState.class);
-		k.register(Resume.class);
-		k.register(ScaleOutInfo.class);
-		k.register(StateAck.class);
-		k.register(ArrayList.class);
-		k.register(BackupRI.class);
-		k.register(InitNodeState.class);
-		k.register(InitOperatorState.class);
-		k.register(InitRI.class);
-		k.register(InvalidateState.class);
-		k.register(ReconfigureConnection.class);
-		//k.register(BitSet.class);
-		k.register(BitSet.class, new BitSetSerializer());
-		k.register(OpFailureCtrl.class);
-		k.register(FailureCtrl.class);
-		k.register(UpDownRCtrl.class);
-		k.register(DownUpRCtrl.class);
-
-		return k;
+		return ctrlDispatcherWorker;
 	}
 	
 	public void setTick(long tick){

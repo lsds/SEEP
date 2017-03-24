@@ -65,7 +65,7 @@ public class ControlDispatcher {
 	
 	private PUContext puCtx = null;
 	private Kryo k = null;
-	
+
 	///\fixme{remove this variable asap. debugging for now}
 	// FIXME: REMOVE THIS FROM HERE ASAP
 	private Output largeOutput = new Output(10000000);
@@ -136,7 +136,8 @@ public class ControlDispatcher {
 	}
 	
 	private boolean sendUpstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block){
-		return send(ct, channel, block, "upstream");
+		//return send(ct, channel, block, "upstream");
+		return channel.getControlDispatcherWorker().send(ct, block);	
 	}
 
 	private boolean send(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block, String dir)
@@ -162,12 +163,12 @@ public class ControlDispatcher {
 				output = new Output(outputStream);
 				long syncStart = System.currentTimeMillis();
 				//synchronized(k){
-				synchronized(channel.getCtrlKryo()){
+				synchronized(channel.getControlDispatcherWorker().getCtrlKryo()){
 					synchronized(socket){
 						synchronized (output){
 							long writeStart = System.currentTimeMillis();
 							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
-							k.writeObject(output, ct);
+							channel.getControlDispatcherWorker().getCtrlKryo().writeObject(output, ct);
 							output.flush();
 							LOG.debug("Wrote "+dir+" control tuple "+ct.toString()+" to "+channel.getOperatorId()+",size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms (+sync="+(System.currentTimeMillis() - syncStart)+" ms)");
 						}
@@ -310,7 +311,9 @@ public class ControlDispatcher {
 	
 	private boolean sendDownstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block) 
 	{
-		return send(ct, channel, block, "downstream");
+		//return send(ct, channel, block, "downstream");
+		//TODO: the return value is kind of meaningless here.
+		return channel.getControlDispatcherWorker().send(ct, block);	
 	}
 
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
