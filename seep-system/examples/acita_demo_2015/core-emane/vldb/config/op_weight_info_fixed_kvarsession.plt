@@ -62,11 +62,17 @@ set title sprintf("Operator interval tput \nk=%s, %s=%s, query=%s, duration=%s, 
 set ylabel "Tput (Kb/s)"
 plot for [i=1:words(op_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_tput_files,i)) using 1:2 title word(op_tput_files,i) w fsteps linestyle i
 
+set title sprintf("Operator cumulative tput \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_tput_files,i)) using 1:3 title word(op_tput_files,i) w fsteps linestyle i
+
 op_sink_tput_files=system(sprintf("find %s -maxdepth 1 -name 'op_-*_interval_tput.txt' | sed 's/.*op_\\([-]\\?[0-9]\\+\\)_interval_tput.txt/\\1/'", expdir))
 
 set title sprintf("Sink operator interval tput \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 set ylabel "Tput (Kb/s)"
 plot for [i=1:words(op_sink_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_sink_tput_files,i)) using 1:2 title word(op_sink_tput_files,i) w fsteps linestyle i
+
+set title sprintf("Sink operator cumulative tput \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+plot for [i=1:words(op_sink_tput_files)] sprintf("%s/op_%s_interval_tput.txt", expdir, word(op_sink_tput_files,i)) using 1:3 title word(op_sink_tput_files,i) w fsteps linestyle i
 
 set title sprintf("End-to-end tuple latency \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 set ylabel "Latency (ms)"
