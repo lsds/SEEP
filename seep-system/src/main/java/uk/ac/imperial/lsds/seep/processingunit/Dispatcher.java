@@ -1950,6 +1950,8 @@ public class Dispatcher implements IRoutingObserver {
 					//Not necessarily what we want for sharedReplayLog?
 					removed.clear(); //Should be reflected in the backing map.
 				}
+				if (remainder != null && remainder.size() != queue.size()) { throw new RuntimeException("Logic error - non-backing map?"); }
+
 				//if (removed != null && !removed.isEmpty()) { lock.notifyAll(); }
 				if (removedSome) { lock.notifyAll(); }
 				return removedSome;
