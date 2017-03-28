@@ -452,6 +452,20 @@ public class Dispatcher implements IRoutingObserver {
 		if (tEnd - tStart > CTRL_DELAY_WARNING) { logger.warn("HIGH CTRL DELAY: "+ logMsg); } else { logger.debug(logMsg); }
 	}
 	
+	private void notifyRoutingFailed(int downOpId)
+	{
+			//N.B. Probably shouldn't be holding any locks here?
+			if (owner.getOwner().getUpstreamRoutingController() != null)
+			{
+				owner.getOwner().getUpstreamRoutingController().handleDownFailed(downOpId);
+			}
+			else
+			{
+				//owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
+				owner.getOperator().getRouter().update_downFailed(downOpId);
+			}
+	}
+
 	private boolean isDownAlive(int downOpId, long ts)
 	{
 		synchronized(lock) { return downAlives.get(downOpId) != null && downAlives.get(downOpId).contains(ts); }
@@ -920,6 +934,8 @@ public class Dispatcher implements IRoutingObserver {
 
 		private void postConnectionFailureCleanup()
 		{
+			long tStart = System.currentTimeMillis();
+			logger.debug("Starting post connection failure cleanup for "+dest.getOperatorId());
 			//Connection must be down.
 			//Remove any output tuples from this replica's output log and add them to the operator output queue.
 			//This should include the current 'SEEP' batch since it might contain several tuples.
@@ -958,13 +974,15 @@ public class Dispatcher implements IRoutingObserver {
 			//TODO: Double check the downstream operator id you're using here is the same as the routing control worker
 			//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
 			//Should you actually force close the control connection?
-			owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
+			//owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
+			notifyRoutingFailed(dest.getOperatorId());
 			//TODO: Interrupt the dispatcher thread
 			
 			//Reconnect synchronously (might need to add a helper method to the output queue).
 			outputQueue.reopenEndpoint(dest);
 			
 			synchronized(lock) { dataConnected = true; }
+			logger.debug("Completed post connection failure cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis()-tStart));
 		}
 
 
@@ -1182,7 +1200,8 @@ public class Dispatcher implements IRoutingObserver {
 			if (!flushSuccess)
 			{
 				logger.warn("Failed to send control tuple, clearing routing ctrl.");
-				owner.getOperator().getRouter().update_downFailed(downId);
+				//owner.getOperator().getRouter().update_downFailed(downId);
+				notifyRoutingFailed(downId);
 			}
 		}
 	}
@@ -1473,7 +1492,8 @@ public class Dispatcher implements IRoutingObserver {
 			DataTuple testRoutesTuple = null;
 
 			//TODO: Extend/chenage this to also temporarily disable failure ctrl updates for this downstream 
-			owner.getOperator().getRouter().update_downFailed(downOpId);
+			//owner.getOperator().getRouter().update_downFailed(downOpId);
+			notifyRoutingFailed(downOpId);
 			
 			if (hardReplay)
 			{
@@ -1626,6 +1646,7 @@ public class Dispatcher implements IRoutingObserver {
 			//TODO: Need to ignore failure ctrl's in dispatcher too until after we've reenabled their handling in the router.
 			// Or maybe we can filter them inside the dispatcher first?
 			//owner.getOperator().getRouter().update_downFailed(dest.getOperatorId());
+			//notifyRoutingFailed(dest.getOperatorId());
 			//TODO: Should probably convert this to void.	
 			return null;
 		}

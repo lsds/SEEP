@@ -150,6 +150,11 @@ public class CoreRE {
 	public RoutingController getRoutingController()
 	{ return routingController; }
 
+	public UpstreamRoutingController getUpstreamRoutingController()
+	{
+		return upstreamRoutingController;
+	}
+
 	public ControlTuple removeLastFCtrl(int upOpIndex)
 	{
 		if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)

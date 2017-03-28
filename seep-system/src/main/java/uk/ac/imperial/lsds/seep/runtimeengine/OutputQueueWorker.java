@@ -71,8 +71,14 @@ public class OutputQueueWorker
 	public OutputQueueWorker(CoreRE owner, boolean outputQueueTimestamps)
 	{
 
+		/*
+		 * N.B. Temporarily disable this since we now close piggybacked control socket at downstream. Still a problem though if disconnected completely, since the upstream probably won't notice until some tcp
+		 * timeout is reached (or maybe not even then since it might never receive the tcp close messages if there is a network failure. Actually, it will never even attempt to reconnect, meaning that no further
+		 * data or ctrl will be exchanged!
 		if (enableUpstreamRoutingCtrl) 
 		{ throw new RuntimeException("TODO: Need to fix bug whereby connection hangs because upstream connection has failed due to connection timeout, but ds connection never fails because no data is ever sent on it (because rctrl has timed out) and no non-coalesced ctrl is ever sent on it (because upstream routing ctrl). Solution is to close connection on rctrl timeout at upstream or close both connections at downstream if upstream direction fails. Actually, not even sure the latter will work - will tcp keep trying to close a connection indefinitely? Alternative solution is to ensure some periodic ping is sent ds even with upstream routing ctrl."); }
+
+		*/
 		this.owner = owner;
 		this.k = initialiseKryo(); 
 		this.outputQueueTimestamps = outputQueueTimestamps;
@@ -304,7 +310,9 @@ public class OutputQueueWorker
 			if (enableTupleTracking) { logger.info(logline); } else { logger.debug(logline);}
 		}
 
-		if(channelRecord.getChannelBatchSize() <= 0 || ctrlDataTuple.rctrl != null || ctrlDataTuple.fctrl != null){
+		//if(channelRecord.getChannelBatchSize() <= 0 || ctrlDataTuple.rctrl != null || ctrlDataTuple.fctrl != null){
+		if(channelRecord.getChannelBatchSize() <= 0 || ctrlDataTuple.rctrl != null || ctrlDataTuple.fctrl != null ||
+			(enableUpstreamRoutingCtrl && !downIsMultiInput && !channelRecord.getDownstreamDataSocket().isClosed()) ) {	//last clause is essentially a ping.
 			//channelRecord.setTick(currentTime);
 			BatchTuplePayload msg = channelRecord.getBatch();
 			
@@ -395,9 +403,11 @@ public class OutputQueueWorker
 
 		public CtrlDataTuple getCtrlData(SynchronousCommunicationChannel channel)
 		{
+			long waitStart = System.currentTimeMillis();
 			synchronized(lock)
 			{
-				while (!ctrlDataChanged(channel))
+				//while (!ctrlDataChanged(channel))
+				while (!ctrlDataChanged(channel) && (!enableUpstreamRoutingCtrl || downIsMultiInput || (System.currentTimeMillis() - waitStart < 2*DEFAULT_TIMEOUT)))
 				{
 					try { lock.wait(DEFAULT_TIMEOUT); } catch(InterruptedException e) { logger.debug("getCtrlData wait timed out"); }
 				}
