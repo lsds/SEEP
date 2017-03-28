@@ -43,6 +43,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private static final Logger logger = LoggerFactory.getLogger(SynchronousCommunicationChannel.class);
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private static final int socketConnectTimeout = Integer.parseInt(GLOBALS.valueFor("socketConnectTimeout"));
+	private static final long reconnectBackoff = Long.parseLong(GLOBALS.valueFor("reconnectBackoff"));
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
@@ -223,6 +224,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				{
 					logger.trace("Data connection "+ numReconnects+" to "+ip+" failed: "+e);
 				}
+				if (numReconnects> 1) { try { Thread.sleep(reconnectBackoff); } catch(InterruptedException ie) {} } //TODO Not sure if safe to sleep, would prefer to wait.
 				numReconnects++;
 			}
 		}
@@ -273,11 +275,18 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	 */	 
 	public void reopenDownstreamControlSocketNonBlocking(Socket prevSocketToClose)
 	{
+		/*
+		If piggybacking, this should only be called for send upstream channel. If so, should
+		still close the socket on a failure since (i) it just throws unnecessary exceptions (ii)
+		with upstream routing control the upstream will just not route anything to this downstream anymore
+		since it's routing control timer times out, but never reconnects because it is never sending data/ctrl
+		on the connection.
 		if (piggybackControlTraffic) 
 		{ 
 			logger.info("Not reopening downstream control socket - piggyback control traffic enabled");
 			return; 
 		}
+		*/
 
 		if (prevSocketToClose == null) 
 		{ 
@@ -292,6 +301,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			}
 		}
 		
+		//Always close the previous socket.
+		try { prevSocketToClose.close(); }
+		catch(IOException e) {
+			e.printStackTrace(); //Urgh 
+		}
+
 		final InetAddress ip;
 		final int port;
 		
@@ -305,14 +320,22 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			}
 			else
 			{
+				/*
 				try { prevSocketToClose.close(); }
 				catch(IOException e) {
-					e.printStackTrace(); /*Urgh*/ 
+					e.printStackTrace(); //Urgh 
 				}
+				*/
 				logger.info("Another caller already reopening control socket.");
 				//Another caller is already reopening the socket.
 				return;
 			}			
+		}
+
+		if (piggybackControlTraffic) 
+		{ 
+			logger.info("Not reopening downstream control socket - piggyback control traffic enabled");
+			return; 
 		}
 
 		openDownstreamControlSocketNonBlocking(ip, port);		
@@ -373,12 +396,14 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					}
 					catch(Exception e)
 					{
-						if (reconnectCount < 1 || reconnectCount % 10 == 0)
+						if (reconnectCount < 1 || reconnectCount % 10000 == 0)
 						{
 							e.printStackTrace(); // Urgh
 						}
 						//e.printStackTrace();
 					}
+					if (reconnectCount > 1) { try { Thread.sleep(reconnectBackoff); } catch(InterruptedException e) {} }
+
 					reconnectCount++;
 					//dokeeffe TODO: N.B. If some other exception causes this
 					//thread to fail then this connection will be stuck forever
