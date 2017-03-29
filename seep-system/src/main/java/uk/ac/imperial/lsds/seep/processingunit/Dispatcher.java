@@ -954,14 +954,10 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				else
 				{
-					logger.debug("Dispatcher worker failed to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+					logger.warn("Dispatcher worker failed to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 					postConnectionFailureCleanup();
-					logger.debug("Dispatcher worker recovered from failure to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+					logger.warn("Dispatcher worker recovered from failure to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 
-					//TODO: N.B. complete hack, write this in a more understandable manner.
-					//Essentially, if piggybacking want to get rid of any connection number mismatch when we next
-					//try to send a tuple after a reconnect.
-					if (piggybackControlTraffic) { notifyFctrlHardTimedOut(); }
 				}
 			}
 		}
@@ -1027,7 +1023,15 @@ public class Dispatcher implements IRoutingObserver {
 					//		won't get any more control until after we've reconnected. In which case we'll just end up calling 
 					//		reopen the next time we wend a tuple. This would be nice but need to be careful to perhaps clear the
 					//		log before readding the tuple? 
-					throw new RuntimeException("TODO: post piggy success");
+					//		
+					//		On further reflection the most likely thing to have happened here is a spurious/too aggressive fctrl hard
+					//		timeout where the connection recovers. 
+					//		I think the think to do is just call reopen after the next connection. If the connection never actually
+					//		dies then we won't need to reconnect. If it does die then calling reopen will update the connection number
+					//		to the appropriate value. If we do reopen now and then it fails subsequently we'll end up reopening later
+					//		anyway. In fact maybe that's all we should be doing when piggybacking? 
+					//
+					notifyFctrlHardTimedOut();
 				}
 				else
 				{
@@ -1106,7 +1110,12 @@ public class Dispatcher implements IRoutingObserver {
 			//TODO: Interrupt the dispatcher thread
 			
 			//Reconnect synchronously (might need to add a helper method to the output queue).
-			outputQueue.reopenEndpoint(dest);
+			//If piggybacking, will instead
+			if (!piggybackControTraffic) { outputQueue.reopenEndpoint(dest); }
+			//TODO: N.B. complete hack, write this in a more understandable manner.
+			//Essentially, if piggybacking want to get rid of any connection number mismatch when we next
+			//try to send a tuple after a reconnect.
+			else {  notifyFctrlHardTimedOut(); }
 			
 			synchronized(lock) { dataConnected = true; }
 			logger.debug("Completed post connection failure cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis()-tStart));
@@ -1714,7 +1723,7 @@ public class Dispatcher implements IRoutingObserver {
 			//we have a failure ctrl or retransmit timeout, and happen to be transmitting a new tuple, then if we clear
 			//its retransmit timer it might not get readded?
 
-			logger.info("Failure ctrl watchdog performing hard cleanup for "+downOpId);
+			logger.warn("Failure ctrl watchdog performing hard cleanup for "+downOpId);
 			long tStart = System.currentTimeMillis();
 			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 			SynchronousCommunicationChannel dest = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
@@ -1772,7 +1781,7 @@ public class Dispatcher implements IRoutingObserver {
 				}
 			}	
 
-			logger.info("Failure ctrl watchdog completed hard cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis() - tStart) +" ms");
+			logger.warn("Failure ctrl watchdog completed hard cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis() - tStart) +" ms");
 			//Update this connections routing cost 
 			//TODO: Should you be doing this route cost update before/after/synchronously with the replay?
 			//TODO: Need a method on router like setFailed (and then unsetFailed).
