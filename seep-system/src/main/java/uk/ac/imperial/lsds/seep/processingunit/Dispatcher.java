@@ -838,6 +838,7 @@ public class Dispatcher implements IRoutingObserver {
 		private final OutputQueue outputQueue;
 		private final EndPoint dest;
 		private boolean dataConnected = false;
+		private boolean fctrlHardTimedOut = false;
 		private final RateLimiter rateLimiter = new FixedRateLimiter();
 		
 		public DispatcherWorker(OutputQueue outputQueue, EndPoint dest)
@@ -850,6 +851,18 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
+		public void notifyFctrlHardTimedOut() { synchronized(lock) { fctrlHardTimedOut = true; } logger.debug("Set fcht for "+dest.getOperatorId()); }
+		private boolean clearFctrlHardTimedOut() 
+		{ 
+			logger.debug("Clearing fcht for "+dest.getOperatorId());
+			synchronized(lock) 
+			{ 
+				boolean prev = fctrlHardTimedOut;
+				fctrlHardTimedOut = false;
+				return prev;
+			}
+		}
+
 		public boolean isConnected()
 		{
 			synchronized(lock) { return dataConnected; }
@@ -916,7 +929,24 @@ public class Dispatcher implements IRoutingObserver {
 
 				//nextTuple.getPayload().instrumentation_ts=System.currentTimeMillis();
 				if (fctrlHandler != null) { fctrlHandler.addBatchRetransmitTimer(dest.getOperatorId(), nextTuple.getPayload().timestamp, System.currentTimeMillis()); }
+
+				//If there has been a hard timeout since the last send
+				if (clearFctrlHardTimedOut())
+			 	{ 
+					preSendFctrlHardTimeoutCleanup(nextTuple);	
+					continue; 
+				}
+
 				boolean success = outputQueue.sendToDownstream(nextTuple, dest);
+
+				//If there has been a hard timeout since the send started
+				if (clearFctrlHardTimedOut()) 
+				{ 
+					postSendFctrlHardTimeoutCleanup(nextTuple, success); 
+					continue;
+				} 
+
+				//Otherwise no hard timeout since the last send
 				if (success)
 				{
 					logger.debug("Dispatcher worker sent tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
@@ -927,10 +957,107 @@ public class Dispatcher implements IRoutingObserver {
 					logger.debug("Dispatcher worker failed to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 					postConnectionFailureCleanup();
 					logger.debug("Dispatcher worker recovered from failure to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
+
+					//TODO: N.B. complete hack, write this in a more understandable manner.
+					//Essentially, if piggybacking want to get rid of any connection number mismatch when we next
+					//try to send a tuple after a reconnect.
+					if (piggybackControlTraffic) { notifyFctrlHardTimedOut(); }
 				}
 			}
 		}
-		
+	
+		private void preSendFctrlHardTimeoutCleanup(DataTuple dt)
+		{
+			//TODO: Should the below all be wrapped in data connected = false ; data connected = true?
+			//The implications of that are that if a failure ctrl arrives while not yet connected its alives 
+			//will be ignored (should only matter for non-piggybacked)?. On the other hand I can't see any downsides if you don't wrap it, 
+			//although there might be interleaving with sending etc. Need to think as well about what would
+			//happen with non-piggybacked. 
+			
+			//Firstly readd the tuple to the output queue.
+			long ts = dt.getPayload().timestamp;
+			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+			if (sessionLog.size() > 1 || (sessionLog.size() == 1 && !sessionLog.containsKey(ts))) { throw new RuntimeException("Logic error, ts=: "+ts+", sessionLog="+sessionLog); }
+			opQueue.forceAdd(dt);
+
+			if (piggybackControlTraffic) 
+			{
+				//reopen endpoint
+				outputQueue.reopenEndpoint(dest);
+			}
+			else
+			{
+				//	TODO: Don't want to spuriously reopen?
+				//  Normally if the control conn fails first you might not actually
+				//  do the reopen until after, and so there will be a failure but 
+				//  you'll be guaranteed to do the reconnect at least. The only problem
+				//  is you'll end up clearing the fctrls in the course of that most likely
+				//  (i.e. spurious retractions). In any event, it should therefore be ok
+				//  to do a reconnect if set since that's what you'll be doing anyway.
+				//  If on the other hand the data send fails first you'll be able to clear the
+				//  flag afterward if the hard cleanup has happened already. You'll just need
+				//  to make sure you readd the tuple before reopening the endpoint.
+				throw new RuntimeException("TODO");
+			}
+			//TODO: Go over connection failure cleanup to see if anything else is missing
+		}	
+
+		private void postSendFctrlHardTimeoutCleanup(DataTuple dt, boolean success)
+		{
+			//Sanity check: Should be *at most* one tuple (this one) in the log.
+			long ts = dt.getPayload().timestamp;
+			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+			if (sessionLog.size() > 1 || (sessionLog.size() == 1 && !sessionLog.containsKey(ts))) { throw new RuntimeException("Logic error, ts=: "+ts+", sessionLog="+sessionLog); }
+			opQueue.forceAdd(dt);
+
+			//TODO: What to do with failure ctrl watchdog in terms of when to clear/reset it?
+			//N.B. Flag should be set by failure ctrl timeout *before* beginning to cleanup.
+			//TODO: Should perhaps clear the log of this tuple so that it doesn't get dropped as a dupe
+			//when retransmitted?
+			if (piggybackControlTraffic)
+			{
+				if (success)
+				{
+					//		TODO: Ok to just clear hard here? To be honest this case is possible but shouldn't really happen,
+					//		so possibly not worth worrying about in terms of performance. Problem is if fails afterward then
+					//		when we try to send again we'll get a spurious failure because of a connection number mismatch.
+					//		What we could do perhaps is reset the failure ctrl watchdog? I guess there is a disconnect between
+					//		when we do a hard cleanup and when a reconnect happens. Actually, it might be better to just *Not*
+					//		clear the flag, then presume that the control has expired (because of the hard reset) and so we
+					//		won't get any more control until after we've reconnected. In which case we'll just end up calling 
+					//		reopen the next time we wend a tuple. This would be nice but need to be careful to perhaps clear the
+					//		log before readding the tuple? 
+					throw new RuntimeException("TODO: post piggy success");
+				}
+				else
+				{
+					//		Readd tuple then do reopen to update connection number in output queue. N.B. need to clear log of this
+					//		tuple too in case it gets squashed subsequently as a dupe.
+					outputQueue.reopenEndpoint(dest);
+				}
+			} 
+			else 
+			{
+				if (success)
+				{	
+					//		clear log and readd tuple but don't clear flag or reopen endpoint? Alternatively could clear flag and
+					//		reopen endpoint, and be guaranteed to be all set later? Problem is if control connects but data hasn't 
+					//		connected yet could end up routing data to this downstream without a valid connection - so yes think
+					//		this should perhaps block reopening and clear flag. Maybe a downside is that we'll unnecessarily close
+					//		a connection in some cases. On the other hand if we don't then when there is actually a failure subsequently
+					//		we'll have a second spurious reconnect if we reopen later.
+				}
+				else
+				{
+					//		clear log, readd tuple don't see any downside here to clearing flag and blocking reopening. 
+					//
+					//	TODO: Perhaps only need to readd tuple here if in log since otherwise it must have been readded by hard cleanup?
+					//	Might be unnecessarily risky.
+				}
+				throw new RuntimeException("TODO");
+			}
+			//TODO: Go over connection failure cleanup to see if anything else is missing
+		}
 
 		private void postConnectionFailureCleanup()
 		{
@@ -1260,6 +1387,9 @@ public class Dispatcher implements IRoutingObserver {
 				logger.trace("Failure ctrl handling updated acks in "+(tAcks - tStart)+" ms");
 				if (optimizeReplay)
 				{
+					//TODO: Could this check be leading to spurious retractions (or even just delay recovery from a connection failure unnecessarily?)
+					//Think just the latter, and probably not too bad now given that independent of whether piggybacking the actual reconnect/reopen should be quick. 
+					//On the other hand removing it might slow upstreams from detecting failures/retractions, although probably not.
 					if (workers.get(owner.getOperator().getOpContext().getDownOpIndexFromOpId(dsOpId)).isConnected())
 					{
 						Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
@@ -1588,6 +1718,7 @@ public class Dispatcher implements IRoutingObserver {
 			long tStart = System.currentTimeMillis();
 			int downOpIndex = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 			SynchronousCommunicationChannel dest = (SynchronousCommunicationChannel)owner.getPUContext().getDownstreamTypeConnection().elementAt(downOpIndex);
+			boolean assumeFailOnHardReplay = true;
 			if (dest != null)
 			{
 				synchronized(lock)
@@ -1607,7 +1738,7 @@ public class Dispatcher implements IRoutingObserver {
 					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
 					IBuffer buffer = dest.getBuffer();
 					//N.B. This is the key step wrt mhro!
-					TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
+					TreeMap<Long, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
 
 					
 					//5) for tuple in logged
@@ -1635,6 +1766,8 @@ public class Dispatcher implements IRoutingObserver {
 					logger.debug("dsooa before requeue from srl: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
 					requeueFromSharedReplayLog(dsOpOldAlives);
 					logger.error("TODO: Should we be requeueing from srl before from individual buffers (correctness vs perf?)");
+
+					if (assumeFailOnHardReplay) { workers.get(downOpIndex).notifyFctrlHardTimedOut(); }
 					lock.notifyAll();
 				}
 			}	
