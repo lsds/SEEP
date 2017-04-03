@@ -957,7 +957,6 @@ public class Dispatcher implements IRoutingObserver {
 					logger.warn("Dispatcher worker failed to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
 					postConnectionFailureCleanup();
 					logger.warn("Dispatcher worker recovered from failure to send tuple to downstream: "+dest.getOperatorId()+",dt="+nextTuple.getPayload().timestamp);
-
 				}
 			}
 		}
@@ -1111,7 +1110,7 @@ public class Dispatcher implements IRoutingObserver {
 			
 			//Reconnect synchronously (might need to add a helper method to the output queue).
 			//If piggybacking, will instead
-			if (!piggybackControTraffic) { outputQueue.reopenEndpoint(dest); }
+			if (!piggybackControlTraffic) { outputQueue.reopenEndpoint(dest); }
 			//TODO: N.B. complete hack, write this in a more understandable manner.
 			//Essentially, if piggybacking want to get rid of any connection number mismatch when we next
 			//try to send a tuple after a reconnect.
