@@ -302,21 +302,29 @@ def record_op_utils(op_utils, exp_dir):
                 f.write('%d %.1f %.1f\n'%(ts/1000, util, cum))
 
 def record_op_transmissions(op_transmissions, exp_dir):
-    total_transmissions = {}
+    ts_total_transmissions = {}
+    op_total_transmissions = {}
     for op in op_transmissions:
         op_transmissions_file = "%s/op_%s_transmissions.txt"%(exp_dir, op)
+        op_total_transmissions[op] = len(op_transmissions[op])
         with open(op_transmissions_file, 'w') as f:
             f.write('# t ts dsop\n')
             for (t, ts, ds_op) in op_transmissions[op]:
                 f.write('%d %d %d\n'%(t, ts, ds_op))
-                total_transmissions[ts] = total_transmissions.get(ts, 0) + 1
+                ts_total_transmissions[ts] = ts_total_transmissions.get(ts, 0) + 1
 
-    total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
-    with open(total_transmissions_file, 'w') as f:
+    ts_total_transmissions_file = "%s/ts_total_transmissions.txt"%(exp_dir)
+    with open(ts_total_transmissions_file, 'w') as f:
         f.write('#ts count\n') 
-        f.write('#total %d'%(sum(total_transmissions.values())))
-        for ts in sorted(total_transmissions.keys()):
-            f.write('%d %d\n'%(ts, total_transmissions[ts]))
+        f.write('#total %d\n'%(sum(ts_total_transmissions.values())))
+        for ts in sorted(ts_total_transmissions.keys()):
+            f.write('%d %d\n'%(ts, ts_total_transmissions[ts]))
+
+    op_total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
+    with open(op_total_transmissions_file, 'w') as f:
+        f.write('#op total\n')
+        for op in op_total_transmissions:
+            f.write('%s %d\n'%(op, op_total_transmissions[op]))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

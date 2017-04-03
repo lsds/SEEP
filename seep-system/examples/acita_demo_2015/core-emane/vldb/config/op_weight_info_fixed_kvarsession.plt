@@ -71,3 +71,13 @@ plot for [i=1:words(op_sink_tput_files)] sprintf("%s/op_%s_interval_tput.txt", e
 set title sprintf("End-to-end tuple latency \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
 set ylabel "Latency (ms)"
 plot sprintf("%s/%s/%sk/%s%s/%ss/tx_latencies.txt",outputdir,timestr,k,var,varext,session) using 1:2 notitle w lines linestyle 1
+
+set title sprintf("Operator transmissions \nk=%s, %s=%s, query=%s, duration=%s, session=%s",k,varname,var,query,duration,session)
+set xlabel "Operator"
+set ylabel "Total tx (batches)"
+set boxwidth 1 
+set xdata
+set xrange [*:*]
+#set style histogram clustered
+plot sprintf("%s/op_total_transmissions.txt", expdir) using 2:xticlabels(1) notitle w boxes linestyle 1
+
