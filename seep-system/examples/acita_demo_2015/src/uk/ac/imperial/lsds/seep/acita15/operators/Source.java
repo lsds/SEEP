@@ -32,9 +32,11 @@ public class Source implements StatelessOperator {
 
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Source.class);
+	private static boolean scheduledPauses = false;
 	
 	public void setUp() {
 		System.out.println("Setting up SOURCE operator with id="+api.getOperatorId());
+		scheduledPauses = Boolean.parseBoolean(GLOBALS.valueFor("scheduledPauses"));
 	}
 
 	public void processData(DataTuple dt) {
@@ -65,7 +67,9 @@ public class Source implements StatelessOperator {
 				logger.info("Source sending started at t="+tWarmedUp);
 				logger.info("Source sending started at t="+tWarmedUp);
 			}
-			
+		
+			schedulePause(tupleId);	
+
 			DataTuple output = data.newTuple(tupleId, value, latencyBreakdown);
 			output.getPayload().timestamp = tupleId;
 			if (tupleId % 1000 == 0)
@@ -122,7 +126,43 @@ public class Source implements StatelessOperator {
 		}
 		return builder.toString();
 	}
-	
+
+	private void schedulePause(long ts)
+	{
+		if (scheduledPauses)
+		{
+			//long pauseOnTuple = 5000;
+			long pauseOnTuple = 3000;
+			if (ts == pauseOnTuple)
+			{
+				File startFailures = new File("../start_failures.txt");
+				if (startFailures.exists())
+				{
+					long tStart = readStartTime(startFailures);
+					long initialPause = Long.parseLong(GLOBALS.valueFor("initialPause"));
+					long now = System.currentTimeMillis();
+					long schedulePause = 100 * 1000; 
+					if (now < tStart + initialPause + schedulePause)
+					{
+						schedulePause = tStart + initialPause + schedulePause - now;
+					}
+					else
+					{
+						logger.error("Took to long to reach schedule point, missed time by "+ (now - (tStart + initialPause + schedulePause)) + " ms.");
+						System.exit(1);
+					}
+
+					try {
+						Thread.sleep(schedulePause);
+					} 
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}				
+				}
+			}
+		}
+	}
+
 	private void initialPause()
 	{
 		long pause = Long.parseLong(GLOBALS.valueFor("initialPause"));
