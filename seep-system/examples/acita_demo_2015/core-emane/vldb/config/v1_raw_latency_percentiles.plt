@@ -33,7 +33,12 @@ plot sprintf("%s/%s/1k/%s%s/1k-lat.data",outputdir,timestr,var,varext) using 1:7
 	sprintf("%s/%s/2k/%s%s/2k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
 	sprintf("%s/%s/3k/%s%s/3k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
 	sprintf("%s/%s/5k/%s%s/5k-lat.data",outputdir,timestr,var,varext) using 1:7:7:7:7 notitle w candlesticks linestyle 5, \
-	sprintf("%s/%s/1k/%s%s/1k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
-	sprintf("%s/%s/2k/%s%s/2k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
-	sprintf("%s/%s/3k/%s%s/3k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
-	sprintf("%s/%s/5k/%s%s/5k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 4 
+	sprintf("%s/%s/1k/%s%s/1k-lat.data",outputdir,timestr,var,varext) using 1:6:5:10:8 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
+	sprintf("%s/%s/2k/%s%s/2k-lat.data",outputdir,timestr,var,varext) using 1:6:5:10:8 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
+	sprintf("%s/%s/3k/%s%s/3k-lat.data",outputdir,timestr,var,varext) using 1:6:5:10:8 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
+	sprintf("%s/%s/5k/%s%s/5k-lat.data",outputdir,timestr,var,varext) using 1:6:5:10:8 notitle with candlesticks whiskerbars 0.5 linestyle 4 
+#
+#	sprintf("%s/%s/1k/%s%s/1k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 1, \
+#	sprintf("%s/%s/2k/%s%s/2k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 2, \
+#	sprintf("%s/%s/3k/%s%s/3k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 3, \
+#	sprintf("%s/%s/5k/%s%s/5k-lat.data",outputdir,timestr,var,varext) using 1:5:4:12:10 notitle with candlesticks whiskerbars 0.5 linestyle 4 
