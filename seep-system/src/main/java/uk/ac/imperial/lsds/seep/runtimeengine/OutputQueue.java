@@ -110,6 +110,12 @@ public class OutputQueue {
 		}
 	}
 
+	public synchronized boolean checkEndpoint(EndPoint dest)
+	{
+		if (piggybackControlTraffic) { return oqWorker.isConnected(); }
+		else { throw new RuntimeException("TODO"); }
+	}
+
 	private synchronized boolean sendToDownstreamPiggybacked(DataTuple tuple, EndPoint dest)
 	{
 		long prevReconnectCount = currentReconnectCount;

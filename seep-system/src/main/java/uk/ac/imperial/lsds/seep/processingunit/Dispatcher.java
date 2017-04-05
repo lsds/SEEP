@@ -978,6 +978,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (piggybackControlTraffic) 
 			{
 				//reopen endpoint
+				logger.debug("pre send fctrl hard timeout cleanup for "+dest.getOperatorId()+",ts="+ts);
 				outputQueue.reopenEndpoint(dest);
 			}
 			else
@@ -1031,11 +1032,13 @@ public class Dispatcher implements IRoutingObserver {
 					//		anyway. In fact maybe that's all we should be doing when piggybacking? 
 					//
 					notifyFctrlHardTimedOut();
+					logger.debug("post send fctrl hard timeout cleanup for "+dest.getOperatorId()+",ts="+ts+",success=true");
 				}
 				else
 				{
 					//		Readd tuple then do reopen to update connection number in output queue. N.B. need to clear log of this
 					//		tuple too in case it gets squashed subsequently as a dupe.
+					logger.debug("post send fctrl hard timeout cleanup for "+dest.getOperatorId()+",ts="+ts+",success=false");
 					outputQueue.reopenEndpoint(dest);
 				}
 			} 
@@ -1073,6 +1076,7 @@ public class Dispatcher implements IRoutingObserver {
 			//and delete it from its output queue.
 			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 
+			boolean doUpdateDownAlives = !(piggybackControlTraffic && outputQueue.checkEndpoint(dest));
 			synchronized(lock)
 			{
 				dataConnected = false;
@@ -1084,7 +1088,7 @@ public class Dispatcher implements IRoutingObserver {
 				//2) Do a combined.set alives
 				//3) Save the old alives for this downstream
 				//4) delete the old alives for this downstream (TODO: What if control connection still open?)
-				Set<Long> dsOpOldAlives = updateDownAlives(dest.getOperatorId(), null);
+				Set<Long> dsOpOldAlives = doUpdateDownAlives? updateDownAlives(dest.getOperatorId(), null) : null;
 				//5) for tuple in logged
 				//		if acked discard
 				//		else if in joint alives add to shared replay log
@@ -1114,7 +1118,14 @@ public class Dispatcher implements IRoutingObserver {
 			//TODO: N.B. complete hack, write this in a more understandable manner.
 			//Essentially, if piggybacking want to get rid of any connection number mismatch when we next
 			//try to send a tuple after a reconnect.
-			else {  notifyFctrlHardTimedOut(); }
+			else 
+			{  
+				notifyFctrlHardTimedOut(); 
+				if (failureCtrlWatchdog != null && !doUpdateDownAlives) 
+				{ 
+					synchronized(lock) { failureCtrlWatchdog.reset(dest.getOperatorId(), FAILURE_CTRL_WATCHDOG_TIMEOUT);}
+				}
+			}
 			
 			synchronized(lock) { dataConnected = true; }
 			logger.debug("Completed post connection failure cleanup for "+dest.getOperatorId()+" in "+(System.currentTimeMillis()-tStart));

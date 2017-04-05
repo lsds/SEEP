@@ -197,7 +197,7 @@ public class OutputQueueWorker
 
 	private long getReconnectCount() { synchronized(lock) { return reconnectCount; } }
 	private void setConnected() { synchronized(lock) { connected = true; lock.notifyAll(); } }
-	private boolean isConnected() { synchronized(lock) { return connected; } }
+	public boolean isConnected() { synchronized(lock) { return connected; } }
 	private void setReconnecting() 
 	{ 
 		synchronized(lock) 
