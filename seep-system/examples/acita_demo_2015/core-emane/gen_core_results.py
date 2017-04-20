@@ -5,7 +5,8 @@ import subprocess,os,time,re,argparse,glob, pandas
 from extract_results import *
 from compute_stats import compute_cumulative_percentiles
 
-
+#gen_sub_results = True
+gen_sub_results = False
 def main(exp_dir):
 
     sim_env = os.environ.copy()
@@ -36,6 +37,12 @@ def main(exp_dir):
             #if not t_src_begin: raise Exception("Could not find t_src_begin.")
             if not t_src_begin: "WARNING: Could not find t_src_begin."
 
+        if gen_sub_results:
+            with open(src_log, 'r') as src:
+                t_sub_begin = sub_tx_begin(src)
+                #if not t_src_begin: raise Exception("Could not find t_src_begin.")
+                if not t_sub_begin: "WARNING: Could not find t_sub_begin."
+
         with open(finished_sink_log, 'r') as sink:
             # Get time sink received first message
             t_finished_sink_begin = sink_rx_begin(sink)
@@ -44,6 +51,7 @@ def main(exp_dir):
             (total_tuples, total_bytes, t_finished_sink_end) = sink_rx_end(sink)
             finished_total_tuples = total_tuples
             finished_total_bytes = total_bytes #N.B.This assumes all tuples are the same size.
+            avg_bytes_per_tuple = total_bytes / total_tuples
 
             if not t_finished_sink_end: raise Exception("Could not find t_sink_end.")
         with open(finished_sink_log, 'r') as sink:
@@ -57,6 +65,7 @@ def main(exp_dir):
         t_min_sink_begin = t_finished_sink_begin 
         for sink_log in filter(lambda log: log != finished_sink_log, sink_logs):
             print 'Processing potentially unfinished log: ', sink_log
+            if t_sub_begin: raise Exception("TODO: sub tput + replicated sinks.")
             with open(sink_log, 'r') as sink:
                 (tuples, bytez) = unfinished_sink_tuples(sink, t_finished_sink_end, tuple_ids)
 
@@ -123,6 +132,10 @@ def main(exp_dir):
             if op_id:
                 op_transmissions[op_id] = transmissions
 
+    if t_sub_begin:
+        total_sub_tuples = len(sub_rx_latencies(t_sub_begin, deduped_tx_latencies))
+        print 'Total sub tuples=%d (from %d)'%(total_sub_tuples, len(deduped_tx_latencies))
+
     if finished:
         # Record the tput, k, w, query name etc.
         # Compute the mean tput
@@ -131,7 +144,12 @@ def main(exp_dir):
             record_stat('%s/tput.txt'%exp_dir, {'src_sink_mean_tput':src_sink_mean_tput})
             src_sink_frame_rate = frame_rate(t_src_begin, t_finished_sink_end, total_tuples) 
             record_stat('%s/tput.txt'%exp_dir, {'src_sink_frame_rate':src_sink_frame_rate}, 'a')
-
+        
+        if t_sub_begin:
+            t_sub_end = t_finished_sink_end # For now, assume we want to ignore tuples at the start
+            total_sub_bytes = avg_bytes_per_tuple * total_sub_tuples
+            sub_mean_tput = mean_tput(t_sub_begin, t_sub_end, total_sub_bytes)
+            record_stat('%s/tput.txt'%exp_dir, {'sub_mean_tput':sub_mean_tput})
 
         record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_tx_latencies, exp_dir)
         "N.B. finished_total_bytes will be wrong here if tuples are different sizes."

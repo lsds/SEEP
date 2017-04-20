@@ -39,6 +39,24 @@ def src_tx_begin(f):
 
     return None
 
+def sub_tx_begin(f):
+    """
+    return t_sub_begin
+    """
+    failed_op = 10
+    oq_sync_regex = re.compile(r't=(\d+), oq.sync')
+    fail_begin_regex = re.compile(r'Failure ctrl watchdog completed hard cleanup for %d in'%(failed_op))
+    last_tx = None
+    for line in f:
+        match = re.search(oq_sync_regex, line)
+        if match:
+            last_tx = int(match.group(1))
+        else:
+            match = re.search(fail_begin_regex, line)
+            if match: return last_tx
+
+    return None
+
 def sink_rx_begin(f):
     """
     returns t_begin
@@ -116,6 +134,9 @@ def sink_rx_tuples(f):
             results.append(match.groups())
 
     return results
+
+def sub_rx_latencies(t_sub_begin, rx_latencies):
+    return { ts : v for ts, v in rx_latencies.iteritems() if v[2] > t_sub_begin}
 
 def processor_tput(f):
     regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
