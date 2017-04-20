@@ -763,9 +763,10 @@ def get_initial_placements(placements, mobility, xyScale):
         print 'xyScale = %s'%str(xyScale)
         with open(placements_path, 'r') as pf:
             for line in pf:
-                els = map(int, line.split(','))
-                print els
-                result[els[0]] = (int(xyScale*els[1]), int(xyScale*els[2]))
+                if not line.strip().startswith('#'):
+                    els = map(int, line.split(','))
+                    print els
+                    result[els[0]] = (int(xyScale*els[1]), int(xyScale*els[2]))
 
         return result
 

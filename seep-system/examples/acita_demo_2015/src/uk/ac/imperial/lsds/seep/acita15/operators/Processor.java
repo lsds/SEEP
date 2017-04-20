@@ -110,10 +110,12 @@ public class Processor implements StatelessOperator{
 	{
 		/*
 		if (api.getOperatorId() == 0 || api.getOperatorId() == 10 || api.getOperatorId() == 11)
-		{ processingDelay = 0; } 
+		{ processingDelay = 80; } 
+		else if (api.getOperatorId() == 2 || api.getOperatorId() == 210 || api.getOperatorId() == 211)
+		{ processingDelay = 100; } 
 		else { processingDelay = 0; }
-		logger.warn("Setting explicit processing delay of "+processingDelay+" for operator "+api.getOperatorId());
 		*/
+		logger.warn("Setting explicit processing delay of "+processingDelay+" for operator "+api.getOperatorId());
 	}
 		
 		
