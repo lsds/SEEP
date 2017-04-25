@@ -2,6 +2,10 @@ set terminal term
 set output sprintf("sr_retransmissions%s",termext)
 set title sprintf("Retransmissions")
 set ylabel "Total tx (batches)"
+set xlabel "Bottleneck"
+set xtics right offset 4,0
+set xtics nomirror
+set ytics nomirror
 set auto x
 set yrange [0:*]
 set style data histogram

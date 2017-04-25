@@ -2,6 +2,10 @@ set terminal term
 set output sprintf("sr_tput%s",termext)
 set title sprintf("Recovery throughput")
 set ylabel "Tput (Kb/s)"
+set xlabel "Bottleneck"
+set xtics right offset 4,0
+set xtics nomirror
+set ytics nomirror
 set auto x
 set yrange [0:*]
 set style data histogram
