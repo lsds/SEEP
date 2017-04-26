@@ -24,7 +24,7 @@ echo "Installing prerequisites."
 # First update and install prerequisite packages for CORE
 sudo apt-get update
 sudo apt-get install git make
-sudo apt-get -y install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img
+sudo apt-get -y install bash bridge-utils ebtables iproute libev-dev python tcl8.5 tk8.5 libtk-img unzip
 
 echo "Installing Core from main repo."
 #Install EMANE prerequisites
@@ -76,15 +76,17 @@ popd
 
 echo "Downloading BonnMotion."
 #BonnMotion
-wget http://sys.cs.uos.de/bonnmotion/src/bonnmotion-2.1.3.zip
+if [ ! -f bonnmotion-2.1.3.zip ]; then
+	wget http://sys.cs.uos.de/bonnmotion/src/bonnmotion-2.1.3.zip
+fi
 unzip bonnmotion-2.1.3.zip
 
 # TODO: Automate bm install.
-#pushd bonnmotion-2.1.3
-#./install
+pushd bonnmotion-2.1.3
+./install
 # TODO: Requires manual intervention to confirm java location
-#sudo ln -s `pwd`/bin/bm /usr/bin/bm
-#popd
+sudo ln -s `pwd`/bin/bm /usr/bin/bm
+popd
 
 echo "Installing maven"
 #Maven (you'll perhaps need to manually install soot-framework-2.5.0.jar into the local mvn repository
