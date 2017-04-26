@@ -49,9 +49,9 @@ def main(ks,variables,sessions,params,plot_time_str=None):
             run_experiment(ks, variables, session_ids, params, time_str, data_dir )
 
         if not params['iperf']:
-            #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'tput', get_tput)
-            #record_var_statistics(ks, mobilities, nodes, session_ids, time_str, data_dir, 'lat', get_latency)
-            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput_include_failed if include_failed else get_tput)
+            #record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput_include_failed if include_failed else get_tput)
+            #record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
+            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', create_get_tput_fn(params))
             record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
 
             var_suffix = get_var_suffix_and_vals(variables)[0]
@@ -392,10 +392,10 @@ def get_metrics(k, var, var_suffix, sessions, time_str, data_dir, get_metric_fn)
 
     return metrics
 
-def get_tput(logdir, include_failed=False):
+def get_tput(logdir, include_failed=False, sub=False):
     #regex = re.compile('src_sink_mean_tput=(\d+)')
-    #regex = re.compile('sink_sink_mean_tput=(\d+)')
     regex = re.compile('sink_sink_mean_tput=(\d+)')
+    if sub: regex = re.compile('sub_mean_tput=(\d+)')
     logfilename = '%s/tput.txt'%logdir
     if not os.path.exists(logfilename): 
         if include_failed: return 0.0
@@ -409,6 +409,12 @@ def get_tput(logdir, include_failed=False):
             
     if include_failed: return 0.0
     else: raise Exception("Could not find tput in %s"%logfilename)
+
+def create_get_tput_fn(params):
+    includeFailed = params['includeFailed']
+    sub = params['sub']
+    print ('Creating get tput fn: includeFailed=%s,sub=%s'%(str(includeFailed), str(sub)))
+    return lambda logdir: get_tput(logdir, includeFailed, sub)
 
 def get_tput_include_failed(logdir):
     return get_tput(logdir, True)
@@ -554,6 +560,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--meanderRouting', dest='meander_routing', default=None, help='Override meander routing alg (backpressure, hash, shortestPath)')
     parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
     parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
+    parser.add_argument('--sub', dest='sub', default=False, action='store_true', help='Record throughput for a subset of tuples (ft exp only)')
     parser.add_argument('--emaneModel', dest='emane_model', default='Ieee80211abg', help='Emane model to use (if using emane)')
     parser.add_argument('--txRateMode', dest='txratemode', default='4', help='Emane 802.11 transmission rate mode (4=11Mb/s, 12=54Mb/s)')
     parser.add_argument('--srcRates', dest='src_rates', default=None, help='Fixed frame rates for sources to send at.')
@@ -639,6 +646,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['pinnedSeed'] = args.pinned_seed
     params['pinAll'] = args.pin_all
     params['injectFailures'] = args.inject_failures
+    params['sub'] =args.sub 
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

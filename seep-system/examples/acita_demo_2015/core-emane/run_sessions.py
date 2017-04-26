@@ -110,7 +110,7 @@ fi
 
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
-./gen_core_results.py --expDir $resultsDir
+./gen_core_results.py --expDir $resultsDir %s
 #./move_analysis.py --nodes 10 --expDir $resultsDir/positions
 chmod -R go+rw $resultsDir
 cd $expDir
@@ -427,7 +427,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='sl': var = params['skewLimit']
  
 
-        datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
+        datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session, params['sub']) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(nodes)
 
@@ -794,9 +794,10 @@ def add_to_server(session, params):
             print 'Name error'
             return False
 
-def create_datacollect_hook(time_str, k, var, var_suffix, exp_session):
+def create_datacollect_hook(time_str, k, var, var_suffix, exp_session, sub):
     print 'Script dir = %s'%script_dir
-    return datacollect_template%(script_dir, time_str, k, var, var_suffix, exp_session)
+    hook = datacollect_template%(script_dir, time_str, k, var, var_suffix, exp_session, '--sub' if sub else '')
+    return hook
 
 def watch_meander_services(sessiondir, node_names):
     while True:

@@ -5,9 +5,7 @@ import subprocess,os,time,re,argparse,glob, pandas
 from extract_results import *
 from compute_stats import compute_cumulative_percentiles
 
-#gen_sub_results = True
-gen_sub_results = False
-def main(exp_dir):
+def main(exp_dir, gen_sub_results):
 
     sim_env = os.environ.copy()
     print "Analysing logs in %s"%(exp_dir)       
@@ -347,7 +345,8 @@ def record_op_transmissions(op_transmissions, exp_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')
     parser.add_argument('--expDir', dest='exp_dir', help='relative path to exp dir')
+    parser.add_argument('--sub', dest='gen_sub_results', default=False, action='store_true', help='Gen for subset of tuples (ft only)')
     args=parser.parse_args()
 
-    main(args.exp_dir)
+    main(args.exp_dir, args.gen_sub_results)
 
