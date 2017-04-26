@@ -26,6 +26,7 @@ def main(exp_dir, gen_sub_results):
     print 'Found sink logs: ', sink_logs
 
     op_logs = get_processor_logfiles(exp_dir)
+    t_sub_begin = False
 
     if finished: 
         # Get time src started sending
