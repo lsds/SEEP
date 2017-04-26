@@ -30,11 +30,11 @@ custom_services_dir = /home/dokeeffe/.core/myservices
 #
 # uncomment and edit to establish a distributed control backchannel
 #controlnet = koala1:172.16.1.0/24 koala4:172.16.2.0/24
-controlnet = koala4:172.20.1.0/24 koala1:172.20.2.0/24
+controlnet = koala8:172.16.1.0/24 koala6:172.16.2.0/24
 
 # uncomment and edit to establish distributed auxiliary control channels.
 #controlnet1 = core1:172.17.1.0/24 core2:172.17.2.0/24 core3:172.17.3.0/24 core4 :172.17.4.0/24 core5:172.17.5.0/24
-controlnet1 = koala4:172.21.1.0/24 koala1:172.21.2.0/24
+controlnet1 = koala8:172.17.1.0/24 koala6:172.17.2.0/24
 #controlnet2 = core1:172.18.1.0/24 core2:172.18.2.0/24 core3:172.18.3.0/24 core4 :172.18.4.0/24 core5:172.18.5.0/24
 #controlnet3 = core1:172.19.1.0/24 core2:172.19.2.0/24 core3:172.19.3.0/24 core4 :172.19.4.0/24 core5:172.19.5.0/24
 
