@@ -824,6 +824,7 @@ class Ns2ScriptedMobility(WayPointMobility):
         ln = 0
         #dokeeffe: hack
         altitude = 1.0
+        offset = 100.0
         ix = iy = iz = None
         inodenum = None
         for line in f:
@@ -841,8 +842,8 @@ class Ns2ScriptedMobility(WayPointMobility):
                     parts = line.split()
                     time = float(parts[2])
                     nodenum = parts[3][1+parts[3].index('('):parts[3].index(')')]
-                    x = float(parts[5])
-                    y = float(parts[6])
+                    x = float(parts[5]) + offset 
+                    y = float(parts[6]) + offset 
                     #z = None
                     z = altitude 
                     speed = float(parts[7].strip('"'))
@@ -858,9 +859,9 @@ class Ns2ScriptedMobility(WayPointMobility):
                             #self.addinitial(self.map(inodenum), ix, iy, iz)
                             self.addinitial(self.map(inodenum), ix, iy, altitude)
                             ix = iy = iz = None
-                        ix = float(parts[3])
+                        ix = float(parts[3]) + offset
                     elif parts[2] == 'Y_':
-                        iy = float(parts[3])
+                        iy = float(parts[3]) + offset
                     elif parts[2] == 'Z_':
                         iz = float(parts[3])
                         #self.addinitial(self.map(nodenum), ix, iy, iz)
