@@ -74,19 +74,21 @@ popd
 #    exit 1
 #fi
 
-echo "Downloading BonnMotion."
-#BonnMotion
-if [ ! -f bonnmotion-2.1.3.zip ]; then
-	wget http://sys.cs.uos.de/bonnmotion/src/bonnmotion-2.1.3.zip
-fi
-unzip bonnmotion-2.1.3.zip
+if [ ! -f /usr/bin/bm ]; then
+	echo "Downloading BonnMotion."
+	#BonnMotion
+	if [ ! -f bonnmotion-2.1.3.zip ]; then
+		wget http://sys.cs.uos.de/bonnmotion/src/bonnmotion-2.1.3.zip
+	fi
+	unzip bonnmotion-2.1.3.zip
 
-# TODO: Automate bm install.
-pushd bonnmotion-2.1.3
-./install
-# TODO: Requires manual intervention to confirm java location
-sudo ln -s `pwd`/bin/bm /usr/bin/bm
-popd
+	# TODO: Automate bm install.
+	pushd bonnmotion-2.1.3
+	./install
+	# TODO: Requires manual intervention to confirm java location
+	sudo ln -s `pwd`/bin/bm /usr/bin/bm
+	popd
+fi
 
 echo "Installing maven"
 #Maven (you'll perhaps need to manually install soot-framework-2.5.0.jar into the local mvn repository
@@ -97,6 +99,7 @@ mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.
 ./meander-bld.sh
 popd
 
+if [ ! -f /usr/bin/nrlolsrd ]; then
 echo "Downloading NRL OLSR"
 #Nrlolsr (optional)
 wget http://downloads.pf.itd.nrl.navy.mil/olsr/nrlolsrdv7.8.1.tgz
@@ -106,6 +109,7 @@ pushd nrlolsr/unix
 make -f Makefile.linux
 sudo ln -s `pwd`/nrlolsrd /usr/bin/nrlolsrd
 popd
+fi
 
 #olsrd 0.6.3 from ppa at https://launchpad.net/~guardianproject/+archive/ubuntu/commotion (Don't forget to update before installing!).
 echo "Downloading OLSRD"
