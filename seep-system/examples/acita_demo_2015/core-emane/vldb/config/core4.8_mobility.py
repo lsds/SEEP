@@ -655,13 +655,14 @@ class WayPointMobility(WirelessModel):
     def addwaypoint(self, time, nodenum, x, y, z, speed):
         ''' Waypoints are pushed to a heapq, sorted by time.
         '''
-        #print "addwaypoint: %s %s %s,%s,%s %s" % (time, nodenum, x, y, z, speed)
+        #self.session.warn("addwaypoint: %s %s %s,%s,%s %s" % (time, nodenum, x, y, z, speed))
         wp = self.WayPoint(time, nodenum, coords=(x,y,z), speed=speed)
         heapq.heappush(self.queue, wp)
         
     def addinitial(self, nodenum, x, y, z):
         ''' Record initial position in a dict.
         '''
+        #self.session.warn("addinitial: %s %s,%s,%s" % (nodenum, x, y, z))
         wp = self.WayPoint(0, nodenum, coords=(x,y,z), speed=0)
         self.initial[nodenum] = wp
         
@@ -824,7 +825,7 @@ class Ns2ScriptedMobility(WayPointMobility):
         ln = 0
         #dokeeffe: hack
         altitude = 1.0
-        offset = 100.0
+        offset = 5000.0
         ix = iy = iz = None
         inodenum = None
         for line in f:
