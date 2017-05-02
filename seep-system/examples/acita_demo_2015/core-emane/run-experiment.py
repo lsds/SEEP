@@ -16,8 +16,8 @@ ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
 latency_percentile = '95%'
 latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
-latency_percentile = 'max'
-latency_regex = re.compile('max_lat=(\d+)')
+#latency_percentile = 'max'
+#latency_regex = re.compile('max_lat=(\d+)')
 max_latency = 1000000.0 
 
 var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx' : 'retx_timeout', 'sl' : 'skew_limit' }
