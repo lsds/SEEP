@@ -531,6 +531,7 @@ class WayPointMobility(WirelessModel):
     def runround(self):
         ''' Advance script time and move nodes.
         '''
+        if self.verbose: self.session.info("Using runround from %s"%(str(self.__class__.__name__)))
         if self.state != self.STATE_RUNNING:
             return        
         t = self.lasttime
@@ -633,6 +634,7 @@ class WayPointMobility(WirelessModel):
             dx = 0.0 - x1
         if (y1 + dy) < 0.0:
             dy = 0.0 - y1
+        if self.verbose: self.session.info("Moving n%s from (%d %d %d) d(%.1f %.1f) towards (%d %d %d)"%(node.objid, x1, y1, z1, dx, dy, x2, y2, z2))
         self.setnodeposition(node, x1 + dx, y1 + dy, z1)
         return True
         

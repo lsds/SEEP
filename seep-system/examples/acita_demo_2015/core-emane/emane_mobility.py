@@ -1,14 +1,17 @@
-import sys,time
+import sys,time,traceback
 from core.pycore import Session 
 from core.mobility import Ns2ScriptedMobility 
 from emanesh.events import EventService, LocationEvent
 
-def publish_loc(n, x, y, z, session, verbose=False):
+def publish_loc(nem, x, y, z, session, verbose=False):
     loc = LocationEvent() 
     lat,lon,alt = session.location.getgeo(x, y, z)
+    if verbose: 
+        rtx, rty, rtz = session.location.getxyz(lat, lon, alt)
+        session.info('Publishing location event for nem %d: (%.1f %.1f %.1f) -> (%.6f %.6f %.6f) (diff rt %d %d %d)' \
+            %(nem,x,y,z,lat,lon,alt, x-rtx,y-rty,z-rtz))
 
-    if verbose: print 'Publishing location event: lat=%s,lon=%s,alt=%s'%(str(lat),str(lon),str(alt))
-    loc.append(n, latitude=lat,longitude=lon, altitude=alt)
+    loc.append(nem, latitude=lat,longitude=lon, altitude=alt)
 
     session.emane.service.publish(0, loc)
 
@@ -42,6 +45,12 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
 
         #Slaves won't call this on their node, but might not matter if all
         #SEEP nodes are on the master?
+        if self.verbose: 
+            (oldx,oldy,oldz) = node.position.get()
+            #traceback.print_stack()
+            self.session.info('%s setting node position for n%d: (%s %s %s) -> (%d %d %d)' \
+                %(str(self.__class__.__name__), node.objid, str(oldx), str(oldy), str(oldz), x, y, z))
+
         node.position.set(x, y, z)  
         #msg = node.tonodemsg(flags=0)
         #TODO: Record of remote node positions might be needed if SEEP nodes on slaves
@@ -52,11 +61,14 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
 
     def set_remote_nodes(self, remote_nodes):
         self.remote_nodes = dict([(n.objid, n) for n in remote_nodes])
-        self.session.info("Set EmaneNs2ScriptedMobility remote nodes: %s"%str(self.remote_nodes.keys()))
+        if self.verbose: 
+            self.session.info("Set %s remote nodes: %s" \
+                %(str(self.__class__.__name__), str(self.remote_nodes.keys())))
 
     def runround(self):
         ''' Advance script time and move nodes.
         '''
+        if self.verbose: self.session.info("Using runround from %s"%(str(self.__class__.__name__)))
         if self.state != self.STATE_RUNNING:
             return        
         t = self.lasttime
@@ -114,6 +126,7 @@ class EmaneNs2ScriptedMobility(Ns2ScriptedMobility):
     def movenodesinitial(self):
         ''' Move nodes to their initial positions. Then calculate the ranges.
         '''
+        if self.verbose: self.session.info("Using movenodesinitial from %s"%(str(self.__class__.__name__)))
         moved = []
         moved_netifs = []
         self.session.info("Mobility: Setting initial positions for nodes %s"%(str(self.initial.keys())))
