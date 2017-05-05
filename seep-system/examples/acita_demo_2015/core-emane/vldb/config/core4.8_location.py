@@ -151,9 +151,9 @@ class CoreLocation(ConfigurableManager):
         y = -(self.m2px(ym) + self.refxyz[1])
         z = self.m2px(zm) + self.refxyz[2]
         #return (x, y, z)
-        #Note: For some reason the coordinate conversion seems to be off by 12
-        #for the y axix. No idea why.
-        return (x, y+12, z)
+        #Note: For some reason the coordinate conversion seems to be off
+        #for the y axix by an amount that depends on the refgeo. No idea why.
+        return (x, y+3, z)
 
     def geteastingshift(self, zonen, zonel):
         ''' If the lat, lon coordinates being converted are located in a

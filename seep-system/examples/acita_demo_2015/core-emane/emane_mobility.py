@@ -6,11 +6,12 @@ from emanesh.events import EventService, LocationEvent
 def publish_loc(nem, x, y, z, session, verbose=False):
     loc = LocationEvent() 
     lat,lon,alt = session.location.getgeo(x, y, z)
+    rtx, rty, rtz = session.location.getxyz(lat, lon, alt)
     if verbose: 
-        rtx, rty, rtz = session.location.getxyz(lat, lon, alt)
         session.info('Publishing location event for nem %d: (%.1f %.1f %.1f) -> (%.6f %.6f %.6f) (diff rt %d %d %d)' \
             %(nem,x,y,z,lat,lon,alt, x-rtx,y-rty,z-rtz))
 
+    if int(x-rtx) > 0 or int(y-rty) > 0 or int(z - rtz) > 0: raise Exception("Error converting between coordinate systems!")
     loc.append(nem, latitude=lat,longitude=lon, altitude=alt)
 
     session.emane.service.publish(0, loc)
