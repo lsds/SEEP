@@ -150,11 +150,23 @@ public class CoreRE {
 	public RoutingController getRoutingController()
 	{ return routingController; }
 
+	public UpstreamRoutingController getUpstreamRoutingController()
+	{
+		return upstreamRoutingController;
+	}
+
 	public ControlTuple removeLastFCtrl(int upOpIndex)
 	{
 		if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
 		{ throw new RuntimeException("Logic error.");}
 		return lastUpOpIndexFctrls.remove(upOpIndex);
+	}
+
+	public ControlTuple getLastFCtrl(int upOpIndex)
+	{
+		if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
+		{ throw new RuntimeException("Logic error.");}
+		return lastUpOpIndexFctrls.get(upOpIndex);
 	}
 
     public IProcessingUnit getProcessingUnit() {

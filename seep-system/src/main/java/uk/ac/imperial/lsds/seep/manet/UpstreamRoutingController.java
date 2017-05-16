@@ -108,6 +108,10 @@ public class UpstreamRoutingController {
 		logger.debug("Upstream routing controller updated router weights in "+(System.currentTimeMillis() - tSendBegin)+ " ms");
 	}
 
+	public void handleDownFailed(int downOpId)
+	{
+		handleRCtrl(new DownUpRCtrl(downOpId, -1.0, null));
+	}
 
 	/*
 	public void handleRCtrl(UpDownRCtrl rctrl)

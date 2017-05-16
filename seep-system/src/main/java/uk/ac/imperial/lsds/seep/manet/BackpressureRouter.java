@@ -218,6 +218,7 @@ public class BackpressureRouter implements IRouter {
 	private Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
 	{
 		Map<Integer, Set<Long>> newConstraints = null;
+		long tStart = System.currentTimeMillis();
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
@@ -225,6 +226,8 @@ public class BackpressureRouter implements IRouter {
 				throw new RuntimeException("Logic error?");
 			}
 			logger.debug("BP router handling downup rctrl: "+ downUp);
+			long tAcquire = System.currentTimeMillis();
+			logger.trace("BP router handling downup rctrl acquired lock in " + (tAcquire - tStart));
 			long prevUpdateTs = lastWeightUpdateTimes.get(downUp.getOpId());
 			lastWeightUpdateTimes.put(downUp.getOpId(), System.currentTimeMillis());
 			if (resetExpiryTimer)
@@ -271,6 +274,7 @@ public class BackpressureRouter implements IRouter {
 				unmatched.get(downUp.getOpId()).clear();
 			}
 		}
+		logger.debug("BP router handled downup rctrl in " + (System.currentTimeMillis() - tStart));
 		return newConstraints;
 	}
 	

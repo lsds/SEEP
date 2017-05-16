@@ -5,8 +5,7 @@ import subprocess,os,time,re,argparse,glob, pandas
 from extract_results import *
 from compute_stats import compute_cumulative_percentiles
 
-
-def main(exp_dir):
+def main(exp_dir, gen_sub_results):
 
     sim_env = os.environ.copy()
     print "Analysing logs in %s"%(exp_dir)       
@@ -27,6 +26,7 @@ def main(exp_dir):
     print 'Found sink logs: ', sink_logs
 
     op_logs = get_processor_logfiles(exp_dir)
+    t_sub_begin = False
 
     if finished: 
         # Get time src started sending
@@ -36,12 +36,22 @@ def main(exp_dir):
             #if not t_src_begin: raise Exception("Could not find t_src_begin.")
             if not t_src_begin: "WARNING: Could not find t_src_begin."
 
+        if gen_sub_results:
+            with open(src_log, 'r') as src:
+                t_sub_begin = sub_tx_begin(src)
+                #if not t_src_begin: raise Exception("Could not find t_src_begin.")
+                if not t_sub_begin: "WARNING: Could not find t_sub_begin."
+
         with open(finished_sink_log, 'r') as sink:
             # Get time sink received first message
             t_finished_sink_begin = sink_rx_begin(sink)
             if not t_finished_sink_begin: raise Exception("Could not find t_sink_begin.")
         with open(finished_sink_log, 'r') as sink:
             (total_tuples, total_bytes, t_finished_sink_end) = sink_rx_end(sink)
+            finished_total_tuples = total_tuples
+            finished_total_bytes = total_bytes #N.B.This assumes all tuples are the same size.
+            avg_bytes_per_tuple = total_bytes / total_tuples
+
             if not t_finished_sink_end: raise Exception("Could not find t_sink_end.")
         with open(finished_sink_log, 'r') as sink:
             rx_latencies = sink_rx_latencies(sink)
@@ -54,6 +64,7 @@ def main(exp_dir):
         t_min_sink_begin = t_finished_sink_begin 
         for sink_log in filter(lambda log: log != finished_sink_log, sink_logs):
             print 'Processing potentially unfinished log: ', sink_log
+            if t_sub_begin: raise Exception("TODO: sub tput + replicated sinks.")
             with open(sink_log, 'r') as sink:
                 (tuples, bytez) = unfinished_sink_tuples(sink, t_finished_sink_end, tuple_ids)
 
@@ -120,6 +131,10 @@ def main(exp_dir):
             if op_id:
                 op_transmissions[op_id] = transmissions
 
+    if t_sub_begin:
+        total_sub_tuples = len(sub_rx_latencies(t_sub_begin, deduped_tx_latencies))
+        print 'Total sub tuples=%d (from %d)'%(total_sub_tuples, len(deduped_tx_latencies))
+
     if finished:
         # Record the tput, k, w, query name etc.
         # Compute the mean tput
@@ -128,9 +143,17 @@ def main(exp_dir):
             record_stat('%s/tput.txt'%exp_dir, {'src_sink_mean_tput':src_sink_mean_tput})
             src_sink_frame_rate = frame_rate(t_src_begin, t_finished_sink_end, total_tuples) 
             record_stat('%s/tput.txt'%exp_dir, {'src_sink_frame_rate':src_sink_frame_rate}, 'a')
-
+        
+        if t_sub_begin:
+            t_sub_end = t_finished_sink_end # For now, assume we want to ignore tuples at the start
+            total_sub_bytes = avg_bytes_per_tuple * total_sub_tuples
+            sub_mean_tput = mean_tput(t_sub_begin, t_sub_end, total_sub_bytes)
+            record_stat('%s/tput.txt'%exp_dir, {'sub_mean_tput':sub_mean_tput})
 
         record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_tx_latencies, exp_dir)
+        "N.B. finished_total_bytes will be wrong here if tuples are different sizes."
+        deduped_joint_latencies = sorted(list(deduped_tx_latencies.values()), key=lambda x: x[2])[:finished_total_tuples]
+        record_sink_sink_joint_finished_stats(t_min_sink_begin, deduped_joint_latencies[-1][2], finished_total_bytes, finished_total_tuples, deduped_joint_latencies, exp_dir)
         """
         sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
         record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
@@ -153,12 +176,24 @@ def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, dedupe
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
     sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_frame_rate':sink_sink_frame_rate}, 'a')
-    deduped_latencies = map(lambda (latency, txts): latency, deduped_tx_latencies.values())
+    deduped_latencies = map(lambda (latency, txts, rxts): latency, deduped_tx_latencies.values())
     lstats = latency_stats(pd.Series(deduped_latencies))
     record_stat('%s/latency.txt'%exp_dir, lstats)
     lpercentiles = compute_cumulative_percentiles(deduped_latencies)
     record_percentiles(lpercentiles, 'lat', exp_dir)
     record_latencies(deduped_tx_latencies, '%s/tx_latencies.txt'%exp_dir)
+
+def record_sink_sink_joint_finished_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_joint_latencies, exp_dir):
+    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
+    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
+    record_stat('%s/tput.txt'%exp_dir, {'sink_sink_joint_mean_tput':sink_sink_mean_tput}, 'a')
+    sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
+    record_stat('%s/tput.txt'%exp_dir, {'sink_sink_joint_frame_rate':sink_sink_frame_rate}, 'a')
+    deduped_latencies = map(lambda x: x[0], deduped_joint_latencies)
+    #lstats = latency_stats(pd.Series(deduped_latencies))
+    #record_stat('%s/latency.txt'%exp_dir, lstats)
+    #lpercentiles = compute_cumulative_percentiles(deduped_latencies)
+    #record_percentiles(lpercentiles, 'lat', exp_dir)
 
 def get_src_logfile(exp_dir):
     return get_logfile(exp_dir, is_src_log)
@@ -264,9 +299,9 @@ def record_op_weight_infos(op_weight_infos, exp_dir):
     for op in op_weight_infos:
         op_weight_infos_file = "%s/op_%s_weight_infos.txt"%(exp_dir, op)
         with open(op_weight_infos_file, 'w') as f:
-            f.write('# ltqlen iq oq ready w pending\n')
-            for (ts, ltqlen, iq, oq, ready, pending, w, wi, wdqru) in op_weight_infos[op]:
-                line = '%d %d %d %d %d %.1f'%(ts/1000, ltqlen, iq, oq, ready, w)
+            f.write('#t ltqlen iq oq ready w skew pending(0-i) w(0-i)\n')
+            for (ts, ltqlen, iq, oq, ready, pending, skew, w, wi, wdqru) in op_weight_infos[op]:
+                line = '%d %d %d %d %d %.1f %d'%(ts/1000, ltqlen, iq, oq, ready, w, skew)
                 if pending:
                     line += " " + " ".join(map(str, pending))
                 if wi:
@@ -284,25 +319,35 @@ def record_op_utils(op_utils, exp_dir):
                 f.write('%d %.1f %.1f\n'%(ts/1000, util, cum))
 
 def record_op_transmissions(op_transmissions, exp_dir):
-    total_transmissions = {}
+    ts_total_transmissions = {}
+    op_total_transmissions = {}
     for op in op_transmissions:
         op_transmissions_file = "%s/op_%s_transmissions.txt"%(exp_dir, op)
+        op_total_transmissions[op] = len(op_transmissions[op])
         with open(op_transmissions_file, 'w') as f:
             f.write('# t ts dsop\n')
             for (t, ts, ds_op) in op_transmissions[op]:
                 f.write('%d %d %d\n'%(t, ts, ds_op))
-                total_transmissions[ts] = total_transmissions.get(ts, 0) + 1
+                ts_total_transmissions[ts] = ts_total_transmissions.get(ts, 0) + 1
 
-    total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
-    with open(total_transmissions_file, 'w') as f:
+    ts_total_transmissions_file = "%s/ts_total_transmissions.txt"%(exp_dir)
+    with open(ts_total_transmissions_file, 'w') as f:
         f.write('#ts count\n') 
-        for ts in sorted(total_transmissions.keys()):
-            f.write('%d %d\n'%(ts, total_transmissions[ts]))
+        f.write('#total %d\n'%(sum(ts_total_transmissions.values())))
+        for ts in sorted(ts_total_transmissions.keys()):
+            f.write('%d %d\n'%(ts, ts_total_transmissions[ts]))
+
+    op_total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
+    with open(op_total_transmissions_file, 'w') as f:
+        f.write('#op total\n')
+        for op in op_total_transmissions:
+            f.write('%s %d\n'%(op, op_total_transmissions[op]))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')
     parser.add_argument('--expDir', dest='exp_dir', help='relative path to exp dir')
+    parser.add_argument('--sub', dest='gen_sub_results', default=False, action='store_true', help='Gen for subset of tuples (ft only)')
     args=parser.parse_args()
 
-    main(args.exp_dir)
+    main(args.exp_dir, args.gen_sub_results)
 

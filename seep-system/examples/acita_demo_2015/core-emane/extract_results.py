@@ -39,6 +39,24 @@ def src_tx_begin(f):
 
     return None
 
+def sub_tx_begin(f):
+    """
+    return t_sub_begin
+    """
+    failed_op = 10
+    oq_sync_regex = re.compile(r't=(\d+), oq.sync')
+    fail_begin_regex = re.compile(r'Failure ctrl watchdog completed hard cleanup for %d in'%(failed_op))
+    last_tx = None
+    for line in f:
+        match = re.search(oq_sync_regex, line)
+        if match:
+            last_tx = int(match.group(1))
+        else:
+            match = re.search(fail_begin_regex, line)
+            if match: return last_tx
+
+    return None
+
 def sink_rx_begin(f):
     """
     returns t_begin
@@ -67,7 +85,7 @@ def sink_rx_latencies(f):
     returns a list of (tsrx, latency)
     """
     tuple_records = sink_rx_tuples(f)
-    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3])), tuple_records)
+    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3]), int(tuple_record[4])), tuple_records)
     #return pd.Series(latencies)
     return latencies
 
@@ -90,19 +108,19 @@ def unfinished_sink_rx_latencies(f, t_end):
     tuple_records = sink_rx_tuples(f)
     filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez, opLats, sockLats):
             int(rxts) <= int(t_end), tuple_records)
-    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3])), filtered_tuple_records)
+    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3]), int(tuple_record[4])), filtered_tuple_records)
     #return pd.Series(latencies)
     return latencies
 
 def dedup_latencies(latencies):
     deduped = {}
-    for (ts, latency, txts) in latencies:
+    for (ts, latency, txts, rxts) in latencies:
         if ts in deduped:
             print 'Found dupe latency %s'%(str(ts))
             if deduped[ts][0] > latency:
-                deduped[ts] = (latency, txts)
+                deduped[ts] = (latency, txts, rxts)
         else:
-            deduped[ts] = (latency, txts)
+            deduped[ts] = (latency, txts, rxts)
     #return pd.Series(deduped.values())
     return deduped
 
@@ -116,6 +134,9 @@ def sink_rx_tuples(f):
             results.append(match.groups())
 
     return results
+
+def sub_rx_latencies(t_sub_begin, rx_latencies):
+    return { ts : v for ts, v in rx_latencies.iteritems() if v[2] > t_sub_begin}
 
 def processor_tput(f):
     regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
@@ -131,7 +152,7 @@ def processor_tput(f):
     return (op_id, last_cum_tput)
 
 def get_interval_tputs(f):
-    regex = re.compile(r't=(\d+),id=(\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
+    regex = re.compile(r't=(\d+),id=([-]?\d+),interval=(\d+),tput=(.*),cumTput=(.*)$')
     op_id = None
     tputs = [] 
     for line in f:
@@ -164,7 +185,7 @@ def get_weight_infos(f):
     Example log line:
     t=1481214262870,op=11,ltqlen=726,iq=625,oq=101,ready=625,pending={0=0, 1=0},w=0.0,wi=[0.0, 0.0],wdqru(i=0 [u=-1:w=-359.244746835916,d=-625.0,q=100.0,r=0.5747915949374656]),(i=1 [u=-2:w=-78.81605920712812,d=-625.0,q=100.0,r=0.12610569473140498])
     """
-    regex = re.compile(r't=(\d+),op=(.*),ltqlen=(\d+),iq=(\d+),oq=(\d+),ready=(\d+),pending=(.*),w=(.*),wi=(.*),wdqru(.*)$')
+    regex = re.compile(r't=(\d+),op=(.*),ltqlen=(\d+),iq=(\d+),oq=(\d+),ready=(\d+),pending=(.*),skew=(.*),w=(.*),wi=(.*),wdqru(.*)$')
     op_id = None
     weight_info = [] 
     for line in f:
@@ -190,16 +211,17 @@ def get_weight_infos(f):
                 for j in sorted(pending_dict): 
                     pending.append(pending_dict[j])
             
-            w = float(match.group(8))
+            skew = int(match.group(8))
+            w = float(match.group(9))
 
             wi = []
-            wi_match = re.search(re.compile(r'\[(.*)\]'), match.group(9)).group(1)
+            wi_match = re.search(re.compile(r'\[(.*)\]'), match.group(10)).group(1)
 
             if wi_match:
                 wi = map(float, wi_match.split(','))
                     
-            wdqru = match.group(10)
-            weight_info.append((t, ltqlen, iq, oq, ready, pending, w, wi, wdqru))
+            wdqru = match.group(11)
+            weight_info.append((t, ltqlen, iq, oq, ready, pending, skew, w, wi, wdqru))
 
     return (op_id, weight_info)
 
@@ -228,7 +250,7 @@ def get_utils(f):
     return (op_id, utils)
 
 def get_transmissions(f):
-    regex = re.compile(r't=(\d+), oq.sync ([-]?\d+) sending ts=(\d+) for (\d+),')
+    regex = re.compile(r't=(\d+), oq.sync ([-]?\d+) sending ts=(\d+) for ([-]?\d+),')
     transmissions = []
     op_id = None
     for line in f:

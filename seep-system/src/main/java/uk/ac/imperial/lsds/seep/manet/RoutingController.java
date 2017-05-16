@@ -214,7 +214,10 @@ public class RoutingController implements Runnable{
 						}
 						else
 						{
-							ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							boolean removeFctrl = this.MAX_WEIGHT_DELAY < Long.parseLong(GLOBALS.valueFor("fctrlEmitInterval"));
+							if (removeFctrl) { throw new RuntimeException("TODO: This might have perf implications, but if worried about upstream fctrl processing overhead then better not to remove but ignore if have sent one recently"); }
+							//ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+							ControlTuple fct = owner.getLastFCtrl(upOpIndex);
 							if (fct != null)
 							{
 								FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
@@ -265,7 +268,10 @@ public class RoutingController implements Runnable{
 					}
 					else
 					{
-						ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+						boolean removeFctrl = this.MAX_WEIGHT_DELAY < Long.parseLong(GLOBALS.valueFor("fctrlEmitInterval"));
+						if (removeFctrl) { throw new RuntimeException("TODO: This might have perf implications, but if worried about upstream fctrl processing overhead then better not to remove but ignore if have sent one recently"); }
+						//ControlTuple fct = owner.removeLastFCtrl(upOpIndex);
+						ControlTuple fct = owner.getLastFCtrl(upOpIndex);
 						if (fct != null)
 						{
 							FailureCtrl fctrl = fct.getOpFailureCtrl().getFailureCtrl();
@@ -475,13 +481,20 @@ public class RoutingController implements Runnable{
 				 int max = Math.max(weightInfo.pending.get(0), weightInfo.pending.get(1));
 				 int min = Math.min(weightInfo.pending.get(0), weightInfo.pending.get(1));
 				 int skew = max - min;
-				 if (skewLimit > 0 && skew > skewLimit && (nodeId == 2 || nodeId == 210 || nodeId == 211))
+				 double w = aggregate(joinWeights);
+
+				 if (skewLimit > 0 && skew > skewLimit) 
+				 //if (skewLimit > 0 && skew > skewLimit && (nodeId == 2 || nodeId == 210 || nodeId == 211))
+				 //if (skewLimit > 0 && skew > skewLimit && (nodeId == 0 || nodeId == 10 || nodeId == 11 || nodeId == 1 || nodeId == 110 || nodeId == 111))
+				 //if ((skewLimit > 0 && skew > skewLimit) || (nodeId == 10 || nodeId == 11 || nodeId == 110 || nodeId == 111 || nodeId == 210 || nodeId == 211))
 				 {
-					weights.put(nodeId, -999999.0);
+					logger.debug("Skew="+skew+", bound="+skewLimit);
+					weights.put(nodeId, -99999.0);
+					weightInfo.skew = skew - skewLimit; 
 				 }
 				 else
 				 {
-					weights.put(nodeId, aggregate(joinWeights));
+					weights.put(nodeId, w);
 				 }
 			}
 			weightInfo.recordWeight();
@@ -556,6 +569,7 @@ public class RoutingController implements Runnable{
 		int ready;
 		Map<Integer, Integer> pending = new HashMap<>();
 		double w;
+		int skew;
 		ArrayList<Double> wi = new ArrayList<>();
 		Map<Integer, Map<Integer, double[]>> wdqru = new HashMap<>();
 
@@ -585,7 +599,7 @@ public class RoutingController implements Runnable{
 				}	
 			}
 
-			logger.info("t="+t+",op="+nodeId+",ltqlen="+ltqlen+",iq="+iq+",oq="+oq+",ready="+ready+",pending="+pending+",w="+w+",wi="+wi+",wdqru"+wdqruString);
+			logger.info("t="+t+",op="+nodeId+",ltqlen="+ltqlen+",iq="+iq+",oq="+oq+",ready="+ready+",pending="+pending+",skew="+skew+",w="+w+",wi="+wi+",wdqru"+wdqruString);
 		}
 	}	
 

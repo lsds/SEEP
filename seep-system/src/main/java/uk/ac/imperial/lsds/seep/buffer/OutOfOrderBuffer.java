@@ -29,7 +29,7 @@ public class OutOfOrderBuffer implements IBuffer {
 			TimestampTracker inputTs) {
 		logger.trace("Saving tuple "+batch.getTuple(0).timestamp);
 		log.put(batch.getTuple(0).timestamp, batch);
-		notifyThat(opID).savedBatch();
+		//notifyThat(opID).savedBatch();
 	}
 
 	@Override
@@ -40,7 +40,7 @@ public class OutOfOrderBuffer implements IBuffer {
 			TreeMap<Long, BatchTuplePayload> trimmed = new TreeMap<>(log);
 			log.clear();
 			logger.debug("Cleared log.");
-			notifyThat(opID).clearedBuffer();
+			//notifyThat(opID).clearedBuffer();
 			return trimmed;
 		}
 		else
@@ -53,7 +53,7 @@ public class OutOfOrderBuffer implements IBuffer {
 				{ 
 					logger.trace("Trimmed batch "+ts);
 					iter.remove(); 
-					notifyThat(opID).trimmedBuffer(1);
+					//notifyThat(opID).trimmedBuffer(1);
 				}	
 				/*
 				BatchTuplePayload batch = log.get(ts);
@@ -79,7 +79,7 @@ public class OutOfOrderBuffer implements IBuffer {
 		for (Long ts : log.keySet())
 		{
 			//TODO: Might as well trim any acked from log too.
-			if (ts > fctrl.lw() && !fctrl.acks().contains(ts) && !fctrl.alives().contains(ts))
+			if (!fctrl.isAcked(ts) && !fctrl.isAlive(ts))
 			{
 				delayed.put(ts,  log.get(ts));
 			}

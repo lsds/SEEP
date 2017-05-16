@@ -110,7 +110,7 @@ fi
 
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
-./gen_core_results.py --expDir $resultsDir
+./gen_core_results.py --expDir $resultsDir %s
 #./move_analysis.py --nodes 10 --expDir $resultsDir/positions
 chmod -R go+rw $resultsDir
 cd $expDir
@@ -352,6 +352,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             print 'Initial placements=',placements
             if placements: 
                 create_static_routes(placements, tx_range, session.sessiondir)
+                if len(placements) != nodes-2: raise Exception("Expected placement for %d nodes, got %d"%(nodes-2,len(placements)))
 
         if params['injectFailures']: 
             shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
@@ -423,9 +424,10 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='rcd': var = params['routingCtrlDelay']
         if var_suffix=='retx': var = params['retransmitTimeout']
         if var_suffix=='bsz': var = params['maxTotalQueueSizeTuples']
+        if var_suffix=='sl': var = params['skewLimit']
  
 
-        datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session) 
+        datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session, params['sub']) 
         session.sethook("hook:5","datacollect.sh",None,datacollect_hook)
         session.node_count="%d"%(nodes)
 
@@ -761,9 +763,10 @@ def get_initial_placements(placements, mobility, xyScale):
         print 'xyScale = %s'%str(xyScale)
         with open(placements_path, 'r') as pf:
             for line in pf:
-                els = map(int, line.split(','))
-                print els
-                result[els[0]] = (int(xyScale*els[1]), int(xyScale*els[2]))
+                if not line.strip().startswith('#'):
+                    els = map(int, line.split(','))
+                    print els
+                    result[els[0]] = (int(xyScale*els[1]), int(xyScale*els[2]))
 
         return result
 
@@ -791,9 +794,10 @@ def add_to_server(session, params):
             print 'Name error'
             return False
 
-def create_datacollect_hook(time_str, k, var, var_suffix, exp_session):
+def create_datacollect_hook(time_str, k, var, var_suffix, exp_session, sub):
     print 'Script dir = %s'%script_dir
-    return datacollect_template%(script_dir, time_str, k, var, var_suffix, exp_session)
+    hook = datacollect_template%(script_dir, time_str, k, var, var_suffix, exp_session, '--sub' if sub else '')
+    return hook
 
 def watch_meander_services(sessiondir, node_names):
     while True:

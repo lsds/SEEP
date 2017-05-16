@@ -1094,11 +1094,11 @@ class Emane(ConfigurableManager):
                 continue
             # yaw,pitch,roll,azimuth,elevation,velocity are unhandled
             lat = attrs['latitude']
-            long = attrs['longitude']
+            lon = attrs['longitude']
             alt = attrs['altitude']
-            self.handlelocationeventtoxyz(txnemid, lat, long, alt)
+            self.handlelocationeventtoxyz(txnemid, lat, lon, alt)
 
-    def handlelocationeventtoxyz(self, nemid, lat, long, alt):
+    def handlelocationeventtoxyz(self, nemid, lat, lon, alt):
         ''' Convert the (NEM ID, lat, long, alt) from a received location event
         into a node and x,y,z coordinate values, sending a Node Message.
         Returns True if successfully parsed and a Node Message was sent.
@@ -1111,19 +1111,21 @@ class Emane(ConfigurableManager):
             return False
         n = netif.node.objid
         # convert from lat/long/alt to x,y,z coordinates
-        (x, y, z) = self.session.location.getxyz(lat, long, alt)
+        (x, y, z) = self.session.location.getxyz(lat, lon, alt)
         x = int(x)
         y = int(y)
         z = int(z)
+
         if self.verbose:
-            self.info("location event NEM %s (%s, %s, %s) -> (%s, %s, %s)" \
-                      % (nemid, lat, long, alt, x, y, z))
+            (xOld, yOld, zOld) = netif.node.position.get() 
+            self.info("Event monitor received location event n%s NEM %s (%s, %s, %s) -> (%s, %s, %s) (old %s %s %s)" \
+                      % (str(n), nemid, lat, lon, alt, x, y, z, xOld, yOld, zOld))
         try:
             if (x.bit_length() > 16) or (y.bit_length() > 16) or \
                (z.bit_length() > 16) or (x < 0) or (y < 0) or (z < 0):
                 warntxt = "Unable to build node location message since " \
                           "received lat/long/alt exceeds coordinate " \
-                          "space: NEM %s (%d, %d, %d)" % (nemid, x, y, z)
+                          "space: n%s NEM %s (%d, %d, %d)" % (str(n), nemid, x, y, z)
                 self.info(warntxt)
                 self.session.exception(coreapi.CORE_EXCP_LEVEL_ERROR,
                                        "emane", None, warntxt)
@@ -1143,7 +1145,7 @@ class Emane(ConfigurableManager):
         node.position.set(x,y,z)
         msg = node.tonodemsg(flags=0)
         self.session.broadcastraw(None, msg)
-        self.session.sdt.updatenodegeo(node.objid, lat, long, alt)
+        self.session.sdt.updatenodegeo(node.objid, lat, lon, alt)
         return True
 
 

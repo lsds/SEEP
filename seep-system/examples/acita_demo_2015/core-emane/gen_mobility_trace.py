@@ -53,6 +53,7 @@ def gen_trace(session_dir, session_id, nodes, params):
                     '-p', params.get('p', default_p)]
 
         elif mobility_model ==  'SteadyStateRandomWaypoint':
+              
             bm_raw_params = ['bm', '-f', trace_file, 'SteadyStateRandomWaypoint', 
                     '-n', str(nodes-1), 
                     '-R', str(session_id),
@@ -60,7 +61,7 @@ def gen_trace(session_dir, session_id, nodes, params):
                     '-x', str(params.get('x', default_x)), 
                     '-y', str(params.get('y', default_y)),
                     '-o', str(params.get('o', default_speed)),
-                    '-p', "1.0",
+                    '-p', str(1.0 if params.get('o', default_speed) > 1.0 else params.get('o', default_speed) - 0.1),
                     #'-k', default_p,
                     #'-l', "0.5"]
                     '-k', "15.0",

@@ -13,3 +13,4 @@ mkdir -p seep-system/examples/acita_demo_2015/tmp
 
 pushd seep-system/examples/acita_demo_2015 ; ant ; popd 
 pushd seep-system/examples/stateless-simple-query ; ant ; popd
+#./gradlew build -x test

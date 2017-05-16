@@ -531,6 +531,7 @@ class WayPointMobility(WirelessModel):
     def runround(self):
         ''' Advance script time and move nodes.
         '''
+        if self.verbose: self.session.info("Using runround from %s"%(str(self.__class__.__name__)))
         if self.state != self.STATE_RUNNING:
             return        
         t = self.lasttime
@@ -633,6 +634,7 @@ class WayPointMobility(WirelessModel):
             dx = 0.0 - x1
         if (y1 + dy) < 0.0:
             dy = 0.0 - y1
+        if self.verbose: self.session.info("Moving n%s from (%d %d %d) d(%.1f %.1f) towards (%d %d %d)"%(node.objid, x1, y1, z1, dx, dy, x2, y2, z2))
         self.setnodeposition(node, x1 + dx, y1 + dy, z1)
         return True
         
@@ -655,13 +657,14 @@ class WayPointMobility(WirelessModel):
     def addwaypoint(self, time, nodenum, x, y, z, speed):
         ''' Waypoints are pushed to a heapq, sorted by time.
         '''
-        #print "addwaypoint: %s %s %s,%s,%s %s" % (time, nodenum, x, y, z, speed)
+        #self.session.warn("addwaypoint: %s %s %s,%s,%s %s" % (time, nodenum, x, y, z, speed))
         wp = self.WayPoint(time, nodenum, coords=(x,y,z), speed=speed)
         heapq.heappush(self.queue, wp)
         
     def addinitial(self, nodenum, x, y, z):
         ''' Record initial position in a dict.
         '''
+        #self.session.warn("addinitial: %s %s,%s,%s" % (nodenum, x, y, z))
         wp = self.WayPoint(0, nodenum, coords=(x,y,z), speed=0)
         self.initial[nodenum] = wp
         
@@ -824,6 +827,7 @@ class Ns2ScriptedMobility(WayPointMobility):
         ln = 0
         #dokeeffe: hack
         altitude = 1.0
+        offset = 5000.0
         ix = iy = iz = None
         inodenum = None
         for line in f:
@@ -841,8 +845,8 @@ class Ns2ScriptedMobility(WayPointMobility):
                     parts = line.split()
                     time = float(parts[2])
                     nodenum = parts[3][1+parts[3].index('('):parts[3].index(')')]
-                    x = float(parts[5])
-                    y = float(parts[6])
+                    x = float(parts[5]) + offset 
+                    y = float(parts[6]) + offset 
                     #z = None
                     z = altitude 
                     speed = float(parts[7].strip('"'))
@@ -858,9 +862,9 @@ class Ns2ScriptedMobility(WayPointMobility):
                             #self.addinitial(self.map(inodenum), ix, iy, iz)
                             self.addinitial(self.map(inodenum), ix, iy, altitude)
                             ix = iy = iz = None
-                        ix = float(parts[3])
+                        ix = float(parts[3]) + offset
                     elif parts[2] == 'Y_':
-                        iy = float(parts[3])
+                        iy = float(parts[3]) + offset
                     elif parts[2] == 'Z_':
                         iz = float(parts[3])
                         #self.addinitial(self.map(nodenum), ix, iy, iz)

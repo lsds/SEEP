@@ -65,7 +65,7 @@ public class ControlDispatcher {
 	
 	private PUContext puCtx = null;
 	private Kryo k = null;
-	
+
 	///\fixme{remove this variable asap. debugging for now}
 	// FIXME: REMOVE THIS FROM HERE ASAP
 	private Output largeOutput = new Output(10000000);
@@ -136,8 +136,15 @@ public class ControlDispatcher {
 	}
 	
 	private boolean sendUpstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block){
+		//return send(ct, channel, block, "upstream");
+		return channel.getControlDispatcherWorker().send(ct, block);	
+	}
+
+	private boolean send(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block, String dir)
+	{
 		int numRetries = 0;
 		boolean success = false;
+		long sendStart = System.currentTimeMillis();
 		while(!success)
 		{
 			Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
@@ -154,14 +161,16 @@ public class ControlDispatcher {
 				boolean compress = false;
 				OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
 				output = new Output(outputStream);
-				synchronized(k){
+				long syncStart = System.currentTimeMillis();
+				//synchronized(k){
+				synchronized(channel.getControlDispatcherWorker().getCtrlKryo()){
 					synchronized(socket){
 						synchronized (output){
 							long writeStart = System.currentTimeMillis();
 							if (ct.getTsSend() > 0) { ct.setTsSend(writeStart); }
-							k.writeObject(output, ct);
+							channel.getControlDispatcherWorker().getCtrlKryo().writeObject(output, ct);
 							output.flush();
-							LOG.debug("Wrote upstream control tuple "+ct.toString() + "in "+(System.currentTimeMillis()-writeStart)+" ms");
+							LOG.debug("Wrote "+dir+" control tuple "+ct.toString()+" to "+channel.getOperatorId()+",size="+output.total()+" in "+(System.currentTimeMillis()-writeStart)+" ms (+sync="+(System.currentTimeMillis() - syncStart)+" ms)");
 						}
 					}
 				}
@@ -177,7 +186,7 @@ public class ControlDispatcher {
 				if (!block) { break; }
 			}
 		}
-		if (!success) { LOG.warn("Sending control tuple upstream failed"); }
+		if (!success) { LOG.warn("Sending control tuple "+dir+" to "+channel.getOperatorId()+" failed in "+(System.currentTimeMillis()-sendStart)+" ms"); }
 		return success;
 	}
 	
@@ -302,52 +311,18 @@ public class ControlDispatcher {
 	
 	private boolean sendDownstream(ControlTuple ct, SynchronousCommunicationChannel channel, boolean block) 
 	{
-		int numRetries = 0;
-		boolean success = false;
-		while (!success)
-		{
-			Socket socket = block ? channel.getDownstreamControlSocket() : channel.tryGetDownstreamControlSocket();
-			if (socket == null)
-			{
-				if (block) { throw new RuntimeException("Logic error."); }
-				break;
-			}
-			
-			Output output = null;
-			try{
-				//boolean compress = true;
-				boolean compress = false;
-				OutputStream outputStream = compress ? new DeflaterOutputStream(socket.getOutputStream()) : socket.getOutputStream();
-				output = new Output(outputStream);
-				synchronized(k){
-					synchronized (socket){
-						if (ct.getTsSend() > 0) { ct.setTsSend(System.currentTimeMillis()); }
-						k.writeObject(output, ct);
-						output.flush();
-						LOG.debug("Wrote downstream control tuple "+ct.toString());
-					}
-				}
-				success = true;
-			}
-			catch(IOException | KryoException e){
-				if (numRetries < 1)
-				{
-					LOG.error("-> Dispatcher. While sending control msg "+e.getMessage());
-					e.printStackTrace();
-				}
-				channel.reopenDownstreamControlSocketNonBlocking(socket);
-				if (!block) { break; }
-			}
-		}
-		return success;
+		//return send(ct, channel, block, "downstream");
+		//TODO: the return value is kind of meaningless here.
+		return channel.getControlDispatcherWorker().send(ct, block);	
 	}
-	
+
 	public void ackControlMessage(ControlTuple genericAck, OutputStream os){
 		Output output = new Output(os);
 		synchronized(k){
 			k.writeObject(output, genericAck);
 		}
 		output.flush();
+		throw new RuntimeException("Deprecated: Sync for the os has now moved into the channel?");
 	}
 	
 	public void initStateMessage(ControlTuple initStateMsg, OutputStream os){

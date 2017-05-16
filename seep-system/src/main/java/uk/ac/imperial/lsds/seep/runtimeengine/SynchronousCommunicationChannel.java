@@ -13,6 +13,7 @@ package uk.ac.imperial.lsds.seep.runtimeengine;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Iterator;
@@ -31,6 +32,9 @@ import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 
+
+import com.esotericsoftware.kryo.Kryo;
+
 /**
 * OutputInformation. This class models the information associated to a downstream or upstream connection
 */
@@ -38,6 +42,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 
 	private static final Logger logger = LoggerFactory.getLogger(SynchronousCommunicationChannel.class);
 	private static final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
+	private static final int socketConnectTimeout = Integer.parseInt(GLOBALS.valueFor("socketConnectTimeout"));
+	private static final long reconnectBackoff = Long.parseLong(GLOBALS.valueFor("reconnectBackoff"));
 	private int targetOperatorId;
 	private Socket downstreamDataSocket;
 	private Socket downstreamControlSocket;
@@ -67,6 +73,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int deferredPortD = -1;
 	private int deferredPortC = -1;
 
+	private final ControlDispatcherWorker ctrlDispatcherWorker;
+
 	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer){
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
@@ -87,6 +95,8 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
+		this.ctrlDispatcherWorker = new ControlDispatcherWorker(this);	//Don't like this.
 	}
 	
 	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
@@ -97,6 +107,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		this.deferredControlIp = deferredControlIp;
 		this.deferredPortD = deferredPortD;
 		this.deferredPortC = deferredPortC;
+		this.ctrlDispatcherWorker = new ControlDispatcherWorker(this);	//Don't like this.
 	}
 	
 	public int getOperatorId(){
@@ -188,7 +199,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			OutputStream tmpOutput = null;
 			try
 			{
-				tmpSocket = new Socket(ip, port);
+				//tmpSocket = new Socket(ip, port);
+				tmpSocket = new Socket();
+				tmpSocket.bind(null);
+				tmpSocket.connect(new InetSocketAddress(ip, port), socketConnectTimeout);
+				if (piggybackControlTraffic) { setSocketRcvBufSize(tmpSocket); }
 				tmpOutput = tmpSocket.getOutputStream();
 				downstreamDataSocket = tmpSocket;
 				output = new Output(tmpOutput);
@@ -209,6 +224,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				{
 					logger.trace("Data connection "+ numReconnects+" to "+ip+" failed: "+e);
 				}
+				if (numReconnects> 1) { try { Thread.sleep(reconnectBackoff); } catch(InterruptedException ie) {} } //TODO Not sure if safe to sleep, would prefer to wait.
 				numReconnects++;
 			}
 		}
@@ -233,7 +249,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			logger.info("Skipping deferred init to "+deferredIp);
 			return; 
 		}
-		else if (piggybackControlTraffic)
+		
+		//Only used ctrl dispatcher worker if there is no piggybacked downstream data socket.
+		new Thread(ctrlDispatcherWorker).start();	
+
+		if (piggybackControlTraffic)
 		{
 			logger.info("Skipping deferred init to non downstream data conn "+deferredIp);
 			return; 
@@ -255,11 +275,18 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	 */	 
 	public void reopenDownstreamControlSocketNonBlocking(Socket prevSocketToClose)
 	{
+		/*
+		If piggybacking, this should only be called for send upstream channel. If so, should
+		still close the socket on a failure since (i) it just throws unnecessary exceptions (ii)
+		with upstream routing control the upstream will just not route anything to this downstream anymore
+		since it's routing control timer times out, but never reconnects because it is never sending data/ctrl
+		on the connection.
 		if (piggybackControlTraffic) 
 		{ 
 			logger.info("Not reopening downstream control socket - piggyback control traffic enabled");
 			return; 
 		}
+		*/
 
 		if (prevSocketToClose == null) 
 		{ 
@@ -274,6 +301,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			}
 		}
 		
+		//Always close the previous socket.
+		try { prevSocketToClose.close(); }
+		catch(IOException e) {
+			e.printStackTrace(); //Urgh 
+		}
+
 		final InetAddress ip;
 		final int port;
 		
@@ -287,14 +320,22 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			}
 			else
 			{
+				/*
 				try { prevSocketToClose.close(); }
 				catch(IOException e) {
-					e.printStackTrace(); /*Urgh*/ 
+					e.printStackTrace(); //Urgh 
 				}
+				*/
 				logger.info("Another caller already reopening control socket.");
 				//Another caller is already reopening the socket.
 				return;
 			}			
+		}
+
+		if (piggybackControlTraffic) 
+		{ 
+			logger.info("Not reopening downstream control socket - piggyback control traffic enabled");
+			return; 
 		}
 
 		openDownstreamControlSocketNonBlocking(ip, port);		
@@ -309,13 +350,18 @@ public class SynchronousCommunicationChannel implements EndPoint{
 				if (downstreamControlSocket != null)
 				{
 					// TODO: Not sure if it is necessary to close this?
-					try { downstreamControlSocket.close(); }
+					try { 
+						downstreamControlSocket.close(); }
 					catch(IOException e) {
 						e.printStackTrace(); /*Urgh*/ 
 					}
 					logger.info("Closing downstream control socket");
 				}
-
+				try {
+					setSocketSndBufSize(newSocket); }
+				catch(SocketException e) {
+					e.printStackTrace(); /*Urgh*/ 
+				}
 				downstreamControlSocket = newSocket;	
 			}
 		}
@@ -334,7 +380,11 @@ public class SynchronousCommunicationChannel implements EndPoint{
 					Socket tmpSocket = null;
 					try
 					{
-						tmpSocket = new Socket(ip, port);
+						//tmpSocket = new Socket(ip, port);
+						tmpSocket = new Socket();
+						tmpSocket.bind(null);
+						tmpSocket.connect(new InetSocketAddress(ip, port), socketConnectTimeout);
+						setSocketBufSize(tmpSocket);
 						synchronized(controlSocketLock)
 						{
 							downstreamControlSocket = tmpSocket;
@@ -344,14 +394,16 @@ public class SynchronousCommunicationChannel implements EndPoint{
 							//return downstreamControlSocket;
 						}
 					}
-					catch(IOException e)
+					catch(Exception e)
 					{
-						if (reconnectCount < 1)
+						if (reconnectCount < 1 || reconnectCount % 10000 == 0)
 						{
 							e.printStackTrace(); // Urgh
 						}
 						//e.printStackTrace();
 					}
+					if (reconnectCount > 1) { try { Thread.sleep(reconnectBackoff); } catch(InterruptedException e) {} }
+
 					reconnectCount++;
 					//dokeeffe TODO: N.B. If some other exception causes this
 					//thread to fail then this connection will be stuck forever
@@ -362,7 +414,31 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}).start();
 	}
 	
-	
+	private void setSocketRcvBufSize(Socket socket) throws SocketException
+	{
+		int bufSize = Integer.parseInt(GLOBALS.valueFor("ctrlSocketBufSize"));
+		socket.setReceiveBufferSize(bufSize);
+		if (bufSize != socket.getReceiveBufferSize()) 
+		{ 
+			logger.error("Set socket rcv buf size failed, requested="+bufSize+", receive="+socket.getReceiveBufferSize());
+		}
+	}
+
+	private void setSocketSndBufSize(Socket socket) throws SocketException
+	{
+		int bufSize = Integer.parseInt(GLOBALS.valueFor("ctrlSocketBufSize"));
+		socket.setSendBufferSize(bufSize);
+		if (bufSize != socket.getSendBufferSize()) 
+		{ 
+			logger.error("Set socket snd buf size failed, requested="+bufSize+", send="+socket.getSendBufferSize());
+		}
+	}
+
+	private void setSocketBufSize(Socket socket) throws SocketException
+	{
+		setSocketRcvBufSize(socket);
+		setSocketSndBufSize(socket);
+	}	
 	
 	public void setSharedIterator(Iterator<OutputLogEntry> i){
 		this.sharedIterator = i;
@@ -374,6 +450,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	public Output getOutput() {
 		return output;
+	}
+
+
+	public ControlDispatcherWorker getControlDispatcherWorker()
+	{
+		return ctrlDispatcherWorker;
 	}
 	
 	public void setTick(long tick){
