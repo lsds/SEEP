@@ -1,9 +1,6 @@
 #!/bin/bash
 set -o errexit ; set -o nounset
 sudo apt-get update
-sudo apt-get -y install maven
-
-mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.5.0 -Dpackaging=jar -Dfile=libs/soot/soot-framework/2.5.0/soot-2.5.0.jar
 
 #N.B. You need to install Oracle Java 1.7 manually first!
 #TODO: Automate java install
@@ -21,10 +18,16 @@ mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.
 #    exit 1
 #fi
 
-#sudo apt-get -y install bison flex
+sudo apt-get -y install maven
 
 mkdir -p install
 cd install
+
+pushd ../../../../..
+mvn install:install-file -DgroupId=soot -DartifactId=soot-framework -Dversion=2.5.0 -Dpackaging=jar -Dfile=libs/soot/soot-framework/2.5.0/soot-2.5.0.jar
+popd
+
+#sudo apt-get -y install bison flex
 
 #wget http://www.olsr.org/releases/0.9/olsrd-0.9.0.3.tar.gz
 #tar -xzvf olsrd-0.9.0.3.tar.gz 
@@ -36,7 +39,7 @@ cd install
 #sudo make install
 #popd
 #popd
-cd ..
+
 
 # OR
 #For 14.04 can just install olsrd from apt-get directly (installs 0.6.6 on trusty, 0.6.2 on pi)
@@ -72,6 +75,7 @@ sudo apt-get -y install gnuplot
 ##sudo apt-get install libstdc++6
 
 #For facerec query.
+cd ..
 sudo apt-get -y install libv4l-dev
 pushd ../resources/training
 mkdir -p chokepoint
