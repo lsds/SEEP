@@ -1,0 +1,17 @@
+country=GB
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network {
+	ssid="Imperial-WPA"
+	priority=1
+	proto=RSN
+	key_mgmt=WPA-EAP
+	pairwise=CCMP
+	auth_alg=OPEN
+	eap=PEAP
+	identity="dokeeffe@ic.ac.uk"
+	password=""
+	phase1="peaplabel=0"
+	phase2="auth=MSCHAPV2"
+}
