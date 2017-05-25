@@ -54,109 +54,116 @@ def main(ks,variables,sessions,params,plot_time_str=None):
             record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', create_get_tput_fn(params))
             record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
 
-            var_suffix = get_var_suffix_and_vals(variables)[0]
-
-            if var_suffix == 'm' and len(variables['mobility']) > 1:
-                for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
-                    'latency_vs_mobility', 'tput_vs_mobility_stddev', 
-                    'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
-                    'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'n' :
-                for p in ['tput_vs_nodes_stddev', 'latency_vs_nodes_stddev', 
-                        'rel_tput_vs_nodes_stddev', 'rel_latency_vs_nodes_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'd':
-                for p in ['tput_vs_dimension_stddev', 'latency_vs_dimension_stddev', 
-                        'rel_tput_vs_dimension_stddev', 'rel_latency_vs_dimension_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'c':
-                for p in ['tput_vs_cpudelay_stddev', 'latency_vs_cpudelay_stddev', 
-                        'rel_tput_vs_cpudelay_stddev', 'rel_latency_vs_cpudelay_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'rcd':
-                for p in ['tput_vs_rctrldelay_stddev', 'latency_vs_rctrldelay_stddev', 
-                        'rel_tput_vs_rctrldelay_stddev', 'rel_latency_vs_rctrldelay_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'bsz':
-                if len (variables['buf_size']) == 1:
-                    plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['buf_size'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
-                    plot_var('v1_tput_vs_var_stddev', var_suffix2name[var_suffix], time_str, script_dir, data_dir)
-                else:
-                    for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev']:
-                        #'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
-                        plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'retx':
-                for p in ['tput_vs_retx_timeout_stddev', 'latency_vs_retx_timeout_stddev', 
-                        'rel_tput_vs_retx_timeout_stddev', 'rel_latency_vs_retx_timeout_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'r':
-                record_tput_vs_lat_statistics(ks, time_str, data_dir)
-                for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            elif var_suffix == 'sl':
-                for p in ['tput_vs_skew_limit_stddev', 'latency_vs_skew_limit_stddev', 
-                        'rel_tput_vs_skew_limit_stddev', 'rel_latency_vs_skew_limit_stddev']:
-                    plot(p, time_str, script_dir, data_dir)
-            else:
-                plot('v1_latency_percentiles', time_str, script_dir, data_dir)
-                plot('v1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-                plot('v1_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
-                plot('v1_tput_vs_netsize_stddev', time_str, script_dir, data_dir)
-                plot('v1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-                plot('v1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
-                plot('v1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
-                plot_fixed_mob('v1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
-
-        # Do any plots that summarize all sessions for fixed k and mob.
-
-            for k in ks:
-                if var_suffix == 'm': 
-                    for var in variables['mobility']:
-                        plot_fixed_kmob('cum_lat_fixed_kmob', k, var, len(session_ids), time_str, script_dir, data_dir, params)
-                        plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, var, len(session_ids), time_str, script_dir, data_dir, params)
-                    
-                varname = var_suffix2name[var_suffix]
-                for var in variables[varname]: 
-                    for session in session_ids:
-                        #plot_fixed_kvarsession('cum_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        #plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        #plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        #plot_fixed_kvarsession('op_cum_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        #plot_fixed_kvarsession('link_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        #plot_fixed_kvarsession('link_cost_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        #plot_fixed_kvarsession('op_cum_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        if k > 1:
-                            plot_fixed_kvarsession('op_weight_info_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                        if k == 1:
-                            plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-
-                        if params['dstat']:
-                            plot_fixed_kvarsession('cpu_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kvarsession('cpu_wait_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kvarsession('page_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kvarsession('io_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-                            plot_fixed_kvarsession('disk_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
-
-                        if params['emanestats']:
-                            for stat in get_emane_mac_stats(script_dir):
-                                plot_fixed_kvarsession('emane_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
-
-                # Uncomment this and tweak params when plotting movement analysis.
-                #for node in range(3,10):
-                #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
+            do_main_plots(ks,variables,session_ids,time_str,data_dir,params)
+            do_debug_plots(ks,variables,session_ids,time_str,data_dir,params)
 
             logdir = '%s/%s'%(data_dir, time_str)
             chmod_dir(logdir)
-            sharedir = os.path.expanduser('~/shares/%s'%time_str)
-            print sharedir
-            if not os.path.isdir(sharedir): os.mkdir(sharedir)
-            copy_pdfs(logdir, sharedir)
-            copy_results(logdir, sharedir)
+            #sharedir = os.path.expanduser('~/shares/%s'%time_str)
+            #print sharedir
+            #if not os.path.isdir(sharedir): os.mkdir(sharedir)
+            #copy_pdfs(logdir, sharedir)
+            #copy_results(logdir, sharedir)
 
     finally:
         if params['notifyAddr']:
             notify('Job %s@%s complete'%(time_str,socket.gethostname()), params['notifyAddr'], params['notifySmtp'])
+
+def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
+    var_suffix = get_var_suffix_and_vals(variables)[0]
+
+    if var_suffix == 'm' and len(variables['mobility']) > 1:
+        for p in ['tput_vs_mobility', 'median_tput_vs_mobility', 
+            'latency_vs_mobility', 'tput_vs_mobility_stddev', 
+            'latency_vs_mobility_stddev', 'rel_tput_vs_mobility_stddev',
+            'rel_latency_vs_mobility_stddev', 'tput_vs_netsize_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'n' :
+        for p in ['tput_vs_nodes_stddev', 'latency_vs_nodes_stddev', 
+                'rel_tput_vs_nodes_stddev', 'rel_latency_vs_nodes_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'd':
+        for p in ['tput_vs_dimension_stddev', 'latency_vs_dimension_stddev', 
+                'rel_tput_vs_dimension_stddev', 'rel_latency_vs_dimension_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'c':
+        for p in ['tput_vs_cpudelay_stddev', 'latency_vs_cpudelay_stddev', 
+                'rel_tput_vs_cpudelay_stddev', 'rel_latency_vs_cpudelay_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'rcd':
+        for p in ['tput_vs_rctrldelay_stddev', 'latency_vs_rctrldelay_stddev', 
+                'rel_tput_vs_rctrldelay_stddev', 'rel_latency_vs_rctrldelay_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'bsz':
+        if len (variables['buf_size']) == 1:
+            plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['buf_size'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
+            plot_var('v1_tput_vs_var_stddev', var_suffix2name[var_suffix], time_str, script_dir, data_dir)
+        else:
+            for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev']:
+                #'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
+                plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'retx':
+        for p in ['tput_vs_retx_timeout_stddev', 'latency_vs_retx_timeout_stddev', 
+                'rel_tput_vs_retx_timeout_stddev', 'rel_latency_vs_retx_timeout_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'r':
+        record_tput_vs_lat_statistics(ks, time_str, data_dir)
+        for p in ['tput_vs_latency_stddev', 'rel_tput_vs_latency_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'sl':
+        for p in ['tput_vs_skew_limit_stddev', 'latency_vs_skew_limit_stddev', 
+                'rel_tput_vs_skew_limit_stddev', 'rel_latency_vs_skew_limit_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    else:
+        plot('v1_latency_percentiles', time_str, script_dir, data_dir)
+        plot('v1_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot('v1_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot('v1_tput_vs_netsize_stddev', time_str, script_dir, data_dir)
+        plot('v1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot('v1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot('v1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot_fixed_mob('v1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
+
+def do_debug_plots(ks,variables,session_ids,time_str,data_dir,params):
+    var_suffix = get_var_suffix_and_vals(variables)[0]
+    for k in ks:
+        if var_suffix == 'm': 
+            for var in variables['mobility']:
+                plot_fixed_kmob('cum_lat_fixed_kmob', k, var, len(session_ids), time_str, script_dir, data_dir, params)
+                plot_fixed_kmob('cum_raw_lat_fixed_kmob', k, var, len(session_ids), time_str, script_dir, data_dir, params)
+            
+        varname = var_suffix2name[var_suffix]
+        for var in variables[varname]: 
+            for session in session_ids:
+                #plot_fixed_kvarsession('cum_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                #plot_fixed_kvarsession('tx_lat_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                #plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                #plot_fixed_kvarsession('op_cum_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                #plot_fixed_kvarsession('link_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                #plot_fixed_kvarsession('link_cost_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                #plot_fixed_kvarsession('op_cum_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                if k > 1:
+                    plot_fixed_kvarsession('op_weight_info_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                if k == 1:
+                    plot_fixed_kvarsession('op_tput_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+
+                if params['dstat']:
+                    plot_fixed_kvarsession('cpu_util_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                    plot_fixed_kvarsession('cpu_wait_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                    plot_fixed_kvarsession('page_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                    plot_fixed_kvarsession('io_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+                    plot_fixed_kvarsession('disk_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params)
+
+                if params['emanestats']:
+                    for stat in get_emane_mac_stats(script_dir):
+                        plot_fixed_kvarsession('emane_stats_fixed_kvarsession', k, varname, var, var_suffix, session, time_str, script_dir, data_dir, params, add_to_envstr=';stat=\'%s\''%stat)
+
+        # Uncomment this and tweak params when plotting movement analysis.
+        #for node in range(3,10):
+        #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
+
+def do_cross_plots(ks):
+    pass
 
 def get_daemon_server():
     if not 'server' in globals(): return None
