@@ -22,7 +22,7 @@ max_latency = 1000000.0
 
 var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx' : 'retx_timeout', 'sl' : 'skew_limit' }
 
-def main(ks,variables,sessions,params,plot_time_str=None):
+def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
 
     #script_dir = os.path.dirname(os.path.realpath(__file__))
     time_str = 'unknown'
@@ -51,20 +51,16 @@ def main(ks,variables,sessions,params,plot_time_str=None):
         if not params['iperf']:
             #record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput_include_failed if include_failed else get_tput)
             #record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
-            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', create_get_tput_fn(params))
-            record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
+            if not cross:
+                record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', create_get_tput_fn(params))
+                record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
 
-            do_main_plots(ks,variables,session_ids,time_str,data_dir,params)
-            do_debug_plots(ks,variables,session_ids,time_str,data_dir,params)
-
-            logdir = '%s/%s'%(data_dir, time_str)
-            chmod_dir(logdir)
-            #sharedir = os.path.expanduser('~/shares/%s'%time_str)
-            #print sharedir
-            #if not os.path.isdir(sharedir): os.mkdir(sharedir)
-            #copy_pdfs(logdir, sharedir)
-            #copy_results(logdir, sharedir)
-
+                do_main_plots(ks,variables,session_ids,time_str,data_dir,params)
+                do_debug_plots(ks,variables,session_ids,time_str,data_dir,params)
+                logdir = '%s/%s'%(data_dir, time_str)
+                chmod_dir(logdir)
+            else:
+                do_cross_plots(ks,variables,session_ids,time_str,data_dir,params)
     finally:
         if params['notifyAddr']:
             notify('Job %s@%s complete'%(time_str,socket.gethostname()), params['notifyAddr'], params['notifySmtp'])
@@ -162,8 +158,12 @@ def do_debug_plots(ks,variables,session_ids,time_str,data_dir,params):
         #for node in range(3,10):
         #    plot_fixed_kmobsession('node_distances', k, mob, session, time_str, script_dir, data_dir, params, add_to_envstr=';node=\'n%d\''%node)
 
-def do_cross_plots(ks):
-    pass
+def do_cross_plots(ks,variables,session_ids,time_str,data_dir,params):
+    var_suffix = get_var_suffix_and_vals(variables)[0]
+
+    if var_suffix == 'm' and len(variables['mobility']) > 1:
+        for p in ['tput_vs_mobility_cross_stderr', 'latency_vs_mobility_cross_stderr']:
+            plot(p, time_str, script_dir, data_dir)
 
 def get_daemon_server():
     if not 'server' in globals(): return None
@@ -581,6 +581,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--retransmitTimeout', dest='retx_timeout', default=None, help='Time to wait before retransmitting')
     parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
     parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
+    parser.add_argument('--cross', dest='cross', default=False, action='store_true', help='Do a cross plot based on several previous experiments')
 
     args=parser.parse_args()
 
@@ -661,7 +662,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
     if args.meander_routing: params['meanderRouting'] = args.meander_routing
     if args.initial_pause: params['initialPause'] = args.initial_pause
+    if args.cross:
+        if not args.plot_time_str: raise Exception("Cross plot enabled without plotOnly!")
 
     #main(ks,pts,nodes,sessions,params,plot_time_str=args.plot_time_str)
-    main(ks,variables,sessions,params,plot_time_str=args.plot_time_str)
+    main(ks,variables,sessions,params,plot_time_str=args.plot_time_str,cross=args.cross)
 
