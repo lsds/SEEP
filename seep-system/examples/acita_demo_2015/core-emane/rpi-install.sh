@@ -50,15 +50,15 @@ sudo cp /etc/olsrd/olsrd.conf /etc/olsrd/olsrd.conf.orig
 sudo cp ../vldb/config/olsrd.conf.default.full.txt /etc/olsrd/olsrd.conf
 
 echo "Installing pip + python packages."
-sudo apt-get -y install python-pip
-sudo apt-get -y install python-dev
-sudo apt-get -y install libpng12-dev libfreetype6-dev pkg-config
+#sudo apt-get -y install python-pip
+#sudo apt-get -y install python-dev
+#sudo apt-get -y install libpng12-dev libfreetype6-dev pkg-config
 
 #python pandas
-sudo pip install pandas
+#sudo pip install pandas
 
 #python matplotlib
-sudo pip install matplotlib
+#sudo pip install matplotlib
 
 #python utm
 #sudo pip install utm
