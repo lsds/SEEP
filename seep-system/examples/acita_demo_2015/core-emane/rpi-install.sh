@@ -2,6 +2,8 @@
 set -o errexit ; set -o nounset
 sudo apt-get update
 
+sudo apt-get install oracle-java8-jdk
+
 #N.B. You need to install Oracle Java 1.7 manually first!
 #TODO: Automate java install
 #if [ ! -f jdk-7u79-linux-x64.tar.gz ]; then
