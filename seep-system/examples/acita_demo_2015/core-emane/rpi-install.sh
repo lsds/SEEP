@@ -2,7 +2,7 @@
 set -o errexit ; set -o nounset
 sudo apt-get update
 
-sudo apt-get install oracle-java8-jdk
+sudo apt-get -y install oracle-java8-jdk
 
 #N.B. You need to install Oracle Java 1.7 manually first!
 #TODO: Automate java install
@@ -45,7 +45,7 @@ popd
 
 # OR
 #For 14.04 can just install olsrd from apt-get directly (installs 0.6.6 on trusty, 0.6.2 on pi)
-sudo apt-get install olsrd 
+sudo apt-get -y install olsrd 
 
 #Update olsrd config.
 sudo cp /etc/olsrd/olsrd.conf /etc/olsrd/olsrd.conf.orig
