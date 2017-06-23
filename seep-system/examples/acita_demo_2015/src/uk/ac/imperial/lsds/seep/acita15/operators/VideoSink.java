@@ -161,6 +161,7 @@ public class VideoSink implements StatelessOperator {
 	//TODO: Do this in the background.
 	private void displayImage(long tupleId, byte[] value, int[] bbox, String label)
 	{	
+		if (Boolean.parseBoolean(GLOBALS.valueFor("loadIplImages"))) { throw new RuntimeException("TODO"); }
 		if (enableSinkDisplay)
 		{
 			if (reorder)
@@ -200,6 +201,7 @@ public class VideoSink implements StatelessOperator {
 	
 	private void recordImage(long tupleId, byte[] bytes, int[] bbox)
 	{
+		if (Boolean.parseBoolean(GLOBALS.valueFor("loadIplImages"))) { throw new RuntimeException("TODO"); }
 		//cvRectangle(bwImg, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
 		//ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
 		BufferedImage outputImg = bytesToBufferedImage(bytes, bbox);

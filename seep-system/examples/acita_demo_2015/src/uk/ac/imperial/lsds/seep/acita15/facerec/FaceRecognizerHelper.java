@@ -87,8 +87,8 @@ public class FaceRecognizerHelper
 	public int recognize(byte[] value, int x, int y, int width, int height, int type)
 	{
 		if (x <= 0 && y <=0 && width <= 0 && height <= 0) { return -1; }
-		IplImage img = parseBufferedImage(value);
-		IplImage imgBW = prepareBWImage(img, type);
+		IplImage img = VideoHelper.getIplImage(value, frameConverter, iplConverter);
+		IplImage imgBW = VideoHelper.prepareBWImage(img, type);
 		cvSetImageROI(imgBW, cvRect(x, y, width, height));
 
 		IplImage cropped = cvCreateImage(cvGetSize(imgBW), imgBW.depth(), imgBW.nChannels());
@@ -281,31 +281,4 @@ public class FaceRecognizerHelper
 		return new File(GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources").getAbsolutePath();
 	}
 	
-	public IplImage parseBufferedImage(byte[] bytes)
-	{
-		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-		try
-		{
-			IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
-			return img;
-		} 
-		catch (IOException e)
-		{
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public IplImage prepareBWImage(IplImage image, int type)
-	{
-		if (type > 0)
-		{
-			IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
-			cvCvtColor(image, imageBW, CV_BGR2GRAY);
-			return imageBW;
-		}
-		else
-		{
-			return image; //Already bw
-		}
-	}
 }

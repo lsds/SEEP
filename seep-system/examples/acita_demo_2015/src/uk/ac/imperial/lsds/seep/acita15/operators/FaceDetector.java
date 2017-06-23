@@ -55,6 +55,7 @@ import org.bytedeco.javacv.OpenCVFrameConverter;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
 import uk.ac.imperial.lsds.seep.acita15.facerec.FaceDetectorHelper;
+import uk.ac.imperial.lsds.seep.acita15.facerec.VideoHelper;
 
 public class FaceDetector implements StatelessOperator{
 
@@ -79,9 +80,9 @@ public class FaceDetector implements StatelessOperator{
 		int type = data.getInt("type");
 			
 		logger.debug("Received "+cols+"x"+rows+" frame of type "+type);
-		IplImage img = faceDetector.parseBufferedImage(value, cols, rows, type);
+		IplImage img = faceDetector.getIplImage(value);
 		logger.debug("Received "+img.width()+"x"+img.height()+" frame.");
-		IplImage imgBW = faceDetector.prepareBWImage(img, type);
+		IplImage imgBW = VideoHelper.prepareBWImage(img, type);
 		int[] bbox = faceDetector.detectFirstFace(imgBW, rows);
 		
 		DataTuple outputTuple = null;

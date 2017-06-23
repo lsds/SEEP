@@ -114,7 +114,7 @@ public class FaceDetectorHelper
 	//public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
 	public int[] detectFirstFace(IplImage bwImg, int rows)
 	{
-		int absoluteFaceSize = safeLongToInt(Math.round(rows * RELATIVE_FACE_SIZE));
+		int absoluteFaceSize = VideoHelper.safeLongToInt(Math.round(rows * RELATIVE_FACE_SIZE));
 		CvMemStorage storage = cvCreateMemStorage(0);
 		cvClearMemStorage(storage);
 		try {
@@ -149,52 +149,6 @@ public class FaceDetectorHelper
 		}
 	}
 
-	public int safeLongToInt(long l) {
-		if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-			throw new IllegalArgumentException
-			(l + " cannot be cast to int without changing its value.");
-		}
-		return (int) l;
-	}
-
-	public IplImage parseBufferedImage(byte[] bytes, int cols, int rows, int type)
-	{
-		//if (cols == 0 && rows == 0 && type == 0)
-		if (cols == 0 && rows == 0)
-		{
-			//It's a raw image file, convert to ipl image via buffered image.
-			ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-			try
-			{
-				IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
-				return img;
-			} 
-			catch (IOException e)
-			{
-				throw new RuntimeException(e);
-			}
-		}
-		else
-		{
-			//It's an ipl image in byte form already.
-			throw new RuntimeException("TODO"); 
-		}
-	}
-	
-	public IplImage prepareBWImage(IplImage image, int type)
-	{
-		if (type > 0)
-		{
-			final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
-			cvCvtColor(image, imageBW, CV_BGR2GRAY);
-			return imageBW;
-		}
-		else
-		{
-			return image;
-		}
-	}
-
 	public void recordFaceDetection(long tupleId, IplImage bwImg, int[] bbox)
 	{
 		cvRectangle(bwImg, cvPoint(bbox[0], bbox[1]), cvPoint(bbox[2], bbox[3]), CvScalar.RED, 1, CV_AA, 0);
@@ -209,6 +163,11 @@ public class FaceDetectorHelper
 		catch(IOException e) { throw new RuntimeException(e); }
 	}
 	
+	public IplImage getIplImage(byte[] bytes)
+	{
+		return VideoHelper.getIplImage(bytes, frameConverter, iplConverter);
+	}
+
 	/*
 	public static void testFaceDetection()
 	{

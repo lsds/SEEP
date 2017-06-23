@@ -22,7 +22,6 @@ import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
-import uk.ac.imperial.lsds.seep.acita15.facerec.FaceRecognizerHelper;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -48,6 +47,9 @@ import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
+
+import uk.ac.imperial.lsds.seep.acita15.facerec.FaceRecognizerHelper;
+import uk.ac.imperial.lsds.seep.acita15.facerec.VideoHelper;
 
 public class SEEPFaceRecognizer implements StatelessOperator{
 

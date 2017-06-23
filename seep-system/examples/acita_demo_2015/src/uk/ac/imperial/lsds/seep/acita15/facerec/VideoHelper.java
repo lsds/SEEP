@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,12 +47,17 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.opencv_core.Mat;
 
+import org.bytedeco.javacv.Java2DFrameConverter;
+import org.bytedeco.javacv.OpenCVFrameConverter;
+
 import java.nio.file.Files;
 
 import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
+import static org.bytedeco.javacpp.opencv_imgproc.*;
 //import static org.bytedeco.javacpp.opencv_legacy.*;
+//
 
 public class VideoHelper {
 
@@ -64,17 +70,20 @@ public class VideoHelper {
 
 	public byte[][] loadImages(String imgDirname)
 	{
+		boolean loadIplImages = Boolean.parseBoolean(GLOBALS.valueFor("loadIplImages"));
 		if (Boolean.parseBoolean(GLOBALS.valueFor("resourcesInJar")))
 		{
-			return loadImagesFromJar(imgDirname);	
+			return loadImagesFromJar(imgDirname, loadIplImages);	
 		}
 		else
 		{
-			return loadImagesFromDisk(imgDirname);	
+			return loadImagesFromDisk(imgDirname, loadIplImages);	
 		}
 	}
 
-	public byte[][] loadImagesFromJar(String imgDirname)
+	public byte[][] loadImagesFromJar(String imgDirname) { return loadImagesFromJar(imgDirname, false); }
+
+	public byte[][] loadImagesFromJar(String imgDirname, boolean loadIplImages)
 	{
 
 		Set<String> filenames = getJarImageFilenames(imgDirname);
@@ -88,13 +97,14 @@ public class VideoHelper {
 			try
 			{
 				InputStream is = getClass().getClassLoader().getResourceAsStream(filename);
+
 				ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 	
 				int nRead;
 				byte[] data = new byte[16384];
 	
 				while ((nRead = is.read(data, 0, data.length)) != -1) {
-				  buffer.write(data, 0, nRead);
+					buffer.write(data, 0, nRead);
 				}
 	
 				buffer.flush();
@@ -116,6 +126,19 @@ public class VideoHelper {
 					frameArr[i] = buffer.toByteArray();	
 					logger.debug("Reduced image from "+originalSize+" to "+frameArr[i].length+" bytes");
 					buffer.close();
+					is.close();
+				}
+
+				if (loadIplImages)
+				{
+					Java2DFrameConverter frameConverter = new Java2DFrameConverter();
+					OpenCVFrameConverter iplConverter = new OpenCVFrameConverter.ToIplImage();
+					is = new ByteArrayInputStream(frameArr[i]);
+					IplImage iplImage = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(is)));
+					//byte iplImageBytes = new byte[...];
+					//frameArr[i] = iplImage.imageData().get(iplImageBytes);
+					if (!iplImage.imageData().asBuffer().hasArray()) { throw new RuntimeException("TODO"); }
+					frameArr[i] = iplImage.imageData().asBuffer().array();
 					is.close();
 				}
 			}
@@ -180,8 +203,11 @@ public class VideoHelper {
 		return new File(GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources").getAbsolutePath();
 	}
 	
-	public byte[][] loadImagesFromDisk(String imgDirname)
+	public byte[][] loadImagesFromDisk(String imgDirname) { return loadImagesFromDisk(imgDirname, false); }
+
+	public byte[][] loadImagesFromDisk(String imgDirname, boolean loadIplImages)	
 	{		
+		if (loadIplImages) { throw new RuntimeException("TODO: Change the below to use ImageIO.read and then convert?"); }
 		File dir = new File(onDiskResourceRoot() + "/" + imgDirname);
 		File [] files = dir.listFiles(new FilenameFilter() {
 			@Override
@@ -255,11 +281,46 @@ public class VideoHelper {
 		return frameArr;
 	}
 	
-	public int safeLongToInt(long l) {
+	public static int safeLongToInt(long l) {
 		if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
 			throw new IllegalArgumentException
 			(l + " cannot be cast to int without changing its value.");
 		}
 		return (int) l;
+	}
+
+	public static IplImage getIplImage(byte[] bytes, Java2DFrameConverter frameConverter, OpenCVFrameConverter iplConverter)
+	{
+		boolean loadIplImages = Boolean.parseBoolean(GLOBALS.valueFor("loadIplImages"));
+		if (loadIplImages) { return new IplImage().imageData(new BytePointer(bytes)); }
+		else { return VideoHelper.parseBufferedImage(bytes, frameConverter, iplConverter); }
+	}
+
+	public static IplImage parseBufferedImage(byte[] bytes, Java2DFrameConverter frameConverter, OpenCVFrameConverter iplConverter)
+	{
+		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+		try
+		{
+			IplImage img = iplConverter.convertToIplImage(frameConverter.convert(ImageIO.read(bais)));
+			return img;
+		} 
+		catch (IOException e)
+		{
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static IplImage prepareBWImage(IplImage image, int type)
+	{
+		if (type > 0)
+		{
+			final IplImage imageBW = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 1);
+			cvCvtColor(image, imageBW, CV_BGR2GRAY);
+			return imageBW;
+		}
+		else
+		{
+			return image; //Already bw
+		}
 	}
 }
