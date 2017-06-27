@@ -46,6 +46,7 @@ public class VideoSink implements StatelessOperator {
 	private long numTuples;
 	private long warmUpTuples;
 	private long tupleSize;
+	private long tStart;
 	private long tuplesReceived = 0;
 	private long totalBytes = 0;
 	private final int displayPort = 20150;
@@ -89,6 +90,7 @@ public class VideoSink implements StatelessOperator {
 
 		if (tuplesReceived == 0)
 		{
+			tStart = System.currentTimeMillis();
 			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
 			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
 			System.out.println("SNK: Received initial tuple at t="+System.currentTimeMillis());
@@ -118,6 +120,7 @@ public class VideoSink implements StatelessOperator {
 					+",total bytes="+totalBytes
 					+",t="+System.currentTimeMillis()
 					+",tuple size bytes="+tupleSize);
+			logger.info("SNK: TPUT=" + (((8 * totalBytes) / 1024.0) / ((System.currentTimeMillis() - tStart) / 1000.0)) + "Kb/s");
 			System.exit(0);
 		}
 		//stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
