@@ -41,12 +41,17 @@ import javax.imageio.ImageIO;
 
 import java.awt.image.BufferedImage;
 
+import org.bytedeco.javacv.*;
+import org.bytedeco.javacpp.*;
+import org.bytedeco.javacpp.indexer.*;
+import org.bytedeco.javacpp.Loader;
 //import org.bytedeco.javacpp.FloatPointer;
 import org.bytedeco.javacpp.DoublePointer;
 import org.bytedeco.javacpp.IntPointer;
 //import org.bytedeco.javacpp.PointerPointer;
 //import static org.bytedeco.javacpp.opencv_contrib.*;
 import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_objdetect.*;
 import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_highgui.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
@@ -118,6 +123,9 @@ public class FaceRecognizerHelper
 	{
 		//FaceRecognizer faceRecognizer = createFisherFaceRecognizer();
 		// FaceRecognizer faceRecognizer = createEigenFaceRecognizer();
+		// Preload the opencv_objdetect module to work around a known bug.
+		Loader.load(opencv_objdetect.class);
+
 		FaceRecognizer lbphRecognizer = createLBPHFaceRecognizer();
 
 		if (existingFaceRecModel != null && !existingFaceRecModel.trim().isEmpty())
