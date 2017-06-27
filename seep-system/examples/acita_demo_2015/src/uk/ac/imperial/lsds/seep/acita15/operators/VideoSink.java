@@ -120,7 +120,10 @@ public class VideoSink implements StatelessOperator {
 					+",total bytes="+totalBytes
 					+",t="+System.currentTimeMillis()
 					+",tuple size bytes="+tupleSize);
-			logger.info("SNK: TPUT=" + (((8 * totalBytes) / 1024.0) / ((System.currentTimeMillis() - tStart) / 1000.0)) + "Kb/s");
+			long duration = System.currentTimeMillis() - tStart;
+			double kbTput = ((8 * totalBytes) / 1024.0) / (duration / 1000.0);
+			double framesTput = tuplesReceived / (duration / 1000.0); 
+			logger.info("SNK: TPUT=" + kbTput + " Kb/s, "+ framesTput + " frames/s");
 			System.exit(0);
 		}
 		//stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());
