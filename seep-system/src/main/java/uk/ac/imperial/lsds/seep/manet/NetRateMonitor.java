@@ -29,6 +29,7 @@ public class NetRateMonitor implements Runnable {
 	private final UpstreamRoutingController upstreamRoutingController;
 	private Map <Integer, String> upOpIds;
 	private final boolean coreDeployment;
+	private final boolean piAdHocDeployment = true;
 
 	public NetRateMonitor(Map<Integer, String> upOpIds)
 	{
@@ -102,6 +103,18 @@ public class NetRateMonitor implements Runnable {
 					}
 					else { throw new RuntimeException("Unknown routing alg: "+GLOBALS.valueFor("net-routing")); }
 					//TODO: Add empty routes/costs?
+				}
+				else if (piAdHocDeployment)
+				{
+					logNetInfo(allNetInfo());
+					logNetInfo(tcpRtoInfo());
+					List<String> routes = readRoutes();
+					logger.info("Parsing " + GLOBALS.valueFor("net-routing") + " routes");
+					if (GLOBALS.valueFor("net-routing").equals("OLSRETX"))
+					{
+						upstreamCosts = parseOLSRETXRoutes(routes);
+					}
+					else { throw new RuntimeException("Unsupported routing alg for Pi ad-hoc deployment: "+GLOBALS.valueFor("net-routing")); }
 				}
 				else
 				{
