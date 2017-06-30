@@ -52,6 +52,7 @@ public class GLOBALS {
 			globals.load(fis);
 			
 			globals.put("useCoreAddr", globals.getProperty("useCoreAddr", ""));
+			globals.put("net-routing", globals.getProperty("net-routing", "OLSRETX"));
 			globals.put("replicationFactor", System.getProperty("replicationFactor", globals.getProperty("replicationFactor", "1")));
 			globals.put("chainLength", globals.getProperty("chainLength", "1"));
 			globals.put("queryType", globals.getProperty("queryType", "chain"));

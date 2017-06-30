@@ -61,6 +61,8 @@ public class VideoSink implements StatelessOperator {
 	private boolean exitOnFinished = true;
 	private ReorderBuffer reorderBuffer = null;
 	private boolean reorder = Boolean.parseBoolean(GLOBALS.valueFor("reorderImages"));
+	private final String targetMatch = "chokepoint/P2E_S1_C3/0024";
+	private int matches = 0;
     
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
@@ -102,6 +104,11 @@ public class VideoSink implements StatelessOperator {
 		recordTuple(dt, value.length);
 		long tupleId = dt.getLong("tupleId");
 		int[] bbox = new int[]{dt.getInt("x"), dt.getInt("y"), dt.getInt("x2"), dt.getInt("y2")};
+		String label = dt.getString("label");
+		boolean match = label.startsWith(targetMatch);
+		logger.info("Label for image: "+label + ", match="+match);
+		if (match) { matches++; }
+
 		if (tupleId != warmUpTuples + tuplesReceived -1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
@@ -124,6 +131,8 @@ public class VideoSink implements StatelessOperator {
 			double kbTput = ((8 * totalBytes) / 1024.0) / (duration / 1000.0);
 			double framesTput = tuplesReceived / (duration / 1000.0); 
 			logger.info("SNK: TPUT=" + kbTput + " Kb/s, "+ framesTput + " frames/s");
+			double matchRate = (100.0 * matches) / tuplesReceived;
+			logger.info("SNK: MATCHES=" + matches + " / " + tuplesReceived + "(" +matchRate+ ")");
 			System.exit(0);
 		}
 		//stats.add(System.currentTimeMillis(), dt.getPayload().toString().length());

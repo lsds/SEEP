@@ -259,7 +259,7 @@ System.out.println("broadcast state and runtime init");
 		{
 			managerS = new ServerSocket(port, 50, InetAddress.getByName(GLOBALS.valueFor("coreMainAddr")));
 		}
-		else { managerS = new ServerSocket(port); }
+		else { managerS = new ServerSocket(port, 50, InetAddress.getByName(GLOBALS.valueFor("mainAddr"))); }
 		
 		LOG.info(" Listening on {}:{}", managerS.getInetAddress(), port);
 		BufferedReader bis = null;
