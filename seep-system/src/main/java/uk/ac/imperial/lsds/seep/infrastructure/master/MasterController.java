@@ -111,6 +111,10 @@ public class MasterController {
 							System.out.println("BYE");
 							System.exit(0);
 							break;
+						case 7:
+							deployQueryToNodes();
+							startSystemOption(inf);
+							break;
 						case 10:
 							System.out.println("Parsing txt file...");
 							inf.parseFileForNetflix();
@@ -217,7 +221,7 @@ public class MasterController {
 	}
 	
 	public void startSystemOption(Infrastructure inf) throws IOException, ESFTRuntimeException{
-		getUserInput("Press a button to start the source");
+		//getUserInput("Press a button to start the source");
 		
         //Start the source, and thus the stream processing system
 		inf.start();
@@ -279,6 +283,7 @@ public class MasterController {
 		System.out.println("4- Parallelize Operator Manually");
 		System.out.println("5- Stop system console (EXP)");
 		System.out.println("6- Exit");
+		System.out.println("7- Deploy query to Nodes AND Start system");
 		System.out.println("10- Parse txt file to binary kryo");
 	}
 }
