@@ -64,12 +64,13 @@ public class FaceDetectorHelper
 	public FaceDetectorHelper()
 	{
 		frameConverter = new Java2DFrameConverter();
-		//matConverter = new OpenCVFrameConverter.ToMat();
+		matConverter = new OpenCVFrameConverter.ToMat();
 		iplConverter = new OpenCVFrameConverter.ToIplImage();
 
 		try
 		{
-			this.faceDetector = loadFaceCascade();
+			//this.faceDetector = loadFaceCascade();
+			this.faceDetector = null; 
 			this.lbpFaceDetector = loadLBPFaceCascade(); 
 		}
 		catch(Exception e) { throw new RuntimeException(e); }
@@ -139,8 +140,64 @@ public class FaceDetectorHelper
 		return new File(GLOBALS.valueFor("repoDir")+"/seep-system/examples/acita_demo_2015/resources").getAbsolutePath();
 	}
 
-	//public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
 	public int[] detectFirstFace(IplImage bwImg, int rows)
+	{
+		//return detectFirstFaceHaar(bwImg, rows);
+		return detectFirstFaceMultiScale(bwImg, rows);
+	}
+
+	public int[] detectFirstFaceMultiScale(IplImage bwImg, int rows)
+	{
+		int absoluteFaceSize = VideoHelper.safeLongToInt(Math.round(rows * RELATIVE_FACE_SIZE));
+		//CvMemStorage storage = cvCreateMemStorage(0);
+		//cvClearMemStorage(storage);
+		try {
+			//int flags = CV_HAAR_DO_CANNY_PRUNING;
+			int flags = 0;
+			//CvSize minFeatureSize = cvSize(MIN_FEATURE_DIM, MIN_FEATURE_DIM);
+			//CvSize maxFeatureSize = cvSize(0,0); //No max
+			Size minFeatureSize = new Size(MIN_FEATURE_DIM, MIN_FEATURE_DIM);
+			Size maxFeatureSize = new Size(0,0); //No max
+			int minNeighbours = 2;
+
+			Mat bwMat = matConverter.convertToMat(iplConverter.convert(bwImg));
+
+			RectVector rects = new RectVector();
+			//CvSeq rects = cvHaarDetectObjects(bwImg, faceDetector, storage, SCALE_FACTOR, minNeighbours, flags, minFeatureSize, maxFeatureSize);
+			lbpFaceDetector.detectMultiScale(bwMat, rects, SCALE_FACTOR, minNeighbours, flags, minFeatureSize, maxFeatureSize);
+			//int nFaces = rects.total();
+			long nFaces = rects.size();
+			if (nFaces == 0) {
+				return null;
+			}
+			else
+			{
+				logger.debug("Detected faces: "+nFaces);
+				//BytePointer elem = cvGetSeqElem(rects, 0);
+				//CvRect rect = new CvRect(elem);
+				Rect rect = rects.get(0);
+				int bbox[] = new int[4];
+				bbox[0] = rect.x();
+				bbox[1] = rect.y();
+				bbox[2] = rect.x() + rect.width();
+				bbox[3] = rect.y() + rect.height();
+				
+				logger.debug("Face bounding box=("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
+				return bbox;
+			}
+		}
+		finally 
+		{
+			//cvReleaseMemStorage(storage);
+		}
+
+
+
+
+	}
+
+	//public int[] detectFirstFace(IplImage bwImg, int absoluteFaceSize)
+	public int[] detectFirstFaceHaar(IplImage bwImg, int rows)
 	{
 		int absoluteFaceSize = VideoHelper.safeLongToInt(Math.round(rows * RELATIVE_FACE_SIZE));
 		CvMemStorage storage = cvCreateMemStorage(0);
