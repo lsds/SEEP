@@ -48,9 +48,12 @@ public class FaceDetectorHelper
 	private final static int MIN_FEATURE_DIM = 40;
 	private final static double RELATIVE_FACE_SIZE = 0.2;
 	private final static String classifierName = "cascades/haarcascade_frontalface_alt.xml";
+	private final static String lbpClassifierName = "cascades/lbpcascade_frontalface_improved.xml";
+	//private final static String lbpClassifierName = "cascades/lbpcascade_frontalface.xml";
 
 	//private CascadeClassifier faceDetector = null;
 	private CvHaarClassifierCascade faceDetector = null;
+	private CascadeClassifier lbpFaceDetector = null;
 	private Java2DFrameConverter frameConverter = null;
 	private OpenCVFrameConverter matConverter = null;
 	private OpenCVFrameConverter iplConverter = null;
@@ -67,31 +70,56 @@ public class FaceDetectorHelper
 		try
 		{
 			this.faceDetector = loadFaceCascade();
+			this.lbpFaceDetector = loadLBPFaceCascade(); 
 		}
 		catch(Exception e) { throw new RuntimeException(e); }
 	}
 
 	public static CvHaarClassifierCascade loadFaceCascade() throws IOException 
 	{
-        String classifierPath = null;
-			 	if (resourcesInJar)
-				{	
-					classifierPath = extractFaceCascadeFromJar();
-				}
-				else
-				{
-					classifierPath = onDiskResourceRoot() + "/" + classifierName;
-				}
+		String classifierPath = null;
+		if (resourcesInJar)
+		{	
+			classifierPath = extractFaceCascadeFromJar();
+		}
+		else
+		{
+			classifierPath = onDiskResourceRoot() + "/" + classifierName;
+		}
 
-        // Preload the opencv_objdetect module to work around a known bug.
-        Loader.load(opencv_objdetect.class);
+		// Preload the opencv_objdetect module to work around a known bug.
+		Loader.load(opencv_objdetect.class);
 
-        // We can "cast" Pointer objects by instantiating a new object of the desired class.
-        CvHaarClassifierCascade classifier = new CvHaarClassifierCascade(cvLoad(classifierPath));
-        if (classifier.isNull()) {
-            logger.error("Error loading classifier file \"" + classifierPath + "\".");
-            System.exit(1);
-        }
+		// We can "cast" Pointer objects by instantiating a new object of the desired class.
+		CvHaarClassifierCascade classifier = new CvHaarClassifierCascade(cvLoad(classifierPath));
+		if (classifier.isNull()) {
+		    logger.error("Error loading classifier file \"" + classifierPath + "\".");
+		    System.exit(1);
+		}
+		return classifier;
+	}
+
+	public static CascadeClassifier loadLBPFaceCascade() throws IOException 
+	{
+		String classifierPath = null;
+		if (resourcesInJar)
+		{	
+			classifierPath = extractFaceCascadeFromJar();
+		}
+		else
+		{
+			classifierPath = onDiskResourceRoot() + "/" + lbpClassifierName;
+		}
+
+		// Preload the opencv_objdetect module to work around a known bug.
+		Loader.load(opencv_objdetect.class);
+
+		// We can "cast" Pointer objects by instantiating a new object of the desired class.
+		CascadeClassifier classifier = new CascadeClassifier(cvLoad(classifierPath));
+		if (classifier.isNull()) {
+		    logger.error("Error loading classifier file \"" + classifierPath + "\".");
+		    System.exit(1);
+		}
 		return classifier;
 	}
 
