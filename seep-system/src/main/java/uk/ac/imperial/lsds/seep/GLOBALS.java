@@ -65,8 +65,21 @@ public class GLOBALS {
 			File f = new File(sessionParamsPath);	
 			if (f.exists() && !f.isDirectory())
 			{
+				LOG.info("Loading session props from: " + sessionParamsPath); 
 				globals.load(new FileReader(sessionParamsPath));
 			}
+
+			String extraPropsPath = globals.getProperty("extraProps");
+			if (extraPropsPath != null)
+			{
+				f = new File(extraPropsPath);	
+				if (f.exists() && !f.isDirectory())
+				{
+					LOG.info("Loading extra props from: " + extraPropsPath); 
+					globals.load(new FileReader(extraPropsPath));
+				}
+			}
+
 			LOG.info("Loaded global properties="+propsToString());
 		}
 		catch (FileNotFoundException e1) {

@@ -48,10 +48,9 @@ public class FaceDetectorHelper
 	private final static int MIN_FEATURE_DIM = 40;
 	private final static double RELATIVE_FACE_SIZE = 0.2;
 	private final static String classifierName = "cascades/haarcascade_frontalface_alt.xml";
-	private final static String lbpClassifierName = "cascades/lbpcascade_frontalface_improved.xml";
-	//private final static String lbpClassifierName = "cascades/lbpcascade_frontalface.xml";
+	//private final static String lbpClassifierName = "cascades/lbpcascade_frontalface_improved.xml";
+	private final static String lbpClassifierName = "cascades/lbpcascade_frontalface.xml";
 
-	//private CascadeClassifier faceDetector = null;
 	private CvHaarClassifierCascade faceDetector = null;
 	private CascadeClassifier lbpFaceDetector = null;
 	private Java2DFrameConverter frameConverter = null;
@@ -116,7 +115,8 @@ public class FaceDetectorHelper
 		Loader.load(opencv_objdetect.class);
 
 		// We can "cast" Pointer objects by instantiating a new object of the desired class.
-		CascadeClassifier classifier = new CascadeClassifier(cvLoad(classifierPath));
+		//CascadeClassifier classifier = new CascadeClassifier(cvLoad(classifierPath));
+		CascadeClassifier classifier = new CascadeClassifier(classifierPath);
 		if (classifier.isNull()) {
 		    logger.error("Error loading classifier file \"" + classifierPath + "\".");
 		    System.exit(1);

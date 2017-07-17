@@ -4,7 +4,7 @@ echo `pwd`
 screen -d -m -S seep-ita
 
 
-for n in {1..4}; do
+for n in {1..6}; do
 	screen -S seep-ita -X screen $n
 done
 

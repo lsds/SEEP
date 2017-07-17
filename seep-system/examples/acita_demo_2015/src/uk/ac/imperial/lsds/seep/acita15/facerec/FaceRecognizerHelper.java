@@ -127,6 +127,8 @@ public class FaceRecognizerHelper
 		Loader.load(opencv_objdetect.class);
 
 		FaceRecognizer lbphRecognizer = createLBPHFaceRecognizer();
+		//FaceRecognizer lbphRecognizer = createEigenFaceRecognizer();
+		//FaceRecognizer lbphRecognizer = createFisherFaceRecognizer();
 
 		if (existingFaceRecModel != null && !existingFaceRecModel.trim().isEmpty())
 		{  	
