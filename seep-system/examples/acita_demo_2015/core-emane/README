@@ -15,3 +15,6 @@ Then update olsrd config?
 Then need to point core config to acita config dir.
 Then need to update /etc/hosts.
 Then need to update core config (e.g. for control net).
+
+eval `ssh-agent -s`
+ssh-add ~/.ssh/id_rsa_pi

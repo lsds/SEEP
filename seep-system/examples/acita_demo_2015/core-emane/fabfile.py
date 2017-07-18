@@ -2,12 +2,15 @@
 
 from fabric.api import *
 
+env.use_ssh_config = True
 
 adhoc_hosts = [
-	"191.168.181.107", # docpi2
-	#"191.168.181.114", # docpiv1
+	#"191.168.181.107", # docpi2
+	"191.168.181.114", # docpiv1
 	#"191.168.181.106", # docpi1
-	#"191.168.181.101", # mypi
+	"191.168.181.101", # mypi
+	"191.168.181.108", # docpi3
+	"191.168.181.110", # docpi4
 ]
 
 ap_hosts = [
@@ -15,9 +18,12 @@ ap_hosts = [
 	#"192.168.0.114", # docpiv1
 	#"192.168.0.106", # docpi1
 	#"192.168.0.101", # mypi
+	#"192.168.0.108", # docpi3
+	#"192.168.0.110", # docpi4
 ]
 
-env.hosts = ap_hosts
+#env.hosts = ap_hosts
+env.hosts = adhoc_hosts 
 
 repo_root = "/home/pi/dev/seep-ita"
 demo_root = repo_root + "/seep-system/examples/acita_demo_2015"
@@ -65,8 +71,12 @@ def git_pull():
 @parallel
 def rebuild():
 	with cd(repo_root):
-		run(./meander-bld.sh)
+		run('./meander-bld.sh')
 
 def git_status():
 	with cd(repo_root):
 		run('git status')
+
+def git_diff():
+	with cd(repo_root):
+		run('git diff')
