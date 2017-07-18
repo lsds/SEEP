@@ -29,7 +29,7 @@ public class NetRateMonitor implements Runnable {
 	private final UpstreamRoutingController upstreamRoutingController;
 	private Map <Integer, String> upOpIds;
 	private final boolean coreDeployment;
-	private final boolean piAdHocDeployment = true;
+	private final boolean piAdHocDeployment = "true".equals(GLOBALS.valueFor("piAdHocDeployment"));
 
 	public NetRateMonitor(Map<Integer, String> upOpIds)
 	{
