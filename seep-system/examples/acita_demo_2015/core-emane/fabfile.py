@@ -26,8 +26,6 @@ demo_root = repo_root + "/seep-system/examples/acita_demo_2015"
 
 env.user = "pi"
 
-#env.password = "notrecommended"
-
 def test():
 	with cd("~"):
 		run('echo "Hello World."')
