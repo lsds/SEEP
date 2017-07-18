@@ -199,6 +199,7 @@ public class FaceRecognizerHelper
 		untrainedRecognizer.train(images, labels);
 	}
 	
+	/*
 	public void testATT()
 	{
 		Mat testImage = imread(testImageFilename, IMREAD_GRAYSCALE);
@@ -250,6 +251,7 @@ public class FaceRecognizerHelper
 
 		logger.debug("Predicted label: " + predictedLabel);
 	}
+	*/
 	
 	public Mat loadBWMatImage(String filename)
 	{
