@@ -945,6 +945,11 @@ public class StatefulProcessingUnit implements IProcessingUnit{
 	}
 
 	@Override
+	public int getOpIdFromUpstreamIpPort(InetAddress ip, int port) {
+		return runningOp.getOpContext().getOpIdFromUpstreamIpPort(ip, port);
+	}
+
+	@Override
 	public void setOutputQueueList(ArrayList<OutputQueue> downOpId_outputQ_map) {
 		throw new RuntimeException("TODO");
 		

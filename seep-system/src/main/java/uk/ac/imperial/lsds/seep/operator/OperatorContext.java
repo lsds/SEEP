@@ -16,6 +16,7 @@ package uk.ac.imperial.lsds.seep.operator;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -146,7 +147,28 @@ public class OperatorContext implements Serializable{
 		///\fixme{make operators id consistent, or propagate errors with exceptions otherwise}
 		return -1000;
 	}
-	
+
+	public int getOpIdFromUpstreamIpPort(InetAddress ip, int srcPort)
+	{
+		//TODO: What if a join?
+		//First get the set of upstream op ids (ids) that match the ip.
+		List<Integer> sameNodeUpstreams = new ArrayList<>();
+		for(OperatorStaticInformation op : upstream){
+			if(ipEquals(op.getMyNode().getIp(), ip)){
+				sameNodeUpstreams.add(op.getOpId());
+			}
+		}
+
+		//If n = |ids| == 1 one then return the id
+		//If n > 1, get replica local index r = srcPort mod n and
+		// return sorted(ids)[r]
+
+		int upstreamIndex = srcPort % sameNodeUpstreams.size();
+		Collections.sort(sameNodeUpstreams);
+		int upstreamId = sameNodeUpstreams.get(upstreamIndex);	
+		return upstreamId;
+	}
+
 	public int getDownOpIdFromIndex(int index){
 		int opId = 0;
 		for(PlacedOperator down : downstreams){

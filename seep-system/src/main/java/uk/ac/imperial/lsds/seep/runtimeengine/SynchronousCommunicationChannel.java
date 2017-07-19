@@ -18,6 +18,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,8 +75,14 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private int deferredPortC = -1;
 
 	private final ControlDispatcherWorker ctrlDispatcherWorker;
+	private final int localSiblingIndex;
+	private final int localSiblings;
+	private final Random localSiblingRandom;
 
 	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer){
+		this(opId, downstreamSocketD, downstreamSocketC, blindSocket, buffer, -1, 1);
+	}
+	public SynchronousCommunicationChannel(int opId, Socket downstreamSocketD, Socket downstreamSocketC, Socket blindSocket, IBuffer buffer, int localSiblingIndex, int localSiblings){
 		this.targetOperatorId = opId;
 		this.downstreamDataSocket = downstreamSocketD;
 		this.downstreamControlSocket = downstreamSocketC;
@@ -97,9 +104,16 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		}
 
 		this.ctrlDispatcherWorker = new ControlDispatcherWorker(this);	//Don't like this.
+		this.localSiblingIndex = localSiblingIndex;
+		this.localSiblings = localSiblings;
+		this.localSiblingRandom = new Random(localSiblingIndex);
 	}
 	
-	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer){	
+	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer){
+		this(opId, deferredIp, deferredControlIp, deferredPortD, deferredPortC, buffer, -1, 1);
+	}
+
+	public SynchronousCommunicationChannel(int opId, InetAddress deferredIp, InetAddress deferredControlIp, int deferredPortD, int deferredPortC, IBuffer buffer, int localSiblingIndex, int localSiblings){	
 		this.targetOperatorId = opId;
 		this.buffer = buffer;
 		this.deferredInit = true;
@@ -108,6 +122,9 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		this.deferredPortD = deferredPortD;
 		this.deferredPortC = deferredPortC;
 		this.ctrlDispatcherWorker = new ControlDispatcherWorker(this);	//Don't like this.
+		this.localSiblingIndex = localSiblingIndex;
+		this.localSiblings = localSiblings;
+		this.localSiblingRandom = new Random(localSiblingIndex);
 	}
 	
 	public int getOperatorId(){
@@ -201,7 +218,12 @@ public class SynchronousCommunicationChannel implements EndPoint{
 			{
 				//tmpSocket = new Socket(ip, port);
 				tmpSocket = new Socket();
-				tmpSocket.bind(null);
+				if (localSiblingIndex < 0) { tmpSocket.bind(null); }
+				else
+				{
+					tmpSocket.bind(new InetSocketAddress(getIndexedPort()));
+				}
+
 				tmpSocket.connect(new InetSocketAddress(ip, port), socketConnectTimeout);
 				if (piggybackControlTraffic) { setSocketRcvBufSize(tmpSocket); }
 				tmpOutput = tmpSocket.getOutputStream();
@@ -519,5 +541,14 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	
 	public void setReconf_ts(TimestampTracker ts){
 		this.reconf_ts = ts;
+	}
+
+	private int getIndexedPort()
+	{
+		int minPort = 33300;
+		int maxPort = 60000;
+
+		int unindexed = localSiblingRandom.nextInt(maxPort - minPort) + minPort;	
+		return unindexed - localSiblings + localSiblingIndex;
 	}
 }

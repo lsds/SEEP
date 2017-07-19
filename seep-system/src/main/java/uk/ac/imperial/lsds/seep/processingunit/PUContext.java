@@ -75,6 +75,9 @@ public class PUContext {
 	//map in charge of storing the buffers that this operator is using
 	private HashMap<Integer, IBuffer> downstreamBuffers = new HashMap<Integer, IBuffer>();
 
+	private int localSiblings = 1;
+	private int localSiblingIndex = -1;
+
 	private volatile boolean configured = false;
 	
 	public PUContext(WorkerNodeDescription nodeDescr, ArrayList<EndPoint> starTopology){
@@ -160,6 +163,9 @@ public class PUContext {
 	}
 	
 	private void configureDownstreamAndUpstreamConnections(Operator op){
+		localSiblings = op.getOpContext().getMeanderQuery().localSiblings(op.getOperatorId());
+		localSiblingIndex = op.getOpContext().getMeanderQuery().localSiblingIndex(op.getOperatorId());
+
 		//Gather nature of downstream operators, i.e. local or remote
 		for(PlacedOperator down: op.getOpContext().downstreams){
 			LOG.debug("-> configuring downstream of {}", down.opID());
@@ -174,6 +180,9 @@ public class PUContext {
 		
 		downstreamTypeConnection = new Vector<EndPoint>();
 		upstreamTypeConnection = new Vector<EndPoint>();
+
+
+
 		if (enableDummies)
 		{
 			dummyDownstreamTypeConnection = new Vector<EndPoint>();
@@ -279,7 +288,7 @@ public class PUContext {
 						
 					IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer(opID) : new Buffer();
 					
-					SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer);
+					SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, socketD, socketC, socketBlind, buffer, localSiblingIndex, localSiblings);
 					downstreamTypeConnection.add(con);
 					remoteDownstream.add(con);
 	/// \todo{here a 40000 is used, change this line to make it properly}
@@ -322,7 +331,7 @@ public class PUContext {
 			LOG.debug("-> Trying remote deferred downstream conn to: {}/{}", ip.toString(), portD);
 			IBuffer buffer = "true".equals(GLOBALS.valueFor("netAwareDispatcher")) ? new OutOfOrderBuffer(opID) : new Buffer();
 			
-			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, controlIp, portD, portC, buffer);
+			SynchronousCommunicationChannel con = new SynchronousCommunicationChannel(opID, ip, controlIp, portD, portC, buffer, localSiblingIndex, localSiblings);
 			downstreamTypeConnection.add(con);
 			remoteDownstream.add(con);
 /// \todo{here a 40000 is used, change this line to make it properly}

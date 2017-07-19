@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -533,4 +534,69 @@ public class Query implements Serializable
 		for (Integer id : result) { return id; }
 		return null;
 	}
+
+	public int localSiblings(Integer physicalId)
+	{
+		int result = 1;
+		Set<Integer> sameNodeWorkers = addr2phys.get(getNodeAddress(physicalId));
+		if (sameNodeWorkers.size() > 1)
+		{
+			//Now need to count the number of replicas.
+			Set siblings = getPhysicalNodeIds(getLogicalNodeId(physicalId));
+			if (siblings.size() > 1)
+			{
+				//And finally all replicas on the same node.
+				List<Integer> siblingsSameNode = new LinkedList<>();
+				for (Integer snw : sameNodeWorkers)
+				{
+					if (siblings.contains(snw))
+					{
+						siblingsSameNode.add(snw);	
+					}	
+				}	
+				result = siblingsSameNode.size();
+			}
+		}
+		return result;
+
+	}
+
+	public int localSiblingIndex(Integer physicalId)
+	{
+		Set<Integer> sameNodeWorkers = addr2phys.get(getNodeAddress(physicalId));
+		
+		int localWorkerIndex = -1; //return -1 if the only replica on this ip
+
+		if (sameNodeWorkers.size() > 1)
+		{
+			//Now need to count the number of replicas.
+			Set siblings = getPhysicalNodeIds(getLogicalNodeId(physicalId));
+			if (siblings.size() > 1)
+			{
+				//And finally all replicas on the same node.
+				List<Integer> siblingsSameNode = new LinkedList<>();
+				for (Integer snw : sameNodeWorkers)
+				{
+					if (siblings.contains(snw))
+					{
+						siblingsSameNode.add(snw);	
+					}	
+				}	
+
+				//If more than one then return an index based on sort order (used to pick client port #'s).
+				if (siblingsSameNode.size() > 1)
+				{
+					Collections.sort(siblingsSameNode);
+					for (int i = 0; i < siblingsSameNode.size(); i++)
+					{ 
+						if (siblingsSameNode.get(i).equals(physicalId)) { localWorkerIndex = i; break; }
+					}
+					if (localWorkerIndex < 0) { throw new RuntimeException("Logic error for "+physicalId+" lwi="+localWorkerIndex); }
+				}	
+			}
+		}
+		
+		logger.debug("Local worker index for "+ physicalId + ": "+localWorkerIndex);
+		return localWorkerIndex;
+	}	
 }

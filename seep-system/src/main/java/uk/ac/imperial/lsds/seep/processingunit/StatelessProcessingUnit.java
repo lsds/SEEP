@@ -577,6 +577,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	}
 
 	@Override
+	public int getOpIdFromUpstreamIpPort(InetAddress ip, int port) {
+		return runningOp.getOpContext().getOpIdFromUpstreamIpPort(ip, port);
+	}
+
+	@Override
 	public void setOutputQueueList(ArrayList<OutputQueue> downOpId_outputQ_map) {
 		this.outputQueues = downOpId_outputQ_map;
 		if (dispatcher != null) {

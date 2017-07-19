@@ -117,6 +117,8 @@ public interface IProcessingUnit {
 
 	public int getOpIdFromUpstreamIp(InetAddress ip);
 
+	public int getOpIdFromUpstreamIpPort(InetAddress ip, int port);
+
 	public PUContext getPUContext();
 
 	public void sendDataDispatched(DataTuple dt);

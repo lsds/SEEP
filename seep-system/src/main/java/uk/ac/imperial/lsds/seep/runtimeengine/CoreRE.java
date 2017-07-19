@@ -610,6 +610,10 @@ public class CoreRE {
 	public int getOpIdFromInetAddress(InetAddress ip){
 		return processingUnit.getOpIdFromUpstreamIp(ip);
 	}
+
+	public int getOpIdFromInetAddressAndPort(InetAddress ip, int port){
+		return processingUnit.getOpIdFromUpstreamIpPort(ip, port);
+	}
 	
 	//TODO To refine this method...
 	/// \todo {this method should work when an operator must be killed in a proper way}

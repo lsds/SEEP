@@ -84,7 +84,8 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.idxMapper = idxMapper;
 		this.dsa = dsa;
 		this.k = initializeKryo();
-		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress()));
+		InetSocketAddress inSocketAddr = (InetSocketAddress)upstreamSocket.getRemoteSocketAddress();
+		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddressAndPort(inSocketAddr.getAddress(), inSocketAddr.getPort()));
 		this.ctrlQueue = null;
 		LOG.info("Created icdhw with ctrlQueue = "+ctrlQueue);
 	}
@@ -97,7 +98,8 @@ public class IncomingDataHandlerWorker implements Runnable{
 		this.idxMapper = idxMapper;
 		this.dsa = dsa;
 		this.k = initializeKryo();
-		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress()));
+		InetSocketAddress inSocketAddr = (InetSocketAddress)upstreamSocket.getRemoteSocketAddress();
+		this.stats = new Stats(owner.getProcessingUnit().getOperator().getOperatorId(), owner.getOpIdFromInetAddressAndPort(inSocketAddr.getAddress(), inSocketAddr.getPort()));
 		this.ctrlQueue = ctrlQueue;
 		LOG.info("Created icdhw with ctrlQueue = "+ctrlQueue);
 	}
@@ -167,7 +169,10 @@ public class IncomingDataHandlerWorker implements Runnable{
 		/** experimental sync **/
 		try{
 			// Get incomingOp id
-			int opId = owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress());
+			//int opId = owner.getOpIdFromInetAddress(((InetSocketAddress)upstreamSocket.getRemoteSocketAddress()).getAddress());
+			InetSocketAddress inSocketAddr = (InetSocketAddress)upstreamSocket.getRemoteSocketAddress();
+			int opId = owner.getOpIdFromInetAddressAndPort(inSocketAddr.getAddress(), inSocketAddr.getPort());
+
 			int originalOpId = owner.getOriginalUpstreamFromOpId(opId);
 			
 			DataStructureI dso = null;

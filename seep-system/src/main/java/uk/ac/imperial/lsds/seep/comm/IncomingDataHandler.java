@@ -78,7 +78,9 @@ public class IncomingDataHandler implements Runnable{
 				Socket incomingConn = incDataServerSocket.accept();
 				String threadName = incomingConn.getInetAddress().toString();
 				Thread newConn = null;
-				int upstreamOpId = owner.getOpIdFromInetAddress(((InetSocketAddress)incomingConn.getRemoteSocketAddress()).getAddress());
+				//int upstreamOpId = owner.getOpIdFromInetAddress(((InetSocketAddress)incomingConn.getRemoteSocketAddress()).getAddress());
+				InetSocketAddress inSocketAddr = (InetSocketAddress)incomingConn.getRemoteSocketAddress();
+				int upstreamOpId = owner.getOpIdFromInetAddressAndPort(inSocketAddr.getAddress(), inSocketAddr.getPort());
 				LOG.info("-> Creating worker for upstream: "+upstreamOpId);
 				if (ctrlQueues == null)
 				{

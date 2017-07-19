@@ -74,7 +74,8 @@ public class VideoSource implements StatelessOperator {
 	
 	private IplImage[] testIplFrames = null;
 	private byte[][] testRawFrames = null;
-	private final String testFramesDir = "images0.5";
+	private final String testFramesDir = GLOBALS.valueFor("testFramesDir");
+	//private final String testFramesDir = "images0.5";
 	//private final String testFramesDir = "images/chokepoint";
 	private final String extractedFilesDir = "resources/source";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
