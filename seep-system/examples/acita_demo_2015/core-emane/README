@@ -18,3 +18,7 @@ Then need to update core config (e.g. for control net).
 
 eval `ssh-agent -s`
 ssh-add ~/.ssh/id_rsa_pi
+
+cp /etc/network/interfaces{.adhoc,}
+edit /etc/NetworkManager.conf
+managed=false
