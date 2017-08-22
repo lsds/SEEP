@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 public class WeightedRoundRobinRouter implements IRouter {
 	private final static Logger logger = LoggerFactory.getLogger(WeightedRoundRobinRouter.class);
@@ -26,6 +27,9 @@ public class WeightedRoundRobinRouter implements IRouter {
 	private int switchCount = 0;
 	private final Object lock = new Object(){};
 	private final Random random = new Random(0);
+	private final boolean fixedWeights = true;
+	private volatile boolean weightsInitialized; 
+	private final boolean upstreamRoutingController;
 	
 	
 	public WeightedRoundRobinRouter(OperatorContext opContext) {
@@ -38,9 +42,18 @@ public class WeightedRoundRobinRouter implements IRouter {
 			weights.put(downOpId, INITIAL_WEIGHT);
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
+		if(!fixedWeights) { weightsInitialized = true; }
 		logger.info("Initial weights: "+weights);
+		Query meanderQuery = opContext.getMeanderQuery(); 
+		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
+		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
+
+		boolean downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+		boolean downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
+		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
-	
+
+		
 	@Override
 	public ArrayList<Integer> route(long batchId) {
 
@@ -86,6 +99,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 
 	@Override
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
+		if (upstreamRoutingController) { throw new RuntimeException ("Logic error."); }
 		synchronized(lock)
 		{
 			if (!weights.containsKey(downUp.getOpId()))
@@ -104,6 +118,30 @@ public class WeightedRoundRobinRouter implements IRouter {
 			logger.debug("Weighted rr router weights= "+weights);
 		}
 		throw new RuntimeException("TODO");
+	}
+
+	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	{
+		if (!upstreamRoutingController) { throw new RuntimeException("Logic error."); }
+		synchronized(lock)
+		{
+			logger.debug("WRR router handling upstream controller weights: "+ newWeights);
+			/*
+			long prevUpdateTs = lastWeightUpdateTimes.get(downUpdated);
+			lastWeightUpdateTimes.put(downUpdated, System.currentTimeMillis());
+			weightExpiryMonitor.reset(downUpdated);
+			
+			if (prevUpdateTs > 0) 
+			{ 
+				logger.info("Weight update delay for "+downUpdated+"="+(System.currentTimeMillis() - prevUpdateTs));
+			}
+			*/	
+			for (Integer opId : newWeights.keySet())
+			{
+				weights.put(opId, newWeights.get(opId));
+			}
+		}	
+		return null;
 	}
 
 	private ArrayList<Integer> getActiveOpIds()

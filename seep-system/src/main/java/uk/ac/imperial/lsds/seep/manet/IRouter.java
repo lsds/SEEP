@@ -15,4 +15,5 @@ public interface IRouter {
 	public void updateNetTopology(
 			Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState);
 	public Set<Long> areConstrained(Set<Long> queued);
+	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated);
 }

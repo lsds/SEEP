@@ -37,4 +37,9 @@ public class AbstractRouter implements IRouter {
 	{
 		throw new RuntimeException("TODO"); 
 	}
+
+	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	{
+		throw new RuntimeException("Logic error."); 
+	}
 }
