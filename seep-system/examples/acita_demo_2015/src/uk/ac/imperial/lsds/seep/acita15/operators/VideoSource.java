@@ -189,6 +189,21 @@ public class VideoSource implements StatelessOperator {
 					}				
 				}
 			}
+			if (!sendIndefinitely)
+			{
+				long tStop = System.currentTimeMillis() + (Long.parseLong(GLOBALS.valueFor("sourceShutdownPause")) * 1000);
+				while (System.currentTimeMillis() < tStop)
+				{
+					logger.debug("Source waiting to shutdown="+(tStop-System.currentTimeMillis()));
+					try {
+						Thread.sleep(Math.max(1, tStop - System.currentTimeMillis()));
+					} 
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}				
+				}
+			}
+
 		}
 		catch(Exception e)
 		{
