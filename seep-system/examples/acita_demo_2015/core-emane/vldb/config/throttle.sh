@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 #
 #  tc uses the following units when passed as a parameter.
 #  kbps: Kilobytes per second
@@ -38,7 +39,7 @@ start() {
 
 	DNLD=$1
 	UPLD=$1
-@echo "Throttling 
+echo "Throttling $IP to $1"
 # We'll use Hierarchical Token Bucket (HTB) to shape bandwidth.
 # For detailed configuration options, please consult Linux man
 # page.
