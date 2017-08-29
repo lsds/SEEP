@@ -43,6 +43,7 @@ public class RoutingController implements Runnable{
 	//private final static double COST_THRESHOLD = 4.5;
 	//private final static double COST_THRESHOLD = 5.5;
 	private final static double COST_THRESHOLD = Double.parseDouble(GLOBALS.valueFor("costThreshold"));
+	private final static double COST_EXPONENT = Double.parseDouble(GLOBALS.valueFor("costExponent"));
 	private final long MAX_WEIGHT_DELAY;// = 1 * 1000;
 	private final CoreRE owner;
 	private final Integer nodeId;
@@ -346,7 +347,7 @@ public class RoutingController implements Runnable{
 					else
 					{
 						upstreamNetRates.get(i).put(upstreamId,
-								new Double(1.0 / Math.pow(cost.doubleValue(), 2)));
+								new Double(1.0 / Math.pow(cost.doubleValue(), COST_EXPONENT)));
 					}
 				}
 			}
