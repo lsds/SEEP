@@ -98,6 +98,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final int numDownstreamReplicas;
 	private final boolean canRetransmitConstrained;
 	private boolean downstreamsRoutable = true;
+	private final boolean reportMaxSrcTotalQueueSizeTuples;
 
 	
 	public Dispatcher(IProcessingUnit owner)
@@ -110,6 +111,8 @@ public class Dispatcher implements IRoutingObserver {
 		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
 					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
 					replicationFactor == 1;
+
+		reportMaxSrcTotalQueueSizeTuples = Boolean.parseBoolean(GLOBALS.valueFor("reportMaxSrcTotalQueueSizeTuples"));
 
 		if (TRY_SEND_ALTERNATIVES_TIMEOUT > DOWNSTREAMS_UNROUTABLE_TIMEOUT) { throw new RuntimeException("Logic error: todo."); }
 
@@ -341,7 +344,14 @@ public class Dispatcher implements IRoutingObserver {
 	{
 		if (owner.getOperator().getOpContext().isSource()) 
 		{ 
-			return GLOBAL_MAX_TOTAL_QUEUE_SIZE;
+			if (reportMaxSrcTotalQueueSizeTuples)
+			{
+				return MAX_TOTAL_QUEUE_SIZE;
+			}
+			else
+			{
+				return GLOBAL_MAX_TOTAL_QUEUE_SIZE;
+			}
 		}
 		else { return opQueue.size(); }
 	}
