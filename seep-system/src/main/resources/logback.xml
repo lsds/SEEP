@@ -47,7 +47,7 @@
   <logger name="uk.ac.imperial.lsds.seep.manet.stats.Stats" level="INFO"/>
   <logger name="uk.ac.imperial.lsds.seep.comm.IncomingDataHandlerWorker" level="INFO"/>
   <logger name="uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue" level="INFO"/>
-  <logger name="uk.ac.imperial.lsds.seep.processingunit.Dispatcher" level="INFO"/>
+  <!-- <logger name="uk.ac.imperial.lsds.seep.processingunit.Dispatcher" level="INFO"/>-->
 
   <logger name="uk.ac.imperial.lsds.seep.manet.CoreGUIUtil" level="INFO"/>
   <logger name="uk.ac.imperial.lsds.seep.operator.Operator" level="INFO"/>
