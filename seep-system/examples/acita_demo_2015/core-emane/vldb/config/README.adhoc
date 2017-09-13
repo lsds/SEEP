@@ -1,0 +1,11 @@
+To configure bowfell to join the ad-hoc network:
+
+sudo stop network-manager
+cp vldb/config/bowfell-etc-NetworkManager.conf /etc/NetworkManager/NetworkManager.conf
+cp vldb/config/etc-network-interfaces.adhoc.bowfell /etc/network/interfaces
+cp vldb/config/olsrd.conf.adhoc.bowfell /etc/olsrd/olsrd.conf
+
+ifdown wlan0
+ifup wlan0
+
+olsrd -i wlan0 

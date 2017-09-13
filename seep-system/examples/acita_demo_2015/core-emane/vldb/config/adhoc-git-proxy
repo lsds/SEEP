@@ -1,0 +1,10 @@
+https://superuser.com/questions/1117698/tunneling-git-through-ssh-to-get-past-a-firewall-port-specification-interpert
+
+ssh -D 443 pi@191.168.181.101 -p 23
+git -c http.proxy=socks5h://localhost:443 pull --rebase
+
+
+#ssh -f -o ExitOnForwardFailure=yes -D 443 pi@191.168.101 -p 23 sleep 10
+ssh -f -D 443 pi@191.168.181.101 -p 23 sleep 10
+git -c http.proxy=socks5h://localhost:443 pull --rebase
+git -c http.proxy=socks5h://localhost:443 fetch --dry-run 

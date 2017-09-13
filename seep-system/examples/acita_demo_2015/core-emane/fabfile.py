@@ -29,7 +29,7 @@ ap_hosts = [
 
 #env.hosts = ap_hosts
 env.hosts = adhoc_hosts 
-
+throttle_host = 'pi@191.168.181.106'  # docpi1 
 local_repo_root = "/data/dev/seep-github"
 repo_root = "/home/pi/dev/seep-ita"
 demo_relative = "/seep-system/examples/acita_demo_2015"
@@ -42,6 +42,7 @@ def localtest():
     with lcd("~"):
         local('echo "Hello World from %s"'%env.host_string)
 
+@parallel
 def test():
 	with cd("~"):
 		run('echo "Hello World from %s"'%env.host_string)
@@ -85,8 +86,10 @@ def workers(numWorkers):
 def gather(expdir):
 	run('pkill "java" || /bin/true')
 	with cd(demo_root + "/tmp"):
+		run('tar -czf workers.tar.gz *worker*.log')
 		with lcd(local_demo_root + "/core-emane/log/" + expdir):
-			get('*worker*.log')
+			#get('*worker*.log')
+			get('workers.tar.gz')
 
 @hosts('localhost')
 def mkexpdir():
@@ -96,6 +99,9 @@ def mkexpdir():
 		local('mkdir -p %s'%expdir)
 		local('cp %s/*.log %s'%(local_demo_root+'/tmp', expdir))
 		execute(gather, expdir)
+        local('for f in $(find log/%s -name "*.tar.gz") ; do cd $(dirname $f) ; tar -xzvf workers.tar.gz ; cd - ; done'%expdir)
+        local('./gen_core_results.py --expDir log/%s'%expdir)
+        local('./plot_pi_results.py --timeStr %s'%expdir)
 
 def to_ap():
 	sudo('cp /etc/network/interfaces.orig /etc/network/interfaces')
@@ -131,6 +137,22 @@ def git_pull():
 		run('git pull --rebase')
 		#run('git stash pop')
 
+@hosts(throttle_host)
+def throttle(rate):
+    with cd(demo_root):
+        sudo("core-emane/vldb/config/throttle-loss.sh start %s"%rate)
+        #run("./core-emane/vldb/config/throttle.sh show")
+
+@hosts(throttle_host)
+def unthrottle():
+    with cd(demo_root):
+        sudo("core-emane/vldb/config/throttle-loss.sh stop")
+
+def test_throttle(do_probe=False):
+    with cd(demo_root):
+        if do_probe: sudo("modprobe ifb")
+        sudo("core-emane/vldb/config/throttle-loss.sh show")
+
 @parallel
 def rebuild():
 	with cd(repo_root):
@@ -144,5 +166,39 @@ def git_diff():
 	with cd(repo_root):
 		run('git diff')
 
+# Note: Make sure there are no uncommitted/conflicting changes on remotes first!
+def git_rebase(stash=False):
+    with cd(repo_root):
+        if stash: run('git stash')
+
+        #sudo('ssh -f -D 443 pi@191.168.181.101 -p 23 sleep 10')
+        sudo('ssh -f -D 443 dokeeffe@191.168.181.115 sleep 10')
+        #run('git -c http.proxy=socks5h://localhost:443 fetch --dry-run')
+        run('git -c http.proxy=socks5h://localhost:443 pull --rebase')
+        if stash: run('git stash pop')
+
 def port_range():
 	run('cat /proc/sys/net/ipv4/ip_local_port_range')
+
+@hosts('localhost')
+def sync_time():
+    #now = time.strftime("%H:%M:%S", time.gmtime())
+    now = time.strftime("%s", time.gmtime())
+    execute(set_time, now)
+
+def set_time(now):
+    #sudo('date +%%T -u -s %s'%now)
+    sudo('date -s @%s'%now)
+
+def get_time():
+    run('date +%s')
+
+def get_date():
+    run('date')
+
+def get_retries():
+    run('cat /proc/sys/net/ipv4/tcp_retries2')
+
+# Original value was 15
+def set_retries(retries=6):
+    sudo('sysctl -w net.ipv4.tcp_retries2=%d'%(int(retries)))

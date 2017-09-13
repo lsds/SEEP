@@ -26,6 +26,7 @@ def main(exp_dir, gen_sub_results):
     print 'Found sink logs: ', sink_logs
 
     op_logs = get_processor_logfiles(exp_dir)
+    print 'Found op logs: ', op_logs
     t_sub_begin = False
 
     if finished: 
@@ -212,6 +213,10 @@ def get_logfile(exp_dir, type_fn):
     for filename in files:
         with open(filename, 'r') as f:
             if type_fn(f): return filename 
+    files = glob.glob("%s/*/*worker*.log"%exp_dir)
+    for filename in files:
+        with open(filename, 'r') as f:
+            if type_fn(f): return filename 
     return None
 
 def get_logfiles(exp_dir, type_fn):
@@ -232,8 +237,9 @@ def get_sink_logfiles(exp_dir):
 
 def get_processor_logfiles(exp_dir):
     files = glob.glob("%s/*worker*.log"%exp_dir)
+    filesLevel1 = glob.glob("%s/*/*worker*.log"%exp_dir)
     filenames = []
-    for filename in files:
+    for filename in files+filesLevel1:
         with open(filename, 'r') as f:
             if is_processor_log(f): filenames.append(filename) 
     return filenames 
