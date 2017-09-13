@@ -36,6 +36,7 @@ public class UpstreamRoutingController {
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
 	private final boolean ignoreQueueLengths = GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && Boolean.parseBoolean(GLOBALS.valueFor("ignoreQueueLengths"));  
+	private final boolean disableBackpressureETX = GLOBALS.valueFor("meanderRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
 
 	private final static double INITIAL_WEIGHT = -1;
 	//private final static double COST_THRESHOLD = 3.9;
@@ -146,6 +147,10 @@ public class UpstreamRoutingController {
 				if (cost >= GraphUtil.SUB_INFINITE_DISTANCE
 						.intValue()) {
 					downstreamNetRates.put(downstreamId, new Double(0));
+				}
+				else if (disableBackpressureETX)
+				{
+					downstreamNetRates.put(downstreamId, new Double(1.0));
 				}
 				else
 				{

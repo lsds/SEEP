@@ -36,6 +36,7 @@ public class RoutingController implements Runnable{
 	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
 	private final boolean requirePositiveAggregates = Boolean.parseBoolean(GLOBALS.valueFor("requirePositiveAggregates"));
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
+	private final boolean disableBackpressureETX = GLOBALS.valueFor("meanderRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
 	private final boolean sendQueueLengthsOnly;
 
 	private final static double INITIAL_WEIGHT = -1;
@@ -343,6 +344,10 @@ public class RoutingController implements Runnable{
 					if (cost >= GraphUtil.SUB_INFINITE_DISTANCE
 							.intValue()) {
 						upstreamNetRates.get(i).put(upstreamId, new Double(0));
+					}
+					else if (disableBackpressureETX)
+					{
+						upstreamNetRates.get(i).put(upstreamId, new Double(1.0));
 					}
 					else
 					{
