@@ -71,6 +71,7 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 	private static final String repoDir = GLOBALS.valueFor("repoDir");	
 
 	private Stats stats;
+	private Stats utilStats;
 	
 	public void processData(DataTuple data) {
 		
@@ -133,8 +134,10 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 			}
 		}
 		
-		logger.debug("Face detector processed "+cols+"x"+rows+" tuple in " + (System.currentTimeMillis() - tProcessStart) + "ms");
-		stats.add(System.currentTimeMillis(), value.length);
+		long tProcessEnd = System.currentTimeMillis();
+		logger.debug("Face detector processed "+cols+"x"+rows+" tuple in " + (tProcessEnd - tProcessStart) + "ms");
+		stats.add(tProcessEnd, value.length);
+		utilStats.addWorkDone(tProcessEnd, tProcessEnd - tProcessStart);
 		//stats.add(System.currentTimeMillis(), data.getPayload().toString().length());
 		api.send_highestWeight(outputTuple);
 	}
@@ -157,6 +160,7 @@ public class FaceDetectorRecognizer implements StatelessOperator{
 	public void setUp() {
 		System.out.println("Setting up FACE_DETECTOR_RECOGNIZER operator with id="+api.getOperatorId());
 		stats = new Stats(api.getOperatorId());
+		utilStats = new Stats(api.getOperatorId());
 
 		faceDetectorHelper = new FaceDetectorHelper();
 
