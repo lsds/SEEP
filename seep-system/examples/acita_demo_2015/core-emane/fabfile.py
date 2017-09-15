@@ -66,7 +66,14 @@ def local_workers(numWorkers):
 			#time.sleep(2)
 			
 
+@hosts('localhost')
 def workers(numWorkers):
+    now = time.strftime("%s", time.gmtime())
+    execute(set_time, now)
+    execute(set_retries)
+    execute(remote_workers, numWorkers)
+    
+def remote_workers(numWorkers):
 	with lcd(local_demo_root):
 		with cd(demo_root):
 			put('extraConfig.properties', 'extraConfig.properties')	
@@ -86,10 +93,12 @@ def workers(numWorkers):
 def gather(expdir):
 	run('pkill "java" || /bin/true')
 	with cd(demo_root + "/tmp"):
-		run('tar -czf workers.tar.gz *worker*.log')
+		#run('tar -czf workers.tar.gz *worker*.log')
 		with lcd(local_demo_root + "/core-emane/log/" + expdir):
 			#get('*worker*.log')
-			get('workers.tar.gz')
+			#get('workers.tar.gz')
+			port = env.port if env.port else '22'
+			local('scp -C -P %s %s:%s/*worker*.log .'%(port, env.host, demo_root+"/tmp"))
 
 @hosts('localhost')
 def mkexpdir():
@@ -99,7 +108,7 @@ def mkexpdir():
 		local('mkdir -p %s'%expdir)
 		local('cp %s/*.log %s'%(local_demo_root+'/tmp', expdir))
 		execute(gather, expdir)
-        local('for f in $(find log/%s -name "*.tar.gz") ; do cd $(dirname $f) ; tar -xzvf workers.tar.gz ; cd - ; done'%expdir)
+        #local('for f in $(find log/%s -name "*.tar.gz") ; do cd $(dirname $f) ; tar -xzvf workers.tar.gz ; cd - ; done'%expdir)
         local('./gen_core_results.py --expDir log/%s'%expdir)
         local('./plot_pi_results.py --timeStr %s'%expdir)
 
