@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
+import uk.ac.imperial.lsds.seep.GLOBALS;
 
 public class RoundRobinRouter implements IRouter {
 	private final static Logger logger = LoggerFactory.getLogger(RoundRobinRouter.class);
@@ -26,6 +27,7 @@ public class RoundRobinRouter implements IRouter {
 	private final Object lock = new Object(){};
 	private int nextRoundRobinIndex = 0;
 	private final ArrayList<Integer> downOps;
+	private final boolean upstreamRoutingController;
 	
 	
 	
@@ -40,6 +42,13 @@ public class RoundRobinRouter implements IRouter {
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
 		logger.info("Initial weights: "+weights);
+		Query meanderQuery = opContext.getMeanderQuery(); 
+		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
+		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
+
+		boolean downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+		boolean downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
+		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
 	
 	@Override
@@ -87,25 +96,27 @@ public class RoundRobinRouter implements IRouter {
 	}
 
 	@Override
-	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp)
+	{
+		if (upstreamRoutingController) { throw new RuntimeException ("Logic error."); }
+		return handleDownUp(downUp, true);
+	}
+
+	/* Note don't think there is any need to actually use the expiry timer yet for RR yet. */
+	private Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
+	{
 		synchronized(lock)
 		{
-			if (!weights.containsKey(downUp.getOpId()))
-			{
-				throw new RuntimeException("Logic error?");
-			}
+			if (!weights.containsKey(downUp.getOpId())) { throw new RuntimeException("Logic error?"); }
+
 			logger.debug("RR router handling downup rctrl: "+ downUp);
 			weights.put(downUp.getOpId(), downUp.getWeight());
-			if (downUp.getUnmatched() != null)
-			{
-				//TODO: Tmp hack: Null here indicates a local update because
-				//an attempt to send a q length msg upstream failed - should
-				//clean it up to perhaps use a different method.
-				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
-			}
+
+			if (downUp.getUnmatched() != null) { throw new RuntimeException("Logic error."); }
 			logger.debug("RR router weights= "+weights);
 		}
-		throw new RuntimeException("TODO");
+
+		return null;
 	}
 	
 	private Integer maxWeightOpId()
@@ -138,11 +149,30 @@ public class RoundRobinRouter implements IRouter {
 	
 	public void handleDownFailed(int downOpId)
 	{
-		throw new RuntimeException("TODO"); 
+		handleDownUp(new DownUpRCtrl(downOpId, -1.0, null), false);
 	}
 
 	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
 	{
-		throw new RuntimeException("Logic error."); 
+		if (!upstreamRoutingController) { throw new RuntimeException("Logic error."); }
+		synchronized(lock)
+		{
+			logger.debug("WRR router handling upstream controller weights: "+ newWeights);
+			/*
+			long prevUpdateTs = lastWeightUpdateTimes.get(downUpdated);
+			lastWeightUpdateTimes.put(downUpdated, System.currentTimeMillis());
+			weightExpiryMonitor.reset(downUpdated);
+			
+			if (prevUpdateTs > 0) 
+			{ 
+				logger.info("Weight update delay for "+downUpdated+"="+(System.currentTimeMillis() - prevUpdateTs));
+			}
+			*/	
+			for (Integer opId : newWeights.keySet())
+			{
+				weights.put(opId, newWeights.get(opId));
+			}
+		}	
+		return null;
 	}
 }
