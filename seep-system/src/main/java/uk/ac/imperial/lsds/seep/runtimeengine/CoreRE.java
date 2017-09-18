@@ -415,9 +415,17 @@ public class CoreRE {
 		{
 			Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
-			if (GLOBALS.valueFor("meanderRouting").equals("hash") || replicationFactor == 1)
+			int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
+			boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
+			boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+
+			if (replicationFactor == 1 || 
+					GLOBALS.valueFor("meanderRouting").equals("hash") ||
+					GLOBALS.valueFor("meanderRouting").equals("roundRobin"))
 			{				
 				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication."); }
+				if (replicationFactor > 1 && GLOBALS.valueFor("meanderRouting").equals("roundRobin") && downIsMultiInput)
+				{ throw new RuntimeException("Logic error: can't using rr with multi-input operators."); }
 
 				//Record net rates for debugging purposes
 				ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
@@ -455,11 +463,11 @@ public class CoreRE {
 					processingUnit.getDispatcher().startDispatcherMain();
 				}
 			}
-			else
+			else if (GLOBALS.valueFor("meanderRouting").equals("backpressure") ||
+								GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin"))
 			{
-				int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
-				boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
-				boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+				if (replicationFactor > 1 && GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && downIsMultiInput)
+				{ throw new RuntimeException("Logic error: can't using wrr with multi-input operators."); }
 					
 				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
@@ -521,6 +529,7 @@ public class CoreRE {
 					*/
 				}
 			}
+			else { throw new RuntimeException("Unknown routing algorithm: "+GLOBALS.valueFor("meanderRouting")); }
 		}
 	}
     /**
