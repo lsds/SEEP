@@ -16,6 +16,11 @@ import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 
+
+/**
+ * Round Robin supports both upstream and downstream routing control, since it doesn't 
+ * care what the weights represent only whether they are positive. 
+ */
 public class RoundRobinRouter implements IRouter {
 	private final static Logger logger = LoggerFactory.getLogger(RoundRobinRouter.class);
 	private final static double INITIAL_WEIGHT = 1;

@@ -12,6 +12,7 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;

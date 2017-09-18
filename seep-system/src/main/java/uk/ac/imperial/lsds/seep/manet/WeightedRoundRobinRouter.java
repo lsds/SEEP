@@ -17,6 +17,10 @@ import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 
+/**
+ * Weighted Round Robin supports only upstream routing control, since for now downstream routing
+ * controllers incorporate queue differentials into their weight calculations.
+ */
 public class WeightedRoundRobinRouter implements IRouter {
 	private final static Logger logger = LoggerFactory.getLogger(WeightedRoundRobinRouter.class);
 	private final static double INITIAL_WEIGHT = 1;

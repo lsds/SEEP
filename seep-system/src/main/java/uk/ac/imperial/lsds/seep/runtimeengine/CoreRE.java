@@ -420,12 +420,9 @@ public class CoreRE {
 			boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
 
 			if (replicationFactor == 1 || 
-					GLOBALS.valueFor("meanderRouting").equals("hash") ||
-					GLOBALS.valueFor("meanderRouting").equals("roundRobin"))
+					GLOBALS.valueFor("meanderRouting").equals("hash"))
 			{				
 				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication."); }
-				if (replicationFactor > 1 && GLOBALS.valueFor("meanderRouting").equals("roundRobin") && downIsMultiInput)
-				{ throw new RuntimeException("Logic error: can't using rr with multi-input operators."); }
 
 				//Record net rates for debugging purposes
 				ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
@@ -464,10 +461,13 @@ public class CoreRE {
 				}
 			}
 			else if (GLOBALS.valueFor("meanderRouting").equals("backpressure") ||
-								GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin"))
+								GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
+								GLOBALS.valueFor("meanderRouting").equals("roundRobin"))
 			{
-				if (replicationFactor > 1 && GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && downIsMultiInput)
-				{ throw new RuntimeException("Logic error: can't using wrr with multi-input operators."); }
+				if (replicationFactor > 1 && downIsMultiInput &&
+						(GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") || 
+							GLOBALS.valueFor("meanderRouting").equals("roundRobin")))
+				{ throw new RuntimeException("Logic error: can't using RR or WRR with multi-input operators."); }
 					
 				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
