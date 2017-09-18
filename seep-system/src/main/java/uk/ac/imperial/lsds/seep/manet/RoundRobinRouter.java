@@ -33,6 +33,8 @@ public class RoundRobinRouter implements IRouter {
 	private int nextRoundRobinIndex = 0;
 	private final ArrayList<Integer> downOps;
 	private final boolean upstreamRoutingController;
+	private final boolean downIsMultiInput;
+	private final boolean downIsUnreplicatedSink;
 	
 	
 	
@@ -51,8 +53,8 @@ public class RoundRobinRouter implements IRouter {
 		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
 		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
 
-		boolean downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
-		boolean downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
+		downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+		downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
 		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
 	
@@ -132,6 +134,7 @@ public class RoundRobinRouter implements IRouter {
 		{
 			for (Integer opId : weights.keySet())
 			{
+				if (downIsUnreplicatedSink) { return opId; }
 				double opWeight = weights.get(opId);
 				if (opWeight > maxWeight) { result = opId; maxWeight = opWeight; }
 			}

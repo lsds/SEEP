@@ -31,9 +31,9 @@ public class WeightedRoundRobinRouter implements IRouter {
 	private int switchCount = 0;
 	private final Object lock = new Object(){};
 	private final Random random = new Random(0);
-	private final boolean fixedWeights = true;
-	private volatile boolean weightsInitialized; 
 	private final boolean upstreamRoutingController;
+	private final boolean downIsMultiInput;
+	private final boolean downIsUnreplicatedSink;
 	
 	
 	public WeightedRoundRobinRouter(OperatorContext opContext) {
@@ -46,14 +46,13 @@ public class WeightedRoundRobinRouter implements IRouter {
 			weights.put(downOpId, INITIAL_WEIGHT);
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
-		if(!fixedWeights) { weightsInitialized = true; }
 		logger.info("Initial weights: "+weights);
 		Query meanderQuery = opContext.getMeanderQuery(); 
 		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
 		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
 
-		boolean downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
-		boolean downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
+		downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
+		downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
 		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
 
@@ -153,6 +152,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 		ArrayList<Integer> result = new ArrayList<>();
 		for (Integer opId : weights.keySet())
 		{		
+			if (downIsUnreplicatedSink) { result.add(opId) ; break; }
 			if (weights.get(opId) > 0) { result.add(opId); }
 		}
 		logger.debug("getActiveOpIds: Active op ids= "+result);
