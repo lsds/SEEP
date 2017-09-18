@@ -70,7 +70,7 @@ public class RoundRobinRouter implements IRouter {
 				int initialIndex = nextRoundRobinIndex;
 				while (true)
 				{
-					if (weights.get(downOps.get(nextRoundRobinIndex)) > 0)
+					if (weights.get(downOps.get(nextRoundRobinIndex)) > 0 || downIsUnreplicatedSink)
 					{
 						downOpId = downOps.get(nextRoundRobinIndex);
 						nextRoundRobinIndex = ((nextRoundRobinIndex + 1) % downOps.size());
