@@ -468,7 +468,12 @@ public class CoreRE {
 						(GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") || 
 							GLOBALS.valueFor("meanderRouting").equals("roundRobin")))
 				{ throw new RuntimeException("Logic error: can't using RR or WRR with multi-input operators."); }
-					
+
+				if (GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && 
+						(!enableUpstreamRoutingControl ||
+							!Boolean.parseBoolean(GLOBALS.valueFor("ignoreQueueLengths"))))
+				{ throw new RuntimeException("Logic error: invalid configuration for WRR."); }
+
 				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
 						routingController = new RoutingController(this);

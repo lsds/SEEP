@@ -79,7 +79,7 @@ public class RoundRobinRouter implements IRouter {
 					else 
 					{ 
 						nextRoundRobinIndex = ((nextRoundRobinIndex + 1) % downOps.size());
-						if (nextRoundRobinIndex == initialIndex) { throw new RuntimeException("Logic error - no op found!"); }
+						if (nextRoundRobinIndex == initialIndex && !downIsUnreplicatedSink) { throw new RuntimeException("Logic error - no op found!"); }
 					}
 	
 				}
