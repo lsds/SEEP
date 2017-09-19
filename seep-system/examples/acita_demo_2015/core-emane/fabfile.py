@@ -195,6 +195,7 @@ def sync_time():
     now = time.strftime("%s", time.gmtime())
     execute(set_time, now)
 
+@parallel
 def set_time(now):
     #sudo('date +%%T -u -s %s'%now)
     sudo('date -s @%s'%now)
@@ -208,6 +209,11 @@ def get_date():
 def get_retries():
     run('cat /proc/sys/net/ipv4/tcp_retries2')
 
+def grep_logs(pattern):
+	with cd(demo_root + "/tmp"):
+		run('grep -PIn %s *.log ; true'%pattern)
+
 # Original value was 15
+@parallel
 def set_retries(retries=6):
     sudo('sysctl -w net.ipv4.tcp_retries2=%d'%(int(retries)))

@@ -9,7 +9,7 @@ def main(exp_dir, gen_sub_results):
 
     sim_env = os.environ.copy()
     print "Analysing logs in %s"%(exp_dir)       
-
+    
     # Get src logfilename
     src_log = get_src_logfile(exp_dir) 
     #src_log = get_src_logfiles(exp_dir)[0]
@@ -171,6 +171,8 @@ def main(exp_dir, gen_sub_results):
     record_op_utils(op_utils, exp_dir)
     record_link_interval_tputs(link_interval_tputs, exp_dir)
     record_op_transmissions(op_transmissions, exp_dir)
+
+    error_check(exp_dir)
 
 def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_tx_latencies, exp_dir):
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -348,6 +350,16 @@ def record_op_transmissions(op_transmissions, exp_dir):
         f.write('#op total\n')
         for op in op_total_transmissions:
             f.write('%s %d\n'%(op, op_total_transmissions[op]))
+
+def error_check(exp_dir):
+    logs = get_logfiles(exp_dir, lambda f: True)
+    all_errors = {}
+    for log in logs:
+        with open(log, 'r') as f:
+            errors = get_errors(log)
+            if errors: all_errors[log] = errors
+    
+    if all_errors: print all_errors
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyse emulation logs')

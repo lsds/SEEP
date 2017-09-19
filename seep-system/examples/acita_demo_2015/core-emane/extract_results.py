@@ -260,3 +260,12 @@ def get_transmissions(f):
             transmissions.append((int(match.group(1)), int(match.group(3)), int(match.group(4))))
 
     return (op_id, transmissions)
+
+def get_errors(f):
+    err_regexes = re.compile(r'RuntimeException|Logic error|Logic Error|Abort')
+    err_msgs = []
+    for line in f:
+        match = re.findall(err_regexes, line)
+        if match: err_msgs += match 
+
+    return err_msgs
