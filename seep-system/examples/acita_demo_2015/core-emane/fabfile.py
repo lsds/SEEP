@@ -213,6 +213,10 @@ def grep_logs(pattern):
 	with cd(demo_root + "/tmp"):
 		run('grep -PIn %s *.log ; true'%pattern)
 
+#def apt_install(pkg):
+#    sudo('apt-get update')
+#    sudo('apt-get install -y %s'%pkg)
+
 # Original value was 15
 @parallel
 def set_retries(retries=6):

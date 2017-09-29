@@ -9,3 +9,8 @@ ifdown wlan0
 ifup wlan0
 
 olsrd -i wlan0 
+
+For some reason I can only get the wifi dongle to work for a 3.x kernel (i.e. Ubuntu 14.04).
+
+bowfell> uname -a
+Linux bowfell.doc.ic.ac.uk 3.13.0-119-generic #166-Ubuntu SMP Wed May 3 12:18:55 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux

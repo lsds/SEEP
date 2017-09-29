@@ -2,7 +2,7 @@
 set -o errexit ; set -o nounset
 sudo apt-get update
 
-sudo apt-get -y install oracle-java8-jdk maven
+sudo apt-get -y install oracle-java8-jdk maven iperf
 
 mkdir -p install
 cd install
