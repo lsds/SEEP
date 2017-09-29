@@ -8,6 +8,8 @@ def compute_stats_dict(vals):
             'MEDIAN':medianVal, 'LQ':lowerQuartileVal, 'UQ':upperQuartileVal}
 
 def compute_stats(vals):
+
+    if len(vals) == 0: return (0.0,0.0,0.0,0.0,0.0,0.0,0.0)
     meanVal = sum(vals)/len(vals)
     varianceVal = (reduce(lambda accum, x: math.pow(meanVal - x,2) + accum,
         vals, 0)) / max(1, len(vals) - 1)
