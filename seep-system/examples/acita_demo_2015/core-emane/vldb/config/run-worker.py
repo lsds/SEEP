@@ -11,7 +11,7 @@ query_base = 'Base'
 data_dir_base = '%s/log'%eg_dir
 user = 'root'
 
-def main(k,h,query,w,hostname, local_worker_id=1):
+def main(k,h,query,w,hostname, extra_props_dir, local_worker_id=1):
     sim_env = os.environ.copy()
     time_str = time.strftime('%H-%M-%a%d%m%y')
     session_params = read_session_params()
@@ -22,7 +22,7 @@ def main(k,h,query,w,hostname, local_worker_id=1):
         time.sleep(worker_predelay)
         worker_logfilename = wlog(w, k, query, hostname,local_worker_id, time_str) 
         print 'Starting worker with logfile %s'%worker_logfilename
-        worker = start_worker(k, h, query, worker_logfilename, sim_env, local_worker_id)
+        worker = start_worker(k, h, query, worker_logfilename, sim_env, extra_props_dir, local_worker_id)
 
         print 'Waiting for any process to terminate.'
         while True:
@@ -35,7 +35,7 @@ def main(k,h,query,w,hostname, local_worker_id=1):
         if worker:
             stop_worker(worker)
 
-def start_worker(k, h, query, logfilename, sim_env, local_worker_id):
+def start_worker(k, h, query, logfilename, sim_env, extra_props_dir, local_worker_id):
     worker_port = worker_base_port + local_worker_id
     extra_java_params=map(lambda line: '-D'+line, read_extra_params())
     worker_processors = ",".join(map(str, range(3,64,4)))
@@ -47,7 +47,7 @@ def start_worker(k, h, query, logfilename, sim_env, local_worker_id):
                 '-XX:+PrintGCDetails', '-XX:+PrintGCTimeStamps',
                 '-Dplatform.dependencies=true',
                 '-Djava.awt.headless=true',
-                '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]
+                '-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,'-DqueryType=%s'%query, '-DextraProps=%s'%extra_props_dir] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Worker', '%d'%worker_port]
         p = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -60,6 +60,11 @@ def stop_worker(worker):
 
 def wlog(w, k, query, hostname, local_worker_id, time_str):
     return 'worker-w%d-k%d-%s-%s-%d-%s.log'%(w,k,query,hostname,local_worker_id,time_str)
+
+def read_extra_props_dir():
+    with open('../extraPropsDir.txt', 'rb') as f:
+        for line in f:
+            return line.strip()
 
 def read_k():
     with open('../k.txt', 'rb') as f:
@@ -107,6 +112,7 @@ if __name__ == "__main__":
     query = args.query if args.query else read_query() 
     w = 2 + (k*h)
     wname = socket.gethostname()
+    extra_props_dir = read_extra_props_dir()
     
-    main(k, h, query, w, wname, local_worker_id)
+    main(k, h, query, w, wname, extra_props_dir, local_worker_id)
 

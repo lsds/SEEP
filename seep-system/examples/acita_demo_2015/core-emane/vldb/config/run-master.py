@@ -8,7 +8,7 @@ query_jar = 'acita_demo_2015.jar'
 query_base = 'Base'
 data_dir = '%s/log'%eg_dir
 
-def main(k, h, query, plot_time_str, run_master):
+def main(k, h, query, extra_props_dir, plot_time_str, run_master):
     sim_env = os.environ.copy()
     session_params = read_session_params()
    
@@ -24,7 +24,7 @@ def main(k, h, query, plot_time_str, run_master):
 
                 print 'Starting master'
                 master_logfilename = mlog(k, query, time_str) 
-                master = start_master(k,h, query, master_logfilename, sim_env)
+                master = start_master(k,h, query, extra_props_dir, master_logfilename, sim_env)
 
                 time.sleep(master_postdelay)
 
@@ -70,7 +70,7 @@ def run_query(master):
     master.stdin.write('\n')
     print 'Started query'
 
-def start_master(k, h, query, logfilename, sim_env):
+def start_master(k, h, query, extra_props_dir, logfilename, sim_env):
     extra_java_params=map(lambda line: '-D'+line, read_extra_params())
     master_processors = ",".join(map(str, range(3,64,4)))
     #master_processors = "25-31"
@@ -79,7 +79,7 @@ def start_master(k, h, query, logfilename, sim_env):
 
     with open(data_dir+'/'+logfilename, 'w') as log:
         args = taskset_params + ['java','-Dplatform.dependencies=true','-DuseCoreAddr=true','-DreplicationFactor=%d'%k,'-DchainLength=%d'%h,
-                '-DqueryType=%s'%query] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
+                '-DqueryType=%s'%query, '-DextraProps=%s'%extra_props_dir] + extra_java_params + ['-jar', '%s/../lib/%s'%(eg_dir, seep_jar), 'Master', '%s/dist/%s'%(eg_dir,query_jar), query_base]
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=sim_env)
         return p
 
@@ -91,6 +91,11 @@ def stop_master(p):
 
 def mlog(k, query, time_str):
     return 'master-k%d-%s-%s.log'%(k,query,time_str)
+
+def read_extra_props_dir():
+    with open('../extraPropsDir.txt', 'rb') as f:
+        for line in f:
+            return line.strip()
 
 def read_k():
     with open('../k.txt', 'rb') as f:
@@ -142,6 +147,7 @@ if __name__ == "__main__":
     k = int(args.k) if args.k else read_k()
     h = int(args.h) if args.h else read_h()
     query = args.query if args.query else read_query() 
+    extra_props_dir = read_extra_props_dir()
     
-    main(k, h, query, args.plot_time_str, not bool(args.no_master))
+    main(k, h, query, extra_props_dir, args.plot_time_str, not bool(args.no_master))
 

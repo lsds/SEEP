@@ -69,7 +69,8 @@ public class GLOBALS {
 				globals.load(new FileReader(sessionParamsPath));
 			}
 
-			String extraPropsPath = globals.getProperty("extraProps");
+			String extraPropsPath = System.getProperty("extraProps");
+			if (extraPropsPath == null) { extraPropsPath = globals.getProperty("extraProps"); }
 			if (extraPropsPath != null)
 			{
 				f = new File(extraPropsPath);	

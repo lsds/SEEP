@@ -184,6 +184,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         write_query_type(params['query'], session.sessiondir)
         write_extra_params(params, session.sessiondir)
         write_session_params(params, session.sessiondir)
+        write_extra_props_dir(session.sessiondir)
+        write_extra_props(k, params['h'], params['query'], params, session.sessiondir)
 
         copy_seep_jar(session.sessiondir)
         trace_file = None
@@ -829,8 +831,20 @@ def write_extra_params(params, session_dir):
 
 def write_session_params(params, session_dir):
     with open('%s/session_params.txt'%session_dir, 'w') as f:
-        for k in params:
-            f.write('%s=%s\n'%(k,str(params[k])))
+        for p in params:
+            f.write('%s=%s\n'%(p,str(params[p])))
+
+def write_extra_props_dir(session_dir):
+    with open('%s/extraPropsDir.txt'%session_dir, 'w') as f:
+        f.write('%s/extraConfig.properties'%session_dir)
+
+def write_extra_props(k, h, query, params, session_dir):
+    with open('%s/extraConfig.properties'%session_dir, 'w') as f:
+        for p in params:
+            f.write('%s=%s\n'%(p,str(params[p])))
+        f.write('k=%s\n'%(str(k)))
+        f.write('chainLength=%s\n'%(str(h)))
+        f.write('queryType=%s\n'%(str(query)))
 
 def copy_seep_jar(session_dir):
     dest = '%s/lib'%session_dir
