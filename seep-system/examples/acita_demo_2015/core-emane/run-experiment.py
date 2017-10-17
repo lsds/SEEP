@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import subprocess,os,time,re,argparse,sys,socket
+import subprocess,os,time,re,argparse,sys,socket,shutil
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 #script_dir = '%s/dev/seep-ita/seep-system/examples/acita_demo_2015/core-emane'%os.environ['HOME']
@@ -45,6 +45,9 @@ def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
             if not os.path.isdir(exp_dir): os.mkdir(exp_dir)
             with open("%s/cmdline.txt"%(exp_dir), 'w') as f:
                 f.write("%s\n"%params['cmdline'])
+            if params['placement']:
+                shutil.copy("%s/static/%s"%(script_dir,params['placement']), exp_dir)
+
             #run_experiment(ks, mobilities, nodes, session_ids, params, time_str, data_dir )
             run_experiment(ks, variables, session_ids, params, time_str, data_dir )
 
@@ -118,7 +121,8 @@ def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
         plot('v1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('v1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('v1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
-        plot_fixed_mob('v1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
+        #plot_fixed_mob('v1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
+        plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['mobility'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
 
 def do_debug_plots(ks,variables,session_ids,time_str,data_dir,params):
     var_suffix = get_var_suffix_and_vals(variables)[0]

@@ -319,7 +319,7 @@ public class FailureCtrl {
 				if (ack <= ts && ack > lw) 
 				{ unacked--; }
 			}
-			if (unacked != (ts - lw - acks.size())) { throw new RuntimeException("Logic error."); }
+			if (unacked != (ts - lw - acks.size())) { throw new RuntimeException("Logic error: unacked="+unacked+",ts="+ts+",ls="+lw+",acks.size="+acks.size()+",acks="+acks); }
 			return unacked; 
 		}
 	}
