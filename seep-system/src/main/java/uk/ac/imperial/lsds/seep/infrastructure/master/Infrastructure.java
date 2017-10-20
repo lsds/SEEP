@@ -411,34 +411,31 @@ public class Infrastructure {
 	{
 		Map<Integer, String> constraints = new HashMap<>();
 		File f = new File("mappingRecordIn.txt");
-		if (!f.exists()) 
-		{ 
-			LOG.warn("No mapping constraints found.");			
-		}
-		else
-		{
-				FileReader fr;
-				try {
-					fr = new FileReader(f);
-					BufferedReader br = new BufferedReader(fr);
-					String constraint;
-					while((constraint = br.readLine()) != null)
-					{
-						String[] splits = constraint.split(",");
-						int opId = Integer.parseInt(splits[0]);
-						if (constraints.containsKey(opId) && !constraints.get(opId).equals(splits[1]))
-						{
-							LOG.error("Logic error: "+ constraints + ",constraint");
-							System.exit(1);
-						}
-						constraints.put(opId, splits[1]);
-					}
-				} catch (Exception e) {
-					LOG.error("Unexpected exception:"+e);
+		if (!f.exists()) { f = new File("../mappingRecordIn.txt"); }
+		if (!f.exists()) { f = new File("../../mappingRecordIn.txt"); }
+		if (!f.exists()) { LOG.warn("No mapping constraints found.");	return constraints; }
+
+		FileReader fr;
+		try {
+			fr = new FileReader(f);
+			BufferedReader br = new BufferedReader(fr);
+			String constraint;
+			while((constraint = br.readLine()) != null)
+			{
+				String[] splits = constraint.split(",");
+				int opId = Integer.parseInt(splits[0]);
+				if (constraints.containsKey(opId) && !constraints.get(opId).equals(splits[1]))
+				{
+					LOG.error("Logic error: "+ constraints + ",constraint");
 					System.exit(1);
 				}
-
+				constraints.put(opId, splits[1]);
+			}
+		} catch (Exception e) {
+			LOG.error("Unexpected exception:"+e);
+			System.exit(1);
 		}
+
 		return constraints;
 	}
 	
