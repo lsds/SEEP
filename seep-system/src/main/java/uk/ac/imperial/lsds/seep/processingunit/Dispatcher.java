@@ -178,8 +178,10 @@ public class Dispatcher implements IRoutingObserver {
 		if (!bestEffort) { fctrlHandler = new FailureCtrlHandler(); }
 		else { fctrlHandler = null; }
 
-		boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() > 1;
+		//boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() > 1;
+		boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() >= 1; //Temp force for VC exps
 		if (owner.getOperator().getOpContext().isSource() && !bestEffort && replicationFactor > 1 && hasJoin)  
+		//if (owner.getOperator().getOpContext().isSource() && !bestEffort && hasJoin) //Temp force for VC k=1
 		{ limitUnacked = true; }
 		else { limitUnacked = false; }
 		MAX_UNACKED = GLOBAL_MAX_TOTAL_QUEUE_SIZE-1;
@@ -279,12 +281,19 @@ public class Dispatcher implements IRoutingObserver {
 		long ts = dt.getPayload().timestamp;
 		if (limitUnacked)
 		{
+			long lastSendSuccess = System.currentTimeMillis();
 			while (getCombinedDownFailureCtrl().unacked(ts) >= MAX_UNACKED)
 			{
 				synchronized(lock)
 				{	
 					try { lock.wait(MAX_LOCK_WAIT); } catch (InterruptedException e) {}
 				}
+
+				if (owner.getOperator().getOpContext().isSource() && System.currentTimeMillis() - lastSendSuccess > ABORT_SESSION_TIMEOUT)
+				{
+					logger.error("Abort session timeout exceeded");
+					System.exit(1);	
+				} 
 			}
 		}
 
