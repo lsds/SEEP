@@ -69,7 +69,7 @@ public class NodeManager{
 	static public MonitorSlave monitorSlave;
 	static public int second;
 	static public double throughput;
-	private final String[] interfacePrefs = {"wlan", "lo" , "eth"};	
+	private final String[] interfacePrefs = {"eth", "lo" , "wlan"};	
 	private static boolean ignoreIpv6 = true;
 	private Thread monitorT = null;
 	
