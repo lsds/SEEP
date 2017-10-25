@@ -22,8 +22,8 @@ set style line 2 lw 5 lt 2 linecolor rgb CADMIUMORANGE
 set style line 4 lw 5 lt 2 linecolor rgb GOLDENROD
 
 set style data histograms
-set style histogram cluster gap 4
-#set style histogram errorbars gap 2 lw 1
+#set style histogram cluster gap 4
+set style histogram errorbars gap 4 lw 2
 #set style histogram errorbars gap 10 lw 5 
 #set style fill empty 
 #set boxwidth 2 absolute
@@ -52,9 +52,13 @@ set style fill solid border rgb BLACK
 # Face Recognition       
 # Video Correlation
 # Heatmap
-plot sprintf("%s/%s/combined-all-k-tput.data",outputdir,timestr) using 2:xtic(1) title col, \
-							'' using 3:xtic(1) title col, \
-							'' using 4:xtic(1) title col, \
+#plot sprintf("%s/%s/combined-all-k-tput.data",outputdir,timestr) using 2:xtic(1) title col, \
+#							'' using 3:xtic(1) title col, \
+#							'' using 4:xtic(1) title col, \
+
+plot sprintf("%s/%s/combined-all-k-tput.data",outputdir,timestr) using 2:3:xtic(1) title col, \
+							'' using 4:5:xtic(1) title col, \
+							'' using 6:7:xtic(1) title col, \
 
 #plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 #	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \
