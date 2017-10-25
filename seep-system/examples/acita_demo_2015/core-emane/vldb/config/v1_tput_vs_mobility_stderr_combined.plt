@@ -2,10 +2,10 @@
 load sprintf("%s/colours.plt",tmpldir)
 #set output plotname
 set terminal term 
-set output sprintf("%s/%s/tput_vs_mobility_stddev_combined%s",outputdir,timestr,termext)
+set output sprintf("%s/%s/tput_stderr_combined%s",outputdir,timestr,termext)
 
 #set xlabel "Replication factor (k)" font ", 20"
-set xlabel "Query" font ", 20" offset 0,-1
+#set xlabel "Query" font ", 20" offset 0,-1
 #set ylabel "Throughput (Kb/s)" font ", 20" offset -2
 set ylabel "Throughput (Kb/s)" font ", 20"
 set auto x
