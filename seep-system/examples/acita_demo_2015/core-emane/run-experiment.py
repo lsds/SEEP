@@ -164,6 +164,9 @@ def do_cross_plots(ks,variables,session_ids,time_str,data_dir,params):
     if var_suffix == 'm' and len(variables['mobility']) > 1:
         for p in ['tput_vs_mobility_cross_stderr', 'latency_vs_mobility_cross_stderr']:
             plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'm':
+        for p in ['v1_tput_vs_mobility_stderr_combined', 'v1_raw_latency_percentiles_combined']:
+            plot(p, time_str, script_dir, data_dir)
 
 def get_daemon_server():
     if not 'server' in globals(): return None
