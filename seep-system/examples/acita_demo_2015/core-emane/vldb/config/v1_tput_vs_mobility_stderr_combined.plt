@@ -25,10 +25,10 @@ set tics nomirror
 #set xtics rotate by -30
 
 set border linewidth 1.5
-set style line 1 lw 5 lt 1 linecolor rgb CRIMSON 
-set style line 3 lw 5 lt 3 linecolor rgb BLUE 
-set style line 2 lw 5 lt 2 linecolor rgb CADMIUMORANGE 
-set style line 4 lw 5 lt 2 linecolor rgb GOLDENROD
+#set style line 1 lw 5 lt 1 linecolor rgb CRIMSON 
+#set style line 3 lw 5 lt 3 linecolor rgb BLUE 
+#set style line 2 lw 5 lt 2 linecolor rgb CADMIUMORANGE 
+#set style line 4 lw 5 lt 2 linecolor rgb GOLDENROD
 
 set style data histograms
 #set style histogram cluster gap 4
@@ -37,10 +37,11 @@ set style histogram errorbars gap 2 lw 2
 #set style fill empty 
 #set boxwidth 2 absolute
 
-#set style line 1 linewidth 2.5 linecolor rgb "red"
-#set style line 2 linewidth 2.5 linecolor rgb "blue"
-#set style line 3 linewidth 2.5 linecolor rgb "green"
-#set style line 4 linewidth 2.5 linecolor rgb "pink"
+set style line 1 linewidth 2.5 linecolor rgb "red"
+set style line 2 linewidth 2.5 linecolor rgb "blue"
+set style line 3 linewidth 2.5 linecolor rgb "green"
+set style line 4 linewidth 2.5 linecolor rgb "pink"
+set style line 5 linewidth 2.5 linecolor rgb "violet"
 #set boxwidth 0.1
 set style fill solid border rgb BLACK 
 #set key off 
@@ -65,11 +66,11 @@ set style fill solid border rgb BLACK
 #							'' using 3:xtic(1) title col, \
 #							'' using 4:xtic(1) title col, \
 
-plot sprintf("%s/%s/combined-all-k-tput.data",outputdir,timestr) using 2:3:xtic(1) title col, \
-							'' using 4:5:xtic(1) title col, \
-							'' using 6:7:xtic(1) title col, \
-							'' using 8:9:xtic(1) title col, \
-							'' using 10:11:xtic(1) title col, \
+plot sprintf("%s/%s/combined-all-k-tput.data",outputdir,timestr) using 2:3:xtic(1) title col ls 1, \
+							'' using 4:5:xtic(1) title col ls 2, \
+							'' using 6:7:xtic(1) title col ls 3, \
+							'' using 8:9:xtic(1) title col ls 4, \
+							'' using 10:11:xtic(1) title col ls 5, \
 
 #plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 #	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \

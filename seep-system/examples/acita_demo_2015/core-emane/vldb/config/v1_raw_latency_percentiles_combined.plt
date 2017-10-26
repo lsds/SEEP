@@ -21,11 +21,12 @@ set xrange [0:4]
 set tics nomirror
 
 set border linewidth 1.5
-set style line 5 linewidth 2.5 linecolor rgb "black"
+set style line 6 linewidth 2.5 linecolor rgb "black"
 set style line 1 linewidth 2.5 linecolor rgb "red"
 set style line 2 linewidth 2.5 linecolor rgb "blue"
 set style line 3 linewidth 2.5 linecolor rgb "green"
 set style line 4 linewidth 2.5 linecolor rgb "pink"
+set style line 5 linewidth 2.5 linecolor rgb "violet"
 
 #set style line 1 linewidth 2.5 linecolor rgb CRIMSON 
 #set style line 2 linewidth 2.5 linecolor rgb CADMIUMORANGE 
@@ -35,8 +36,9 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 set boxwidth 0.1
 #Leave space at edges
 #set offset 0.1,0.1
-set style fill empty 
-set key top left
+#set style fill empty 
+set style fill solid border rgb BLACK
+set key top right 
 
 #11-38-21-Mon051216
 #15-10-41-Tue101017
@@ -57,20 +59,20 @@ set key top left
 #
 
 plot sprintf("%s/%s/combined-1k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
-	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 1 title "k=1", \
-	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 1 title "r=1", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks  linestyle 6, \
 	sprintf("%s/%s/combined-2k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
-	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 2 title "k=2", \
-	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 2 title "r=2", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks  linestyle 6, \
 	sprintf("%s/%s/combined-3k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
-	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 3 title "k=3", \
-	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 3 title "r=3", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks  linestyle 6, \
 	sprintf("%s/%s/combined-4k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
-	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 4 title "k=4", \
-	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 4 title "r=4", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks  linestyle 6, \
 	sprintf("%s/%s/combined-5k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
-	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 5 title "k=5", \
-	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5  linestyle 5 title "r=5", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks  linestyle 6, \
 
 #	sprintf("%s/%s/combined-all-k-lat.data",outputdir,timestr) using $(2+3):7:8:12:10 notitle w candlesticks linestyle 5, \
 #	sprintf("%s/%s/combined-all-k-lat.data",outputdir,timestr) using $(2+3):2:9:9:9:9 notitle w candlesticks linestyle 5, \
