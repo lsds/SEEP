@@ -1,5 +1,5 @@
 load sprintf("%s/colours.plt",tmpldir)
-set terminal term 
+set terminal term size 5, 2
 #set terminal pdf 
 #set size 0.8,0.6
 set output sprintf("%s/%s/combined_raw_latency_percentiles%s",outputdir,timestr,termext)

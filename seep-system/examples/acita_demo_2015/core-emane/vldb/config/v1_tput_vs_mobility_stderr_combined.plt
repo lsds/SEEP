@@ -1,7 +1,7 @@
 #load "gp-style.plt"
 load sprintf("%s/colours.plt",tmpldir)
 #set output plotname
-set terminal term 
+set terminal term size 5, 2  
 #set terminal pdf
 #set size 0.8,0.6
 #set tmargin 0.0
