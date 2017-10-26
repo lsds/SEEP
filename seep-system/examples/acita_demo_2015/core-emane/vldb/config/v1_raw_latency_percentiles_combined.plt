@@ -1,14 +1,19 @@
 load sprintf("%s/colours.plt",tmpldir)
 set terminal term 
+#set terminal pdf 
+#set size 0.8,0.6
 set output sprintf("%s/%s/combined_raw_latency_percentiles%s",outputdir,timestr,termext)
 
 #set title sprintf("Latency (5th/LQ/median/UQ/95th) vs replication factor (r)\n") font ",10"
 #set xlabel "Replication factor (k)" font ", 20"
 #set ylabel "Latency\n (5th/LQ/median/UQ/95th ptile., ms)" font ", 20" offset -2
-set ylabel "Latency (ms)\n [5th/LQ/median/UQ/95th ptile.]"
+#set ylabel "Latency (ms)\n [5th/LQ/median/UQ/95th ptile.]"
+set ylabel "Latency (ms)"
+set xlabel " "
 
 #set yrange [0:100]
 #set xrange [1:5]
+set xrange [0:4]
 # Only have xtic labels for incr's of 1
 #set xtics 1
 #set tics font ", 16"
@@ -29,7 +34,7 @@ set style line 4 linewidth 2.5 linecolor rgb "pink"
 
 set boxwidth 0.1
 #Leave space at edges
-set offset 0.1,0.1
+#set offset 0.1,0.1
 set style fill empty 
 set key top left
 
@@ -59,6 +64,12 @@ plot sprintf("%s/%s/combined-1k-lat.data",outputdir,timestr) using 2:4:xticlabel
 	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
 	sprintf("%s/%s/combined-3k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
 	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 3 title "k=3", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/combined-4k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 4 title "k=4", \
+	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
+	sprintf("%s/%s/combined-5k-lat.data",outputdir,timestr) using 2:4:xticlabels(1) linestyle -3 notitle, \
+	'' using ($2+($3 * 0.15)-0.3):8:7:12:10 w candlesticks whiskerbars 0.5 linestyle 5 title "k=5", \
 	''  using ($2+($3 * 0.15)-0.3):9:9:9:9 notitle w candlesticks linestyle 5, \
 
 #	sprintf("%s/%s/combined-all-k-lat.data",outputdir,timestr) using $(2+3):7:8:12:10 notitle w candlesticks linestyle 5, \

@@ -2,18 +2,27 @@
 load sprintf("%s/colours.plt",tmpldir)
 #set output plotname
 set terminal term 
+#set terminal pdf
+#set size 0.8,0.6
+#set tmargin 0.0
+#set bmargin 0.0
+#set terminal postscript enhanced color 
 set output sprintf("%s/%s/tput_stderr_combined%s",outputdir,timestr,termext)
+#set datafile missing "?"
 
 #set xlabel "Replication factor (k)" font ", 20"
 #set xlabel "Query" font ", 20" offset 0,-1
 #set ylabel "Throughput (Kb/s)" font ", 20" offset -2
-set ylabel "Throughput (Kb/s)" font ", 20"
+#set ylabel "Throughput (Kb/s)" font ", 20"
+set ylabel "Throughput (Kb/s)"
+set xlabel " "
 set auto x
 set yrange [0:*]
 #set yrange [0:100]
-set tics font ", 16"
+#set tics font ", 16"
 #set xtics offset 1,1,3
 set tics nomirror
+#set xtics rotate by -30
 
 set border linewidth 1.5
 set style line 1 lw 5 lt 1 linecolor rgb CRIMSON 
@@ -23,7 +32,7 @@ set style line 4 lw 5 lt 2 linecolor rgb GOLDENROD
 
 set style data histograms
 #set style histogram cluster gap 4
-set style histogram errorbars gap 4 lw 2
+set style histogram errorbars gap 2 lw 2
 #set style histogram errorbars gap 10 lw 5 
 #set style fill empty 
 #set boxwidth 2 absolute
@@ -59,6 +68,8 @@ set style fill solid border rgb BLACK
 plot sprintf("%s/%s/combined-all-k-tput.data",outputdir,timestr) using 2:3:xtic(1) title col, \
 							'' using 4:5:xtic(1) title col, \
 							'' using 6:7:xtic(1) title col, \
+							'' using 8:9:xtic(1) title col, \
+							'' using 10:11:xtic(1) title col, \
 
 #plot sprintf("%s/%s/1k-tput.data",outputdir,timestr) using 1:2 title "k=1" w lines linestyle 1, \
 #	sprintf("%s/%s/2k-tput.data",outputdir,timestr) using 1:2 title "k=2" w lines linestyle 2, \
