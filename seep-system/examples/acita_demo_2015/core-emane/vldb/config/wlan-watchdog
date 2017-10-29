@@ -1,0 +1,13 @@
+#!/bin/sh
+INF=wlan0
+t1=$(ifconfig | grep -o $INF)
+
+if [ "$t1" != "$INF" ]; then
+	echo "$INF down - restarting"
+	sudo ip link set $INF down
+	sudo ip link set $INF up 
+	echo "$INF restarted"
+#else
+#	echo "$INF OK"
+fi
+exit

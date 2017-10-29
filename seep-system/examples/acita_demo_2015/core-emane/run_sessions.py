@@ -285,6 +285,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
         if params['emanestats']: services_str += "|EmaneStats"
+        if params['netutil']: services_str += "|NetUtil"
+
         workers = []
         num_workers = get_num_workers(k, nodes, params)
         print 'num_workers=', num_workers
