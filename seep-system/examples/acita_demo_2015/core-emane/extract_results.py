@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import re, pandas as pd
+import re, pandas as pd, os.path, glob
 
 def is_src_log(f):
     f_type = log_type(f) 
@@ -269,3 +269,19 @@ def get_errors(f):
         if match: err_msgs += match 
 
     return err_msgs
+
+def get_node_net_rates(exp_dir, t_start, t_end):
+    all_node_rates = {}
+    for fname in glob.glob('%s/net-util/*net-rates.txt'%exp_dir):
+        node_rates = []
+        with open(fname, 'r') as f:
+            for line in f:
+                if not line.startswith('#'):
+                    splits = line.strip().split(' ')
+                    # t1, t2, rx_bytes, tx_bytes
+                    node_rates.append((int(splits[0]), int(splits[1]), int(splits[2]), int(splits[3])))
+
+        host = os.path.basename(fname).rstrip('-net-rates.txt')
+        all_node_rates[host] = node_rates
+
+    return all_node_rates

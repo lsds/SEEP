@@ -23,9 +23,9 @@ fi
 
 while true 
 do
-	txrx=$(cat /proc/net/dev | grep $INF)
+	txrx=$(cat /proc/net/dev | grep $INF | tr -s " ")
 	now=$(date +%s%3N) 
-	log="$(hostname)-net-util.log" 
-	echo "$now $txrx" >> "$log" 
+	log="$(hostname)-net-util.txt" 
+	echo "$now$txrx" >> "$log" 
 	sleep 1
 done

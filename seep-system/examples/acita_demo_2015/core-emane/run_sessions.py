@@ -93,6 +93,7 @@ do
         mkdir -p $resultsDir/emane-tables
         cp $d/emane-tables*.txt $resultsDir/emane-tables
     fi
+
 done
 
 #Copy mobility params if they exist
@@ -108,8 +109,16 @@ then
 	cp emane-stats/*.txt $resultsDir/emane-stats
 fi
 
+#Copy net utilisation 
+if [ -d net-util ];
+then
+    mkdir -p $resultsDir/net-util
+    cp net-util/*net-util.txt $resultsDir/net-util
+fi
+
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
+./record_net_rates.py --expDir $resultsDir 
 ./gen_core_results.py --expDir $resultsDir %s
 #./move_analysis.py --nodes 10 --expDir $resultsDir/positions
 chmod -R go+rw $resultsDir
@@ -285,7 +294,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         services_str += "|%s"%params['net-routing']
         if params['quagga']: services_str += "|zebra|vtysh"
         if params['emanestats']: services_str += "|EmaneStats"
-        if params['netutil']: services_str += "|NetUtil"
+        #if params['netutil']: services_str += "|NetUtil"
+        services_str += "|NetUtil"
 
         workers = []
         num_workers = get_num_workers(k, nodes, params)

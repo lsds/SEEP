@@ -8,16 +8,16 @@ class NetUtil(CoreService):
     _name = "NetUtil"
     _group = "SEEP"
     _depends = ()
-    _configs = ("net-util.sh", )
+    _configs = ("net-util-run.sh", )
     _startindex = 81
-    _startup = ("sh net-util.sh start",)
-    _shutdown = ("sh net-util.sh stop",)
+    _startup = ("sh net-util-run.sh start",)
+    _shutdown = ("sh net-util-run.sh stop",)
     _validate = ()
     _meta = "records net utilisation statistics"
 
     @classmethod
     def generateconfig(cls, node, filename, services):
-        ''' Generate an net-util.sh logging script.
+        ''' Generate an net-util-run.sh logging script.
         '''
         cfg = """
 #!/bin/sh

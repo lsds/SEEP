@@ -25,7 +25,8 @@ public class Stats implements Serializable {
 	private static final Logger logger = LoggerFactory.getLogger(Stats.class);
 
 	private final long MIN_INTERVAL= 5 * 1000;
-	private final long UTIL_MIN_INTERVAL= 5 * 1000;
+	//private final long UTIL_MIN_INTERVAL= 5 * 1000;
+	private final long UTIL_MIN_INTERVAL= 1 * 1000;
 	private final int operatorId;
 	private final Integer upstreamId;
 	private long tIntervalStart = System.currentTimeMillis();

@@ -4,6 +4,7 @@ import subprocess,os,time,re,argparse,glob, pandas
 
 from extract_results import *
 from compute_stats import compute_cumulative_percentiles
+from energy import get_network_energy_usage
 
 def main(exp_dir, gen_sub_results):
 
@@ -154,7 +155,13 @@ def main(exp_dir, gen_sub_results):
         record_sink_sink_stats(t_min_sink_begin, t_finished_sink_end, total_bytes, total_tuples, deduped_tx_latencies, exp_dir)
         "N.B. finished_total_bytes will be wrong here if tuples are different sizes."
         deduped_joint_latencies = sorted(list(deduped_tx_latencies.values()), key=lambda x: x[2])[:finished_total_tuples]
+        t_min_finished_sink_end = deduped_joint_latencies[-1][2]
         record_sink_sink_joint_finished_stats(t_min_sink_begin, deduped_joint_latencies[-1][2], finished_total_bytes, finished_total_tuples, deduped_joint_latencies, exp_dir)
+
+        node_net_rates = get_node_net_rates(exp_dir, t_min_sink_begin, t_min_finished_sink_end)
+        network_energy_usage = get_network_energy_usage(node_net_rates)
+        record_network_energy_usage(network_energy_usage, exp_dir)
+
         """
         sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
         record_stat('%s/tput.txt'%exp_dir, {'sink_sink_mean_tput':sink_sink_mean_tput}, 'a')
@@ -187,7 +194,7 @@ def record_sink_sink_stats(t_sink_begin, t_sink_end, total_bytes, tuples, dedupe
     record_latencies(deduped_tx_latencies, '%s/tx_latencies.txt'%exp_dir)
 
 def record_sink_sink_joint_finished_stats(t_sink_begin, t_sink_end, total_bytes, tuples, deduped_joint_latencies, exp_dir):
-    sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
+    #sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
     record_stat('%s/tput.txt'%exp_dir, {'sink_sink_joint_mean_tput':sink_sink_mean_tput}, 'a')
     sink_sink_frame_rate = frame_rate(t_sink_begin, t_sink_end, tuples) 
@@ -350,6 +357,11 @@ def record_op_transmissions(op_transmissions, exp_dir):
         f.write('#op total\n')
         for op in op_total_transmissions:
             f.write('%s %d\n'%(op, op_total_transmissions[op]))
+
+def record_network_energy_usage(network_energy_usage, exp_dir):
+    with open(exp_dir+'/network_energy_usage.txt', 'w') as f:
+        for node in network_energy_usage:
+            f.write('%s/%d\n'%(node, network_energy_usage[node]))
 
 def error_check(exp_dir):
     logs = get_logfiles(exp_dir, lambda f: True)
