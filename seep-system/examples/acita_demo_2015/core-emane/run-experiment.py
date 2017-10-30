@@ -57,6 +57,7 @@ def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
             if not cross:
                 record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', create_get_tput_fn(params))
                 record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
+                record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'energy', create_get_network_energy_fn(params))
 
                 do_main_plots(ks,variables,session_ids,time_str,data_dir,params)
                 do_debug_plots(ks,variables,session_ids,time_str,data_dir,params)
@@ -97,6 +98,7 @@ def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
         if len (variables['buf_size']) == 1:
             plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['buf_size'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
             plot_var('v1_tput_vs_var_stddev', var_suffix2name[var_suffix], time_str, script_dir, data_dir)
+            plot_var('v1_network_energy_stderr', var_suffix2name[var_suffix], time_str, script_dir, data_dir)
         else:
             for p in ['tput_vs_bufsize_stddev', 'latency_vs_bufsize_stddev']:
                 #'rel_tput_vs_bufsize_stddev', 'rel_latency_vs_bufsize_stddev']:
@@ -121,6 +123,7 @@ def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
         plot('v1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('v1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('v1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
+        plot_fixedvar('v1_network_energy_stderr', var_suffix2name[var_suffix], variables['mobility'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
         #plot_fixed_mob('v1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
         plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['mobility'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
 
@@ -463,6 +466,27 @@ def get_raw_latencies(logdir):
                 result.append(int(line.split()[1]))
 
     return result
+
+def create_get_network_energy_fn(params):
+    include_failed = params['includeFailed']
+    return lambda logdir: get_network_energy_usage(logdir, include_failed)
+
+def get_network_energy_usage(logdir, include_failed=False):
+    energy_regex = re.compile('^total/(\d+)') 
+    regex = energy_regex
+    logfilename = '%s/network_energy_usage.txt'%logdir
+    if not os.path.exists(logfilename):
+        if include_failed: return 0 
+        else: raise Exception("Could not find network energy usage log %s"%logfilename)
+
+    with open(logfilename, 'r') as energy_log:
+        for line in energy_log:
+            match = re.search(regex, line)
+            if match:
+                return int(match.group(1))
+
+    if include_failed: return 0
+    else: raise Exception("Could not find network energy usage log %s"%logfilename)
 
 def get_emane_mac_stats(script_dir):
     result = []
