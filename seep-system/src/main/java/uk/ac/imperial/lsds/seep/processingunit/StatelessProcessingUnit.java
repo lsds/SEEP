@@ -453,25 +453,37 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			if ("hash".equals(routingAlg) || replicationFactor == 1)
 			{
 				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication.");}
-				getOperator().getRouter().setMeanderRouting(new HashRouter(getOperator().getOpContext()));
-
+				Query meanderQuery = getOperator().getOpContext().getMeanderQuery();
+				int logicalId = meanderQuery.getLogicalNodeId(getOperator().getOperatorId());
+				int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
+				boolean downIsReplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1; 
+				if (downIsReplicatedSink && GLOBALS.valueFor("replicatedSinksHashRouting").equals("backpressure")) {
+					getOperator().getRouter().setMeanderRouting(new BackpressureRouter(getOperator().getOpContext()));
+					LOG.info("Using backpressure routing for this operator since down op is replicated sink.");
+				} else {
+					getOperator().getRouter().setMeanderRouting(new HashRouter(getOperator().getOpContext()));
+					LOG.info("Using hash routing.");
+				}
 			}
 			else if ("roundRobin".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new RoundRobinRouter(getOperator().getOpContext()));
+				LOG.info("Using round robin routing.");
 			}
 			else if ("weightedRoundRobin".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
-
+				LOG.info("Using weighted round robin routing.");
 			}
 			else if ("shortestPath".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new ShortestPathRouter(getOperator().getOpContext()));
+				LOG.info("Using shortest path routing.");
 			}
 			else if ("backpressure".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new BackpressureRouter(getOperator().getOpContext()));
+				LOG.info("Using backpressure routing.");
 			}
 			else
 			{

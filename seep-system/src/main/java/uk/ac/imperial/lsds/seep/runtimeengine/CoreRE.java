@@ -416,13 +416,15 @@ public class CoreRE {
 			Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 			int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
+			Integer downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
 			boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
-			boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+			boolean downIsMultiInput = !meanderQuery.isSink(logicalId) && meanderQuery.isJoin(downLogicalId);
+			boolean isReplicatedSink = meanderQuery.isSink(logicalId) && meanderQuery.getPhysicalNodeIds(logicalId).size() > 1; 
+			boolean downIsReplicatedSink = !meanderQuery.isSink(logicalId) && meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1; 
 
 			if (replicationFactor == 1 || 
 					GLOBALS.valueFor("meanderRouting").equals("hash"))
 			{				
-				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication."); }
 
 				//Record net rates for debugging purposes
 				ArrayList<Integer> upOpIds = processingUnit.getOperator().getOpContext().getUpstreamOpIdList();
@@ -434,13 +436,38 @@ public class CoreRE {
 					upOpIdAddrs.put(upOpId, opInfo.getMyNode().getIp().getHostName());
 					
 				}
-				
-				LOG.info("Starting OLSRETX net rate monitor.");
-				//Null routingController since just want to log net rates.
-				netRateMonitor = new NetRateMonitor(upOpIdAddrs);
-				nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
-				nrMonT.start();		
-	
+
+				if (replicationFactor > 1 || !(isReplicatedSink || downIsReplicatedSink) || !GLOBALS.valueFor("replicatedSinksHashRouting").equals("backpressure"))
+				{
+					
+					if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication."); }
+					LOG.info("Starting OLSRETX net rate monitor.");
+					//Null routingController since just want to log net rates.
+					netRateMonitor = new NetRateMonitor(upOpIdAddrs);
+					nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
+					nrMonT.start();		
+				}
+				else
+				{
+					// If sinks are replicated, use bp for k=1 for a fair comparison?
+					if (processingUnit.getOperator().getOpContext().isSink()) {
+						routingController = new RoutingController(this);
+						Thread rControllerT = new Thread(routingController, "RoutingController");
+						rControllerT.start();
+
+						if (enableUpstreamRoutingControl) { throw new RuntimeException("TODO."); }
+						LOG.info("Starting OLSRETX net rate monitor.");
+						netRateMonitor = new NetRateMonitor(upOpIdAddrs, routingController);
+						nrMonT = new Thread(netRateMonitor, "NetRateMonitor");
+						nrMonT.start();		
+					}
+					else
+					{
+						if (enableUpstreamRoutingControl) { throw new RuntimeException("TODO."); }
+						processingUnit.getDispatcher().startRoutingCtrlWorkers();
+					}
+				}
+
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
 					processingUnit.getDispatcher().startDispatcherMain();
