@@ -11,6 +11,7 @@ from compute_stats import compute_stats,median,compute_relative_raw_vals,compute
 from run_sessions import run_sessions
 from util import chmod_dir, pybool_to_javastr, copy_pdfs, copy_results
 from notify import notify
+from gen_core_results import gen_core_results
 
 ticksPerSecond = 1000.0 * 1000.0 * 1000.0
 maxWaitSeconds = 1000000000
@@ -54,6 +55,8 @@ def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
         if not params['iperf']:
             #record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', get_tput_include_failed if include_failed else get_tput)
             #record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
+            if params['regenSessions']: regen_session_results(ks, variables, session_ids, time_str, data_dir)
+
             if not cross:
                 record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'tput', create_get_tput_fn(params))
                 record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'lat', get_latency_include_failed if include_failed else get_latency)
@@ -269,6 +272,13 @@ def get_var_suffix_and_vals(variables):
 
     return (var_suffix, var_vals)
 
+def regen_session_results(ks, variables, sessions, time_str, data_dir):
+    var_suffix, var_vals = get_var_suffix_and_vals(variables)
+    for k in ks:
+        for var in var_vals:
+            for session in sessions:
+                exp_dir = '%s/%s/%sk/%.2f%s/%ss'%(data_dir,time_str,k,var,var_suffix,session)
+                gen_core_results(exp_dir, False)
 
 def record_var_statistics(ks, variables, sessions, time_str, data_dir, metric_suffix, get_metric_fn):
     raw_vals = {}
@@ -473,6 +483,7 @@ def create_get_network_energy_fn(params):
 
 def get_network_energy_usage(logdir, include_failed=False):
     energy_regex = re.compile('^total/(\d+)') 
+    #energy_regex = re.compile('^total_normalized/(\d+)') 
     regex = energy_regex
     logfilename = '%s/network_energy_usage.txt'%logdir
     if not os.path.exists(logfilename):
@@ -613,6 +624,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--initialPause', dest='initial_pause', default=None, help='Initial pause before source starts sending (ms)')
     parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
     parser.add_argument('--cross', dest='cross', default=False, action='store_true', help='Do a cross plot based on several previous experiments')
+    parser.add_argument('--regenSessions', dest='regen_sessions', default=False, action='store_true', help='Regenerate all session results')
 
     args=parser.parse_args()
 
@@ -687,6 +699,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['pinAll'] = args.pin_all
     params['injectFailures'] = args.inject_failures
     params['sub'] =args.sub 
+    params['regenSessions']=args.regen_sessions
     if args.trace: params['trace']=args.trace
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay

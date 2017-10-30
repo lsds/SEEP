@@ -6,7 +6,7 @@ from extract_results import *
 from compute_stats import compute_cumulative_percentiles
 from energy import get_network_energy_usage
 
-def main(exp_dir, gen_sub_results):
+def gen_core_results(exp_dir, gen_sub_results):
 
     sim_env = os.environ.copy()
     print "Analysing logs in %s"%(exp_dir)       
@@ -159,7 +159,7 @@ def main(exp_dir, gen_sub_results):
         record_sink_sink_joint_finished_stats(t_min_sink_begin, deduped_joint_latencies[-1][2], finished_total_bytes, finished_total_tuples, deduped_joint_latencies, exp_dir)
 
         node_net_rates = get_node_net_rates(exp_dir, t_min_sink_begin, t_min_finished_sink_end)
-        network_energy_usage = get_network_energy_usage(node_net_rates)
+        network_energy_usage = get_network_energy_usage(node_net_rates, total_tuples)
         record_network_energy_usage(network_energy_usage, exp_dir)
 
         """
@@ -379,5 +379,5 @@ if __name__ == "__main__":
     parser.add_argument('--sub', dest='gen_sub_results', default=False, action='store_true', help='Gen for subset of tuples (ft only)')
     args=parser.parse_args()
 
-    main(args.exp_dir, args.gen_sub_results)
+    gen_core_results(args.exp_dir, args.gen_sub_results)
 
