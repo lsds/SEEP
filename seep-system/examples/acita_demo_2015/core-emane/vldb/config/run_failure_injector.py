@@ -1,13 +1,22 @@
 #!/usr/bin/python -u
 
-import subprocess,os,time,re,argparse
+import subprocess,os,time,re,argparse,random
 
 def main(node):
     offset, cycle_spec = get_node_cycle_spec(node)
     if cycle_spec: 
+        print "Found failure cycle spec for %s"%(node)
         wait_for_offset(node, offset)
         do_cycles(node, cycle_spec)
         return
+
+    offset, slot_length, p_fail = get_node_fail_prob_spec(node)
+    if p_fail and p_fail > 0.0:
+        print "Found probabilistic failure spec for %s"%(node)
+        wait_for_offset(node,offset)
+        inject_probabilistic_failures(node, slot_length, p_fail)
+        return
+
     print "No failure cycles defined for node %s, terminating."%(node)
 
 def wait_for_offset(node, offset):
@@ -37,17 +46,43 @@ def toggle_netif(direction):
 
 def get_node_cycle_spec(node):
     """ Format of cycle spec file line is node,offset_sec,up_duration_sec,down_duration_sec"""
-    with open("../failure_cycles.txt", 'r') as f:
-        for line in f:
-            cycle_spec = line.strip().split(',')	
-            if node == cycle_spec[0].strip():
-                return float(cycle_spec[1]), map(float, cycle_spec[2:])
+    if os.path.exists("../failure_cycles.txt"):
+        with open("../failure_cycles.txt", 'r') as f:
+            for line in f:
+                cycle_spec = line.strip().split(',')	
+                if node == cycle_spec[0].strip():
+                    return float(cycle_spec[1]), map(float, cycle_spec[2:])
     return None,None
 
 def get_exp_start():
     with open("../start_failures.txt", 'r') as f:
         for line in f:
             return float(line.strip())
+
+def get_node_fail_prob_spec(node):
+    """ Format of fail spec file line is node,offset_sec,slot_length_sec_float,p_fail_float"""
+    if os.path.exists("../failure_probs.txt"):
+        with open("../failure_probs.txt", 'r') as f:
+            for line in f:
+                fail_spec = line.strip().split(',')	
+                spec_node = fail_spec[0].strip() 
+                if node == spec_node or spec_node == '*':
+                    return float(fail_spec[1]),float(fail_spec[2]), float(fail_spec[3])
+    return None,None,None
+
+def inject_probabilistic_failures(node, slot_length, p_fail):
+    while True:
+        rand = random.random()
+        if rand < p_fail:
+            print "Probabilistic failure triggered for %s at %s"%(node,time.strftime("%H:%M:%S"))
+            toggle_netif("down")
+
+        #Sleep for slot_length seconds
+        time.sleep(slot_length)
+
+        if rand < p_fail:
+            print "Node %s recovering from probabilistic failure at %s"%(node,time.strftime("%H:%M:%S"))
+            toggle_netif("up")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run a failure injector on this node.')

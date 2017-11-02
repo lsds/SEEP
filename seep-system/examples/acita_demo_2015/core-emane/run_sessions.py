@@ -368,8 +368,12 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 create_static_routes(placements, tx_range, session.sessiondir)
                 if len(placements) != nodes-2: raise Exception("Expected placement for %d nodes, got %d"%(nodes-2,len(placements)))
 
-        if params['injectFailures']: 
-            shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
+        if params['injectFailures'] or params['injectProbFailures']: 
+            print 'Creating failures injectors.'
+            (src,dest) = (params['injectFailures'],'failure_cycles.txt') if params['injectFailures'] else (params['injectProbFailures'],'failure_probs.txt') 
+            print 'Copying failure spec from %s to %s.'%(src,dest)
+            #shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
+            shutil.copy("%s/static/%s"%(script_dir, src), '%s/%s'%(session.sessiondir,dest))
             with open("%s/start_failures.txt"%session.sessiondir, 'w') as sf:
                 sf.write(str(time.time()) + "\n")
 
@@ -381,7 +385,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 pos = gen_grid_position(i, nodes-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|PcapSrc"
-            if params['injectFailures']: worker_services += "|FailureInjector"
+            if params['injectFailures'] or params['injectProbFailures']: worker_services += "|FailureInjector"
             #if params['emanestats']: worker_services += "|EmaneStats"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos, verbose=verbose)) 
        
@@ -394,11 +398,12 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             else:
                 pos = gen_grid_position(i, nodes-1)
 
+            router_services="|FailureInjector" if params['injectFailures'] or params['injectProbFailures'] else "" 
             if distributed:
                 slave = slaves[i % len(slaves)]
-                routers.append(create_remote_node(i, session, slave, "%s"%services_str, wlan1, pos, verbose=verbose))
+                routers.append(create_remote_node(i, session, slave, "%s%s"%(services_str,router_services), wlan1, pos, verbose=verbose))
             else:
-                routers.append(create_node(i, session, "%s"%services_str, wlan1, pos, verbose=verbose))
+                routers.append(create_node(i, session, "%s%s"%(services_str,router_services), wlan1, pos, verbose=verbose))
 
         if params['noiseNodes'] > 0:
             #TODO: Is this the right way to compute noise_net_id?

@@ -617,6 +617,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--includeFailed', dest='include_failed', default=False, action='store_true', help='Include results of failed runs in recorded stats.')
     parser.add_argument('--pinAll', dest='pin_all', default=False, action='store_true', help='pin all nodes if pinned seed defined')
     parser.add_argument('--injectFailures', dest='inject_failures', default=None, help='Start a failure cycle service according to config file.')
+    parser.add_argument('--injectProbFailures', dest='inject_prob_failures', default=None, help='Start a probabilistic failure service according to config file.')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
     parser.add_argument('--bufSize', dest='buf_size', default=None, help='Max size of intermediate buffers')
     parser.add_argument('--skewLimit', dest='skew_limit', default=None, help='Max skew for pending tuples')
@@ -698,6 +699,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['pinnedSeed'] = args.pinned_seed
     params['pinAll'] = args.pin_all
     params['injectFailures'] = args.inject_failures
+    params['injectProbFailures'] = args.inject_prob_failures
     params['sub'] =args.sub 
     params['regenSessions']=args.regen_sessions
     if args.trace: params['trace']=args.trace
