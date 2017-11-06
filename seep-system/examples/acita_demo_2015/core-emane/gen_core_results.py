@@ -4,7 +4,7 @@ import subprocess,os,time,re,argparse,glob, pandas
 
 from extract_results import *
 from compute_stats import compute_cumulative_percentiles
-from energy import get_network_energy_usage
+from energy import get_network_power_usage
 
 def gen_core_results(exp_dir, gen_sub_results):
 
@@ -159,8 +159,8 @@ def gen_core_results(exp_dir, gen_sub_results):
         record_sink_sink_joint_finished_stats(t_min_sink_begin, deduped_joint_latencies[-1][2], finished_total_bytes, finished_total_tuples, deduped_joint_latencies, exp_dir)
 
         node_net_rates = get_node_net_rates(exp_dir, t_min_sink_begin, t_min_finished_sink_end)
-        network_energy_usage = get_network_energy_usage(node_net_rates, total_tuples)
-        record_network_energy_usage(network_energy_usage, exp_dir)
+        network_power_usage = get_network_power_usage(node_net_rates, total_tuples)
+        record_network_power_usage(network_power_usage, exp_dir)
 
         """
         sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -358,10 +358,10 @@ def record_op_transmissions(op_transmissions, exp_dir):
         for op in op_total_transmissions:
             f.write('%s %d\n'%(op, op_total_transmissions[op]))
 
-def record_network_energy_usage(network_energy_usage, exp_dir):
+def record_network_power_usage(network_power_usage, exp_dir):
     with open(exp_dir+'/network_energy_usage.txt', 'w') as f:
-        for node in network_energy_usage:
-            f.write('%s/%d\n'%(node, network_energy_usage[node]))
+        for node in network_power_usage:
+            f.write('%s/%d\n'%(node, network_power_usage[node]))
 
 def error_check(exp_dir):
     logs = get_logfiles(exp_dir, lambda f: True)
