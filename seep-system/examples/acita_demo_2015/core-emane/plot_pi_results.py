@@ -34,10 +34,11 @@ def main(time_strs, exp_name):
     elif exp_name:
         plot('pi_tput', time_str, script_dir, data_dir, add_to_envstr=';expname=\'%s\''%exp_name)
     else:
-        plot('pi_op_cum_tput_fixed_kvarsession', time_str, script_dir, data_dir)
-        plot('pi_op_tput_fixed_kvarsession', time_str, script_dir, data_dir)
-        plot('pi_op_cum_util_fixed_kvarsession', time_str, script_dir, data_dir)
-        plot('pi_op_weight_info_fixed_kvarsession', time_str, script_dir, data_dir)
+        for time_str in time_strs:
+            plot('pi_op_cum_tput_fixed_kvarsession', time_str, script_dir, data_dir)
+            plot('pi_op_tput_fixed_kvarsession', time_str, script_dir, data_dir)
+            plot('pi_op_cum_util_fixed_kvarsession', time_str, script_dir, data_dir)
+            plot('pi_op_weight_info_fixed_kvarsession', time_str, script_dir, data_dir)
 
 def plot(p, time_str, script_dir, data_dir, term='pdf', add_to_envstr=''):
     exp_dir = '%s/%s'%(data_dir,time_str)
