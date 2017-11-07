@@ -7,6 +7,6 @@ while true ; do
 	txrx=$(cat /proc/stat | grep '^cpu ')
 	now=$(date +%s%3N) 
 	host=$(hostname)
-	echo "$now $txrx" >> "$host-cpu-util.txt" 
+	echo "$now$txrx" >> "$host-cpu-util.txt" 
 	sleep 1
 done

@@ -33,11 +33,11 @@ do
 
 	now=$(date +%s%3N) 
 
-	echo "$now $txrx" >> "$net_log" 
-	echo "$now $cpu" >> "$cpu_log" 
+	echo "$now$txrx" >> "$net_log" 
+	echo "$now$cpu" >> "$cpu_log" 
 
-	echo "$now $txrx"
-	echo "$now $cpu"
+	echo "$now$txrx"
+	echo "$now$cpu"
 
 	sleep 1
 done

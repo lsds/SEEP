@@ -297,6 +297,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if params['emanestats']: services_str += "|EmaneStats"
         #if params['netutil']: services_str += "|NetUtil"
         services_str += "|NetUtil"
+        services_str += "|CpuUtil"
 
         workers = []
         num_workers = get_num_workers(k, nodes, params)
