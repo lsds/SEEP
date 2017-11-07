@@ -116,6 +116,13 @@ then
     cp net-util/*net-util.txt $resultsDir/net-util
 fi
 
+#Copy cpu utilisation 
+if [ -d cpu-util ];
+then
+    mkdir -p $resultsDir/cpu-util
+    cp cpu-util/*cpu-util.txt $resultsDir/cpu-util
+fi
+
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
 ./record_cpu_rates.py --expDir $resultsDir 
