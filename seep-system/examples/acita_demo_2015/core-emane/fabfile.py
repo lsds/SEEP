@@ -114,15 +114,19 @@ def gather(expdir):
 
 @hosts('localhost')
 def mkexpdir():
-	with lcd(local_demo_root + "/core-emane/log"):
-		local('pkill "java" || /bin/true')
-		expdir = local('date +%H-%M-%S-%a%d%m%y', capture=True)
-		local('mkdir -p %s'%expdir)
-		local('cp %s/*.log %s'%(local_demo_root+'/tmp', expdir))
-		local('cp /tmp/*net-util.txt %s'%(expdir))
-		local('cp /tmp/*cpu-util.txt %s'%(expdir))
-		execute(gather, expdir)
+    with lcd(local_demo_root + "/core-emane/log"):
+        local('pkill "java" || /bin/true')
+        expdir = local('date +%H-%M-%S-%a%d%m%y', capture=True)
+        local('mkdir -p %s'%expdir)
+        local('cp %s/*.log %s'%(local_demo_root+'/tmp', expdir))
+        local('mkdir -p %s/net-util'%expdir)
+        local('mkdir -p %s/cpu-util'%expdir)
+        local('cp /tmp/*net-util.txt %s/net-util'%(expdir))
+        local('cp /tmp/*cpu-util.txt %s/cpu-util'%(expdir))
+        execute(gather, expdir)
         #local('for f in $(find log/%s -name "*.tar.gz") ; do cd $(dirname $f) ; tar -xzvf workers.tar.gz ; cd - ; done'%expdir)
+        local('./record_net_rates.py --expDir log/%s'%expdir)
+        local('./record_cpu_rates.py --expDir log/%s'%expdir)
         local('./gen_core_results.py --expDir log/%s'%expdir)
         local('./plot_pi_results.py --timeStrs %s'%expdir)
 
