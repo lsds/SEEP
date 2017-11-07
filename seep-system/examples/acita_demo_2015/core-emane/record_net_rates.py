@@ -5,7 +5,7 @@ def record_net_rates(sessiondir, t_start, t_end):
     for raw_name in glob.glob("%s/net-util/*net-util.txt"%sessiondir):
         rates_out = raw_name.replace('net-util.txt', 'net-rates.txt')
         with open(raw_name, 'r') as rf:
-            raw_lines = rf.readlines()
+            raw_lines = filter(lambda l: not l.startswith('#'), rf.readlines())
             (t, bytes_rx, bytes_tx) = parse_line(raw_lines[0])
             with open(rates_out, 'w') as ro:
                 ro.write('#t1 t2 bytes_rx bytes_tx\n')

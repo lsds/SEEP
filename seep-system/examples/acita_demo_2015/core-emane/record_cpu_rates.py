@@ -8,7 +8,7 @@ def record_cpu_rates(sessiondir, t_start, t_end):
     for raw_name in glob.glob("%s/cpu-util/*cpu-util.txt"%sessiondir):
         rates_out = raw_name.replace('cpu-util.txt', 'cpu-rates.txt')
         with open(raw_name, 'r') as rf:
-            raw_lines = rf.readlines()
+            raw_lines = filter(lambda l: not l.startswith('#'), rf.readlines())
             (t, busy, total) = parse_line(raw_lines[0])
             with open(rates_out, 'w') as ro:
                 ro.write('#t1 t2 u(t1t2)\n')
