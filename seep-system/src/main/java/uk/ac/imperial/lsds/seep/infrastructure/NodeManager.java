@@ -69,7 +69,8 @@ public class NodeManager{
 	static public MonitorSlave monitorSlave;
 	static public int second;
 	static public double throughput;
-	private final String[] interfacePrefs = {"eth", "lo" , "wlan"};	
+	//private final String[] interfacePrefs = {"eth", "lo" , "wlan"};	
+	private final String[] interfacePrefs;
 	private static boolean ignoreIpv6 = true;
 	private Thread monitorT = null;
 	
@@ -78,6 +79,20 @@ public class NodeManager{
 		this.bindAddr = bindAddr;
        
 		this.ownPort = ownPort;
+
+		if (Boolean.parseBoolean(GLOBALS.valueFor("useCoreAddr")) && Boolean.parseBoolean(GLOBALS.valueFor("piAdHocDeployment")))
+		{
+			throw new RuntimeException("Logic error - Can't use core and pi at the same time.");
+		}
+		else if (Boolean.parseBoolean(GLOBALS.valueFor("useCoreAddr")) || !Boolean.parseBoolean(GLOBALS.valueFor("piAdHocDeployment")))
+		{
+			interfacePrefs = new String[]{"eth", "lo" , "wlan"};
+		}
+		else
+		{
+			interfacePrefs = new String[]{"wlan1", "wlan0", "lo" , "eth"};
+		}
+
 		try {
 			if (Boolean.parseBoolean(GLOBALS.valueFor("separateControlNet")))
 			{
