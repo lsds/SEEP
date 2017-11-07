@@ -341,7 +341,7 @@ def record_op_utils(op_utils, exp_dir):
     for op in op_utils:
         op_utils_file = "%s/op_%s_utils.txt"%(exp_dir, op)
         with open(op_utils_file, 'w') as f:
-            f.write('#ts util cum interval\n')
+            f.write('#ts_s util cum interval_ms\n')
             for (ts, util, cum, interval) in op_utils[op]:
                 f.write('%d %.1f %.1f %d\n'%(ts/1000, util, cum, interval))
 

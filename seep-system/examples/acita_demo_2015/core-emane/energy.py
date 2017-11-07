@@ -6,7 +6,7 @@ mb = 1000000.0
 def get_network_power_usage(node_net_rates, total_tuples, t_start, t_end):
     power_usage = {}
     node_net_rates = trim_net_intervals(node_net_rates, t_start, t_end)
-    exp_interval = float(t_end - t_start) / 1000.0
+    exp_interval_s = float(t_end - t_start) / 1000.0
 
     for node in node_net_rates:
         #power_usage[node] = base_power 
@@ -15,7 +15,7 @@ def get_network_power_usage(node_net_rates, total_tuples, t_start, t_end):
             energy += rx_energy(t2 - t1, rx_bytes)
             energy += tx_energy(t2 - t1, tx_bytes)
 
-        power_usage[node] = (energy / exp_interval)
+        power_usage[node] = (energy / exp_interval_s)
     
     if len(node_net_rates) != len(power_usage): raise Exception("Logic error: %d != %d"%(len(node_net_rates), len(power_usage)))
 
@@ -24,28 +24,28 @@ def get_network_power_usage(node_net_rates, total_tuples, t_start, t_end):
 def get_cpu_power_usage(node_cpu_rates, total_tuples, t_start, t_end):
     power_usage = {}
     node_cpu_rates = trim_cpu_intervals(node_cpu_rates, t_start, t_end)
-    exp_interval = float(t_end - t_start) / 1000.0
+    exp_interval_s = float(t_end - t_start) / 1000.0
 
     for node in node_cpu_rates:
         energy = 0.0
         for (t1, t2, cpu_util) in node_cpu_rates[node]:
             energy += cpu_energy(t2 - t1, cpu_util)
 
-        power_usage[node] = (energy / exp_interval)
+        power_usage[node] = (energy / exp_interval_s)
 
     return get_total_power_usage(power_usage, total_tuples)
 
 def get_ops_power_usage(op_utils, total_tuples, t_start, t_end):
     power_usage = {}
     op_utils = trim_op_intervals(op_utils, t_start, t_end)
-    exp_interval = float(t_end - t_start) / 1000.0
+    exp_interval_s = float(t_end - t_start) / 1000.0
 
     for op_id in op_utils:
         energy = 0.0
         for (t, interval_util, cum_util, interval) in op_utils[op_id]:
              energy += op_energy(interval, interval_util)
 
-        power_usage[op_id] = (energy / exp_interval)
+        power_usage[op_id] = (energy / exp_interval_s)
 
     # N.B. This won't include any base power for non-op nodes!
     return get_total_power_usage(power_usage, total_tuples)
@@ -121,13 +121,11 @@ def trim_op_intervals(op_utils, t_start, t_end):
                 max_included_t2 = max(t2, max_included_t2)
 
         if min_included_t1 < t_end: 
-            # cum_util distorted here
-            first_op_util = (min_included_t1, 0.0, 0.0, min_included_t1 - t_start)
+            first_op_util = (min_included_t1, 0.0, "Error", min_included_t1 - t_start)
             trimmed_op_utils[node] = [first_op_util] + trimmed_op_utils[node]
 
         if max_included_t2 > t_start:
-            # cum_util distorted here
-            last_op_util = (t_end, 0.0, 0.0, t_end - max_included_t2)
+            last_op_util = (t_end, 0.0, "Error", t_end - max_included_t2)
             trimmed_op_utils[node].append(last_op_util)
 
     return trimmed_op_utils
