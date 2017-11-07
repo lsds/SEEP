@@ -1,6 +1,6 @@
 import numpy
 
-def get_network_power_usage(node_net_rates, total_tuples):
+def get_network_power_usage(node_net_rates, total_tuples, t_start, t_end):
 
     power_usage = {}
     for node in node_net_rates:
@@ -11,6 +11,40 @@ def get_network_power_usage(node_net_rates, total_tuples):
             power_usage[node] += avg_tx_power(t2 - t1, tx_bytes)
 
     num_nodes = len(node_net_rates)
+    power_usage['total_excl_base'] = sum(power_usage.values())
+    power_usage['total_normalized_excl_base'] = power_usage['total_excl_base'] / total_tuples
+    # N.B. Be careful not to compute over all entries now you've added total!
+    power_usage['total'] = power_usage['total_excl_base'] + base_power()  
+    power_usage['total_normalized'] = power_usage['total'] / total_tuples
+    return power_usage
+
+def get_cpu_power_usage(node_cpu_rates, total_tuples, t_start, t_end):
+
+    power_usage = {}
+    for node in node_cpu_rates:
+        #power_usage[node] = base_power() 
+        power_usage[node] = 0 
+        for (t1, t2, cpu_util) in node_cpu_rates[node]:
+            power_usage[node] += avg_cpu_power(t2 - t1, cpu_util)
+
+    num_nodes = len(node_cpu_rates)
+    power_usage['total_excl_base'] = sum(power_usage.values())
+    power_usage['total_normalized_excl_base'] = power_usage['total_excl_base'] / total_tuples
+    # N.B. Be careful not to compute over all entries now you've added total!
+    power_usage['total'] = power_usage['total_excl_base'] + base_power()  
+    power_usage['total_normalized'] = power_usage['total'] / total_tuples
+    return power_usage
+
+def get_ops_power_usage(op_utils, total_tuples, t_start, t_end):
+
+    power_usage = {}
+    for op_id in op_utils:
+        #power_usage[node] = base_power() 
+        power_usage[op_id] = 0 
+        for (t, interval, interval_util, cum_util) in op_utils[op_id]:
+            power_usage[op_id] += avg_op_power(interval, interval_util)
+
+    num_nodes = len(op_utils)
     power_usage['total_excl_base'] = sum(power_usage.values())
     power_usage['total_normalized_excl_base'] = power_usage['total_excl_base'] / total_tuples
     # N.B. Be careful not to compute over all entries now you've added total!
@@ -55,6 +89,29 @@ def avg_tx_power(interval, bytez):
 
     #return interpolated_power(tx_watts, interval, bytez) - tx_watts[0][1]
     return interpolated_power(tx_watts, interval, bytez) - base_power() 
+
+# TODO: Since might have different intervals, really need to multiply by
+# the actual interval length here.
+def avg_cpu_power(interval, cpu_util):
+    # From stress --cpu 1?
+    cpu_watts = [(0.0,1.3286), (1.0, 1.5841)]
+
+    x = map(lambda (a,b): a, cpu_watts)
+    y = map(lambda (a,b): b, cpu_watts)
+
+    #TODO: Normalize to num cores?
+    return numpy.interp(cpu_util, x, y)
+
+# TODO: Since might have different intervals, really need to multiply by
+# the actual interval length here.
+def avg_op_power(interval, op_util):
+    # From rpi processor busy waiting
+    op_watts = [(0.0,1.3286), (1.0, 1.5841)]
+
+    x = map(lambda (a,b): a, op_watts)
+    y = map(lambda (a,b): b, op_watts)
+
+    return numpy.interp(op_util, x, y)
 
 def interpolated_power(data2watts, interval, bytez):
     interval_tput = (bytez * 8 * 1000) / interval

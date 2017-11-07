@@ -245,7 +245,7 @@ def get_utils(f):
         match = re.search(regex, line)
         if match:
             op_id = str(int(match.group(2)))
-            utils.append((int(match.group(1)), float(match.group(4)), float(match.group(5))))
+            utils.append((int(match.group(1)), float(match.group(4)), float(match.group(5)), int(match.group(3))))
 
     return (op_id, utils)
 
@@ -270,7 +270,7 @@ def get_errors(f):
 
     return err_msgs
 
-def get_node_net_rates(exp_dir, t_start, t_end):
+def get_node_net_rates(exp_dir):
     all_node_rates = {}
     for fname in glob.glob('%s/net-util/*net-rates.txt'%exp_dir):
         node_rates = []
@@ -280,8 +280,24 @@ def get_node_net_rates(exp_dir, t_start, t_end):
                     splits = line.strip().split(' ')
                     # t1, t2, rx_bytes, tx_bytes
                     node_rates.append((int(splits[0]), int(splits[1]), int(splits[2]), int(splits[3])))
+                    raise Exception("Need to filter by time first!")
 
         host = os.path.basename(fname).rstrip('-net-rates.txt')
+        all_node_rates[host] = node_rates
+    return all_node_rates
+
+def get_node_cpu_rates(exp_dir):
+    all_node_rates = {}
+    for fname in glob.glob('%s/cpu-util/*cpu-rates.txt'%exp_dir):
+        node_rates = []
+        with open(fname, 'r') as f:
+            for line in f:
+                if not line.startswith('#'):
+                    splits = line.strip().split(' ')
+                    # t1, t2, u_t1t2 
+                    node_rates.append((int(splits[0]), int(splits[1]), float(splits[2])))
+
+        host = os.path.basename(fname).rstrip('-cpu-rates.txt')
         all_node_rates[host] = node_rates
 
     return all_node_rates

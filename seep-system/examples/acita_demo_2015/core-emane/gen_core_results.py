@@ -158,9 +158,20 @@ def gen_core_results(exp_dir, gen_sub_results):
         t_min_finished_sink_end = deduped_joint_latencies[-1][2]
         record_sink_sink_joint_finished_stats(t_min_sink_begin, deduped_joint_latencies[-1][2], finished_total_bytes, finished_total_tuples, deduped_joint_latencies, exp_dir)
 
-        node_net_rates = get_node_net_rates(exp_dir, t_min_sink_begin, t_min_finished_sink_end)
-        network_power_usage = get_network_power_usage(node_net_rates, total_tuples)
+        node_net_rates = get_node_net_rates(exp_dir)
+        network_power_usage = get_network_power_usage(node_net_rates, total_tuples, t_min_sink_begin, t_min_finished_sink_end)
         record_network_power_usage(network_power_usage, exp_dir)
+
+        node_cpu_rates = get_node_cpu_rates(exp_dir)
+        cpu_power_usage = get_cpu_power_usage(node_cpu_rates, total_tuples, t_min_sink_begin, t_min_finished_sink_end)
+        record_cpu_power_usage(network_power_usage, exp_dir)
+    
+        # Alternatively, estimate CPU power usage based only on operator utilization
+        op_power_usage = get_ops_power_usage(op_utils, total_tuples, t_min_sink_begin, t_min_finished_sink_end) 
+        record_op_power_usage(network_power_usage, exp_dir)
+
+        total_power = network_power_usage['total'] + op_power_usage['total_excl_base']
+        record_stat('%s/power.txt'%exp_dir, {'total_power':total_power})
 
         """
         sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -329,9 +340,9 @@ def record_op_utils(op_utils, exp_dir):
     for op in op_utils:
         op_utils_file = "%s/op_%s_utils.txt"%(exp_dir, op)
         with open(op_utils_file, 'w') as f:
-            f.write('# util cum\n')
-            for (ts, util, cum) in op_utils[op]:
-                f.write('%d %.1f %.1f\n'%(ts/1000, util, cum))
+            f.write('#ts util cum interval\n')
+            for (ts, util, cum, interval) in op_utils[op]:
+                f.write('%d %.1f %.1f %d\n'%(ts/1000, util, cum, interval))
 
 def record_op_transmissions(op_transmissions, exp_dir):
     ts_total_transmissions = {}
@@ -362,6 +373,16 @@ def record_network_power_usage(network_power_usage, exp_dir):
     with open(exp_dir+'/network_energy_usage.txt', 'w') as f:
         for node in network_power_usage:
             f.write('%s/%d\n'%(node, network_power_usage[node]))
+
+def record_cpu_power_usage(cpu_power_usage, exp_dir):
+    with open(exp_dir+'/cpu_energy_usage.txt', 'w') as f:
+        for node in cpu_power_usage:
+            f.write('%s/%d\n'%(node, cpu_power_usage[node]))
+
+def record_ops_power_usage(ops_power_usage, exp_dir):
+    with open(exp_dir+'/ops_energy_usage.txt', 'w') as f:
+        for node in ops_power_usage:
+            f.write('%s/%d\n'%(node, ops_power_usage[node]))
 
 def error_check(exp_dir):
     logs = get_logfiles(exp_dir, lambda f: True)
