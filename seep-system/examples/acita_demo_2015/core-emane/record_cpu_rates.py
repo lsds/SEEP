@@ -2,9 +2,9 @@
 import time,argparse,glob
 
 def record_cpu_rates(sessiondir, t_start, t_end):
-"""
-u(t) = (c_busy(t) - c_busy(t-1)) / (c_total(t) - c_total(t-1))
-"""
+    """
+    u(t) = (c_busy(t) - c_busy(t-1)) / (c_total(t) - c_total(t-1))
+    """
     for raw_name in glob.glob("%s/cpu-util/*cpu-util.txt"%sessiondir):
         rates_out = raw_name.replace('cpu-util.txt', 'cpu-rates.txt')
         with open(raw_name, 'r') as rf:
@@ -16,19 +16,19 @@ u(t) = (c_busy(t) - c_busy(t-1)) / (c_total(t) - c_total(t-1))
                     (t2, busy2, total2) = parse_line(line)
                     if include_interval(t, t2, t_start, t_end):
                         u_t1t2 = float(busy2 - busy) / float(total2 - total)
-                        ro.write('%d %d %d\n'%(t, t2, u_t1t2)
+                        ro.write('%d %d %d\n'%(t, t2, u_t1t2))
                     t = t2
                     busy = busy2
                     total = total2
 
 
 def parse_line(line):
-"""
-# t cpu user nice system idle iowait irq softirq steal guest guest_nice 
-# 1509981381591 cpu 512194268 902536 71123045 3104491679 30873931 1268 766257 0 0 0                                                                                                        
-c_busy(t) = c_user(t) + c_nice(t) + c_system(t)
-c_total(t) = c_busy(t) + c_idle(t)
-"""
+    """
+    # t cpu user nice system idle iowait irq softirq steal guest guest_nice 
+    # 1509981381591 cpu 512194268 902536 71123045 3104491679 30873931 1268 766257 0 0 0                                                                                                        
+    c_busy(t) = c_user(t) + c_nice(t) + c_system(t)
+    c_total(t) = c_busy(t) + c_idle(t)
+    """
     splits = line.strip().split(' ')
     t = int(splits[0])
     user = int(splits[2])

@@ -4,7 +4,7 @@ import subprocess,os,time,re,argparse,glob, pandas
 
 from extract_results import *
 from compute_stats import compute_cumulative_percentiles
-from energy import get_network_power_usage
+from energy import get_network_power_usage, get_cpu_power_usage, get_ops_power_usage
 
 def gen_core_results(exp_dir, gen_sub_results):
 
@@ -164,14 +164,15 @@ def gen_core_results(exp_dir, gen_sub_results):
 
         node_cpu_rates = get_node_cpu_rates(exp_dir)
         cpu_power_usage = get_cpu_power_usage(node_cpu_rates, total_tuples, t_min_sink_begin, t_min_finished_sink_end)
-        record_cpu_power_usage(network_power_usage, exp_dir)
+        record_cpu_power_usage(cpu_power_usage, exp_dir)
     
         # Alternatively, estimate CPU power usage based only on operator utilization
-        op_power_usage = get_ops_power_usage(op_utils, total_tuples, t_min_sink_begin, t_min_finished_sink_end) 
-        record_op_power_usage(network_power_usage, exp_dir)
+        ops_power_usage = get_ops_power_usage(op_utils, total_tuples, t_min_sink_begin, t_min_finished_sink_end) 
+        record_ops_power_usage(ops_power_usage, exp_dir)
 
-        total_power = network_power_usage['total'] + op_power_usage['total_excl_base']
-        record_stat('%s/power.txt'%exp_dir, {'total_power':total_power})
+        total_power = network_power_usage['total'] + ops_power_usage['total_excl_base']
+        total_power_excl_base = network_power_usage['total_excl_base'] + ops_power_usage['total_excl_base']
+        record_stat('%s/power.txt'%exp_dir, {'total_power':total_power, 'total_power_excl_base':total_power_excl_base})
 
         """
         sink_sink_mean_tput = mean_tput(t_sink_begin, t_sink_end, total_bytes)
@@ -372,17 +373,17 @@ def record_op_transmissions(op_transmissions, exp_dir):
 def record_network_power_usage(network_power_usage, exp_dir):
     with open(exp_dir+'/network_energy_usage.txt', 'w') as f:
         for node in network_power_usage:
-            f.write('%s/%d\n'%(node, network_power_usage[node]))
+            f.write('%s/%.3f\n'%(node, network_power_usage[node]))
 
 def record_cpu_power_usage(cpu_power_usage, exp_dir):
     with open(exp_dir+'/cpu_energy_usage.txt', 'w') as f:
         for node in cpu_power_usage:
-            f.write('%s/%d\n'%(node, cpu_power_usage[node]))
+            f.write('%s/%.3f\n'%(node, cpu_power_usage[node]))
 
 def record_ops_power_usage(ops_power_usage, exp_dir):
     with open(exp_dir+'/ops_energy_usage.txt', 'w') as f:
         for node in ops_power_usage:
-            f.write('%s/%d\n'%(node, ops_power_usage[node]))
+            f.write('%s/%.3f\n'%(node, ops_power_usage[node]))
 
 def error_check(exp_dir):
     logs = get_logfiles(exp_dir, lambda f: True)

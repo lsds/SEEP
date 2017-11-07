@@ -280,7 +280,6 @@ def get_node_net_rates(exp_dir):
                     splits = line.strip().split(' ')
                     # t1, t2, rx_bytes, tx_bytes
                     node_rates.append((int(splits[0]), int(splits[1]), int(splits[2]), int(splits[3])))
-                    raise Exception("Need to filter by time first!")
 
         host = os.path.basename(fname).rstrip('-net-rates.txt')
         all_node_rates[host] = node_rates
