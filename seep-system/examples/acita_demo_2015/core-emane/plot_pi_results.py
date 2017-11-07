@@ -6,8 +6,10 @@ from compute_stats import compute_stats
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
-# alg =1, k=2, tput = 3
-exp_compute_coords = { 'pi-tput-vs-rr' : (1,3), 'pi-tput-scaling' : (2,3)}
+# alg =1, k=2, tput=3, framerate=4, power=5
+exp_compute_coords = { 'pi-tput-vs-rr' : (1,3), 
+                        'pi-tput-scaling' : (2,3), 
+                        'pi-power-scaling' : (2,5)}
 
 def main(time_strs, exp_name): 
 
