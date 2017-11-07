@@ -118,6 +118,7 @@ fi
 
 cd $scriptDir
 #./gen_core_results.py --expDir log/$timeStr 
+./record_cpu_rates.py --expDir $resultsDir 
 ./record_net_rates.py --expDir $resultsDir 
 ./gen_core_results.py --expDir $resultsDir %s
 #./move_analysis.py --nodes 10 --expDir $resultsDir/positions
