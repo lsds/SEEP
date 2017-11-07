@@ -29,15 +29,15 @@ echo "##########" >> "$cpu_log"
 while true 
 do
 	txrx=$(cat /proc/net/dev | grep $INF | tr -s " ")
-	cpu=$(cat /proc/stat | grep '^cpu ')
+	cpu=$(cat /proc/stat | grep '^cpu ' | tr -s " ")
 
 	now=$(date +%s%3N) 
 
 	echo "$now$txrx" >> "$net_log" 
-	echo "$now$cpu" >> "$cpu_log" 
+	echo "$now $cpu" >> "$cpu_log" 
 
 	echo "$now$txrx"
-	echo "$now$cpu"
+	echo "$now $cpu"
 
 	sleep 1
 done
