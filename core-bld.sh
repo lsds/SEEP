@@ -1,0 +1,1 @@
+./meander-bld.sh core
