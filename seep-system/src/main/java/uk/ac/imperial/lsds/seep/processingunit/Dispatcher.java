@@ -34,6 +34,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.manet.FixedRateLimiter;
 import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.manet.RateLimiter;
@@ -90,7 +91,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final OperatorOutputQueue sharedReplayLog;
 	//private final FailureCtrl nodeFctrl = new FailureCtrl();	//KEEP THIS
 	private final FailureCtrl combinedDownFctrl = new FailureCtrl();
-	private final Map<Integer, Set<Long>> downAlives = new HashMap<>();	//TODO: Concurrency?
+	private final Map<Integer, Set<Timestamp>> downAlives = new HashMap<>();	//TODO: Concurrency?
 	
 	private final Map<String, Integer> idxMapper = new HashMap<String, Integer>(); //Needed for replay after conn failure
 	
@@ -278,7 +279,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public void dispatch(DataTuple dt) 
 	{
-		long ts = dt.getPayload().timestamp;
+		Timestamp ts = dt.getPayload().timestamp;
 		if (limitUnacked)
 		{
 			long lastSendSuccess = System.currentTimeMillis();
@@ -317,7 +318,7 @@ public class Dispatcher implements IRoutingObserver {
 	private void dispatchReliable(DataTuple dt) 
 	{ 
 		//TODO: Locking around combinedDownFctrl?
-		long ts = dt.getPayload().timestamp;
+		Timestamp ts = dt.getPayload().timestamp;
 		synchronized(lock)
 		{
 			if (combinedDownFctrl.isAcked(ts))
@@ -370,7 +371,7 @@ public class Dispatcher implements IRoutingObserver {
 		if (!bestEffort)
 		{
 			if (!owner.getOperator().getOpContext().isSink()) { throw new RuntimeException("Logic error."); }
-			long ts = dt.getPayload().timestamp;
+			Timestamp ts = dt.getPayload().timestamp;
 			synchronized(lock)
 			{
 				combinedDownFctrl.ack(ts);
@@ -405,7 +406,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	//N.B. newConstraints will contain all constrains for the given input,
 	//but only if there was a change from the previous constraints.
-	public void routingChanged(Map<Integer, Set<Long>> newConstraints)
+	public void routingChanged(Map<Integer, Set<Timestamp>> newConstraints)
 	{
         //for each dj in newConstraints.keySet
         //	for each batch id i in rctrl(dj).constraints():
@@ -423,7 +424,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (newConstraints.size() > 1) { throw new RuntimeException("Logic error."); }
 			for (Integer downOpId : newConstraints.keySet())
 			{
-				for (Long ts : newConstraints.get(downOpId))
+				for (Timestamp ts : newConstraints.get(downOpId))
 				{
 					int target = owner.getOperator().getOpContext().getDownOpIndexFromOpId(downOpId);
 					synchronized(lock)
@@ -485,7 +486,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 	}
 
-	private boolean isDownAlive(int downOpId, long ts)
+	private boolean isDownAlive(int downOpId, Timestamp ts)
 	{
 		synchronized(lock) { return downAlives.get(downOpId) != null && downAlives.get(downOpId).contains(ts); }
 	}
@@ -504,7 +505,7 @@ public class Dispatcher implements IRoutingObserver {
 				lastSendSuccess = System.currentTimeMillis();
 				while(true)
 				{
-					Set<Long> constraints = dispatchHead();
+					Set<Timestamp> constraints = dispatchHead();
 					
 					if (constraints != null && !constraints.isEmpty())
 					{
@@ -523,11 +524,11 @@ public class Dispatcher implements IRoutingObserver {
 				logger.error("Fatal error - aborting: "+e); System.exit(1); }
 		}
 
-		private Set<Long> dispatchHead()
+		private Set<Timestamp> dispatchHead()
 		{
 			DataTuple dt = null;
 			ArrayList<Integer> targets = null; 
-			Set<Long> constraints = null;
+			Set<Timestamp> constraints = null;
 			
 			synchronized(lock)
 			{
@@ -583,14 +584,14 @@ public class Dispatcher implements IRoutingObserver {
 			//return constraints;
 		}
 		
-		private void dispatchConstrained(Set<Long> constraints)
+		private void dispatchConstrained(Set<Timestamp> constraints)
 		{
 			//Otherwise try to route constrained from further back in the queue
 			if (constraints == null || constraints.isEmpty()) { throw new RuntimeException("Logic error."); }
 			
 			int constrainedInQueue = 0;
 			//for each batch in constraints
-			for (Long ts : constraints)
+			for (Timestamp ts : constraints)
 			{
 				//if opQueue has batch
 				DataTuple dt = opQueue.get(ts);
@@ -626,7 +627,7 @@ public class Dispatcher implements IRoutingObserver {
 			while (dt == null)
 			{
 				dt = opQueue.peekHead();
-				long ts = dt.getPayload().timestamp;
+				Timestamp ts = dt.getPayload().timestamp;
 				if (combinedDownFctrl.isAcked(ts))
 				{
 					boolean removed = opQueue.remove(ts) != null;
@@ -642,7 +643,7 @@ public class Dispatcher implements IRoutingObserver {
 		private boolean admitBatch(DataTuple dt, ArrayList<Integer> targets)
 		{
 			FailureCtrl fctrl = getCombinedDownFailureCtrl();
-			long ts = dt.getPayload().timestamp;
+			Timestamp ts = dt.getPayload().timestamp;
 			if (!shouldTrySend(ts, fctrl, isConstrainedRoute(targets)))
 			{
 				dt = opQueue.remove(dt.getPayload().timestamp);
@@ -671,7 +672,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 		private void sendBatchUnconstrainedRoute(DataTuple dt, ArrayList<Integer> targets)
 		{
-			long ts = dt.getPayload().timestamp;
+			Timestamp ts = dt.getPayload().timestamp;
 			
 			//Option 1: Don't remove unless there is space in target
 			//Problem: Will just end up busy spinning
@@ -768,7 +769,7 @@ public class Dispatcher implements IRoutingObserver {
 
 		private void sendBatchConstrainedRoute(DataTuple dt, ArrayList<Integer> targets)
 		{
-			long ts = dt.getPayload().timestamp;
+			Timestamp ts = dt.getPayload().timestamp;
 			logger.debug("Sending constrained tuple "+ ts);
 			boolean allSucceeded = true;
 
@@ -834,7 +835,7 @@ public class Dispatcher implements IRoutingObserver {
 		//downstream in order to recover from a coordination failure.
 		//However, if this batch isn't being routed according to constraints,
 		//it will be safe to just add to the shared replay log.
-		private boolean shouldTrySend(long ts, FailureCtrl fctrl, boolean constrainedRoute)
+		private boolean shouldTrySend(Timestamp ts, FailureCtrl fctrl, boolean constrainedRoute)
 		{
 			if (fctrl.isAcked(ts)|| 
 					(optimizeReplay && fctrl.isAlive(ts) && 
@@ -887,19 +888,19 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock) { return dataConnected; }
 		}
 		
-		public boolean inSessionLog(long ts, boolean downIsUnaryOK)
+		public boolean inSessionLog(Timestamp ts, boolean downIsUnaryOK)
 		{
 			if (!downIsUnaryOK && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
 			return ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).contains(ts);
 
 		}
 
-		public boolean inSessionLog(long ts)
+		public boolean inSessionLog(Timestamp ts)
 		{
 			return inSessionLog(ts, false);
 		}
 		
-		public DataTuple getFromSessionLog(long ts)
+		public DataTuple getFromSessionLog(Timestamp ts)
 		{
 			if (!downIsMultiInput) { throw new RuntimeException("Logic error."); }
 			BatchTuplePayload b = ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).get(ts);
@@ -989,8 +990,8 @@ public class Dispatcher implements IRoutingObserver {
 			//happen with non-piggybacked. 
 			
 			//Firstly readd the tuple to the output queue.
-			long ts = dt.getPayload().timestamp;
-			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+			Timestamp ts = dt.getPayload().timestamp;
+			TreeMap<Timestamp, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 			if (sessionLog.size() > 1 || (sessionLog.size() == 1 && !sessionLog.containsKey(ts))) { throw new RuntimeException("Logic error, ts=: "+ts+", sessionLog="+sessionLog); }
 			opQueue.forceAdd(dt);
 
@@ -1020,8 +1021,8 @@ public class Dispatcher implements IRoutingObserver {
 		private void postSendFctrlHardTimeoutCleanup(DataTuple dt, boolean success)
 		{
 			//Sanity check: Should be *at most* one tuple (this one) in the log.
-			long ts = dt.getPayload().timestamp;
-			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+			Timestamp ts = dt.getPayload().timestamp;
+			TreeMap<Timestamp, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 			if (sessionLog.size() > 1 || (sessionLog.size() == 1 && !sessionLog.containsKey(ts))) { throw new RuntimeException("Logic error, ts=: "+ts+", sessionLog="+sessionLog); }
 			opQueue.forceAdd(dt);
 
@@ -1093,7 +1094,7 @@ public class Dispatcher implements IRoutingObserver {
 			//This should include the current 'SEEP' batch since it might contain several tuples.
 			//N.B. Important to remove from buffer/session log before adding to output queue since the dispatcher main could otherwise think a tuple is in the session log
 			//and delete it from its output queue.
-			TreeMap<Long, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
+			TreeMap<Timestamp, BatchTuplePayload> sessionLog = ((SynchronousCommunicationChannel)dest).getBuffer().trim(null);
 
 			boolean doUpdateDownAlives = !(piggybackControlTraffic && outputQueue.checkEndpoint(dest));
 			synchronized(lock)
@@ -1107,7 +1108,7 @@ public class Dispatcher implements IRoutingObserver {
 				//2) Do a combined.set alives
 				//3) Save the old alives for this downstream
 				//4) delete the old alives for this downstream (TODO: What if control connection still open?)
-				Set<Long> dsOpOldAlives = doUpdateDownAlives? updateDownAlives(dest.getOperatorId(), null) : null;
+				Set<Timestamp> dsOpOldAlives = doUpdateDownAlives? updateDownAlives(dest.getOperatorId(), null) : null;
 				//5) for tuple in logged
 				//		if acked discard
 				//		else if in joint alives add to shared replay log
@@ -1155,11 +1156,11 @@ public class Dispatcher implements IRoutingObserver {
 	}
 	
 		/* TODO: Should be holding lock here? */
-		private void requeueTuples(TreeMap<Long, BatchTuplePayload> sessionLog, Set<Long> dsOpOldAlives)
+		private void requeueTuples(TreeMap<Timestamp, BatchTuplePayload> sessionLog, Set<Timestamp> dsOpOldAlives)
 		{
-			for (Map.Entry<Long, BatchTuplePayload> e : sessionLog.entrySet())
+			for (Map.Entry<Timestamp, BatchTuplePayload> e : sessionLog.entrySet())
 			{
-				long ts = e.getKey();
+				Timestamp ts = e.getKey();
 				TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
 
 				if (!combinedDownFctrl.isAcked(ts))
@@ -1186,12 +1187,12 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 
-	private Set<Long> getRetractions(Set<Long> dsOpOldAlives)
+	private Set<Timestamp> getRetractions(Set<Timestamp> dsOpOldAlives)
 	{
-		Set<Long> retractions = new HashSet<>();
+		Set<Timestamp> retractions = new HashSet<>();
 		if (dsOpOldAlives != null)
 		{
-			for (Long id : dsOpOldAlives)
+			for (Timestamp id : dsOpOldAlives)
 			{
 				if (!combinedDownFctrl.isAcked(id) && !combinedDownFctrl.isAlive(id))
 				{
@@ -1203,11 +1204,11 @@ public class Dispatcher implements IRoutingObserver {
 	}
 
 	//Assumes you've already trimmed buffer, updated combinedDownFctrl, and lock is held.
-	public void requeueRetractedTuples(Set<Long> retracted)
+	public void requeueRetractedTuples(Set<Timestamp> retracted)
 	{
 		Vector<EndPoint> endpoints = owner.getPUContext().getDownstreamTypeConnection();
 
-		for (Long ts : retracted)
+		for (Timestamp ts : retracted)
 		{
 			if (!combinedDownFctrl.isAcked(ts) && !combinedDownFctrl.isAlive(ts))
 			{
@@ -1238,12 +1239,12 @@ public class Dispatcher implements IRoutingObserver {
 	}
 
 	//Lock should be held
-	private Set<Long> updateDownAlives(int dsOpId, Set<Long> newDownAlives)
+	private Set<Timestamp> updateDownAlives(int dsOpId, Set<Timestamp> newDownAlives)
 	{
-		Set<Long> dsOpOldAlives = null;
+		Set<Timestamp> dsOpOldAlives = null;
 		if (optimizeReplay)
 		{
-			Set<Long> newAlives = new HashSet<>();
+			Set<Timestamp> newAlives = new HashSet<>();
 			if (newDownAlives != null) { newAlives.addAll(newDownAlives); }
 			for (Integer id : downAlives.keySet())
 			{
@@ -1261,7 +1262,7 @@ public class Dispatcher implements IRoutingObserver {
 	}
 	
 	/* Should be holding lock here */
-	private void requeueFromSharedReplayLog(Set<Long> dsOpOldAlives)
+	private void requeueFromSharedReplayLog(Set<Timestamp> dsOpOldAlives)
 	{
 		//Replay any retracted alives that we hold in shared replay logs
 		if (optimizeReplay && dsOpOldAlives != null && !sharedReplayLog.isEmpty())
@@ -1269,7 +1270,7 @@ public class Dispatcher implements IRoutingObserver {
 			logger.debug("Requeuing from shared replay log with dsooa.size="+dsOpOldAlives.size()+",srl.size="+sharedReplayLog.size());
 			if (sharedReplayLog.size() > dsOpOldAlives.size())
 			{
-				for (Long oldDownAlive : dsOpOldAlives)
+				for (Timestamp oldDownAlive : dsOpOldAlives)
 				{
 					if (!combinedDownFctrl.isAcked(oldDownAlive) && !combinedDownFctrl.isAlive(oldDownAlive))
 					{
@@ -1279,7 +1280,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			else
 			{
-				for (Long srlEntry : sharedReplayLog.keys())
+				for (Timestamp srlEntry : sharedReplayLog.keys())
 				{
 					if (combinedDownFctrl.isAcked(srlEntry)) { sharedReplayLog.remove(srlEntry); }
 					else if (dsOpOldAlives.contains(srlEntry) && !combinedDownFctrl.isAlive(srlEntry))
@@ -1290,7 +1291,7 @@ public class Dispatcher implements IRoutingObserver {
 	}
 
 	//Assumes lock held	
-	private void moveSharedReplayToOpQueue(Long id)
+	private void moveSharedReplayToOpQueue(Timestamp id)
 	{
 		//Retraction, should schedule for replay if in shared replay log.
 		DataTuple dt = sharedReplayLog.remove(id);
@@ -1374,13 +1375,13 @@ public class Dispatcher implements IRoutingObserver {
 	private class FailureCtrlHandler
 	{		
 		private final Map<Integer, Long> lastUpdateTimes = new HashMap<>();
-		private final Map<Integer, Map<Long,Long>> batchRetransmitTimers= new HashMap<Integer, Map<Long,Long>>();
+		private final Map<Integer, Map<Timestamp,Long>> batchRetransmitTimers= new HashMap<Integer, Map<Timestamp,Long>>();
 
 		public FailureCtrlHandler()
 		{
 			for(Integer downOpId : owner.getOperator().getOpContext().getDownstreamOpIdList())
 			{
-				batchRetransmitTimers.put(downOpId, new HashMap<Long,Long>());
+				batchRetransmitTimers.put(downOpId, new HashMap<Timestamp,Long>());
 			}
 		}
 
@@ -1430,13 +1431,13 @@ public class Dispatcher implements IRoutingObserver {
 					//On the other hand removing it might slow upstreams from detecting failures/retractions, although probably not.
 					if (workers.get(owner.getOperator().getOpContext().getDownOpIndexFromOpId(dsOpId)).isConnected())
 					{
-						Set<Long> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+						Set<Timestamp> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
 						long tDownAlives = System.currentTimeMillis();
 						logger.trace("Failure ctrl handler checking for replay from shared log.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
 						long tRequeueShared = System.currentTimeMillis();
 			
-						Set<Long> retractions = getRetractions(dsOpOldAlives);
+						Set<Timestamp> retractions = getRetractions(dsOpOldAlives);
 						long tGetRetractions = System.currentTimeMillis();
 						if (!retractions.isEmpty()) 
 						{ 
@@ -1517,7 +1518,7 @@ public class Dispatcher implements IRoutingObserver {
 			if (removedSome) { setDownstreamsRoutable(true); }
 		}
 
-		private void addBatchRetransmitTimer(int downOpId, long batchId, long now)
+		private void addBatchRetransmitTimer(int downOpId, Timestamp batchId, long now)
 		{
 			if (bestEffort || !enableBatchRetransmitTimeouts) { return; }
 
@@ -1562,11 +1563,11 @@ public class Dispatcher implements IRoutingObserver {
 			{
 
 				logger.debug("Retransmit timers before check="+batchRetransmitTimers);
-				Iterator<Map.Entry<Long,Long>> iter = batchRetransmitTimers.get(downOpId).entrySet().iterator();
+				Iterator<Map.Entry<Timestamp,Long>> iter = batchRetransmitTimers.get(downOpId).entrySet().iterator();
 				while (iter.hasNext())
 				{
-					Map.Entry<Long,Long> e = iter.next();
-					Long batchId = e.getKey();
+					Map.Entry<Timestamp,Long> e = iter.next();
+					Timestamp batchId = e.getKey();
 					long delay = System.currentTimeMillis() - e.getValue();
 					if (combinedDownFctrl.isAcked(batchId) ||
 						(optimizeReplay && combinedDownFctrl.isAlive(batchId)))
@@ -1710,12 +1711,12 @@ public class Dispatcher implements IRoutingObserver {
 				if (cci != null)
 				{
 					IBuffer buffer = cci.getBuffer();
-					TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
+					TreeMap<Timestamp, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
 					logger.debug("Watchdog requeueing "+delayedBatches.size()+" tuples sent to "+downOpId);
 					long now = System.currentTimeMillis();
-					for (Map.Entry<Long, BatchTuplePayload> e : delayedBatches.entrySet())
+					for (Map.Entry<Timestamp, BatchTuplePayload> e : delayedBatches.entrySet())
 					{
-						long ts = e.getKey();
+						Timestamp ts = e.getKey();
 						TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
 
 						if (!combinedDownFctrl.isAcked(ts))
@@ -1769,14 +1770,14 @@ public class Dispatcher implements IRoutingObserver {
 					//2) Do a combined.set alives
 					//3) Save the old alives for this downstream
 					//4) delete the old alives for this downstream
-					Set<Long> dsOpOldAlives = updateDownAlives(downOpId, null);
+					Set<Timestamp> dsOpOldAlives = updateDownAlives(downOpId, null);
 
 					//TODO: Should we be using downOpFailureCtrl?
 					FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
 					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
 					IBuffer buffer = dest.getBuffer();
 					//N.B. This is the key step wrt mhro!
-					TreeMap<Long, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
+					TreeMap<Timestamp, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
 
 					
 					//5) for tuple in logged
@@ -1788,7 +1789,7 @@ public class Dispatcher implements IRoutingObserver {
 					requeueTuples(delayedBatches, dsOpOldAlives);
 
 					// Check whether there have been any retractions for batches only contained in other buffers.
-					Set<Long> retractions = getRetractions(dsOpOldAlives);
+					Set<Timestamp> retractions = getRetractions(dsOpOldAlives);
 					if (!retractions.isEmpty()) 
 					{ 
 						logger.info("Downstream "+downOpId+" retractions:"+retractions); 
@@ -1836,7 +1837,7 @@ public class Dispatcher implements IRoutingObserver {
 	
 	public class OperatorOutputQueue
 	{
-		private SortedMap<Long, DataTuple> queue;
+		private SortedMap<Timestamp, DataTuple> queue;
 		private final int maxSize;
 		
 		public OperatorOutputQueue(int maxSize)
@@ -1876,7 +1877,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		public DataTuple get(Long ts)
+		public DataTuple get(Timestamp ts)
 		{
 			synchronized(lock)
 			{
@@ -1884,14 +1885,14 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		public Set<Long> keys()
+		public Set<Timestamp> keys()
 		{
 			synchronized(lock)
 			{
 				if (queue.isEmpty()) { return null; }
 				else
 				{
-					Set<Long> result = new HashSet<>();
+					Set<Timestamp> result = new HashSet<>();
 					result.addAll(queue.keySet());
 					return result;
 				}
@@ -1899,7 +1900,7 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		public int size() { synchronized(lock) { return queue.size(); }}
-		public DataTuple remove(long ts)
+		public DataTuple remove(Timestamp ts)
 		{
 			DataTuple dt = null;
 			synchronized(lock)
@@ -1910,15 +1911,15 @@ public class Dispatcher implements IRoutingObserver {
 			return dt;
 		}
 		
-		public Map<Long, DataTuple> removeAll(Set<Long> tsSet)
+		public Map<Timestamp, DataTuple> removeAll(Set<Timestamp> tsSet)
 		{
-			Map<Long, DataTuple> removed = new TreeMap<>();
+			Map<Timestamp, DataTuple> removed = new TreeMap<>();
 			synchronized(lock)
 			{
 				//Optimization - iterate over the smaller of the q and the tsSet
 				if (tsSet.size() < queue.size())
 				{
-					for (Long ts : tsSet)
+					for (Timestamp ts : tsSet)
 					{
 						DataTuple dt = queue.remove(ts);
 						if (dt != null) { removed.put(ts,  dt); }
@@ -1926,11 +1927,11 @@ public class Dispatcher implements IRoutingObserver {
 				}
 				else
 				{
-					Iterator<Map.Entry<Long, DataTuple>> iter = queue.entrySet().iterator();
+					Iterator<Map.Entry<Timestamp, DataTuple>> iter = queue.entrySet().iterator();
 					while (iter.hasNext())
 					{
-						Map.Entry<Long,DataTuple> qEntry = iter.next();
-						Long qts = qEntry.getKey();
+						Map.Entry<Timestamp,DataTuple> qEntry = iter.next();
+						Timestamp qts = qEntry.getKey();
 						if (tsSet.contains(qts))
 						{
 							iter.remove();
@@ -1955,13 +1956,13 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		//public SortedMap<Long, DataTuple> removeOlderInclusive(long ts)
-		public boolean removeOlderInclusive(long ts)
+		public boolean removeOlderInclusive(Timestamp ts)
 		{
 			synchronized(lock)
 			{
-				SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				SortedMap<Timestamp, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
 				boolean removedSome = removed != null && !removed.isEmpty();
-				SortedMap<Long, DataTuple> remainder = queue.tailMap(ts+1);
+				SortedMap<Timestamp, DataTuple> remainder = queue.tailMap(ts+1);
 				if (remainder == null || remainder.isEmpty()) { queue.clear(); }
 				else 
 				{ 
@@ -1978,7 +1979,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
-		public boolean contains(long ts)
+		public boolean contains(Timestamp ts)
 		{
 			synchronized(lock) { return queue.containsKey(ts); }
 		}

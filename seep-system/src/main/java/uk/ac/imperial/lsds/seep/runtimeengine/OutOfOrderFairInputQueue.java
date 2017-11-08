@@ -19,13 +19,14 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.manet.Query;
 
 public class OutOfOrderFairInputQueue implements DataStructureI {
 
 	private final static Logger logger = LoggerFactory.getLogger(OutOfOrderFairInputQueue.class);
-	private TreeMap<Long, DataTuple> inputQueue = new TreeMap<>();
+	private TreeMap<Timestamp, DataTuple> inputQueue = new TreeMap<>();
 	private final int maxInputQueueSize;
 	//private long lw = -1;
 	//private Set<Long> acks = new HashSet<>();
@@ -67,7 +68,7 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 		lock.lock();	
 		try
 		{	
-			long ts = data.getPayload().timestamp; 
+			Timestamp ts = data.getPayload().timestamp; 
 			if (!bestEffort && !inputFctrl.updateAlives(ts))
 			{
 				logger.debug("Ignoring tuple with ts="+ts);
@@ -192,8 +193,9 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 		try
 		{
 			if (bestEffort || 
-					downFctrl.lw() < inputFctrl.lw() || 
-					(downFctrl.lw() == inputFctrl.lw() && downFctrl.acks().size() < inputFctrl.acks().size()))
+					//downFctrl.lw() < inputFctrl.lw() || 
+					//(downFctrl.lw() == inputFctrl.lw() && downFctrl.acks().size() < inputFctrl.acks().size()))
+					!downFctrl.coversAcks(inputFctrl))
 			{
 				throw new RuntimeException("Logic error");
 			}
@@ -202,14 +204,15 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 			//with the ids of all tuples live downstream.
 			inputFctrl.update(downFctrl.lw(), downFctrl.acks(), null);
 			
-			Iterator<Long> iter = inputQueue.keySet().iterator();
+			Iterator<Timestamp> iter = inputQueue.keySet().iterator();
 			boolean removedSomething = false;
 			while (iter.hasNext())
 			{
-				long ts = iter.next();
+				Timestamp ts = iter.next();
 				//Probably want to delete tuples that are live downstream but not
 				//here to prevent leaks with multi-input ops.
-				if (ts <= inputFctrl.lw() || inputFctrl.acks().contains(ts) 
+				//if (ts <= inputFctrl.lw() || inputFctrl.acks().contains(ts) 
+				if (inputFctrl.isAcked(ts) 
 						|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
 				{
 					iter.remove();

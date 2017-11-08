@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 
 public class FailureCtrl {
 
@@ -18,7 +19,8 @@ public class FailureCtrl {
 		this(-1, new HashSet<Long>(), new HashSet<Long>());
 	}
 	
-	public FailureCtrl(long lw, Set<Long> acks, Set<Long> alives)
+	//public FailureCtrl(long lw, Set<Long> acks, Set<Long> alives)
+	private FailureCtrl(long lw, Set<Long> acks, Set<Long> alives)
 	{
 		this.lw = lw;
 		this.acks = (acks == null ? new HashSet<Long>() : acks);
@@ -30,6 +32,14 @@ public class FailureCtrl {
 		this.lw = other.lw;
 		this.acks = new HashSet<>(other.acks());
 		this.alives = new HashSet<>(other.alives());
+	}
+
+	public FailureCtrl(FailureCtrl other, boolean keepAlives)
+	{
+		this.lw = other.lw;
+		this.acks = new HashSet<>(other.acks());
+		if (keepAlives)  { this.alives = new HashSet<>(other.alives()); }
+		else { this.alives = new HashSet<Long>(); }
 	}
 	
 	public FailureCtrl(String fctrl)
@@ -87,13 +97,29 @@ public class FailureCtrl {
 		return longs;
 	}
 	
-	public long lw() { return lw;	}
-	
-	public Set<Long> acks() { 
-		synchronized(lock) { return new HashSet<>(acks); }
+	//public long lw() { return lw;	}
+	public Timestamp lw() { 
+		/*
+		return lw;	
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
-	public Set<Long> alives() { 
+	
+	//public Set<Long> acks() { 
+	public Set<Timestamp> acks() { 
+		/*
+		synchronized(lock) { return new HashSet<>(acks); }
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
+	}
+
+	
+	//public Set<Long> alives() { 
+	public Set<Timestamp> alives() { 
+		/*
 		synchronized(lock) { return new HashSet<>(alives); }
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 	
 	public boolean update(FailureCtrl other)
@@ -143,8 +169,9 @@ public class FailureCtrl {
 		}
 	}
 	
-	public void ack(long ts)
+	public void ack(Timestamp ts)
 	{
+		/*
 		synchronized(lock)
 		{
 			if (!alives.isEmpty()) 
@@ -162,10 +189,13 @@ public class FailureCtrl {
 				}
 			}
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries?");	
 	}
 	
-	public boolean update(long newLw, Set<Long> newAcks, Set<Long> newAlives)
+	public boolean update(Timestamp newLw, Set<Timestamp> newAcks, Set<Timestamp> newAlives)
 	{
+		/*
 		boolean changed = false;
 		synchronized(lock)
 		{
@@ -211,6 +241,8 @@ public class FailureCtrl {
 			
 			return changed || prevAcksSize != acks.size() || prevAlivesSize != alives.size();
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries?");	
 	}
 	
 	/*
@@ -249,8 +281,9 @@ public class FailureCtrl {
 	}
 	*/
 	
-	public boolean updateAlives(long newAlive)
+	public boolean updateAlives(Timestamp newAlive)
 	{
+		/*
 		synchronized(lock)
 		{
 			if (newAlive <= lw || acks.contains(newAlive) || alives.contains(newAlive))
@@ -263,10 +296,13 @@ public class FailureCtrl {
 				return true;
 			}
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries?");	
 	}
 	
-	public void updateAlives(Set<Long> newAlives)
+	public void updateAlives(Set<Timestamp> newAlives)
 	{
+		/*
 		synchronized(lock)
 		{
 			alives.addAll(newAlives);
@@ -280,36 +316,48 @@ public class FailureCtrl {
 				}
 			}
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries?");	
 	}
 	
-	public void setAlives(Set<Long> newAlives)
+	public void setAlives(Set<Timestamp> newAlives)
 	{
+		/*
 		synchronized(lock)
 		{
 			alives.clear();
 			updateAlives(newAlives);
 		}	
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 	
 	
-	public boolean isAcked(long ts)
+	public boolean isAcked(Timestamp ts)
 	{
+		/*
 		synchronized(lock)
 		{
 			return ts <= lw || acks.contains(ts);
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 
-	public boolean isAlive(long ts)
+	public boolean isAlive(Timestamp ts)
 	{
+		/*
 		synchronized(lock)
 		{
 			return alives.contains(ts) && !isAcked(ts);
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 
-	public long unacked(long ts)
+	public long unacked(Timestamp ts)
 	{
+		/*
 		synchronized(lock)
 		{
 			if (ts <= lw) { return 0; }
@@ -322,5 +370,12 @@ public class FailureCtrl {
 			if (unacked != (ts - lw - acks.size())) { throw new RuntimeException("Logic error: unacked="+unacked+",ts="+ts+",ls="+lw+",acks.size="+acks.size()+",acks="+acks); }
 			return unacked; 
 		}
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries?");	
+	}
+
+	public boolean coversAcks(FailureCtrl other)
+	{
+		throw new RuntimeException("TODO: See OutOfOrderInputQueue");	
 	}
 }

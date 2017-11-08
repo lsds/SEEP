@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
@@ -31,7 +32,7 @@ public class BackpressureRouter implements IRouter {
 	private final boolean downIsUnreplicatedSink;
 	private final Map<Integer, Double> weights;
 	private final Map<Integer, Long> lastWeightUpdateTimes;
-	private final Map<Integer, Set<Long>> unmatched;
+	private final Map<Integer, Set<Timestamp>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
 	private ArrayList<Integer> lastOrder = null;
@@ -54,7 +55,7 @@ public class BackpressureRouter implements IRouter {
 		{
 			weights.put(downOpId, INITIAL_WEIGHT);
 			lastWeightUpdateTimes.put(downOpId, -1L);
-			unmatched.put(downOpId, new HashSet<Long>());
+			unmatched.put(downOpId, new HashSet<Timestamp>());
 		}
 		logger.info("Initial weights: "+weights);
 		Query meanderQuery = opContext.getMeanderQuery(); 
@@ -66,7 +67,7 @@ public class BackpressureRouter implements IRouter {
 		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
 	
-	public ArrayList<Integer> route(long batchId)
+	public ArrayList<Integer> route(Timestamp batchId)
 	{
 		ArrayList<Integer> targets = null;
 		synchronized(lock)
@@ -182,7 +183,7 @@ public class BackpressureRouter implements IRouter {
 	}
 	
 
-	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	public Map<Integer, Set<Timestamp>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
 	{
 		synchronized(lock)
 		{
@@ -204,7 +205,7 @@ public class BackpressureRouter implements IRouter {
 		return null;
 	}
 
-	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp)
+	public Map<Integer, Set<Timestamp>> handleDownUp(DownUpRCtrl downUp)
 	{
 		if (upstreamRoutingController) { throw new RuntimeException ("Logic error."); }
 		return handleDownUp(downUp, true);
@@ -215,9 +216,9 @@ public class BackpressureRouter implements IRouter {
 		handleDownUp(new DownUpRCtrl(downOpId, -1.0, null), false);
 	}
 	
-	private Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
+	private Map<Integer, Set<Timestamp>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
 	{
-		Map<Integer, Set<Long>> newConstraints = null;
+		Map<Integer, Set<Timestamp>> newConstraints = null;
 		long tStart = System.currentTimeMillis();
 		synchronized(lock)
 		{
@@ -253,19 +254,19 @@ public class BackpressureRouter implements IRouter {
 			}
 			
 			logger.debug("handleDownUp:Node "+opContext.getOperatorStaticInformation().getOpId()+" backpressure router weights= "+weights);
-			Set<Long> newUnmatched = downUp.getUnmatched();
+			Set<Timestamp> newUnmatched = downUp.getUnmatched();
 			if (newUnmatched != null)
 			{
 				//TODO: Tmp hack: Null here indicates a local update because
 				//an attempt to send a q length msg upstream failed - should
 				//clean it up to perhaps use a different method.
-				Set<Long> oldUnmatched = unmatched.get(downUp.getOpId());
+				Set<Timestamp> oldUnmatched = unmatched.get(downUp.getOpId());
 				boolean changed = unmatchedChanged(oldUnmatched, newUnmatched);
 				logger.debug("Unmatched changed for "+downUp.getOpId()+"="+changed+", old="+oldUnmatched+",new="+newUnmatched);
 				unmatched.put(downUp.getOpId(), newUnmatched);
 				
 				if (changed) {
-					newConstraints = new HashMap<Integer, Set<Long>>();
+					newConstraints = new HashMap<Integer, Set<Timestamp>>();
 					newConstraints.put(downUp.getOpId(), new HashSet<>(newUnmatched));
 				}
 			}
@@ -378,16 +379,16 @@ public class BackpressureRouter implements IRouter {
 		throw new RuntimeException("Logic error");		
 	}
 	
-	public Set<Long> areConstrained(Set<Long> queued)
+	public Set<Timestamp> areConstrained(Set<Timestamp> queued)
 	{
 		if (queued == null || queued.isEmpty() || !downIsMultiInput) { return null; }
 		logger.debug("Checking constrained for queued: "+queued);
 		synchronized(lock)
 		{
-			Set<Long> constraints = new HashSet<>();
+			Set<Timestamp> constraints = new HashSet<>();
 			for (Integer dsOpId : unmatched.keySet())
 			{
-				for (Long constrained : unmatched.get(dsOpId))
+				for (Timestamp constrained : unmatched.get(dsOpId))
 				{
 					if (queued.contains(constrained))
 					{
@@ -400,14 +401,14 @@ public class BackpressureRouter implements IRouter {
 		}
 	}
 	
-	private boolean unmatchedChanged(Set<Long> oldUnmatched, Set<Long> newUnmatched)
+	private boolean unmatchedChanged(Set<Timestamp> oldUnmatched, Set<Timestamp> newUnmatched)
 	{
 		if (oldUnmatched == null && newUnmatched == null) { return false;}		
 		if ((oldUnmatched == null && !newUnmatched.isEmpty()) || 
 				(newUnmatched == null && !oldUnmatched.isEmpty())) { return true;}
 		if (oldUnmatched.size() != newUnmatched.size()) { return true; }
 		
-		for (Long unmatched : oldUnmatched) 
+		for (Timestamp unmatched : oldUnmatched) 
 		{ 
 			if (!newUnmatched.contains(unmatched)) { return true; }
 		}

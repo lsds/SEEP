@@ -16,6 +16,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperatorState;
@@ -252,10 +253,18 @@ public class OutputQueueWorker
 	{
 		BatchTuplePayload msg = new BatchTuplePayload();
 		msg.addTuple(tp);
+		if (!tp.timestamp.equals(msg.outputTs)) { throw new RuntimeException("Logic error tp.ts="+tp.timestamp+",msg.ts="+msg.outputTs); }
 		SynchronousCommunicationChannel channelRecord = (SynchronousCommunicationChannel)dest;		
+		/*
 		if (channelRecord.getBuffer().contains(tp.timestamp)) 
 		{ 
 			logger.info("oq.dupe ts="+tp.timestamp+",dsOpId="+dest.getOperatorId());	
+			return true; 
+		} 
+		*/
+		if (channelRecord.getBuffer().contains(msg.outputTs)) 
+		{ 
+			logger.info("oq.dupe ts="+msg.outputTs+",dsOpId="+dest.getOperatorId());	
 			return true; 
 		} 
 		channelRecord.getBuffer().save(msg, msg.outputTs, owner.getIncomingTT());
@@ -288,7 +297,8 @@ public class OutputQueueWorker
 			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
 			if (!allowOutOfOrderTuples)
 			{
-				tp.timestamp = System.currentTimeMillis(); // assign local ack
+				//tp.timestamp = System.currentTimeMillis(); // assign local ack
+				throw new RuntimeException("Deprecated, ignore?");
 			}
 			long currentTime = System.currentTimeMillis();
 			if (outputQueueTimestamps) { tp.instrumentation_ts = currentTime; }
@@ -339,7 +349,7 @@ public class OutputQueueWorker
 			}
 			catch(KryoException|IllegalArgumentException e)
 			{
-				long ts = tuple == null ? -1 : tuple.getPayload().timestamp;
+				Timestamp ts = tuple == null ? null : tuple.getPayload().timestamp;
 				logger.error("Writing batch to "+dest.getOperatorId() + " failed, ts="+ ts +", "+e);
 				channelRecord.cleanBatch2();
 				return false;

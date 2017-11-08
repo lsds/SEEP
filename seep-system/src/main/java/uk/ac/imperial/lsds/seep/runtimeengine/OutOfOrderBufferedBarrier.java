@@ -22,6 +22,7 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.manet.Query;
 
 public class OutOfOrderBufferedBarrier implements DataStructureI {
@@ -31,8 +32,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	private final int logicalId;
 	private final Query meanderQuery;
 	private final int numLogicalInputs;
-	private final ArrayList<TreeMap<Long, DataTuple>> pending;	//Unbounded
-	private final TreeMap<Long, ArrayList<DataTuple>> ready = new TreeMap<Long, ArrayList<DataTuple>>();
+	private final ArrayList<TreeMap<Timestamp, DataTuple>> pending;	//Unbounded
+	private final TreeMap<Timestamp, ArrayList<DataTuple>> ready = new TreeMap<Timestamp, ArrayList<DataTuple>>();
 	private final ArrayList<FailureCtrl> inputFctrls;
 	private final boolean optimizeReplay;
 	private final boolean bestEffort;
@@ -71,7 +72,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		pending = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			pending.add(new TreeMap<Long, DataTuple>());
+			pending.add(new TreeMap<Timestamp, DataTuple>());
 			inputFctrls.add(new FailureCtrl());
 		}
 	}
@@ -83,10 +84,10 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	{
 		synchronized(this)
 		{
-			long ts = dt.getPayload().timestamp;
+			Timestamp ts = dt.getPayload().timestamp;
 			int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
 			FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
-			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
+			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.isAlive(ts))
 			{
 				logger.debug("Ignoring tuple with ts="+ts);
 				return; 
@@ -131,7 +132,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	}
 	
 	//Assumes lock held
-	private void addReady(long ts)
+	private void addReady(Timestamp ts)
 	{
 		ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
@@ -182,7 +183,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		for (int i = 0; i < dts.size(); i++)
 		{
 			if (dts.get(i) == null) { continue; }
-			long ts = dts.get(i).getPayload().timestamp;
+			Timestamp ts = dts.get(i).getPayload().timestamp;
 			long latency = pullEnd - dts.get(i).getPayload().instrumentation_ts;
 			long pullLatency = pullEnd - dts.get(i).getPayload().local_ts;
 			long pullReadTime = pullEnd - pullStart;
@@ -238,13 +239,15 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		return upOpFctrls; 
 	}
 	
-	private void trimQueue(Iterator<Long> qIter, FailureCtrl downFctrl)
+	private void trimQueue(Iterator<Timestamp> qIter, FailureCtrl downFctrl)
 	{
 		while (qIter.hasNext())
 		{
-			Long ts = qIter.next();
-			if (ts <= downFctrl.lw() || downFctrl.acks().contains(ts)
-					|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
+			Timestamp ts = qIter.next();
+			//if (ts <= downFctrl.lw() || downFctrl.acks().contains(ts)
+			if (downFctrl.isAcked(ts)
+					//|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
+					|| (!reprocessNonLocals && downFctrl.isAlive(ts)))
 			{
 				qIter.remove();
 				if (barrierTimeoutMonitor != null) { barrierTimeoutMonitor.clear(ts); }
@@ -295,12 +298,12 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 	/** Get the current 'constraints' i.e. for each input the set
 	 * of batch ids not yet received but already received for other inputs 
 	 */
-	public synchronized ArrayList<RangeSet<Long>> getRoutingConstraints() {
-		ArrayList<TreeSet<Long>> constraints = new ArrayList<>(numLogicalInputs);
-		ArrayList<RangeSet<Long>> constraintRanges = new ArrayList<>(numLogicalInputs);
+	public synchronized ArrayList<RangeSet<Timestamp>> getRoutingConstraints() {
+		ArrayList<TreeSet<Timestamp>> constraints = new ArrayList<>(numLogicalInputs);
+		ArrayList<RangeSet<Timestamp>> constraintRanges = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			constraints.add(new TreeSet<Long>());
+			constraints.add(new TreeSet<Timestamp>());
 			
 			for (int j = 0; j < numLogicalInputs; j++)
 			{
@@ -314,17 +317,18 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		return constraintRanges;
 	}
 	
-	private RangeSet<Long> toRangeSet(TreeSet<Long> constraints)
+	private RangeSet<Timestamp> toRangeSet(TreeSet<Timestamp> constraints)
 	{ 
-		RangeSet<Long> result = TreeRangeSet.create();
+		/*
+		RangeSet<Timestamp> result = TreeRangeSet.create();
 		if (constraints == null || constraints.isEmpty()) { return result; }
 		
-		Iterator<Long> iter = constraints.iterator();
-		Long rangeStart = null;
-		Long rangeEnd = null;
+		Iterator<Timestamp> iter = constraints.iterator();
+		Timestamp rangeStart = null;
+		Timestamp rangeEnd = null;
 		while(iter.hasNext())
 		{
-			Long next = iter.next();
+			Timestamp next = iter.next();
 			if (rangeStart == null)
 			{
 				rangeStart = next;
@@ -356,7 +360,10 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 				}
 			}
 		}
+		
 		return result;
+		*/
+		throw new RuntimeException("TODO: How to handle multiple queries?");
 	}
 	
 	@Override
@@ -371,10 +378,10 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 
 	private class BarrierTimeoutMonitor
 	{
-		private final Map<Long, TimerTask> timeoutTasks = new HashMap<>();
+		private final Map<Timestamp, TimerTask> timeoutTasks = new HashMap<>();
 		private final Timer timer = new Timer(true);
 		
-		public void set(final long ts, long delay)
+		public void set(final Timestamp ts, long delay)
 		{
 			if (timeoutTasks.containsKey(ts)) { throw new RuntimeException("Logic error - timeout task already exists: "+ts); }
 			TimerTask timeoutTask = new TimerTask() 
@@ -398,7 +405,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 			timer.schedule(timeoutTask, delay);
 		}
 		
-		public void clear(final long ts)
+		public void clear(final Timestamp ts)
 		{
 			if (timeoutTasks.containsKey(ts))
 			{

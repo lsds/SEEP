@@ -21,7 +21,7 @@ public class BatchTuplePayload {
 
 	public int batchSize = 0;
 	public ArrayList<TuplePayload> batch = new ArrayList<TuplePayload>();
-	public long outputTs = -1;
+	public Timestamp outputTs = null;
 	public Integer rctrl = null;
 	public ControlTuple fctrl = null;
 	
@@ -51,21 +51,26 @@ public class BatchTuplePayload {
 	
 	public synchronized void trim(FailureCtrl otherFctrl)
 	{
+		//TODO: This doesn't really make sense at the moment for
+		// multi-tuples batches.
 		//TODO: Is this even thread safe wrt output sending?
 		Iterator<TuplePayload> iter = batch.iterator();
-		long newOutputTs = -1;
+		//Timestamp newOutputTs = -1;
+		Timestamp newOutputTs = null;
 		while (iter.hasNext())
 		{
-			long tupleTs = iter.next().timestamp;
+			Timestamp tupleTs = iter.next().timestamp;
 			// Don't remove based on alives here - we're using this log for replay.
-			if (tupleTs <= otherFctrl.lw() || otherFctrl.acks().contains(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
+			//if (tupleTs <= otherFctrl.lw() || otherFctrl.acks().contains(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
+			if (otherFctrl.isAcked(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
 			{
 				iter.remove();
 				batchSize--;
 			}
 			else
 			{
-				newOutputTs = Math.max(newOutputTs, tupleTs);
+				//newOutputTs = Math.max(newOutputTs, tupleTs);
+				newOutputTs = Timestamp.max(newOutputTs, tupleTs);
 			}
 		}
 		outputTs = newOutputTs;	//TODO: This will probably mess up the existing acking relationships.
@@ -77,9 +82,10 @@ public class BatchTuplePayload {
 		Iterator<TuplePayload> iter = batch.iterator();
 		while (iter.hasNext())
 		{
-			long tupleTs = iter.next().timestamp;
+			Timestamp tupleTs = iter.next().timestamp;
 			// Don't remove based on alives here - we're using this log for replay.
-			if (tupleTs <= otherFctrl.lw() || otherFctrl.acks().contains(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
+			//if (tupleTs <= otherFctrl.lw() || otherFctrl.acks().contains(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
+			if (otherFctrl.isAcked(tupleTs) /*|| otherFctrl.alives().contains(tupleTs)*/)
 			{
 				return true;	
 			}

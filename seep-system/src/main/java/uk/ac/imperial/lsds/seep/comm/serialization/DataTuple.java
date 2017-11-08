@@ -86,6 +86,7 @@ public class DataTuple implements DataTupleI, Serializable{
 	}
 	
 	public DataTuple newTuple(Object...objects){
+		/*
 		TuplePayload tp = new TuplePayload();
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = System.currentTimeMillis();
@@ -93,11 +94,14 @@ public class DataTuple implements DataTupleI, Serializable{
 		tp.local_ts = tp.instrumentation_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
+		*/
+		throw new RuntimeException("TODO");
 	}
 	
 	// to be used by java2sdg
 	@Deprecated
 	public DataTuple _newTuple(Object[] objects){
+		/*
 		TuplePayload tp = new TuplePayload();
 		tp.attrValues = new Payload(objects);
 		tp.timestamp = System.currentTimeMillis();
@@ -105,6 +109,8 @@ public class DataTuple implements DataTupleI, Serializable{
 		tp.local_ts = tp.instrumentation_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
+		*/
+		throw new RuntimeException("TODO");
 	}
 	
 	@Override

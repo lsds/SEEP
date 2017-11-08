@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.manet.IRouter;
 import uk.ac.imperial.lsds.seep.operator.Operator;
@@ -191,10 +192,13 @@ public class Router implements Serializable{
 		LOG.debug("Routing data tuple: "+dt.getPayload().timestamp);
 		if (meanderRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
-		return meanderRouter.route(dt.getLong("tupleId"));
+
+		if (! new Timestamp(dt.getLong("tupleId"), dt.getInt("queryId")).equals(dt.getPayload().timestamp)) { throw new RuntimeException("Logic error."); }
+		//return meanderRouter.route(dt.getLong("tupleId")); dokeeffe changed during multi-source query refactoring
+		return meanderRouter.route(dt.getPayload().timestamp);
 	}
 	
-	public Set<Long> areConstrained(Set<Long> batches)
+	public Set<Timestamp> areConstrained(Set<Timestamp> batches)
 	{
 		return meanderRouter.areConstrained(batches);
 	}
@@ -290,7 +294,7 @@ public class Router implements Serializable{
 	{
 		observers.add(o);
 	}
-	private void notifyObservers(Map<Integer, Set<Long>> newConstraints)
+	private void notifyObservers(Map<Integer, Set<Timestamp>> newConstraints)
 	{
 		for (IRoutingObserver o : observers)
 		{

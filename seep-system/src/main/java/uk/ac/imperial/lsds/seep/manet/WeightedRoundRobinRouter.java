@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.GLOBALS;
@@ -25,7 +26,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 	private final static Logger logger = LoggerFactory.getLogger(WeightedRoundRobinRouter.class);
 	private final static double INITIAL_WEIGHT = 1;
 	private final Map<Integer, Double> weights;
-	private final Map<Integer, Set<Long>> unmatched;
+	private final Map<Integer, Set<Timestamp>> unmatched;
 	private final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	private Integer lastRouted = null;
 	private int switchCount = 0;
@@ -44,7 +45,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 		for (int downOpId : downOps)
 		{
 			weights.put(downOpId, INITIAL_WEIGHT);
-			unmatched.put(downOpId, new HashSet<Long>());
+			unmatched.put(downOpId, new HashSet<Timestamp>());
 		}
 		logger.info("Initial weights: "+weights);
 		Query meanderQuery = opContext.getMeanderQuery(); 
@@ -58,7 +59,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 
 		
 	@Override
-	public ArrayList<Integer> route(long batchId) {
+	public ArrayList<Integer> route(Timestamp batchId) {
 
 		Integer downOpId = null;
 		
@@ -101,7 +102,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 	}
 
 	@Override
-	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Timestamp>> handleDownUp(DownUpRCtrl downUp) {
 		if (upstreamRoutingController) { throw new RuntimeException ("Logic error."); }
 		synchronized(lock)
 		{
@@ -123,7 +124,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 		throw new RuntimeException("TODO");
 	}
 
-	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	public Map<Integer, Set<Timestamp>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
 	{
 		if (!upstreamRoutingController) { throw new RuntimeException("Logic error."); }
 		synchronized(lock)
@@ -189,7 +190,7 @@ public class WeightedRoundRobinRouter implements IRouter {
 		throw new RuntimeException("Logic error");		
 	}
 	
-	public Set<Long> areConstrained(Set<Long> queued)
+	public Set<Timestamp> areConstrained(Set<Timestamp> queued)
 	{
 		return null;
 	}

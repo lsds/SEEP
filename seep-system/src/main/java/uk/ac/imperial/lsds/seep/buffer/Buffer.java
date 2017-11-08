@@ -24,6 +24,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperator
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 /**
@@ -45,7 +46,7 @@ public class Buffer implements Serializable, IBuffer{
 //	public Iterator<BatchTuplePayload> iterator() { 
 //		return buff.iterator(); 
 //	}
-	
+
 	/* (non-Javadoc)
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#iterator()
 	 */
@@ -57,6 +58,7 @@ public class Buffer implements Serializable, IBuffer{
 	public Buffer(){
 		BackupOperatorState initState = new BackupOperatorState();
 		bs = initState;
+		throw new RuntimeException("TODO: Buffer probably broken.");
 	}
 	
 	/* (non-Javadoc)
@@ -122,7 +124,7 @@ public class Buffer implements Serializable, IBuffer{
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#save(uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload, long, uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker)
 	 */
 	@Override
-	public void save(BatchTuplePayload batch, long outputTs, TimestampTracker inputTs){
+	public void save(BatchTuplePayload batch, Timestamp outputTs, TimestampTracker inputTs){
 		log.add(new OutputLogEntry(outputTs, inputTs, batch));
 	}
 	
@@ -130,8 +132,9 @@ public class Buffer implements Serializable, IBuffer{
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#trim(long)
 	 */
 	@Override
-	public TimestampTracker trim(long ts)
+	public TimestampTracker trimBatch(Timestamp ts)
 	{
+		/*
 		// System.out.println("ACK: "+ts);
 		TimestampTracker oldest = null;
 		boolean matchFirstEntryToRemove = true;
@@ -163,13 +166,15 @@ public class Buffer implements Serializable, IBuffer{
 		System.out.println("TOTAL-TRIM: "+(endTrim-startTrim));
 
         return oldest;
+		*/
+		throw new RuntimeException("Deprecated - ignore?");
 	}
 	
 	/* (non-Javadoc)
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#trim(uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl)
 	 */
 	@Override
-	public TreeMap<Long, BatchTuplePayload> trim(FailureCtrl fctrl)
+	public TreeMap<Timestamp, BatchTuplePayload> trim(FailureCtrl fctrl)
 	{
 		/*
 		Iterator<OutputLogEntry> iter = log.iterator();
@@ -186,9 +191,9 @@ public class Buffer implements Serializable, IBuffer{
 		
 	}
 	
-	public boolean contains(long ts) { throw new RuntimeException("Logic error."); }
-	public BatchTuplePayload get(long ts) { throw new RuntimeException("Logic error."); }
-	public TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl)
+	public boolean contains(Timestamp ts) { throw new RuntimeException("Logic error."); }
+	public BatchTuplePayload get(Timestamp ts) { throw new RuntimeException("Logic error."); }
+	public TreeMap<Timestamp, BatchTuplePayload> get(FailureCtrl fctrl)
 	{
 		throw new RuntimeException("Logic error.");
 	}
@@ -198,9 +203,9 @@ public class Buffer implements Serializable, IBuffer{
 	 * @see uk.ac.imperial.lsds.seep.buffer.IBuffer#getInputVTsForOutputTs(long)
 	 */
 	@Override
-	public TimestampTracker getInputVTsForOutputTs(long output_ts){
+	public TimestampTracker getInputVTsForOutputTs(Timestamp output_ts){
 		for(OutputLogEntry l : log){
-			if(l.outputTs == output_ts){
+			if(l.outputTs.equals(output_ts)){
 				return l.inputVTs;
 			}
 		}

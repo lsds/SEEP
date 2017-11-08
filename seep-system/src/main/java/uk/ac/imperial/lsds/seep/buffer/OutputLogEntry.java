@@ -11,15 +11,16 @@
 package uk.ac.imperial.lsds.seep.buffer;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public class OutputLogEntry {
 
-	public long outputTs;
+	public Timestamp outputTs;
 	public TimestampTracker inputVTs;
 	public BatchTuplePayload batch;
 	
-	public OutputLogEntry(long outputTs, TimestampTracker inputVTs, BatchTuplePayload batch){
+	public OutputLogEntry(Timestamp outputTs, TimestampTracker inputVTs, BatchTuplePayload batch){
 		this.outputTs = outputTs;
 		this.inputVTs = inputVTs;
 		this.batch = batch;

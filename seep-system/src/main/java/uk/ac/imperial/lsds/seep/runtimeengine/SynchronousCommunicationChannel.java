@@ -27,6 +27,7 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.buffer.IBuffer;
 import uk.ac.imperial.lsds.seep.buffer.OutputLogEntry;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 
@@ -61,7 +62,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 	private AtomicBoolean replay = new AtomicBoolean(false);
 	
 	private TimestampTracker reconf_ts;
-	private long last_ts;
+	private Timestamp last_ts;
 	private Iterator<OutputLogEntry> sharedIterator;
 	
 	//Batch information for this channel
@@ -531,7 +532,7 @@ public class SynchronousCommunicationChannel implements EndPoint{
 		batch = new BatchTuplePayload();
 	}
 	
-	public long getLast_ts(){
+	public Timestamp getLast_ts(){
 		return last_ts;
 	}
 	

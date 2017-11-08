@@ -9,13 +9,14 @@ import java.util.HashSet;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 
 public class AbstractWeightBasedRouter implements IRouter {
 	protected final static double INITIAL_WEIGHT = 1;
 	protected final Map<Integer, Double> weights;
-	protected final Map<Integer, Set<Long>> unmatched;
+	protected final Map<Integer, Set<Timestamp>> unmatched;
 	protected final OperatorContext opContext;	//TODO: Want to get rid of this dependency!
 	protected Integer lastRouted = null;
 	protected int switchCount = 0;
@@ -36,7 +37,7 @@ public class AbstractWeightBasedRouter implements IRouter {
 		for (int downOpId : downOps)
 		{
 			weights.put(downOpId, INITIAL_WEIGHT);
-			unmatched.put(downOpId, new HashSet<Long>());
+			unmatched.put(downOpId, new HashSet<Timestamp>());
 		}
 		Query meanderQuery = opContext.getMeanderQuery(); 
 		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
@@ -48,13 +49,13 @@ public class AbstractWeightBasedRouter implements IRouter {
 	}
 
 	@Override
-	public ArrayList<Integer> route(long batchId) {
+	public ArrayList<Integer> route(Timestamp batchId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Timestamp>> handleDownUp(DownUpRCtrl downUp) {
 		// TODO Auto-generated method stub
 		throw new RuntimeException("TODO");
 	}
@@ -65,7 +66,7 @@ public class AbstractWeightBasedRouter implements IRouter {
 		throw new RuntimeException("Logic error");		
 	}
 	
-	public Set<Long> areConstrained(Set<Long> queued)
+	public Set<Timestamp> areConstrained(Set<Timestamp> queued)
 	{
 		return null;
 	}
@@ -75,7 +76,7 @@ public class AbstractWeightBasedRouter implements IRouter {
 		throw new RuntimeException("TODO"); 
 	}
 
-	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	public Map<Integer, Set<Timestamp>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
 	{
 		throw new RuntimeException("Logic error."); 
 	}

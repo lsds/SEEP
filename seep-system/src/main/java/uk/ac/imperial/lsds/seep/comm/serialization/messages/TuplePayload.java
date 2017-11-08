@@ -15,7 +15,7 @@ import java.io.Serializable;
 public class TuplePayload implements Serializable{
 	
 	public static final long serialVersionUID = 1L;
-	public long timestamp;
+	public Timestamp timestamp;
 	public int schemaId;
 	public Payload attrValues;
 	public long instrumentation_ts;

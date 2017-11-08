@@ -186,9 +186,10 @@ public class CoreProcessingLogic implements Serializable{
 	}
 	
 	private synchronized void processAck(int opId, long ack_ts){
+		/*
 		// Trim local buffer
 		IBuffer buffer = puCtx.getBuffer(opId);
-		TimestampTracker oldest = buffer.trim(ack_ts);
+		TimestampTracker oldest = buffer.trimBatch(ack_ts);
 		
 		// Check whether this operator is responsible to control when to backpropagate acks
 		if(pu.getOperator().getOperatorCode() instanceof StatelessOperator || !((StatefulProcessingUnit)pu).isCheckpointEnabled()){
@@ -212,6 +213,8 @@ public class CoreProcessingLogic implements Serializable{
 				System.out.println("is NULL");
 			}
 		}
+		*/
+		throw new RuntimeException("Deprecated - ignore?");
 	}
 	
 	public void processFailureCtrl(FailureCtrl fctrl, int fctrlSenderOpId)
@@ -387,16 +390,17 @@ public class CoreProcessingLogic implements Serializable{
 	}
 	
 	public int configureNewDownstreamStatefulOperatorPartition(int oldOpId, int newOpId, int oldOpIndex, int newOpIndex){
+		/*
 		int newKey = -1;
 		
-		/** BLOCK OF CODE TO REFACTOR **/
+		// BLOCK OF CODE TO REFACTOR
 		//. stop sending data to op1 remember last data sent
 		SynchronousCommunicationChannel oldConnection = ((SynchronousCommunicationChannel)puCtx.getDownstreamTypeConnection().get(oldOpIndex));
 		// necessary to ignore state checkpoints of the old operator before split.
 		long last_ts = oldConnection.getLast_ts();
 		TimestampTracker last_tsV = oldConnection.getBuffer().getInputVTsForOutputTs(last_ts);
 		oldConnection.setReconf_ts(last_tsV);
-		/** END BLOCK OF CODE **/
+		// END BLOCK OF CODE
 				
 		//Stop connections to perform the update
 		LOG.debug("-> Stopping connections of oldOpId: {}and newOpId: {}", oldOpId, newOpId);
@@ -406,6 +410,8 @@ public class CoreProcessingLogic implements Serializable{
 		int bounds[] = pu.getOperator().getRouter().newOperatorPartition(oldOpId, newOpId, oldOpIndex, newOpIndex);
 		newKey = (bounds[1]-bounds[0])/2;
 		return newKey;
+		*/
+		throw new RuntimeException("Deprecated - ignore?");
 	}
 	
 	public void backupRoutingInformation(int oldOpId) {

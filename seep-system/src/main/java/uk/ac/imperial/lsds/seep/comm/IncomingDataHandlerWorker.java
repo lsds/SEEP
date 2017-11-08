@@ -200,11 +200,13 @@ public class IncomingDataHandlerWorker implements Runnable{
 				long readTime = (receiveTs-receiveStartTs);
 				LOG.debug("Received new batch from "+opId+ ",btpayload="+ batchTuplePayload+",readTime="+readTime);
 				ArrayList<TuplePayload> batch = batchTuplePayload.batch;
+				if (batch.size() > 1) { throw new RuntimeException("TODO: multiple tuples per batch."); }
 				for(TuplePayload t_payload : batch)
 				{
 					
 					if (!allowOutOfOrderTuples)
 					{
+						/*
 						long incomingTs = t_payload.timestamp;
 						// Check for already processed data
 						/// \todo{should be <= but the problem is that logical clock in java has ms granularity. This means that once you
@@ -215,6 +217,8 @@ public class IncomingDataHandlerWorker implements Runnable{
 						}
 						owner.setTsData(opId, incomingTs);
 						lastIncomingTs = incomingTs;
+						*/
+						throw new RuntimeException("Deprecated, ignore?");
 					}
 					
 					//Put data in inputQueue

@@ -24,6 +24,7 @@ import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.manet.Query;
 
 public class OutOfOrderFairBufferedBarrier implements DataStructureI {
@@ -33,8 +34,8 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	private final int logicalId;
 	private final Query meanderQuery;
 	private final int numLogicalInputs;
-	private final ArrayList<TreeMap<Long, DataTuple>> pending;	//Unbounded
-	private final TreeMap<Long, ArrayList<DataTuple>> ready = new TreeMap<Long, ArrayList<DataTuple>>();
+	private final ArrayList<TreeMap<Timestamp, DataTuple>> pending;	//Unbounded
+	private final TreeMap<Timestamp, ArrayList<DataTuple>> ready = new TreeMap<Timestamp, ArrayList<DataTuple>>();
 	private final ArrayList<FailureCtrl> inputFctrls;
 	private final boolean optimizeReplay;
 	private final boolean bestEffort;
@@ -75,7 +76,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 		pending = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			pending.add(new TreeMap<Long, DataTuple>());
+			pending.add(new TreeMap<Timestamp, DataTuple>());
 			inputFctrls.add(new FailureCtrl());
 		}
 	}
@@ -90,7 +91,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 		lock.lock();
 		try
 		{
-			long ts = dt.getPayload().timestamp;
+			Timestamp ts = dt.getPayload().timestamp;
 			int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
 			FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
 			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
@@ -140,7 +141,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	}
 	
 	//Assumes lock held
-	private void addReady(long ts)
+	private void addReady(Timestamp ts)
 	{
 		ArrayList<DataTuple> readyBatches = new ArrayList<>(numLogicalInputs);
 		for (int i = 0; i < numLogicalInputs; i++)
@@ -197,7 +198,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 			for (int i = 0; i < dts.size(); i++)
 			{
 				if (dts.get(i) == null) { continue; }
-				long ts = dts.get(i).getPayload().timestamp;
+				Timestamp ts = dts.get(i).getPayload().timestamp;
 				long latency = pullEnd - dts.get(i).getPayload().instrumentation_ts;
 				long pullLatency = pullEnd - dts.get(i).getPayload().local_ts;
 				long pullReadTime = pullEnd - pullStart;
@@ -263,13 +264,15 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 		finally { lock.unlock(); }
 	}
 	
-	private void trimQueue(Iterator<Long> qIter, FailureCtrl downFctrl)
+	private void trimQueue(Iterator<Timestamp> qIter, FailureCtrl downFctrl)
 	{
 		while (qIter.hasNext())
 		{
-			Long ts = qIter.next();
-			if (ts <= downFctrl.lw() || downFctrl.acks().contains(ts)
-					|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
+			Timestamp ts = qIter.next();
+			//if (ts <= downFctrl.lw() || downFctrl.acks().contains(ts)
+			if (downFctrl.isAcked(ts)
+					//|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
+					|| (!reprocessNonLocals && downFctrl.isAlive(ts)))
 			{
 				qIter.remove();
 				if (barrierTimeoutMonitor != null) { barrierTimeoutMonitor.clear(ts); }
@@ -325,15 +328,15 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	/** Get the current 'constraints' i.e. for each input the set
 	 * of batch ids not yet received but already received for other inputs 
 	 */
-	public ArrayList<RangeSet<Long>> getRoutingConstraints() {
+	public ArrayList<RangeSet<Timestamp>> getRoutingConstraints() {
 		lock.lock();
 		try
 		{
-			ArrayList<TreeSet<Long>> constraints = new ArrayList<>(numLogicalInputs);
-			ArrayList<RangeSet<Long>> constraintRanges = new ArrayList<>(numLogicalInputs);
+			ArrayList<TreeSet<Timestamp>> constraints = new ArrayList<>(numLogicalInputs);
+			ArrayList<RangeSet<Timestamp>> constraintRanges = new ArrayList<>(numLogicalInputs);
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				constraints.add(new TreeSet<Long>());
+				constraints.add(new TreeSet<Timestamp>());
 				
 				for (int j = 0; j < numLogicalInputs; j++)
 				{
@@ -361,10 +364,10 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 
 	private class BarrierTimeoutMonitor
 	{
-		private final Map<Long, TimerTask> timeoutTasks = new HashMap<>();
+		private final Map<Timestamp, TimerTask> timeoutTasks = new HashMap<>();
 		private final Timer timer = new Timer(true);
 		
-		public void set(final long ts, long delay)
+		public void set(final Timestamp ts, long delay)
 		{
 			if (timeoutTasks.containsKey(ts)) { throw new RuntimeException("Logic error - timeout task already exists: "+ts); }
 			TimerTask timeoutTask = new TimerTask() 
@@ -391,7 +394,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 			timer.schedule(timeoutTask, delay);
 		}
 		
-		public void clear(final long ts)
+		public void clear(final Timestamp ts)
 		{
 			if (timeoutTasks.containsKey(ts))
 			{

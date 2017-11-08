@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
 import uk.ac.imperial.lsds.seep.manet.GraphUtil.InetAddressNodeId;
 
@@ -34,7 +35,7 @@ public class ShortestPathRouter implements IRouter {
 
 	//
 	@Override
-	public ArrayList<Integer> route(long batchId) {
+	public ArrayList<Integer> route(Timestamp batchId) {
 		// TODO Auto-generated method stub
 		logger.debug("Routing to next hop: "+currentNextHop);
 		if (currentNextHop == null) { return null; }
@@ -248,11 +249,11 @@ public class ShortestPathRouter implements IRouter {
 	}
 
 	@Override
-	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
+	public Map<Integer, Set<Timestamp>> handleDownUp(DownUpRCtrl downUp) {
 		throw new RuntimeException("Logic error.");
 	}
 	
-	public Set<Long> areConstrained(Set<Long> queued)
+	public Set<Timestamp> areConstrained(Set<Timestamp> queued)
 	{
 		return null;
 	}
@@ -268,7 +269,7 @@ public class ShortestPathRouter implements IRouter {
 			}	
 		} 
 	}
-	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
+	public Map<Integer, Set<Timestamp>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
 	{
 		throw new RuntimeException("Logic error."); 
 	}

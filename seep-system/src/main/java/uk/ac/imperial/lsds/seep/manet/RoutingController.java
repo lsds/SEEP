@@ -20,6 +20,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.DownUpRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutOfOrderBufferedBarrier;
@@ -149,7 +150,7 @@ public class RoutingController implements Runnable{
 				if (numLogicalInputs > 1)
 				{
 					//ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
-					ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderFairBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+					ArrayList<RangeSet<Timestamp>> routingConstraints = ((OutOfOrderFairBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
 					for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
 					{
 						int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
@@ -167,7 +168,7 @@ public class RoutingController implements Runnable{
 					for (Integer upstreamId : weightsCopy.keySet())
 					{
 	
-						RangeSet<Long> empty = TreeRangeSet.create();
+						RangeSet<Timestamp> empty = TreeRangeSet.create();
 						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
 						double weight = weightsCopy.get(upstreamId);
 						//if (nodeId == 1 && upstreamId == 10 || nodeId == 110 && upstreamId == 0 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
@@ -207,7 +208,7 @@ public class RoutingController implements Runnable{
 	}
 	
 
-	private void sendWeight(int upstreamId, int upOpIndex, double weight, RangeSet<Long> constraints)
+	private void sendWeight(int upstreamId, int upOpIndex, double weight, RangeSet<Timestamp> constraints)
 	{
 						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, constraints);
 						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
@@ -260,7 +261,7 @@ public class RoutingController implements Runnable{
 				{
 					Integer upstreamId = (Integer)upstreamIdObj;
 
-					RangeSet<Long> empty = TreeRangeSet.create();
+					RangeSet<Timestamp> empty = TreeRangeSet.create();
 					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, localQueueLength, empty);
 					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 

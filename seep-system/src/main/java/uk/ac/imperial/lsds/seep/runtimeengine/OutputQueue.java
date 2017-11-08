@@ -160,7 +160,8 @@ public class OutputQueue {
 				final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
 				if (!allowOutOfOrderTuples)
 				{
-					tp.timestamp = System.currentTimeMillis(); // assign local ack
+					//tp.timestamp = System.currentTimeMillis(); // assign local ack
+					throw new RuntimeException("Deprecated - ignore?");
 				}
 				long currentTime = System.currentTimeMillis();
 				if (outputQueueTimestamps) { tp.instrumentation_ts = currentTime; }

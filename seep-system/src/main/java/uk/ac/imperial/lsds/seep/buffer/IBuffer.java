@@ -8,6 +8,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupOperator
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
 
 public interface IBuffer {
@@ -16,7 +17,7 @@ public interface IBuffer {
 
 	public abstract int size();
 	
-	public abstract boolean contains(long ts);
+	public abstract boolean contains(Timestamp ts);
 
 	public abstract BackupOperatorState getBackupState();
 
@@ -24,17 +25,17 @@ public interface IBuffer {
 
 	public abstract void replaceRawData(RawData rw);
 
-	public abstract void save(BatchTuplePayload batch, long outputTs,
+	public abstract void save(BatchTuplePayload batch, Timestamp outputTs,
 			TimestampTracker inputTs);
 
-	public abstract TimestampTracker trim(long ts);
+	public abstract TimestampTracker trimBatch(Timestamp ts);
 
-	public abstract TreeMap<Long, BatchTuplePayload> trim(FailureCtrl fctrl);
+	public abstract TreeMap<Timestamp, BatchTuplePayload> trim(FailureCtrl fctrl);
 	
-	public abstract TreeMap<Long, BatchTuplePayload> get(FailureCtrl fctrl);
-	public abstract BatchTuplePayload get(long ts);
+	public abstract TreeMap<Timestamp, BatchTuplePayload> get(FailureCtrl fctrl);
+	public abstract BatchTuplePayload get(Timestamp ts);
 
 	///fixme{just for testing, do binary search on structure}
-	public abstract TimestampTracker getInputVTsForOutputTs(long output_ts);
+	public abstract TimestampTracker getInputVTsForOutputTs(Timestamp output_ts);
 
 }
