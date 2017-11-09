@@ -377,12 +377,17 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 create_static_routes(placements, tx_range, session.sessiondir)
                 if len(placements) != nodes-2: raise Exception("Expected placement for %d nodes, got %d"%(nodes-2,len(placements)))
 
-        if params['injectFailures'] or params['injectProbFailures']: 
+        if params['injectFailures'] or params['injectProbFailures'] or params['failProb'] > 0.0: 
             print 'Creating failures injectors.'
-            (src,dest) = (params['injectFailures'],'failure_cycles.txt') if params['injectFailures'] else (params['injectProbFailures'],'failure_probs.txt') 
-            print 'Copying failure spec from %s to %s.'%(src,dest)
-            #shutil.copy("%s/static/%s"%(script_dir, params['injectFailures']), '%s/failure_cycles.txt'%session.sessiondir)
-            shutil.copy("%s/static/%s"%(script_dir, src), '%s/%s'%(session.sessiondir,dest))
+            if params['injectFailures'] or params['injectProbFailures']:
+                (src,dest) = (params['injectFailures'],'failure_cycles.txt') if params['injectFailures'] else (params['injectProbFailures'],'failure_probs.txt') 
+                print 'Copying failure spec from %s to %s.'%(src,dest)
+                shutil.copy("%s/static/%s"%(script_dir, src), '%s/%s'%(session.sessiondir,dest))
+            else:
+                print 'Generate a fixed failure probability schedule for all nodes'
+                with open("%s/failure_probs.txt"%session.sessiondir, 'w') as fp:
+                    fp.write('*,%.1f,%.1f,%.2f\n'%(params['failProbStart'], params['failProbSlot'], params['failProb'])) 
+
             with open("%s/start_failures.txt"%session.sessiondir, 'w') as sf:
                 sf.write(str(time.time()) + "\n")
 
@@ -394,7 +399,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 pos = gen_grid_position(i, nodes-1)
             worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|PcapSrc"
-            if params['injectFailures'] or params['injectProbFailures']: worker_services += "|FailureInjector"
+            if params['injectFailures'] or params['injectProbFailures'] or params['failProb'] > 0.0: worker_services += "|FailureInjector"
             #if params['emanestats']: worker_services += "|EmaneStats"
             workers.append(create_node(i, session, "%s|%s"%(services_str, worker_services), wlan1, pos, verbose=verbose)) 
        
@@ -407,7 +412,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             else:
                 pos = gen_grid_position(i, nodes-1)
 
-            router_services="|FailureInjector" if params['injectFailures'] or params['injectProbFailures'] else "" 
+            router_services="|FailureInjector" if params['injectFailures'] or params['injectProbFailures']  or params['failProb'] > 0.0 else "" 
             if distributed:
                 slave = slaves[i % len(slaves)]
                 routers.append(create_remote_node(i, session, slave, "%s%s"%(services_str,router_services), wlan1, pos, verbose=verbose))
@@ -453,6 +458,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='retx': var = params['retransmitTimeout']
         if var_suffix=='bsz': var = params['maxTotalQueueSizeTuples']
         if var_suffix=='sl': var = params['skewLimit']
+        if var_suffix=='fp': var = params['failProb']
  
 
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session, params['sub']) 

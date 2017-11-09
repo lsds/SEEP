@@ -21,7 +21,9 @@ latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
 #latency_regex = re.compile('max_lat=(\d+)')
 max_latency = 1000000.0 
 
-var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx' : 'retx_timeout', 'sl' : 'skew_limit' }
+var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' :
+'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx'
+: 'retx_timeout', 'sl' : 'skew_limit', 'fp' : 'fail_prob' }
 
 def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
 
@@ -117,6 +119,10 @@ def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
     elif var_suffix == 'sl':
         for p in ['tput_vs_skew_limit_stddev', 'latency_vs_skew_limit_stddev', 
                 'rel_tput_vs_skew_limit_stddev', 'rel_latency_vs_skew_limit_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'fp':
+        for p in ['tput_vs_fail_prob_stddev', 'latency_vs_fail_prob_stddev', 
+                'rel_tput_vs_fail_prob_stddev', 'rel_latency_vs_fail_prob_stddev']:
             plot(p, time_str, script_dir, data_dir)
     else:
         plot('v1_latency_percentiles', time_str, script_dir, data_dir)
@@ -237,6 +243,10 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
             for skew_limit in variables['skew_limit']:
                 params['skewLimit'] = skew_limit
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'sl', sessions, params)
+        elif variables['fail_prob']:
+            for fail_prob in variables['fail_prob']:
+                params['failProb'] = float(fail_prob)
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'fp', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -266,6 +276,9 @@ def get_var_suffix_and_vals(variables):
     elif len(variables['skew_limit']) > 0:
         var_vals = variables['skew_limit']
         var_suffix = 'sl'
+    elif variables['fail_prob']:
+        var_vals = variables['fail_prob']
+        var_suffix = 'fp'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -618,6 +631,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--pinAll', dest='pin_all', default=False, action='store_true', help='pin all nodes if pinned seed defined')
     parser.add_argument('--injectFailures', dest='inject_failures', default=None, help='Start a failure cycle service according to config file.')
     parser.add_argument('--injectProbFailures', dest='inject_prob_failures', default=None, help='Start a probabilistic failure service according to config file.')
+    parser.add_argument('--failureProbs', dest='fail_prob', default=None, help='Start a series of experiments with probabilistic failures on all nodes')
+    parser.add_argument('--failureProbSlot', dest='fail_prob_slot', default=10.0, help='Default probabilistic failure slot')
+    parser.add_argument('--failureProbStart', dest='fail_prob_start', default=40.0, help='Default probabilistic failure start time')
     parser.add_argument('--routingCtrlDelay', dest='rctrl_delay', default=None, help='Routing control delay (ms)')
     parser.add_argument('--bufSize', dest='buf_size', default=None, help='Max size of intermediate buffers')
     parser.add_argument('--skewLimit', dest='skew_limit', default=None, help='Max skew for pending tuples')
@@ -640,10 +656,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     buf_size=map(lambda x: int(x), args.buf_size.split(',')) if args.buf_size else []
     retx_timeout=map(lambda x: int(x), args.retx_timeout.split(',')) if args.retx_timeout else []
     skew_limit =map(lambda x: int(x), args.skew_limit.split(',')) if args.skew_limit else []
+    fail_prob = map(lambda x: float(x), args.fail_prob.split(',')) if args.fail_prob else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
             "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay,
-            "buf_size" : buf_size, "retx_timeout": retx_timeout, "skew_limit": skew_limit}
+            "buf_size" : buf_size, "retx_timeout": retx_timeout, "skew_limit":
+            skew_limit, "fail_prob" : fail_prob }
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))
@@ -700,6 +718,9 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['pinAll'] = args.pin_all
     params['injectFailures'] = args.inject_failures
     params['injectProbFailures'] = args.inject_prob_failures
+    if not fail_prob: params['failProb'] = 0.0
+    params['failProbSlot'] = args.fail_prob_slot
+    params['failProbStart'] = args.fail_prob_start
     params['sub'] =args.sub 
     params['regenSessions']=args.regen_sessions
     if args.trace: params['trace']=args.trace
