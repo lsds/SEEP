@@ -132,7 +132,7 @@ def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
         plot('v1_rel_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('v1_joint_tput_vs_mobility_stddev', time_str, script_dir, data_dir)
         plot('v1_joint_latency_vs_mobility_stddev', time_str, script_dir, data_dir)
-        plot_fixedvar('v1_network_energy_stderr', var_suffix2name[var_suffix], variables['mobility'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
+        plot_fixed_var('v1_network_energy_stderr', var_suffix2name[var_suffix], variables['mobility'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
         #plot_fixed_mob('v1_raw_latency_percentiles', variables['mobility'][0], len(session_ids), time_str, script_dir, data_dir, params)
         plot_fixed_var('v1_raw_latency_percentiles', var_suffix2name[var_suffix], variables['mobility'][0], var_suffix, len(session_ids), time_str, script_dir, data_dir, params)
 

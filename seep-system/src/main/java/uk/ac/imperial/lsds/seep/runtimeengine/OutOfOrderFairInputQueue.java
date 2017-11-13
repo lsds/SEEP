@@ -200,7 +200,8 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 			
 			//Trim, but don't pollute the record of batches received on this input
 			//with the ids of all tuples live downstream.
-			inputFctrl.update(downFctrl.lw(), downFctrl.acks(), null);
+			//inputFctrl.update(downFctrl.lw(), downFctrl.acks(), null);
+			inputFctrl.update(downFctrl, false);
 			
 			Iterator<Long> iter = inputQueue.keySet().iterator();
 			boolean removedSomething = false;
@@ -220,12 +221,14 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 			FailureCtrl upOpFctrl = null;
 			if (optimizeReplay)
 			{
-				upOpFctrl = new FailureCtrl(inputFctrl);
+				//upOpFctrl = new FailureCtrl(inputFctrl);
+				upOpFctrl = inputFctrl.copy();
 				upOpFctrl.updateAlives(downFctrl.alives()); 
 			}
 			else
 			{
-				upOpFctrl = new FailureCtrl(downFctrl);
+				//upOpFctrl = new FailureCtrl(downFctrl);
+				upOpFctrl = downFctrl.copy();
 			}
 		
 			if (removedSomething) { cond.signalAll(); }

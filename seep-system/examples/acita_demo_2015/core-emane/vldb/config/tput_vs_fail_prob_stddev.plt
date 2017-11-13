@@ -16,8 +16,8 @@ set style line 3 linewidth 2.5 linecolor rgb COBALT
 set style line 4 linewidth 2.5 linecolor rgb GREY 
 set style line 5 linewidth 2.5 linecolor rgb "black" 
 
-set boxwidth 0.01
-set style fill empty 
+#set boxwidth 0.01
+#set style fill empty 
 set key spacing 1.75 font ", 16"
 #set bmargin 4
 #set lmargin 13 

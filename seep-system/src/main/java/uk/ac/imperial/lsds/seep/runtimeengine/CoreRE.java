@@ -1138,7 +1138,8 @@ public class CoreRE {
 		LOG.debug("Writing failure ctrl to up op indices:"+upOpIndexes.toString());
 		DataStructureI dso = dsa.getUniqueDso();
 		if (dso == null) { throw new RuntimeException("TODO"); }
-		FailureCtrl purgeFctrl = multiHopReplayOptimization ? nodeFctrl : new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
+		//FailureCtrl purgeFctrl = multiHopReplayOptimization ? nodeFctrl : new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
+		FailureCtrl purgeFctrl = multiHopReplayOptimization ? nodeFctrl : nodeFctrl.copy(false);
 		ArrayList<FailureCtrl> upFctrls = dso.purge(purgeFctrl);
 		Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
 		int opId = processingUnit.getOperator().getOperatorId();
@@ -1172,7 +1173,8 @@ public class CoreRE {
 	{
 		LOG.debug("Writing failure ctrl to down op indices:"+downOpIndexes.toString());
 		int opId = processingUnit.getOperator().getOperatorId();
-		FailureCtrl noAlives = new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
+		//FailureCtrl noAlives = new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
+		FailureCtrl noAlives = nodeFctrl.copy(false);
 		for (int downOpIndex : downOpIndexes)
 		{
 			int downOpId = processingUnit.getOperator().getOpContext().getDownOpIdFromIndex(downOpIndex);

@@ -249,7 +249,8 @@ public class Dispatcher implements IRoutingObserver {
 		FailureCtrl copy = null;
 		synchronized(lock)
 		{
-			copy = new FailureCtrl(combinedDownFctrl);
+			//copy = new FailureCtrl(combinedDownFctrl);
+			copy = combinedDownFctrl.copy();
 		}
 		return copy;
 	}
@@ -1419,7 +1420,9 @@ public class Dispatcher implements IRoutingObserver {
 				logger.trace("Failure ctrl handling acquired lock in "+(tStart - rxTime)+" ms");
 				long oldLw = combinedDownFctrl.lw();
 				long oldAcksSize = combinedDownFctrl.acks().size();
-				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				//TODO: This is pretty racey, shouldn't expose lw or size? Or should make an atomic copy?
+				//combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				combinedDownFctrl.update(fctrl, false);
 				boolean acksChanged = oldLw < combinedDownFctrl.lw() || oldAcksSize < combinedDownFctrl.acks().size();
 				long tAcks = System.currentTimeMillis();
 				logger.trace("Failure ctrl handling updated acks in "+(tAcks - tStart)+" ms");
@@ -1477,7 +1480,8 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			synchronized(lock)
 			{
-				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				//combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				combinedDownFctrl.update(fctrl, false);
 			}
 		}
 		
@@ -1959,7 +1963,8 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			synchronized(lock)
 			{
-				SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				//SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				SortedMap<Long, DataTuple> removed = queue.headMap(ts+1);
 				boolean removedSome = removed != null && !removed.isEmpty();
 				SortedMap<Long, DataTuple> remainder = queue.tailMap(ts+1);
 				if (remainder == null || remainder.isEmpty()) { queue.clear(); }
