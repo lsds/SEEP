@@ -35,6 +35,29 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		}
 	} 
 	
+	
+	//Unfortunately need to expose as a set for downuprctrl at the moment.
+    public TimestampsMap(Set<Timestamp> tsSet)
+    {
+       tsMap = new HashMap<Integer, TreeSet<Timestamp>>();
+       for (Timestamp ts : tsSet)
+       {
+           Integer key = ts.getKey();
+           if (!tsMap.containsKey(key)) { tsMap.put(key, new TreeSet<Timestamp>()); }
+           tsMap.get(key).add(ts);
+       }
+    }
+
+    public Set<Timestamp> toSet() 
+    { 
+       Set<Timestamp> result = new HashSet<>();
+       for (Integer key : tsMap.keySet()) 
+       {
+	       result.addAll(tsMap.get(key));
+       }
+       return result; 
+    }
+
 	private Map<Integer, Set<Long>> toCompactMap()
 	{
 		Map<Integer,Set<Long>> compactMap = new HashMap<>();

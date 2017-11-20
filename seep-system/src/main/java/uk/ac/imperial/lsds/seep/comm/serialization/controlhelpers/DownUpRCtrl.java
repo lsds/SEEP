@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.RangeSet;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TimestampsMap;
 
 public class DownUpRCtrl {
 
@@ -17,12 +19,20 @@ public class DownUpRCtrl {
 	
 	public DownUpRCtrl() {}
 	
+	public DownUpRCtrl(int opId, double weight, Set<Timestamp> unmatched)
+	{
+		this.opId = opId;
+		this.weight = weight;
+		//this.unmatched = RangeUtil.convertToString(unmatched);che
+		this.unmatched = new TimestampsMap(unmatched).convertToString();
+	}
+	/*
 	public DownUpRCtrl(int opId, double weight, RangeSet<Long> unmatched)
 	{
 		this.opId = opId;
 		this.weight = weight;
 		this.unmatched = RangeUtil.convertToString(unmatched);
-	}
+	}*/
 
 	public int getOpId() {
 		return opId;
@@ -40,8 +50,10 @@ public class DownUpRCtrl {
 		this.weight = weight;
 	}
 
-	public Set<Long> getUnmatched() {
-		return RangeUtil.parseRangeSet(unmatched);
+	public Set<Timestamp> getUnmatched() {
+		//return RangeUtil.parseRangeSet(unmatched);
+		return TimestampsMap.parse(unmatched).toSet();
+
 	}
 	
 	public void setUnmatched(String unmatched)
