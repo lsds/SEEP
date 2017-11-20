@@ -57,6 +57,7 @@ public class HeatMapJoin implements StatelessOperator{
 			else { logger.info("Null tuple"); }
 		}
 	
+		int queryId = data.getInt("queryId");
 		long tupleId = data.getLong("tupleId");
 		
 		
@@ -68,7 +69,7 @@ public class HeatMapJoin implements StatelessOperator{
 		//String value = data.getString("value");
 		
 		
-		DataTuple outputTuple = data.setValues(tupleId, value, padding);
+		DataTuple outputTuple = data.setValues(queryId, tupleId, value, padding);
 		processed++;
 		if (processed == 1 || processed % 1000 == 0)
 		{

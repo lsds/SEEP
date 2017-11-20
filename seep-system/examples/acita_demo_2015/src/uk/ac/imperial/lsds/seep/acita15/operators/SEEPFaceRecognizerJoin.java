@@ -85,6 +85,8 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 			else { logger.info("Null tuple"); }
 		}
 	
+		int queryId = data.getInt("queryId");
+		if (queryId != 0) { throw new RuntimeException("Logic error: non-zero query id."); }
 		long tupleId = data.getLong("tupleId");
 		byte[] value = data.getByteArray("value");
 		int type = data.getInt("type");
@@ -102,7 +104,7 @@ public class SEEPFaceRecognizerJoin implements StatelessOperator{
 		}
 
 		//Shouldn't height/width here be the original input height/width (not height -x, width-y)?
-		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, x2, y2, labelExample);
+		DataTuple outputTuple = data.setValues(queryId, tupleId, value, 0, 0, type, x, y, x2, y2, labelExample);
 			
 		processed++;
 		if (processed % 1000 == 0)

@@ -31,10 +31,11 @@ public class Processor implements StatelessOperator{
 	
 	public void processData(DataTuple data) {
 		long tProcessStart = System.currentTimeMillis();
+		int queryId = data.getInt("queryId");
 		long tupleId = data.getLong("tupleId");
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
-		DataTuple outputTuple = data.setValues(tupleId, value, data.getLongArray("latencyBreakdown"));
+		DataTuple outputTuple = data.setValues(queryId, tupleId, value, data.getLongArray("latencyBreakdown"));
 		processed++;
 		if (processed == 1 || processed % 1000 == 0)
 		{
@@ -61,10 +62,11 @@ public class Processor implements StatelessOperator{
 	public void processData(List<DataTuple> arg0) {
 		for (DataTuple data : arg0)
 		{
+			int queryId = data.getInt("queryId");
 			long tupleId = data.getLong("tupleId");
 			String value = data.getString("value") + "," + api.getOperatorId();
 			
-			DataTuple outputTuple = data.setValues(tupleId, value);
+			DataTuple outputTuple = data.setValues(queryId, tupleId, value);
 			processed++;
 			if (processed % 1000 == 0)
 			{

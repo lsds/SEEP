@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 
 
@@ -33,6 +34,8 @@ public class Source implements StatelessOperator {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(Source.class);
 	private static boolean scheduledPauses = false;
+	private static final boolean multiQuery = Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")) &&
+							Integer.parseInt(GLOBALS.valueFor("numQueries")) > 1;
 	
 	public void setUp() {
 		System.out.println("Setting up SOURCE operator with id="+api.getOperatorId());
@@ -70,8 +73,8 @@ public class Source implements StatelessOperator {
 		
 			schedulePause(tupleId);	
 
-			DataTuple output = data.newTuple(tupleId, value, latencyBreakdown);
-			output.getPayload().timestamp = tupleId;
+			DataTuple output = data.newTuple(multiQuery ? api.getOperatorId() : 0, tupleId, value, latencyBreakdown);
+			output.getPayload().timestamp = multiQuery ? new Timestamp(api.getOperatorId(), tupleId) : new Timestamp(tupleId);
 			if (tupleId % 1000 == 0)
 			{
 				logger.info("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);

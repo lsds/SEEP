@@ -72,6 +72,7 @@ public class FaceDetector implements StatelessOperator{
 	public void processData(DataTuple data) {
 		
 		long tProcessStart = System.currentTimeMillis();
+		int queryId = data.getInt("queryId");
 		long tupleId = data.getLong("tupleId");
 		//String value = data.getString("value") + "," + api.getOperatorId();
 		byte[] value = data.getByteArray("value");
@@ -90,7 +91,7 @@ public class FaceDetector implements StatelessOperator{
 		if (bbox != null)
 		{
 			logger.debug("Found face for "+ data.getLong("tupleId") + " at ("+bbox[0]+","+bbox[1]+"),("+bbox[2]+","+bbox[3]+")");
-			outputTuple = data.setValues(tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3], "");
+			outputTuple = data.setValues(queryId, tupleId, value, rows, cols, type, bbox[0], bbox[1], bbox[2], bbox[3], "");
 			if (recordImages)
 			{
 				faceDetector.recordFaceDetection(tupleId, imgBW, bbox);
@@ -99,7 +100,7 @@ public class FaceDetector implements StatelessOperator{
 		else	
 		{
 			logger.debug("No face found for "+data.getLong("tupleId"));
-			outputTuple = data.setValues(tupleId, value, rows, cols, type, 0, 0, 0, 0, "");
+			outputTuple = data.setValues(queryId, tupleId, value, rows, cols, type, 0, 0, 0, 0, "");
 		}
 		
 		//DataTuple outputTuple = data.setValues(tupleId, value);

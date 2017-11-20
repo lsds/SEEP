@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.acita15.facerec.VideoHelper;
 
@@ -80,6 +81,8 @@ public class VideoSource implements StatelessOperator {
 	private final String extractedFilesDir = "resources/source";
 	private final boolean loadIplImages = false; 	//TODO: Figure out how to convert between iplimage and byte array.
 	private VideoHelper videoHelper = null;
+	private static final boolean multiQuery = Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")) &&
+							Integer.parseInt(GLOBALS.valueFor("numQueries")) > 1;
 	
 	public void setUp() {
 		System.out.println("Setting up VIDEO_SOURCE operator with id="+api.getOperatorId());
@@ -158,12 +161,12 @@ public class VideoSource implements StatelessOperator {
 				else
 				{
 					
-					output = data.newTuple(tupleId, testRawFrames[currentFrame], 0, 0, 1, 0, 0, 0, 0, "");
+					output = data.newTuple(multiQuery ? api.getOperatorId() : 0, tupleId, testRawFrames[currentFrame], 0, 0, 1, 0, 0, 0, 0, "");
 					//output = data.newTuple(tupleId, testRawFrames[51], 0, 0, 1, 0, 0, 0, 0, "");
 					currentFrame = (currentFrame + 1) % testRawFrames.length;
 				}
 	 
-				output.getPayload().timestamp = tupleId;
+				output.getPayload().timestamp = multiQuery? new Timestamp(api.getOperatorId(), tupleId) : new Timestamp(tupleId);
 				if (tupleId % 1000 == 0)
 				{
 					logger.info("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);

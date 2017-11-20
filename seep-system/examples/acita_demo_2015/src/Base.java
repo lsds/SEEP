@@ -99,6 +99,7 @@ public class Base implements QueryComposer{
 	{
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("queryId");
 		srcFields.add("tupleId");
 		srcFields.add("value");
 		srcFields.add("latencyBreakdown");
@@ -108,7 +109,7 @@ public class Base implements QueryComposer{
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
-		snkFields.add("tupleId");
+		snkFields.add("queryId");
 		snkFields.add("value");
 		snkFields.add("latencyBreakdown");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
@@ -120,6 +121,11 @@ public class Base implements QueryComposer{
 			{
 				int sinkScaleFactor = Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor"));
 				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
+			}
+			if (Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")))
+			{ 
+				int numQueries = Integer.parseInt(GLOBALS.valueFor("numQueries"));
+				if (numQueries > 1) { QueryBuilder.scaleOut(src.getOperatorId(), numQueries); }
 			}
 			Map<Integer, Map<Integer, Connectable>> ops = this.createChainOps(CHAIN_LENGTH, 1); 
 			connectToOneDownstream(src, snk, ops);
@@ -147,6 +153,7 @@ public class Base implements QueryComposer{
 	{
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("queryId");
 		srcFields.add("tupleId");
 		srcFields.add("value");
 		srcFields.add("rows");
@@ -162,6 +169,7 @@ public class Base implements QueryComposer{
 		
 		//Declare FaceDetector
 		ArrayList<String> faceDetectFields = new ArrayList<String>();
+		faceDetectFields.add("queryId");
 		faceDetectFields.add("tupleId");
 		faceDetectFields.add("value");
 		faceDetectFields.add("rows");
@@ -177,6 +185,7 @@ public class Base implements QueryComposer{
 		
 		//Declare SpeechRecognizer
 		ArrayList<String> faceRecFields = new ArrayList<String>();
+		faceRecFields.add("queryId");
 		faceRecFields.add("tupleId");
 		faceRecFields.add("value");
 		faceRecFields.add("rows");
@@ -191,6 +200,7 @@ public class Base implements QueryComposer{
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("queryId");
 		snkFields.add("tupleId");
 		snkFields.add("value");
 		snkFields.add("rows");
@@ -231,6 +241,7 @@ public class Base implements QueryComposer{
 	{
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("queryId");
 		srcFields.add("tupleId");
 		srcFields.add("value");
 		srcFields.add("rows");
@@ -246,6 +257,7 @@ public class Base implements QueryComposer{
 		
 		//Declare FaceDetector
 		ArrayList<String> faceDetectorRecognizerFields = new ArrayList<String>();
+		faceDetectorRecognizerFields.add("queryId");
 		faceDetectorRecognizerFields.add("tupleId");
 		faceDetectorRecognizerFields.add("value");
 		faceDetectorRecognizerFields.add("rows");
@@ -261,6 +273,7 @@ public class Base implements QueryComposer{
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("queryId");
 		snkFields.add("tupleId");
 		snkFields.add("value");
 		snkFields.add("rows");
@@ -300,24 +313,28 @@ public class Base implements QueryComposer{
 		
 		// Declare Source 1
 		ArrayList<String> src1Fields = new ArrayList<String>();
+		src1Fields.add("queryId");
 		src1Fields.add("tupleId");
 		src1Fields.add("value");
 		Connectable src1 = QueryBuilder.newStatelessSource(new Source(), -1, src1Fields);
 		
 		// Declare Source 2
 		ArrayList<String> src2Fields = new ArrayList<String>();
+		src2Fields.add("queryId");
 		src2Fields.add("tupleId");
 		src2Fields.add("value");
 		Connectable src2 = QueryBuilder.newStatelessSource(new Source(), -3, src2Fields);
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("queryId");
 		snkFields.add("tupleId");
 		snkFields.add("value");
 		Connectable snk = QueryBuilder.newStatelessSink(new Sink(), -2, snkFields);
 		
 		//Declare join
 		ArrayList<String> jFields = new ArrayList<String>();
+		jFields.add("queryId");
 		jFields.add("tupleId");
 		jFields.add("value");
 		Connectable j = QueryBuilder.newStatelessOperator(new Join(), 0, jFields);
@@ -359,6 +376,7 @@ public class Base implements QueryComposer{
 		Connectable[] sinks = new Connectable[nSinks];
 		
 		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("queryId");
 		srcFields.add("tupleId");
 		srcFields.add("value");
 		srcFields.add("padding");
@@ -368,6 +386,7 @@ public class Base implements QueryComposer{
 		}
 		
 		ArrayList<String> heatMapFields = new ArrayList<String>();
+		heatMapFields.add("queryId");
 		heatMapFields.add("tupleId");
 		heatMapFields.add("value");
 		heatMapFields.add("padding");
@@ -385,6 +404,7 @@ public class Base implements QueryComposer{
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("queryId");
 		snkFields.add("tupleId");
 		snkFields.add("value");
 		snkFields.add("padding");
@@ -464,6 +484,7 @@ public class Base implements QueryComposer{
 		Connectable[] sinks = new Connectable[nSinks];
 		
 		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("queryId");
 		srcFields.add("tupleId");
 		srcFields.add("value");
 		srcFields.add("padding");
@@ -474,6 +495,7 @@ public class Base implements QueryComposer{
 		}
 		
 		ArrayList<String> heatMapFields = new ArrayList<String>();
+		heatMapFields.add("queryId");
 		heatMapFields.add("tupleId");
 		heatMapFields.add("value");
 		heatMapFields.add("padding");
@@ -486,6 +508,7 @@ public class Base implements QueryComposer{
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("queryId");
 		snkFields.add("tupleId");
 		snkFields.add("value");
 		snkFields.add("padding");
@@ -544,6 +567,7 @@ public class Base implements QueryComposer{
 	{
 		// Declare Source
 		ArrayList<String> srcFields = new ArrayList<String>();
+		srcFields.add("queryId");
 		srcFields.add("tupleId");
 		srcFields.add("value");
 		srcFields.add("rows");
@@ -560,6 +584,7 @@ public class Base implements QueryComposer{
 		
 		//Declare FaceDetector
 		ArrayList<String> faceDetectFields = new ArrayList<String>();
+		faceDetectFields.add("queryId");
 		faceDetectFields.add("tupleId");
 		faceDetectFields.add("value");
 		faceDetectFields.add("rows");
@@ -576,6 +601,7 @@ public class Base implements QueryComposer{
 		
 		//Declare SpeechRecognizer
 		ArrayList<String> faceRecFields = new ArrayList<String>();
+		faceRecFields.add("queryId");
 		faceRecFields.add("tupleId");
 		faceRecFields.add("value");
 		faceRecFields.add("rows");
@@ -590,6 +616,7 @@ public class Base implements QueryComposer{
 		
 		// Declare sink
 		ArrayList<String> snkFields = new ArrayList<String>();
+		snkFields.add("queryId");
 		snkFields.add("tupleId");
 		snkFields.add("value");
 		snkFields.add("rows");
@@ -724,6 +751,7 @@ public class Base implements QueryComposer{
 			for (int j = 0; j < replicationFactor; j++)
 			{ 
 				ArrayList<String> pFields = new ArrayList<String>();
+				pFields.add("queryId");
 				pFields.add("tupleId");
 				pFields.add("value");
 				pFields.add("latencyBreakdown");

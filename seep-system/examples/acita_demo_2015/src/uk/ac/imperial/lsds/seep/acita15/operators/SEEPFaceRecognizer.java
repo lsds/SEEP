@@ -68,6 +68,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 	
 	public void processData(DataTuple data) {
 		long tProcessStart = System.currentTimeMillis();
+		int queryId = data.getInt("queryId");
 		long tupleId = data.getLong("tupleId");
 		byte[] value = data.getByteArray("value");
 		int type = data.getInt("type");
@@ -81,7 +82,7 @@ public class SEEPFaceRecognizer implements StatelessOperator{
 		int prediction = faceRecognizerHelper.recognize(value, x, y, width, height, type);
 		String labelExample = faceRecognizerHelper.getLabelExample(prediction);
 		
-		DataTuple outputTuple = data.setValues(tupleId, value, 0, 0, type, x, y, x2, y2, labelExample);
+		DataTuple outputTuple = data.setValues(queryId, tupleId, value, 0, 0, type, x, y, x2, y2, labelExample);
 			
 		processed++;
 		if (processed % 1000 == 0)

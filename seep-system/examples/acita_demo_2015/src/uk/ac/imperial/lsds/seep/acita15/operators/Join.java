@@ -54,10 +54,12 @@ public class Join implements StatelessOperator{
 			data = arg0.get(1);
 		}
 	
+		int queryId = data.getInt("queryId");
+		if (queryId != 0) { throw new RuntimeException("Logic error, non-zero query id for join: "+queryId); }
 		long tupleId = data.getLong("tupleId");
 		String value = data.getString("value") + "," + api.getOperatorId();
 		
-		DataTuple outputTuple = data.setValues(tupleId, value);
+		DataTuple outputTuple = data.setValues(queryId, tupleId, value);
 		processed++;
 		if (processed == 1 || processed % 1000 == 0)
 		{

@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.manet.stats.Stats;
 
@@ -78,9 +79,9 @@ public class VideoSink implements StatelessOperator {
 	}
 	
 	public void processData(DataTuple dt) {
-		if (dt.getPayload().timestamp != dt.getLong("tupleId"))
+		if (!dt.getPayload().timestamp.equals(new Timestamp(dt.getInt("queryId"), dt.getLong("tupleId"))))
 		{
-			throw new RuntimeException("Logic error: ts " + dt.getPayload().timestamp+ "!= tupleId "+dt.getLong("tupleId"));
+			throw new RuntimeException("Logic error: ts " + dt.getPayload().timestamp+ "!= (queryId, tupleId) "+ dt.getInt("queryId")+", "+dt.getLong("tupleId"));
 		}
 
 		if (dt.getLong("tupleId") < warmUpTuples) 

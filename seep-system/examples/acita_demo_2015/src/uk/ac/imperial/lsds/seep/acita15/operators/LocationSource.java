@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import uk.ac.imperial.lsds.seep.GLOBALS;
 import uk.ac.imperial.lsds.seep.comm.serialization.DataTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.operator.StatelessOperator;
 import uk.ac.imperial.lsds.seep.acita15.heatmap.*;
 
@@ -92,8 +93,8 @@ public class LocationSource implements StatelessOperator {
 				value = heatMapQueue.take();
 			} catch (InterruptedException e) { throw new RuntimeException(e); }
 			String padding = generatePadding(tupleSizeChars - value.length());
-			DataTuple output = data.newTuple(tupleId, value, padding);
-			output.getPayload().timestamp = tupleId;
+			DataTuple output = data.newTuple(0, tupleId, value, padding);
+			output.getPayload().timestamp = new Timestamp(tupleId);
 			if (tupleId % 1000 == 0)
 			{
 				logger.info("Source sending tuple id="+tupleId+",t="+output.getPayload().instrumentation_ts);
