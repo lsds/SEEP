@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -256,7 +257,8 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	}
 	
 	public boolean coveringRemove(TimestampMap lws, TimestampsMap acks) {
-
+		return coveringRemoveFromSortedMap(lws, acks, null);
+		/*
 		boolean changed = false;
 		TimestampsMap rawLws = lws.asTimestampsMap();
 		Iterator<Entry<Integer, TreeSet<Timestamp>>> iter = tsMap.entrySet().iterator();
@@ -275,14 +277,45 @@ public class TimestampsMap implements Iterable<Timestamp> {
 			if (tsMap.get(k).isEmpty()) { iter.remove(); }
 			else if(acks != null && acks.tsMap.containsKey(k))
 			{
-				for (Timestamp ack : acks.tsMap.get(k)) 
-				{ changed = tsMap.get(k).removeAll(acks.tsMap.get(k)) || changed; }
+				changed = tsMap.get(k).removeAll(acks.tsMap.get(k)) || changed; 
 			}
 		}
 		
 		return changed;
+		*/
 	}
 
+	public boolean coveringRemoveFromSortedMap(TimestampMap lws, TimestampsMap acks, SortedMap<Timestamp, ? extends Object> sorted)
+	{
+		boolean changed = false;
+		TimestampsMap rawLws = lws.asTimestampsMap();
+		Iterator<Entry<Integer, TreeSet<Timestamp>>> iter = tsMap.entrySet().iterator();
+		
+		while (iter.hasNext())
+		{
+			Integer k = iter.next().getKey();
+			if (rawLws.tsMap.containsKey(k))
+			{
+				Timestamp lw = rawLws.tsMap.get(k).first();
+				int pre = tsMap.get(k).size();
+				Set<Timestamp> toRemove = tsMap.get(k).headSet(lw, true);
+				if (sorted != null) { sorted.keySet().removeAll(toRemove); }
+				toRemove.clear();
+				changed |= pre > tsMap.get(k).size();
+			}
+			
+			if (tsMap.get(k).isEmpty()) { iter.remove(); }
+			else if(acks != null && acks.tsMap.containsKey(k))
+			{ 
+				changed = tsMap.get(k).removeAll(acks.tsMap.get(k)) || changed;
+				if (sorted != null) { sorted.keySet().removeAll(acks.tsMap.get(k)); }
+			}
+		}
+		
+		return changed;
+		
+	}
+	
 	public boolean covers(Timestamp ts)
 	{
 		Integer key = ts.getKey();

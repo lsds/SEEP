@@ -190,11 +190,11 @@ public class FailureCtrl {
 		//throw new RuntimeException("TODO don't expose sets?");
 	}*/
 	
-	private TimestampMap lws() {
+	public TimestampMap lws() {
 		synchronized(lock) { return new TimestampMap(lws); }
 	}
 	
-	private  TimestampsMap acks() {
+	public  TimestampsMap acks() {
 		synchronized(lock) { return new TimestampsMap(acks); }
 	}
 	

@@ -1626,8 +1626,9 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			if(optimizeReplay)
 			{
-				sharedReplayLog.removeOlderInclusive(combinedDownFctrl.lw());
-				sharedReplayLog.removeAll(combinedDownFctrl.acks());
+				//sharedReplayLog.removeOlderInclusive(combinedDownFctrl.lw());
+				//sharedReplayLog.removeAll(combinedDownFctrl.acks());
+				sharedReplayLog.trim();
 			}
 		}
 		
@@ -1652,9 +1653,13 @@ public class Dispatcher implements IRoutingObserver {
 		private void purgeOpOutputQueue()
 		{
 			//boolean removedSome = !opQueue.removeOlderInclusive(combinedDownFctrl.lw()).isEmpty();
+			/*
 			boolean removedSome = opQueue.removeOlderInclusive(combinedDownFctrl.lw());
 			removedSome = removedSome || opQueue.removeAll(combinedDownFctrl.acks()).isEmpty();
 			if (removedSome) { setDownstreamsRoutable(true); }
+			*/
+			if (opQueue.trim()) { setDownstreamsRoutable(true); }
+					
 		}
 
 		private void addBatchRetransmitTimer(int downOpId, Timestamp batchId, long now)
@@ -1979,12 +1984,14 @@ public class Dispatcher implements IRoutingObserver {
 	public class OperatorOutputQueue
 	{
 		private SortedMap<Timestamp, DataTuple> queue;
+		private TimestampsMap index;	//For efficient trimming with multiple queries.
 		private final int maxSize;
 		
 		public OperatorOutputQueue(int maxSize)
 		{
 			this.maxSize = maxSize;
 			queue = new TreeMap<>();
+			index = new TimestampsMap();
 		}
 		
 		public void add(DataTuple dt)
@@ -1999,6 +2006,7 @@ public class Dispatcher implements IRoutingObserver {
 				try
 				{
 					queue.put(dt.getPayload().timestamp, dt);
+					index.add(dt.getPayload().timestamp);
 				}
 				catch(RuntimeException e)
 				{
@@ -2014,6 +2022,7 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock)
 			{
 				queue.put(dt.getPayload().timestamp, dt);
+				index.add(dt.getPayload().timestamp);
 				lock.notifyAll();
 			}
 		}
@@ -2047,12 +2056,13 @@ public class Dispatcher implements IRoutingObserver {
 			synchronized(lock)
 			{
 				dt = queue.remove(ts);
+				index.remove(ts);
 				if (dt != null) { lock.notifyAll() ; }
 			}
 			return dt;
 		}
 		
-		public Map<Timestamp, DataTuple> removeAll(Set<Timestamp> tsSet)
+		private Map<Timestamp, DataTuple> removeAllLegacy(Set<Timestamp> tsSet)
 		{
 			Map<Timestamp, DataTuple> removed = new TreeMap<>();
 			synchronized(lock)
@@ -2097,7 +2107,7 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		//public SortedMap<Long, DataTuple> removeOlderInclusive(long ts)
-		public boolean removeOlderInclusive(Timestamp ts)
+		private boolean removeOlderInclusiveLegacy(Timestamp ts)
 		{
 			synchronized(lock)
 			{
@@ -2120,6 +2130,14 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 		
+		public boolean trim()
+		{
+			synchronized(lock)
+			{
+				return index.coveringRemoveFromSortedMap(combinedDownFctrl.lws(), combinedDownFctrl.acks(), queue);
+			}
+		}
+		
 		public boolean contains(Timestamp ts)
 		{
 			synchronized(lock) { return queue.containsKey(ts); }
@@ -2138,6 +2156,7 @@ public class Dispatcher implements IRoutingObserver {
 				else 
 				{ 
 					DataTuple dt = queue.remove(queue.firstKey());
+					index.remove(dt.getPayload().timestamp);
 					lock.notifyAll();
 					return dt;
 				}
