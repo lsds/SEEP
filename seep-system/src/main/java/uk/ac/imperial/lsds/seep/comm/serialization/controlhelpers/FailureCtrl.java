@@ -498,12 +498,22 @@ public class FailureCtrl {
 		}
 	}
 	
+	/*
 	public void setAlives(Set<Timestamp> newAlives)
 	{
 		synchronized(lock)
 		{
 			alives.clear();
 			updateAlives(newAlives);
+		}	
+	}*/
+	
+	public void setAlives(TimestampsMap newAlives)
+	{
+		synchronized(lock)
+		{
+			alives.clear();
+			alives.addAll(newAlives);
 		}	
 	}
 	
@@ -547,6 +557,13 @@ public class FailureCtrl {
 		}	
 	}
 
+	public TimestampsMap uncovered(TimestampsMap alivesToCheck)
+	{
+		synchronized(lock)
+		{
+			return alivesToCheck.uncovered(lws, acks, alives);
+		}
+	}
 	public boolean coversAcks(FailureCtrl other)
 	{
 		synchronized(lock)

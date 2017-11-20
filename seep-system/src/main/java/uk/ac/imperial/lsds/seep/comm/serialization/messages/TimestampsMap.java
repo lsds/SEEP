@@ -5,13 +5,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 
-public class TimestampsMap {
+public class TimestampsMap implements Iterable<Timestamp> {
 	private static final String kv2kvSep = ";";
 	private static final String k2vSep = ".";
 	
@@ -162,6 +163,17 @@ public class TimestampsMap {
 		return someNew;
 	}
 	
+	public void remove(Timestamp ts)
+	{
+		Integer key = ts.getKey();
+		if (tsMap.containsKey(key)) 
+		{ 
+			tsMap.get(key).remove(ts); 
+			if (tsMap.get(key).isEmpty()) { tsMap.remove(key); }
+		}
+	}
+	
+	
 	public boolean isEmpty() 
 	{ 
 		return tsMap.isEmpty(); 
@@ -271,6 +283,27 @@ public class TimestampsMap {
 		return changed;
 	}
 
+	public boolean covers(Timestamp ts)
+	{
+		Integer key = ts.getKey();
+		return !tsMap.containsKey(key) || !tsMap.get(key).contains(ts);
+	}
+	
+	public TimestampsMap uncovered(TimestampMap lws, TimestampsMap acks, TimestampsMap alives)
+	{
+		TimestampsMap result = new TimestampsMap();
+		for (Integer k : tsMap.keySet())
+		{
+			for (Timestamp ts : tsMap.get(k))
+			{
+				if (!lws.covers(ts) && !acks.covers(ts) && !alives.covers(ts))
+				{ result.add(ts); }	
+			}
+		}
+		return result;
+	}
+	
+	
 	public long coveredSizeInclusive(Timestamp ts) {
 		//Should return the number of timestamps in the map greater less than or equal to the ts
 		Integer key = ts.getKey();
@@ -303,7 +336,7 @@ public class TimestampsMap {
 	
 	public void clear() { tsMap.clear(); }
 	
-	public void assertSizes(int size) 
+	void assertSizes(int size) 
 	{ 
 		for (Integer key : tsMap.keySet()) 
 		{ 
@@ -312,10 +345,47 @@ public class TimestampsMap {
 		}
 	}
 	
+	public int size()
+	{
+		int total = 0;
+		for (Integer k : tsMap.keySet())
+		{
+			total += tsMap.get(k).size();
+		}
+		return total;
+	}
 	
 	private void assertNotEmpty(Integer k)
 	{
 		if (tsMap.get(k).isEmpty()) { throw new RuntimeException("Logic error, "+k+" is empty, tsMap="+tsMap); }
 	}
 	
+	@Override
+	public Iterator<Timestamp> iterator()
+	{
+		return new TMIterator();
+	}
+	
+	private class TMIterator implements Iterator<Timestamp>
+	{
+		private Iterator<Integer> keyIter = tsMap.keySet().iterator();
+		private Iterator<Timestamp> valsIter = null;
+		
+		@Override
+		public boolean hasNext() {
+			return keyIter.hasNext() || (valsIter != null && valsIter.hasNext()); 
+		}
+
+		@Override
+		public Timestamp next() {
+			if (valsIter != null && valsIter.hasNext()) { return valsIter.next(); }
+			else if (keyIter.hasNext()) 
+			{
+				Integer nextKey = keyIter.next();
+				valsIter = tsMap.get(nextKey).iterator();
+				return valsIter.next();
+			}
+			else { throw new NoSuchElementException("No more elements in "+tsMap); }
+		}
+	}
 }

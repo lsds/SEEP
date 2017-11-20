@@ -35,6 +35,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TimestampsMap;
 import uk.ac.imperial.lsds.seep.manet.FixedRateLimiter;
 import uk.ac.imperial.lsds.seep.manet.Query;
 import uk.ac.imperial.lsds.seep.manet.RateLimiter;
@@ -91,7 +92,8 @@ public class Dispatcher implements IRoutingObserver {
 	private final OperatorOutputQueue sharedReplayLog;
 	//private final FailureCtrl nodeFctrl = new FailureCtrl();	//KEEP THIS
 	private final FailureCtrl combinedDownFctrl = new FailureCtrl();
-	private final Map<Integer, Set<Timestamp>> downAlives = new HashMap<>();	//TODO: Concurrency?
+	//private final Map<Integer, Set<Timestamp>> downAlives = new HashMap<>();	//TODO: Concurrency?
+	private final Map<Integer, TimestampsMap> downAlives = new HashMap<>();	//TODO: Concurrency?
 	
 	private final Map<String, Integer> idxMapper = new HashMap<String, Integer>(); //Needed for replay after conn failure
 	
@@ -1108,7 +1110,8 @@ public class Dispatcher implements IRoutingObserver {
 				//2) Do a combined.set alives
 				//3) Save the old alives for this downstream
 				//4) delete the old alives for this downstream (TODO: What if control connection still open?)
-				Set<Timestamp> dsOpOldAlives = doUpdateDownAlives? updateDownAlives(dest.getOperatorId(), null) : null;
+				//Set<Timestamp> dsOpOldAlives = doUpdateDownAlives? updateDownAlives(dest.getOperatorId(), null) : null;
+				TimestampsMap dsOpOldAlives = doUpdateDownAlives? updateDownAlives(dest.getOperatorId(), null) : null;
 				//5) for tuple in logged
 				//		if acked discard
 				//		else if in joint alives add to shared replay log
@@ -1156,7 +1159,40 @@ public class Dispatcher implements IRoutingObserver {
 	}
 	
 		/* TODO: Should be holding lock here? */
-		private void requeueTuples(TreeMap<Timestamp, BatchTuplePayload> sessionLog, Set<Timestamp> dsOpOldAlives)
+		/*
+		private void requeueTuplesLegacy(TreeMap<Timestamp, BatchTuplePayload> sessionLog, Set<Timestamp> dsOpOldAlives)
+		{
+			for (Map.Entry<Timestamp, BatchTuplePayload> e : sessionLog.entrySet())
+			{
+				Timestamp ts = e.getKey();
+				TuplePayload p = e.getValue().getTuple(0);	//TODO: Proper batches.
+
+				if (!combinedDownFctrl.isAcked(ts))
+				{	
+					//TODO: what if acked already?
+					DataTuple dt = new DataTuple(idxMapper, p);
+					if (optimizeReplay && combinedDownFctrl.isAlive(ts))
+					{
+						sharedReplayLog.add(dt);
+						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts+",srl.sz="+sharedReplayLog.size());
+					}
+					else
+					{
+						logger.debug("Requeueing data tuple with timestamp="+p.timestamp);
+						opQueue.forceAdd(dt);
+					}
+					
+					if (optimizeReplay && dsOpOldAlives != null)
+					{
+						//Don't replay this twice
+						dsOpOldAlives.remove(ts);
+					}
+				}
+			}
+		}
+		*/
+		/* TODO: Should be holding lock here? */
+		private void requeueTuples(TreeMap<Timestamp, BatchTuplePayload> sessionLog, TimestampsMap dsOpOldAlives)
 		{
 			for (Map.Entry<Timestamp, BatchTuplePayload> e : sessionLog.entrySet())
 			{
@@ -1187,7 +1223,8 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 
-	private Set<Timestamp> getRetractions(Set<Timestamp> dsOpOldAlives)
+	/*
+	private Set<Timestamp> getRetractionsLegacy(Set<Timestamp> dsOpOldAlives)
 	{
 		Set<Timestamp> retractions = new HashSet<>();
 		if (dsOpOldAlives != null)
@@ -1201,10 +1238,19 @@ public class Dispatcher implements IRoutingObserver {
 			}		
 		}
 		return retractions;
-	}
+	}*/
 
+	private TimestampsMap getRetractions(TimestampsMap dsOpOldAlives)
+	{
+		if (dsOpOldAlives != null)
+		{
+			return combinedDownFctrl.uncovered(dsOpOldAlives);		
+		}
+		else { return new TimestampsMap(); }
+	}
+	
 	//Assumes you've already trimmed buffer, updated combinedDownFctrl, and lock is held.
-	public void requeueRetractedTuples(Set<Timestamp> retracted)
+	public void requeueRetractedTuplesLegacy(Set<Timestamp> retracted)
 	{
 		Vector<EndPoint> endpoints = owner.getPUContext().getDownstreamTypeConnection();
 
@@ -1238,8 +1284,45 @@ public class Dispatcher implements IRoutingObserver {
 		}
 	}
 
+	public void requeueRetractedTuples(TimestampsMap retracted)
+	{
+		Vector<EndPoint> endpoints = owner.getPUContext().getDownstreamTypeConnection();
+
+		for (Timestamp ts : retracted)
+		{
+			if (!combinedDownFctrl.isAcked(ts) && !combinedDownFctrl.isAlive(ts))
+			{
+				for (EndPoint endpoint : endpoints)
+				{
+					BatchTuplePayload btp = ((SynchronousCommunicationChannel)endpoint).getBuffer().get(ts);
+					if (btp != null)
+					{
+						TuplePayload p = btp.getTuple(0);	//TODO: Proper batches.
+
+						//TODO: what if acked already?
+						DataTuple dt = new DataTuple(idxMapper, p);
+						if (optimizeReplay && combinedDownFctrl.isAlive(ts))
+						{
+							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
+							sharedReplayLog.add(dt);
+						}
+						else
+						{
+							logger.debug("Requeueing retracted data tuple with ts="+p.timestamp);
+							opQueue.forceAdd(dt);
+						}
+						break;	//Don't bother looking at other buffers if found in this one.
+					}
+				}
+			}
+		}
+	}
+	
+	
+	
 	//Lock should be held
-	private Set<Timestamp> updateDownAlives(int dsOpId, Set<Timestamp> newDownAlives)
+	/*
+	private Set<Timestamp> updateDownAlivesLegacy(int dsOpId, Set<Timestamp> newDownAlives)
 	{
 		Set<Timestamp> dsOpOldAlives = null;
 		if (optimizeReplay)
@@ -1260,9 +1343,32 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		return dsOpOldAlives;
 	}
+	*/
+	
+	//Lock should be held
+	private TimestampsMap updateDownAlives(int dsOpId, TimestampsMap newDownAlives)
+	{
+		TimestampsMap dsOpOldAlives = null;
+		if (optimizeReplay)
+		{
+			TimestampsMap newAlives = new TimestampsMap();
+			if (newDownAlives != null) { newAlives.addAll(newDownAlives); }
+			for (Integer id : downAlives.keySet()) {
+				if (id != dsOpId && downAlives.get(id) != null)
+				{
+					newAlives.addAll(downAlives.get(id));
+				}
+			}
+			combinedDownFctrl.setAlives(newAlives);
+			dsOpOldAlives = downAlives.get(dsOpId);
+			downAlives.put(dsOpId,  newDownAlives);
+		}
+		return dsOpOldAlives;
+	}
 	
 	/* Should be holding lock here */
-	private void requeueFromSharedReplayLog(Set<Timestamp> dsOpOldAlives)
+	/*
+	private void requeueFromSharedReplayLogLegacy(Set<Timestamp> dsOpOldAlives)
 	{
 		//Replay any retracted alives that we hold in shared replay logs
 		if (optimizeReplay && dsOpOldAlives != null && !sharedReplayLog.isEmpty())
@@ -1289,6 +1395,35 @@ public class Dispatcher implements IRoutingObserver {
 			}
 		}
 	}
+	*/
+	
+	/* Should be holding lock here */
+	private void requeueFromSharedReplayLog(TimestampsMap dsOpOldAlives)
+	{
+		//Replay any retracted alives that we hold in shared replay logs
+		if (optimizeReplay && dsOpOldAlives != null && !sharedReplayLog.isEmpty())
+		{
+			logger.debug("Requeuing from shared replay log with dsooa.size="+dsOpOldAlives.size()+",srl.size="+sharedReplayLog.size());
+			if (sharedReplayLog.size() > dsOpOldAlives.size())
+			{
+				TimestampsMap uncoveredDsOpOldAlives = combinedDownFctrl.uncovered(dsOpOldAlives);
+				for (Timestamp uncoveredOldDownAlive : uncoveredDsOpOldAlives)
+				{
+						moveSharedReplayToOpQueue(uncoveredOldDownAlive);			
+				}
+			}
+			else
+			{
+				for (Timestamp srlEntry : sharedReplayLog.keys())
+				{
+					if (combinedDownFctrl.isAcked(srlEntry)) { sharedReplayLog.remove(srlEntry); }
+					else if (dsOpOldAlives.contains(srlEntry) && !combinedDownFctrl.isAlive(srlEntry))
+					{ moveSharedReplayToOpQueue(srlEntry); }
+				}
+			}
+		}
+	}
+
 
 	//Assumes lock held	
 	private void moveSharedReplayToOpQueue(Timestamp id)
@@ -1432,13 +1567,15 @@ public class Dispatcher implements IRoutingObserver {
 					//On the other hand removing it might slow upstreams from detecting failures/retractions, although probably not.
 					if (workers.get(owner.getOperator().getOpContext().getDownOpIndexFromOpId(dsOpId)).isConnected())
 					{
-						Set<Timestamp> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+						//Set<Timestamp> dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
+						TimestampsMap dsOpOldAlives = updateDownAlives(dsOpId, fctrl.alives());
 						long tDownAlives = System.currentTimeMillis();
 						logger.trace("Failure ctrl handler checking for replay from shared log.");
 						requeueFromSharedReplayLog(dsOpOldAlives);
 						long tRequeueShared = System.currentTimeMillis();
 			
-						Set<Timestamp> retractions = getRetractions(dsOpOldAlives);
+						//Set<Timestamp> retractions = getRetractions(dsOpOldAlives);
+						TimestampsMap retractions = getRetractions(dsOpOldAlives);
 						long tGetRetractions = System.currentTimeMillis();
 						if (!retractions.isEmpty()) 
 						{ 
@@ -1772,11 +1909,12 @@ public class Dispatcher implements IRoutingObserver {
 					//2) Do a combined.set alives
 					//3) Save the old alives for this downstream
 					//4) delete the old alives for this downstream
-					Set<Timestamp> dsOpOldAlives = updateDownAlives(downOpId, null);
+					//Set<Timestamp> dsOpOldAlives = updateDownAlives(downOpId, null);
+					TimestampsMap dsOpOldAlives = updateDownAlives(downOpId, null);
 
 					//TODO: Should we be using downOpFailureCtrl?
 					FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
-					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetsStr(dsOpOldAlives));
+					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+dsOpOldAlives.convertToString());
 					IBuffer buffer = dest.getBuffer();
 					//N.B. This is the key step wrt mhro!
 					TreeMap<Timestamp, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
@@ -1791,7 +1929,8 @@ public class Dispatcher implements IRoutingObserver {
 					requeueTuples(delayedBatches, dsOpOldAlives);
 
 					// Check whether there have been any retractions for batches only contained in other buffers.
-					Set<Timestamp> retractions = getRetractions(dsOpOldAlives);
+					//Set<Timestamp> retractions = getRetractions(dsOpOldAlives);
+					TimestampsMap retractions = getRetractions(dsOpOldAlives);
 					if (!retractions.isEmpty()) 
 					{ 
 						logger.info("Downstream "+downOpId+" retractions:"+retractions); 
@@ -1804,7 +1943,7 @@ public class Dispatcher implements IRoutingObserver {
 					//			move tuple from shared replay log to output queue
 					//TODO: Should this be outside this if block?
 					logger.info("Dispatcher worker "+downOpId+" checking for replay from shared log after hard timeout.");
-					logger.debug("dsooa before requeue from srl: "+RangeUtil.toRangeSetsStr(dsOpOldAlives));
+					logger.debug("dsooa before requeue from srl: "+dsOpOldAlives.convertToString());
 					requeueFromSharedReplayLog(dsOpOldAlives);
 					logger.error("TODO: Should we be requeueing from srl before from individual buffers (correctness vs perf?)");
 
