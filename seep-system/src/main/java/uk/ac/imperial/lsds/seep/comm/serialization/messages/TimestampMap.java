@@ -4,19 +4,17 @@ import java.util.Set;
 
 public class TimestampMap {
 
-	//private Map<Integer, Timestamp> tsMap;
 	private TimestampsMap tsMap;
 
+	public TimestampMap()
+	{
+		this.tsMap = new TimestampsMap();
+	}
+	
 	private TimestampMap(TimestampsMap tsMap) 
 	{ 
 		tsMap.assertSizes(1);
 		this.tsMap = tsMap; 
-	}
-	
-	public TimestampMap(Set<Timestamp> tsSet) 
-	{  
-		tsMap = new TimestampsMap(tsSet);
-		tsMap.assertSizes(1);
 	}
 	
 	public TimestampMap(TimestampMap other) 
@@ -32,8 +30,6 @@ public class TimestampMap {
 		if (tsMapStr.contains(":")) { throw new RuntimeException("Logic error: invalid: "+tsMapStr); }
 		return new TimestampMap(TimestampsMap.parse(tsMapStr));  
 	}
-	
-	public Set<Timestamp> toSet() { return tsMap.toSet(); }
 	
 	public boolean coveringMerge(TimestampMap other) 
 	{ 

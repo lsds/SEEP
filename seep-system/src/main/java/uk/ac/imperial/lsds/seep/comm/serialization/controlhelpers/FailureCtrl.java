@@ -28,10 +28,14 @@ public class FailureCtrl {
 	public FailureCtrl()
 	{
 		//this(-1, new HashSet<Long>(), new HashSet<Long>());
-		this(new HashSet<Timestamp>(), new HashSet<Timestamp>(), new HashSet<Timestamp>());
+		//this(new HashSet<Timestamp>(), new HashSet<Timestamp>(), new HashSet<Timestamp>());
+		this.lws = new TimestampMap();
+		this.acks = new TimestampsMap();
+		this.alives = new TimestampsMap();
 	}
 	
 	//public FailureCtrl(long lw, Set<Long> acks, Set<Long> alives)
+	/*
 	private FailureCtrl(Set<Timestamp> lws, Set<Timestamp> acks, Set<Timestamp> alives)
 	{
 		//this.lw = lw;
@@ -45,6 +49,7 @@ public class FailureCtrl {
 		this.alives = new TimestampsMap(alives);
 
 	}
+	*/
 	private FailureCtrl(TimestampMap lws, TimestampsMap acks, TimestampsMap alives)
 	{
 		//this.lw = lw;
@@ -56,7 +61,6 @@ public class FailureCtrl {
 		this.lws = new TimestampMap(lws);
 		this.acks = new TimestampsMap(acks);
 		this.alives = new TimestampsMap(alives);
-
 	}
 	
 	public FailureCtrl(FailureCtrl other)
@@ -146,7 +150,7 @@ public class FailureCtrl {
 			return lws.convertToString() + ":" + acks.convertToString() + ":" + alives.convertToString();
 		}
 	}
-	
+	/*
 	private String joinLongs(Set<Long> longs)
 	{
 		String longStr = "";
@@ -170,7 +174,7 @@ public class FailureCtrl {
 		}
 		return longs;
 	}
-	
+	*/
 	/*
 	private Set<Timestamp> lwsRaw() { 
 		//synchronized(lock) { return new HashSet<>(lws); }
@@ -353,10 +357,10 @@ public class FailureCtrl {
 			return changed;
 		}
 	}
-	
+	/*
 	private boolean update(Set<Timestamp> newLws, Set<Timestamp> newAcks, Set<Timestamp> newAlives)
 	{
-		/*
+		
 		boolean changed = false;
 		synchronized(lock)
 		{
@@ -402,10 +406,10 @@ public class FailureCtrl {
 			
 			return changed || prevAcksSize != acks.size() || prevAlivesSize != alives.size();
 		}
-		*/
+		
 		throw new RuntimeException("TODO: How to handle multiple queries?");	
 	}
-	
+	*/
 	/*
 	public boolean merge(long otherLw, Set<Long> otherAcks)
 	{
@@ -467,9 +471,10 @@ public class FailureCtrl {
 		}	
 	}
 	
+	/*
 	public void updateAlives(Set<Timestamp> newAlives)
 	{
-		/*
+		
 		synchronized(lock)
 		{
 			alives.addAll(newAlives);
@@ -483,11 +488,12 @@ public class FailureCtrl {
 				}
 			}
 		}
-		*/
+		*
 		//throw new RuntimeException("TODO: How to handle multiple queries?");
 		//TODO: Eventually change interface of above to take a timestampsMap instead of a set.
 		updateAlives(new TimestampsMap(newAlives));
 	}
+	*/
 	
 	public void updateAlives(TimestampsMap newAlives)
 	{
@@ -564,6 +570,7 @@ public class FailureCtrl {
 			return alivesToCheck.uncovered(lws, acks, alives);
 		}
 	}
+	
 	public boolean coversAcks(FailureCtrl other)
 	{
 		synchronized(lock)

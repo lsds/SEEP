@@ -23,18 +23,6 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	{
 		this.tsMap = new HashMap<>();
 	}
-	
-	public TimestampsMap(Set<Timestamp> tsSet)
-	{
-		tsMap = new HashMap<Integer, TreeSet<Timestamp>>();
-		for (Timestamp ts : tsSet)
-		{
-			Integer key = ts.getKey();
-			if (!tsMap.containsKey(key)) { tsMap.put(key, new TreeSet<Timestamp>()); }
-			tsMap.get(key).add(ts);
-		}
-	}
-	
 
 	public TimestampsMap(TimestampsMap other) 
 	{ 
@@ -99,15 +87,6 @@ public class TimestampsMap implements Iterable<Timestamp> {
 			result.tsMap.put(key, orderedKeyVals);
 		}
 		return result;
-	}
-	public Set<Timestamp> toSet() 
-	{ 
-		Set<Timestamp> result = new HashSet<>();
-		for (Integer key : tsMap.keySet()) 
-		{
-			result.addAll(tsMap.get(key));
-		}
-		return result; 
 	}
 	
 	public boolean contains(Timestamp ts)  
@@ -198,7 +177,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 
 	public boolean coveringMerge(TimestampMap lws, TimestampsMap newAcks) {
 		boolean changed = false;
-		TimestampsMap rawLws = lws.asTimestampsMap();
+		//TimestampsMap rawLws = lws.asTimestampsMap();
 		changed = addAll(newAcks) || changed;
 		changed = coveringRemove(lws, null) || changed;
 		return changed;
@@ -258,31 +237,6 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	
 	public boolean coveringRemove(TimestampMap lws, TimestampsMap acks) {
 		return coveringRemoveFromSortedMap(lws, acks, null);
-		/*
-		boolean changed = false;
-		TimestampsMap rawLws = lws.asTimestampsMap();
-		Iterator<Entry<Integer, TreeSet<Timestamp>>> iter = tsMap.entrySet().iterator();
-		
-		while (iter.hasNext())
-		{
-			Integer k = iter.next().getKey();
-			if (rawLws.tsMap.containsKey(k))
-			{
-				Timestamp lw = rawLws.tsMap.get(k).first();
-				int pre = tsMap.get(k).size();
-				tsMap.get(k).headSet(lw, true).clear();
-				changed |= pre > tsMap.get(k).size();
-			}
-			
-			if (tsMap.get(k).isEmpty()) { iter.remove(); }
-			else if(acks != null && acks.tsMap.containsKey(k))
-			{
-				changed = tsMap.get(k).removeAll(acks.tsMap.get(k)) || changed; 
-			}
-		}
-		
-		return changed;
-		*/
 	}
 
 	public boolean coveringRemoveFromSortedMap(TimestampMap lws, TimestampsMap acks, SortedMap<Timestamp, ? extends Object> sorted)

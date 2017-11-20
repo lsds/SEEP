@@ -59,7 +59,7 @@ public class OpFailureCtrl implements Serializable {
 		return opId;
 	}
 	
-	private void setOpId(int opId) {
+	public void setOpId(int opId) {
 		this.opId = opId;
 	}
 	
