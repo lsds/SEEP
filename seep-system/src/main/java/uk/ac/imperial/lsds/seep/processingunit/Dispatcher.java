@@ -1418,10 +1418,11 @@ public class Dispatcher implements IRoutingObserver {
 				if (failureCtrlWatchdog != null) { failureCtrlWatchdog.clear(dsOpId); }	//In case it takes a while to process this failure ctrl.
 				logger.debug("Handling failure ctrl received from "+dsOpId+",cdfctrl="+combinedDownFctrl+ ", fctrl="+fctrl);
 				logger.trace("Failure ctrl handling acquired lock in "+(tStart - rxTime)+" ms");
-				long oldLw = combinedDownFctrl.lw();
-				long oldAcksSize = combinedDownFctrl.acks().size();
-				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
-				boolean acksChanged = oldLw < combinedDownFctrl.lw() || oldAcksSize < combinedDownFctrl.acks().size();
+				//long oldLw = combinedDownFctrl.lw();
+				//long oldAcksSize = combinedDownFctrl.acks().size();
+				//combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				//boolean acksChanged = oldLw < combinedDownFctrl.lw() || oldAcksSize < combinedDownFctrl.acks().size();
+				boolean acksChanged = combinedDownFctrl.update(fctrl, true, true);
 				long tAcks = System.currentTimeMillis();
 				logger.trace("Failure ctrl handling updated acks in "+(tAcks - tStart)+" ms");
 				if (optimizeReplay)
@@ -1478,7 +1479,8 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			synchronized(lock)
 			{
-				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				//combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				combinedDownFctrl.update(fctrl, true, true);
 			}
 		}
 		
@@ -1774,7 +1776,7 @@ public class Dispatcher implements IRoutingObserver {
 
 					//TODO: Should we be using downOpFailureCtrl?
 					FailureCtrl downOpFailureCtrl = getCombinedDownFailureCtrl();
-					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
+					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetsStr(dsOpOldAlives));
 					IBuffer buffer = dest.getBuffer();
 					//N.B. This is the key step wrt mhro!
 					TreeMap<Timestamp, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
@@ -1802,7 +1804,7 @@ public class Dispatcher implements IRoutingObserver {
 					//			move tuple from shared replay log to output queue
 					//TODO: Should this be outside this if block?
 					logger.info("Dispatcher worker "+downOpId+" checking for replay from shared log after hard timeout.");
-					logger.debug("dsooa before requeue from srl: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
+					logger.debug("dsooa before requeue from srl: "+RangeUtil.toRangeSetsStr(dsOpOldAlives));
 					requeueFromSharedReplayLog(dsOpOldAlives);
 					logger.error("TODO: Should we be requeueing from srl before from individual buffers (correctness vs perf?)");
 
@@ -1960,9 +1962,9 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			synchronized(lock)
 			{
-				SortedMap<Timestamp, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				SortedMap<Timestamp, DataTuple> removed = queue.headMap(ts.next());
 				boolean removedSome = removed != null && !removed.isEmpty();
-				SortedMap<Timestamp, DataTuple> remainder = queue.tailMap(ts+1);
+				SortedMap<Timestamp, DataTuple> remainder = queue.tailMap(ts.next());
 				if (remainder == null || remainder.isEmpty()) { queue.clear(); }
 				else 
 				{ 
