@@ -6,44 +6,89 @@ import java.util.Set;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TimestampMap;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TimestampsMap;
 
 public class FailureCtrl {
 
-	private volatile long lw;
-	private final Set<Long> acks;	//Change to linked set
-	private final Set<Long> alives;
+	//private volatile long lw;
+	//private final Set<Long> acks;	//Change to linked set
+	//private final Set<Long> alives;
+	
+	//Could alternatively make these timestamp maps?
+	//private final Set<Timestamp> lws;
+	//private final Set<Timestamp> acks;
+	//private final Set<Timestamp> alives;
+	private final TimestampMap lws;
+	private final TimestampsMap acks;
+	private final TimestampsMap alives;
+	
 	private final Object lock = new Object(){};
 	
 	public FailureCtrl()
 	{
-		this(-1, new HashSet<Long>(), new HashSet<Long>());
+		//this(-1, new HashSet<Long>(), new HashSet<Long>());
+		this(new HashSet<Timestamp>(), new HashSet<Timestamp>(), new HashSet<Timestamp>());
 	}
 	
 	//public FailureCtrl(long lw, Set<Long> acks, Set<Long> alives)
-	private FailureCtrl(long lw, Set<Long> acks, Set<Long> alives)
+	private FailureCtrl(Set<Timestamp> lws, Set<Timestamp> acks, Set<Timestamp> alives)
 	{
-		this.lw = lw;
-		this.acks = (acks == null ? new HashSet<Long>() : acks);
-		this.alives = (alives == null ? new HashSet<Long>() : alives);
+		//this.lw = lw;
+		//this.acks = (acks == null ? new HashSet<Long>() : acks);
+		//this.alives = (alives == null ? new HashSet<Long>() : alives);
+		//this.lws = (lws == null? new HashSet<Timestamp>() : lws);
+		//this.acks = (acks == null ? new HashSet<Timestamp>() : acks);
+		//this.alives = (alives == null ? new HashSet<Timestamp>() : alives);
+		this.lws = new TimestampMap(lws);
+		this.acks = new TimestampsMap(acks);
+		this.alives = new TimestampsMap(alives);
+
+	}
+	private FailureCtrl(TimestampMap lws, TimestampsMap acks, TimestampsMap alives)
+	{
+		//this.lw = lw;
+		//this.acks = (acks == null ? new HashSet<Long>() : acks);
+		//this.alives = (alives == null ? new HashSet<Long>() : alives);
+		//this.lws = (lws == null? new HashSet<Timestamp>() : lws);
+		//this.acks = (acks == null ? new HashSet<Timestamp>() : acks);
+		//this.alives = (alives == null ? new HashSet<Timestamp>() : alives);
+		this.lws = new TimestampMap(lws);
+		this.acks = new TimestampsMap(acks);
+		this.alives = new TimestampsMap(alives);
+
 	}
 	
 	public FailureCtrl(FailureCtrl other)
 	{
+		this(other, false);
+		/*
 		this.lw = other.lw;
 		this.acks = new HashSet<>(other.acks());
 		this.alives = new HashSet<>(other.alives());
+		this.lws = new HashSet<>(other.lws());
+		this.acks = new HashSet<>(other.acks());
+		this.alives = new HashSet<>(other.alives());
+		*/
 	}
 
-	public FailureCtrl(FailureCtrl other, boolean keepAlives)
+	public FailureCtrl(FailureCtrl other, boolean ignoreOtherAlives)
 	{
-		this.lw = other.lw;
+		/*
+		this.lws = new HashSet<>(other.lws());
 		this.acks = new HashSet<>(other.acks());
-		if (keepAlives)  { this.alives = new HashSet<>(other.alives()); }
-		else { this.alives = new HashSet<Long>(); }
+		if (!ignoreOtherAlives)  { this.alives = new HashSet<>(other.alives()); }
+		else { this.alives = new HashSet<Timestamp>(); }
+		*/
+		this.lws = new TimestampMap(other.lws());
+		this.acks = new TimestampsMap(other.acks());
+		this.alives = ignoreOtherAlives ? new TimestampsMap() : new TimestampsMap(other.alives());
+
 	}
 	
 	public FailureCtrl(String fctrl)
 	{
+		/*
 		String[] splits = fctrl.split(":");
 		lw = Long.parseLong(splits[0]);
 		if (splits.length == 1)
@@ -60,6 +105,31 @@ public class FailureCtrl {
 		}
 		acks = parseLongs(splits[1]);
 		alives = parseLongs(splits[2]);
+		*/
+		String[] splits = fctrl.split(":");
+		lws = TimestampMap.parse(splits[0]);
+		if (splits.length == 1)
+		{
+			acks = new TimestampsMap();
+			alives = new TimestampsMap();
+			return;
+		}
+		if (splits.length == 2)
+		{
+			acks = TimestampsMap.parse(splits[1]);
+			alives = new TimestampsMap();
+			return;
+		}
+		acks = TimestampsMap.parse(splits[1]);
+		alives = TimestampsMap.parse(splits[2]);
+	}
+	
+	public FailureCtrl atomicCopy()
+	{
+		synchronized(lock)
+		{
+			return new FailureCtrl(lws, acks, alives);
+		}
 	}
 	
 	public String toString()
@@ -67,9 +137,13 @@ public class FailureCtrl {
 		synchronized(lock)
 		{
 			//return lw + ":" + joinLongs(acks) + ":" + joinLongs(alives);
+			/*
 			String ackStr = RangeUtil.toRangeSetStr(acks);
 			String aliveStr = RangeUtil.toRangeSetStr(alives);
 			return lw + ":" + (ackStr == null ? "" : ackStr) + ":" + (aliveStr == null ? "" : aliveStr);
+			*/
+			//throw new RuntimeException("TODO: Come up with new fctrl format.");
+			return lws.convertToString() + ":" + acks.convertToString() + ":" + alives.convertToString();
 		}
 	}
 	
@@ -97,32 +171,39 @@ public class FailureCtrl {
 		return longs;
 	}
 	
-	//public long lw() { return lw;	}
-	public Timestamp lw() { 
-		/*
-		return lw;	
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
+	/*
+	private Set<Timestamp> lwsRaw() { 
+		//synchronized(lock) { return new HashSet<>(lws); }
+		synchronized(lock) { return lws.toSet(); }
+		//throw new RuntimeException("TODO don't expose sets?");
 	}
 	
-	//public Set<Long> acks() { 
-	public Set<Timestamp> acks() { 
-		/*
-		synchronized(lock) { return new HashSet<>(acks); }
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
+	private Set<Timestamp> acksRaw() { 
+		//synchronized(lock) { return new HashSet<>(acks); }
+		synchronized(lock) { return acks.toSet(); }
+		//throw new RuntimeException("TODO don't expose sets?");
 	}
 
+	private Set<Timestamp> alivesRaw() { 
+		//synchronized(lock) { return new HashSet<>(alives); }
+		synchronized(lock) { return alives.toSet(); }
+		//throw new RuntimeException("TODO don't expose sets?");
+	}*/
 	
-	//public Set<Long> alives() { 
-	public Set<Timestamp> alives() { 
-		/*
-		synchronized(lock) { return new HashSet<>(alives); }
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
+	private TimestampMap lws() {
+		synchronized(lock) { return new TimestampMap(lws); }
 	}
 	
-	public boolean update(FailureCtrl other)
+	private  TimestampsMap acks() {
+		synchronized(lock) { return new TimestampsMap(acks); }
+	}
+	
+	public TimestampsMap alives() {
+		synchronized(lock) { return new TimestampsMap(alives); }
+	}
+	
+	/*
+	public boolean updateOld(FailureCtrl other)
 	{
 		boolean changed = false;
 		synchronized(lock)
@@ -168,6 +249,7 @@ public class FailureCtrl {
 			return changed || acks.size() != prevAcksSize || alives.size() != prevAlivesSize;
 		}
 	}
+	*/
 	
 	public void ack(Timestamp ts)
 	{
@@ -190,10 +272,89 @@ public class FailureCtrl {
 			}
 		}
 		*/
-		throw new RuntimeException("TODO: How to handle multiple queries?");	
+		synchronized(lock)
+		{
+			if (!alives.isEmpty())
+			{
+				throw new RuntimeException("Logic error, only for sink?");
+			}
+			
+			if (!lws.covers(ts) && !acks.contains(ts))
+			{
+				acks.add(ts);
+				acks.compact(lws);
+				//More efficient to merge to acks.compact(lws, ts)?
+			}
+		}
 	}
 	
-	public boolean update(Timestamp newLw, Set<Timestamp> newAcks, Set<Timestamp> newAlives)
+	public boolean update(FailureCtrl other)
+	{
+		return update(other, false, false);
+	}
+	
+	public boolean update(FailureCtrl other, boolean ignoreOtherAlives, boolean ignoreAlivesChanged)
+	{
+		synchronized(lock)
+		{
+			//This is all sooo inefficient!
+			FailureCtrl otherCopy = other.atomicCopy();
+			return update(otherCopy.lws, other.acks, other.alives, ignoreOtherAlives, ignoreAlivesChanged);
+		}
+	}
+	
+	private boolean update(TimestampMap newLws, TimestampsMap newAcks, 
+			TimestampsMap newAlives, boolean ignoreOtherAlives, boolean ignoreAlivesChanged)
+	{	
+		synchronized(lock)
+		{
+			/*
+			 * Strategy: essentially, want a method that doesn't *assume* the different sets are from different
+			 * queries, but will perform efficiently if they are?
+			 * 
+			 * For newLw in newLws
+			 * 		get from other based on query (no guarantee of being unique!).
+			 * 		Could have a timestamps map and a timestamp map!
+			 * lws.coveringMerge(newLw) Essentially removes all older.
+			 */
+			boolean changed = lws.coveringMerge(newLws);
+			/*
+			 * 
+			 * Then just combine acks (don't need timestamp map?)
+			 * Then for ack in acks
+			 *       if lws.covers(ack)
+			 *       	acks.remove(ack);
+			 *       	todo if !newAcks.contains(nxtAck) change = true ?! Bug?
+			 */
+			
+			changed = acks.coveringMerge(lws, newAcks) || changed;
+			/*
+			 * Then for lw in lws
+			 * 		sqnTs = lw.sameQueryNext
+			 * 		if acks.contains sqnTs
+			 * 			lws.replace(lw, sqnTs)// or lws.remove(lw), lws.add(sqnTs)
+			 * 			acks.remove(lw);
+			 */
+			
+			changed = acks.compact(lws) || changed;
+			/*
+			 * Now Alives!
+			 * Firstly just merge the alives, remembering the original size
+			 * 		if lws.covers(alive) or acks.contains(alive) // this.isAcked(alive)?
+			 * 			alives.remove(alive)
+			 * 				if newAlives != null or !newalives contains alive ;; changed (again is this right)?
+			 * 
+			 * finally return whether changed.
+			 */
+			if (!ignoreOtherAlives) { alives.addAll(newAlives); }
+			changed = (alives.coveringRemove(lws, acks) && !ignoreAlivesChanged) || changed;
+		
+			//if !changed then assert old covers new
+			return changed;
+		}
+	}
+	
+	private boolean update(Set<Timestamp> newLws, Set<Timestamp> newAcks, Set<Timestamp> newAlives)
 	{
 		/*
 		boolean changed = false;
@@ -212,7 +373,7 @@ public class FailureCtrl {
 				if (nxtAck <= lw) 
 				{ 
 					iter.remove();
-					if (! newAcks.contains(nxtAck)) { changed = true; }
+					if (! newAcks.contains(nxtAck)) { changed = true; } //This is wrong?! What if both old and new contained it?
 				}
 			}
 			
@@ -283,9 +444,9 @@ public class FailureCtrl {
 	
 	public boolean updateAlives(Timestamp newAlive)
 	{
-		/*
 		synchronized(lock)
 		{
+			/*
 			if (newAlive <= lw || acks.contains(newAlive) || alives.contains(newAlive))
 			{
 				return false;
@@ -295,9 +456,15 @@ public class FailureCtrl {
 				alives.add(newAlive);
 				return true;
 			}
-		}
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries?");	
+			
+			*/
+			if (lws.covers(newAlive) || acks.contains(newAlive) || alives.contains(newAlive)) { return false; }
+			else
+			{
+				alives.add(newAlive);
+				return true;
+			}
+		}	
 	}
 	
 	public void updateAlives(Set<Timestamp> newAlives)
@@ -317,49 +484,54 @@ public class FailureCtrl {
 			}
 		}
 		*/
-		throw new RuntimeException("TODO: How to handle multiple queries?");	
+		//throw new RuntimeException("TODO: How to handle multiple queries?");
+		//TODO: Eventually change interface of above to take a timestampsMap instead of a set.
+		updateAlives(new TimestampsMap(newAlives));
+	}
+	
+	public void updateAlives(TimestampsMap newAlives)
+	{
+		synchronized(lock)
+		{
+			alives.addAll(newAlives);
+			alives.coveringRemove(lws, acks);
+		}
 	}
 	
 	public void setAlives(Set<Timestamp> newAlives)
 	{
-		/*
 		synchronized(lock)
 		{
 			alives.clear();
 			updateAlives(newAlives);
 		}	
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 	
 	
 	public boolean isAcked(Timestamp ts)
 	{
-		/*
+		
 		synchronized(lock)
 		{
-			return ts <= lw || acks.contains(ts);
+			//return ts <= lw || acks.contains(ts);
+			return !lws.covers(ts) && !acks.contains(ts);
 		}
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 
 	public boolean isAlive(Timestamp ts)
 	{
-		/*
 		synchronized(lock)
 		{
 			return alives.contains(ts) && !isAcked(ts);
 		}
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries? Check if queries match?");
 	}
 
 	public long unacked(Timestamp ts)
 	{
-		/*
+
 		synchronized(lock)
 		{
+			/*
 			if (ts <= lw) { return 0; }
 			long unacked = ts - lw;
 			for (Long ack : acks) 
@@ -369,13 +541,26 @@ public class FailureCtrl {
 			}
 			if (unacked != (ts - lw - acks.size())) { throw new RuntimeException("Logic error: unacked="+unacked+",ts="+ts+",ls="+lw+",acks.size="+acks.size()+",acks="+acks); }
 			return unacked; 
-		}
-		*/
-		throw new RuntimeException("TODO: How to handle multiple queries?");	
+			*/
+			if (lws.covers(ts)) { return 0; }
+			else { return (lws.uncoveredSizeInclusive(ts) - acks.coveredSizeInclusive(ts)); }
+		}	
 	}
 
 	public boolean coversAcks(FailureCtrl other)
 	{
-		throw new RuntimeException("TODO: See OutOfOrderInputQueue");	
+		synchronized(lock)
+		{	
+			//TODO: Seriously inefficient!
+			FailureCtrl otherCopy = other.atomicCopy();
+			return lws.covers(otherCopy.lws) && otherCopy.acks.isCovered(lws, acks);
+			//throw new RuntimeException("TODO: See OutOfOrderInputQueue");
+		}
 	}
+	
+	public boolean emptyAlives()
+	{
+		synchronized(lock) { return alives.isEmpty(); }
+	}
+
 }

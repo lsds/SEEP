@@ -39,6 +39,8 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateAck;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StateChunk;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.StreamState;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.UpDownRCtrl;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.TimestampMap;
 import uk.ac.imperial.lsds.seep.reliable.MemoryChunk;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE;
 import uk.ac.imperial.lsds.seep.state.StateWrapper;
@@ -87,7 +89,7 @@ public class ControlTuple {
 	public ControlTuple(CoreRE.ControlTupleType type, int opId, FailureCtrl fctrl)
 	{
 		this.type = type;
-		this.opFctrl = new OpFailureCtrl(opId, fctrl.lw(), fctrl.acks(), fctrl.alives());
+		this.opFctrl = new OpFailureCtrl(opId, fctrl);
 	}
 	
 	public ControlTuple(CoreRE.ControlTupleType type, int opId, int qLen)
@@ -98,18 +100,20 @@ public class ControlTuple {
 		this.tsSend = System.currentTimeMillis();
 	}
 
-	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, RangeSet<Long> unmatched)
+	//public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, RangeSet<Long> unmatched)
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, Set<Timestamp> unmatched)
 	{
 		this.type = type;
 		this.downUp = new DownUpRCtrl(opId, weight, unmatched);
 		this.tsSend = System.currentTimeMillis();
 	}
 	
-	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, RangeSet<Long> unmatched, FailureCtrl fctrl)
+	//public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, RangeSet<Long> unmatched, FailureCtrl fctrl)
+	public ControlTuple(CoreRE.ControlTupleType type, int opId, double weight, Set<Timestamp> unmatched, FailureCtrl fctrl)
 	{
 		this.type = type;
 		this.downUp = new DownUpRCtrl(opId, weight, unmatched);
-		this.opFctrl = new OpFailureCtrl(opId, fctrl.lw(), fctrl.acks(), fctrl.alives());
+		this.opFctrl = new OpFailureCtrl(opId, fctrl);
 		this.tsSend = System.currentTimeMillis();
 	}
 

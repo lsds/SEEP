@@ -190,7 +190,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 		
 		//Trim, but don't pollute the record of batches received on this input
 		//with the ids of all tuples live downstream.
-		inputFctrl.update(downFctrl.lw(), downFctrl.acks(), null);
+		inputFctrl.update(downFctrl, true, true);
 		
 		Iterator<Timestamp> iter = inputQueue.keySet().iterator();
 		boolean removedSomething = false;
@@ -201,7 +201,7 @@ public class OutOfOrderInputQueue implements DataStructureI {
 			//here to prevent leaks with multi-input ops.
 			//if (ts <= inputFctrl.lw() || inputFctrl.acks().contains(ts) 
 			if (inputFctrl.isAcked(ts)
-					|| (!reprocessNonLocals && downFctrl.alives().contains(ts)))
+					|| (!reprocessNonLocals && downFctrl.isAlive(ts)))
 			{
 				iter.remove();
 				removedSomething = true;

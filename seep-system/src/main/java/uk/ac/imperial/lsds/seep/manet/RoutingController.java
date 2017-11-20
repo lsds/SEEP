@@ -150,7 +150,7 @@ public class RoutingController implements Runnable{
 				if (numLogicalInputs > 1)
 				{
 					//ArrayList<RangeSet<Long>> routingConstraints = ((OutOfOrderBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
-					ArrayList<RangeSet<Timestamp>> routingConstraints = ((OutOfOrderFairBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
+					ArrayList<Set<Timestamp>> routingConstraints = ((OutOfOrderFairBufferedBarrier)owner.getDSA().getUniqueDso()).getRoutingConstraints();
 					for (Integer upstreamId : owner.getProcessingUnit().getOperator().getOpContext().getUpstreamOpIdList())
 					{
 						int logicalInputIndex = query.getLogicalInputIndex(query.getLogicalNodeId(nodeId), query.getLogicalNodeId(upstreamId));
@@ -168,7 +168,8 @@ public class RoutingController implements Runnable{
 					for (Integer upstreamId : weightsCopy.keySet())
 					{
 	
-						RangeSet<Timestamp> empty = TreeRangeSet.create();
+						//RangeSet<Timestamp> empty = TreeRangeSet.create();
+						Set<Timestamp> empty = new HashSet<>();
 						//ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weightsCopy.get(upstreamId), empty);
 						double weight = weightsCopy.get(upstreamId);
 						//if (nodeId == 1 && upstreamId == 10 || nodeId == 110 && upstreamId == 0 || nodeId == -2 && upstreamId == 110 || nodeId == -190 && upstreamId == 1) { weight = 0.0 ; } 
@@ -208,7 +209,7 @@ public class RoutingController implements Runnable{
 	}
 	
 
-	private void sendWeight(int upstreamId, int upOpIndex, double weight, RangeSet<Timestamp> constraints)
+	private void sendWeight(int upstreamId, int upOpIndex, double weight, Set<Timestamp> constraints)
 	{
 						ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, weight, constraints);
 						if (!piggybackControlTraffic || !mergeFailureAndRoutingCtrl)
@@ -261,7 +262,9 @@ public class RoutingController implements Runnable{
 				{
 					Integer upstreamId = (Integer)upstreamIdObj;
 
-					RangeSet<Timestamp> empty = TreeRangeSet.create();
+					//RangeSet<Timestamp> empty = TreeRangeSet.create();
+					//RangeSet<Timestamp> empty = TreeRangeSet.create();
+					Set<Timestamp> empty = new HashSet<>();
 					ControlTuple ct = new ControlTuple(ControlTupleType.DOWN_UP_RCTRL, nodeId, localQueueLength, empty);
 					int upOpIndex = owner.getProcessingUnit().getOperator().getOpContext().getUpOpIndexFromOpId(upstreamId);
 

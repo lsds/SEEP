@@ -193,7 +193,7 @@ public class Router implements Serializable{
 		if (meanderRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
 
-		if (! new Timestamp(dt.getLong("tupleId"), dt.getInt("queryId")).equals(dt.getPayload().timestamp)) { throw new RuntimeException("Logic error."); }
+		if (! new Timestamp(dt.getInt("queryId"), dt.getLong("tupleId")).equals(dt.getPayload().timestamp)) { throw new RuntimeException("Logic error."); }
 		//return meanderRouter.route(dt.getLong("tupleId")); dokeeffe changed during multi-source query refactoring
 		return meanderRouter.route(dt.getPayload().timestamp);
 	}

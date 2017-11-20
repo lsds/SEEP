@@ -13,16 +13,27 @@ import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 public class OpFailureCtrl implements Serializable {
 	private static final Logger logger = LoggerFactory.getLogger(OpFailureCtrl.class);
 	private int opId;
+	private String fctrlString;
+	/*
 	private long lw;
 	private BitSet acks;
 	private BitSet alives;
 	private String rsAcks;
 	private String rsAlives;
 	private boolean useBitSet = false;
+	*/
 
 	public OpFailureCtrl() {}
 	
-	public OpFailureCtrl(int opId, long lw, Set<Long> acks, Set<Long> alives)
+	public OpFailureCtrl(int opId, FailureCtrl fctrl)
+	{
+		//this(opId, fctrl.lw(), fctrl.acks(), fctrl.alives());
+		this.opId = opId;
+		this.fctrlString = fctrl.toString();
+	}
+	
+	/*
+	private OpFailureCtrl(int opId, long lw, Set<Long> acks, Set<Long> alives)
 	{
 		this.opId = opId;
 		this.lw = lw;
@@ -42,23 +53,38 @@ public class OpFailureCtrl implements Serializable {
 
 		}
 	}
+	*/
 	
 	public int getOpId() {
 		return opId;
 	}
-	public void setOpId(int opId) {
+	
+	private void setOpId(int opId) {
 		this.opId = opId;
 	}
+	
 
-	public long getLw() {
+	public FailureCtrl getFailureCtrl()
+	{
+		return new FailureCtrl(fctrlString);
+	}
+	
+	public String getFctrlString() { return fctrlString; }
+	
+	public void setFctrlString(String str)
+	{
+		this.fctrlString = str;
+	}
+	/*
+	private long getLw() {
 		return lw;
 	}
 
-	public void setLw(long lw) {
+	private void setLw(long lw) {
 		this.lw = lw;
 	}
 	
-	public Set<Long> getAcks() {
+	private Set<Long> getAcks() {
 		if (useBitSet)
 		{
 			return fromBitSet(lw, acks);
@@ -69,7 +95,7 @@ public class OpFailureCtrl implements Serializable {
 		}
 	}
 
-	public void setAcks(Set<Long> newAcks) {
+	private void setAcks(Set<Long> newAcks) {
 		if (useBitSet)
 		{
 			this.acks = toBitSet(lw, newAcks);
@@ -80,7 +106,7 @@ public class OpFailureCtrl implements Serializable {
 		}
 	}
 
-	public Set<Long> getAlives() {
+	private Set<Long> getAlives() {
 		if (useBitSet)
 		{
 			return fromBitSet(lw, alives);
@@ -91,7 +117,7 @@ public class OpFailureCtrl implements Serializable {
 		}
 	}
 
-	public void setAlives(Set<Long> newAlives) {
+	private void setAlives(Set<Long> newAlives) {
 		if (useBitSet)
 		{
 			this.alives = toBitSet(lw, newAlives);
@@ -101,7 +127,8 @@ public class OpFailureCtrl implements Serializable {
 			this.rsAlives = RangeUtil.toRangeSetStr(newAlives);
 		}
 	}
-
+	
+	
 	public FailureCtrl getFailureCtrl() 
 	{
 		if (useBitSet)
@@ -139,4 +166,5 @@ public class OpFailureCtrl implements Serializable {
 		//logger.trace("Converted bitset "+low+","+bits+" to ids "+ids);
 		return ids;
 	}
+	*/
 }

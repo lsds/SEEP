@@ -204,7 +204,7 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			inputFctrls.get(i).update(downFctrl.lw(), downFctrl.acks(), null);
+			inputFctrls.get(i).update(downFctrl, true, true);
 		}
 		
 		//Now purge the ready queue of any acked batches.

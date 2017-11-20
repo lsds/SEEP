@@ -43,7 +43,8 @@ public class HashRouter implements IRouter {
 	public ArrayList<Integer> route(Timestamp batchId) {
 		synchronized(lock)
 		{
-			int index = (int)((batchId / Math.pow(downOps.size(), height)) % downOps.size());	
+			//int index = (int)((batchId / Math.pow(downOps.size(), height)) % downOps.size());	
+			int index = batchId.index((int)Math.pow(downOps.size(), height), downOps.size());
 			Integer downOpId = downOps.get(index);
 			/*
 			if (height == 1)

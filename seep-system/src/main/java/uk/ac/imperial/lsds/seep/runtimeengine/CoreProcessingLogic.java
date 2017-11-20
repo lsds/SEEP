@@ -245,7 +245,7 @@ public class CoreProcessingLogic implements Serializable{
 			}
 			else
 			{
-				if (!fctrl.alives().isEmpty()) { throw new RuntimeException("Logic error, upstream fctrl alives non-empty."); }
+				if (!fctrl.emptyAlives()) { throw new RuntimeException("Logic error, upstream fctrl alives non-empty."); }
 				//LOG.trace("Processing up failure ctrl received from "+fctrlSenderOpId+",fctrl.lw="+fctrl.lw()+",fctrl.acks="+fctrl.acks()); 
 				//Probably a replicated sink, need to handle an upstream failure ctrl from another sink.
 				pu.getDispatcher().handleUpstreamFailureCtrl(fctrl, fctrlSenderOpId);

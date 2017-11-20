@@ -94,7 +94,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 			Timestamp ts = dt.getPayload().timestamp;
 			int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
 			FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
-			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
+			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.isAlive(ts))
 			{
 				logger.debug("Ignoring tuple with ts="+ts);
 				return; 
@@ -226,7 +226,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 			
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				inputFctrls.get(i).update(downFctrl.lw(), downFctrl.acks(), null);
+				inputFctrls.get(i).update(downFctrl, true, true);
 			}
 			
 			//Now purge the ready queue of any acked batches.
@@ -328,6 +328,36 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	/** Get the current 'constraints' i.e. for each input the set
 	 * of batch ids not yet received but already received for other inputs 
 	 */
+	
+	public ArrayList<Set<Timestamp>> getRoutingConstraints()
+	{
+		lock.lock();
+		try
+		{
+			ArrayList<Set<Timestamp>> constraints = new ArrayList<>(numLogicalInputs);
+			//ArrayList<RangeSet<Timestamp>> constraintRanges = new ArrayList<>(numLogicalInputs);
+			for (int i = 0; i < numLogicalInputs; i++)
+			{
+				constraints.add(new TreeSet<Timestamp>());
+				
+				for (int j = 0; j < numLogicalInputs; j++)
+				{
+					if (i == j) { continue; }
+					// TODO: if numLogicalInputs > 2 should really have a count for each constraint
+					constraints.get(i).addAll(pending.get(j).keySet());
+				}
+				//constraintRanges.add(RangeUtil.toRangeSet(constraints.get(i)));
+			}
+			//logger.debug("Constraint ranges: "+constraintRanges+", constraints:"+constraints);
+			//return constraintRanges;
+			return constraints;
+		}
+		finally { lock.unlock(); }
+		
+		
+	}
+	
+	/*
 	public ArrayList<RangeSet<Timestamp>> getRoutingConstraints() {
 		lock.lock();
 		try
@@ -351,6 +381,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 		}
 		finally { lock.unlock(); }
 	}
+	*/
 	
 	@Override
 	public void push(DataTuple dt) {
