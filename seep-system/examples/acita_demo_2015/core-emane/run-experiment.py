@@ -626,6 +626,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
     parser.add_argument('--cross', dest='cross', default=False, action='store_true', help='Do a cross plot based on several previous experiments')
     parser.add_argument('--regenSessions', dest='regen_sessions', default=False, action='store_true', help='Regenerate all session results')
+    parser.add_argument('--multiQuery', dest='multi_query', default='1', help='Number of queries')
 
     args=parser.parse_args()
 
@@ -669,6 +670,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['user']=args.user
     params['duration']=args.duration
     params['sources']=args.sources
+    params['enableMultiQuery']=int(args.multi_query) > 1
+    params['numQueries']=int(args.multi_query)
     params['sinks']=args.sinks
     params['fanin']=args.max_fan_in
     params['pyScaleOutSinks']=args.scale_sinks

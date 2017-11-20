@@ -650,11 +650,12 @@ def get_num_workers(k, nodes, params):
     if q == 'chain' or q == 'fr' or q == 'fdr': 
         if q == 'fr' and params['h'] != 2: raise Exception("Fr query needs height of 2.");
         if q == 'fdr' and params['h'] != 1: raise Exception("Fdr query needs height of 1.");
+        numQueries = 1 if not params['enableMultiQuery'] else params['numQueries']
         if params['colocateSrcSink']:
-            if sink_scale_factor > 1: raise Exception("Can't colocate source with replicated sinks.")
+            if sink_scale_factor > 1 or numQueries > 1: raise Exception("Can't colocate source with replicated sinks or multiple queries.")
             num_workers = [2] + [1] * (k * params['h'])
         else:
-            num_workers = [1] * (1 + sink_scale_factor + (k * params['h']))
+            num_workers = [1] * (numQueries + sink_scale_factor + (k * params['h']))
     elif q == 'join':
         if params['h'] != 1: raise Exception('Only support query of height 1 for join')
         sources = int(params['sources'])
