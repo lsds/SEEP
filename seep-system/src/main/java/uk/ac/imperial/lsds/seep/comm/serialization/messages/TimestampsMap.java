@@ -40,11 +40,14 @@ public class TimestampsMap implements Iterable<Timestamp> {
     public TimestampsMap(Set<Timestamp> tsSet)
     {
        tsMap = new HashMap<Integer, TreeSet<Timestamp>>();
-       for (Timestamp ts : tsSet)
+       if (tsSet != null)
        {
-           Integer key = ts.getKey();
-           if (!tsMap.containsKey(key)) { tsMap.put(key, new TreeSet<Timestamp>()); }
-           tsMap.get(key).add(ts);
+	       for (Timestamp ts : tsSet)
+	       {
+	           Integer key = ts.getKey();
+	           if (!tsMap.containsKey(key)) { tsMap.put(key, new TreeSet<Timestamp>()); }
+	           tsMap.get(key).add(ts);
+	       }
        }
     }
 
@@ -76,6 +79,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	public String convertToString() { 
 		//Assume exactly two levels of nesting for now.		
 		//Format key1.val1;key1.val2;...;keyn.valn
+		if (tsMap.isEmpty()) { return ""; }
 		Map<Integer, Set<Long>> compact = toCompactMap();
 		String result = "";
 		
@@ -96,6 +100,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	
 	public static TimestampsMap parse(String tsMapStr) { 
 		if (tsMapStr.contains(":")) { throw new RuntimeException("Logic error: invalid: "+tsMapStr); }
+		if (tsMapStr == null || tsMapStr.isEmpty()) { return null; }
 		TimestampsMap result = new TimestampsMap();
 		String[] keysVals = tsMapStr.split(kv2kvSep);
 		for (int i = 0; i < keysVals.length; i++)

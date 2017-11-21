@@ -4,6 +4,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TimestampMap;
@@ -19,6 +22,8 @@ public class FailureCtrl {
 	//private final Set<Timestamp> lws;
 	//private final Set<Timestamp> acks;
 	//private final Set<Timestamp> alives;
+	private final static Logger logger = LoggerFactory.getLogger(FailureCtrl.class);
+
 	private final TimestampMap lws;
 	private final TimestampsMap acks;
 	private final TimestampsMap alives;
@@ -110,6 +115,7 @@ public class FailureCtrl {
 		acks = parseLongs(splits[1]);
 		alives = parseLongs(splits[2]);
 		*/
+		logger.error("Parsing failure ctrl: "+fctrl);
 		String[] splits = fctrl.split(":");
 		lws = TimestampMap.parse(splits[0]);
 		if (splits.length == 1)
@@ -147,7 +153,9 @@ public class FailureCtrl {
 			return lw + ":" + (ackStr == null ? "" : ackStr) + ":" + (aliveStr == null ? "" : aliveStr);
 			*/
 			//throw new RuntimeException("TODO: Come up with new fctrl format.");
-			return lws.convertToString() + ":" + acks.convertToString() + ":" + alives.convertToString();
+			String str = lws.convertToString() + ":" + acks.convertToString() + ":" + alives.convertToString();
+			logger.error("Converted to string: "+str);
+			return str;
 		}
 	}
 	/*
