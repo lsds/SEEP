@@ -116,9 +116,9 @@ public class FailureCtrl {
 		alives = parseLongs(splits[2]);
 		*/
 		logger.error("Parsing failure ctrl: "+fctrl);
-		if (fctrl.length() != 3) { throw new RuntimeException("Logic error: "+fctrl); }
 		
 		String[] splits = fctrl.split(":");
+		if (splits.length != 3) { throw new RuntimeException("Logic error: "+fctrl); }
 		lws = "-".equals(splits[0]) ? new TimestampMap() : TimestampMap.parse(splits[0]);
 		acks = "-".equals(splits[1]) ? new TimestampsMap() : TimestampsMap.parse(splits[1]);
 		alives = "-".equals(splits[2]) ? new TimestampsMap() : TimestampsMap.parse(splits[2]);
