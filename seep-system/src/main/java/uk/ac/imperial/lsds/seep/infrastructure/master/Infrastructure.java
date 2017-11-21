@@ -533,16 +533,22 @@ public class Infrastructure {
 
 		//Walk the ops, starting at the source.
 		Set<Integer> srcPhys = new HashSet<>();
-		if (src.size() > 1) { throw new RuntimeException("TODO"); }
-		Operator currentSrc = src.get(0);
-		srcPhys.add(currentSrc.getOperatorId());
-		log2phys.put(1, srcPhys);
-		phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+		//if (src.size() > 1) { throw new RuntimeException("TODO"); }
 
-		LOG.info("Source op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(srcPhys));
-		int numDownstreams = currentSrc.getOpContext().getDownstreamSize();
+		for (int i = 0; i < src.size(); i++)
+		{
+			Operator currentSrc = src.get(i);
+			srcPhys.add(currentSrc.getOperatorId());
+		
+			phys2addr.put(currentSrc.getOperatorId(), currentSrc.getOpContext().getOperatorStaticInformation().getMyNode().getIp());
+			LOG.info("Source "+i+" op id="+currentSrc.getOperatorId()+",physAddr="+phys2addr.get(currentSrc.getOperatorId()));
+		}
+		log2phys.put(1, srcPhys);
+		
+		Operator current = src.get(0);
+		int numDownstreams = current.getOpContext().getDownstreamSize();
 		int downstreamLogicalIndex = 2;
-		Operator current = currentSrc;
+	
 		while (numDownstreams > 0)
 		{
 			LOG.info("Number of downstreams for op "+ current.getOperatorId()+"= "+numDownstreams);
