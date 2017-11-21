@@ -562,7 +562,12 @@ public class FailureCtrl {
 			return unacked; 
 			*/
 			if (lws.covers(ts)) { return 0; }
-			else { return (lws.uncoveredSizeInclusive(ts) - acks.coveredSizeInclusive(ts)); }
+			else 
+			{
+				long unacked = lws.uncoveredSizeInclusive(ts) - acks.coveredSizeInclusive(ts); 
+				logger.error("Computed unacked: "+unacked);
+				return unacked; 
+			}
 		}	
 	}
 

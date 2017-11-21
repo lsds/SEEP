@@ -15,6 +15,7 @@ public class Timestamp implements Comparable
 	}
 
 	Integer getKey() { return query; }
+	Long getVal() { return ts; }
 
 	/* Not sure this is the semantics you actually want! 
 
@@ -86,7 +87,10 @@ public class Timestamp implements Comparable
 	@Override
 	public int hashCode()
 	{
-		throw new RuntimeException("TODO");
+		int result = 17;
+		result = 31 * result + query;
+		result = 31 * result + ((int)(ts ^ (ts >>> 32)));
+		return result;
 	}
 
 	public String[] toStrings() { return new String[] { ""+query, ""+ts } ; }
@@ -94,7 +98,7 @@ public class Timestamp implements Comparable
 	@Override
 	public String toString()
 	{
-		return ""+ts+"."+query;
+		return ""+query+SEP+ts;
 	}
 	
 	//Bit weird putting this here, but want to avoid exposing the underlying
@@ -116,8 +120,4 @@ public class Timestamp implements Comparable
 		return new Timestamp(query, ts+1);
 	}
 	
-	Long[] toLongArray() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }

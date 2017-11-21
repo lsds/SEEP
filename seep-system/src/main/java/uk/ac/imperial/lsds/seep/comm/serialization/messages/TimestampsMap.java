@@ -70,7 +70,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 			if(!compactMap.containsKey(tsKey)) { compactMap.put(tsKey, new HashSet<Long>()); }
 			for (Timestamp ts : tsMap.get(tsKey))
 			{
-				compactMap.get(tsKey).add(ts.toLongArray()[1]);
+				compactMap.get(tsKey).add(ts.getVal());
 			}
 		}
 		return compactMap;
