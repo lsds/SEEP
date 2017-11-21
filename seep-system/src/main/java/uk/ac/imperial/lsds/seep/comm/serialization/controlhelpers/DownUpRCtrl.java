@@ -52,8 +52,9 @@ public class DownUpRCtrl {
 
 	public Set<Timestamp> getUnmatched() {
 		//return RangeUtil.parseRangeSet(unmatched);
-		return TimestampsMap.parse(unmatched).toSet();
-
+		TimestampsMap unmatchedMap = TimestampsMap.parse(unmatched);
+		if (unmatchedMap != null) { return unmatchedMap.toSet(); }
+		else { return null; }
 	}
 	
 	public void setUnmatched(String unmatched)

@@ -116,22 +116,12 @@ public class FailureCtrl {
 		alives = parseLongs(splits[2]);
 		*/
 		logger.error("Parsing failure ctrl: "+fctrl);
+		if (fctrl.length() != 3) { throw new RuntimeException("Logic error: "+fctrl); }
+		
 		String[] splits = fctrl.split(":");
-		lws = TimestampMap.parse(splits[0]);
-		if (splits.length == 1)
-		{
-			acks = new TimestampsMap();
-			alives = new TimestampsMap();
-			return;
-		}
-		if (splits.length == 2)
-		{
-			acks = TimestampsMap.parse(splits[1]);
-			alives = new TimestampsMap();
-			return;
-		}
-		acks = TimestampsMap.parse(splits[1]);
-		alives = TimestampsMap.parse(splits[2]);
+		lws = "-".equals(splits[0]) ? new TimestampMap() : TimestampMap.parse(splits[0]);
+		acks = "-".equals(splits[1]) ? new TimestampsMap() : TimestampsMap.parse(splits[1]);
+		alives = "-".equals(splits[2]) ? new TimestampsMap() : TimestampsMap.parse(splits[2]);
 	}
 	
 	public FailureCtrl atomicCopy()
@@ -153,7 +143,12 @@ public class FailureCtrl {
 			return lw + ":" + (ackStr == null ? "" : ackStr) + ":" + (aliveStr == null ? "" : aliveStr);
 			*/
 			//throw new RuntimeException("TODO: Come up with new fctrl format.");
-			String str = lws.convertToString() + ":" + acks.convertToString() + ":" + alives.convertToString();
+			String lwsStr = lws.convertToString();
+			String ackStr = acks.convertToString();
+			String aliveStr = alives.convertToString();
+			String str = (lwsStr.isEmpty() ? "-": lwsStr) + ":" +
+					(ackStr.isEmpty() ? "-": ackStr) + ":" +
+					(aliveStr.isEmpty() ? "-": aliveStr);
 			logger.error("Converted to string: "+str);
 			return str;
 		}
