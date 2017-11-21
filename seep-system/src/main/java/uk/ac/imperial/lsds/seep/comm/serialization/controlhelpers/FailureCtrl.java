@@ -23,6 +23,8 @@ public class FailureCtrl {
 	//private final Set<Timestamp> acks;
 	//private final Set<Timestamp> alives;
 	private final static Logger logger = LoggerFactory.getLogger(FailureCtrl.class);
+	private final static String SEP = ":";
+	private final static String EMPTY = "_";
 
 	private final TimestampMap lws;
 	private final TimestampsMap acks;
@@ -117,11 +119,11 @@ public class FailureCtrl {
 		*/
 		logger.error("Parsing failure ctrl: "+fctrl);
 		
-		String[] splits = fctrl.split(":");
+		String[] splits = fctrl.split(SEP);
 		if (splits.length != 3) { throw new RuntimeException("Logic error: "+fctrl); }
-		lws = "-".equals(splits[0]) ? new TimestampMap() : TimestampMap.parse(splits[0]);
-		acks = "-".equals(splits[1]) ? new TimestampsMap() : TimestampsMap.parse(splits[1]);
-		alives = "-".equals(splits[2]) ? new TimestampsMap() : TimestampsMap.parse(splits[2]);
+		lws = EMPTY.equals(splits[0]) ? new TimestampMap() : TimestampMap.parse(splits[0]);
+		acks = EMPTY.equals(splits[1]) ? new TimestampsMap() : TimestampsMap.parse(splits[1]);
+		alives = EMPTY.equals(splits[2]) ? new TimestampsMap() : TimestampsMap.parse(splits[2]);
 	}
 	
 	public FailureCtrl atomicCopy()
@@ -146,9 +148,9 @@ public class FailureCtrl {
 			String lwsStr = lws.convertToString();
 			String ackStr = acks.convertToString();
 			String aliveStr = alives.convertToString();
-			String str = (lwsStr.isEmpty() ? "-": lwsStr) + ":" +
-					(ackStr.isEmpty() ? "-": ackStr) + ":" +
-					(aliveStr.isEmpty() ? "-": aliveStr);
+			String str = (lwsStr.isEmpty() ? EMPTY: lwsStr) + SEP +
+					(ackStr.isEmpty() ? EMPTY: ackStr) + SEP +
+					(aliveStr.isEmpty() ? EMPTY: aliveStr);
 			logger.error("Converted to string: "+str);
 			return str;
 		}
