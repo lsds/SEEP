@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
 
 public class DataTuple implements DataTupleI, Serializable{
@@ -86,16 +87,15 @@ public class DataTuple implements DataTupleI, Serializable{
 	}
 	
 	public DataTuple newTuple(Object...objects){
-		/*
 		TuplePayload tp = new TuplePayload();
 		tp.attrValues = new Payload(objects);
-		tp.timestamp = System.currentTimeMillis();
-		tp.instrumentation_ts =  tp.timestamp;
+		//tp.timestamp = System.currentTimeMillis();
+		//tp.instrumentation_ts =  tp.timestamp;
+		tp.timestamp = new Timestamp();
+		tp.instrumentation_ts =  System.currentTimeMillis();
 		tp.local_ts = tp.instrumentation_ts;
 		DataTuple dt = new DataTuple(idxMapper, tp);
 		return dt;
-		*/
-		throw new RuntimeException("TODO");
 	}
 	
 	// to be used by java2sdg
