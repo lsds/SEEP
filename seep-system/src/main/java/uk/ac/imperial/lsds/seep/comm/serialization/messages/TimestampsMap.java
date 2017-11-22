@@ -30,7 +30,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		this.tsMap = new HashMap<>();
 		for (Integer key : other.tsMap.keySet())
 		{
-			if (other.tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMap="+tsMap+", other="+other.tsMap); }
+			other.assertNotEmpty(key);
 			tsMap.put(key,  new TreeSet<Timestamp>());
 			tsMap.get(key).addAll(other.tsMap.get(key));
 		}
@@ -57,7 +57,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
        Set<Timestamp> result = new HashSet<>();
        for (Integer key : tsMap.keySet()) 
        {
-		if (tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMap="+tsMap); }
+    	   assertNotEmpty(key);
 	       result.addAll(tsMap.get(key));
        }
        return result; 
@@ -67,13 +67,13 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	{
 		Map<Integer,Set<Long>> compactMap = new HashMap<>();
 		//Assume exactly two levels of nesting for now?
-		for (Integer tsKey : tsMap.keySet())
+		for (Integer key : tsMap.keySet())
 		{
-			if (tsMap.get(tsKey).isEmpty()) { throw new RuntimeException("Logic error? key="+tsKey+", tsMap="+tsMap); }
-			if(!compactMap.containsKey(tsKey)) { compactMap.put(tsKey, new HashSet<Long>()); }
-			for (Timestamp ts : tsMap.get(tsKey))
+			assertNotEmpty(key);
+			if(!compactMap.containsKey(key)) { compactMap.put(key, new HashSet<Long>()); }
+			for (Timestamp ts : tsMap.get(key))
 			{
-				compactMap.get(tsKey).add(ts.getVal());
+				compactMap.get(key).add(ts.getVal());
 			}
 		}
 		return compactMap;
@@ -134,7 +134,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		for (Integer k : rawLws.tsMap.keySet())
 		{
 			if (!tsMap.containsKey(k)) { continue; }
-			if (tsMap.get(k).isEmpty()) { throw new RuntimeException("Logic error? key="+k+", tsMapStr="+tsMap); }
+			assertNotEmpty(k);
 			Timestamp lw = rawLws.tsMap.get(k).first();
 			Timestamp next = lw.nextSameKey();
 			
@@ -170,7 +170,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		boolean someNew = false;
 		for (Integer key : other.tsMap.keySet())
 		{
-			if (other.tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMapStr="+other.tsMap); }
+			other.assertNotEmpty(key);
 			for (Timestamp ts : other.tsMap.get(key)) 
 			{ someNew = this.add(ts) || someNew; }
 		}
@@ -232,6 +232,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		TimestampsMap rawLws = lws.asTimestampsMap();
 		for (Integer k : tsMap.keySet())
 		{
+			assertNotEmpty(k);
 			if (rawLws.tsMap.containsKey(k))
 			{
 				Timestamp currentMax = tsMap.get(k).last();
@@ -291,15 +292,15 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		while (iter.hasNext())
 		{
 			Integer k = iter.next().getKey();
+			assertNotEmpty(k);
 			if (rawLws.tsMap.containsKey(k))
 			{
 				Timestamp lw = rawLws.tsMap.get(k).first();
-				int pre = tsMap.get(k).size();
-				if (pre <= 0 ) { throw new RuntimeException("Logic error? key="+k+", tsMapStr="+tsMap+", pre="+pre); }
+				int preSize = tsMap.get(k).size();
 				Set<Timestamp> toRemove = tsMap.get(k).headSet(lw, true);
 				if (sorted != null) { sorted.keySet().removeAll(toRemove); }
 				toRemove.clear();
-				changed |= pre > tsMap.get(k).size();
+				changed |= preSize > tsMap.get(k).size();
 			}
 			
 			if (tsMap.get(k).isEmpty()) { iter.remove(); }
@@ -326,6 +327,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		TimestampsMap result = new TimestampsMap();
 		for (Integer k : tsMap.keySet())
 		{
+			assertNotEmpty(k);
 			for (Timestamp ts : tsMap.get(k))
 			{
 				if (!lws.covers(ts) && !acks.covers(ts) && !alives.covers(ts))
