@@ -354,7 +354,7 @@ def record_op_transmissions(op_transmissions, exp_dir):
         with open(op_transmissions_file, 'w') as f:
             f.write('# t ts dsop\n')
             for (t, ts, ds_op) in op_transmissions[op]:
-                f.write('%d %d %d\n'%(t, ts, ds_op))
+                f.write('%d %s %d\n'%(t, ts, ds_op))
                 ts_total_transmissions[ts] = ts_total_transmissions.get(ts, 0) + 1
 
     ts_total_transmissions_file = "%s/ts_total_transmissions.txt"%(exp_dir)
@@ -362,7 +362,7 @@ def record_op_transmissions(op_transmissions, exp_dir):
         f.write('#ts count\n') 
         f.write('#total %d\n'%(sum(ts_total_transmissions.values())))
         for ts in sorted(ts_total_transmissions.keys()):
-            f.write('%d %d\n'%(ts, ts_total_transmissions[ts]))
+            f.write('%s %d\n'%(ts, ts_total_transmissions[ts]))
 
     op_total_transmissions_file = "%s/op_total_transmissions.txt"%(exp_dir)
     with open(op_total_transmissions_file, 'w') as f:

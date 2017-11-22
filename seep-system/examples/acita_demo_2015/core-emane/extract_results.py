@@ -85,53 +85,56 @@ def sink_rx_latencies(f):
     returns a list of (tsrx, latency)
     """
     tuple_records = sink_rx_tuples(f)
-    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3]), int(tuple_record[4])), tuple_records)
+    latencies = map(lambda tuple_record: ('%d.%d'%(int(tuple_record[2]),int(tuple_record[3])), int(tuple_record[6]), int(tuple_record[4]), int(tuple_record[5])), tuple_records)
     #return pd.Series(latencies)
     return latencies
 
 def sink_rx_tuple_ids(f):
     tuple_records = sink_rx_tuples(f)
-    return set(map(lambda record: int(record[2]), tuple_records))
+    return set(map(lambda record: '%d.%d'%(int(record[2]),int(record[3])), tuple_records))
 
 def unfinished_sink_tuples(f, t_end, prev_tuples):
     tuple_records = sink_rx_tuples(f)
     print 'Found %d tuple records'%(len(tuple_records))
-    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez, opLats, sockLats):
-            int(rxts) <= int(t_end) and not int(ts) in prev_tuples, tuple_records)
+    filtered_tuple_records = filter(lambda (cnt, tid, query, ts, txts, rxts, latency, bytez, opLats, sockLats):
+            int(rxts) <= int(t_end) and not '%d.%d'%(int(query), int(ts)) in prev_tuples, tuple_records)
     print 'Left with %d tuple records after filtering'%(len(filtered_tuple_records))
-    #total_bytes = reduce(lambda total, (cnt, tid, ts, txts, rxts, latency, bytez): int(bytez)+total, filtered_tuple_records)
-    total_bytes = reduce(lambda total, el: int(el[6])+total, filtered_tuple_records, 0)
+    #total_bytes = reduce(lambda total, (cnt, tid, query, ts, txts, rxts, latency, bytez): int(bytez)+total, filtered_tuple_records)
+    #total_bytes = reduce(lambda total, el: int(el[6])+total, filtered_tuple_records, 0)
+    total_bytes = reduce(lambda total, el: int(el[7])+total, filtered_tuple_records, 0)
     return (len(filtered_tuple_records), total_bytes)
 
 
 def unfinished_sink_rx_latencies(f, t_end):
     tuple_records = sink_rx_tuples(f)
-    filtered_tuple_records = filter(lambda (cnt, tid, ts, txts, rxts, latency, bytez, opLats, sockLats):
+    filtered_tuple_records = filter(lambda (cnt, tid, query, ts, txts, rxts, latency, bytez, opLats, sockLats):
             int(rxts) <= int(t_end), tuple_records)
-    latencies = map(lambda tuple_record: (int(tuple_record[2]), int(tuple_record[5]), int(tuple_record[3]), int(tuple_record[4])), filtered_tuple_records)
+    latencies = map(lambda tuple_record: ('%d.%d'%(int(tuple_record[2]),int(tuple_record[3])), int(tuple_record[6]), int(tuple_record[4]), int(tuple_record[5])), filtered_tuple_records)
     #return pd.Series(latencies)
     return latencies
 
 def dedup_latencies(latencies):
     deduped = {}
-    for (ts, latency, txts, rxts) in latencies:
-        if ts in deduped:
-            print 'Found dupe latency %s'%(str(ts))
-            if deduped[ts][0] > latency:
-                deduped[ts] = (latency, txts, rxts)
+    for (query_ts, latency, txts, rxts) in latencies:
+        if query_ts in deduped:
+            print 'Found dupe latency %s'%query_ts
+            if deduped[query_ts][0] > latency:
+                deduped[query_ts] = (latency, txts, rxts)
         else:
-            deduped[ts] = (latency, txts, rxts)
+            deduped[query_ts] = (latency, txts, rxts)
     #return pd.Series(deduped.values())
     return deduped
 
 def sink_rx_tuples(f):
     results = []
-    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+),latencyBreakdown=(\d+);(\d+)$')
+    regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=([-]?\d+).(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+),latencyBreakdown=(\d+);(\d+)$')
+    #regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+),latencyBreakdown=(\d+);(\d+)$')
     #regex = re.compile(r'SNK: Received tuple with cnt=(\d+),id=(\d+),ts=(\d+),txts=(\d+),rxts=(\d+),latency=(\d+),bytes=(\d+)$')
     for line in f:
         match = re.search(regex, line)
         if match:
             results.append(match.groups())
+            print match.groups()
 
     return results
 
@@ -250,14 +253,14 @@ def get_utils(f):
     return (op_id, utils)
 
 def get_transmissions(f):
-    regex = re.compile(r't=(\d+), oq.sync ([-]?\d+) sending ts=(\d+) for ([-]?\d+),')
+    regex = re.compile(r't=(\d+), oq.sync ([-]?\d+) sending ts=([-]?\d+).(\d+) for ([-]?\d+),')
     transmissions = []
     op_id = None
     for line in f:
         match = re.search(regex, line)
         if match:
             op_id = str(int(match.group(2)))
-            transmissions.append((int(match.group(1)), int(match.group(3)), int(match.group(4))))
+            transmissions.append((int(match.group(1)), '%d.%d'%(int(match.group(3)),int(match.group(4))), int(match.group(5))))
 
     return (op_id, transmissions)
 
