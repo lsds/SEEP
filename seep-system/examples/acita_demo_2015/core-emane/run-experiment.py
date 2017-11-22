@@ -21,7 +21,9 @@ latency_regex = re.compile('%s_lat=(\d+)'%(latency_percentile))
 #latency_regex = re.compile('max_lat=(\d+)')
 max_latency = 1000000.0 
 
-var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 'retx' : 'retx_timeout', 'sl' : 'skew_limit' }
+var_suffix2name = { 'm' : 'mobility', 'n' : 'nodes', 'd' : 'dimension', 'c' : 'cpudelay', 
+			'r' : 'srcrates', 'rcd' : 'rctrl_delay', 'bsz' : 'buf_size', 
+			'retx' : 'retx_timeout', 'sl' : 'skew_limit', 'q' : 'queries' }
 
 def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
 
@@ -117,6 +119,10 @@ def do_main_plots(ks,variables,session_ids,time_str,data_dir,params):
     elif var_suffix == 'sl':
         for p in ['tput_vs_skew_limit_stddev', 'latency_vs_skew_limit_stddev', 
                 'rel_tput_vs_skew_limit_stddev', 'rel_latency_vs_skew_limit_stddev']:
+            plot(p, time_str, script_dir, data_dir)
+    elif var_suffix == 'q':
+        for p in ['tput_vs_queries_stddev', 'latency_vs_queries_stddev', 
+                'rel_tput_vs_queries_stddev', 'rel_latency_vs_queries_stddev']:
             plot(p, time_str, script_dir, data_dir)
     else:
         plot('v1_latency_percentiles', time_str, script_dir, data_dir)
@@ -237,6 +243,10 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
             for skew_limit in variables['skew_limit']:
                 params['skewLimit'] = skew_limit
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'sl', sessions, params)
+        elif len(variables['skew_limit']) > 0:
+            for num_queries in variables['queries']:
+                params['numQueries'] = num_queries 
+                run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'q', sessions, params)
         else:
             for mob in variables['mobility']:
                 run_sessions(time_str, k, mob, variables['nodes'][0], 'm', sessions, params)
@@ -266,6 +276,9 @@ def get_var_suffix_and_vals(variables):
     elif len(variables['skew_limit']) > 0:
         var_vals = variables['skew_limit']
         var_suffix = 'sl'
+    elif len(variables['queries']) > 0:
+        var_vals = variables['queries']
+        var_suffix = 'q'
     else: 
         var_vals = variables['mobility']
         var_suffix = 'm'
@@ -626,7 +639,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--pinnedSeed', dest='pinned_seed', default=None, help='Random seed to use for initial shuffle of pinned nodes')
     parser.add_argument('--cross', dest='cross', default=False, action='store_true', help='Do a cross plot based on several previous experiments')
     parser.add_argument('--regenSessions', dest='regen_sessions', default=False, action='store_true', help='Regenerate all session results')
-    parser.add_argument('--multiQuery', dest='multi_query', default='1', help='Number of queries')
+    parser.add_argument('--multiQuery', dest='multi_query', default=None, help='Number of queries')
 
     args=parser.parse_args()
 
@@ -641,10 +654,12 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     buf_size=map(lambda x: int(x), args.buf_size.split(',')) if args.buf_size else []
     retx_timeout=map(lambda x: int(x), args.retx_timeout.split(',')) if args.retx_timeout else []
     skew_limit =map(lambda x: int(x), args.skew_limit.split(',')) if args.skew_limit else []
+    queries=map(lambda x: int(x), args.multi_query.split(',')) if args.multi_query else []
 
     variables = { "mobility" : pts, "nodes" : nodes, "dimension" : dimension,
             "cpudelay" : cpudelay, "srcrates": srcrates, "rctrl_delay" : rctrl_delay,
-            "buf_size" : buf_size, "retx_timeout": retx_timeout, "skew_limit": skew_limit}
+            "buf_size" : buf_size, "retx_timeout": retx_timeout, "skew_limit": skew_limit,
+            "queries" : queries}
 
     if len(filter(lambda x: x > 1, map(len, variables.values()))) > 1:
         raise Exception("Multiple parameters being varied at the same time: %s"%str(variables))
@@ -670,8 +685,8 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['user']=args.user
     params['duration']=args.duration
     params['sources']=args.sources
-    params['enableMultiQuery']=int(args.multi_query) > 1
-    params['numQueries']=int(args.multi_query)
+    params['enableMultiQuery']=bool(args.multi_query)
+    #params['numQueries']=int(args.multi_query)
     params['sinks']=args.sinks
     params['fanin']=args.max_fan_in
     params['pyScaleOutSinks']=args.scale_sinks

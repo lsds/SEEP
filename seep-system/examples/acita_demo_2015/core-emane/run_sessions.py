@@ -453,6 +453,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         if var_suffix=='retx': var = params['retransmitTimeout']
         if var_suffix=='bsz': var = params['maxTotalQueueSizeTuples']
         if var_suffix=='sl': var = params['skewLimit']
+        if var_suffix=='q': var = params['numQueries']
  
 
         datacollect_hook = create_datacollect_hook(time_str, k, var, var_suffix, exp_session, params['sub']) 
