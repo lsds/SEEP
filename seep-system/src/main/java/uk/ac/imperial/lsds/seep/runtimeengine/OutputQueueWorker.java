@@ -103,6 +103,7 @@ public class OutputQueueWorker
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
+		k.register(Timestamp.class);
 
 		k.register(ControlTuple.class);
 		k.register(MemoryChunk.class);

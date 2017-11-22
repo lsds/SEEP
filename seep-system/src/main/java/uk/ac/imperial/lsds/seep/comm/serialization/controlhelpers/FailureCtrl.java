@@ -23,7 +23,7 @@ public class FailureCtrl {
 	//private final Set<Timestamp> acks;
 	//private final Set<Timestamp> alives;
 	private final static Logger logger = LoggerFactory.getLogger(FailureCtrl.class);
-	private final static String SEP = ":";
+	private final static String SEP = "/";
 	private final static String EMPTY = "_";
 
 	private final TimestampMap lws;
@@ -91,9 +91,9 @@ public class FailureCtrl {
 		if (!ignoreOtherAlives)  { this.alives = new HashSet<>(other.alives()); }
 		else { this.alives = new HashSet<Timestamp>(); }
 		*/
-		this.lws = new TimestampMap(other.lws());
-		this.acks = new TimestampsMap(other.acks());
-		this.alives = ignoreOtherAlives ? new TimestampsMap() : new TimestampsMap(other.alives());
+		this.lws = other.lws();
+		this.acks = other.acks();
+		this.alives = ignoreOtherAlives ? new TimestampsMap() : other.alives();
 
 	}
 	
@@ -535,7 +535,8 @@ public class FailureCtrl {
 		synchronized(lock)
 		{
 			//return ts <= lw || acks.contains(ts);
-			return !lws.covers(ts) && !acks.contains(ts);
+			//return !lws.covers(ts) && !acks.contains(ts);
+			return lws.covers(ts) || acks.contains(ts);
 		}
 	}
 

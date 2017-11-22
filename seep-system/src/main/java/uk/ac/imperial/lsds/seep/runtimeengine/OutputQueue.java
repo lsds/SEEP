@@ -26,6 +26,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
 import uk.ac.imperial.lsds.seep.infrastructure.NodeManager;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
@@ -68,6 +69,7 @@ public class OutputQueue {
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
+		k.register(Timestamp.class);
 		return k;
 	}
 	

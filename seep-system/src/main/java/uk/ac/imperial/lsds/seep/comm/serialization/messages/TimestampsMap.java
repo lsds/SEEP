@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import uk.ac.imperial.lsds.seep.comm.serialization.RangeUtil;
 
@@ -29,7 +30,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		this.tsMap = new HashMap<>();
 		for (Integer key : other.tsMap.keySet())
 		{
-			if (other.tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error?"); }
+			if (other.tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMap="+tsMap+", other="+other.tsMap); }
 			tsMap.put(key,  new TreeSet<Timestamp>());
 			tsMap.get(key).addAll(other.tsMap.get(key));
 		}
@@ -56,6 +57,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
        Set<Timestamp> result = new HashSet<>();
        for (Integer key : tsMap.keySet()) 
        {
+		if (tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMap="+tsMap); }
 	       result.addAll(tsMap.get(key));
        }
        return result; 
@@ -67,6 +69,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		//Assume exactly two levels of nesting for now?
 		for (Integer tsKey : tsMap.keySet())
 		{
+			if (tsMap.get(tsKey).isEmpty()) { throw new RuntimeException("Logic error? key="+tsKey+", tsMap="+tsMap); }
 			if(!compactMap.containsKey(tsKey)) { compactMap.put(tsKey, new HashSet<Long>()); }
 			for (Timestamp ts : tsMap.get(tsKey))
 			{
@@ -99,17 +102,18 @@ public class TimestampsMap implements Iterable<Timestamp> {
 	}
 	
 	public static TimestampsMap parse(String tsMapStr) { 
-		if (tsMapStr.contains(":")) { throw new RuntimeException("Logic error: invalid: "+tsMapStr); }
+		//if (tsMapStr.contains(":")) { throw new RuntimeException("Logic error: invalid: "+tsMapStr); }
 		if (tsMapStr == null || tsMapStr.isEmpty()) { return null; }
 		TimestampsMap result = new TimestampsMap();
 		String[] keysVals = tsMapStr.split(kv2kvSep);
 		for (int i = 0; i < keysVals.length; i++)
 		{
 			
-			String[] keyVal = keysVals[i].split(k2vSep);
+			String[] keyVal = keysVals[i].split(Pattern.quote(k2vSep));
 			if (keyVal.length != 2) { throw new RuntimeException("Logic error"); }
 			Integer key = Integer.parseInt(keyVal[0]);
 			Set<Long> vals = RangeUtil.parseRangeSet(keyVal[1]);
+			if (vals.isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMapStr="+tsMapStr); }
 			TreeSet<Timestamp> orderedKeyVals = new TreeSet<>();
 			for (Long val : vals) { orderedKeyVals.add(new Timestamp(key, val)); }
 			result.tsMap.put(key, orderedKeyVals);
@@ -130,7 +134,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		for (Integer k : rawLws.tsMap.keySet())
 		{
 			if (!tsMap.containsKey(k)) { continue; }
-			
+			if (tsMap.get(k).isEmpty()) { throw new RuntimeException("Logic error? key="+k+", tsMapStr="+tsMap); }
 			Timestamp lw = rawLws.tsMap.get(k).first();
 			Timestamp next = lw.nextSameKey();
 			
@@ -146,6 +150,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 				lw = next;
 				next = next.nextSameKey();
 			}
+			if (tsMap.get(k).isEmpty()) { tsMap.remove(k); }
 		}
 		
 		return changed;
@@ -165,6 +170,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		boolean someNew = false;
 		for (Integer key : other.tsMap.keySet())
 		{
+			if (other.tsMap.get(key).isEmpty()) { throw new RuntimeException("Logic error? key="+key+", tsMapStr="+other.tsMap); }
 			for (Timestamp ts : other.tsMap.get(key)) 
 			{ someNew = this.add(ts) || someNew; }
 		}
@@ -193,11 +199,20 @@ public class TimestampsMap implements Iterable<Timestamp> {
 		for (Integer k : tsMap.keySet())
 		{
 			assertNotEmpty(k);
-			if (!rawLws.tsMap.containsKey(k)) { return false; }
-			Timestamp lw = rawLws.tsMap.get(k).first();
-			for (Timestamp uncovered : tsMap.get(k).tailSet(lw, false))
+			if (rawLws.tsMap.containsKey(k)) 
+			{ 
+				Timestamp lw = rawLws.tsMap.get(k).first();
+				for (Timestamp uncovered : tsMap.get(k).tailSet(lw, false))
+				{
+					if (!other.tsMap.containsKey(k) || !other.tsMap.get(k).contains(uncovered)) { return false; }
+				}
+			}
+			else
 			{
-				if (!other.tsMap.containsKey(k) || !other.tsMap.get(k).contains(uncovered)) { return false; }
+				for (Timestamp uncovered : tsMap.get(k))
+				{
+					if (!other.tsMap.containsKey(k) || !other.tsMap.get(k).contains(uncovered)) { return false; }
+				}
 			}
 		}
 		return true;
@@ -280,6 +295,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 			{
 				Timestamp lw = rawLws.tsMap.get(k).first();
 				int pre = tsMap.get(k).size();
+				if (pre <= 0 ) { throw new RuntimeException("Logic error? key="+k+", tsMapStr="+tsMap+", pre="+pre); }
 				Set<Timestamp> toRemove = tsMap.get(k).headSet(lw, true);
 				if (sorted != null) { sorted.keySet().removeAll(toRemove); }
 				toRemove.clear();
@@ -290,6 +306,7 @@ public class TimestampsMap implements Iterable<Timestamp> {
 			else if(acks != null && acks.tsMap.containsKey(k))
 			{ 
 				changed = tsMap.get(k).removeAll(acks.tsMap.get(k)) || changed;
+				if (tsMap.get(k).isEmpty()) { iter.remove(); }
 				if (sorted != null) { sorted.keySet().removeAll(acks.tsMap.get(k)); }
 			}
 		}

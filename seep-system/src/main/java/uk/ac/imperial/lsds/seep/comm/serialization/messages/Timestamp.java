@@ -1,8 +1,9 @@
 package uk.ac.imperial.lsds.seep.comm.serialization.messages;
-
-public class Timestamp implements Comparable
+import java.io.Serializable;
+public class Timestamp implements Comparable, Serializable
 {
-	public final static String SEP = ".";
+	public static final String SEP = ".";
+	public static final long serialVersionUID = 1L;
 	private long ts;
 	private int query = 0;
 

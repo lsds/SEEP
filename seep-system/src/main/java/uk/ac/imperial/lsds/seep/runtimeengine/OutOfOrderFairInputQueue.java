@@ -197,7 +197,7 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 					//(downFctrl.lw() == inputFctrl.lw() && downFctrl.acks().size() < inputFctrl.acks().size()))
 					!downFctrl.coversAcks(inputFctrl))
 			{
-				throw new RuntimeException("Logic error");
+				throw new RuntimeException("Logic error: down="+downFctrl + ",input="+inputFctrl);
 			}
 			
 			//Trim, but don't pollute the record of batches received on this input

@@ -227,6 +227,12 @@ public class Base implements QueryComposer{
 				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
 			}
 		}
+
+		if (Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")))
+		{ 
+			int numQueries = Integer.parseInt(GLOBALS.valueFor("numQueries"));
+			if (numQueries > 1) { QueryBuilder.scaleOut(src.getOperatorId(), numQueries); }
+		}
 		
 		if (REPLICATION_FACTOR > 1)
 		{
@@ -297,6 +303,12 @@ public class Base implements QueryComposer{
 			{
 				QueryBuilder.scaleOut(snk.getOperatorId(), sinkScaleFactor > 0 ? sinkScaleFactor : REPLICATION_FACTOR);
 			}
+		}
+
+		if (Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")))
+		{ 
+			int numQueries = Integer.parseInt(GLOBALS.valueFor("numQueries"));
+			if (numQueries > 1) { QueryBuilder.scaleOut(src.getOperatorId(), numQueries); }
 		}
 		
 		if (REPLICATION_FACTOR > 1)

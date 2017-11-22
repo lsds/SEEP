@@ -28,6 +28,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.ControlTuple;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.Payload;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.TuplePayload;
+import uk.ac.imperial.lsds.seep.comm.serialization.messages.Timestamp;
 import uk.ac.imperial.lsds.seep.comm.serialization.serializers.ArrayListSerializer;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.Ack;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.BackupNodeState;
@@ -113,6 +114,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 		k.register(Payload.class);
 		k.register(TuplePayload.class);
 		k.register(BatchTuplePayload.class);
+		k.register(Timestamp.class);
 
 		k.register(ControlTuple.class);
 		k.register(MemoryChunk.class);
