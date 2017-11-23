@@ -64,6 +64,7 @@ public class VideoSink implements StatelessOperator {
 	private boolean reorder = Boolean.parseBoolean(GLOBALS.valueFor("reorderImages"));
 	private final String targetMatch = "chokepoint/P2E_S1_C3/0024";
 	private int matches = 0;
+	private int numQueries;
     
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
@@ -75,6 +76,7 @@ public class VideoSink implements StatelessOperator {
 		frameConverter = new Java2DFrameConverter();
 		iplConverter = new OpenCVFrameConverter.ToIplImage();
 		recordImages = Boolean.parseBoolean(GLOBALS.valueFor("recordImages"));
+		numQueries = Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")) ? Integer.parseInt(GLOBALS.valueFor("numQueries")) : 1;
 		connectToDisplay();
 	}
 	
@@ -110,7 +112,7 @@ public class VideoSink implements StatelessOperator {
 		logger.info("Label for image: "+label + ", match="+match);
 		if (match) { matches++; }
 
-		if (tupleId != warmUpTuples + tuplesReceived -1)
+		if (tupleId != warmUpTuples + tuplesReceived -1 && numQueries == 1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}

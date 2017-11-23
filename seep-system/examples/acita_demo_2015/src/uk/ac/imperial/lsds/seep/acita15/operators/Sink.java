@@ -32,6 +32,7 @@ public class Sink implements StatelessOperator {
 	private long totalBytes = 0;
 	private boolean enableLatencyBreakdown = false;
 	private Stats stats = null;
+	private int numQueries;
 	
 	public void setUp() {
 		logger.info("Setting up SINK operator with id="+api.getOperatorId());
@@ -40,6 +41,7 @@ public class Sink implements StatelessOperator {
 		warmUpTuples = Long.parseLong(GLOBALS.valueFor("warmUpTuples"));
 		tupleSize = Long.parseLong(GLOBALS.valueFor("tupleSizeChars"));
 		enableLatencyBreakdown = Boolean.parseBoolean(GLOBALS.valueFor("enableLatencyBreakdown"));
+		numQueries = Boolean.parseBoolean(GLOBALS.valueFor("enableMultiQuery")) ? Integer.parseInt(GLOBALS.valueFor("numQueries")) : 1;
 		logger.info("SINK expecting "+numTuples+" tuples.");
 	}
 	
@@ -68,7 +70,7 @@ public class Sink implements StatelessOperator {
 		totalBytes += dt.getString("value").length();
 		recordTuple(dt, dt.getString("value").length());
 		long tupleId = dt.getLong("tupleId");
-		if (tupleId != warmUpTuples + tuplesReceived -1)
+		if (tupleId != warmUpTuples + tuplesReceived -1 && numTuples == 1)
 		{
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}
