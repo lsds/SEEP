@@ -124,6 +124,7 @@ public class VideoSink implements StatelessOperator {
 		
 		displayImage(tupleId, value, bbox, dt.getString("label"));
 		
+		//if (tuplesReceived >= numTuples * numQueries)
 		if (tuplesReceived >= numTuples)
 		{
 			logger.info("SNK: FINISHED with total tuples="+tuplesReceived

@@ -75,6 +75,7 @@ public class Sink implements StatelessOperator {
 			logger.info("SNK: Received tuple " + tuplesReceived + " out of order, id="+tupleId);
 		}
 		
+		//if (tuplesReceived >= numTuples * numQueries)
 		if (tuplesReceived >= numTuples)
 		{
 			logger.info("SNK: FINISHED with total tuples="+tuplesReceived

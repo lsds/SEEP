@@ -243,7 +243,7 @@ def run_experiment(ks, variables, sessions, params, time_str, data_dir):
             for skew_limit in variables['skew_limit']:
                 params['skewLimit'] = skew_limit
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'sl', sessions, params)
-        elif len(variables['skew_limit']) > 0:
+        elif len(variables['queries']) > 0:
             for num_queries in variables['queries']:
                 params['numQueries'] = num_queries 
                 run_sessions(time_str, k, variables['mobility'][0], variables['nodes'][0], 'q', sessions, params)
