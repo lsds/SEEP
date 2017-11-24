@@ -15,7 +15,7 @@ def record_cpu_rates(sessiondir, t_start, t_end):
                 for line in raw_lines[1:]:
                     (t2, busy2, total2) = parse_line(line)
                     if include_interval(t, t2, t_start, t_end):
-                        u_t1t2 = float(busy2 - busy) / float(total2 - total)
+                        u_t1t2 = float(busy2 - busy) / float(total2 - total) if (total2 - total) > 0 else 0.0
                         ro.write('%d %d %.3f\n'%(t, t2, u_t1t2))
                     t = t2
                     busy = busy2
