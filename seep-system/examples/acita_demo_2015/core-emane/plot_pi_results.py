@@ -11,7 +11,10 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 #                        'pi-tput-scaling' : (2,3), 
 #                        'pi-power-scaling' : (2,5)}
 
-exp_compute_coords = {  'pi-tput-scaling' : [2,3], 
+exp_compute_coords = {'pi-tput-vs-rr' : [1,3], 
+                        'pi-tput-vs-rr-dense' : [1,3], 
+                        'pi-tput-scaling' : [2,3], 
+                        'pi-tput-scaling-dense' : [2,3], 
                         'pi-power-scaling' : [2,7], 
                         'pi-power-scaling-excl-base' : [2,6],
                         'pi-power-scaling-active-only' : [2,8], 
@@ -20,6 +23,10 @@ exp_compute_coords = {  'pi-tput-scaling' : [2,3],
                         'pi-power-efficiency-scaling-excl-base' : [2,6],
                         'pi-power-efficiency-scaling-active-only' : [2,8], 
                         'pi-power-efficiency-scaling-excl-base-breakdown' : [2,9,10,11] } 
+#                        'pi-power-efficiency-scaling' : [2,7], 
+#                        'pi-power-efficiency-scaling-excl-base' : [2,6],
+#                        'pi-power-efficiency-scaling-active-only' : [2,8], 
+#                        'pi-power-efficiency-scaling-excl-base-breakdown' : [2,9,10,11] } 
 
 exp_results_files = { 'pi-power-scaling-excl-base-breakdown' : ['results-net.txt', 
                                                         'results-cpu.txt', 
@@ -28,10 +35,18 @@ exp_results_files = { 'pi-power-scaling-excl-base-breakdown' : ['results-net.txt
                                                         'results-cpu.txt', 
                                                         'results-ops.txt'] } 
 
-exp_compute_divisor = { 'pi-power-efficiency-scaling' : 3, 
+exp_compute_numerator = { 'pi-power-efficiency-scaling' : 3, 
                         'pi-power-efficiency-scaling-excl-base' : 3,
                         'pi-power-efficiency-scaling-active-only' : 3, 
                         'pi-power-efficiency-scaling-excl-base-breakdown' : 3 } 
+
+#exp_compute_divisor = { 'pi-power-efficiency-scaling' : 2, 
+#                        'pi-power-efficiency-scaling-excl-base' : 2,
+#                        'pi-power-efficiency-scaling-active-only' : 2, 
+#                        'pi-power-efficiency-scaling-excl-base-breakdown' : 2 } 
+
+#pi_combined = ['pi-tput-scaling-all', 'pi-tput-vs-rr-all'] 
+pi_combined = ['pi-tput-scaling-all'] 
 
 def main(time_strs, exp_name, cross_dir): 
 
@@ -62,6 +77,9 @@ def main(time_strs, exp_name, cross_dir):
                 results_file = exp_results_files[exp][i] if exp in exp_results_files else 'results.txt'
                 write_exp_results(exp, exp_result, results_dir, results_file) # Record aggregated results
 
+            plot(exp, '%s/%s'%(cross_dir, exp), script_dir, data_dir, add_to_envstr=';expname=\'%s\''%'fr')
+        
+        for exp in pi_combined:
             plot(exp, '%s/%s'%(cross_dir, exp), script_dir, data_dir, add_to_envstr=';expname=\'%s\''%'fr')
 
     elif exp_name:
@@ -125,20 +143,22 @@ def compute_xy_exp_results(x, y, raw_results, exp):
     for line in raw_results:
         els = line.split(' ')
         y_val = float(els[y])
-        if exp in exp_compute_divisor:
-            #y_val = (float(els[exp_compute_divisor[exp]])) / y_val 
-            y_val = y_val / (float(els[exp_compute_divisor[exp]])/1024.0)
+        if exp in exp_compute_numerator:
+            y_val = (float(els[exp_compute_numerator[exp]])) / y_val 
+            #y_val = y_val / (float(els[exp_compute_divisor[exp]])/1024.0)
+        ##TODO: Geometric mean?
         exp_results[els[x]] = exp_results.get(els[x], []) + [y_val]
 
-    for exp in exp_results:
-        exp_results[exp] = compute_stats(map(float, exp_results[exp]))
+    for er in exp_results:
+        exp_results[er] = compute_stats(map(float, exp_results[er]))
 
     return exp_results
 
 ## Helper function to record experiment results
 def write_exp_results(exp, exp_results, results_dir, results_file='results.txt'):
     with open('%s/%s/%s'%(results_dir, exp, results_file), 'w') as rf:
-        for exp in sorted(exp_results.keys()):
+        for exp in reversed(sorted(exp_results.keys())):
+        #for exp in sorted(exp_results.keys()):
             rf.write('%s %s\n'%(exp, " ".join('{:.1f}'.format(x) for x in exp_results[exp])))
 
 if __name__ == "__main__":
