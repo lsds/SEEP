@@ -9,9 +9,11 @@ def get_network_power_usage(node_net_rates, total_tuples, t_start, t_end):
     exp_interval_s = float(t_end - t_start) / 1000.0
 
     for node in node_net_rates:
+        print 'Getting energy for node %s with %d intervals'%(node, len(node_net_rates[node]))
         #power_usage[node] = base_power 
         energy = 0.0 
         for (t1, t2, rx_bytes, tx_bytes) in node_net_rates[node]:
+            if t2 <= t1: raise Exception('No range: %d %d %d %d'%(t1, t2, rx_bytes, tx_bytes))
             energy += rx_energy(t2 - t1, rx_bytes)
             energy += tx_energy(t2 - t1, tx_bytes)
 
