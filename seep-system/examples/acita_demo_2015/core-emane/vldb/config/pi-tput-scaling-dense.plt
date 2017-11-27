@@ -1,6 +1,6 @@
 load sprintf("%s/colours.plt",tmpldir)
 set terminal term
-set output sprintf("pi_tput_scaling_%s%s",expname,termext)
+set output sprintf("pi_tput_scaling_dense_%s%s",expname,termext)
 #set title sprintf("Throughput for query=%s",expname)
 set ylabel "Tput (Kb/s)" font ", 20"
 set xlabel "Replication factor (r)" font ", 20"

@@ -1,11 +1,13 @@
+load sprintf("%s/colours.plt",tmpldir)
 set terminal term
 set output sprintf("pi_tput_vs_rr_%s%s",expname,termext)
-set title sprintf("Throughput for query=%s",expname)
-set ylabel "Tput (Kb/s)"
-set xlabel "Routing Algorithm"
+#set title sprintf("Throughput for query=%s",expname)
+set ylabel "Tput (Kb/s)" font ", 20"
+set xlabel "Routing Algorithm" font ", 20"
 #set xtics right offset 10,0
 set xtics nomirror
 set ytics nomirror
+set tics font ", 16"
 set auto x
 set yrange [0:*]
 set style data histogram

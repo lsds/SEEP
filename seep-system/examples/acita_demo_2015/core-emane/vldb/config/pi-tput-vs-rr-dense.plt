@@ -1,9 +1,9 @@
+load sprintf("%s/colours.plt",tmpldir)
 set terminal term
-set output sprintf("pi_power_efficiency_scaling_active_only_%s%s",expname,termext)
-#set title sprintf("Power effiency for active nodes only with query=%s",expname)
-#set ylabel "Avg. Power Efficiency (J/Kb)" font ", 20"
-set ylabel "Performance per Watt (Kb/W)" font ", 20"
-set xlabel "Replication factor (r)" font ", 20"
+set output sprintf("pi_tput_vs_rr_dense_%s%s",expname,termext)
+#set title sprintf("Throughput for query=%s",expname)
+set ylabel "Tput (Kb/s)" font ", 20"
+set xlabel "Routing Algorithm" font ", 20"
 #set xtics right offset 10,0
 set xtics nomirror
 set ytics nomirror
