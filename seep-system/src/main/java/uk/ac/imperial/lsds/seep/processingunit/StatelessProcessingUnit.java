@@ -40,6 +40,7 @@ import uk.ac.imperial.lsds.seep.manet.RoundRobinRouter;
 import uk.ac.imperial.lsds.seep.manet.ShortestPathRouter;
 import uk.ac.imperial.lsds.seep.manet.WeightedRoundRobinRouter;
 import uk.ac.imperial.lsds.seep.manet.HashRouter;
+import uk.ac.imperial.lsds.seep.manet.PowerOf2ChoicesRouter;
 import uk.ac.imperial.lsds.seep.operator.EndPoint;
 import uk.ac.imperial.lsds.seep.operator.Operator;
 import uk.ac.imperial.lsds.seep.operator.OperatorContext;
@@ -474,6 +475,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 			{
 				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
 				LOG.info("Using weighted round robin routing.");
+			}
+			else if ("powerOf2Choices".equals(routingAlg))
+			{
+				getOperator().getRouter().setMeanderRouting(new PowerOf2ChoicesRouter(getOperator().getOpContext()));
+				LOG.info("Using power of 2 choices routing.");
 			}
 			else if ("shortestPath".equals(routingAlg))
 			{

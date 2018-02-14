@@ -37,6 +37,8 @@ public class RoutingController implements Runnable{
 	private final boolean requirePositiveAggregates = Boolean.parseBoolean(GLOBALS.valueFor("requirePositiveAggregates"));
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private final boolean disableBackpressureETX = GLOBALS.valueFor("meanderRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
+	private final boolean updateWeightNetOnly = GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && !Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
+	private final boolean updateWeightQueueLengthOnly = GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices"); 
 	private final boolean sendQueueLengthsOnly;
 
 	private final static double INITIAL_WEIGHT = -1;
@@ -397,10 +399,18 @@ public class RoutingController implements Runnable{
 		}
 		
 	}
-	
+
 	private void updateWeight(boolean downstreamsRoutable)
 	{
 			expireUpstreamQlens();
+			/*
+			if (updateWeightNetOnly)
+			{
+				updateWeightNetOnly(downstreamsRoutable);
+				return;
+			}
+			*/
+
 			Map<Integer, Integer> localInputQlens = null;
 		  weightInfo = new WeightInfo();
 			if (numLogicalInputs > 1)
@@ -507,16 +517,53 @@ public class RoutingController implements Runnable{
 			logger.debug("Updated routing controller weights: "+ weights);
 	}
 
+	private void updateWeightNetOnly(boolean downstreamsRoutable)
+	{
+		if (numLogicalInputs > 1) { throw new RuntimeException("Logic error: WRR with join op."); }
+
+		weightInfo = new WeightInfo();
+		for (int i = 0; i < numLogicalInputs; i++)
+		{
+				ArrayList<Integer> upstreamIds = new ArrayList<>(query.getPhysicalInputs(query.getLogicalNodeId(nodeId))[i]);
+				weightInfo.wdqru.put(i, new HashMap<Integer,double[]>());
+
+				Iterator<Integer> iter = upstreamIds.iterator();
+				while (iter.hasNext())
+				{
+					Integer upstreamId = iter.next();
+					weightInfo.wdqru.get(i).put(upstreamId, new double[4]);
+
+					double weight = upstreamNetRates.get(i).get(upstreamId);
+					weightInfo.wdqru.get(i).get(upstreamId)[0] = weight;
+					weightInfo.wdqru.get(i).get(upstreamId)[3] = weight;
+
+					weights.put(upstreamId, downstreamsRoutable ? weight : -1);
+				}
+		}
+		weightInfo.recordWeight();
+	}
+
 
 	private double computeWeight(int qLenUpstream, int qLenLocal, double netRate, double pRate)
 	{
-		// N.B. TODO: Need to discuss this.
-		//N.B. I think the +1 here will do what we want since
-		//if there is no link we will still have a weight of 0,
-		//But when sending initially it will act as a gradient.
-		//Not sure if it will overload the queues though?
-		return diffU(qLenUpstream, qLenLocal) * netRate * pRate;
-		//return netRate * pRate;
+			if (updateWeightNetOnly)
+			{
+				return netRate;
+			}
+			else if (updateWeightQueueLengthOnly)
+			{
+				return (1 / (1+ qLenLocal));
+			}
+			else
+			{
+				// N.B. TODO: Need to discuss this.
+				//N.B. I think the +1 here will do what we want since
+				//if there is no link we will still have a weight of 0,
+				//But when sending initially it will act as a gradient.
+				//Not sure if it will overload the queues though?
+				return diffU(qLenUpstream, qLenLocal) * netRate * pRate;
+				//return netRate * pRate;
+			}
 	}
 
 	private double diffU(int qLenUpstream, int qLenLocal)
