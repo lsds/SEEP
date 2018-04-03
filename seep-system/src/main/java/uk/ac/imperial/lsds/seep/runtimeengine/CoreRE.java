@@ -80,7 +80,7 @@ public class CoreRE {
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final Map<Integer, ControlTuple> lastUpOpIndexFctrls = new ConcurrentHashMap<Integer, ControlTuple>();
 	private final boolean enableUpstreamRoutingControl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")); 
-	private final boolean multiHopReplayOptimization = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay")) && Boolean.parseBoolean(GLOBALS.valueFor("multiHopReplayOptimization")); 
+	private final boolean multiHopReplayOptimization = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay")) && Boolean.parseBoolean(GLOBALS.valueFor("multiHopReplayOptimization")) && !GLOBALS.valueFor("meanderRouting").equals("broadcast"); 
 	private WorkerNodeDescription nodeDescr = null;
 	
     private Thread processingUnitThread = null;
@@ -490,17 +490,20 @@ public class CoreRE {
 			else if (GLOBALS.valueFor("meanderRouting").equals("backpressure") ||
 								GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
 								GLOBALS.valueFor("meanderRouting").equals("roundRobin") ||
-								GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices"))
+								GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices") ||
+								GLOBALS.valueFor("meanderRouting").equals("broadcast"))
 			{
 				if (replicationFactor > 1 && downIsMultiInput &&
 						(GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") || 
 							GLOBALS.valueFor("meanderRouting").equals("roundRobin") ||
-							GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices")))
-				{ throw new RuntimeException("Logic error: can't using RR or WRR with multi-input operators."); }
+							GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices") ||
+							GLOBALS.valueFor("meanderRouting").equals("broadcast")))
+				{ throw new RuntimeException("Logic error: can't using RR, WRR, P2C or Bcast with multi-input operators (yet)."); }
 
-				if (GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && 
+				if ((GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
+							GLOBALS.valueFor("meanderRouting").equals("broadcast")) && 
 						enableUpstreamRoutingControl && !Boolean.parseBoolean(GLOBALS.valueFor("ignoreQueueLengths")))
-				{ throw new RuntimeException("Logic error: invalid configuration for WRR."); }
+				{ throw new RuntimeException("Logic error: invalid configuration for WRR/Bcast."); }
 
 				if (!processingUnit.getOperator().getOpContext().isSource())
 				{
