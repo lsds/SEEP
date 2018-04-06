@@ -203,7 +203,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		
 		for (int i = 0; i < numLogicalInputs; i++)
 		{
-			inputFctrls.get(i).update(downFctrl.lw(), downFctrl.acks(), null);
+			//inputFctrls.get(i).update(downFctrl.lw(), downFctrl.acks(), null);
+			inputFctrls.get(i).update(downFctrl, false);
 		}
 		
 		//Now purge the ready queue of any acked batches.
@@ -220,7 +221,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		{
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				FailureCtrl upOpFctrl = new FailureCtrl(inputFctrls.get(i));
+				//FailureCtrl upOpFctrl = new FailureCtrl(inputFctrls.get(i));
+				FailureCtrl upOpFctrl = inputFctrls.get(i).copy();
 				upOpFctrl.updateAlives(downFctrl.alives());
 				upOpFctrls.add(upOpFctrl);
 			}
@@ -229,7 +231,8 @@ public class OutOfOrderBufferedBarrier implements DataStructureI {
 		{
 			for (int i = 0; i < numLogicalInputs; i++)
 			{
-				upOpFctrls.add(new FailureCtrl(downFctrl));
+				//upOpFctrls.add(new FailureCtrl(downFctrl));
+				upOpFctrls.add(downFctrl.copy());
 			}
 		}
 	

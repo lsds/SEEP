@@ -52,7 +52,7 @@ public class Dispatcher implements IRoutingObserver {
 	//private static final long ROUTING_CTRL_DELAY = 1 * 50;
 	//private static final long ROUTING_CTRL_DELAY = 1 * 25;
 	private static final long ROUTING_CTRL_DELAY = Long.parseLong(GLOBALS.valueFor("routingCtrlDelay"));
-	private static final long SEND_TIMEOUT = 1 * 500;
+	private static final long SEND_TIMEOUT = Long.parseLong(GLOBALS.valueFor("trySendTimeout")); // 1 * 500;
 	//private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = 120 * 1000; // 4 * 1000 Only set this really high for latency breakdown.
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private static final long FAILURE_CTRL_RETRANSMIT_TIMEOUT = Long.parseLong(GLOBALS.valueFor("retransmitTimeout"));
@@ -99,6 +99,7 @@ public class Dispatcher implements IRoutingObserver {
 	private final boolean canRetransmitConstrained;
 	private boolean downstreamsRoutable = true;
 	private final boolean reportMaxSrcTotalQueueSizeTuples;
+	private final boolean broadcast;
 
 	
 	public Dispatcher(IProcessingUnit owner)
@@ -147,6 +148,7 @@ public class Dispatcher implements IRoutingObserver {
 			failureCtrlWatchdog = null;
 			numDownstreamReplicas = 0;
 			canRetransmitConstrained = true;
+			broadcast = false;
 		}
 		else
 		{
@@ -154,6 +156,8 @@ public class Dispatcher implements IRoutingObserver {
 			downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
 			int downInputIndex = meanderQuery.getLogicalInputIndex(downLogicalId, logicalId);
 			canRetransmitConstrained = downInputIndex == 0 || !Boolean.parseBoolean(GLOBALS.valueFor("restrictRetransmitConstrained"));
+			broadcast = GLOBALS.valueFor("meanderRouting").equals("broadcast"); 
+
 			logger.info("canRetransmitConstrained="+canRetransmitConstrained);
 			if (bestEffort)
 			{
@@ -178,10 +182,11 @@ public class Dispatcher implements IRoutingObserver {
 		if (!bestEffort) { fctrlHandler = new FailureCtrlHandler(); }
 		else { fctrlHandler = null; }
 
+
 		//boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() > 1;
 		boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() >= 1; //Temp force for VC exps
-		if (owner.getOperator().getOpContext().isSource() && !bestEffort && replicationFactor > 1 && hasJoin)  
-		//if (owner.getOperator().getOpContext().isSource() && !bestEffort && hasJoin) //Temp force for VC k=1
+		//if (owner.getOperator().getOpContext().isSource() && !bestEffort && replicationFactor > 1 && hasJoin)  
+		if (owner.getOperator().getOpContext().isSource() && !bestEffort && hasJoin) //Temp force for VC k=1
 		{ limitUnacked = true; }
 		else { limitUnacked = false; }
 		MAX_UNACKED = GLOBAL_MAX_TOTAL_QUEUE_SIZE-1;
@@ -249,7 +254,8 @@ public class Dispatcher implements IRoutingObserver {
 		FailureCtrl copy = null;
 		synchronized(lock)
 		{
-			copy = new FailureCtrl(combinedDownFctrl);
+			//copy = new FailureCtrl(combinedDownFctrl);
+			copy = combinedDownFctrl.copy();
 		}
 		return copy;
 	}
@@ -325,7 +331,7 @@ public class Dispatcher implements IRoutingObserver {
 				//Acked already, discard.
 				return;	
 			}
-			if (!(optimizeReplay && combinedDownFctrl.isAlive(ts)))
+			if (!(optimizeReplay && ((broadcast && isAllDownAlive(ts)) || (!broadcast && combinedDownFctrl.isAlive(ts)))))
 			{
 				if (owner.getOperator().getOpContext().isSource() || boundedOpQueue)
 				{
@@ -488,6 +494,19 @@ public class Dispatcher implements IRoutingObserver {
 	private boolean isDownAlive(int downOpId, long ts)
 	{
 		synchronized(lock) { return downAlives.get(downOpId) != null && downAlives.get(downOpId).contains(ts); }
+	}
+
+	private boolean isAllDownAlive(long ts)
+	{
+		synchronized(lock) 
+		{ 
+			for (Integer downOpId : downAlives.keySet()) 
+			{ 
+				if (!isDownAlive(downOpId, ts)) { return false; }
+			}
+
+			return true;
+		}
 	}
 	
 	public void stop(int target) { throw new RuntimeException("TODO"); }
@@ -825,7 +844,7 @@ public class Dispatcher implements IRoutingObserver {
 		private boolean isConstrainedRoute(ArrayList<Integer> targets)
 		{
 			boolean constrainedRoute = targets != null && targets.size() > 1 && targets.get(0) < 0;
-			if (constrainedRoute && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
+			if (constrainedRoute && !broadcast && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
 			return constrainedRoute;
 		}
 		
@@ -836,9 +855,11 @@ public class Dispatcher implements IRoutingObserver {
 		//it will be safe to just add to the shared replay log.
 		private boolean shouldTrySend(long ts, FailureCtrl fctrl, boolean constrainedRoute)
 		{
+			if (broadcast && downIsMultiInput) { throw new RuntimeException("TODO: Fix flag in condition below."); }
 			if (fctrl.isAcked(ts)|| 
-					(optimizeReplay && fctrl.isAlive(ts) && 
-							(!downIsMultiInput || !constrainedRoute)))
+					(optimizeReplay && 
+					 ((!broadcast && fctrl.isAlive(ts)) || (broadcast && isAllDownAlive(ts))) && 
+						(!downIsMultiInput || (!broadcast && !constrainedRoute))))
 			{
 				return false;
 			}
@@ -889,7 +910,7 @@ public class Dispatcher implements IRoutingObserver {
 		
 		public boolean inSessionLog(long ts, boolean downIsUnaryOK)
 		{
-			if (!downIsUnaryOK && !downIsMultiInput) { throw new RuntimeException("Logic error."); }
+			if (!downIsUnaryOK && !downIsMultiInput && !broadcast) { throw new RuntimeException("Logic error."); }
 			return ((OutOfOrderBuffer)(((SynchronousCommunicationChannel)dest).getBuffer())).contains(ts);
 
 		}
@@ -1166,7 +1187,7 @@ public class Dispatcher implements IRoutingObserver {
 				{	
 					//TODO: what if acked already?
 					DataTuple dt = new DataTuple(idxMapper, p);
-					if (optimizeReplay && combinedDownFctrl.isAlive(ts))
+					if (optimizeReplay && !broadcast && combinedDownFctrl.isAlive(ts))
 					{
 						sharedReplayLog.add(dt);
 						logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts+",srl.sz="+sharedReplayLog.size());
@@ -1209,7 +1230,7 @@ public class Dispatcher implements IRoutingObserver {
 
 		for (Long ts : retracted)
 		{
-			if (!combinedDownFctrl.isAcked(ts) && !combinedDownFctrl.isAlive(ts))
+			if (!combinedDownFctrl.isAcked(ts) && ((!broadcast && !combinedDownFctrl.isAlive(ts)) || (broadcast && !isAllDownAlive(ts))))
 			{
 				for (EndPoint endpoint : endpoints)
 				{
@@ -1220,7 +1241,7 @@ public class Dispatcher implements IRoutingObserver {
 
 						//TODO: what if acked already?
 						DataTuple dt = new DataTuple(idxMapper, p);
-						if (optimizeReplay && combinedDownFctrl.isAlive(ts))
+						if (optimizeReplay && ((!broadcast && combinedDownFctrl.isAlive(ts)) || (broadcast && isAllDownAlive(ts))))
 						{
 							logger.info("Replay optimization: Dispatcher worker avoided retransmission from sender session log of "+ts);
 							sharedReplayLog.add(dt);
@@ -1271,7 +1292,7 @@ public class Dispatcher implements IRoutingObserver {
 			{
 				for (Long oldDownAlive : dsOpOldAlives)
 				{
-					if (!combinedDownFctrl.isAcked(oldDownAlive) && !combinedDownFctrl.isAlive(oldDownAlive))
+					if (!combinedDownFctrl.isAcked(oldDownAlive) && ((!broadcast && !combinedDownFctrl.isAlive(oldDownAlive)) || (broadcast && !isAllDownAlive(oldDownAlive))))
 					{
 						moveSharedReplayToOpQueue(oldDownAlive);
 					}			
@@ -1282,7 +1303,7 @@ public class Dispatcher implements IRoutingObserver {
 				for (Long srlEntry : sharedReplayLog.keys())
 				{
 					if (combinedDownFctrl.isAcked(srlEntry)) { sharedReplayLog.remove(srlEntry); }
-					else if (dsOpOldAlives.contains(srlEntry) && !combinedDownFctrl.isAlive(srlEntry))
+					else if (dsOpOldAlives.contains(srlEntry) && ((!broadcast && !combinedDownFctrl.isAlive(srlEntry)) || (broadcast && !isAllDownAlive(srlEntry))))
 					{ moveSharedReplayToOpQueue(srlEntry); }
 				}
 			}
@@ -1419,7 +1440,9 @@ public class Dispatcher implements IRoutingObserver {
 				logger.trace("Failure ctrl handling acquired lock in "+(tStart - rxTime)+" ms");
 				long oldLw = combinedDownFctrl.lw();
 				long oldAcksSize = combinedDownFctrl.acks().size();
-				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				//TODO: This is pretty racey, shouldn't expose lw or size? Or should make an atomic copy?
+				//combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				combinedDownFctrl.update(fctrl, false);
 				boolean acksChanged = oldLw < combinedDownFctrl.lw() || oldAcksSize < combinedDownFctrl.acks().size();
 				long tAcks = System.currentTimeMillis();
 				logger.trace("Failure ctrl handling updated acks in "+(tAcks - tStart)+" ms");
@@ -1477,7 +1500,8 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			synchronized(lock)
 			{
-				combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				//combinedDownFctrl.update(fctrl.lw(), fctrl.acks(), null);
+				combinedDownFctrl.update(fctrl, false);
 			}
 		}
 		
@@ -1670,6 +1694,7 @@ public class Dispatcher implements IRoutingObserver {
 			}
 			else
 			{
+				if (broadcast) { throw new RuntimeException("TODO"); }
 				testRoutesTuple = postFailureCtrlTimeoutCleanupSoft(downOpId);
 			} 
 			//TODO: Add a call to reenable failure ctrl updates for this downstream
@@ -1711,6 +1736,7 @@ public class Dispatcher implements IRoutingObserver {
 				{
 					IBuffer buffer = cci.getBuffer();
 					TreeMap<Long, BatchTuplePayload> delayedBatches = buffer.get(downOpFailureCtrl);
+					if (broadcast) { throw new RuntimeException("TODO: call to buffer.get must return alive tuples unless alive at *all* downstreams?"); }
 					logger.debug("Watchdog requeueing "+delayedBatches.size()+" tuples sent to "+downOpId);
 					long now = System.currentTimeMillis();
 					for (Map.Entry<Long, BatchTuplePayload> e : delayedBatches.entrySet())
@@ -1776,8 +1802,9 @@ public class Dispatcher implements IRoutingObserver {
 					logger.debug("node fctrl after updateDownAlives: "+downOpFailureCtrl+",dsooa: "+RangeUtil.toRangeSetStr(dsOpOldAlives));
 					IBuffer buffer = dest.getBuffer();
 					//N.B. This is the key step wrt mhro!
-					TreeMap<Long, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
 
+					TreeMap<Long, BatchTuplePayload> delayedBatches = assumeFailOnHardReplay? buffer.trim(null) : buffer.get(downOpFailureCtrl);
+					if (!assumeFailOnHardReplay && broadcast) { throw new RuntimeException("TODO: call to buffer.get must return alive tuples unless alive at *all* downstreams?"); }
 					
 					//5) for tuple in logged
 					//		if acked discard
@@ -1959,7 +1986,8 @@ public class Dispatcher implements IRoutingObserver {
 		{
 			synchronized(lock)
 			{
-				SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				//SortedMap<Long, DataTuple> removed = new TreeMap<>(queue.headMap(ts+1));
+				SortedMap<Long, DataTuple> removed = queue.headMap(ts+1);
 				boolean removedSome = removed != null && !removed.isEmpty();
 				SortedMap<Long, DataTuple> remainder = queue.tailMap(ts+1);
 				if (remainder == null || remainder.isEmpty()) { queue.clear(); }

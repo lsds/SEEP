@@ -103,24 +103,24 @@ public class WeightedRoundRobinRouter implements IRouter {
 	@Override
 	public Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp) {
 		if (upstreamRoutingController) { throw new RuntimeException ("Logic error."); }
+		return handleDownUp(downUp, true);
+	}
+
+	/* Note don't think there is any need to actually use the expiry timer yet for WRR yet. */
+	private Map<Integer, Set<Long>> handleDownUp(DownUpRCtrl downUp, boolean resetExpiryTimer)
+	{
 		synchronized(lock)
 		{
-			if (!weights.containsKey(downUp.getOpId()))
-			{
-				throw new RuntimeException("Logic error?");
-			}
-			logger.debug("Weighted rr router handling downup rctrl: "+ downUp);
+			if (!weights.containsKey(downUp.getOpId())) { throw new RuntimeException("Logic error?"); }
+
+			logger.debug("Weighted RR router handling downup rctrl: "+ downUp);
 			weights.put(downUp.getOpId(), downUp.getWeight());
-			if (downUp.getUnmatched() != null)
-			{
-				//TODO: Tmp hack: Null here indicates a local update because
-				//an attempt to send a q length msg upstream failed - should
-				//clean it up to perhaps use a different method.
-				unmatched.put(downUp.getOpId(), downUp.getUnmatched());
-			}
-			logger.debug("Weighted rr router weights= "+weights);
+
+			if (downUp.getUnmatched() != null) { throw new RuntimeException("Logic error."); }
+			logger.debug("Weighted RR router weights= "+weights);
 		}
-		throw new RuntimeException("TODO");
+
+		return null;
 	}
 
 	public Map<Integer, Set<Long>> handleWeights(Map<Integer, Double> newWeights, Integer downUpdated)
@@ -196,6 +196,6 @@ public class WeightedRoundRobinRouter implements IRouter {
 	
 	public void handleDownFailed(int downOpId)
 	{
-		throw new RuntimeException("TODO"); 
+		handleDownUp(new DownUpRCtrl(downOpId, -1.0, null), false);
 	}
 }

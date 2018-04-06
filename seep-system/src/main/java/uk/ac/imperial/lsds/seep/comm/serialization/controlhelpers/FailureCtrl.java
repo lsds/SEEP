@@ -23,15 +23,27 @@ public class FailureCtrl {
 		this.lw = lw;
 		this.acks = (acks == null ? new HashSet<Long>() : acks);
 		this.alives = (alives == null ? new HashSet<Long>() : alives);
+		//checkAcks();
 	}
 	
-	public FailureCtrl(FailureCtrl other)
+	private FailureCtrl(FailureCtrl other)
 	{
+		//other.checkAcks();
 		this.lw = other.lw;
 		this.acks = new HashSet<>(other.acks());
 		this.alives = new HashSet<>(other.alives());
+		//checkAcks();
 	}
-	
+
+	public FailureCtrl copy() { return copy(true); }
+	public FailureCtrl copy(boolean keepAlives)
+	{
+		synchronized(lock)
+		{
+			return new FailureCtrl(this.lw(), this.acks(), keepAlives ? this.alives() : null); 
+		}
+	}
+
 	public FailureCtrl(String fctrl)
 	{
 		String[] splits = fctrl.split(":");
@@ -50,6 +62,8 @@ public class FailureCtrl {
 		}
 		acks = parseLongs(splits[1]);
 		alives = parseLongs(splits[2]);
+		if (splits.length > 3) { throw new RuntimeException("Logic error - parsing bug: "+fctrl); }
+		//checkAcks();
 	}
 	
 	public String toString()
@@ -96,11 +110,21 @@ public class FailureCtrl {
 		synchronized(lock) { return new HashSet<>(alives); }
 	}
 	
-	public boolean update(FailureCtrl other)
+	public boolean update(FailureCtrl other) { return update(other, true); }
+	public boolean update(FailureCtrl origOther, boolean updateAlives)
+	{
+			FailureCtrl other = origOther.copy();
+			//other.checkAcks();
+			return update(other.lw(), other.acks(), updateAlives ? other.alives() : null);
+	}
+
+	/*	
+	public boolean update(FailureCtrl other) 
 	{
 		boolean changed = false;
 		synchronized(lock)
 		{
+			FailureCtrl other = origOther.atomicCopy();
 			if (other.lw() > lw)
 			{
 				lw = other.lw();
@@ -139,14 +163,17 @@ public class FailureCtrl {
 					if (!other.alives().contains(nxtAlive)) { changed = true; }
 				}
 			}
+			checkAcks();
 			return changed || acks.size() != prevAcksSize || alives.size() != prevAlivesSize;
 		}
 	}
+	*/
 	
 	public void ack(long ts)
 	{
 		synchronized(lock)
 		{
+			//checkAcks();
 			if (!alives.isEmpty()) 
 			{ 
 				throw new RuntimeException("Tmp: Logic error - only for sink."); 
@@ -161,6 +188,8 @@ public class FailureCtrl {
 					acks.remove(lw);
 				}
 			}
+
+			//checkAcks();
 		}
 	}
 	
@@ -169,6 +198,8 @@ public class FailureCtrl {
 		boolean changed = false;
 		synchronized(lock)
 		{
+			//checkAcks();
+			long oldLw = lw;
 			if (newLw > lw) { changed = true; }
 			lw = Math.max(lw, newLw);
 			
@@ -185,13 +216,17 @@ public class FailureCtrl {
 					if (! newAcks.contains(nxtAck)) { changed = true; }
 				}
 			}
-			
+		
+			//At this point, can assert everything in acks > lw.	
 			while(acks.contains(lw+1))
 			{
+				//if (acks.contains(lw)) { throw new RuntimeException("Logic error - off by one: oldLw="+oldLw+",newLw="+newLw+",lw="+lw+",acks="+acks); } 
 				changed = true;
-				acks.remove(lw);
+				acks.remove(lw+1);
 				lw++;
 			}
+			//if (acks.contains(lw)) { throw new RuntimeException("Logic error - off by one: oldLw="+oldLw+",newLw="+newLw+",lw="+lw+",acks="+acks); } 
+			//checkAcks();
 			
 			int prevAlivesSize = alives.size();
 			if (newAlives != null) {  
@@ -208,7 +243,7 @@ public class FailureCtrl {
 					if (newAlives == null || !newAlives.contains(nxtAlive)) { changed = true; }
 				}
 			}
-			
+			//checkAcks();
 			return changed || prevAcksSize != acks.size() || prevAlivesSize != alives.size();
 		}
 	}
@@ -323,4 +358,16 @@ public class FailureCtrl {
 			return unacked; 
 		}
 	}
+
+	private void checkAcks()
+	{
+			synchronized(lock)
+			{
+				for (Long ack : acks)
+				{
+					if (ack <= lw) { throw new RuntimeException("Logic error: checkAcks lw="+lw+",acks.size="+acks.size()+",acks="+acks); } 
+				}
+			}
+	}
+
 }
