@@ -37,7 +37,7 @@ public class RoutingController implements Runnable{
 	private final boolean requirePositiveAggregates = Boolean.parseBoolean(GLOBALS.valueFor("requirePositiveAggregates"));
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
 	private final boolean disableBackpressureETX = GLOBALS.valueFor("meanderRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
-	private final boolean updateWeightNetOnly = GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && !Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
+	private final boolean updateWeightNetOnly = (GLOBALS.valueFor("meanderRouting").equals("broadcast") || GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin")) && !Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
 	private final boolean updateWeightQueueLengthOnly = GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices"); 
 	private final boolean sendQueueLengthsOnly;
 
@@ -519,7 +519,7 @@ public class RoutingController implements Runnable{
 
 	private void updateWeightNetOnly(boolean downstreamsRoutable)
 	{
-		if (numLogicalInputs > 1) { throw new RuntimeException("Logic error: WRR with join op."); }
+		if (numLogicalInputs > 1) { throw new RuntimeException("Logic error: WRR/Broadcast with join op."); }
 
 		weightInfo = new WeightInfo();
 		for (int i = 0; i < numLogicalInputs; i++)

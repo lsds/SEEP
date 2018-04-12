@@ -489,16 +489,18 @@ public class CoreRE {
 			}
 			else if (GLOBALS.valueFor("meanderRouting").equals("backpressure") ||
 								GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
+								GLOBALS.valueFor("meanderRouting").equals("backpressureWeightedRoundRobin") ||
 								GLOBALS.valueFor("meanderRouting").equals("roundRobin") ||
 								GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices") ||
 								GLOBALS.valueFor("meanderRouting").equals("broadcast"))
 			{
 				if (replicationFactor > 1 && downIsMultiInput &&
 						(GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") || 
+						  GLOBALS.valueFor("meanderRouting").equals("backpressureWeightedRoundRobin") || 
 							GLOBALS.valueFor("meanderRouting").equals("roundRobin") ||
 							GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices") ||
 							GLOBALS.valueFor("meanderRouting").equals("broadcast")))
-				{ throw new RuntimeException("Logic error: can't using RR, WRR, P2C or Bcast with multi-input operators (yet)."); }
+				{ throw new RuntimeException("Logic error: can't using RR, WRR, BPWRR, P2C or Bcast with multi-input operators (yet)."); }
 
 				if ((GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
 							GLOBALS.valueFor("meanderRouting").equals("broadcast")) && 

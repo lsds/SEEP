@@ -477,6 +477,11 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
 				LOG.info("Using weighted round robin routing.");
 			}
+			else if ("backpressureWeightedRoundRobin".equals(routingAlg))
+			{
+				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
+				LOG.info("Using backpressure weighted round robin routing.");
+			}
 			else if ("powerOf2Choices".equals(routingAlg))
 			{
 				getOperator().getRouter().setMeanderRouting(new PowerOf2ChoicesRouter(getOperator().getOpContext()));
