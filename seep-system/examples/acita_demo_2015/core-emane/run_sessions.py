@@ -73,7 +73,14 @@ mkdir -p $resultsDir
 # Copy all log files to results dir
 for d in n*.conf 
 do
+    if [ -e "$d/log" ]
+    then
+        cp $d/log/*.log $resultsDir	
+    fi
+    if [ -e "$d/log1" ]
+    then
 	cp $d/log1/*.log $resultsDir	
+    fi
     if [ -e "$d/log2" ]
     then
         cp $d/log2/*.log $resultsDir	
@@ -151,7 +158,9 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
 		'emane_event_monitor':"true" if params['emaneMobility'] else "false"} 
         if params['preserve']: session_cfg['preservedir'] = '1' 
         if distributed: 
+
             print 'slaves=',params['slave']
+            raise Exception("Temporarily disallowed distributed, revert ip + core config.")
             slaves = params['slave'].split(',')
             #session_cfg['controlnetif1'] = "eth4"
             session_cfg['controlnetif1'] = "eth1"
@@ -167,7 +176,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             print 'Using controlnet: %s'%session_cfg['controlnet']
             print 'Using controlnet1: %s'%session_cfg['controlnet1']
         else: 
-            session_cfg['controlnet'] = "172.16.1.0/24"
+            #session_cfg['controlnet'] = "172.16.1.0/24"
+            session_cfg['controlnet'] = "172.60.2.0/24"
 
         if distributed and params['emaneMobility'] and mob > 0.0: session = EmaneNs2Session(cfg=session_cfg, persistent=True)
         else: session = pycore.Session(cfg=session_cfg, persistent=True)
@@ -544,6 +554,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 print 'Removing session from core daemon server'
                 server.delsession(session)
 
+            if params['enableMultiQuery']: time.sleep(30)
+
         if params['sinkDisplay'] and sink_display:
             print 'Shutting down query sink display ', sink_display
             sink_display.stdin.close()
@@ -651,7 +663,8 @@ def get_num_workers(k, nodes, params):
     if q == 'chain' or q == 'fr' or q == 'fdr': 
         if q == 'fr' and params['h'] != 2: raise Exception("Fr query needs height of 2.");
         if q == 'fdr' and params['h'] != 1: raise Exception("Fdr query needs height of 1.");
-        numQueries = 1 if not params['enableMultiQuery'] else params['numQueries']
+        #numQueries = 1 if not params['enableMultiQuery'] else params['numQueries']
+        numQueries = 1 if not params['enableMultiQuery'] else params['maxQueries']
         if params['colocateSrcSink']:
             if sink_scale_factor > 1 or numQueries > 1: raise Exception("Can't colocate source with replicated sinks or multiple queries.")
             num_workers = [2] + [1] * (k * params['h'])

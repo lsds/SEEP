@@ -26,7 +26,8 @@ def log_type(f):
         match = re.search(regex, line)
         if match: return match.group(1)
 
-    raise Exception("Unknown log type for file: "+str(f))
+    #raise Exception("Unknown log type for file: "+str(f))
+    return ""
 
 def src_tx_begin(f):
     """
@@ -134,7 +135,6 @@ def sink_rx_tuples(f):
         match = re.search(regex, line)
         if match:
             results.append(match.groups())
-            print match.groups()
 
     return results
 

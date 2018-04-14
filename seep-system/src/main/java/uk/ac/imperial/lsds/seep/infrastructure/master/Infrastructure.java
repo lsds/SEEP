@@ -348,6 +348,7 @@ public class Infrastructure {
 	
 	public void localMapPhysicalOperatorsToNodes(){		
 		Map<Integer, String> constraints = readMappingConstraints();
+		Map<Integer, String> unusedConstraints = new HashMap<>(constraints);
 		  		
 		// First assign any operators in constrained mappings to the corresponding node (ip addr, port).
 		for(Entry<Integer, Operator> e : queryToNodesMapping.entrySet()){
@@ -374,6 +375,37 @@ public class Infrastructure {
 				}
 				LOG.info("-> Mapping OP: {} to Node: {}", opId, a);
 				placeNew(e.getValue(), a);
+				unusedConstraints.remove(opId);
+			}
+		}
+		
+		// For multi-query experiments, avoid using any nodes previously used with
+		// multiple sources in subsequent runs with fewer sources but higher replication
+		// Presumes each run will always start enough workers to potentially host the
+		// maximum number of sources used across all experiments.
+		if (!unusedConstraints.isEmpty())
+		{
+			LOG.info("Unused constraints remaining, removing corresponding nodes from pool: "+unusedConstraints);
+			for (Entry<Integer, String> e : unusedConstraints.entrySet())
+			{
+				String[] splits = e.getValue().split(":");
+				InetAddress nodeIp = null;
+				try {
+					nodeIp = InetAddress.getByName(splits[0]);
+				} catch (UnknownHostException e1) {
+					LOG.error("Unknown address in unused constraint:"+e.getValue());
+					System.exit(1);
+				}
+				int nodePort = Integer.parseInt(splits[1]);
+				
+				Node a = null;
+				try {
+					a = getNodeFromPool(nodeIp, nodePort);
+				} catch (NodePoolEmptyException e1) {
+					LOG.error("Node pool empty (unused constraints)");
+					System.exit(1);
+				}
+				LOG.info("-> Removing unused Node: {}", a);
 			}
 		}
 		

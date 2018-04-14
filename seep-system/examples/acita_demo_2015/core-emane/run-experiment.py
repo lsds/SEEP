@@ -65,7 +65,7 @@ def main(ks,variables,sessions,params,plot_time_str=None,cross=False):
                 record_var_statistics(ks, variables, session_ids, time_str, data_dir, 'energy', create_get_network_energy_fn(params))
 
                 do_main_plots(ks,variables,session_ids,time_str,data_dir,params)
-                do_debug_plots(ks,variables,session_ids,time_str,data_dir,params)
+                #do_debug_plots(ks,variables,session_ids,time_str,data_dir,params)
                 logdir = '%s/%s'%(data_dir, time_str)
                 chmod_dir(logdir)
             else:
@@ -687,6 +687,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     params['sources']=args.sources
     params['enableMultiQuery']=bool(args.multi_query)
     #params['numQueries']=int(args.multi_query)
+    params['maxQueries']=max([1]+queries)
     params['sinks']=args.sinks
     params['fanin']=args.max_fan_in
     params['pyScaleOutSinks']=args.scale_sinks

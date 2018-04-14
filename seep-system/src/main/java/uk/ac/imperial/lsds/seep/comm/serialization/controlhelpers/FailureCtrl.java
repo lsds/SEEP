@@ -117,7 +117,7 @@ public class FailureCtrl {
 		acks = parseLongs(splits[1]);
 		alives = parseLongs(splits[2]);
 		*/
-		logger.error("Parsing failure ctrl: "+fctrl);
+		logger.debug("Parsing failure ctrl: "+fctrl);
 		
 		String[] splits = fctrl.split(SEP);
 		if (splits.length != 3) { throw new RuntimeException("Logic error: "+fctrl); }
@@ -151,7 +151,7 @@ public class FailureCtrl {
 			String str = (lwsStr.isEmpty() ? EMPTY: lwsStr) + SEP +
 					(ackStr.isEmpty() ? EMPTY: ackStr) + SEP +
 					(aliveStr.isEmpty() ? EMPTY: aliveStr);
-			logger.error("Converted to string: "+str);
+			logger.debug("Converted to string: "+str);
 			return str;
 		}
 	}
@@ -568,7 +568,7 @@ public class FailureCtrl {
 			else 
 			{
 				long unacked = lws.uncoveredSizeInclusive(ts) - acks.coveredSizeInclusive(ts); 
-				logger.error("Computed unacked: "+unacked);
+				logger.debug("Computed unacked: "+unacked);
 				return unacked; 
 			}
 		}	
