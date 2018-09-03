@@ -1,18 +1,23 @@
-SEEP is an experimental parallel data processing system that is being developed
-by the Large-Scale Distributed Systems (LSDS) research group
-(http://lsds.doc.ic.ac.uk) at Imperial College London. It is licsensed under
-EPL (Eclipse Public License).
+Frontier is an experimental edge processing platform for the Internet of Things (IoT)
+that is being developed by the Distributed and Global Computing Centre (DGC) at 
+Royal Holloway University of London and the Large-Scale Distributed Systems (LSDS)
+group at Imperial College London. It is licensed under EPL (Eclipse Public License).
 
-The SEEP system is under heavy development and should be considered an alpha
+The Frontier system is under heavy development and should be considered an alpha
 release. This is not considered a "stable" branch.
 
-Further details on SEEP, including papers that explain the underlying model 
+Further details on Frontier, including a paper that explains the underlying model 
 can be found at the project website:
-http://lsds.doc.ic.ac.uk/projects/SEEP
+http://lsds.doc.ic.ac.uk/projects/ita-dsm
+
+Frontier builds on previous research into data-parallel stream processing for 
+datacenter environments as part of the SEEP project: 
+http://lsds.doc.ic.ac.uk/projects/ita-dsm
 
 The SEEP system consists of two modules, the runtime system (seep-system) and a
-compiler (java2sdg). Below is some information regarding how to build the
-system and modules.
+compiler (java2sdg). Frontier uses parts of the SEEP runtime system codebase,
+albeit heavily modified to operate in an edge environment. Below is some
+information regarding how to build the system and modules.
 
 BUILDING:
 #####################
