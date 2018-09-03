@@ -3,6 +3,7 @@
 if [ $# -eq 0 ]
 then
 	echo "No arguments supplied: Do you want to build for \"core\" or \"pi\" experiments?"
+	exit;
 fi
 
 pushd seep-system/examples/acita_demo_2015 ; ant clean ; popd 

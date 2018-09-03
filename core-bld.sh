@@ -1,1 +1,1 @@
-./meander-bld.sh core
+./frontier-bld.sh core
