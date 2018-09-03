@@ -21,7 +21,7 @@ differentiated modules, seep-system and seep-java2sdg.
 
 From the top level directory:
 
-./meander-bld.sh
+./frontier-bld.sh
 
 Will build seep-system and the example applications stateless-simple-query and
 acita_demo_2015.

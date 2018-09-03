@@ -187,7 +187,7 @@ def test_throttle(do_probe=False):
 @parallel
 def rebuild():
 	with cd(repo_root):
-		run('./meander-bld.sh')
+		run('./frontier-bld.sh pi')
 
 def git_status():
 	with cd(repo_root):

@@ -520,8 +520,8 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
             publish_commeffects(session, packet_losses, roof_to_nem, verbose=True)
             time.sleep(5)
 
-        print 'Waiting for a meander worker/master to terminate'
-        watch_meander_services(session.sessiondir, map(lambda n: "n%d"%n,
+        print 'Waiting for a frontier worker/master to terminate'
+        watch_frontier_services(session.sessiondir, map(lambda n: "n%d"%n,
             range(2,3 + sum(num_workers))))
 
 
@@ -833,7 +833,7 @@ def create_datacollect_hook(time_str, k, var, var_suffix, exp_session, sub):
     hook = datacollect_template%(script_dir, time_str, k, var, var_suffix, exp_session, '--sub' if sub else '')
     return hook
 
-def watch_meander_services(sessiondir, node_names):
+def watch_frontier_services(sessiondir, node_names):
     while True:
         for name in node_names:
             for process in ['worker1', 'worker2', 'master']:
@@ -1017,7 +1017,7 @@ def core_cleanup():
 
 if __name__ == "__main__" or __name__ == "__builtin__":
     print 'Hello world'
-    parser = argparse.ArgumentParser(description='Run several meander experiments on CORE')
+    parser = argparse.ArgumentParser(description='Run several frontier experiments on CORE')
     parser.add_argument('--k', dest='k', default='2', help='replication factors (2)')
     parser.add_argument('--h', dest='h', default='2', help='chain length (2)')
     parser.add_argument('--x', dest='x', default='1200', help='Grid x dimension (1200)')
