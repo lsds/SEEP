@@ -1,1 +1,1 @@
-./meander-bld.sh pi
+./frontier-bld.sh pi
