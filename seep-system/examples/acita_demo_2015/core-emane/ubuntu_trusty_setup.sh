@@ -207,7 +207,9 @@ sudo apt-get -y install libv4l-dev
 pushd ../resources/training
 mkdir -p chokepoint
 cd chokepoint
-wget http://filestore.nicta.com.au/Comms/OpenNICTA/data/crop/P2E.tar.xz
+#http://arma.sourceforge.net/chokepoint/ 
+#wget http://filestore.nicta.com.au/Comms/OpenNICTA/data/crop/P2E.tar.xz
+https://zenodo.org/record/815657/files/P2E.tar.xz
 tar xf P2E.tar.xz
 popd
 
