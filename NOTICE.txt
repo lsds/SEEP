@@ -1,6 +1,6 @@
-Seep
-Copyright 2013 Imperial College London.
+Frontier
+Copyright 2018 Imperial College London 
 
-This  is an experimental system. Note that there is no official release. The code is open sourced to show progress and get feedback. Please note that this system is continuously being developed and so there is no a stable release for testing. First released is planned for last quarter of 2013.
+This  is an experimental system. Note that there is no official release. The code is open sourced to show progress and get feedback. Please note that this system is continuously being developed and so there is no a stable release for testing. 
 
 Thanks!
