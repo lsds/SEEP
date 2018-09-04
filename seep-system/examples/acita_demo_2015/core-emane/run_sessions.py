@@ -296,7 +296,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
         master_services = services_str
         if params['dstat']: master_services += "|dstat" 
  
-        master = create_node(2, session, "%s|MeanderMaster"%master_services, wlan1,
+        master = create_node(2, session, "%s|FrontierMaster"%master_services, wlan1,
                 gen_grid_position(2+nodes, nodes - 1), addinf=False, verbose=verbose)
 
         services_str += "|%s"%params['net-routing']
@@ -397,7 +397,7 @@ def run_session(time_str, k, mob, nodes, var_suffix, exp_session, params):
                 pos = placements[i]
             else:
                 pos = gen_grid_position(i, nodes-1)
-            worker_services = "|".join(["MeanderWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
+            worker_services = "|".join(["FrontierWorker%d"%lwid for lwid in range(1, num_workers[i-3]+1)])
             if params['pcap']: worker_services += "|PcapSrc"
             if params['injectFailures'] or params['injectProbFailures'] or params['failProb'] > 0.0: worker_services += "|FailureInjector"
             #if params['emanestats']: worker_services += "|EmaneStats"

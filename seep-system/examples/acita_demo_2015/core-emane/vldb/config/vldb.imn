@@ -52,10 +52,10 @@ node n1 {
     iconcoords {374.0 295.0}
     labelcoords {374.0 327.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderWorker}
+    services {OLSR IPForward FrontierWorker}
     custom-config {
-	custom-config-id service:MeanderWorker
-	custom-command MeanderWorker 
+	custom-config-id service:FrontierWorker
+	custom-command FrontierWorker 
 	config {
 	starttime=5
 	}
@@ -78,10 +78,10 @@ node n2 {
     iconcoords {421.0 239.0}
     labelcoords {421.0 271.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderWorker}
+    services {OLSR IPForward FrontierWorker}
     custom-config {
-	custom-config-id service:MeanderWorker
-	custom-command MeanderWorker
+	custom-config-id service:FrontierWorker
+	custom-command FrontierWorker
 	config {
 	starttime=5
 	}
@@ -104,10 +104,10 @@ node n3 {
     iconcoords {557.0 245.0}
     labelcoords {557.0 277.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderWorker}
+    services {OLSR IPForward FrontierWorker}
     custom-config {
-	custom-config-id service:MeanderWorker
-	custom-command MeanderWorker
+	custom-config-id service:FrontierWorker
+	custom-command FrontierWorker
 	config {
 	starttime=5
 	}
@@ -130,10 +130,10 @@ node n4 {
     iconcoords {624.0 326.0}
     labelcoords {624.0 358.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderWorker}
+    services {OLSR IPForward FrontierWorker}
     custom-config {
-	custom-config-id service:MeanderWorker
-	custom-command MeanderWorker
+	custom-config-id service:FrontierWorker
+	custom-command FrontierWorker
 	config {
 	starttime=5
 	}
@@ -156,10 +156,10 @@ node n5 {
     iconcoords {536.0 359.0}
     labelcoords {536.0 391.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderWorker}
+    services {OLSR IPForward FrontierWorker}
     custom-config {
-	custom-config-id service:MeanderWorker
-	custom-command MeanderWorker
+	custom-config-id service:FrontierWorker
+	custom-command FrontierWorker
 	config {
 	starttime=5
 	}
@@ -182,10 +182,10 @@ node n6 {
     iconcoords {425.0 377.0}
     labelcoords {425.0 409.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderWorker}
+    services {OLSR IPForward FrontierWorker}
     custom-config {
-	custom-config-id service:MeanderWorker
-	custom-command MeanderWorker
+	custom-config-id service:FrontierWorker
+	custom-command FrontierWorker
 	config {
 	starttime=5
 	}
@@ -208,10 +208,10 @@ node n7 {
     iconcoords {482.0 185.0}
     labelcoords {482.0 217.0}
     interface-peer {eth0 w0}
-    services {OLSR IPForward MeanderMaster}
+    services {OLSR IPForward FrontierMaster}
     custom-config {
-	custom-config-id service:MeanderMaster
-	custom-command MeanderMaster
+	custom-config-id service:FrontierMaster
+	custom-command FrontierMaster
 	config {
 	starttime=5
 	}

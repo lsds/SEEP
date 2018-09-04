@@ -12,11 +12,11 @@ from core.service import CoreService, addservice
 from core.misc.ipaddr import IPv4Prefix, IPv6Prefix
 from worker_cfg_builder import build_cfg
 
-class MeanderWorker2(CoreService):
+class FrontierWorker2(CoreService):
     ''' This is a sample user-defined service. 
     '''
     # a unique name is required, without spaces
-    _name = "MeanderWorker2"
+    _name = "FrontierWorker2"
     # you can create your own group here
     _group = "SEEP"
     # list of other services this service depends on
@@ -44,5 +44,5 @@ class MeanderWorker2(CoreService):
         return build_cfg(2, cls, node, filename, services)
             
 # this line is required to add the above class to the list of available services
-addservice(MeanderWorker2)
+addservice(FrontierWorker2)
 
