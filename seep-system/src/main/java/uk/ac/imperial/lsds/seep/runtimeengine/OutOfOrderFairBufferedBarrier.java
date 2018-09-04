@@ -31,7 +31,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	private final static Logger logger = LoggerFactory.getLogger(OutOfOrderFairBufferedBarrier.class);
 	private final int opId;
 	private final int logicalId;
-	private final Query meanderQuery;
+	private final Query frontierQuery;
 	private final int numLogicalInputs;
 	private final ArrayList<TreeMap<Long, DataTuple>> pending;	//Unbounded
 	private final TreeMap<Long, ArrayList<DataTuple>> ready = new TreeMap<Long, ArrayList<DataTuple>>();
@@ -46,12 +46,12 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	private final ReentrantLock lock = new ReentrantLock(true){};
 	private final Condition cond = lock.newCondition();
 	
-	public OutOfOrderFairBufferedBarrier(Query meanderQuery, int opId)
+	public OutOfOrderFairBufferedBarrier(Query frontierQuery, int opId)
 	{
 		this.opId = opId;
-		this.meanderQuery = meanderQuery;	//To get logical index for upstreams.
-		this.logicalId = meanderQuery.getLogicalNodeId(opId);
-		this.numLogicalInputs = meanderQuery.getLogicalInputs(meanderQuery.getLogicalNodeId(opId)).length;
+		this.frontierQuery = frontierQuery;	//To get logical index for upstreams.
+		this.logicalId = frontierQuery.getLogicalNodeId(opId);
+		this.numLogicalInputs = frontierQuery.getLogicalInputs(frontierQuery.getLogicalNodeId(opId)).length;
 		this.bestEffort = GLOBALS.valueFor("reliability").equals("bestEffort");
 		this.optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		this.reprocessNonLocals = Boolean.parseBoolean(GLOBALS.valueFor("reprocessNonLocals"));
@@ -59,8 +59,8 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 		this.maxReadyQueueSize = Integer.parseInt(GLOBALS.valueFor("readyQueueLength"));
 		this.barrierTimeout = Long.parseLong(GLOBALS.valueFor("barrierTimeout"));
 		this.boundReadyQueue = Boolean.parseBoolean(GLOBALS.valueFor("boundReadyQueue")) || 
-					!GLOBALS.valueFor("meanderRouting").equals("backpressure") ||  
-					meanderQuery.getPhysicalNodeIds(logicalId).size() == 1;
+					!GLOBALS.valueFor("frontierRouting").equals("backpressure") ||  
+					frontierQuery.getPhysicalNodeIds(logicalId).size() == 1;
 		logger.info("OutOfOrderFairBufferedBarrier using bound ready queue? "+this.boundReadyQueue);
 
 		if (barrierTimeout > 0)  
@@ -82,7 +82,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 	
 	//TODO: Note the incoming data handler worker
 	//could tell us both the upOpId, the upOpOriginalId
-	//or even the meander query index.
+	//or even the frontier query index.
 	public void push(DataTuple dt, int upOpId)
 	{
 		//synchronized(this)
@@ -91,7 +91,7 @@ public class OutOfOrderFairBufferedBarrier implements DataStructureI {
 		try
 		{
 			long ts = dt.getPayload().timestamp;
-			int logicalInputIndex = meanderQuery.getLogicalInputIndex(logicalId, meanderQuery.getLogicalNodeId(upOpId));
+			int logicalInputIndex = frontierQuery.getLogicalInputIndex(logicalId, frontierQuery.getLogicalNodeId(upOpId));
 			FailureCtrl inputFctrl = inputFctrls.get(logicalInputIndex); 
 			if (pending.get(logicalInputIndex).containsKey(ts) || inputFctrl.isAcked(ts) || inputFctrl.alives().contains(ts))
 			{

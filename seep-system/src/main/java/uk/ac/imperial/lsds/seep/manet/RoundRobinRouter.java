@@ -49,12 +49,12 @@ public class RoundRobinRouter implements IRouter {
 			unmatched.put(downOpId, new HashSet<Long>());
 		}
 		logger.info("Initial weights: "+weights);
-		Query meanderQuery = opContext.getMeanderQuery(); 
-		int logicalId = meanderQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
-		int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId); 
+		Query frontierQuery = opContext.getFrontierQuery(); 
+		int logicalId = frontierQuery.getLogicalNodeId(opContext.getOperatorStaticInformation().getOpId());
+		int downLogicalId = frontierQuery.getNextHopLogicalNodeId(logicalId); 
 
-		downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
-		downIsUnreplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
+		downIsMultiInput = frontierQuery.getLogicalInputs(downLogicalId).length > 1;
+		downIsUnreplicatedSink = frontierQuery.isSink(downLogicalId) && frontierQuery.getPhysicalNodeIds(downLogicalId).size() == 1;
 		upstreamRoutingController = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")) && !downIsMultiInput;
 	}
 	

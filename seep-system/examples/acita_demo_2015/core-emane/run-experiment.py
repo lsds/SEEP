@@ -620,7 +620,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     parser.add_argument('--notifyAddr', dest='notify_addr', default=None, help='Send email from/to addr on job completion.')
     parser.add_argument('--notifySmtp', dest='notify_smtp', default='smarthost.cc.ic.ac.uk', help='Smtp server to use for email notifications.')
     parser.add_argument('--xyScale', dest='xy_scale', default=None, help='Scale factor for each (x,y) coordinate (static placement only)')
-    parser.add_argument('--meanderRouting', dest='meander_routing', default=None, help='Override meander routing alg (backpressure, hash, shortestPath)')
+    parser.add_argument('--frontierRouting', dest='frontier_routing', default=None, help='Override frontier routing alg (backpressure, hash, shortestPath)')
     parser.add_argument('--noiseNodes', dest='noise_nodes', default=0, help='Number of rf noise sources')
     parser.add_argument('--roofnet', dest='roofnet', default=False, action='store_true', help='Use roofnet placements and packet losses')
     parser.add_argument('--sub', dest='sub', default=False, action='store_true', help='Record throughput for a subset of tuples (ft exp only)')
@@ -727,7 +727,7 @@ if __name__ == "__main__" or __name__ == "__builtin__":
     if args.master_postdelay: params['master_postdelay'] = args.master_postdelay
     if args.worker_predelay: params['worker_predelay'] = args.worker_predelay
     if args.refresh_ms: params['refresh_ms'] = args.refresh_ms
-    if args.meander_routing: params['meanderRouting'] = args.meander_routing
+    if args.frontier_routing: params['frontierRouting'] = args.frontier_routing
     if args.initial_pause: params['initialPause'] = args.initial_pause
     if args.cross:
         if not args.plot_time_str: raise Exception("Cross plot enabled without plotOnly!")

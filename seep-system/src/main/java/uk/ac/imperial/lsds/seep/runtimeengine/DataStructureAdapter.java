@@ -60,9 +60,9 @@ public class DataStructureAdapter {
 		dsoMap.put(opId, dso);
 	}
 	
-	private void setUpMeanderQuery(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext)
+	private void setUpFrontierQuery(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext)
 	{
-		Query query = opContext.getMeanderQuery();
+		Query query = opContext.getFrontierQuery();
 		int opId = opContext.getOperatorStaticInformation().getOpId();
 		int logicalId = query.getLogicalNodeId(opId);
 		Map<Integer, DataStructureI> tmpLogicalDsoMap = new HashMap<>();
@@ -137,7 +137,7 @@ public class DataStructureAdapter {
 					Barrier b = new Barrier(numberUpstreamsOnBarrier);
 					uniqueDso = b;
 					LOG.debug("-> Ingest with Sync-Barrier from {}", entry.getKey());
-					throw new RuntimeException("TODO: Meander query?");
+					throw new RuntimeException("TODO: Frontier query?");
 				}
 			}
 		}
@@ -158,9 +158,9 @@ public class DataStructureAdapter {
 	
 //	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, int numUpstreams){
 	public void setUp(Map<Integer, InputDataIngestionMode> iimMap, OperatorContext opContext){
-		if (opContext.getMeanderQuery() != null)
+		if (opContext.getFrontierQuery() != null)
 		{
-		  setUpMeanderQuery(iimMap, opContext);
+		  setUpFrontierQuery(iimMap, opContext);
 		  return;
 		}
 	

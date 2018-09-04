@@ -157,7 +157,7 @@ public class OutputQueue {
 			}
 			if(!stop.get()){
 				TuplePayload tp = tuple.getPayload();
-				final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
+				final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getFrontierQuery() != null;
 				if (!allowOutOfOrderTuples)
 				{
 					tp.timestamp = System.currentTimeMillis(); // assign local ack

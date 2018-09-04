@@ -28,7 +28,7 @@ public class ShortestPathRouter implements IRouter {
 	public ShortestPathRouter(OperatorContext opContext)
 	{
 		this.opContext = opContext;
-		this.query = opContext.getMeanderQuery();
+		this.query = opContext.getFrontierQuery();
 		this.localPhysicalId = opContext.getOperatorStaticInformation().getOpId();
 	}
 

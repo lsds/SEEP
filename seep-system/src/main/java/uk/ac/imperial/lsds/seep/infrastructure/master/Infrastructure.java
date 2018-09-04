@@ -398,11 +398,11 @@ public class Infrastructure {
 		}
 				
 		LOG.info("-> All operators have been mapped");
-		Query q = buildMeanderQuery();
-		LOG.info("Finished building meander query.");
+		Query q = buildFrontierQuery();
+		LOG.info("Finished building frontier query.");
 		for(Operator o : queryToNodesMapping.values()){
 			LOG.info("OP: {}, CONF: {}", o.getOperatorId(), o);
-			o.getOpContext().setMeanderQuery(q);
+			o.getOpContext().setFrontierQuery(q);
 		}
 		writeMappingConstraints(constraints);
 	}
@@ -461,7 +461,7 @@ public class Infrastructure {
 		}
 	}
 	
-	private Query buildMeanderQuery()
+	private Query buildFrontierQuery()
 	{
 		String queryType = GLOBALS.valueFor("queryType"); 
 		if (queryType.equals("chain"))
@@ -996,7 +996,7 @@ public class Infrastructure {
 			
 			currentOpsIndex++;
 		}
-		LOG.debug("Creating new meander query, logTop="+logicalTopology+", log2phys="+log2phys+",phys2addr="+phys2addr);
+		LOG.debug("Creating new frontier query, logTop="+logicalTopology+", log2phys="+log2phys+",phys2addr="+phys2addr);
 		return new Query(logicalTopology, log2phys, phys2addr);	
 	}
 

@@ -41,7 +41,7 @@ public class OperatorContext implements Serializable{
 	
 	private boolean isSource = false;
 	private boolean isSink = false;
-	private Query meanderQuery = null;
+	private Query frontierQuery = null;
 	
 	// store the type of input data ingestion mode per upstream operator. <OpId - InputDataIngestionMode>
 	private Map<Integer, InputDataIngestionMode> inputDataIngestionModePerUpstream = new HashMap<Integer, InputDataIngestionMode>();
@@ -72,8 +72,8 @@ public class OperatorContext implements Serializable{
 		this.isSink = isSink;
 	}
 	
-	public void setMeanderQuery(Query query) { this.meanderQuery = query; }
-	public Query getMeanderQuery() { return meanderQuery; }
+	public void setFrontierQuery(Query query) { this.frontierQuery = query; }
+	public Query getFrontierQuery() { return frontierQuery; }
 	
 	public boolean doesRequireLogicalRouting(){
 		// If there are more than one addressable streamIds in the logicalRouting table, it does require specific routing

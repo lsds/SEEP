@@ -82,14 +82,14 @@ public class OutputQueueWorker
 		this.owner = owner;
 		this.k = initialiseKryo(); 
 		this.outputQueueTimestamps = outputQueueTimestamps;
-		Query meanderQuery = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
+		Query frontierQuery = owner.getProcessingUnit().getOperator().getOpContext().getFrontierQuery();
 		opId = owner.getProcessingUnit().getOperator().getOperatorId();
-		int logicalId = meanderQuery.getLogicalNodeId(opId);
-		boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
-		this.downIsMultiInput = !owner.getProcessingUnit().getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+		int logicalId = frontierQuery.getLogicalNodeId(opId);
+		boolean opIsMultiInput = frontierQuery.isJoin(logicalId);
+		this.downIsMultiInput = !owner.getProcessingUnit().getOperator().getOpContext().isSink() && frontierQuery.isJoin(frontierQuery.getNextHopLogicalNodeId(logicalId));
 
 		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
-		boolean bpRouting = GLOBALS.valueFor("enableMeanderRouting").equals("true") && GLOBALS.valueFor("meanderRouting").equals("backpressure");
+		boolean bpRouting = GLOBALS.valueFor("enableFrontierRouting").equals("true") && GLOBALS.valueFor("frontierRouting").equals("backpressure");
 		boolean noRoutingCtrlMessagesToSend = !bpRouting || replicationFactor <= 1 || (!downIsMultiInput && enableUpstreamRoutingCtrl);
 		mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl")) && !noRoutingCtrlMessagesToSend;
 		logger.info("OutputQueue worker merging failure and routing ctrl? "+mergeFailureAndRoutingCtrl);
@@ -285,7 +285,7 @@ public class OutputQueueWorker
 		{
 			//To send tuple
 			TuplePayload tp = tuple.getPayload();
-			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
+			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getFrontierQuery() != null;
 			if (!allowOutOfOrderTuples)
 			{
 				tp.timestamp = System.currentTimeMillis(); // assign local ack

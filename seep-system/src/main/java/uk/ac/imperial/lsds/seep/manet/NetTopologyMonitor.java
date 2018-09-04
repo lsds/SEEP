@@ -23,14 +23,14 @@ public class NetTopologyMonitor implements Runnable {
 	private final static long NET_MONITOR_DELAY = 2 * 1000;
 	private final Object lock = new Object(){};
 	
-	private final Query meanderQuery;
+	private final Query frontierQuery;
 
 	private final boolean coreDeployment;
 	private final Router router;
 	
-	public NetTopologyMonitor(int localOpId, Query meanderQuery, Router router)
+	public NetTopologyMonitor(int localOpId, Query frontierQuery, Router router)
 	{
-		this.meanderQuery = meanderQuery;
+		this.frontierQuery = frontierQuery;
 		this.router = router;
 		coreDeployment = "true".equals(GLOBALS.valueFor("useCoreAddr"));
 	}
@@ -55,7 +55,7 @@ public class NetTopologyMonitor implements Runnable {
 				if (coreDeployment)
 				{
 					Map<InetAddressNodeId, Map<InetAddressNodeId, Double>> linkState = parseTopology(readTopology());
-					router.getMeanderRouting().updateNetTopology(linkState);
+					router.getFrontierRouting().updateNetTopology(linkState);
 					router.update_highestWeight(null);
 					//upstreamCosts = parseRoutes(readRoutes());
 					//TODO: Add empty routes/costs?

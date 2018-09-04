@@ -163,8 +163,8 @@ public class PUContext {
 	}
 	
 	private void configureDownstreamAndUpstreamConnections(Operator op){
-		localSiblings = op.getOpContext().getMeanderQuery().localSiblings(op.getOperatorId());
-		localSiblingIndex = op.getOpContext().getMeanderQuery().localSiblingIndex(op.getOperatorId());
+		localSiblings = op.getOpContext().getFrontierQuery().localSiblings(op.getOperatorId());
+		localSiblingIndex = op.getOpContext().getFrontierQuery().localSiblingIndex(op.getOperatorId());
 
 		//Gather nature of downstream operators, i.e. local or remote
 		for(PlacedOperator down: op.getOpContext().downstreams){

@@ -52,7 +52,7 @@ public class Router implements Serializable{
 	private HashMap<Integer, RoutingStrategyI> downstreamRoutingImpl = new HashMap<Integer, RoutingStrategyI>();
 
 	private ArrayList<IRoutingObserver> observers = new ArrayList<>(1);
-	private IRouter meanderRouter = null;
+	private IRouter frontierRouter = null;
 	
 	public enum RelationalOperator{
 		//LEQ, L, EQ, G, GEQ, RANGE
@@ -64,12 +64,12 @@ public class Router implements Serializable{
 		this.routeInfo = routeInfo;
 	}
 	
-	public void setMeanderRouting(IRouter meanderRouter)
+	public void setFrontierRouting(IRouter frontierRouter)
 	{
-		this.meanderRouter = meanderRouter;
+		this.frontierRouter = frontierRouter;
 	}
 	
-	public IRouter getMeanderRouting() { return meanderRouter; }
+	public IRouter getFrontierRouting() { return frontierRouter; }
 	
 	//Gather indexes from statefulDynamic Load balancer
 	public ArrayList<Integer> getIndexesInformation(int oldOpId){
@@ -189,14 +189,14 @@ public class Router implements Serializable{
 	public ArrayList<Integer> forward_highestWeight(DataTuple dt)
 	{
 		LOG.debug("Routing data tuple: "+dt.getPayload().timestamp);
-		if (meanderRouter == null) { throw new RuntimeException("Logic error?"); }
+		if (frontierRouter == null) { throw new RuntimeException("Logic error?"); }
 		checkDownstreamRoutingImpl();
-		return meanderRouter.route(dt.getLong("tupleId"));
+		return frontierRouter.route(dt.getLong("tupleId"));
 	}
 	
 	public Set<Long> areConstrained(Set<Long> batches)
 	{
-		return meanderRouter.areConstrained(batches);
+		return frontierRouter.areConstrained(batches);
 	}
 	
 	public ArrayList<Integer> forward_toOp(DataTuple dt, int streamId){
@@ -248,14 +248,14 @@ public class Router implements Serializable{
 	
 	public void update_highestWeight(DownUpRCtrl downUp)
 	{
-		if (meanderRouter == null) 
+		if (frontierRouter == null) 
 		{ 
-			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
+			LOG.warn("Ignoring down-up routing ctrl - frontier router doesn't exist yet.");
 			return;
 		}
 		if (downUp != null)
 		{
-			notifyObservers(meanderRouter.handleDownUp(downUp));
+			notifyObservers(frontierRouter.handleDownUp(downUp));
 		}
 		else
 		{
@@ -266,23 +266,23 @@ public class Router implements Serializable{
 
 	public void update_highestWeights(Map<Integer, Double> weights, Integer downOpUpdated)
 	{	
-		if (meanderRouter == null) 
+		if (frontierRouter == null) 
 		{ 
-			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
+			LOG.warn("Ignoring down-up routing ctrl - frontier router doesn't exist yet.");
 			return;
 		}
-		notifyObservers(meanderRouter.handleWeights(weights, downOpUpdated));
+		notifyObservers(frontierRouter.handleWeights(weights, downOpUpdated));
 	}
 
 	public void update_downFailed(int downOpId)
 	{
-		if (meanderRouter == null) 
+		if (frontierRouter == null) 
 		{ 
-			LOG.warn("Ignoring down-up routing ctrl - meander router doesn't exist yet.");
+			LOG.warn("Ignoring down-up routing ctrl - frontier router doesn't exist yet.");
 			return;
 		}
 		
-		meanderRouter.handleDownFailed(downOpId);
+		frontierRouter.handleDownFailed(downOpId);
 		notifyObservers(null);
 	}
 	

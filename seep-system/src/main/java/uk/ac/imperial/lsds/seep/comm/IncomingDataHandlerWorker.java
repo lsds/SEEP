@@ -191,7 +191,7 @@ public class IncomingDataHandlerWorker implements Runnable{
 			BatchTuplePayload batchTuplePayload = null;
 
 			long lastIncomingTs = -1;
-			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery() != null;
+			final boolean allowOutOfOrderTuples = owner.getProcessingUnit().getOperator().getOpContext().getFrontierQuery() != null;
 			
 			while(goOn){
 				long receiveStartTs = System.currentTimeMillis();

@@ -24,7 +24,7 @@ import uk.ac.imperial.lsds.seep.infrastructure.monitor.policy.metric.MetricName;
  * 
  * @author mrouaux
  */
-public class MeanderMetricsNotifier {
+public class FrontierMetricsNotifier {
 
     private final static MetricRegistry metricRegistry 
         = SharedMetricRegistries.getOrCreate("uk.ac.imperial.lsds.seep.manet");
@@ -35,7 +35,7 @@ public class MeanderMetricsNotifier {
     		.build();
     private final static Slf4jReporter sl4jReporter = Slf4jReporter
     		.forRegistry(metricRegistry)
-    		.outputTo(LoggerFactory.getLogger(MeanderMetricsNotifier.class))
+    		.outputTo(LoggerFactory.getLogger(FrontierMetricsNotifier.class))
     		.convertRatesTo(TimeUnit.SECONDS)
     		.convertDurationsTo(TimeUnit.MILLISECONDS)
     		.build();
@@ -46,50 +46,50 @@ public class MeanderMetricsNotifier {
     	sl4jReporter.start(1, TimeUnit.SECONDS);
     }
 
-    public static MeanderMetricsNotifier notifyThat(int operatorId) {
-        return new MeanderMetricsNotifier(operatorId);
+    public static FrontierMetricsNotifier notifyThat(int operatorId) {
+        return new FrontierMetricsNotifier(operatorId);
     }
     
     private int operatorId;
 
-    MeanderMetricsNotifier(int operatorId) {
+    FrontierMetricsNotifier(int operatorId) {
         this.operatorId = operatorId;
     }
     
     public void triedSend()
     {
-    	final Meter trySendRequests = metricRegistry.meter(MetricRegistry.name(MeanderMetricsNotifier.class, "dispatcherMain", "trySendRequests"));
+    	final Meter trySendRequests = metricRegistry.meter(MetricRegistry.name(FrontierMetricsNotifier.class, "dispatcherMain", "trySendRequests"));
     	trySendRequests.mark();
     }
     
     public void sendSucceeded()
     {
-    	final Meter sendSucceeded = metricRegistry.meter(MetricRegistry.name(MeanderMetricsNotifier.class, "dispatcherMain", "sendSucceeded"));
+    	final Meter sendSucceeded = metricRegistry.meter(MetricRegistry.name(FrontierMetricsNotifier.class, "dispatcherMain", "sendSucceeded"));
     	sendSucceeded.mark();
     }
     
     public void missedSwitch()
     {
-    	final Meter missedSwitch = metricRegistry.meter(MetricRegistry.name(MeanderMetricsNotifier.class, "dispatcherMain", "missedSwitch"));
+    	final Meter missedSwitch = metricRegistry.meter(MetricRegistry.name(FrontierMetricsNotifier.class, "dispatcherMain", "missedSwitch"));
     	missedSwitch.mark();
     }
     
     //TODO: Would like to know the downOpId here.
     public void savedBatch()
     {
-    	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(MeanderMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
+    	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(FrontierMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
     	bufferLength.inc();
     }
     
     public void trimmedBuffer(int trimmed)
     {
-      	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(MeanderMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
+      	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(FrontierMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
     	bufferLength.dec(trimmed);
     }
     
     public void clearedBuffer()
     {
-      	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(MeanderMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
+      	final Counter bufferLength = metricRegistry.counter(MetricRegistry.name(FrontierMetricsNotifier.class, "OutOfOrderBuffer.size", ""+operatorId));
     	bufferLength.dec(bufferLength.getCount());	//approx
     }
 }

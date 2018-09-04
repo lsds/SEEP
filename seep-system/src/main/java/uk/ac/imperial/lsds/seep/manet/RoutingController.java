@@ -36,9 +36,9 @@ public class RoutingController implements Runnable{
 	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
 	private final boolean requirePositiveAggregates = Boolean.parseBoolean(GLOBALS.valueFor("requirePositiveAggregates"));
 	private static final long FAILURE_CTRL_WATCHDOG_TIMEOUT = Long.parseLong(GLOBALS.valueFor("failureCtrlTimeout"));
-	private final boolean disableBackpressureETX = GLOBALS.valueFor("meanderRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
-	private final boolean updateWeightNetOnly = (GLOBALS.valueFor("meanderRouting").equals("broadcast") || GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin")) && !Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
-	private final boolean updateWeightQueueLengthOnly = GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices"); 
+	private final boolean disableBackpressureETX = GLOBALS.valueFor("frontierRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
+	private final boolean updateWeightNetOnly = (GLOBALS.valueFor("frontierRouting").equals("broadcast") || GLOBALS.valueFor("frontierRouting").equals("weightedRoundRobin")) && !Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl"));
+	private final boolean updateWeightQueueLengthOnly = GLOBALS.valueFor("frontierRouting").equals("powerOf2Choices"); 
 	private final boolean sendQueueLengthsOnly;
 
 	private final static double INITIAL_WEIGHT = -1;
@@ -68,7 +68,7 @@ public class RoutingController implements Runnable{
 		logger.info("Creating routing controller.");
 		this.owner = owner;
 		this.nodeId = owner.getProcessingUnit().getOperator().getOperatorId();
-		this.query = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
+		this.query = owner.getProcessingUnit().getOperator().getOpContext().getFrontierQuery();
 		//this.inputQueues = inputQueues;
 		this.numLogicalInputs = query.getLogicalInputs(query.getLogicalNodeId(nodeId)).length;
 		

@@ -43,7 +43,7 @@ import uk.ac.imperial.lsds.seep.runtimeengine.AsynchronousCommunicationChannel;
 import uk.ac.imperial.lsds.seep.runtimeengine.CoreRE.ControlTupleType;
 import uk.ac.imperial.lsds.seep.runtimeengine.OutputQueue;
 import uk.ac.imperial.lsds.seep.runtimeengine.SynchronousCommunicationChannel;
-import static uk.ac.imperial.lsds.seep.manet.MeanderMetricsNotifier.notifyThat;
+import static uk.ac.imperial.lsds.seep.manet.FrontierMetricsNotifier.notifyThat;
 
 public class Dispatcher implements IRoutingObserver {
 
@@ -109,8 +109,8 @@ public class Dispatcher implements IRoutingObserver {
 		optimizeReplay = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay"));
 		eagerPurgeOpQueue = Boolean.parseBoolean(GLOBALS.valueFor("eagerPurgeOpQueue"));
 		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
-		boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
-					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
+		boundedOpQueue = !GLOBALS.valueFor("frontierRouting").equals("backpressure") || 
+					Boolean.parseBoolean(GLOBALS.valueFor("boundFrontierRoutingQueues")) ||
 					replicationFactor == 1;
 
 		reportMaxSrcTotalQueueSizeTuples = Boolean.parseBoolean(GLOBALS.valueFor("reportMaxSrcTotalQueueSizeTuples"));
@@ -139,8 +139,8 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		
 		
-		Query meanderQuery = owner.getOperator().getOpContext().getMeanderQuery(); 
-		int logicalId = meanderQuery.getLogicalNodeId(owner.getOperator().getOperatorId());
+		Query frontierQuery = owner.getOperator().getOpContext().getFrontierQuery(); 
+		int logicalId = frontierQuery.getLogicalNodeId(owner.getOperator().getOperatorId());
 
 		if (owner.getOperator().getOpContext().isSink())
 		{
@@ -152,11 +152,11 @@ public class Dispatcher implements IRoutingObserver {
 		}
 		else
 		{
-			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
-			downIsMultiInput = meanderQuery.getLogicalInputs(downLogicalId).length > 1;
-			int downInputIndex = meanderQuery.getLogicalInputIndex(downLogicalId, logicalId);
+			int downLogicalId = frontierQuery.getNextHopLogicalNodeId(logicalId);
+			downIsMultiInput = frontierQuery.getLogicalInputs(downLogicalId).length > 1;
+			int downInputIndex = frontierQuery.getLogicalInputIndex(downLogicalId, logicalId);
 			canRetransmitConstrained = downInputIndex == 0 || !Boolean.parseBoolean(GLOBALS.valueFor("restrictRetransmitConstrained"));
-			broadcast = GLOBALS.valueFor("meanderRouting").equals("broadcast"); 
+			broadcast = GLOBALS.valueFor("frontierRouting").equals("broadcast"); 
 
 			logger.info("canRetransmitConstrained="+canRetransmitConstrained);
 			if (bestEffort)
@@ -167,7 +167,7 @@ public class Dispatcher implements IRoutingObserver {
 				}
 			}
 				
-			numDownstreamReplicas = meanderQuery.getPhysicalNodeIds(downLogicalId).size();
+			numDownstreamReplicas = frontierQuery.getPhysicalNodeIds(downLogicalId).size();
 			if (Boolean.parseBoolean(GLOBALS.valueFor("enableFailureCtrlWatchdog")) && 
 					numDownstreamReplicas > 1 && !bestEffort)
 			{
@@ -183,8 +183,8 @@ public class Dispatcher implements IRoutingObserver {
 		else { fctrlHandler = null; }
 
 
-		//boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() > 1;
-		boolean hasJoin = meanderQuery.getJoinOpLogicalNodeIds().size() >= 1; //Temp force for VC exps
+		//boolean hasJoin = frontierQuery.getJoinOpLogicalNodeIds().size() > 1;
+		boolean hasJoin = frontierQuery.getJoinOpLogicalNodeIds().size() >= 1; //Temp force for VC exps
 		//if (owner.getOperator().getOpContext().isSource() && !bestEffort && replicationFactor > 1 && hasJoin)  
 		if (owner.getOperator().getOpContext().isSource() && !bestEffort && hasJoin) //Temp force for VC k=1
 		{ limitUnacked = true; }

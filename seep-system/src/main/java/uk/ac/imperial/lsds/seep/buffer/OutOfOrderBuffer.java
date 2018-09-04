@@ -11,7 +11,7 @@ import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.FailureCtrl;
 import uk.ac.imperial.lsds.seep.comm.serialization.controlhelpers.RawData;
 import uk.ac.imperial.lsds.seep.comm.serialization.messages.BatchTuplePayload;
 import uk.ac.imperial.lsds.seep.runtimeengine.TimestampTracker;
-import static uk.ac.imperial.lsds.seep.manet.MeanderMetricsNotifier.notifyThat;
+import static uk.ac.imperial.lsds.seep.manet.FrontierMetricsNotifier.notifyThat;
 
 public class OutOfOrderBuffer implements IBuffer {
 	private static final Logger logger = LoggerFactory.getLogger(OutOfOrderBuffer.class);

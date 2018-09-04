@@ -32,10 +32,10 @@ public class HashRouter implements IRouter {
 	public HashRouter(OperatorContext opContext) {
 		this.opContext = opContext;
 		this.downOps = opContext.getDownstreamOpIdList();
-		Query meanderQuery = opContext.getMeanderQuery(); 
+		Query frontierQuery = opContext.getFrontierQuery(); 
 		this.opId = opContext.getOperatorStaticInformation().getOpId();
-		int logicalId = meanderQuery.getLogicalNodeId(opId);
-		this.height = meanderQuery.getHeight(logicalId);
+		int logicalId = frontierQuery.getLogicalNodeId(opId);
+		this.height = frontierQuery.getHeight(logicalId);
 	}
 	
 	@Override

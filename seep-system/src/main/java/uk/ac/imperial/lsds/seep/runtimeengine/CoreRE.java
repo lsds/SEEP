@@ -80,7 +80,7 @@ public class CoreRE {
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final Map<Integer, ControlTuple> lastUpOpIndexFctrls = new ConcurrentHashMap<Integer, ControlTuple>();
 	private final boolean enableUpstreamRoutingControl = Boolean.parseBoolean(GLOBALS.valueFor("enableUpstreamRoutingControl")); 
-	private final boolean multiHopReplayOptimization = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay")) && Boolean.parseBoolean(GLOBALS.valueFor("multiHopReplayOptimization")) && !GLOBALS.valueFor("meanderRouting").equals("broadcast"); 
+	private final boolean multiHopReplayOptimization = Boolean.parseBoolean(GLOBALS.valueFor("optimizeReplay")) && Boolean.parseBoolean(GLOBALS.valueFor("multiHopReplayOptimization")) && !GLOBALS.valueFor("frontierRouting").equals("broadcast"); 
 	private WorkerNodeDescription nodeDescr = null;
 	
     private Thread processingUnitThread = null;
@@ -411,19 +411,19 @@ public class CoreRE {
 	
 	private void setUpRouting()
 	{
-		if (GLOBALS.valueFor("enableMeanderRouting").equals("true"))
+		if (GLOBALS.valueFor("enableFrontierRouting").equals("true"))
 		{
-			Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
+			Query frontierQuery = processingUnit.getOperator().getOpContext().getFrontierQuery();
 			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
-			int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
-			Integer downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
-			boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
-			boolean downIsMultiInput = !meanderQuery.isSink(logicalId) && meanderQuery.isJoin(downLogicalId);
-			boolean isReplicatedSink = meanderQuery.isSink(logicalId) && meanderQuery.getPhysicalNodeIds(logicalId).size() > 1; 
-			boolean downIsReplicatedSink = !meanderQuery.isSink(logicalId) && meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1; 
+			int logicalId = frontierQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
+			Integer downLogicalId = frontierQuery.getNextHopLogicalNodeId(logicalId);
+			boolean opIsMultiInput = frontierQuery.isJoin(logicalId);
+			boolean downIsMultiInput = !frontierQuery.isSink(logicalId) && frontierQuery.isJoin(downLogicalId);
+			boolean isReplicatedSink = frontierQuery.isSink(logicalId) && frontierQuery.getPhysicalNodeIds(logicalId).size() > 1; 
+			boolean downIsReplicatedSink = !frontierQuery.isSink(logicalId) && frontierQuery.isSink(downLogicalId) && frontierQuery.getPhysicalNodeIds(downLogicalId).size() > 1; 
 
 			if (replicationFactor == 1 || 
-					GLOBALS.valueFor("meanderRouting").equals("hash"))
+					GLOBALS.valueFor("frontierRouting").equals("hash"))
 			{				
 
 				//Record net rates for debugging purposes
@@ -473,12 +473,12 @@ public class CoreRE {
 					processingUnit.getDispatcher().startDispatcherMain();
 				}
 			}
-			else if (GLOBALS.valueFor("meanderRouting").equals("shortestPath"))
+			else if (GLOBALS.valueFor("frontierRouting").equals("shortestPath"))
 			{				
 				if (!processingUnit.getOperator().getOpContext().isSink())
 				{
 				
-					netTopologyMonitor = new NetTopologyMonitor(processingUnit.getOperator().getOperatorId(), meanderQuery, processingUnit.getOperator().getRouter());
+					netTopologyMonitor = new NetTopologyMonitor(processingUnit.getOperator().getOperatorId(), frontierQuery, processingUnit.getOperator().getRouter());
 					ntMonT = new Thread(netTopologyMonitor, "NetTopologyMonitor");
 					ntMonT.start();
 				}
@@ -487,23 +487,23 @@ public class CoreRE {
 					processingUnit.getDispatcher().startDispatcherMain();
 				}
 			}
-			else if (GLOBALS.valueFor("meanderRouting").equals("backpressure") ||
-								GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
-								GLOBALS.valueFor("meanderRouting").equals("backpressureWeightedRoundRobin") ||
-								GLOBALS.valueFor("meanderRouting").equals("roundRobin") ||
-								GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices") ||
-								GLOBALS.valueFor("meanderRouting").equals("broadcast"))
+			else if (GLOBALS.valueFor("frontierRouting").equals("backpressure") ||
+								GLOBALS.valueFor("frontierRouting").equals("weightedRoundRobin") ||
+								GLOBALS.valueFor("frontierRouting").equals("backpressureWeightedRoundRobin") ||
+								GLOBALS.valueFor("frontierRouting").equals("roundRobin") ||
+								GLOBALS.valueFor("frontierRouting").equals("powerOf2Choices") ||
+								GLOBALS.valueFor("frontierRouting").equals("broadcast"))
 			{
 				if (replicationFactor > 1 && downIsMultiInput &&
-						(GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") || 
-						  GLOBALS.valueFor("meanderRouting").equals("backpressureWeightedRoundRobin") || 
-							GLOBALS.valueFor("meanderRouting").equals("roundRobin") ||
-							GLOBALS.valueFor("meanderRouting").equals("powerOf2Choices") ||
-							GLOBALS.valueFor("meanderRouting").equals("broadcast")))
+						(GLOBALS.valueFor("frontierRouting").equals("weightedRoundRobin") || 
+						  GLOBALS.valueFor("frontierRouting").equals("backpressureWeightedRoundRobin") || 
+							GLOBALS.valueFor("frontierRouting").equals("roundRobin") ||
+							GLOBALS.valueFor("frontierRouting").equals("powerOf2Choices") ||
+							GLOBALS.valueFor("frontierRouting").equals("broadcast")))
 				{ throw new RuntimeException("Logic error: can't using RR, WRR, BPWRR, P2C or Bcast with multi-input operators (yet)."); }
 
-				if ((GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") ||
-							GLOBALS.valueFor("meanderRouting").equals("broadcast")) && 
+				if ((GLOBALS.valueFor("frontierRouting").equals("weightedRoundRobin") ||
+							GLOBALS.valueFor("frontierRouting").equals("broadcast")) && 
 						enableUpstreamRoutingControl && !Boolean.parseBoolean(GLOBALS.valueFor("ignoreQueueLengths")))
 				{ throw new RuntimeException("Logic error: invalid configuration for WRR/Bcast."); }
 
@@ -567,7 +567,7 @@ public class CoreRE {
 					*/
 				}
 			}
-			else { throw new RuntimeException("Unknown routing algorithm: "+GLOBALS.valueFor("meanderRouting")); }
+			else { throw new RuntimeException("Unknown routing algorithm: "+GLOBALS.valueFor("frontierRouting")); }
 		}
 	}
     /**
@@ -695,10 +695,10 @@ public class CoreRE {
 		 **/
 		ControlTupleType ctt = ct.getType();
 
-		Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
-		int logicalId = meanderQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
-		boolean opIsMultiInput = meanderQuery.isJoin(logicalId);
-		boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && meanderQuery.isJoin(meanderQuery.getNextHopLogicalNodeId(logicalId));
+		Query frontierQuery = processingUnit.getOperator().getOpContext().getFrontierQuery();
+		int logicalId = frontierQuery.getLogicalNodeId(processingUnit.getOperator().getOperatorId());
+		boolean opIsMultiInput = frontierQuery.isJoin(logicalId);
+		boolean downIsMultiInput = !processingUnit.getOperator().getOpContext().isSink() && frontierQuery.isJoin(frontierQuery.getNextHopLogicalNodeId(logicalId));
 
 		/** ACK message **/
 		if(ctt.equals(ControlTupleType.ACK)) {
@@ -1147,15 +1147,15 @@ public class CoreRE {
 		//FailureCtrl purgeFctrl = multiHopReplayOptimization ? nodeFctrl : new FailureCtrl(nodeFctrl.lw(), nodeFctrl.acks(), null);
 		FailureCtrl purgeFctrl = multiHopReplayOptimization ? nodeFctrl : nodeFctrl.copy(false);
 		ArrayList<FailureCtrl> upFctrls = dso.purge(purgeFctrl);
-		Query meanderQuery = processingUnit.getOperator().getOpContext().getMeanderQuery();
+		Query frontierQuery = processingUnit.getOperator().getOpContext().getFrontierQuery();
 		int opId = processingUnit.getOperator().getOperatorId();
 		for (int upOpIndex : upOpIndexes)
 		{
 			int upOpId = processingUnit.getOperator().getOpContext().getUpOpIdFromIndex(upOpIndex);
 			LOG.debug("Writing failure ctrl to up op id:"+upOpId);
-			FailureCtrl upFctrl = upFctrls.get(meanderQuery.getLogicalInputIndex(
-					meanderQuery.getLogicalNodeId(opId), 
-					meanderQuery.getLogicalNodeId(upOpId)));
+			FailureCtrl upFctrl = upFctrls.get(frontierQuery.getLogicalInputIndex(
+					frontierQuery.getLogicalNodeId(opId), 
+					frontierQuery.getLogicalNodeId(upOpId)));
 			if (!downstreamsRoutable) { upFctrl = purgeFctrl; }
 			LOG.debug("Writing failure ctrl, node="+nodeFctrl+",upOp="+upFctrl);
 			ControlTuple ct = new ControlTuple(ControlTupleType.FAILURE_CTRL, opId , upFctrl);

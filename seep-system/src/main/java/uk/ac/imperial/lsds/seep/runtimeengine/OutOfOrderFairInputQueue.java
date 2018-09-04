@@ -37,14 +37,14 @@ public class OutOfOrderFairInputQueue implements DataStructureI {
 	
 	private final FailureCtrl inputFctrl = new FailureCtrl();
 	
-	public OutOfOrderFairInputQueue(Query meanderQuery, int opId)
+	public OutOfOrderFairInputQueue(Query frontierQuery, int opId)
 	{
-		boolean isSink = meanderQuery.isSink(meanderQuery.getLogicalNodeId(opId));
+		boolean isSink = frontierQuery.isSink(frontierQuery.getLogicalNodeId(opId));
 		//inputQueue = new ArrayBlockingQueue<DataTuple>(Integer.parseInt(GLOBALS.valueFor("inputQueueLength")));
 		int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 		boolean replicatedSink = isSink && Integer.parseInt(GLOBALS.valueFor("sinkScaleFactor")) > 0;
-		boolean boundedOpQueue = !GLOBALS.valueFor("meanderRouting").equals("backpressure") || 
-					Boolean.parseBoolean(GLOBALS.valueFor("boundMeanderRoutingQueues")) ||
+		boolean boundedOpQueue = !GLOBALS.valueFor("frontierRouting").equals("backpressure") || 
+					Boolean.parseBoolean(GLOBALS.valueFor("boundFrontierRoutingQueues")) ||
 					(replicationFactor == 1 && !replicatedSink);
 		if (boundedOpQueue)
 		{

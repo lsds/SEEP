@@ -35,8 +35,8 @@ public class UpstreamRoutingController {
 	private final boolean piggybackControlTraffic = Boolean.parseBoolean(GLOBALS.valueFor("piggybackControlTraffic"));
 	private final boolean mergeFailureAndRoutingCtrl = Boolean.parseBoolean(GLOBALS.valueFor("mergeFailureAndRoutingCtrl"));
 	private final boolean enableDummies = Boolean.parseBoolean(GLOBALS.valueFor("sendDummyDownUpControlTraffic"));
-	private final boolean ignoreQueueLengths = GLOBALS.valueFor("meanderRouting").equals("weightedRoundRobin") && Boolean.parseBoolean(GLOBALS.valueFor("ignoreQueueLengths"));  
-	private final boolean disableBackpressureETX = GLOBALS.valueFor("meanderRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
+	private final boolean ignoreQueueLengths = GLOBALS.valueFor("frontierRouting").equals("weightedRoundRobin") && Boolean.parseBoolean(GLOBALS.valueFor("ignoreQueueLengths"));  
+	private final boolean disableBackpressureETX = GLOBALS.valueFor("frontierRouting").equals("backpressure") && Boolean.parseBoolean(GLOBALS.valueFor("disableBackpressureETX"));
 
 	private final static double INITIAL_WEIGHT = -1;
 	//private final static double COST_THRESHOLD = 3.9;
@@ -62,7 +62,7 @@ public class UpstreamRoutingController {
 		logger.info("Creating routing controller.");
 		this.owner = owner;
 		this.nodeId = owner.getProcessingUnit().getOperator().getOperatorId();
-		this.query = owner.getProcessingUnit().getOperator().getOpContext().getMeanderQuery();
+		this.query = owner.getProcessingUnit().getOperator().getOpContext().getFrontierQuery();
 		//this.inputQueues = inputQueues;
 
 		this.logicalId = query.getLogicalNodeId(nodeId);

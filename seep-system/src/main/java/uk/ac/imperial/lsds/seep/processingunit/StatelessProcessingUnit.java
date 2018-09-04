@@ -450,56 +450,56 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 		ctx.configureOperatorConnections(runningOp);
 		if (dispatcher != null && !getOperator().getOpContext().isSink())
 		{
-			String routingAlg = GLOBALS.valueFor("meanderRouting");
+			String routingAlg = GLOBALS.valueFor("frontierRouting");
 			int replicationFactor = Integer.parseInt(GLOBALS.valueFor("replicationFactor"));
 			if ("hash".equals(routingAlg) || replicationFactor == 1)
 			{
 				if (replicationFactor == 1) { LOG.warn("Using hash routing since no replication.");}
-				Query meanderQuery = getOperator().getOpContext().getMeanderQuery();
-				int logicalId = meanderQuery.getLogicalNodeId(getOperator().getOperatorId());
-				int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
-				boolean downIsReplicatedSink = meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1; 
+				Query frontierQuery = getOperator().getOpContext().getFrontierQuery();
+				int logicalId = frontierQuery.getLogicalNodeId(getOperator().getOperatorId());
+				int downLogicalId = frontierQuery.getNextHopLogicalNodeId(logicalId);
+				boolean downIsReplicatedSink = frontierQuery.isSink(downLogicalId) && frontierQuery.getPhysicalNodeIds(downLogicalId).size() > 1; 
 				if (downIsReplicatedSink && GLOBALS.valueFor("replicatedSinksHashRouting").equals("backpressure")) {
-					getOperator().getRouter().setMeanderRouting(new BackpressureRouter(getOperator().getOpContext()));
+					getOperator().getRouter().setFrontierRouting(new BackpressureRouter(getOperator().getOpContext()));
 					LOG.info("Using backpressure routing for this operator since down op is replicated sink.");
 				} else {
-					getOperator().getRouter().setMeanderRouting(new HashRouter(getOperator().getOpContext()));
+					getOperator().getRouter().setFrontierRouting(new HashRouter(getOperator().getOpContext()));
 					LOG.info("Using hash routing.");
 				}
 			}
 			else if ("roundRobin".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new RoundRobinRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new RoundRobinRouter(getOperator().getOpContext()));
 				LOG.info("Using round robin routing.");
 			}
 			else if ("weightedRoundRobin".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
 				LOG.info("Using weighted round robin routing.");
 			}
 			else if ("backpressureWeightedRoundRobin".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new WeightedRoundRobinRouter(getOperator().getOpContext()));
 				LOG.info("Using backpressure weighted round robin routing.");
 			}
 			else if ("powerOf2Choices".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new PowerOf2ChoicesRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new PowerOf2ChoicesRouter(getOperator().getOpContext()));
 				LOG.info("Using power of 2 choices routing.");
 			}
 			else if ("broadcast".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new BroadcastRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new BroadcastRouter(getOperator().getOpContext()));
 				LOG.info("Using broadcast routing.");
 			}
 			else if ("shortestPath".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new ShortestPathRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new ShortestPathRouter(getOperator().getOpContext()));
 				LOG.info("Using shortest path routing.");
 			}
 			else if ("backpressure".equals(routingAlg))
 			{
-				getOperator().getRouter().setMeanderRouting(new BackpressureRouter(getOperator().getOpContext()));
+				getOperator().getRouter().setFrontierRouting(new BackpressureRouter(getOperator().getOpContext()));
 				LOG.info("Using backpressure routing.");
 			}
 			else
@@ -579,12 +579,12 @@ public class StatelessProcessingUnit implements IProcessingUnit {
 	{	
 		owner.writeFailureCtrls(getOperator().getOpContext().getListOfUpstreamIndexes(), nodeFctrl, downstreamsRoutable);
 		
-		Query meanderQuery = getOperator().getOpContext().getMeanderQuery();
-		int logicalId = meanderQuery.getLogicalNodeId(getOperator().getOperatorId());
-		if (!meanderQuery.isSink(logicalId))
+		Query frontierQuery = getOperator().getOpContext().getFrontierQuery();
+		int logicalId = frontierQuery.getLogicalNodeId(getOperator().getOperatorId());
+		if (!frontierQuery.isSink(logicalId))
 		{
-			int downLogicalId = meanderQuery.getNextHopLogicalNodeId(logicalId);
-			if (meanderQuery.isSink(downLogicalId) && meanderQuery.getPhysicalNodeIds(downLogicalId).size() > 1)
+			int downLogicalId = frontierQuery.getNextHopLogicalNodeId(logicalId);
+			if (frontierQuery.isSink(downLogicalId) && frontierQuery.getPhysicalNodeIds(downLogicalId).size() > 1)
 			{
 				//Downstream is a replicated sink, send combined failure ctrl *downstream* too.
 				owner.writeDownstreamFailureCtrls(getOperator().getOpContext().getListOfDownstreamIndexes(), nodeFctrl);
