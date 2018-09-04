@@ -1,8 +1,0 @@
-rootProject.name = 'seep'
-include ':seep-system'
-include ':seep-java2sdg'
-include ':seep-streamsql'
-
-project(':seep-system').projectDir = "$rootDir/seep-system" as File
-project(':seep-java2sdg').projectDir = "$rootDir/seep-java2sdg" as File
-project(':seep-streamsql').projectDir = "$rootDir/seep-streamsql" as File
