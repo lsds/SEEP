@@ -1,3 +1,5 @@
+# Frontier: Resilient Edge Processing for the Internet of Things.
+
 Frontier is an experimental edge processing platform for the Internet of Things (IoT)
 that is being developed by the Distributed and Global Computing Centre (DGC) at 
 Royal Holloway University of London and the Large-Scale Distributed Systems (LSDS)
